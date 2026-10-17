@@ -4,9 +4,9 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
-## [Unreleased]
+## [0.1.15] - 2026-10-17
 
-### Pictures are downloaded once
+### Pictures are downloaded once, and steering can say "after"
 
 - A picture you looked at is kept on the phone (at most 192 MB, the oldest go
   first), so opening a photo again, going back to one in the viewer, or
