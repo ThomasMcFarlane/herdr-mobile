@@ -6,9 +6,11 @@ const _floatDark = [BoxShadow(color: Color(0x73000000), blurRadius: 20, offset: 
 /// Design tokens, in three tiers: a private palette (the hex values below),
 /// the roles a screen reads ([Ds], [Type], [Mono], [Gap], [Radii],
 /// [IconSize]), and component metrics, which exist only where two or more
-/// components share a value (`FloatingBar`, `RowMetrics`). A new token needs
-/// two call sites and a one-line reason; `tool/design_lint.dart` keeps raw
-/// values out of screens.
+/// components share a value (`FloatingBar`, `RowMetrics`). A new visual token
+/// needs two call sites and a one-line reason. A named timer or spring
+/// (`Dwell`, `Springs`) may have one call site: it is named by its role, so
+/// the value is found and tuned in one place. `tool/design_lint.dart` keeps
+/// raw values out of screens.
 ///
 /// The look is deliberately not Material: flat rows instead of cards, one
 /// accent, hairlines instead of elevation, status by shape as well as colour,

@@ -72,7 +72,7 @@ class _HomeShellState extends State<HomeShell> with RestorationMixin, SingleTick
   // not at all under reduced motion. Rests at 1, so nothing is composited
   // outside the 120 ms of a switch.
   late final _fade = AnimationController(vsync: this, duration: Motion.fade, value: 1);
-  late final _opacity = CurvedAnimation(parent: _fade, curve: Motion.easeOut);
+  late final _opacity = Motion.curved(_fade);
 
   @override
   String get restorationId => 'home';

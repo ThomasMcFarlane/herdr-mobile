@@ -377,7 +377,7 @@ class _EntranceTransition extends StatefulWidget {
 }
 
 class _EntranceTransitionState extends State<_EntranceTransition> {
-  late final CurvedAnimation _curve = CurvedAnimation(parent: widget.animation, curve: Motion.easeOut);
+  late final CurvedAnimation _curve = Motion.curved(widget.animation);
   late bool _done = widget.animation.isCompleted;
 
   @override

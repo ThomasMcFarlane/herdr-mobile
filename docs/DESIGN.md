@@ -82,7 +82,9 @@ element has the same weight" is a fail.
 Three tiers: a private palette (the hex values), the roles a screen reads
 (`Ds`, `Type`, `Mono`, `Gap`, `Radii`, `IconSize`), and component metrics that
 exist only where two or more components share a value (`FloatingBar`,
-`RowMetrics`). A new token needs two call sites and a one-line reason.
+`RowMetrics`). A new visual token needs two call sites and a one-line reason.
+A named timer or spring (`Dwell`, `Springs`) may have one call site: it is
+named by its role, so every timing lives in `motion.dart` and is tuned there.
 `tool/design_lint.dart` keeps raw values out of screens.
 
 ### Colour roles

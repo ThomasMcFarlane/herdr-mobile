@@ -26,7 +26,7 @@ class AppSwitch extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
-    final duration = Motion.reduced(context) ? Duration.zero : Motion.standard;
+    final duration = Motion.of(context, Motion.standard);
     return AnimatedContainer(
       duration: duration,
       curve: Motion.easeOut,

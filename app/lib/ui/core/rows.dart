@@ -409,12 +409,8 @@ class Collapse extends StatefulWidget {
 class _CollapseState extends State<Collapse> with SingleTickerProviderStateMixin {
   late final AnimationController _controller =
       AnimationController(vsync: this, value: widget.open ? 1 : 0);
-  late final Animation<double> _progress = CurvedAnimation(
-    parent: _controller,
-    curve: Motion.easeOut,
-    // Closing is an ease-out in time too, not the opening curve played backwards.
-    reverseCurve: Motion.easeOut.flipped,
-  );
+  // Closing is an ease-out in time too, not the opening curve played backwards.
+  late final CurvedAnimation _progress = Motion.curved(_controller);
 
   /// Lets the child move between wrappers (clip/fade while animating, bare when
   /// fully open) without being rebuilt from scratch.
@@ -430,6 +426,7 @@ class _CollapseState extends State<Collapse> with SingleTickerProviderStateMixin
 
   @override
   void dispose() {
+    _progress.dispose();
     _controller.dispose();
     super.dispose();
   }
