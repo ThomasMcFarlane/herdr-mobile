@@ -144,7 +144,7 @@ class OriginLine extends StatelessWidget {
       padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.sm),
       child: Row(
         children: [
-          Icon(LucideIcons.bot, size: IconSize.inline, color: ds.textSecondary),
+          Icon(HerdrIcons.agents, size: IconSize.inline, color: ds.textSecondary),
           const SizedBox(width: Gap.sm),
           Expanded(
             child: Text(

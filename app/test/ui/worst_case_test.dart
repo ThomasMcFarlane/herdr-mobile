@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/machine_profile.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_card.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../support/shot.dart' show loadAppFonts;
 import 'ui_harness.dart';
@@ -99,7 +98,7 @@ void main() {
         final h = await _worstCase();
         await pumpUi(tester, h, width: width, textScale: scale);
 
-        await tester.tap(find.byIcon(LucideIcons.server));
+        await tester.tap(find.byIcon(HerdrIcons.machines));
         await settle(tester);
         expect(find.textContaining('build-server-eu-west-2'), findsOneWidget);
         expect(find.text('x'), findsWidgets);

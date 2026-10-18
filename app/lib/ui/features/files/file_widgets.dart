@@ -68,7 +68,7 @@ IconData iconForEntry(RemoteEntry e) {
           danger: true,
         ),
       RemoteFileErrorKind.unsupported => (
-          icon: LucideIcons.serverOff,
+          icon: HerdrIcons.machinesOff,
           title: 'Files are unavailable',
           message: e.message,
           retry: false,

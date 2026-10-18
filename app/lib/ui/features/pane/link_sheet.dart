@@ -107,13 +107,13 @@ Future<void> showLinkSheet(BuildContext context, String url, {MachineConnection?
             ),
             if (previewable)
               note(
-                LucideIcons.server,
+                HerdrIcons.machines,
                 'This address is on ${machine.profile.label}. Open on phone reaches it over your SSH connection.',
               )
             else if (local && https)
-              note(LucideIcons.server, 'HTTPS on the machine can’t be opened on the phone yet.')
+              note(HerdrIcons.machines, 'HTTPS on the machine can’t be opened on the phone yet.')
             else if (local)
-              note(LucideIcons.server, 'This address is on the machine, not your phone.')
+              note(HerdrIcons.machines, 'This address is on the machine, not your phone.')
             else if (plain)
               note(LucideIcons.triangleAlert, 'This link is not encrypted.'),
           ],

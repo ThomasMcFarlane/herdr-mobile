@@ -315,7 +315,7 @@ class _MissingMachine extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(LucideIcons.serverOff, size: IconSize.empty, color: ds.textTertiary),
+            Icon(HerdrIcons.machinesOff, size: IconSize.empty, color: ds.textTertiary),
             const SizedBox(height: Gap.md),
             Text(
               'This machine is no longer saved',

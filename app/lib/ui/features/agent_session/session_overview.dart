@@ -237,7 +237,7 @@ class _SessionOverviewState extends State<SessionOverview> {
         padding: const EdgeInsets.symmetric(horizontal: Gap.xs),
           child: Row(
             children: [
-              Icon(LucideIcons.bot, size: IconSize.row, color: ds.textSecondary),
+              Icon(HerdrIcons.agents, size: IconSize.row, color: ds.textSecondary),
               const SizedBox(width: Gap.sm),
               Expanded(child: Text(text, style: Type.secondaryStrong.copyWith(color: ds.text))),
               Icon(LucideIcons.chevronRight, size: IconSize.inline, color: ds.textTertiary),

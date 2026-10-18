@@ -32,6 +32,7 @@ Future<void> loadAppFonts() async {
     'JetBrainsMono-Italic.ttf',
     'JetBrainsMono-BoldItalic.ttf',
   ]);
+  await load('HerdrIcons', const ['HerdrIcons.ttf']);
 
   // Icon font from the lucide package (no asset path of our own).
   final config = jsonDecode(await File('.dart_tool/package_config.json').readAsString())

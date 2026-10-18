@@ -43,7 +43,7 @@ class MachineField extends StatelessWidget {
             for (final c in choices)
               SheetAction(
                 label: c.profile.label,
-                icon: c.profile.id == machine?.profile.id ? LucideIcons.check : LucideIcons.server,
+                icon: c.profile.id == machine?.profile.id ? LucideIcons.check : HerdrIcons.machines,
                 onTap: () => onSelect(c.profile.id),
               ),
           ],

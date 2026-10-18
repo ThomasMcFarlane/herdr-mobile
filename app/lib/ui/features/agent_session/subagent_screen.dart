@@ -81,7 +81,7 @@ class _SubagentRunScreenState extends State<SubagentRunScreen> {
                 final (exists, transcript) = v;
                 if (!exists) {
                   return const EmptyState(
-                    icon: LucideIcons.bot,
+                    icon: HerdrIcons.agents,
                     title: 'Subagent gone',
                     message: 'The agent no longer lists this subagent.',
                   );

@@ -148,7 +148,7 @@ class _FormState extends State<_Form> {
               child: Padding(
                 padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom),
                 child: EmptyState(
-                  icon: LucideIcons.serverOff,
+                  icon: HerdrIcons.machinesOff,
                   title: 'No machine is online',
                   message: 'An agent session starts on a connected machine. Check the Machines '
                       'tab, then come back.',

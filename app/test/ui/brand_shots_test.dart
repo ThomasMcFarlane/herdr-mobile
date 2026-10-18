@@ -126,9 +126,9 @@ Widget _firstRun({int badge = 0}) => Stack(
             padding: const EdgeInsets.only(bottom: 28),
             child: FloatingTabBar(
               tabs: [
-                TabSpec(icon: LucideIcons.bot, label: 'Agents', badge: badge),
-                const TabSpec(icon: LucideIcons.server, label: 'Machines'),
-                const TabSpec(icon: LucideIcons.settings, label: 'Settings'),
+                TabSpec(icon: HerdrIcons.agents, label: 'Agents', badge: badge),
+                const TabSpec(icon: HerdrIcons.machines, label: 'Machines'),
+                const TabSpec(icon: HerdrIcons.settings, label: 'Settings'),
               ],
               index: badge == 0 ? 0 : 1,
               onChanged: (_) {},

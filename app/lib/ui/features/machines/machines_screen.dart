@@ -56,7 +56,7 @@ class MachinesScreen extends StatelessWidget {
                     child: Padding(
                       padding: EdgeInsets.only(bottom: FloatingBar.clearance(context)),
                       child: EmptyState(
-                        icon: LucideIcons.server,
+                        icon: HerdrIcons.machines,
                         title: 'No machines yet',
                         message: 'Add a machine that runs herdr. You can connect as many as '
                             'you like and see them all together.',

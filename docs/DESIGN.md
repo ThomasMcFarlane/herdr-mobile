@@ -34,8 +34,10 @@ without one gets deleted by the next person who does not understand it.
    intent delay): a soft tint (`Ds.pressTint`) or a scale from `PressScale`.
 7. **Motion is quiet** (see Motion). Nothing moves at rest; durations, curves
    and springs come from `motion.dart`.
-8. **Icons are Lucide** (1.5 px line). One object has one icon everywhere: an
-   agent is `bot`, a machine is `server`. Sizes come from `IconSize`.
+8. **Icons are Lucide, and ours where they sit as peers** (24 grid, stroke 2,
+   round caps). One object has one icon everywhere: an agent is
+   `HerdrIcons.agents`, a machine `HerdrIcons.machines`. Sizes come from
+   `IconSize`.
 9. **Everything is reachable.** 44 x 44 targets even where the painted shape is
    smaller; every control has one accessible name.
 10. **Say it once; tint, don't outline.** A state is named in one place on a
@@ -161,6 +163,16 @@ figures.
   radius minus the inset.
 - `IconSize`: `inline` 14, `row` 16 (and every chevron), `bar` 18, `lead` 20
   (a row's status glyph), `nav` 24 (tab bar), `empty` 28, `hero` 48.
+- **Drawn icons** (`HerdrIcons`, `herdr_icons.dart`, generated with its font by
+  `tool/icons/build_icons.py`): the tab bar, the selection bar, and the agent
+  and machine everywhere. Why: Lucide draws on one grid with no keylines, so
+  peers in one bar differed in weight (its `server` enclosed 1.7x the area of
+  its `bot` and popped out of the tab bar; its 14-unit `x` sank next to
+  `circleStop`). Ours keep Lucide's grammar, fit keylines, and are balanced by
+  `--measure`: peers in one bar keep their squint (what stays dark after a
+  1.5 dp blur) within about 1.5. An open shape (`close`) cannot enclose much;
+  it is drawn larger instead. Draw a new glyph only for a peer set or an
+  object of the app; generic actions stay Lucide.
 - Rows are at least 56 high; `ListRow` text starts at 64 (gutter 20 + 32
   leading column + 12). A small leading widget is centred on the title line.
 

@@ -136,7 +136,7 @@ class _BodyState extends State<_Body> {
         return [
           filler(
             EmptyState(
-              icon: LucideIcons.serverOff,
+              icon: HerdrIcons.machinesOff,
               title: vm.machineLost ? 'That machine went offline' : 'No machine is online',
               message: vm.machineLost
                   ? 'Pick another machine above.'
@@ -163,7 +163,7 @@ class _BodyState extends State<_Body> {
         return [
           filler(
             EmptyState(
-              icon: LucideIcons.bot,
+              icon: HerdrIcons.agents,
               title: 'No agent installed',
               message: 'None of ${_anyAgent()} is installed on ${machine?.profile.label ?? 'this machine'}.',
             ),
@@ -285,7 +285,7 @@ class _Filters extends StatelessWidget {
                 _capped(
                   AppChip(
                     label: visibleText(c.profile.label),
-                    icon: LucideIcons.server,
+                    icon: HerdrIcons.machines,
                     selected: c.profile.id == vm.machine?.profile.id,
                     onTap: () => vm.selectMachine(c.profile.id),
                   ),

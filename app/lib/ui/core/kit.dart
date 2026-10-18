@@ -4,8 +4,8 @@
 /// files inside this folder import each other directly.
 library;
 
-export 'answer_chip.dart';
 export 'ansi.dart';
+export 'answer_chip.dart';
 export 'bottom_stack.dart';
 export 'brand_mark.dart';
 export 'buttons.dart';
@@ -18,6 +18,7 @@ export 'fields.dart';
 export 'floating_pill.dart';
 export 'form_sections.dart';
 export 'glyphs.dart';
+export 'herdr_icons.dart';
 export 'hold_confirm.dart';
 export 'key_cap.dart';
 export 'large_title.dart';

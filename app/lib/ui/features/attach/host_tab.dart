@@ -212,7 +212,7 @@ class _HostTabState extends State<HostTab> {
             child: Padding(
               padding: EdgeInsets.only(top: Gap.xl),
               child: EmptyState(
-                icon: LucideIcons.serverOff,
+                icon: HerdrIcons.machinesOff,
                 title: 'Files are unavailable on this machine',
                 message: 'This machine has no file access (SFTP), so its folders cannot be listed here.',
               ),

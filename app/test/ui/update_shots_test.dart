@@ -254,8 +254,8 @@ void main() {
               index: 0,
               onChanged: _noop,
               tabs: [
-                TabSpec(icon: LucideIcons.bot, label: 'Agents', badge: 2),
-                TabSpec(icon: LucideIcons.server, label: 'Machines'),
+                TabSpec(icon: HerdrIcons.agents, label: 'Agents', badge: 2),
+                TabSpec(icon: HerdrIcons.machines, label: 'Machines'),
                 TabSpec(icon: LucideIcons.settings, label: 'Settings', mark: true, markLabel: 'update available'),
               ],
             ),

@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/acp/subagents/subagent_run.dart';
 import '../../../data/repositories/agent_session.dart';
@@ -80,7 +79,7 @@ class SubagentsChip extends StatelessWidget {
         child: AppChip(
           label: label,
           tint: tint,
-          leading: Icon(LucideIcons.bot, size: IconSize.inline, color: tint ?? ds.textSecondary),
+          leading: Icon(HerdrIcons.agents, size: IconSize.inline, color: tint ?? ds.textSecondary),
           onTap: () => showSubagents(context, session),
         ),
       );

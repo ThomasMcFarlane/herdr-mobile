@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/repositories/agent_session.dart';
@@ -149,17 +148,17 @@ class BatchActionBar extends StatelessWidget {
       children: [
         _BarAction(
           label: 'Stop',
-          icon: LucideIcons.circleStop,
+          icon: HerdrIcons.stop,
           onTap: can(BatchAction.stop) ? () => onAction(BatchAction.stop) : null,
         ),
         _BarAction(
           label: 'Message',
-          icon: LucideIcons.messageSquare,
+          icon: HerdrIcons.message,
           onTap: can(BatchAction.message) ? () => onAction(BatchAction.message) : null,
         ),
         _BarAction(
           label: 'Close',
-          icon: LucideIcons.x,
+          icon: HerdrIcons.close,
           danger: true,
           onTap: can(BatchAction.close) ? () => onAction(BatchAction.close) : null,
         ),

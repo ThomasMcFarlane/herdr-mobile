@@ -413,7 +413,7 @@ String firstLine(String raw) {
 
 IconData _icon(BackgroundKind kind) => switch (kind) {
   BackgroundKind.shell || BackgroundKind.terminal || BackgroundKind.eval => LucideIcons.squareTerminal,
-  BackgroundKind.agent => LucideIcons.bot,
+  BackgroundKind.agent => HerdrIcons.agents,
   BackgroundKind.workflow => LucideIcons.workflow,
   BackgroundKind.monitor => LucideIcons.eye,
   BackgroundKind.other => LucideIcons.cog,

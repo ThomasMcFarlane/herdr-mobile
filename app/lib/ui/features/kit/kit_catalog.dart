@@ -46,6 +46,7 @@ const _viShort = 'Cần bạn xử lý';
 
 void _noop() {}
 void _noopBool(bool _) {}
+void _noopIndex(int _) {}
 
 /// Every kit component and token sheet, in the order the Kit screen lists them.
 final List<KitEntry> kitCatalog = [
@@ -64,6 +65,19 @@ final List<KitEntry> kitCatalog = [
   ], tokens: true),
   KitEntry('IconSize', KitStatus.stable, [
     KitState('The seven sizes', (c) => const _IconSheet()),
+  ], tokens: true),
+  KitEntry('HerdrIcons', KitStatus.beta, [
+    KitState('The drawn set at nav size', (c) => const _HerdrIconSheet(size: IconSize.nav)),
+    KitState('At row size', (c) => const _HerdrIconSheet(size: IconSize.row)),
+    KitState('As the tab bar', (c) => const FloatingTabBar(
+          tabs: [
+            TabSpec(icon: HerdrIcons.agents, label: 'Agents', badge: 2),
+            TabSpec(icon: HerdrIcons.machines, label: 'Machines'),
+            TabSpec(icon: HerdrIcons.settings, label: 'Settings', mark: true, markLabel: 'update available'),
+          ],
+          index: 0,
+          onChanged: _noopIndex,
+        )),
   ], tokens: true),
   KitEntry('Gap', KitStatus.stable, [
     KitState('The spacing scale', (c) => const _GapSheet()),
@@ -813,9 +827,44 @@ class _IconSheet extends StatelessWidget {
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(LucideIcons.bot, size: s, color: ds.textSecondary),
+              Icon(HerdrIcons.agents, size: s, color: ds.textSecondary),
               const SizedBox(height: Gap.xs),
               Text('$name ${s.round()}', style: Type.caption.copyWith(color: ds.textMuted)),
+            ],
+          ),
+      ],
+    );
+  }
+}
+
+/// herdr's drawn glyphs, each with its name: peers in a bar weigh the same.
+class _HerdrIconSheet extends StatelessWidget {
+  const _HerdrIconSheet({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final ds = context.ds;
+    return Wrap(
+      spacing: Gap.lg,
+      runSpacing: Gap.md,
+      children: [
+        for (final (name, icon) in const [
+          ('agents', HerdrIcons.agents),
+          ('machines', HerdrIcons.machines),
+          ('machinesOff', HerdrIcons.machinesOff),
+          ('settings', HerdrIcons.settings),
+          ('stop', HerdrIcons.stop),
+          ('message', HerdrIcons.message),
+          ('close', HerdrIcons.close),
+        ])
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: size, color: ds.text),
+              const SizedBox(height: Gap.xs),
+              Text(name, style: Type.caption.copyWith(color: ds.textMuted)),
             ],
           ),
       ],

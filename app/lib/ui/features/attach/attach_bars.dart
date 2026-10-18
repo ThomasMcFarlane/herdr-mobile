@@ -15,7 +15,7 @@ extension AttachTabLook on AttachTab {
   IconData get icon => switch (this) {
     AttachTab.gallery => LucideIcons.images,
     AttachTab.files => LucideIcons.fileText,
-    AttachTab.host => LucideIcons.server,
+    AttachTab.host => HerdrIcons.machines,
   };
 
   /// What the tab holds, for a screen reader.

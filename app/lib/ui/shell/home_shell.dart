@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemNavigator;
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../data/repositories/app_update.dart';
@@ -240,16 +239,16 @@ class _HomeShellState extends State<HomeShell> with RestorationMixin, SingleTick
                   onChanged: _select,
                   tabs: [
                     TabSpec(
-                      icon: LucideIcons.bot,
+                      icon: HerdrIcons.agents,
                       label: 'Agents',
                       badge: needsYou,
                       badgeLabel: needsYou == 1 ? 'needs you' : 'need you',
                     ),
-                    const TabSpec(icon: LucideIcons.server, label: 'Machines'),
+                    const TabSpec(icon: HerdrIcons.machines, label: 'Machines'),
                     // A newer version is a quiet dot, never a count: it is not
                     // something that needs the person.
                     TabSpec(
-                      icon: LucideIcons.settings,
+                      icon: HerdrIcons.settings,
                       label: 'Settings',
                       mark: widget.update?.release != null,
                       markLabel: 'update available',

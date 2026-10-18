@@ -9,7 +9,6 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../support/shot.dart' show loadAppFonts;
 
@@ -73,8 +72,8 @@ Widget _tabBarPage() => Scaffold(
                   index: 0,
                   onChanged: (_) {},
                   tabs: const [
-                    TabSpec(icon: LucideIcons.bot, label: 'Agents'),
-                    TabSpec(icon: LucideIcons.settings, label: 'Settings'),
+                    TabSpec(icon: HerdrIcons.agents, label: 'Agents'),
+                    TabSpec(icon: HerdrIcons.settings, label: 'Settings'),
                   ],
                 ),
               ),

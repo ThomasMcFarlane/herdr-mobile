@@ -126,7 +126,7 @@ class SubagentGroupHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(Gap.xs, Gap.sm, Gap.xs, Gap.xs),
       child: Row(
         children: [
-          Icon(LucideIcons.bot, size: IconSize.inline, color: ds.textSecondary),
+          Icon(HerdrIcons.agents, size: IconSize.inline, color: ds.textSecondary),
           const SizedBox(width: Gap.sm),
           Expanded(
             child: Semantics(
