@@ -56,7 +56,9 @@ void main() {
       session
         ..setLink(AgentLink.live)
         ..setSavedCopy(null);
+      // The strip folds away (Collapse) rather than popping.
       await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(Motion.expand);
       expect(find.byType(StatusStrip), findsNothing);
       expect(find.textContaining('Fix the build', findRichText: true), findsOneWidget);
     });
@@ -112,6 +114,7 @@ void main() {
         ..setLink(AgentLink.live)
         ..setSavedCopy(null);
       await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(Motion.expand);
       expect(find.byType(PermissionPanel), findsOneWidget);
       expect(waiting, findsNothing, reason: 'the request itself is shown now');
     });
@@ -139,8 +142,8 @@ void main() {
   group('savedCopyNotice', () {
     final now = DateTime(2026, 3, 1, 15, 30);
     test('today, yesterday, earlier', () {
-      expect(savedCopyNotice(DateTime(2026, 3, 1, 14, 2), now), 'Showing the copy saved at 14:02. Nothing here can be answered.');
-      expect(savedCopyNotice(DateTime(2026, 3, 1, 9, 5), now), contains('saved at 09:05.'));
+      expect(savedCopyNotice(DateTime(2026, 3, 1, 14, 2), now), 'Showing the copy saved today at 14:02. Nothing here can be answered.');
+      expect(savedCopyNotice(DateTime(2026, 3, 1, 9, 5), now), contains('saved today at 09:05.'));
       expect(savedCopyNotice(DateTime(2026, 2, 28, 23, 59), now), contains('saved yesterday at 23:59.'));
       expect(savedCopyNotice(DateTime(2026, 2, 3, 8, 0), now), contains('saved on 3 Feb at 08:00.'));
     });
