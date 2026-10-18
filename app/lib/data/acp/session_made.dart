@@ -537,7 +537,10 @@ void _saved(String printed, String? cwd, DateTime? at, List<_Mention> out) {
 // ----- servers -----
 
 Uri? _serverUri(String raw, {required bool keepPath}) {
-  final trimmed = raw.replaceFirst(RegExp(r'''[.,;:!?'"]+$'''), '');
+  // What closes the sentence or the markdown around the link is not the link:
+  // `**http://127.0.0.1:8766/**` was read as the path `/**`, a row named
+  // `localhost:8766/**` that asked the server for a page that is not there.
+  final trimmed = raw.replaceFirst(RegExp(r'''[.,;:!?'"*_~]+$'''), '');
   final uri = Uri.tryParse(trimmed);
   if (uri == null || uri.scheme.toLowerCase() != 'http' || !isPreviewHost(uri.host)) return null;
   // `:0` parses as no port at all, so the digits are read from the text.
