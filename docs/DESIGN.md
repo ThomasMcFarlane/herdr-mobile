@@ -273,6 +273,7 @@ change. Status: **stable** = a catalog entry, a semantics test and this row.
 | `QuestionWash`, `AnswerChip` | `question_wash.dart`, `answer_chip.dart` | what an agent asks; an answer, held when risky | six washes, five chips |
 | `HoldToConfirm` | `hold_confirm.dart` | the hold guard | |
 | `AppTopBar`, `AppBackButton` | `top_bar.dart` | every top bar | seven bars, twelve Backs |
+| `AddressPill` | `address_pill.dart` | where a page shown in herdr comes from, under a bar's title; warns when the page is not from the machine | the page screen's own pill |
 | `SliverLargeTitle` | `large_title.dart` | a root or list page's title | |
 | `showAppSheet`, `SheetScaffold`, `SheetTitle`, `SheetGrabber`, `showActionSheet`, `showConfirmSheet` | `sheets.dart` | every sheet: four kinds (actions, list, message, form) | 23 sheets with their own paddings |
 | `FloatingBar*`, `FloatingTabBar`, `BottomStackTransition` | `bottom_stack.dart` | the bottom stack (below) | |

@@ -156,6 +156,12 @@ abstract final class Dwell {
   /// A spinner or a skeleton shows only for work that takes longer than this.
   static const spinnerDelay = Duration(milliseconds: 120);
 
+  /// A page that changed its address without loading (a single-page app's
+  /// route) has its `<title>` read again after this long: frameworks set the
+  /// title after the route renders, so a read at the change is one route
+  /// behind.
+  static const titleSettle = Duration(milliseconds: 400);
+
   /// A toast stays: short words, longer words, and one with an action.
   static const toastShort = Duration(milliseconds: 1500);
   static const toastLong = Duration(milliseconds: 2750);
