@@ -89,7 +89,7 @@ class AnswerChip extends StatelessWidget {
   /// Why the answer is held (`pushes to a remote`), said after the hold words.
   final String? reason;
 
-  /// A line under the label at rest (what a mode does).
+  /// A line under the label in every state (what a mode does, its risk).
   final String? detail;
   final AnswerRisk risk;
   final AnswerChipState state;
@@ -181,7 +181,8 @@ class AnswerChip extends StatelessWidget {
         : switch (state) {
             AnswerChipState.primed => reason == null ? 'Hold or tap again' : 'Hold or tap again · $reason',
             AnswerChipState.sent => 'Sent: $label',
-            AnswerChipState.failed => 'Couldn’t send · Retry',
+            // A gated answer still needs a hold to go out again: the words say so.
+            AnswerChipState.failed => this.hold ? 'Couldn’t send · Hold to retry' : 'Couldn’t send · Retry',
             AnswerChipState.changed => 'The question changed',
             _ => label,
           };
@@ -227,7 +228,10 @@ class AnswerChip extends StatelessWidget {
           children: [
             if (lead != null) ...[lead, const SizedBox(width: Gap.sm)],
             Expanded(
-              child: detail == null || state != AnswerChipState.rest || showsHold
+              // The detail (what a mode does, its risk) stays in every state:
+              // the chip keeps its height under the finger and the warning
+              // stays readable while confirming.
+              child: detail == null
                   ? words
                   : Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -269,7 +273,9 @@ class AnswerChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: pressed && enabled ? pressedBg : bg,
         borderRadius: BorderRadius.circular(Radii.sm),
-        border: edge == null ? null : Border.all(color: edge),
+        // Always a border, clear unless primed: a border pads the box, and a
+        // primed chip must not grow under the finger.
+        border: Border.all(color: edge ?? Colors.transparent),
       ),
       child: hold == null ? content : Stack(fit: StackFit.passthrough, children: [hold.fill, content]),
     );

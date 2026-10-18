@@ -632,4 +632,140 @@ void main() {
       expect(sheetColor(), Ds.ink.surface);
     });
   });
+
+  group('AnswerChip', () {
+    Widget chip({AnswerChipState state = AnswerChipState.rest, bool hold = true}) => Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnswerChip(
+                key: const Key('mode'),
+                label: 'Bypass permissions',
+                detail: 'Runs every command without asking',
+                reason: 'no checks',
+                risk: AnswerRisk.gate,
+                hold: hold,
+                state: state,
+                onTap: () {},
+                onHeld: () {},
+              ),
+              const SizedBox(key: Key('below'), height: 10),
+            ],
+          ),
+        );
+
+    testWidgets('a held dangerous mode keeps its warning and its height under the finger', (tester) async {
+      // Wide enough that no state's words wrap in the test font: the height
+      // checked is the detail's.
+      await pumpCore(tester, chip(), width: 800);
+      final rest = tester.getRect(find.byKey(const Key('below'))).top;
+      final gesture = await tester.startGesture(tester.getCenter(find.byKey(const Key('mode'))));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Runs every command without asking'), findsOneWidget);
+      expect(tester.getRect(find.byKey(const Key('below'))).top, rest, reason: 'nothing moves under the thumb');
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      await pumpCore(tester, chip(state: AnswerChipState.primed), width: 800);
+      expect(find.text('Runs every command without asking'), findsOneWidget);
+      expect(tester.getRect(find.byKey(const Key('below'))).top, rest);
+    });
+
+    testWidgets('a failed held answer says it needs a hold to retry; a tapped one says Retry', (tester) async {
+      await pumpCore(tester, chip(state: AnswerChipState.failed));
+      expect(find.textContaining('Hold to retry'), findsOneWidget);
+      await pumpCore(tester, chip(state: AnswerChipState.failed, hold: false));
+      expect(find.textContaining('Hold to retry'), findsNothing);
+      expect(find.textContaining('Retry'), findsOneWidget);
+    });
+  });
+
+  group('bottom stack', () {
+    testWidgets('a lane keeps its State through enter and exit', (tester) async {
+      var inits = 0;
+      final visible = ValueNotifier(false);
+      addTearDown(visible.dispose);
+      await pumpCore(
+        tester,
+        ValueListenableBuilder<bool>(
+          valueListenable: visible,
+          builder: (context, v, _) => BottomStackTransition(
+            visible: v,
+            builder: (_) => _InitCounter(onInit: () => inits++),
+          ),
+        ),
+      );
+      visible.value = true;
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(inits, 1);
+      await tester.pumpAndSettle();
+      expect(inits, 1, reason: 'the end of the enter must not rebuild the lane from scratch');
+
+      // Out and back before it is gone: still the same lane.
+      visible.value = false;
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 30));
+      visible.value = true;
+      await tester.pumpAndSettle();
+      expect(inits, 1);
+    });
+
+    testWidgets('after a scrub, tapping away and back puts the capsule under the selected tab', (tester) async {
+      final index = ValueNotifier(0);
+      addTearDown(index.dispose);
+      await pumpCore(
+        tester,
+        Align(
+          alignment: Alignment.bottomCenter,
+          child: ValueListenableBuilder<int>(
+            valueListenable: index,
+            builder: (context, i, _) => FloatingTabBar(
+              index: i,
+              onChanged: (n) => index.value = n,
+              tabs: const [
+                TabSpec(icon: Icons.list, label: 'Agents'),
+                TabSpec(icon: Icons.dns, label: 'Machines'),
+                TabSpec(icon: Icons.settings, label: 'Settings'),
+              ],
+            ),
+          ),
+        ),
+      );
+      double capsule() => tester.getCenter(find.byKey(FloatingTabBar.capsuleKey)).dx;
+      double tab(String l) => tester.getCenter(find.byKey(FloatingTabBar.tabKey(l))).dx;
+
+      // Scrub from Agents to Settings and let the spring land.
+      final cell = tab('Machines') - tab('Agents');
+      await tester.timedDrag(find.byKey(FloatingTabBar.tabKey('Agents')), Offset(cell * 2, 0), const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
+      expect(index.value, 2);
+
+      await tester.tap(find.byKey(FloatingTabBar.tabKey('Machines')));
+      await tester.pump(const Duration(milliseconds: 60));
+      await tester.tap(find.byKey(FloatingTabBar.tabKey('Settings')));
+      await tester.pumpAndSettle();
+      expect(index.value, 2);
+      expect(capsule(), moreOrLessEquals(tab('Settings'), epsilon: 1));
+    });
+  });
+}
+
+class _InitCounter extends StatefulWidget {
+  const _InitCounter({required this.onInit});
+  final VoidCallback onInit;
+  @override
+  State<_InitCounter> createState() => _InitCounterState();
+}
+
+class _InitCounterState extends State<_InitCounter> {
+  @override
+  void initState() {
+    super.initState();
+    widget.onInit();
+  }
+
+  @override
+  Widget build(BuildContext context) => const SizedBox(height: 56, width: 200);
 }

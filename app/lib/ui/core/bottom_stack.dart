@@ -187,9 +187,10 @@ class FloatingBarScrim extends StatelessWidget {
 /// [slide] false it only fades over [Motion.fade]: the Dock swapping between
 /// the tab bar and the batch bar in its own place. Reduced motion fades.
 ///
-/// At rest it is the lane itself (no opacity layer), or nothing while hidden:
-/// [builder] runs only while the lane shows, so a hidden lane listens to
-/// nothing.
+/// The lane keeps one widget structure at rest and in motion (an opaque
+/// [Opacity] paints no layer), so the lane's State lives through the end of
+/// the transition. Hidden, it is nothing: [builder] runs only while the lane
+/// shows, so a hidden lane listens to nothing.
 class BottomStackTransition extends StatefulWidget {
   const BottomStackTransition({super.key, required this.visible, required this.builder, this.slide = true});
 
@@ -203,7 +204,7 @@ class BottomStackTransition extends StatefulWidget {
 
 class _BottomStackTransitionState extends State<BottomStackTransition> with SingleTickerProviderStateMixin {
   late final AnimationController _shown = AnimationController(vsync: this, value: widget.visible ? 1 : 0);
-  late final Animation<double> _curve = Motion.curved(_shown);
+  late final CurvedAnimation _curve = Motion.curved(_shown);
 
   @override
   void didUpdateWidget(BottomStackTransition old) {
@@ -222,23 +223,29 @@ class _BottomStackTransitionState extends State<BottomStackTransition> with Sing
 
   @override
   void dispose() {
+    _curve.dispose();
     _shown.dispose();
     super.dispose();
   }
 
+  // One widget structure at rest and in motion, so the child's State (a badge
+  // mid-pop, a RollText, a busy bar) survives the end of the transition. Fully
+  // hidden, the child is dropped.
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
         animation: _curve,
         builder: (context, _) {
           final t = _curve.value;
           if (t <= 0) return const SizedBox.shrink();
-          final child = widget.builder(context);
-          if (t >= 1) return child;
           final slide = widget.slide && !Motion.reduced(context);
           return IgnorePointer(
+            ignoring: t < 1,
             child: Opacity(
               opacity: t,
-              child: slide ? Transform.translate(offset: Offset(0, (1 - t) * Motion.travel), child: child) : child,
+              child: Transform.translate(
+                offset: Offset(0, slide ? (1 - t) * Motion.travel : 0),
+                child: widget.builder(context),
+              ),
             ),
           );
         },
@@ -308,7 +315,11 @@ class _FloatingTabBarState extends State<FloatingTabBar> with SingleTickerProvid
   void didUpdateWidget(FloatingTabBar oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.index == widget.index || _scrubbing) return;
-    if (widget.index == _springTo && _place.isAnimating) return;
+    // The selection a released capsule is springing to is consumed once: a
+    // later change back to that tab is a fresh choice and glides.
+    final springing = widget.index == _springTo && _place.isAnimating;
+    _springTo = null;
+    if (springing) return;
     _glideTo(widget.index);
   }
 
