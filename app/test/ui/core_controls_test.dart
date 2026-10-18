@@ -81,8 +81,9 @@ void main() {
         }
       });
 
-      test('$name a selected tab or chip reads on the accent wash', () {
-        for (final base in [ds.surface, ds.bg]) {
+      test('$name a selected tab, chip or segment reads on the accent wash', () {
+        // The tab bar and sheets sit on surface, chips on bg, a segment on fill.
+        for (final base in [ds.surface, ds.bg, ds.fill]) {
           for (final wash in [ds.accentWash, ds.accentWashPressed]) {
             final tint = Color.alphaBlend(wash, base);
             expect(contrast(ds.accentText, tint), greaterThanOrEqualTo(4.5), reason: 'accent text on $wash over $base');

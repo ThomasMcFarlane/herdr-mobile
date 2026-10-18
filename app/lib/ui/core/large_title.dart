@@ -229,9 +229,7 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
                       // Round buttons paint 40 inside a 44 touch box, so the
                       // painted edge still sits 16 from the screen edge.
                       Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: Gap.gutter - 6,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: AppTopBar.edge),
                         child: Row(
                           children: [
                             ?leading,

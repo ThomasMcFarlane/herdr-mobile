@@ -152,7 +152,7 @@ class _Row extends StatelessWidget {
               ),
               if (tag != null) ...[
                 const SizedBox(width: Gap.sm),
-                Text(tag, maxLines: 1, style: Type.caption.copyWith(color: ds.accentText)),
+                Text(tag, maxLines: 1, style: Type.caption.copyWith(color: ds.textMuted)),
               ],
               if (pinned) ...[
                 const SizedBox(width: Gap.sm),

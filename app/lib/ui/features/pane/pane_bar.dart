@@ -4,6 +4,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/models/herdr_models.dart';
 import '../../../data/repositories/machine_connection.dart';
+import '../../../data/words/agent_names.dart';
+import '../../../data/words/where_line.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../files/files_navigation.dart';
 import 'pane_view_model.dart';
@@ -38,11 +40,11 @@ PaneTitle paneTitle(
     );
   }
   final task = named ?? pane.title.trim();
-  final title = task.isNotEmpty ? task : (pane.agent ?? paneId);
-  final agent = pane.agent;
+  final agent = agentName(pane.agent);
+  final title = task.isNotEmpty ? task : agent;
   return (
     title: title,
-    where: [if (agent != null && agent != title) agent, machine!.profile.label].join(' · '),
+    where: whereLine(agent: agent, machine: machine!.profile.label, title: title),
     status: pane.status,
     live: machine.isLive,
   );

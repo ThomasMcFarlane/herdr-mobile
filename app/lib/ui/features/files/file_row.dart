@@ -80,7 +80,7 @@ class FileRow extends StatelessWidget {
                   SizedBox(
                     width: 32,
                     child: e.isDirectory
-                        ? IconTile(icon: iconForEntry(e), color: ds.accentText)
+                        ? IconTile(icon: iconForEntry(e), color: ds.textSecondary)
                         : FileThumb(files: files, entry: e, icon: iconForEntry(e), loader: thumbs),
                   ),
                   const SizedBox(width: Gap.md),

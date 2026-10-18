@@ -215,7 +215,8 @@ class _AgentCardState extends State<AgentCard>
     // The arrival wash is painted under the content by [_ArrivalWash]: the
     // animation repaints it, never rebuilds the preview and the answers.
     final tint = sel.selected ? Color.alphaBlend(ds.accentWash, ds.surface) : ds.surface;
-    final edge = sel.selected ? ds.accent : ds.hairline;
+    // Picked is a tint, never an outline ("tint, don't outline").
+    final edge = ds.hairline;
     // A finished agent on a reachable machine can be marked reviewed without
     // opening it: by a swipe, or by the screen reader's "Mark reviewed".
     final swipeable = a.status == AgentStatus.done && !a.stale && !sel.active;

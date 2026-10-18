@@ -80,6 +80,11 @@ class AppTopBar extends StatelessWidget {
 
   /// Where the title text starts, from the bar's padded edge: past the
   /// leading control and the title block's own inset.
+  /// From the screen edge to a bar's round buttons, here and on a large
+  /// title: a 40 dp circle in its 44 dp touch box paints 16 from the edge, so
+  /// Back does not move between a list and the page it opens.
+  static const edge = Gap.md + Gap.hair;
+
   static const _titleInset = kMinTap + Gap.xs + Gap.sm;
 
   @override
@@ -157,7 +162,7 @@ class AppTopBar extends StatelessWidget {
     Widget bar = Padding(
       padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: Gap.md),
+        padding: const EdgeInsets.symmetric(horizontal: edge),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
+import '../../../data/models/herdr_models.dart' show AgentStatus;
 import '../../../data/repositories/attention_set.dart';
 import '../../../data/repositories/fleet_repository.dart';
 import '../../../data/repositories/machine_connection.dart';
@@ -210,7 +211,14 @@ class _MachineRow extends StatelessWidget {
                       ],
                     ),
                   ),
-                  if (waiting > 0) ...[const SizedBox(width: Gap.sm), CountBadge(count: waiting)],
+                  // Status as a shape first: the needs-you glyph with its count,
+                  // as on the board's filter chip (a bare number read as unread).
+                  if (waiting > 0) ...[
+                    const SizedBox(width: Gap.sm),
+                    const StatusGlyph(status: AgentStatus.blocked, size: IconSize.inline),
+                    const SizedBox(width: Gap.xs),
+                    Text(waiting > 99 ? '99+' : '$waiting', style: Type.count.copyWith(color: ds.blockedText)),
+                  ],
                   if (!p.enabled && roomy) ...[const SizedBox(width: Gap.sm), enable],
                   const SizedBox(width: Gap.xs),
                   CircleButton(

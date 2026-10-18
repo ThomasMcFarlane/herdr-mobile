@@ -146,7 +146,7 @@ void main() {
         expect(find.byType(PaneTopBar), findsOneWidget);
         expect(tester.getSize(find.byType(PaneTopBar)).height, 56);
         expect(find.text('task 1'), findsOneWidget, reason: 'the title is on screen once');
-        expect(_barText('claude · box'), findsOneWidget);
+        expect(_barText('Claude Code · box'), findsOneWidget);
         expect(find.textContaining(_id(1)), findsNothing);
         await _tearDown(tester, h);
       },

@@ -8,6 +8,7 @@ import '../../../data/models/herdr_models.dart';
 import '../../../data/repositories/agent_screens.dart';
 import '../../../data/repositories/machine_connection.dart';
 import 'approval_button.dart';
+import '../../../data/words/agent_names.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../agents/agent_navigation.dart';
 import '../create/management_sheets.dart';
@@ -319,9 +320,10 @@ class _PaneRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final agent = pane.agent;
-    final title = pane.title.isNotEmpty ? pane.title : (agent ?? 'Shell');
+    final name = agentName(agent);
+    final title = pane.title.isNotEmpty ? pane.title : name;
     final subtitle = [
-      if (agent != null && agent != title) agent,
+      if (agent != null && name != title) name,
       ?tabLabel,
       if (cwdTail(pane.cwd).isNotEmpty) cwdTail(pane.cwd),
     ].join(' · ');

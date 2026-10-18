@@ -486,8 +486,8 @@ void main() {
       final h = await UiHarness.create([(profile: _m('a', 'box'), snapshot: j)]);
       await _pump(tester, MachineScreen(machine: h.fleet.connection('a')!), fleet: h);
 
-      expect(find.textContaining('claude · logs'), findsOneWidget);
-      expect(find.textContaining('claude · 1'), findsOneWidget, reason: 'the first tab is labelled too');
+      expect(find.textContaining('Claude Code · logs'), findsOneWidget);
+      expect(find.textContaining('Claude Code · 1'), findsOneWidget, reason: 'the first tab is labelled too');
       await _tearDown(tester, h);
     });
 

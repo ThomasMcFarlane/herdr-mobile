@@ -260,7 +260,7 @@ void main() {
 
     // The fake snapshot gives every pane the title "title <id>".
     expect(inBar('title $_pane'), findsOneWidget);
-    expect(inBar('claude · box'), findsOneWidget);
+    expect(inBar('Claude Code · box'), findsOneWidget);
     for (final raw in [' · $_pane', _pane]) {
       expect(
         find.descendant(of: find.byType(PaneTopBar), matching: find.text(raw)),
@@ -273,7 +273,7 @@ void main() {
     final node = tester.getSemantics(inBar('title $_pane'));
     expect(node.label, contains('title $_pane'));
     expect(node.label, contains('Working'));
-    expect(node.label, contains('claude · box'));
+    expect(node.label, contains('Claude Code · box'));
     expect(node, isSemantics(isHeader: true));
     semantics.dispose();
     await teardown(tester);
@@ -286,7 +286,7 @@ void main() {
 
     await pumpPane(tester);
 
-    expect(inBar('claude'), findsOneWidget);
+    expect(inBar('Claude Code'), findsOneWidget);
     expect(inBar('box'), findsOneWidget,
         reason: 'the agent is not repeated on the subtitle line');
     await teardown(tester);

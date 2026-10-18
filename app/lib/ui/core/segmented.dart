@@ -161,7 +161,7 @@ class _SegmentedState<T> extends State<Segmented<T>> {
                         child: DecoratedBox(
                           decoration: BoxDecoration(
                             // Lighter than the track in both themes: white on the tint, the next rung up on ink.
-                            color: ds.brightness == Brightness.dark ? ds.fillPressed : ds.surface,
+                            color: ds.accentWash,
                             borderRadius: BorderRadius.circular(kMinTap / 2),
                           ),
                         ),
@@ -231,7 +231,8 @@ class _SegmentedState<T> extends State<Segmented<T>> {
     final ds = context.ds;
     // 1 under the capsule, 0 a cell away: the colour follows the capsule.
     final warm = (1 - (place - i).abs()).clamp(0.0, 1.0);
-    final color = Color.lerp(ds.textSecondary, ds.text, warm)!;
+    // Hue carries the choice, as on the tab bar: secondary ink to accent text.
+    final color = Color.lerp(ds.textSecondary, ds.accentText, warm)!;
     return PressBuilder(
       onTap: () {
         if (!selected) widget.onChanged(o.value);
@@ -259,9 +260,8 @@ class _SegmentedState<T> extends State<Segmented<T>> {
               Text(
                 '${o.count}',
                 style: Type.secondaryStrong.copyWith(
-                  // The capsule under the chosen cell is one rung lighter than the pill: on ink
-                  // textMuted is 4.3:1 there, so the chosen count steps up to textSecondary.
-                  color: selected ? ds.textSecondary : ds.textMuted,
+                  // The chosen count takes the chosen label's accent text.
+                  color: selected ? ds.accentText : ds.textMuted,
                   fontFeatures: Type.tabular,
                 ),
               ),
