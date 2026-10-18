@@ -53,6 +53,19 @@ void main() {
         }
       });
 
+      test('$name text reaches 4.5:1 on the switch: pill and capsule', () {
+        // The capsule is `surface` on paper and `fillPressed` on ink (Segmented).
+        final capsule = ds.isDark ? ds.fillPressed : ds.surface;
+        for (final bg in [ds.fill, capsule]) {
+          for (final c in [ds.text, ds.textSecondary]) {
+            expect(contrast(c, bg), greaterThanOrEqualTo(4.5), reason: '$c on $bg');
+          }
+        }
+        // An unchosen count sits on the pill, the chosen one on the capsule.
+        expect(contrast(ds.textMuted, ds.fill), greaterThanOrEqualTo(4.5));
+        expect(contrast(ds.textSecondary, capsule), greaterThanOrEqualTo(4.5));
+      });
+
       test('$name status text holds on its own tint', () {
         for (final base in [ds.bg, ds.surface]) {
           for (final (text, hue) in [(ds.blockedText, ds.blocked), (ds.dangerText, ds.danger)]) {
@@ -315,6 +328,120 @@ void main() {
         final b = tester.getCenter(find.text('Cd')).dx;
         final box = tester.getRect(find.byType(Segmented<int>));
         expect(b - a, closeTo(box.width / 2, 8));
+      });
+
+      /// The capsule under the chosen cell: `surface` on paper, `fillPressed` on ink.
+      Finder capsule(Ds ds) => find.descendant(
+            of: find.byType(Segmented<int>),
+            matching: find.byWidgetPredicate(
+              (w) => w is DecoratedBox && w.decoration is BoxDecoration && (w.decoration as BoxDecoration).color == (ds.isDark ? ds.fillPressed : ds.surface),
+            ),
+          );
+
+      for (final brightness in Brightness.values) {
+        testWidgets('the counts are readable on the pill and on the capsule (${brightness.name})', (tester) async {
+          final ds = brightness == Brightness.dark ? Ds.ink : Ds.paper;
+          await pumpCore(tester, switchOf(0, (_) {}, kinds: 2), brightness: brightness);
+          await tester.pumpAndSettle();
+          Color countColor(String s) => tester.widget<Text>(find.text(s)).style!.color!;
+          // Kind 0 is chosen (count 10, on the capsule); kind 1 is not (count 11, on the pill).
+          expect(contrast(countColor('10'), ds.isDark ? ds.fillPressed : ds.surface), greaterThanOrEqualTo(4.5));
+          expect(contrast(countColor('11'), ds.fill), greaterThanOrEqualTo(4.5));
+        });
+      }
+
+      testWidgets('a semantic label replaces what is spoken for that option', (tester) async {
+        final handle = tester.ensureSemantics();
+        await pumpCore(
+          tester,
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Segmented<int>(
+              value: 0,
+              onChanged: (_) {},
+              options: const [
+                SegmentOption(0, 'Pages', count: 3),
+                SegmentOption(1, 'Servers', count: 2, semanticLabel: 'Servers, 2, running'),
+              ],
+            ),
+          ),
+        );
+        expect(find.bySemanticsLabel('Servers, 2, running'), findsOneWidget);
+        expect(find.bySemanticsLabel('Servers, 2'), findsNothing);
+        expect(find.bySemanticsLabel('Pages, 3'), findsOneWidget);
+        handle.dispose();
+      });
+
+      testWidgets('a rebuild does not pull the row back from where the person dragged it', (tester) async {
+        Widget page(int bump) => Padding(
+              padding: const EdgeInsets.all(16),
+              child: Segmented<int>(
+                value: 3,
+                onChanged: (_) {},
+                options: [for (var i = 0; i < 4; i++) SegmentOption(i, 'Kind number $i', count: 10 + i + bump)],
+              ),
+            );
+        await pumpCore(tester, page(0));
+        await tester.pumpAndSettle();
+        final scrollable = find.descendant(of: find.byType(Segmented<int>), matching: find.byType(Scrollable));
+        double offset() => tester.state<ScrollableState>(scrollable).position.pixels;
+        final atChosen = offset();
+        expect(atChosen, greaterThan(0));
+        await tester.drag(find.byType(Segmented<int>), const Offset(400, 0));
+        await tester.pumpAndSettle();
+        final dragged = offset();
+        expect(dragged, lessThan(atChosen));
+        // A new asset arrives: same choice, new counts.
+        await pumpCore(tester, page(1));
+        await tester.pumpAndSettle();
+        expect(offset(), dragged);
+      });
+
+      testWidgets('no options draws nothing', (tester) async {
+        await pumpCore(tester, Segmented<int>(value: 0, onChanged: (_) {}, options: const []));
+        expect(tester.takeException(), isNull);
+        expect(tester.getSize(find.byType(Segmented<int>)), Size.zero);
+      });
+
+      testWidgets('a value that is none of the options shows no choice', (tester) async {
+        final handle = tester.ensureSemantics();
+        await pumpCore(
+          tester,
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Segmented<int>(value: 9, onChanged: (_) {}, options: const [SegmentOption(1, 'Key'), SegmentOption(2, 'Password')]),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        expect(capsule(Ds.paper), findsNothing);
+        expect(tester.getSemantics(find.text('Key')).flagsCollection.isSelected, Tristate.isFalse);
+        expect(tester.getSemantics(find.text('Password')).flagsCollection.isSelected, Tristate.isFalse);
+        handle.dispose();
+      });
+
+      testWidgets('with no width to share it is as wide as its content', (tester) async {
+        await pumpCore(
+          tester,
+          Align(
+            alignment: Alignment.topLeft,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [Segmented<int>(value: 0, onChanged: (_) {}, options: const [SegmentOption(0, 'Ab'), SegmentOption(1, 'Cd')])],
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        final box = tester.getRect(find.byType(Segmented<int>));
+        expect(box.width, lessThan(200));
+        expect(box.width, greaterThan(40));
+        // Every label sits inside the pill, none cut.
+        for (final s in ['Ab', 'Cd']) {
+          final r = tester.getRect(find.text(s));
+          expect(r.left, greaterThanOrEqualTo(box.left));
+          expect(r.right, lessThanOrEqualTo(box.right));
+        }
       });
     });
   });

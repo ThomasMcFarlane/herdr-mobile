@@ -1519,10 +1519,18 @@ dot before Servers while one runs). Same motion rule as the tab bar: the
 capsule slides (`Motion.standard`, a jump under reduced motion) and one number,
 its place, drives it and every label's colour, so a label warms as the capsule
 arrives and cools as it leaves; the weight never changes. No press scale, a
-selection haptic only on a real change. Cells are equal when every label fits;
-when one does not (320 dp, large text, four kinds) the row scrolls sideways with
-cells as wide as their labels and keeps the chosen one in view, so a label is
-never cut or squeezed. Text stops at 1.2x. Why this and not what it replaced:
+selection haptic only on a real change. Cells are equal when every label fits
+with its icon; else equal with the words alone; else the row scrolls sideways
+with cells as wide as their labels and keeps the chosen one in view (icons go
+first, so a label is never cut or squeezed). With the real font four kinds
+already scroll on phones under about 400 dp, so the scroll is the ordinary case
+there, not a corner. A rebuild (a new asset arrives) leaves the row where the
+person dragged it; it only brings the chosen cell into view when the choice or
+the width changes. A value that is none of the options shows no capsule and no
+selected cell, no options draws nothing, and in a parent with no width to share
+the pill is as wide as its content. The chosen count is `textSecondary`, not
+`textMuted`: on the capsule on ink `textMuted` is 4.3:1. Text stops at 1.2x.
+Why this and not what it replaced:
 the old control was a tinted track with a white thumb, a third look beside the
 tab bar's capsule and the board's chips; and a chip row for the Made sheet read
 as a filter, not as the sheet's switch (owner); underline tabs were a style the
