@@ -73,15 +73,22 @@ blocked, or you switch the setting off, the service stops and the old rule
 **While a page from a machine is open** (`WebPreviewScreen`: a dev server or
 an HTML file shown in herdr) the same service runs, whatever the setting and
 without the notification permission (Android runs it then, unseen in the
-shade): **"Keeping a page open"** over "herdr stays connected while the page
-is open", or "· a page open" after the agents' line. The page takes a hold on
-the fleet (`FleetRepository.holdAlive`) when it opens and lets it go when it
-closes; while any hold is on the connections are kept (background profile as
-above) and the 90 s rule waits. The notice starts at once, not on the 2 s
-debounce, because Android does not start it from the background. Agent
-sessions are not kept for a page. Why: in a Custom Tab herdr went to the
+shade), and names the page so you know what to close: **"Keeping
+localhost:8790 on devbox open"** over "Close it in herdr to let the
+connection go", or "· localhost:8790 on devbox open" after the agents' line
+("2 pages" for more). The page takes a hold on its machine
+(`FleetRepository.holdAlive`) when it opens and lets it go when it closes.
+Once the notice is up, that machine's connection is kept (background profile
+as above) and its 90 s rule waits; other machines follow their usual rule,
+and agent sessions are not kept for a page. If the notice could not start
+(Android refused it; iOS has none), nothing is kept: the 90 s rule applies,
+and the page says the connection dropped and opens again by itself when it
+is back. A page that opens is worth one more try of a refused start. The
+notice starts at once, not on the 2 s debounce, because Android does not
+start it from the background. Why: in a Custom Tab herdr went to the
 background, Android dropped the SSH connection, and the page waited on
-"Opening…" forever. Not yet measured on a phone.
+"Opening…" forever. There is no time limit: a page left open keeps its
+machine up until you close it. Not yet measured on a phone.
 
 Limits, plainly:
 

@@ -348,7 +348,7 @@ scrollback (herdr's limit). It is text only: no cursor or mouse.
 - **Links.** Web addresses and file paths in the output are underlined. A
   web link opens a sheet with the full address, `Open in browser` and
   `Copy link`. A plain `http` address that lives on the machine (like
-  `http://localhost:5173`) offers `Open on phone`: the page opens inside
+  `http://localhost:5173`) offers `Open page`: the page opens inside
   herdr, carried over your SSH connection (see "Pages from a machine" below);
   any other address on the machine can only be copied. A file path opens the
   file viewer.
@@ -507,17 +507,20 @@ shows recent changes in this folder only. Sorting, `Folders first` and
   was copied.
 
 **Pages from a machine.** A dev server an agent started, or an HTML file it
-wrote, opens as a page inside herdr: `Open on phone` on a `localhost` link,
+wrote, opens as a page inside herdr: `Open page` on a `localhost` link,
 a server or page in a session's `Made` sheet, or `Show as page` in the file
-viewer. The bar names the page and says where it is (`localhost:5173 ·
-devbox`); `Reload` and `⋯` sit on the right. Back goes back in the page
-first, then leaves. While the page is open herdr keeps its connection up,
-also when you switch apps or turn the screen off, with the Watching notice
-(below). A link to the web opens in your phone's browser, not in herdr.
-`⋯` holds `Copy link` (the address on the machine; `Copy path` for a file)
-and `Open in browser`, for a page that needs your phone's browser, such as a
-Google sign-in: it keeps working while the page stays open in herdr.
-A page that cannot load says why, with `Retry`.
+viewer. The bar names the page, with where it comes from in a pill under the
+title (`localhost:5173 · devbox`); `Reload` and `⋯` sit on the right. Back
+goes back in the page first, then leaves. While the page is open herdr keeps
+its machine's connection up, also when you switch apps or turn the screen
+off, with the Watching notice (below); if the connection drops anyway, the
+page says so and comes back by itself when it is up again. A link to the web
+never opens by itself: herdr says where it leads (`github.com isn't from
+devbox.`) and `Open` takes it to your phone's browser. `⋯` holds `Copy link`
+(the address on the machine; `Copy path` for a file) and `Open in browser`,
+for a page that needs your phone's browser, such as a Google sign-in: the
+browser's copy works only while the page stays open in herdr. A page that
+cannot load says why, with `Retry`.
 
 **Photos.** Pictures open in the photo viewer: pinch or double-tap to zoom,
 swipe sideways for the next photo, drag down to close. `Save or share` has
@@ -553,8 +556,9 @@ notifications are on and at least one agent is working or waiting, the app
 runs a quiet foreground service with a low-priority notice, `Watching N
 agents` (with `2 need you · 3 working` under it). It goes away when nothing is
 working or waiting, or when you turn notifications off. While a page from a
-machine is open it runs too, even with notifications off: `Keeping a page
-open`, or `· a page open` after the agents.
+machine is open it runs too, even with notifications off, and names the page:
+`Keeping localhost:5173 on devbox open`, or `· localhost:5173 on devbox open`
+after the agents. Close the page to let it go.
 
 **Cost.** While watching, the app keeps its connections open but quiet:
 status changes only, a heartbeat every 2 minutes, and a down machine retried
@@ -661,7 +665,8 @@ the ones you start from the phone. omp running in a pane is the exception
 
 **Do notifications drain the battery?** They keep a quiet "Watching" service
 alive while agents work, which costs some battery. It is off unless you turn
-notifications on.
+notifications on, or while a page from a machine is open in herdr (the
+notice names it; close the page to let it go).
 
 **Can I undo an answer?** No. Reviews can be undone, answers can't.
 

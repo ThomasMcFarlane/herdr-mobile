@@ -284,22 +284,36 @@ Tailscale.
     that map: it waits for itself.
   - Shown in herdr, not in a Custom Tab: with the tab in front herdr was in the
     background, Android dropped the SSH connection and the page sat on
-    "Opening…" (0.1.17, Samsung, Android 14). The screen holds the fleet up
-    while it is open (`FleetRepository.holdAlive`, the Watching notice; see
-    `docs/ALERTS.md`). `webview_flutter` 4.14 (`webview_flutter_android` 4.13,
-    minSdk 24, Flutter's default: no change).
+    "Opening…" (0.1.17, Samsung, Android 14). The screen holds its machine up
+    while it is open (`FleetRepository.holdAlive`, counted only while the
+    Watching notice is up; see `docs/ALERTS.md`). `webview_flutter` 4.14
+    (`webview_flutter_android` 4.13, minSdk 24, Flutter's default: no change).
+    Cleartext to `localhost`/`127.0.0.1` needs
+    `res/xml/network_security_config.xml` (Android 9+ refuses it by default;
+    unverified on a phone without it, added before the first release).
   - The Android plugin cancels every navigation a page starts and loads it
     again with `loadUrl` when the app allows it, so the entry page's refresh
-    adds a history entry instead of replacing it. Back that lands on an entry
-    URL goes on past it (`_skipEntry`) and its refresh is refused; a download
-    comes back as a second request for the same URL before any page starts,
-    which is refused (loading it again would loop). `test/support/fake_webview.dart`
-    models this; it is read from the plugin's code, not seen on a phone.
+    adds a history entry instead of replacing it. The screen counts the pages
+    behind the one shown (`_behind`) and leaves on Back when there is none, so
+    the entry page under the first page is never shown; one under a second
+    listener's page (opened from the `Open` toast) is covered and skipped
+    (`_skipEntry`). A page opened again (Retry, a connection back) starts its
+    own history: Back leaves after it. A file (download) comes back as a
+    second request for the same URL before any page starts, which is refused
+    with a word (loading it again would loop); a double tap on one link before
+    its page starts reads the same and gets the same word (no way to tell them
+    apart through the plugin). `test/support/fake_webview.dart` models all of
+    this; it is read from the plugin's code, not seen on a phone.
   - What the view loads is one pure rule, `webNavigation` (`web_navigation.dart`,
-    `docs/ARCHITECTURE.md` "Network traffic"). Copy link copies the page's
-    address on the machine (`WebPreview.machinePage`: the machine's port, never
-    the phone's listener port or token); Retry and Open in browser ask for the
-    listener again (`WebPreview.reopen`), which restarts one that stopped.
+    `docs/ARCHITECTURE.md` "Network traffic"). The plugin never asks about a
+    form POST or a frame, and sets `setSupportMultipleWindows(true)` with no
+    public switch: a `window.open` is asked about like any navigation. Copy
+    link copies the page's address on the machine (`WebPreview.machinePage`:
+    the machine's port, never the phone's listener port or token); Retry and
+    Open in browser ask for the listener again (`WebPreview.reopen`), which
+    restarts one that stopped. A single-page app's title is read again
+    `Dwell.titleSettle` after its route changes (frameworks set it after the
+    route renders).
 - **Made in this session** (`session_made.dart` in `data/acp`, the `Made` chip and
   sheet in `ui/features/agent_session`): the servers, pages, pictures and
   documents a session made, found by scanning the transcript, so a link printed an hour ago
@@ -993,7 +1007,11 @@ Notifications are local, optional and off by default (`NotificationSettings`,
 - While enabled and an agent is working or blocked, a quiet `specialUse`
   foreground service ("Watching N agents") keeps the process alive;
   `FleetRepository.keepAliveInBackground` and the session repository's
-  equivalent skip the 90 s suspend.
+  equivalent skip the 90 s suspend. The same service runs for a page from a
+  machine held open (`FleetRepository.holdAlive`), whatever the setting:
+  that keeps only the page's machine, and only once the notice is up
+  (`pageNotice`); without it (refused, or iOS) the 90 s rule applies and the
+  page says the connection dropped.
 - Back at the app's root moves the task to the background instead of finishing
   while watching (`PopScope` in `HomeShell`, `TaskMover`);
   `MainActivity.onDestroy` stops the service for any non-configuration
