@@ -13,6 +13,7 @@ import 'package:herdr_mobile/data/models/remote_file.dart';
 import 'package:herdr_mobile/data/models/web_bridge.dart';
 import 'package:herdr_mobile/data/observed/observed_contracts.dart' show SubagentInfo;
 import 'package:herdr_mobile/data/repositories/agent_session.dart' show AgentLink, SubagentEntry, SubagentState;
+import 'package:herdr_mobile/data/repositories/fleet_repository.dart';
 import 'package:herdr_mobile/data/repositories/machine_connection.dart';
 import 'package:herdr_mobile/data/services/herdr_api.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
@@ -20,6 +21,7 @@ import 'package:herdr_mobile/ui/features/agent_session/session_bar.dart';
 import 'package:herdr_mobile/ui/features/files/file_viewer_screen.dart';
 import 'package:herdr_mobile/ui/features/files/photo_thumbs.dart';
 import 'package:herdr_mobile/ui/features/photos/photo_viewer.dart';
+import 'package:herdr_mobile/ui/features/web/web_preview_screen.dart';
 import 'package:image/image.dart' as img;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher_platform_interface/link.dart';
@@ -28,6 +30,7 @@ import 'package:url_launcher_platform_interface/url_launcher_platform_interface.
 import '../support/fake_agent_session.dart';
 import '../support/fake_fs.dart';
 import '../support/fake_transport.dart';
+import '../support/fake_webview.dart';
 
 class _Launcher extends UrlLauncherPlatform {
   final opened = <String>[];
@@ -70,6 +73,8 @@ void main() {
   late FakeTransport transport;
   late FakeFs fs;
   late _Launcher launcher;
+  late FakeWebView web;
+  late FleetRepository fleet;
 
   var sessions = 0;
   FakeAgentSession session(List<TranscriptItem> items, {String? key}) {
@@ -87,7 +92,7 @@ void main() {
     tester.view.physicalSize = size * 2;
     tester.view.devicePixelRatio = 2;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(MaterialApp(theme: AppTheme.light(), home: Scaffold(body: SessionBar(session: s))));
+    await tester.pumpWidget(withFleet(fleet, MaterialApp(theme: AppTheme.light(), home: Scaffold(body: SessionBar(session: s)))));
     await _settle(tester);
   }
 
@@ -95,6 +100,9 @@ void main() {
     transport = FakeTransport();
     fs = FakeFs()..addFile('/home/dev/payments-api/reports/q3.html', '<h1>q3</h1>');
     launcher = _Launcher();
+    web = FakeWebView.install();
+    fleet = emptyFleet();
+    addTearDown(fleet.dispose);
     UrlLauncherPlatform.instance = launcher;
   });
 
@@ -143,7 +151,7 @@ void main() {
     expect(find.textContaining('Stopped'), findsOneWidget);
   });
 
-  testWidgets('a server opens on the phone through the connection, a page from its own folder', (tester) async {
+  testWidgets('a server opens in herdr through the connection, a page from its own folder', (tester) async {
     final s = session([_say('Serving http://localhost:5173/app'), _wrote('/home/dev/payments-api/reports/q3.html')]);
     await pumpBar(tester, s);
 
@@ -154,10 +162,15 @@ void main() {
     await tester.tap(find.text('localhost:5173/app'));
     await _settle(tester);
     expect(find.text('Made in this session'), findsNothing, reason: 'the sheet goes first');
+    expect(find.byType(WebPreviewScreen), findsOneWidget);
     expect(transport.webBridges.single, isA<PortForward>().having((p) => p.port, 'port', 5173));
-    expect(Uri.parse(launcher.opened.single).queryParameters['to'], '/app');
+    expect(web.loaded.first.queryParameters['to'], '/app');
+    expect(launcher.opened, isEmpty, reason: 'not the phone\'s browser');
 
-    await tester.pump(const Duration(seconds: 6)); // the toast that stood over the rows is gone
+    await tester.tap(find.byTooltip('Back'));
+    await _settle(tester);
+    expect(find.byType(WebPreviewScreen), findsNothing);
+    await tester.pump(const Duration(seconds: 1)); // the bar's rows settle before they take a tap
     await tester.tap(find.text('Made'));
     await _settle(tester);
     await tapChip(tester, 'Pages');
@@ -165,7 +178,7 @@ void main() {
     await tester.tap(find.text('q3.html'));
     await _settle(tester);
     expect(transport.webBridges.last, isA<StaticSite>().having((p) => p.root, 'root', '/home/dev/payments-api/reports'));
-    expect(Uri.parse(launcher.opened.last).queryParameters['to'], '/q3.html');
+    expect(web.loaded.last.path, '/q3.html', reason: 'the page itself, after the entry');
   });
 
   testWidgets('a page the agent named that is not on the machine says so', (tester) async {
@@ -178,7 +191,8 @@ void main() {
     await _settle(tester);
 
     expect(find.text('gone.html is not on the machine any more.'), findsOneWidget);
-    expect(launcher.opened, isEmpty);
+    expect(find.text('Retry'), findsOneWidget, reason: 'said on the page\'s screen, with a way on');
+    expect(web.loaded, isEmpty);
   });
 
   BackgroundWork runningVite() => BackgroundWork(
@@ -250,7 +264,7 @@ void main() {
     expect(find.text('Files are not available on this machine'), findsOneWidget);
   });
 
-  testWidgets('a tap says it is opening, and a second tap while it connects opens nothing more but says so', (tester) async {
+  testWidgets('a tap shows the page\'s screen at once, while the connection is made', (tester) async {
     final s = session([_say('Serving http://localhost:5173/')]);
     await pumpBar(tester, s);
     await tester.tap(find.text('Made'));
@@ -258,60 +272,15 @@ void main() {
     final gate = Completer<void>();
     transport.webGate = gate;
     await tester.tap(find.text('localhost:5173'));
-    await tester.pump(const Duration(milliseconds: 200));
-    expect(find.text('Opening localhost:5173…'), findsOneWidget);
-    // The toast's clock starts once it is in place; then it is gone from over the sheet's bottom row.
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.pump(const Duration(seconds: 6));
+    await _settle(tester);
+    expect(find.byType(WebPreviewScreen), findsOneWidget);
+    expect(find.text('localhost:5173'), findsOneWidget, reason: 'the address, until the page has a title');
+    expect(web.loaded, isEmpty);
 
-    // A second tap on the same row, from a reopened sheet, while it connects.
-    await tester.tap(find.text('Made'));
+    gate.complete();
     await _settle(tester);
-    await tester.tap(find.text('localhost:5173'));
-    await _settle(tester);
-    expect(find.text('Made in this session'), findsNothing, reason: 'the sheet closes like after any tap');
-    expect(find.text('Still opening localhost:5173…'), findsOneWidget, reason: 'not a tap that does nothing');
     expect(transport.webBridges, hasLength(1));
-
-    gate.complete();
-    await _settle(tester);
-    expect(launcher.opened, hasLength(1));
-  });
-
-  testWidgets('a person who tapped a row and went back is not sent to a browser seconds later', (tester) async {
-    final s = session([_say('Serving http://localhost:5173/')]);
-    final gate = Completer<void>();
-    transport.webGate = gate;
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.light(),
-        home: Builder(
-          builder: (context) => Scaffold(
-            body: Column(
-              children: [
-                SessionBar(session: s),
-                TextButton(onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const Scaffold(body: Text('board')))), child: const Text('go')),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-    tester.view.physicalSize = const Size(412, 892) * 2;
-    tester.view.devicePixelRatio = 2;
-    addTearDown(tester.view.reset);
-    await _settle(tester);
-    await tester.tap(find.text('Made'));
-    await _settle(tester);
-    await tester.tap(find.text('localhost:5173'));
-    await tester.pump();
-
-    // The screen the sheet came from goes away while the connection is made.
-    await tester.pumpWidget(MaterialApp(theme: AppTheme.light(), home: const Scaffold(body: Text('board'))));
-    gate.complete();
-    await _settle(tester);
-
-    expect(launcher.opened, isEmpty);
+    expect(web.loaded, isNotEmpty);
   });
 
   testWidgets('a name that hides itself is shown with its characters made visible', (tester) async {
@@ -589,7 +558,7 @@ void main() {
     expect(launcher.opened, isEmpty);
   });
 
-  testWidgets('a page still opens in the browser from its tab', (tester) async {
+  testWidgets('a page opens in herdr from its tab', (tester) async {
     await openSheet(tester, session(mixed()));
     await tapChip(tester, 'Pages');
     await _settle(tester);
@@ -597,7 +566,7 @@ void main() {
     await _settle(tester);
 
     expect(transport.webBridges.last, isA<StaticSite>().having((p) => p.root, 'root', '$base/reports'));
-    expect(Uri.parse(launcher.opened.last).queryParameters['to'], '/two.html');
+    expect(web.loaded.first.queryParameters['to'], '/two.html');
   });
 
   testWidgets('a long list shows the first 60 and a row for the rest; tapping it shows the next batch', (tester) async {

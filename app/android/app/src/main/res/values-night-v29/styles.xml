@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The same window as values/styles.xml, marked dark in the phone's night
+         mode. Flutter draws every pixel itself, so for herdr's own screens
+         this changes nothing; it is what an embedded WebView reads for the
+         page's `prefers-color-scheme` (Android 13+ ties it to the theme's
+         isLightTheme): a page from a machine shown in herdr
+         (WebPreviewScreen) is dark when the phone is, as it was in the
+         phone's browser. Not yet seen on a phone. -->
+    <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">@color/herdr_bg</item>
+        <item name="android:isLightTheme">false</item>
+    </style>
+</resources>

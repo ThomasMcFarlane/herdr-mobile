@@ -194,4 +194,43 @@ void main() {
       expect(transport.webBridges, isEmpty);
     });
   });
+
+  group('the pages a machine\'s listeners show', () {
+    test('a forward\'s page reads as the machine has it, on the machine\'s own port', () async {
+      transport.webInfo = const WebBridgeInfo(port: 51111, token: '0123456789abcdef0123456789abcdef', entryPort: 51999);
+      await web.forwardUrl(Uri.parse('http://localhost:3000/'));
+      expect(web.ports, {51111, 51999});
+
+      final page = web.machinePage(Uri.parse('http://localhost:51111/page2.html?q=1#b'))!;
+      expect(page.address, 'http://localhost:3000/page2.html?q=1#b', reason: 'never the phone\'s port or token');
+      expect(page.label, 'localhost:3000/page2.html');
+      expect(web.machinePage(Uri.parse('http://localhost:51111/'))!.label, 'localhost:3000');
+    });
+
+    test('a static site\'s page is the file on the machine', () async {
+      await web.staticUrl(_file('/home/dev/site/index.html'));
+      final page = web.machinePage(Uri.parse('http://localhost:${transport.webInfo.port}/sub/My%20Page.html'))!;
+      expect(page.address, '/home/dev/site/sub/My Page.html');
+      expect(page.label, 'My Page.html');
+    });
+
+    test('an entry URL, another port and another name are no page of the machine', () async {
+      await web.staticUrl(_file('/home/dev/site/index.html'));
+      final port = transport.webInfo.port;
+      expect(web.machinePage(Uri.parse('http://localhost:$port/__herdr/open?t=x&to=/')), isNull);
+      expect(web.machinePage(Uri.parse('http://localhost:${port + 1}/')), isNull);
+      expect(web.machinePage(Uri.parse('http://example.com:$port/')), isNull);
+    });
+
+    test('reopen asks for the listener again and enters at the same page with a fresh cookie', () async {
+      transport.webInfo = const WebBridgeInfo(port: 51111, token: '0123456789abcdef0123456789abcdef', entryPort: 51999);
+      await web.forwardUrl(Uri.parse('http://localhost:3000/'));
+      final entry = await web.reopen(Uri.parse('http://localhost:51111/page2.html?q=1#b'));
+      expect(transport.webBridges, hasLength(2));
+      expect(transport.webBridges.last.key, 'f|localhost|3000');
+      expect((entry.port, entry.path), (51999, '/__herdr/open'));
+      expect(entry.queryParameters['to'], '/page2.html?q=1#b');
+      await expectLater(web.reopen(Uri.parse('http://localhost:4000/')), throwsA(isA<WebPreviewException>()));
+    });
+  });
 }

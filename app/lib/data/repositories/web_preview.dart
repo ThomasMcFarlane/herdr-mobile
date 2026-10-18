@@ -13,10 +13,42 @@ class WebPreviewException implements Exception {
   String toString() => message;
 }
 
-/// Gives the phone's own browser a URL for something an agent made on a
-/// machine: an HTML file from its folder (read over SFTP), or a dev server
-/// link on the machine (carried over SSH). The URL is a loopback address the
-/// app listens on; see `WebBridgeHost`.
+/// A page shown through one of a machine's listeners, as the person knows it
+/// on the machine: a dev server address ([url], with the machine's own port
+/// even when the phone's listener got another) or a file of a served folder
+/// ([file]). Never the phone's address, which carries no meaning elsewhere.
+class MachinePage {
+  const MachinePage.server(Uri this.url) : file = null;
+  const MachinePage.file(String this.file) : url = null;
+
+  /// `http://localhost:8790/page2.html`.
+  final Uri? url;
+
+  /// `/home/dev/site/page2.html`.
+  final String? file;
+
+  /// What Copy link (or Copy path) copies.
+  String get address => url?.toString() ?? file!;
+
+  /// Where it is, short: `localhost:8790`, or the file's name.
+  String get place => switch (url) {
+        final u? => u.hasPort ? '${u.host}:${u.port}' : u.host,
+        null => RemotePath.basename(file!),
+      };
+
+  /// The page without a title: `localhost:8790/page2.html` (the root is the
+  /// bare host and port), or the file's name.
+  String get label => switch (url) {
+        final u? => u.path.isEmpty || u.path == '/' ? place : '$place${u.path}',
+        null => place,
+      };
+}
+
+/// Gives the app a URL for something an agent made on a machine: an HTML
+/// file from its folder (read over SFTP), or a dev server link on the
+/// machine (carried over SSH). The URL is a loopback address the app listens
+/// on (see `WebBridgeHost`), shown in the app (`WebPreviewScreen`) or, on
+/// request, in the phone's browser.
 class WebPreview {
   WebPreview(this._transport, {required this.machineName});
 
@@ -24,6 +56,16 @@ class WebPreview {
 
   /// Only for the pages the listener shows when something goes wrong.
   final String machineName;
+
+  /// What each listener opened for this machine shows, by its port on the
+  /// phone (the newest wins when a port is used again), and the ports that
+  /// answer entry URLs: the pages of this machine an in-app page may go to.
+  final _specs = <int, WebBridgeSpec>{};
+  final _entryPorts = <int>{};
+
+  /// The phone's ports of every listener opened for this machine, entry
+  /// listeners included.
+  Set<int> get ports => {..._specs.keys, ..._entryPorts};
 
   /// Whether a link can be opened on the phone through [forwardUrl]: plain
   /// `http` to the machine itself, spelled `localhost`, `127.0.0.1`, `[::1]`,
@@ -82,14 +124,55 @@ class WebPreview {
     return _entry(info, link.hasQuery ? '$path?${link.query}' : path, link.hasFragment ? _decoded(link.fragment) : null);
   }
 
+  /// [url], a page the phone shows from one of this machine's listeners, as
+  /// it is on the machine; null for anything else, the entry URL included.
+  MachinePage? machinePage(Uri url) {
+    if (url.scheme != 'http' || !_isListenerHost(url.host) || isEntryUrl(url)) return null;
+    return switch (_specs[url.port]) {
+      PortForward(:final host, :final port) => MachinePage.server(url.replace(host: host, port: port)),
+      StaticSite(:final root) => MachinePage.file(
+          url.pathSegments.every((s) => s.isEmpty) ? root : RemotePath.join(root, url.pathSegments.join('/')),
+        ),
+      null => null,
+    };
+  }
+
+  /// The entry URL that shows [url] (a page of one of this machine's
+  /// listeners) again: the listener is asked for again, so one that stopped
+  /// (10 minutes of nothing, or a new connection) starts, and the browser
+  /// gets its cookie anew. For Retry after a failed load and for a page
+  /// handed to the phone's browser, which has none of the app's cookies.
+  Future<Uri> reopen(Uri url) async {
+    final spec = url.scheme == 'http' && _isListenerHost(url.host) ? _specs[url.port] : null;
+    if (spec == null) {
+      throw const WebPreviewException("Couldn't open on this phone: herdr did not open this page.");
+    }
+    final info = await _open(spec);
+    final path = url.path.isEmpty ? '/' : url.path;
+    return _entry(info, url.hasQuery ? '$path?${url.query}' : path, url.hasFragment ? _decoded(url.fragment) : null);
+  }
+
+  /// Whether [url] is the one URL that carries a listener's token
+  /// (`/__herdr/open`), which sends the browser on to the page.
+  static bool isEntryUrl(Uri url) => url.path == _entryPath;
+
+  static const _entryPath = '/__herdr/open';
+
+  /// The names a listener answers to (it checks the Host header).
+  static bool _isListenerHost(String host) => host == 'localhost' || host == '127.0.0.1';
+
   Future<WebBridgeInfo> _open(WebBridgeSpec spec) async {
+    final WebBridgeInfo info;
     try {
-      return await _transport.openWebBridge(spec);
+      info = await _transport.openWebBridge(spec);
     } on HerdrTransportException catch (e) {
       throw WebPreviewException(_sentence(e.message));
     } on RemoteFileException catch (e) {
       throw WebPreviewException(_sentence(e.message));
     }
+    _specs[info.port] = spec;
+    _entryPorts.add(info.entryPort);
+    return info;
   }
 
   /// A [Uri] holds its fragment encoded and encodes it again when it is built
@@ -123,7 +206,7 @@ class WebPreview {
         scheme: 'http',
         host: 'localhost',
         port: info.entryPort,
-        path: '/__herdr/open',
+        path: _entryPath,
         queryParameters: {
           't': info.token,
           'to': fragment == null || fragment.isEmpty ? to : '$to${Uri(fragment: fragment)}',

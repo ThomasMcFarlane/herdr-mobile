@@ -1,7 +1,7 @@
 // Renders what opens pages on the phone to PNGs for review: the link sheet for
 // an address on the machine (long machine name, long address), for an https one
 // on the machine, with no machine and for a public one, and the file viewer for
-// an HTML file (the globe in the header) and an SVG (Open in browser above
+// an HTML file (the globe in the header) and an SVG (Show as page above
 // View as text), and the session's Web sheet (chip in the bar, servers and
 // pages newest first). Light and dark at 412x892, and 320x640 at 1.6 text scale. Off
 // by default; it writes files:

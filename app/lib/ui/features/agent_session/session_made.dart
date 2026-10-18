@@ -12,15 +12,14 @@ import '../../../data/models/remote_file.dart';
 import '../../../data/models/web_bridge.dart' show sensitiveServiceOf;
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/machine_connection.dart' show LinkState;
-import '../../../data/repositories/web_preview.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
-import '../../support/open_link.dart';
 import '../../../data/words/elapsed.dart';
 import '../../../data/words/plural.dart';
 import '../files/files_navigation.dart' show machineSupportsFiles, openRemoteFile;
 import '../files/photo_files.dart' show photoRoute;
 import '../files/photo_grid.dart' show PhotoThumbFace;
 import '../files/photo_thumbs.dart' show PhotoThumbs;
+import '../web/web_preview_screen.dart';
 import 'session_select.dart';
 import '../../render/visible_text.dart';
 
@@ -340,12 +339,12 @@ class _MoreRow extends StatelessWidget {
 }
 
 /// Rows being opened, so a second tap while the connection is made does not
-/// start a second open and a second browser tab.
+/// start a second open and a second viewer.
 final _opening = <String>{};
 
-/// Closes the sheet, then opens [asset]: a server or page in the phone's
-/// browser (saying it is opening; a failure replaces the toast with its
-/// reason), a picture in the photo viewer and a document in the file viewer.
+/// Closes the sheet, then opens [asset]: a server or page as a page in herdr
+/// (the page's screen goes up at once and says there if it cannot open), a
+/// picture in the photo viewer and a document in the file viewer.
 Future<void> openMadeAsset(BuildContext sheet, BuildContext opener, AgentSessionView session, MadeAsset asset) async {
   final toaster = Toaster.of(sheet);
   final navigator = Navigator.of(opener);
@@ -386,18 +385,11 @@ Future<void> openMadeAsset(BuildContext sheet, BuildContext opener, AgentSession
         final stat = await machine.files.stat(await machine.files.resolve(asset.path!, cwd: session.cwd));
         if (!opener.mounted) return;
         unawaited(navigator.push(photoRoute<void>(machine, stat, listSiblings: false)));
-      case MadeKind.server || MadeKind.page:
-        toaster.show('Opening ${visibleText(asset.title)}…');
-        final entry = asset.kind == MadeKind.server
-            ? await machine.web.forwardUrl(asset.url!, onNote: (note) => toaster.show(note))
-            : await machine.web.staticUrl(
-                await machine.files.stat(await machine.files.resolve(asset.path!, cwd: session.cwd)),
-              );
-        if (!opener.mounted) return;
-        if (!await openPreviewUrl(entry)) failed('Couldn’t open on this phone: no browser could open it.');
+      case MadeKind.server:
+        if (opener.mounted) unawaited(openWebPreview(opener, machine, ServerPage(asset.url!)));
+      case MadeKind.page:
+        if (opener.mounted) unawaited(openWebPreview(opener, machine, FilePage(asset.path!, cwd: session.cwd)));
     }
-  } on WebPreviewException catch (e) {
-    failed(e.message);
   } on RemoteFileException catch (e) {
     failed(
       e.kind == RemoteFileErrorKind.notFound

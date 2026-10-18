@@ -33,7 +33,10 @@ Future<bool> openTappedLink(String url) async {
 }
 
 /// Opens a page the app itself serves on the phone's loopback address (see
-/// `WebBridgeHost`) in the same browser tab as any link.
+/// `WebBridgeHost`) in the same browser tab as any link: `Open in browser`
+/// on a page shown in the app (`WebPreviewScreen`), for what an embedded view
+/// cannot do, such as a Google sign-in. The page works only while herdr
+/// keeps its connection, which that screen holds while it is open.
 ///
 /// Only `http` to `localhost` or `127.0.0.1` is accepted, the one shape those
 /// URLs have: [openInBrowser] and [openTappedLink] stay as they were (a
