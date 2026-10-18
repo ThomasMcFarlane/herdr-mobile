@@ -205,7 +205,8 @@ class _HomeShellState extends State<HomeShell> with RestorationMixin, SingleTick
           ),
           // The scrim under the tab bar (see [FloatingBarScrim]). Picking
           // agents puts the board's own action bar, with its own scrim, in the
-          // tab bar's place.
+          // tab bar's place, and only on the board: picking belongs to it.
+          // The two swap in place with a fade.
           Positioned(
             left: 0,
             right: 0,
@@ -213,7 +214,11 @@ class _HomeShellState extends State<HomeShell> with RestorationMixin, SingleTick
             height: FloatingBar.clearance(context),
             child: ValueListenableBuilder<bool>(
               valueListenable: _selecting,
-              builder: (context, selecting, child) => selecting ? const SizedBox.shrink() : child!,
+              builder: (context, selecting, child) => BottomStackTransition(
+                visible: !(selecting && index == _agents),
+                slide: false,
+                builder: (_) => child!,
+              ),
               child: const FloatingBarScrim(),
             ),
           ),
@@ -223,7 +228,11 @@ class _HomeShellState extends State<HomeShell> with RestorationMixin, SingleTick
             bottom: 0,
             child: ValueListenableBuilder<bool>(
               valueListenable: _selecting,
-              builder: (context, selecting, child) => selecting ? const SizedBox.shrink() : child!,
+              builder: (context, selecting, child) => BottomStackTransition(
+                visible: !(selecting && index == _agents),
+                slide: false,
+                builder: (_) => child!,
+              ),
               child: ListenableBuilder(
                 listenable: widget.update ?? _noUpdate,
                 builder: (context, _) => FloatingTabBar(

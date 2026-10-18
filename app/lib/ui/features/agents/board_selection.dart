@@ -138,17 +138,6 @@ class SelectableRowFrame extends StatelessWidget {
   }
 }
 
-/// Shows [child] only while the board is not picking (the triage pill).
-class HideWhileSelecting extends StatelessWidget {
-  const HideWhileSelecting({super.key, required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) =>
-      context.select<BoardSelection?, bool>((s) => s?.active ?? false) ? const SizedBox.shrink() : child;
-}
-
 /// The picked agents as they are right now: the terminal agents by section,
 /// then the agent sessions. A pane or session that is gone is simply not
 /// there.

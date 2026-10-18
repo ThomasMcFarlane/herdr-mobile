@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -99,9 +97,9 @@ class _TabItem extends StatelessWidget {
   }
 }
 
-/// `3 / 5 · Clear · Attach (3)`: slides up (transform and opacity, 200 ms)
-/// above the tab bar as soon as one thing is picked in any tab, and away when
-/// the tray is empty again.
+/// `3 / 5 · Clear · Attach (3)`: a lane of the bottom stack above the attach
+/// sheet's tab pill, there as soon as one thing is picked in any tab and away
+/// when the tray is empty again ([BottomStackTransition]).
 class AttachActionBar extends StatefulWidget {
   const AttachActionBar({super.key, required this.tray, required this.onAttach});
 
@@ -112,8 +110,8 @@ class AttachActionBar extends StatefulWidget {
   State<AttachActionBar> createState() => _AttachActionBarState();
 }
 
-class _AttachActionBarState extends State<AttachActionBar> with SingleTickerProviderStateMixin {
-  late final AnimationController _slide = AnimationController(vsync: this, duration: Motion.standard, value: widget.tray.isEmpty ? 0 : 1);
+class _AttachActionBarState extends State<AttachActionBar> {
+  /// The count while it leaves: the last one it showed.
   var _count = 0;
 
   @override
@@ -124,27 +122,13 @@ class _AttachActionBarState extends State<AttachActionBar> with SingleTickerProv
   }
 
   void _onTray() {
-    final n = widget.tray.length;
-    if (n > 0) _count = n;
-    final reduced = Motion.reduced(context);
-    if (n > 0) {
-      if (reduced) {
-        _slide.value = 1;
-      } else {
-        unawaited(_slide.forward().catchError((Object _) {}));
-      }
-    } else if (reduced) {
-      _slide.value = 0;
-    } else {
-      unawaited(_slide.reverse().catchError((Object _) {}));
-    }
+    if (widget.tray.length > 0) _count = widget.tray.length;
     setState(() {});
   }
 
   @override
   void dispose() {
     widget.tray.removeListener(_onTray);
-    _slide.dispose();
     super.dispose();
   }
 
@@ -152,60 +136,45 @@ class _AttachActionBarState extends State<AttachActionBar> with SingleTickerProv
   Widget build(BuildContext context) {
     final ds = context.ds;
     final tray = widget.tray;
-    return AnimatedBuilder(
-      animation: _slide,
-      builder: (context, _) {
-        if (_slide.isDismissed) return const SizedBox(width: double.infinity);
-        final count = tray.isEmpty ? _count : tray.length;
-        Widget bar = MediaQuery.withClampedTextScaling(
-          maxScaleFactor: kBarTextScale,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(FloatingBar.side, 0, FloatingBar.side, Gap.sm),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: ds.surface,
-                // Not the pill's stadium: the compact buttons sit 10 dp inside
-                // it, and a 28 dp radius would cut their corners.
-                borderRadius: BorderRadius.circular(Radii.md + 4),
-                border: Border.all(color: ds.hairline),
-                boxShadow: ds.floatShadow,
-              ),
-              child: SizedBox(
-                height: FloatingBar.height,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: Gap.xs, right: Gap.sm),
-                  child: Row(
-                    children: [
-                      AppButton(label: 'Clear', kind: AppButtonKind.ghost, compact: true, onPressed: tray.clear),
-                      Expanded(
-                        child: Semantics(
-                          liveRegion: true,
-                          child: Text(
-                            '$count / ${tray.capacity}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Type.secondary.copyWith(color: ds.textSecondary, fontFeatures: Type.tabular),
-                          ),
-                        ),
+    final count = tray.isEmpty ? _count : tray.length;
+    return BottomStackTransition(
+      visible: !tray.isEmpty,
+      builder: (_) => FloatingBarSlot(
+        aboveInset: false,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: ds.surface,
+            // Not the pill's stadium: the compact buttons sit inside it, and a
+            // 28 dp radius would cut their corners.
+            borderRadius: BorderRadius.circular(Radii.lg),
+            border: Border.all(color: ds.hairline),
+            boxShadow: ds.floatShadow,
+          ),
+          child: SizedBox(
+            height: FloatingBar.height,
+            child: Padding(
+              padding: const EdgeInsets.only(left: Gap.xs, right: Gap.sm),
+              child: Row(
+                children: [
+                  AppButton(label: 'Clear', kind: AppButtonKind.ghost, compact: true, onPressed: tray.clear),
+                  Expanded(
+                    child: Semantics(
+                      liveRegion: true,
+                      child: Text(
+                        '$count / ${tray.capacity}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Type.secondary.copyWith(color: ds.textSecondary, fontFeatures: Type.tabular),
                       ),
-                      AppButton(label: 'Attach ($count)', icon: LucideIcons.paperclip, onPressed: widget.onAttach, compact: true),
-                    ],
+                    ),
                   ),
-                ),
+                  AppButton(label: 'Attach ($count)', icon: LucideIcons.paperclip, onPressed: widget.onAttach, compact: true),
+                ],
               ),
             ),
           ),
-        );
-        if (_slide.value < 1) {
-          final t = Motion.easeOut.transform(_slide.value);
-          final reduced = Motion.reduced(context);
-          bar = Opacity(
-            opacity: t,
-            child: reduced ? bar : Transform.translate(offset: Offset(0, (1 - t) * 24), child: bar),
-          );
-        }
-        return IgnorePointer(ignoring: tray.isEmpty, child: bar);
-      },
+        ),
+      ),
     );
   }
 }

@@ -76,7 +76,7 @@ class MachinesScreen extends StatelessWidget {
                       machine: connections[i],
                     ),
                   ),
-                  SliverToBoxAdapter(child: SizedBox(height: FloatingBar.clearance(context))),
+                  SliverToBoxAdapter(child: SizedBox(height: FloatingBar.listEnd(context))),
                 ],
               ],
             ),

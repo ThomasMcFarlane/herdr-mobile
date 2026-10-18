@@ -629,9 +629,10 @@ void main() {
 
       testWidgets('the text warms as the capsule arrives under it and cools as it leaves, in step with it', (tester) async {
         Color colour(String label) => tester.widget<Text>(find.text(label)).style!.color!;
-        // 0 at textSecondary, 1 at text, read off the red channel.
+        // 0 at textSecondary, 1 at accentText, read off the blue channel
+        // (the one that moves most between them).
         double warmth(String label) =>
-            (colour(label).r - Ds.paper.textSecondary.r) / (Ds.paper.text.r - Ds.paper.textSecondary.r);
+            (colour(label).b - Ds.paper.textSecondary.b) / (Ds.paper.accentText.b - Ds.paper.textSecondary.b);
         // 1 with the capsule centred on the cell, 0 a cell or more away.
         double under(WidgetTester tester, String label) {
           final c = cell(tester, label);

@@ -16,6 +16,7 @@ import 'package:herdr_mobile/ui/features/agents/agent_session_rows.dart';
 import 'package:herdr_mobile/ui/features/agents/batch_actions_sheet.dart';
 import 'package:herdr_mobile/ui/features/agents/triage_pill.dart';
 import 'package:herdr_mobile/ui/shell/home_shell.dart';
+import 'package:herdr_mobile/ui/support/home_tabs.dart';
 import 'package:provider/provider.dart';
 
 import '../support/fake_agent_session.dart';
@@ -87,6 +88,7 @@ Future<void> _pump(
   double textScale = 1,
   Brightness brightness = Brightness.dark,
   double bottomInset = 0,
+  HomeTabs? tabs,
 }) async {
   tester.view
     ..physicalSize = Size(width, height) * 2
@@ -108,7 +110,7 @@ Future<void> _pump(
           data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
           child: child!,
         ),
-        home: const HomeShell(),
+        home: HomeShell(tabs: tabs),
       ),
     ),
   );
@@ -224,6 +226,42 @@ void main() {
       expect(find.textContaining('selected'), findsNothing);
       expect(find.byType(HomeShell), findsOneWidget);
       expect(find.byType(FloatingTabBar), findsOneWidget);
+      await teardownBoard(tester, h);
+    });
+
+    testWidgets('leaving the board ends picking: the tab bar is never left hidden over another tab', (tester) async {
+      final tabs = HomeTabs();
+      final h = await _studio([_pane(1, 'working'), _pane(2, 'blocked')]);
+      await _pump(tester, h, tabs: tabs);
+      await _longPress(tester, _row('task 1'));
+      expect(find.byType(FloatingTabBar), findsNothing, reason: 'the action bar takes its place on the board');
+
+      tabs.select(HomeTab.machines);
+      await _settle(tester);
+      expect(find.byType(FloatingTabBar), findsOneWidget, reason: 'Machines has its tab bar');
+      expect(find.text('Cancel'), findsNothing);
+
+      tabs.select(HomeTab.agents);
+      await _settle(tester);
+      expect(find.textContaining('selected'), findsNothing, reason: 'picking ended when the board was left');
+      expect(find.byType(FloatingTabBar), findsOneWidget);
+      await teardownBoard(tester, h);
+    });
+
+    testWidgets('a toast stands above the triage pill, never over it', (tester) async {
+      final h = await _studio([_pane(1, 'working'), _pane(2, 'blocked')]);
+      await _pump(tester, h, width: 412, height: 892);
+      for (final scale in [1.0, 2.0]) {
+        await _pump(tester, h, width: scale == 1 ? 412 : 320, height: scale == 1 ? 892 : 640, textScale: scale);
+        Toaster.of(tester.element(find.byType(TriagePill))).show('Marked reviewed', action: ToastAction('Undo', () {}));
+        await _settle(tester);
+        final toast = tester.getRect(find.byKey(toastKey));
+        final pill = tester.getRect(find.byType(TriagePill));
+        final bar = tester.getRect(find.byType(FloatingTabBar));
+        expect(toast.bottom, lessThanOrEqualTo(pill.top - 8), reason: 'x$scale: 8 above the pill');
+        expect(pill.bottom, lessThanOrEqualTo(bar.top - 8 + 0.01), reason: 'x$scale: the pill 8 above the bar');
+        await tester.pump(const Duration(seconds: 6));
+      }
       await teardownBoard(tester, h);
     });
 

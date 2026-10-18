@@ -567,7 +567,8 @@ void main() {
       expect(find.text('3 need you'), findsOneWidget);
 
       h.network.goOffline();
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300)); // it leaves like every lane
       expect(find.byType(TriagePill), findsNothing, reason: 'offline: nothing can be answered');
       h.network.goOnline();
       await teardownBoard(tester, h);

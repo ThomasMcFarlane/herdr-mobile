@@ -25,10 +25,14 @@ class SelectionHeader extends StatelessWidget {
     final state = context.select<BoardSelection?, ({bool active, int count, bool busy})>(
       (s) => (active: s?.active ?? false, count: s?.count ?? 0, busy: s?.busy != null),
     );
-    if (!state.active) return const SizedBox.shrink();
+    final selection = context.read<BoardSelection?>();
+    if (selection == null) return const SizedBox.shrink();
     final ds = context.ds;
-    final selection = context.read<BoardSelection>();
-    return MediaQuery.withClampedTextScaling(
+    // It comes and goes with a fade, as the batch bar does below.
+    return BottomStackTransition(
+      visible: state.active,
+      slide: false,
+      builder: (context) => MediaQuery.withClampedTextScaling(
       maxScaleFactor: kBarTextScale,
       child: Container(
         color: ds.bg,
@@ -71,6 +75,7 @@ class SelectionHeader extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 }
@@ -90,12 +95,16 @@ class BatchActionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final selection = context.watch<BoardSelection?>();
-    if (selection == null || !selection.active) return const SizedBox.shrink();
+    if (selection == null) return const SizedBox.shrink();
     final clearance = FloatingBar.clearance(context);
     // Toasts stand above it, as above the tab bar it replaces. The shell hides
     // its scrim with the tab bar, and the board sits under the shell's
-    // overlays, so the bar brings its own.
-    return ToastShelf(
+    // overlays, so the bar brings its own. It swaps with the tab bar in place:
+    // a fade, no slide.
+    return BottomStackTransition(
+      visible: selection.active,
+      slide: false,
+      builder: (context) => ToastShelf(
       lift: clearance,
       child: SizedBox(
         height: clearance,
@@ -111,6 +120,7 @@ class BatchActionBar extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

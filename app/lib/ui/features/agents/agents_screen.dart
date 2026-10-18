@@ -143,13 +143,21 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
 
   /// Tells the sessions when the tab is on screen: they list their hosts
   /// every minute only then.
+  ///
+  /// Picking belongs to the board: leaving the tab ends it (unless a batch is
+  /// running), so the tab bar is never left hidden over another tab.
   void _reportVisible(bool visible) {
     if (_reportedVisible == visible) return;
     _reportedVisible = visible;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _sessions?.setBoardVisible(_reportedVisible ?? false);
+      if (!mounted) return;
+      _sessions?.setBoardVisible(_reportedVisible ?? false);
+      if (_reportedVisible == false && _selection.active && _selection.busy == null) _selection.cancel();
     });
   }
+
+  /// The pill's count while it leaves: the last one it showed.
+  int _pillCount = 0;
 
   /// An explicit choice, from what the board shows now (which `auto` may have
   /// decided): the other look, and it stays.
@@ -227,8 +235,7 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
     final troubled = overview.troubled;
     final blockedCount = attention.needsYou.length;
     final review = attention.toReview.length;
-    // Room under the last row for the floating triage pill.
-    final pillSpace = blockedCount == 0 ? 0.0 : TriagePill.height + Gap.md;
+    if (blockedCount > 0) _pillCount = blockedCount;
 
     // What All picks: the rows the board shows (open sections, this filter),
     // and what a pane that went away takes out of the selection.
@@ -371,7 +378,9 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
                   ),
               },
             ),
-            SliverToBoxAdapter(child: SizedBox(height: clearance + pillSpace)),
+            // Room under the last row for the lanes: the Dock, and the Pin
+            // (the triage pill) while it shows.
+            SliverToBoxAdapter(child: SizedBox(height: FloatingBar.listEnd(context, pin: blockedCount > 0))),
           ],
         ],
       ),
@@ -404,23 +413,37 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
                 onAction: (action) => unawaited(performBatchAction(context, action, _selection)),
               ),
             ),
-            if (blockedCount > 0)
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: clearance,
-                child: Center(
-                  child: HideWhileSelecting(
-                    child: TriagePill(
-                      count: blockedCount,
-                      review: review,
-                      // The sheet walks the same set, in the same order:
-                      // terminal agents and agent sessions.
-                      onTap: () => showTriageSheet(context),
+            // The Pin lane: 8 above the Dock, in the Dock's slot (the same
+            // side margins and width), toasts standing above it while it
+            // shows. It comes and goes like every lane, and steps aside while
+            // the board picks.
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: ListenableBuilder(
+                listenable: _selection,
+                builder: (context, child) => BottomStackTransition(
+                  visible: blockedCount > 0 && !_selection.active,
+                  builder: (_) => child!,
+                ),
+                child: FloatingBarSlot(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: FloatingBar.height + FloatingBar.margin),
+                    child: ToastShelf(
+                      lift: FloatingBar.pinLift(context),
+                      child: TriagePill(
+                        count: _pillCount,
+                        review: review,
+                        // The sheet walks the same set, in the same order:
+                        // terminal agents and agent sessions.
+                        onTap: () => showTriageSheet(context),
+                      ),
                     ),
                   ),
                 ),
               ),
+            ),
           ],
         ),
       ),

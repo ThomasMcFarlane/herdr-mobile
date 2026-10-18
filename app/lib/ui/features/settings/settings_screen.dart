@@ -133,7 +133,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onToggle: () => _toggle(_Open.about),
                 ),
               ),
-              GapRow(id: 'clearance', height: FloatingBar.clearance(context) + Gap.md),
+              GapRow(id: 'clearance', height: FloatingBar.listEnd(context)),
             ],
           ),
           ),
