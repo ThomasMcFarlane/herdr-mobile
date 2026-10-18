@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/acp/background/background_work.dart' show BackgroundTask;
@@ -60,6 +62,10 @@ const _tabKinds = [MadeKind.server, MadeKind.page, MadeKind.picture, MadeKind.do
 const _listStep = 60;
 const _gridStep = 24;
 
+/// Said once over a grid of pictures (and under each row) on a machine that
+/// cannot list files.
+const _noFiles = 'Files are not available on this machine';
+
 class SessionMadeSheet extends StatefulWidget {
   const SessionMadeSheet({super.key, required this.session, required this.opener});
 
@@ -88,6 +94,12 @@ class _SessionMadeSheetState extends State<SessionMadeSheet> {
   final _more = <MadeKind, int>{};
 
   late final _entries = _EntryLoader(widget.session);
+
+  @override
+  void dispose() {
+    _entries.dispose();
+    super.dispose();
+  }
 
   List<MadeAsset> _stable(List<MadeAsset> assets) {
     final order = _order ??= [for (final a in assets) a.key];
@@ -134,6 +146,60 @@ class _SessionMadeSheetState extends State<SessionMadeSheet> {
     ];
   }
 
+  /// The grabber `showAppSheet` draws above whatever is built here (its 8 dp
+  /// gap and 4 dp bar): the room this sheet may take is the screen less the
+  /// status bar, the bottom inset and this.
+  static const _grabber = 12.0;
+
+  /// What [_noFiles] takes at [width]: it is a sentence that wraps on a narrow
+  /// phone or large text, so it is laid out, not guessed.
+  static double _noteHeight(double width, TextScaler scaler) {
+    final painter = TextPainter(
+      text: const TextSpan(text: _noFiles, style: Type.secondary),
+      textDirection: TextDirection.ltr,
+      textScaler: scaler,
+    )..layout(maxWidth: width);
+    final height = painter.height;
+    painter.dispose();
+    return height;
+  }
+
+  /// The most of the screen's height the scrolling area takes; the sheet's own
+  /// cap (which the pinned title and switch share) still applies on a small one.
+  static const _bodyShare = 0.6;
+
+  /// The height of the scrolling area, the same for every tab and for the
+  /// life of the sheet. A bottom sheet grows upward, so a tab with fewer rows
+  /// than the last one would pull the switch down from under the thumb (and a
+  /// longer one push it up): the switch is pinned above the area, and the area
+  /// is as tall as the tallest tab's first batch, or [_bodyShare] of the screen
+  /// if that is less, whichever tab is open (a sheet filling the screen around
+  /// a two-row tab is worse than a list that scrolls). `N more` adds rows
+  /// inside the area, it does not grow it. Estimated from the type scale
+  /// rather than measured: the
+  /// tabs that are not open are not built, and a few dp either way only
+  /// leaves a little room under a short tab or scrolls a long one by that
+  /// much.
+  double _bodyHeight(List<MadeAsset> shown, List<MadeKind> kinds, double width, TextScaler scaler, bool files) {
+    double line(TextStyle s) => scaler.scale(s.fontSize!) * s.height!;
+    // A row: its padding, a title line and a line under it, and the hairline.
+    final row = math.max(56.0, 24 + line(Type.row) + 2 + line(Type.secondary)) + 1;
+    final tile = (width - (_PictureGrid.columns - 1) * _PictureGrid.gap) / _PictureGrid.columns * 3 / 4 + Gap.xs + line(Type.caption);
+    var tallest = 0.0;
+    for (final kind in kinds) {
+      final n = shown.where((a) => a.kind == kind).length;
+      if (kind == MadeKind.picture) {
+        final cells = math.min(n, _gridStep) + (n > _gridStep ? 1 : 0);
+        final rows = (cells + _PictureGrid.columns - 1) ~/ _PictureGrid.columns;
+        final note = files ? 0.0 : _noteHeight(width, scaler) + Gap.md;
+        tallest = math.max(tallest, Gap.md + note + rows * tile + (rows - 1) * Gap.md);
+      } else {
+        tallest = math.max(tallest, (math.min(n, _listStep) + (n > _listStep ? 1 : 0)) * row);
+      }
+    }
+    return tallest;
+  }
+
   @override
   Widget build(BuildContext context) {
     final session = widget.session;
@@ -154,47 +220,82 @@ class _SessionMadeSheetState extends State<SessionMadeSheet> {
         final tabbed = kinds.length >= 2;
         final content = [for (final a in shown) if (a.kind == tab) a];
         final running = shown.any((a) => a.kind == MadeKind.server && serverStateOf(a, tasks, live: live) == ServerState.running);
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(Gap.lg, 8, Gap.lg, Gap.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(top: Gap.sm, bottom: Gap.sm),
-                child: Semantics(
-                  header: true,
-                  child: Text('Made in this session', style: Type.label.copyWith(color: ds.textSecondary)),
-                ),
-              ),
-              if (shown.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: Gap.xl),
-                  child: Text(
-                    'Nothing has come up in this session yet.',
-                    style: Type.secondary.copyWith(color: ds.textSecondary),
+        // `showAppSheet` scrolls whatever it is given and caps it where the
+        // status bar starts; this sheet scrolls its own list under a pinned
+        // switch, so it is given a bounded height of its own.
+        final nav = MediaQuery.of(Navigator.of(context).context);
+        final cap = MediaQuery.sizeOf(context).height - nav.padding.top - nav.padding.bottom - _grabber;
+        final scaler = MediaQuery.textScalerOf(context);
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: cap),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(Gap.lg, 8, Gap.lg, Gap.lg),
+            child: LayoutBuilder(
+              builder: (context, box) => Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: Gap.sm, bottom: Gap.sm),
+                    child: Semantics(
+                      header: true,
+                      child: Text('Made in this session', style: Type.label.copyWith(color: ds.textSecondary)),
+                    ),
                   ),
-                ),
-              if (tabbed)
-                _KindTabs(
-                  tabs: [
-                    for (final k in kinds)
-                      (k, _tabLabel(k), shown.where((a) => a.kind == k).length, k == MadeKind.server && running),
-                  ],
-                  selected: tab!,
-                  onChanged: _pick,
-                ),
-              if (tab == MadeKind.picture)
-                _PictureGrid(
-                  assets: content,
-                  limit: _limit(MadeKind.picture),
-                  files: files,
-                  loader: _entries,
-                  onOpen: _open,
-                  onMore: () => _showMore(MadeKind.picture),
-                )
-              else if (tab != null)
-                ..._rows(content, tab, lastDivider: false, tasks: tasks, live: live, files: files),
-            ],
+                  if (shown.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: Gap.xl),
+                      child: Text(
+                        'Nothing has come up in this session yet.',
+                        style: Type.secondary.copyWith(color: ds.textSecondary),
+                      ),
+                    ),
+                  if (tabbed)
+                    _KindTabs(
+                      tabs: [
+                        for (final k in kinds)
+                          (k, _tabLabel(k), shown.where((a) => a.kind == k).length, k == MadeKind.server && running),
+                      ],
+                      selected: tab!,
+                      onChanged: _pick,
+                    ),
+                  if (tab != null)
+                    Flexible(
+                      child: SizedBox(
+                        height: math.min(
+                          _bodyHeight(shown, kinds, box.maxWidth, scaler, files),
+                          MediaQuery.sizeOf(context).height * _bodyShare,
+                        ),
+                        child: CustomScrollView(
+                          // Each tab starts at its top.
+                          key: ValueKey(tab),
+                          // About a row of pictures past the edge, not the default
+                          // 250 dp: every tile built is a read of up to 2 MiB over
+                          // the radio, and on a phone that is a third of the grid.
+                          scrollCacheExtent: const ScrollCacheExtent.pixels(120),
+                          slivers: [
+                            if (tab == MadeKind.picture)
+                              _PictureGrid(
+                                assets: content,
+                                limit: _limit(MadeKind.picture),
+                                files: files,
+                                loader: _entries,
+                                onOpen: _open,
+                                onMore: () => _showMore(MadeKind.picture),
+                              )
+                            else
+                              SliverToBoxAdapter(
+                                child: Column(
+                                  children: _rows(content, tab, lastDivider: false, tasks: tasks, live: live, files: files),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
         );
       },
@@ -228,7 +329,14 @@ class _KindTabs extends StatelessWidget {
         child: Segmented<MadeKind>(
           options: [
             for (final (kind, label, count, running) in tabs)
-              SegmentOption(kind, label, count: count, leading: running ? const LinkDot(state: LinkState.online) : null),
+              SegmentOption(
+                kind,
+                label,
+                count: count,
+                leading: running ? const LinkDot(state: LinkState.online) : null,
+                // The dot is all a sighted person gets of "running"; say it.
+                semanticLabel: running ? '$label, $count, running' : null,
+              ),
           ],
           value: selected,
           onChanged: onChanged,
@@ -279,8 +387,14 @@ Future<void> openMadeAsset(BuildContext sheet, BuildContext opener, AgentSession
     return;
   }
   final id = '${session.key}\u0000${asset.key}';
-  if (!_opening.add(id)) return;
+  final again = !_opening.add(id);
   Navigator.of(sheet).pop();
+  if (again) {
+    // The sheet closes like after any tap, and the row says what it is doing
+    // instead of looking dead.
+    toaster.show('Still opening ${visibleText(asset.title)}…');
+    return;
+  }
   try {
     switch (asset.kind) {
       case MadeKind.doc:
@@ -288,7 +402,9 @@ Future<void> openMadeAsset(BuildContext sheet, BuildContext opener, AgentSession
         // went wrong itself).
         if (opener.mounted) unawaited(openRemoteFile(opener, machine, asset.path!, cwd: session.cwd));
       case MadeKind.picture:
-        toaster.show('Opening ${visibleText(asset.title)}…');
+        // No toast: it would stand over the viewer for its 3 s (the app has no
+        // way to take one down), and the tile the person tapped is already a
+        // thumbnail of this picture.
         final stat = await machine.files.stat(await machine.files.resolve(asset.path!, cwd: session.cwd));
         if (!opener.mounted) return;
         unawaited(navigator.push(photoRoute<void>(machine, stat, listSiblings: false)));
@@ -340,7 +456,7 @@ class _WebRow extends StatelessWidget {
     final when = formatModified(asset.at);
     final service = asset.kind == MadeKind.server && asset.port != null ? sensitiveServiceOf(asset.port!) : null;
     if (service != null) return '$service, not a web page';
-    if (_isFile && !filesAvailable) return 'Files are not available on this machine';
+    if (_isFile && !filesAvailable) return _noFiles;
     final text = switch (state) {
       ServerState.running => 'Running',
       ServerState.stopped => when.isEmpty ? 'Stopped' : 'Stopped · $when',
@@ -388,12 +504,23 @@ class _EntryLoader {
   final _byKey = <String, Future<RemoteEntry?>>{};
   final _waiting = Queue<Completer<void>>();
   var _running = 0;
+  var _disposed = false;
 
   static const _parallel = 4;
 
-  /// The listing entry of [asset]'s file, or null when it cannot be read (gone,
-  /// refused, not a file): its tile stays quiet.
+  /// The listing entry of [asset]'s file; null when it is gone (or is no
+  /// longer a file), which is remembered for the sheet. Throws when it could
+  /// not be asked (link down, a timeout, a refusal): that says nothing about
+  /// the file, so it is not remembered and the next ask goes to the machine.
   Future<RemoteEntry?> of(MadeAsset asset) => _byKey[asset.key] ??= _load(asset);
+
+  /// The sheet is gone: tiles waiting for a turn are let go without asking.
+  void dispose() {
+    _disposed = true;
+    while (_waiting.isNotEmpty) {
+      _waiting.removeFirst().complete();
+    }
+  }
 
   Future<void> _turn() {
     if (_running < _parallel) {
@@ -416,6 +543,7 @@ class _EntryLoader {
   Future<RemoteEntry?> _load(MadeAsset asset) async {
     await _turn();
     try {
+      if (_disposed) return null;
       final files = _session.machine.files;
       final stat = await files.stat(await files.resolve(asset.path!, cwd: _session.cwd));
       if (!stat.isFile) return null;
@@ -427,8 +555,10 @@ class _EntryLoader {
         size: stat.size,
         modified: stat.modified,
       );
-    } on Object {
-      return null;
+    } on Object catch (e) {
+      if (e is RemoteFileException && e.kind == RemoteFileErrorKind.notFound) return null;
+      _byKey.remove(asset.key);
+      rethrow;
     } finally {
       _next();
     }
@@ -436,7 +566,9 @@ class _EntryLoader {
 }
 
 /// The pictures as a grid, three across: a 4:3 thumbnail and the file name
-/// under it. Built as rows of three, so only the first [limit] tiles exist.
+/// under it. A sliver of lazy rows of three, so only the tiles at the
+/// viewport (and a little beyond it) exist and ask for their picture; the
+/// first [limit] tiles are all there can be.
 class _PictureGrid extends StatelessWidget {
   const _PictureGrid({
     required this.assets,
@@ -454,53 +586,56 @@ class _PictureGrid extends StatelessWidget {
   final ValueChanged<MadeAsset> onOpen;
   final VoidCallback onMore;
 
-  static const _columns = 3;
-  static const _gap = 8.0;
+  static const columns = 3;
+  static const gap = 8.0;
 
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
     final built = assets.length > limit ? assets.sublist(0, limit) : assets;
     final rest = assets.length - built.length;
-    final cells = <Widget>[
-      for (final a in built)
-        _PictureTile(key: ValueKey(a.key), asset: a, loader: loader, enabled: files, onTap: () => onOpen(a)),
-      if (rest > 0) _MoreTile(count: rest, onTap: onMore),
-    ];
-    Widget grid = Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (var start = 0; start < cells.length; start += _columns)
-          Padding(
-            padding: EdgeInsets.only(top: start == 0 ? 0 : Gap.md),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (var i = 0; i < _columns; i++) ...[
-                  if (i > 0) const SizedBox(width: _gap),
-                  Expanded(child: start + i < cells.length ? cells[start + i] : const SizedBox.shrink()),
-                ],
-              ],
-            ),
-          ),
-      ],
+    final cells = built.length + (rest > 0 ? 1 : 0);
+    Widget cell(int i) {
+      if (i < built.length) {
+        final a = built[i];
+        return _PictureTile(key: ValueKey(a.key), asset: a, loader: loader, enabled: files, onTap: () => onOpen(a));
+      }
+      return i == built.length && rest > 0 ? _MoreTile(count: rest, onTap: onMore) : const SizedBox.shrink();
+    }
+
+    final rows = SliverList.builder(
+      itemCount: (cells + columns - 1) ~/ columns,
+      // A row scrolled away lets go of its pictures at once.
+      addAutomaticKeepAlives: false,
+      itemBuilder: (context, row) => Padding(
+        padding: EdgeInsets.only(top: row == 0 ? 0 : Gap.md),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var i = 0; i < columns; i++) ...[
+              if (i > 0) const SizedBox(width: gap),
+              Expanded(child: cell(row * columns + i)),
+            ],
+          ],
+        ),
+      ),
     );
-    // Unavailable stays, dimmed, and says why once instead of under every tile.
-    if (!files) grid = Opacity(opacity: 0.55, child: grid);
-    return Padding(
+    return SliverPadding(
       padding: const EdgeInsets.only(top: Gap.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+      sliver: SliverMainAxisGroup(
+        slivers: [
+          // Unavailable stays, dimmed, and says why once instead of under every tile.
           if (!files)
-            Padding(
-              padding: const EdgeInsets.only(bottom: Gap.md),
-              child: Text(
-                'Files are not available on this machine',
-                style: Type.secondary.copyWith(color: ds.textSecondary),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: Gap.md),
+                child: Text(
+                  _noFiles,
+                  style: Type.secondary.copyWith(color: ds.textSecondary),
+                ),
               ),
             ),
-          grid,
+          if (files) rows else SliverOpacity(opacity: 0.55, sliver: rows),
         ],
       ),
     );
@@ -508,7 +643,8 @@ class _PictureGrid extends StatelessWidget {
 }
 
 /// One picture: the thumbnail when it can be had, a quiet tile with a picture
-/// glyph until then and when the file is gone or unreadable.
+/// glyph until then, a crossed one when the file is gone, and a tile that asks
+/// again when tapped when the machine could not be asked.
 class _PictureTile extends StatefulWidget {
   const _PictureTile({super.key, required this.asset, required this.loader, required this.enabled, required this.onTap});
 
@@ -521,25 +657,38 @@ class _PictureTile extends StatefulWidget {
   State<_PictureTile> createState() => _PictureTileState();
 }
 
+enum _Face { loading, ready, gone, unknown }
+
 class _PictureTileState extends State<_PictureTile> {
   RemoteEntry? _entry;
-  var _gone = false;
+  var _face = _Face.loading;
 
   @override
   void initState() {
     super.initState();
     // Nothing is asked of a machine that cannot answer.
-    if (widget.enabled) {
-      unawaited(
-        widget.loader.of(widget.asset).then((entry) {
-          if (!mounted) return;
-          setState(() {
-            _entry = entry;
-            _gone = entry == null;
-          });
-        }),
+    if (widget.enabled) _ask();
+  }
+
+  void _ask() => unawaited(
+        widget.loader.of(widget.asset).then(
+          (entry) {
+            if (!mounted) return;
+            setState(() {
+              _entry = entry;
+              _face = entry == null ? _Face.gone : _Face.ready;
+            });
+          },
+          // Not "gone": the link may be down. Say nothing is known, ask again on a tap.
+          onError: (Object _) {
+            if (mounted) setState(() => _face = _Face.unknown);
+          },
+        ),
       );
-    }
+
+  void _retry() {
+    setState(() => _face = _Face.loading);
+    _ask();
   }
 
   @override
@@ -547,10 +696,11 @@ class _PictureTileState extends State<_PictureTile> {
     final ds = context.ds;
     final entry = _entry;
     final name = visibleText(widget.asset.title);
+    final unknown = _face == _Face.unknown;
     return PressBuilder(
-      onTap: widget.enabled ? widget.onTap : null,
+      onTap: !widget.enabled ? null : (unknown ? _retry : widget.onTap),
       haptic: true,
-      semanticLabel: name,
+      semanticLabel: unknown ? '$name, could not be loaded, tap to try again' : name,
       builder: (context, pressed) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -559,7 +709,15 @@ class _PictureTileState extends State<_PictureTile> {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(Radii.control),
               child: entry == null
-                  ? _QuietTile(icon: _gone ? LucideIcons.imageOff : LucideIcons.image, faint: !_gone, pressed: pressed)
+                  ? _QuietTile(
+                      icon: switch (_face) {
+                        _Face.gone => LucideIcons.imageOff,
+                        _Face.unknown => LucideIcons.refreshCw,
+                        _ => LucideIcons.image,
+                      },
+                      faint: _face == _Face.loading,
+                      pressed: pressed,
+                    )
                   : PhotoThumbFace(files: widget.loader._session.machine.files, entry: entry, thumbs: PhotoThumbs.shared, pressed: pressed),
             ),
           ),

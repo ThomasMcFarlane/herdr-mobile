@@ -256,6 +256,11 @@ Tailscale.
     (no measurable difference from `127.0.0.1`). A forward takes the *same port
     number* as its target when free: a page that hardcodes
     `ws://localhost:3000` only works then.
+  - A forward's entry URL goes to a separate entry listener, not the forward's
+    own port (`WebBridgeInfo.entryPort`): see `docs/ARCHITECTURE.md` "Pages
+    from a machine". Pauses on a stream subscription nest: a stray
+    `resume()` next to the backpressure `onPause` undid it, and 64 MiB went
+    through a stalled channel (`web_bridge_forward_test`).
   - `Range`, `Last-Modified`/304 and `Cache-Control: no-cache` on static files:
     reload 0.54 s against 1.49 s cold. An extensionless HTML navigation to a
     missing path gets `index.html` (single-page apps).
@@ -281,15 +286,20 @@ Tailscale.
     `.svg`), pictures (`png jpg jpeg gif webp bmp`) and documents (`md markdown
     pdf docx xlsx pptx csv`; NOT `txt`, `json`, `log`, `yaml`, which a build
     prints and a project is configured with). A page: a completed edit's diff or path;
-    a file a command writes (`>`, `>>`, `tee`, `-o`/`--output`, a `cp`/`mv`
-    target, `open`), with a leading `cd X` honoured; a path with a folder in
-    the agent's own words, or a bare name right after a word of making
-    ("created report.html"); a line a tool printed that says it saved a file
-    ("Saved screenshot to out/a.png": the first 8 KB, a word of making and a
-    path with a folder). A picture or document is the same, except that a
+    a file a COMPLETED command writes (`>`, `>>`, `tee`, `-o`/`--output`, a `cp`/`mv`
+    target, `open`; a denied, failed or cancelled one wrote nothing), with a leading
+    `cd X` honoured; a path with a folder in the agent's own words, or a bare name
+    right after a word of making ("created report.html"); a line a tool printed that
+    says it saved a file ("Saved screenshot to out/a.png": the first 8 KB, a word of
+    making and a path with a folder). A picture or document is the same, except that a
     document must be a NEW file (an edit of a README is not something the agent
     made), a diff never makes a picture, and naming one in words needs a word of
-    making right before it (the chat names existing files all day). A deleted or moved page leaves the list. NOT a
+    making right before it (the chat names existing files all day): the verb sits in
+    the last 4 words of the clause the path is in (after the last `.`, `,`, `;`,
+    `:`, `!`, `?`, line break, `and`, `then` or `but`), so "I created the handler
+    and then updated the README.md" lists nothing; `opened` and `output` are not
+    verbs of making, `built` counts only directly before the path. A deleted or moved
+    page leaves the list, also a patch that empties a file (how Codex deletes one). NOT a
     file only read, grepped, listed or downloaded; NOT command output; NOT the
     body of a heredoc; NOT a fenced code block; NOT a path with `$`, a drive
     letter or a URL; NOT `node_modules`, `.git` or system folders; NOT a
@@ -297,8 +307,13 @@ Tailscale.
     unknown: it would be taken against the login folder and open a decoy).
   - Servers: a loopback link in the agent's own words (path kept; a bare
     `localhost:5173` counts), or a BANNER line a launched command printed in
-    its first 8 KB (`Local: http://...`, `Uvicorn running on`, `Serving HTTP
-    on`), origin only. NOT the output of a probe (`curl`, `cat`, `rg`, `git`,
+    its first 8 KB, origin only: a labelled address at the start of the line
+    (`Local: http://...`, `Network:`, `Local URL:`) or a launch phrase
+    (`Uvicorn running on`, `Serving HTTP on`; `listening on` only from a command
+    that looks like a launch). Read while the command still runs (a server never
+    finishes) but not after it failed or was cancelled. NOT a test run
+    (`pytest`, `jest`, `vitest run`, `go test`, `cargo test`, `flutter test`,
+    `npm test`: they start servers of their own), NOT the output of a probe (`curl`, `cat`, `rg`, `git`,
     `ssh`, `docker exec`, ...) and NOT a command's own text. Only `localhost`,
     `127.0.0.1`, `::1`, `0.0.0.0` and `::` count (`isPreviewHost`): another
     `127.x`, `*.localhost` or `*.local` name is resolved by the machine, so the
@@ -315,7 +330,8 @@ Tailscale.
     link sheet, where the whole address is on screen, still opens it.
   - Cost: text is capped, a token is split by delimiters and then tested (a
     lazy regex with a lookahead took 30 s on a 64 KB unbroken run), at most 40
-    mentions per item and 150 rows per session; a command's scan is memoized by
+    mentions per item and 150 rows per kind and session (a flood of screenshots
+    cannot push a server out); a command's scan is memoized by
     its input, which a streaming patch keeps. The chip and sheet compare what
     the rows SHOW (`sameMadeAssets`), not the list, because a streaming tool
     replaces the transcript list on every chunk.
@@ -323,15 +339,26 @@ Tailscale.
     after a `session/load` replay the last message may stay live until the next
     item (`withSetup` does not settle it), so a link in it shows late.
   - The sheet freezes its rows while it is open (a bottom sheet grows upward, so
-    a row added anywhere moves the others); a tap says `Opening X…`, one open
-    per row at a time, and the browser is only launched while the screen the
-    sheet came from is still there.
+    a row added anywhere moves the others) and its height too: the switch is
+    pinned above a scroll area that is as tall as the tallest tab's first batch,
+    at most 60% of the screen, for EVERY tab (estimated from the type scale: the
+    tabs not open are not built; the cap is why a Servers tab of two rows sits
+    in some empty space under a long Pictures tab), so changing tab or
+    scrolling a long list never moves the switch
+    from under the thumb. A tap says `Opening X…` (not for a picture: the toast
+    would stand over the viewer for its 3 s), a second tap on a row that is
+    opening says `Still opening X…`, one open per row at a time, and the browser
+    is only launched while the screen the sheet came from is still there.
   - The sheet: the app's one switch (`Segmented`, docs/DESIGN.md "The switch")
     leads it with the kinds present (`Servers`, `Pages 17`, `Pictures 13`,
     `Docs 8`, a live dot before Servers while one runs), only when two or more
     kinds exist, the choice remembered per session; the default is the newest
-    non-server kind. Pictures are a grid of real thumbnails (`PhotoThumbs`, the
-    folder grid's cache; a file over 2 MB shows its size), the rest rows; at most
+    non-server kind. Pictures are a lazy grid of real thumbnails (`PhotoThumbs`, the
+    folder grid's cache; a file over 2 MB shows its size): only the tiles at the
+    viewport and a row beyond ask the machine for their stat and picture (each is
+    up to 2 MiB over the radio), and the crossed-out picture is for a file the
+    machine says is not there; a stat that failed (link down, a timeout) is a
+    neutral tile that asks again on a tap, never cached as gone. The rest are rows; at most
     60 rows / 24 tiles built, `N more` for the rest. How it got here: a stand-in
     of 40 items showed one list buries the pictures below the first screen; a
     Segmented control with a white thumb, underline tabs and board chips were

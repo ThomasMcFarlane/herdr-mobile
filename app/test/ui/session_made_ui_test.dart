@@ -9,6 +9,7 @@ import 'package:herdr_mobile/data/acp/session_made.dart' show MadeKind;
 import 'package:herdr_mobile/data/acp/background/background_work.dart';
 import 'package:herdr_mobile/data/acp/session_state.dart';
 import 'package:herdr_mobile/data/models/machine_profile.dart';
+import 'package:herdr_mobile/data/models/remote_file.dart';
 import 'package:herdr_mobile/data/models/web_bridge.dart';
 import 'package:herdr_mobile/data/observed/observed_contracts.dart' show SubagentInfo;
 import 'package:herdr_mobile/data/repositories/agent_session.dart' show AgentLink, SubagentEntry, SubagentState;
@@ -19,6 +20,7 @@ import 'package:herdr_mobile/ui/core/glyphs.dart' show LinkDot;
 import 'package:herdr_mobile/ui/core/theme.dart';
 import 'package:herdr_mobile/ui/features/agent_session/session_bar.dart';
 import 'package:herdr_mobile/ui/features/files/file_viewer_screen.dart';
+import 'package:herdr_mobile/ui/features/files/photo_thumbs.dart';
 import 'package:herdr_mobile/ui/features/photos/photo_viewer.dart';
 import 'package:image/image.dart' as img;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -83,8 +85,8 @@ void main() {
     return FakeAgentSession(state: AgentSessionState('s', items: items), machine: machine, key: key ?? 'm/k${sessions++}');
   }
 
-  Future<void> pumpBar(WidgetTester tester, FakeAgentSession s) async {
-    tester.view.physicalSize = const Size(412, 892) * 2;
+  Future<void> pumpBar(WidgetTester tester, FakeAgentSession s, {Size size = const Size(412, 892)}) async {
+    tester.view.physicalSize = size * 2;
     tester.view.devicePixelRatio = 2;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(MaterialApp(theme: AppTheme.light(), home: Scaffold(body: SessionBar(session: s))));
@@ -250,7 +252,7 @@ void main() {
     expect(find.text('Files are not available on this machine'), findsOneWidget);
   });
 
-  testWidgets('a tap says it is opening, and a second tap while it connects opens nothing more', (tester) async {
+  testWidgets('a tap says it is opening, and a second tap while it connects opens nothing more but says so', (tester) async {
     final s = session([_say('Serving http://localhost:5173/')]);
     await pumpBar(tester, s);
     await tester.tap(find.text('Made'));
@@ -260,12 +262,15 @@ void main() {
     await tester.tap(find.text('localhost:5173'));
     await tester.pump(const Duration(milliseconds: 200));
     expect(find.text('Opening localhost:5173…'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 6)); // the toast over the sheet's bottom row is gone
 
     // A second tap on the same row, from a reopened sheet, while it connects.
     await tester.tap(find.text('Made'));
     await _settle(tester);
     await tester.tap(find.text('localhost:5173'));
     await _settle(tester);
+    expect(find.text('Made in this session'), findsNothing, reason: 'the sheet closes like after any tap');
+    expect(find.text('Still opening localhost:5173…'), findsOneWidget, reason: 'not a tap that does nothing');
     expect(transport.webBridges, hasLength(1));
 
     gate.complete();
@@ -390,8 +395,8 @@ void main() {
     ];
   }
 
-  Future<void> openSheet(WidgetTester tester, FakeAgentSession s) async {
-    await pumpBar(tester, s);
+  Future<void> openSheet(WidgetTester tester, FakeAgentSession s, {Size size = const Size(412, 892)}) async {
+    await pumpBar(tester, s, size: size);
     await tester.tap(find.text('Made'));
     await _settle(tester);
     // Thumbnails decode on the engine's real clock.
@@ -401,6 +406,12 @@ void main() {
 
   Future<void> closeSheet(WidgetTester tester) async {
     await tester.tapAt(const Offset(200, 20));
+    await _settle(tester);
+  }
+
+  /// For a sheet that fills the screen, where there is no barrier to tap.
+  Future<void> popSheet(WidgetTester tester) async {
+    Navigator.of(tester.element(find.text('Made in this session'))).pop();
     await _settle(tester);
   }
 
@@ -563,6 +574,7 @@ void main() {
     await _settle(tester);
     expect(find.text('Made in this session'), findsNothing);
     expect(find.byType(PhotoViewer), findsOneWidget);
+    expect(find.textContaining('Opening'), findsNothing, reason: 'no toast stands over the photo');
   });
 
   testWidgets('a tap on a document opens it in the file viewer', (tester) async {
@@ -597,26 +609,102 @@ void main() {
     expect(find.textContaining('.html', skipOffstage: false), findsNWidgets(60));
     expect(find.text('10 more', skipOffstage: false), findsOneWidget);
     await tester.ensureVisible(find.text('10 more'));
+    await tester.pump(); // a list lays out its new offset on the next frame
     await tester.tap(find.text('10 more'));
     await _settle(tester);
     expect(find.textContaining('.html', skipOffstage: false), findsNWidgets(70));
     expect(find.textContaining('more', skipOffstage: false), findsNothing);
   });
 
-  testWidgets('the grid builds the first 24, asks the machine only about those, and shows the next batch on request', (tester) async {
+  testWidgets('the grid builds only the tiles near the viewport, asks the machine only about those, and shows the next batch on request', (tester) async {
     onMachine([for (var i = 0; i < 30; i++) '$base/screenshots/s$i.png']);
-    await openSheet(tester, session([page('one.html'), for (var i = 0; i < 30; i++) picture('s$i.png')]));
+    final held = PhotoThumbs.shared.length;
+    await openSheet(tester, session([page('one.html'), for (var i = 0; i < 30; i++) picture('s$i.png')]), size: const Size(360, 600));
 
     int stats() => fs.calls.where((c) => c.startsWith('stat $base/screenshots/')).length;
-    expect(find.textContaining('.png', skipOffstage: false), findsNWidgets(24));
-    expect(find.text('6 more', skipOffstage: false), findsOneWidget);
-    expect(stats(), 24, reason: 'nothing for tiles that were never built');
+    final built = find.textContaining('.png', skipOffstage: false).evaluate().length;
+    expect(built, inInclusiveRange(3, 23), reason: 'the rows at the viewport and a little beyond, not all 24');
+    expect(stats(), lessThanOrEqualTo(built), reason: 'nothing for tiles that were never built');
+    expect(PhotoThumbs.shared.length - held, lessThanOrEqualTo(built), reason: 'a thumbnail is asked for only by a tile that exists');
+    expect(find.text('6 more', skipOffstage: false), findsNothing);
 
+    final list = find.descendant(of: find.byType(CustomScrollView), matching: find.byType(Scrollable));
+    await tester.scrollUntilVisible(find.text('6 more'), 300, scrollable: list);
     await tester.ensureVisible(find.text('6 more'));
+    await tester.pump(); // a list lays out its new offset on the next frame
     await tester.tap(find.text('6 more'));
     await _settle(tester);
-    expect(find.textContaining('.png', skipOffstage: false), findsNWidgets(30));
-    expect(stats(), 30);
+    expect(find.text('6 more', skipOffstage: false), findsNothing);
+    await tester.scrollUntilVisible(find.text('s0.png'), 300, scrollable: list);
+    await _settle(tester);
+    expect(stats(), 30, reason: 'every picture once it has been scrolled to, none twice');
+  });
+
+  testWidgets('closing the sheet stops the pictures still waiting for their turn', (tester) async {
+    onMachine([for (var i = 0; i < 30; i++) '$base/screenshots/s$i.png']);
+    final gate = Completer<void>();
+    fs.gate = gate;
+    await pumpBar(tester, session([for (var i = 0; i < 30; i++) picture('s$i.png')]), size: const Size(360, 600));
+    await tester.tap(find.text('Made'));
+    await _settle(tester);
+    await popSheet(tester);
+
+    gate.complete();
+    await _settle(tester);
+    final stats = fs.calls.where((c) => c.startsWith('stat $base/screenshots/')).length;
+    expect(stats, lessThanOrEqualTo(4), reason: 'only the few that were already being asked');
+  });
+
+  testWidgets('a picture the machine could not be asked about is not shown as gone, and a tap asks again', (tester) async {
+    onMachine(['$base/screenshots/here.png']);
+    fs.fail = RemoteFileException(RemoteFileErrorKind.network, 'timed out');
+    await openSheet(tester, session([picture('here.png')]));
+    expect(find.byIcon(LucideIcons.imageOff), findsNothing, reason: 'a link that is down says nothing about the file');
+    expect(find.byType(RawImage), findsNothing);
+
+    fs.fail = null;
+    await tester.tap(find.text('here.png'));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byType(RawImage), findsOneWidget, reason: 'the tap asked the machine again');
+    expect(find.byType(PhotoViewer), findsNothing, reason: 'and did not open anything yet');
+  });
+
+  testWidgets('the switch stays where it is whatever tab is open, and while a long list scrolls', (tester) async {
+    onMachine([for (var i = 0; i < 30; i++) '$base/screenshots/s$i.png', '$base/reports/one.html']);
+    await openSheet(tester, session([_say('Serving http://localhost:5173/'), page('one.html'), for (var i = 0; i < 30; i++) picture('s$i.png')]));
+
+    // Only how far from the top: the switch may scroll sideways to its cell.
+    double top(String label) => tester.getRect(find.text(label)).top;
+    final servers = top('Servers');
+    final pictures = top('Pictures');
+    expect(tester.getSize(find.byType(CustomScrollView)).height, lessThanOrEqualTo(892 * 0.6 + 0.5), reason: 'a long list scrolls inside the sheet, which does not fill the screen');
+
+    await tester.drag(find.text('s27.png'), const Offset(0, -300));
+    await _settle(tester);
+    expect(top('Pictures'), pictures, reason: 'the switch does not scroll away with a long list');
+
+    await tapChip(tester, 'Servers');
+    await _settle(tester);
+    expect(find.text('localhost:5173'), findsOneWidget);
+    expect(top('Servers'), servers, reason: 'a short tab after a tall one');
+    expect(top('Pictures'), pictures);
+
+    await tapChip(tester, 'Pictures');
+    await _settle(tester);
+    expect(top('Servers'), servers, reason: 'and a tall one after a short one');
+  });
+
+  testWidgets('a running server is said, not only shown as a dot', (tester) async {
+    final handle = tester.ensureSemantics();
+    final s = session(mixed(), key: 'm/says-running');
+    await openSheet(tester, s);
+    expect(tester.getSemantics(find.text('Servers')).label, 'Servers, 1');
+
+    s.setBackground(runningVite());
+    await _settle(tester);
+    expect(tester.getSemantics(find.text('Servers')).label, 'Servers, 1, running');
+    handle.dispose();
   });
 
   testWidgets('a machine without files: pages, pictures and documents are dimmed with the reason, and nothing is asked', (tester) async {
