@@ -18,7 +18,6 @@ import '../create/new_agent_session_screen.dart' show openNewAgentSession;
 import '../create/session_prefill.dart' show SessionPrefill;
 import '../files/files_navigation.dart' show machineSupportsFiles, openFileBrowser;
 import '../agents/agent_navigation.dart' show agentViewAction;
-import 'permission_dock.dart' show confirmWindow;
 import 'session_select.dart';
 import 'session_overview.dart' show showSessionOverview;
 import 'session_made.dart' show MadeChip;
@@ -396,7 +395,7 @@ class _PickerState extends State<_Picker> {
   }
 
   /// The assistive activation of a dangerous mode: the first primes, the
-  /// second (within [confirmWindow]) sets it. A finger holds instead.
+  /// second (within [Dwell.confirm]) sets it. A finger holds instead.
   void _activate(ConfigChoice choice) {
     if (_primed == choice.value) {
       _primeTimer?.cancel();
@@ -406,7 +405,7 @@ class _PickerState extends State<_Picker> {
     Haptics.armed();
     _primeTimer?.cancel();
     setState(() => _primed = choice.value);
-    _primeTimer = Timer(confirmWindow, () {
+    _primeTimer = Timer(Dwell.confirm, () {
       if (mounted) setState(() => _primed = null);
     });
   }

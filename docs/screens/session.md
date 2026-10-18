@@ -125,7 +125,7 @@ paperclip then carries a round count badge: what will be sent is never hidden.
 typeable).
 
 **Signing in** (`auth_panel.dart`, `AgentSessionView.authNeeded`). A
-`StatusPanel` in the link strip: `Sign in on the host`, the agent's own words,
+`StatusPanel` in the link strip: `Sign in on the machine`, the agent's own words,
 the method names, the agent's login command when it sent one (mono, copyable),
 a primary `Open a terminal on <machine>` that starts a plain shell workspace
 in the session's folder (`SessionLauncher`, no command typed) and opens it,
@@ -499,7 +499,12 @@ to stop` and the footer says so once. `Stopping…` uses the one allowed
 `BusySpinner` for at most 12 s, then `Could not confirm` + `Retry`. After Stop
 ends a turn with jobs left, one toast `Turn stopped · 1 job still running` with
 `Open`. The strip is hidden in the compact layout (the bar chip carries the
-count); it appears and goes without animation.
+count); it appears and goes without animation. Why not `Collapse` like the
+link strips: it sits on the composer, and jobs start and end at the agent's
+pace, several a turn; a fold would slide the composer under the thumb each
+time. The link strip under the bar and the rare `Needs you` strip (a request
+waiting for the link) do fold in and out with `Collapse`, like the pane's
+banner.
 
 **Continue and Past sessions** (`continue_button.dart`, `ui/features/history/`).
 An ended session whose keeper is gone shows its saved transcript read-only and the

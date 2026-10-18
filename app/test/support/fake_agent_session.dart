@@ -103,6 +103,11 @@ class FakeAgentSession extends ChangeNotifier implements AgentSessionView {
   void loadEarlier() => loadEarlierCalls++;
   @override
   String? get error => _error;
+
+  /// Set by a test: [error] is what the agent itself answered.
+  bool errorFromAgentValue = false;
+  @override
+  bool get errorFromAgent => errorFromAgentValue;
   @override
   AgentPhase get phase => _state.phase;
   DateTime? phaseSinceValue;

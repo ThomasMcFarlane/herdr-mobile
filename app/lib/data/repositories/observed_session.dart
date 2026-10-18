@@ -428,6 +428,10 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
   /// The pane is still there but nothing in it is an agent any more.
   bool get _exited => _pane != null && !_pane!.isAgent;
 
+  /// Everything said here comes from the app's reading of the terminal.
+  @override
+  bool get errorFromAgent => false;
+
   @override
   String? get error {
     if (_problem != null) return _problem;
@@ -520,7 +524,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
     return switch (_pending) {
       PendingQuestion() => 'Answer the question above first',
       PendingPermission() => 'Answer the request above first',
-      _ => _blocked ? 'Waiting for you in the terminal' : null,
+      _ => _blocked ? 'Needs you in the terminal' : null,
     };
   }
 
@@ -1622,7 +1626,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
     if (_blocked || _pending != null) {
       return _pending is PendingQuestion
           ? 'The agent is waiting for an answer. Answer it first; the message was not sent.'
-          : 'The agent is waiting for you in the terminal. The message was not sent.';
+          : 'The agent needs you in the terminal. The message was not sent.';
     }
     try {
       await go();

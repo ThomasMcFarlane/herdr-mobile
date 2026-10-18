@@ -85,8 +85,9 @@ Where a blocked pane's prompt is
 understood, the question and up to three answers plus `N more` dock above the
 key row (`AnswerDock`). The dock is hidden in the compact and short layouts.
 
-The answer dock also shows the command (`subject`) in mono, two lines, under a
-one-line question.
+The answer dock shows the question in two lines and the command (`subject`)
+in mono in two more (`QuestionWash`, compact); `Read all` opens the rest when
+either is cut.
 
 The dock's answers take no tap and are dimmed for `tapGuard` each time the dock
 appears (the pane turns blocked, its screen opens by a tap, a swipe or the

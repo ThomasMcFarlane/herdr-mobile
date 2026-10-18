@@ -201,7 +201,7 @@ void foldKeepingInView(BuildContext context, VoidCallback fold) {
     if (!context.mounted) return;
     Scrollable.ensureVisible(
       context,
-      duration: Motion.reduced(context) ? Duration.zero : Motion.expand,
+      duration: Motion.of(context, Motion.expand),
       curve: Motion.easeOut,
       alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtStart,
     );

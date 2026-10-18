@@ -10,6 +10,7 @@ import '../../../data/acp/subagents/subagent_run.dart' show SubagentOrigin;
 import '../../../data/decision/permission_evidence.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/command_risk.dart';
+import '../../../data/words/plural.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../../support/tap_guard.dart';
 import 'agent_md_scope.dart';
@@ -177,9 +178,6 @@ String? optionGate(PermissionOption option, String? risk) {
   return null;
 }
 
-/// How long a primed option waits for its second activation (or a hold).
-const confirmWindow = Dwell.confirm;
-
 /// Why an allow waits for a hold while the command box has not been read to
 /// its end.
 const unreadReason = 'long command, read it all';
@@ -328,7 +326,7 @@ class _PermissionPanelState extends State<PermissionPanel> with TapGuardState<Pe
         context,
         builder: (ctx) {
           final ds = ctx.ds;
-return SheetScaffold(
+          return SheetScaffold(
             title: 'Everything it will run',
             kind: SheetKind.message,
             child: SelectableText(_info.subject, style: Mono.base.copyWith(color: ds.text)),
@@ -344,14 +342,14 @@ return SheetScaffold(
     return optionGate(option, _info.risk);
   }
 
-  /// Primes [option] for a second activation or a hold, for [confirmWindow].
+  /// Primes [option] for a second activation or a hold, for [Dwell.confirm].
   void _prime(PermissionOption option, String reason) {
     _timer?.cancel();
     setState(() {
       _confirming = option.optionId;
       _confirmReason = reason;
     });
-    _timer = Timer(confirmWindow, () {
+    _timer = Timer(Dwell.confirm, () {
       if (mounted) setState(() => _confirming = null);
     });
   }
@@ -513,29 +511,32 @@ return SheetScaffold(
               ),
               const SizedBox(height: Gap.sm),
             ],
-            Row(
-              mainAxisAlignment: widget.more > 0 ? MainAxisAlignment.spaceBetween : MainAxisAlignment.end,
-              children: [
-                if (widget.more > 0)
-                  Flexible(
-                    child: Text(
+            // Side by side while both fit; at a large text size Cancel goes
+            // under the count rather than lose its words.
+            SizedBox(
+              width: double.infinity,
+              child: Wrap(
+                alignment: widget.more > 0 ? WrapAlignment.spaceBetween : WrapAlignment.end,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  if (widget.more > 0)
+                    Text(
                       '${widget.more} more waiting',
                       style: Type.labelStrong.copyWith(color: ds.blockedText),
                     ),
-                  ),
-                Flexible(
-                  child: Padding(
+                  Padding(
                     padding: const EdgeInsets.symmetric(horizontal: Gap.md),
                     child: TextAction(
                       label: 'Cancel request',
                       tone: TextActionTone.quiet,
                       // The answer's own haptic fires once it is handed over.
                       haptic: false,
+                      enabled: live,
                       onTap: _cancel,
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
@@ -618,7 +619,7 @@ class _Paths extends StatelessWidget {
             ),
           ),
         if (paths.length > _shown)
-          Text('${paths.length - _shown} more', style: Type.caption.copyWith(color: ds.textSecondary)),
+          Text(countOf(paths.length - _shown, 'more file'), style: Type.caption.copyWith(color: ds.textSecondary)),
       ],
     );
   }

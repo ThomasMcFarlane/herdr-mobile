@@ -708,8 +708,47 @@ void main() {
 
       session.setLink(AgentLink.live);
       await tester.pump();
+      await tester.pump(Motion.expand);
       expect(strip('Reconnecting…'), findsNothing);
       expect(strip('Couldn’t connect'), findsNothing);
+    });
+
+    testWidgets('the link strip folds in and out instead of popping', (tester) async {
+      final session = FakeAgentSession();
+      await pumpScreen(tester, session);
+      expect(find.byType(StatusStrip), findsNothing);
+
+      session.setLink(AgentLink.reconnecting, error: 'Wi-Fi dropped');
+      await tester.pump();
+      await tester.pump(Motion.expand ~/ 2);
+      final fold = find.ancestor(of: find.byType(StatusStrip), matching: find.byType(Collapse)).first;
+      final mid = tester.getSize(fold).height;
+      await tester.pump(Motion.expand);
+      expect(mid, lessThan(tester.getSize(fold).height), reason: 'still opening');
+
+      session.setLink(AgentLink.live);
+      await tester.pump();
+      await tester.pump(Motion.expand ~/ 2);
+      expect(strip('Reconnecting…'), findsOneWidget, reason: 'it says what it said while it folds away');
+      await tester.pump(Motion.expand);
+      expect(find.byType(StatusStrip), findsNothing);
+    });
+
+    testWidgets('an error of the app’s own leads with what happened; only the agent’s own is the agent’s', (tester) async {
+      final session = FakeAgentSession();
+      await pumpScreen(tester, session);
+      session.setLink(AgentLink.live, error: 'Not connected. The message was not sent.');
+      await tester.pump();
+      await tester.pump(Motion.expand);
+      expect(strip('The agent reported an error'), findsNothing);
+      expect(strip('Not connected'), findsOneWidget);
+      expect(find.textContaining('The message was not sent.', findRichText: true), findsOneWidget);
+
+      session
+        ..errorFromAgentValue = true
+        ..setLink(AgentLink.live, error: 'Rate limit exceeded');
+      await tester.pump();
+      expect(strip('The agent reported an error'), findsOneWidget);
     });
 
     testWidgets('a long reason opens in full', (tester) async {
@@ -730,6 +769,7 @@ void main() {
 
       await tester.tap(find.text('Take over'));
       await tester.pump();
+      await tester.pump(Motion.expand);
       expect(session.reattachCount, 1);
       expect(find.byType(StatusStrip), findsNothing);
       expect(composerField(tester).enabled, isTrue);
@@ -979,6 +1019,7 @@ void main() {
 
       session.setLink(AgentLink.failed, error: 'x' * 300);
       await tester.pump();
+      await tester.pump(Motion.expand);
       expect(tester.takeException(), isNull);
       expect(find.text('Retry'), findsOneWidget);
       expect(tester.getRect(find.text('Retry')).right, lessThanOrEqualTo(320));

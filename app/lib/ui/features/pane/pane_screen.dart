@@ -1044,7 +1044,7 @@ class _Composer extends StatelessWidget {
     final sending = context.select<PaneViewModel, bool>((v) => v.sending);
     final enabled = state == LinkState.online && open;
     final hint = composerHint(
-      agentName(agent),
+      agent == null || agent.isEmpty ? null : agentName(agent),
       linkWord: switch (state) {
         LinkState.online => open ? null : 'Pane closed',
         LinkState.connecting => 'Connecting…',

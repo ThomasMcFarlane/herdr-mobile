@@ -291,7 +291,7 @@ class _AgentChips extends StatelessWidget {
             padding: const EdgeInsets.only(top: Gap.hair),
             child: Text(
               reason,
-              maxLines: 1,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: Type.caption.copyWith(color: ds.textSecondary),
             ),
@@ -340,7 +340,7 @@ class _StartBar extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           AnimatedSize(
-            duration: Motion.reduced(context) ? Duration.zero : Motion.expand,
+            duration: Motion.of(context, Motion.expand),
             curve: Motion.easeOut,
             alignment: Alignment.topCenter,
             child: error == null

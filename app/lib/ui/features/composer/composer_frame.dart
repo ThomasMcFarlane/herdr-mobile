@@ -31,8 +31,10 @@ void showComposerKeyboard(FocusNode focus) {
 
 /// The one composer placeholder: `Message Claude Code…` while the agent can
 /// be written to, else what is in the way ([linkWord]: `Offline`,
-/// `Connecting…`). [agent] is the agent's display name (`agentName`).
-String composerHint(String agent, {String? linkWord}) => linkWord ?? 'Message $agent…';
+/// `Connecting…`). [agent] is the agent's display name (`agentName`); null
+/// for a pane with no agent, where what is typed is a command.
+String composerHint(String? agent, {String? linkWord}) =>
+    linkWord ?? (agent == null ? 'Type a command…' : 'Message $agent…');
 
 /// One line of the field is [inner] tall at any text size (the strut fixes the
 /// line). The field is a stadium of that height and the round buttons sit the

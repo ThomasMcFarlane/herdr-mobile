@@ -237,46 +237,46 @@ class _QuestionPanelState extends State<QuestionPanel> with TapGuardState<Questi
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-                      if (_plan case final plan?) ...[
-                        if (plan.intent case final said?) EvidenceIntent(text: said),
-                        const SizedBox(height: Gap.sm),
-                        PlanEvidence(markdown: plan.planMarkdown!, preview: plan.planIsPreview),
-                      ],
-                      if (schema == null) ...[
-                        const SizedBox(height: Gap.sm),
-                        Text(
-                          'The agent asked you to open a web page. This app does not open links an agent asks for, so you can only decline.',
-                          style: Type.secondary.copyWith(color: ds.textSecondary),
-                        ),
-                      ] else ...[
-                        if (schema.description != null && schema.description!.isNotEmpty) ...[
-                          const SizedBox(height: Gap.xs),
-                          Text(schema.description!, style: Type.secondary.copyWith(color: ds.textSecondary)),
-                        ],
-                        if (secrets.isNotEmpty) ...[
-                          const SizedBox(height: Gap.sm),
-                          _SecretWarning(fields: secrets),
-                        ],
-                        for (final f in schema.fields) ...[
-                          const SizedBox(height: Gap.md),
-                          _FieldBlock(
-                            field: f,
-                            secret: _secret.contains(f.name),
-                            error: errors[f.name],
-                            controller: _texts[f.name],
-                            boolValue: _bools[f.name],
-                            single: _single[f.name],
-                            multi: _multi[f.name],
-                            onBool: (v) => _changed(() => _bools[f.name] = v),
-                            onSingle: (v) => _changed(() => _single[f.name] = v),
-                            onMulti: (v, on) => _changed(() {
-                              final set = _multi[f.name]!;
-                              on ? set.add(v) : set.remove(v);
-                            }),
-                            onText: () => _changed(() {}),
-                          ),
-                        ],
-                      ],
+            if (_plan case final plan?) ...[
+              if (plan.intent case final said?) EvidenceIntent(text: said),
+              const SizedBox(height: Gap.sm),
+              PlanEvidence(markdown: plan.planMarkdown!, preview: plan.planIsPreview),
+            ],
+            if (schema == null) ...[
+              const SizedBox(height: Gap.sm),
+              Text(
+                'The agent asked you to open a web page. This app does not open links an agent asks for, so you can only decline.',
+                style: Type.secondary.copyWith(color: ds.textSecondary),
+              ),
+            ] else ...[
+              if (schema.description != null && schema.description!.isNotEmpty) ...[
+                const SizedBox(height: Gap.xs),
+                Text(schema.description!, style: Type.secondary.copyWith(color: ds.textSecondary)),
+              ],
+              if (secrets.isNotEmpty) ...[
+                const SizedBox(height: Gap.sm),
+                _SecretWarning(fields: secrets),
+              ],
+              for (final f in schema.fields) ...[
+                const SizedBox(height: Gap.md),
+                _FieldBlock(
+                  field: f,
+                  secret: _secret.contains(f.name),
+                  error: errors[f.name],
+                  controller: _texts[f.name],
+                  boolValue: _bools[f.name],
+                  single: _single[f.name],
+                  multi: _multi[f.name],
+                  onBool: (v) => _changed(() => _bools[f.name] = v),
+                  onSingle: (v) => _changed(() => _single[f.name] = v),
+                  onMulti: (v, on) => _changed(() {
+                    final set = _multi[f.name]!;
+                    on ? set.add(v) : set.remove(v);
+                  }),
+                  onText: () => _changed(() {}),
+                ),
+              ],
+            ],
           ],
         ),
         // The answers stay in reach; the question and the fields scroll.
@@ -617,6 +617,13 @@ class _ChoiceRow extends StatelessWidget {
   }
 }
 
+/// A countdown said in words is never shorter than the time left: whole
+/// seconds under a minute, whole minutes after (80 s is `2 minutes`, not `1`).
+Duration _roundedUp(Duration left) {
+  final s = (left.inMilliseconds + 999) ~/ 1000;
+  return s < 60 ? Dwell.second * s : Dwell.second * 60 * ((s + 59) ~/ 60);
+}
+
 /// "The agent goes on without an answer within 45 s.": what Codex does when a
 /// question waits too long (`_meta.codex.autoResolutionMs`). When the request
 /// is withdrawn the panel goes, label and all.
@@ -626,13 +633,6 @@ class _ChoiceRow extends StatelessWidget {
 /// [StepClockLease] (so it also stops in the background). Nothing animates.
 /// The time is counted from when this app got the request, so "within" is the
 /// honest word: after a re-attach the agent's own timer may be further along.
-/// A countdown said in words is never shorter than the time left: whole
-/// seconds under a minute, whole minutes after (80 s is `2 minutes`, not `1`).
-Duration _roundedUp(Duration left) {
-  final s = (left.inMilliseconds + 999) ~/ 1000;
-  return s < 60 ? Dwell.second * s : Dwell.second * 60 * ((s + 59) ~/ 60);
-}
-
 class AutoResolveLabel extends StatefulWidget {
   const AutoResolveLabel({super.key, required this.deadline, this.now = DateTime.now});
 

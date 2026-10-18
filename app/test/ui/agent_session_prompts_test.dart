@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/acp/acp_models.dart';
 import 'package:herdr_mobile/data/acp/session_state.dart';
@@ -188,7 +189,7 @@ void main() {
       expect(session.permissionAnswers, isEmpty);
       expect(find.textContaining('Hold or tap again · '), findsOneWidget);
 
-      await tester.pump(confirmWindow + const Duration(milliseconds: 100));
+      await tester.pump(Dwell.confirm + const Duration(milliseconds: 100));
       expect(find.textContaining('Hold or tap again'), findsNothing);
       tester.semantics.tap(gated);
       await tester.pump();
@@ -239,6 +240,34 @@ void main() {
       await tester.pump();
       expect(session.permissionAnswers, hasLength(1));
       expect(answered(session, 0), isA<PermissionCancelled>());
+    });
+
+    testWidgets('Cancel request keeps its words beside "N more waiting" at 320 dp ×1.6, and reads disabled while taps are ignored',
+        (tester) async {
+      final handle = tester.ensureSemantics();
+      final session = FakeAgentSession(
+        state: stateWith(
+          turnActive: true,
+          pending: [
+            PendingPermission(1, permissionRequest(rawInput: {'command': 'ls'})),
+            PendingPermission(2, permissionRequest(rawInput: {'command': 'pwd'})),
+            PendingPermission(3, permissionRequest(rawInput: {'command': 'id'})),
+          ],
+        ),
+      );
+      await pumpScreen(tester, session, size: const Size(320, 640), textScale: 1.6, settle: false);
+      final cancel = find.text('Cancel request');
+      await tester.ensureVisible(cancel);
+      await tester.pump();
+      expect(tester.renderObject<RenderParagraph>(cancel).didExceedMaxLines, isFalse, reason: 'not cut');
+      expect(tester.getSemantics(cancel), isSemantics(isButton: true, isEnabled: false));
+      await tester.tap(cancel, warnIfMissed: false);
+      await tester.pump();
+      expect(session.permissionAnswers, isEmpty, reason: 'a guarded tap sends nothing');
+
+      await tester.pump(Dwell.tapGuard);
+      expect(tester.getSemantics(cancel), isSemantics(isButton: true, isEnabled: true));
+      handle.dispose();
     });
 
     testWidgets('waiting requests are counted and shown one at a time', (tester) async {

@@ -28,6 +28,7 @@ class JumpToLatest extends StatelessWidget {
       tooltip: 'Jump to latest',
       semanticLabel: count ? '$newBlocks new, jump to latest' : 'Jump to latest',
       haptic: false,
+      roll: true,
       visible: visible,
       onTap: onPressed,
     );

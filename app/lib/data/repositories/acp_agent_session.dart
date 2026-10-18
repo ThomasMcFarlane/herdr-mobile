@@ -142,6 +142,7 @@ class AcpAgentSession extends ChangeNotifier implements AgentSessionView {
   AgentSessionState _state;
   AgentLink _link = AgentLink.live;
   String? _error;
+  bool _errorFromAgent = false;
   late DateTime _phaseSince;
   late AgentPhase _shownPhase;
 
@@ -314,6 +315,9 @@ class AcpAgentSession extends ChangeNotifier implements AgentSessionView {
 
   @override
   String? get error => _error;
+
+  @override
+  bool get errorFromAgent => _error != null && _errorFromAgent;
 
   /// What [state] says while attached; otherwise what the host's listing said
   /// (a waiting request is shown as a permission: the listing does not say
@@ -1029,6 +1033,7 @@ class AcpAgentSession extends ChangeNotifier implements AgentSessionView {
     _evicted = false;
     _link = AgentLink.reconnecting;
     _error = 'Taking the session back.';
+    _errorFromAgent = false;
     _changed();
     await _attach();
   }
@@ -1513,7 +1518,7 @@ class AcpAgentSession extends ChangeNotifier implements AgentSessionView {
       return true;
     } on JsonRpcException catch (e) {
       if (!current()) return false;
-      _holdRefused(blocks, _failure(e, client));
+      _holdRefused(blocks, _failure(e, client), fromAgent: !isAuthRequired(e));
       return true;
     } on AcpProtocolException catch (e) {
       if (!current()) return false;
@@ -1530,9 +1535,9 @@ class AcpAgentSession extends ChangeNotifier implements AgentSessionView {
 
   /// A message the agent refused: it waits held, with the reason, for the
   /// person to edit or drop it; the reason is also the session's [error].
-  void _holdRefused(List<ContentBlock> blocks, String why) {
+  void _holdRefused(List<ContentBlock> blocks, String why, {bool fromAgent = false}) {
     _queue.add(blocks, at: _clock(), state: QueuedState.held, heldReason: why);
-    _setProblem(why);
+    _setProblem(why, fromAgent: fromAgent);
     _changed();
   }
 
@@ -1621,7 +1626,7 @@ class AcpAgentSession extends ChangeNotifier implements AgentSessionView {
       if (_disposed || !identical(client, _client)) return;
       // A dropped link is already said by [link].
       if (e is JsonRpcClosedException && !_ready) return;
-      _setProblem(_failure(e, client));
+      _setProblem(_failure(e, client), fromAgent: e is JsonRpcException && !isAuthRequired(e));
     }
   }
 
@@ -1820,13 +1825,17 @@ class AcpAgentSession extends ChangeNotifier implements AgentSessionView {
     if (_link == link && _error == error) return;
     _link = link;
     _error = error;
+    _errorFromAgent = false;
     _syncPhase();
     _changed();
   }
 
-  void _setProblem(String? problem) {
-    if (_error == problem) return;
+  /// [fromAgent]: the agent itself answered with [problem] (a JSON-RPC
+  /// error); otherwise it is the app's own account of what went wrong.
+  void _setProblem(String? problem, {bool fromAgent = false}) {
+    if (_error == problem && _errorFromAgent == fromAgent) return;
     _error = problem;
+    _errorFromAgent = fromAgent;
     _changed();
   }
 

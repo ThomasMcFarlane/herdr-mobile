@@ -794,7 +794,7 @@ void main() {
       expect(state.pending.single.origin!.id, startsWith('toolu_01Up'));
       final activity = activityOf(state, now: _at(0))!;
       expect(activity.kind, ActivityKind.waiting);
-      expect(activity.text, 'Waiting for you');
+      expect(activity.text, 'Needs you');
     });
   });
 

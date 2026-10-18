@@ -96,7 +96,7 @@ class _AuthPanelState extends State<AuthPanel> {
     return StatusPanel(
       color: ds.blocked,
       icon: LucideIcons.keyRound,
-      title: need.keychain ? '${visibleText(_session.agentLabel)} needs a token' : 'Sign in on the host',
+      title: need.keychain ? '${visibleText(_session.agentLabel)} needs a token' : 'Sign in on the machine',
       message: [
         visibleText(need.message),
         // Signing in again stores the login in the Keychain again, so the

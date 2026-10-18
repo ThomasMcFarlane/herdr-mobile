@@ -11,14 +11,9 @@ import 'package:herdr_mobile/ui/core/kit.dart';
 import '../../support/step_clock.dart';
 import 'agent_session_navigation.dart';
 import 'background_format.dart';
-import 'permission_dock.dart' show confirmWindow;
 import 'session_select.dart';
 import 'subagent_roster.dart' show showSubagents;
 import '../../render/visible_text.dart';
-
-/// How long `Stopping…` waits for the task to leave the running set before it
-/// says it could not confirm.
-const stopConfirmWindow = Dwell.stopConfirm;
 
 /// Up to this many lines the sheet is as tall as its lines; past it, it is as
 /// tall as a list sheet grows and the list is lazy (like the subagent roster).
@@ -124,7 +119,7 @@ class _BackgroundSheetState extends State<BackgroundSheet> {
     Haptics.armed();
     _primeTimer?.cancel();
     setState(() => _primed = key);
-    _primeTimer = Timer(confirmWindow, () {
+    _primeTimer = Timer(Dwell.confirm, () {
       if (mounted) setState(() => _primed = null);
     });
   }
@@ -141,7 +136,7 @@ class _BackgroundSheetState extends State<BackgroundSheet> {
     _timers.remove(key)?.cancel();
     setState(() => stop == null ? _stops.remove(key) : _stops[key] = stop);
     if (stop?.phase == _StopPhase.stopping) {
-      _timers[key] = Timer(stopConfirmWindow, () {
+      _timers[key] = Timer(Dwell.stopConfirm, () {
         if (!mounted || _stops[key]?.phase != _StopPhase.stopping) return;
         if (!_session.backgroundWork.running.any((t) => t.key == key)) return;
         Haptics.failed();

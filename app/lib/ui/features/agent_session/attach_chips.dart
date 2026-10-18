@@ -30,7 +30,7 @@ class AttachmentChips extends StatelessWidget {
     builder: (context, _) {
       final items = attachments.items;
       return AnimatedSize(
-        duration: Motion.reduced(context) ? Duration.zero : Motion.expand,
+        duration: Motion.of(context, Motion.expand),
         curve: Motion.easeOut,
         alignment: Alignment.topCenter,
         child: items.isEmpty

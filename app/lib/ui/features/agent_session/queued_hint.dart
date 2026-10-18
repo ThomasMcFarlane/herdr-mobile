@@ -29,7 +29,7 @@ class DeliveryHint extends StatelessWidget {
     final ds = context.ds;
     final text = delivery == null ? null : deliveryHint(delivery!);
     return AnimatedSize(
-      duration: Motion.reduced(context) ? Duration.zero : Motion.expand,
+      duration: Motion.of(context, Motion.expand),
       curve: Motion.easeOut,
       alignment: Alignment.topCenter,
       child: text == null

@@ -39,7 +39,7 @@ class _QueuedMessagesState extends State<QueuedMessages> {
     // The session replaces the list whenever it changes.
     same: identical,
     builder: (context, queued) => AnimatedSize(
-      duration: Motion.reduced(context) ? Duration.zero : Motion.expand,
+      duration: Motion.of(context, Motion.expand),
       curve: Motion.easeOut,
       alignment: Alignment.topCenter,
       child: queued.isEmpty ? const SizedBox(width: double.infinity) : _list(context, queued),

@@ -683,7 +683,7 @@ class _PictureTileState extends State<_PictureTile> {
     return PressBuilder(
       onTap: !widget.enabled ? null : (unknown ? _retry : widget.onTap),
       haptic: true,
-      semanticLabel: unknown ? '$name, could not be loaded, tap to try again' : name,
+      semanticLabel: unknown ? '$name, could not be loaded, tap to retry' : name,
       builder: (context, pressed) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

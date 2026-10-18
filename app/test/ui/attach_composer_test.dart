@@ -581,7 +581,7 @@ void main() {
       final session = FakeAgentSession()..auth = need();
       await pump(tester, session);
       expect(find.byType(StatusPanel), findsOneWidget);
-      expect(find.text('Sign in on the host'), findsOneWidget);
+      expect(find.text('Sign in on the machine'), findsOneWidget);
       expect(find.textContaining('Log in with Claude \u00b7 Use an API key'), findsOneWidget);
       expect(find.text('Open a terminal on devbox'), findsOneWidget);
       expect(find.text('claude /login'), findsOneWidget);
@@ -598,7 +598,7 @@ void main() {
       final session = FakeAgentSession(link: AgentLink.failed, error: 'Claude Code needs you to sign in on the host.')
         ..auth = need();
       await pump(tester, session);
-      expect(find.text('Sign in on the host'), findsOneWidget);
+      expect(find.text('Sign in on the machine'), findsOneWidget);
       await tester.tap(find.text('Retry'));
       await settle(tester);
       expect(session.reattachCount, 1);

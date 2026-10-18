@@ -83,6 +83,9 @@ class SubagentRunSession extends ChangeNotifier implements AgentSessionView {
   void loadEarlier() {}
   @override
   String? get error => null;
+
+  @override
+  bool get errorFromAgent => false;
   @override
   AgentPhase get phase => state.phase;
   @override

@@ -100,7 +100,7 @@ ActivityLine? activityOf(AgentSessionState state, {required DateTime now}) {
     return ActivityLine(kind: ActivityKind.waiting, text: summary.plain, tool: summary, since: waited.at, quiet: null);
   }
   if (phase != AgentPhase.working) {
-    return const ActivityLine(kind: ActivityKind.waiting, text: 'Waiting for you');
+    return const ActivityLine(kind: ActivityKind.waiting, text: 'Needs you');
   }
   if (running != null) {
     final summary = toolSummary(running.call);

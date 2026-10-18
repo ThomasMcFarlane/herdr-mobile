@@ -168,4 +168,45 @@ void main() {
     attention.dispose();
     h.dispose();
   });
+
+  testWidgets('a new request in a session that stays blocked is a new wait to the arrival cue', (tester) async {
+    final h = await BoardHarness.create([
+      (profile: _profile('a', 'studio-mac'), snapshot: snapshotWith([_pane(1, 'working')], title: _title)),
+    ]);
+    final host = FakeAgentHost();
+    final waits = host.add(id: 'k1', title: 'Deploy');
+    final repo = AgentSessionRepository(fleet: h.fleet, hostFor: (_) => host);
+    final attention = AttentionSet(fleet: h.fleet, sessions: repo);
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ...h.providers,
+          ListenableProvider<AgentSessions>.value(value: repo),
+          ChangeNotifierProvider<AttentionSet>.value(value: attention),
+          Provider<Notifier>.value(value: FakeNotifier()),
+        ],
+        child: MaterialApp(theme: AppTheme.dark(), home: const HomeShell()),
+      ),
+    );
+    await _settle(tester);
+
+    final first = waits.askPermission(command: 'npm run deploy');
+    waits.askPermission(command: 'npm run migrate', toolCallId: 't2');
+    await _settle(tester);
+    final before = attention.needsYouKeys;
+    expect(before, hasLength(1));
+
+    waits.answerElsewhere(first, by: 'terminal', answer: 'allow');
+    await _settle(tester);
+    expect(attention.needsYou, hasLength(1), reason: 'still blocked, on the second request');
+    expect(
+      attention.needsYouKeys.any((k) => !before.contains(k)),
+      isTrue,
+      reason: 'the request in front changed: the cue has something new to feel',
+    );
+
+    await tester.pumpWidget(const SizedBox());
+    attention.dispose();
+    h.dispose();
+  });
 }

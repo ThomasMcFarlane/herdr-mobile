@@ -1023,7 +1023,7 @@ from the recorded traces with their own clock (`test/acp/support/trace_state.dar
   line, not this.
 - **Status line** (`activity.dart`): `activityOf(state, now:)` is null when no
   turn runs, else, in order: `waiting` (a call with a pending permission, its
-  summary; or `Waiting for you` for a question), `tool` (the latest call that
+  summary; or `Needs you` for a question), `tool` (the latest call that
   is pending or in progress, its `ToolSummary.plain`; Claude never says
   `in_progress`), `thought` (the first sentence of the latest thought, only
   while it is the last thing of the turn: Markdown marks removed, cut at the
@@ -1214,7 +1214,7 @@ Everything is in `AgentSessionState`
   roster stays `subagents`). Read `run.items` for the drill-in, `run.liveTextOf` for the
   streaming message, `origin` on `state.pending` for the dock. A disconnected session
   leaves its runs as they were: the UI must not show "running" for it. The status line
-  (`activityOf`) says "Waiting for you" for a child's permission (the child's call is not
+  (`activityOf`) says "Needs you" for a child's permission (the child's call is not
   in the turn); `origin` names who.
   Unmodelled: the adapter's `subagent_spawned` / `subagent_state_update`
   (sent only to a client that advertises `subagents`, which this app never does)
@@ -1434,7 +1434,7 @@ panel say so and give the token steps (`claude setup-token`,
 `CLAUDE_CODE_OAUTH_TOKEN` in `~/.zshenv`, a new session) instead of another
 sign-in. The marker is a guess from the environment, not a look into the
 Keychain. A keeper that runs as the desktop job is not marked, so an auth error
-from it gets the ordinary `Sign in on the host` panel: a login made in a herdr
+from it gets the ordinary `Sign in on the machine` panel: a login made in a herdr
 terminal is in the same session and the job reads it.
 
 Checked: the real start, a working keeper with the starter's environment, the job

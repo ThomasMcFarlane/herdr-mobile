@@ -752,7 +752,7 @@ class _TestResult extends StatelessWidget {
             _ => null,
           };
     return AnimatedSize(
-      duration: Motion.reduced(context) ? Duration.zero : Motion.expand,
+      duration: Motion.of(context, Motion.expand),
       curve: Motion.easeOut,
       alignment: Alignment.topCenter,
       child: view == null
