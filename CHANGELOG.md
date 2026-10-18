@@ -6,6 +6,22 @@ release.
 
 ## [Unreleased]
 
+### Open what an agent made, on your phone
+
+- An HTML or SVG file in the file viewer has an Open in browser button. The
+  page opens in the phone's browser tab with its own styles, scripts and
+  images, read from the file's folder on the machine. An SVG, which the viewer
+  could not draw at all, now shows.
+- A `localhost` link in terminal output or a chat (a dev server on the
+  machine) now offers Open on phone: the page opens in the browser through
+  your SSH connection. Sign-in and passkeys work as in any link. An `https`
+  address on the machine stays copy-only and says why.
+- A machine that does not allow port forwarding says so; Copy link stays.
+- A Web chip under the session's title lists every dev server and HTML or SVG
+  page the agent has put up, newest first, so a link from an hour ago is not
+  lost in the chat. A tap opens it. A server says Running only while a
+  background task for its port is active.
+
 ### Pictures are downloaded once
 
 - A picture you looked at is kept on the phone (at most 192 MB, the oldest go

@@ -85,7 +85,8 @@ class _MarkdownViewState extends State<MarkdownView> {
     );
   }
 
-  void _link(BuildContext context, String url) => unawaited(showLinkSheet(context, url));
+  void _link(BuildContext context, String url) =>
+      unawaited(showLinkSheet(context, url, machine: widget.machine));
 
   void _path(BuildContext context, String path, int? line) {
     final machine = widget.machine!;

@@ -16,13 +16,22 @@ import 'file_widgets.dart';
 /// changed, and the first bytes as a hex dump. Nothing in it is read beyond
 /// the first [viewerHexBytes] bytes.
 class BinaryView extends StatelessWidget {
-  const BinaryView({super.key, required this.model, required this.onCopyPath, this.onViewAsText});
+  const BinaryView({
+    super.key,
+    required this.model,
+    required this.onCopyPath,
+    this.onViewAsText,
+    this.onOpenInBrowser,
+  });
 
   final FileViewerViewModel model;
   final VoidCallback onCopyPath;
 
   /// Offered for SVG: its source is text.
   final VoidCallback? onViewAsText;
+
+  /// Offered for SVG, which has no drawn view here at all: the browser shows it.
+  final VoidCallback? onOpenInBrowser;
 
   @override
   Widget build(BuildContext context) {
@@ -79,6 +88,10 @@ class BinaryView extends StatelessWidget {
         if (perms.isNotEmpty) InfoRow(label: 'Permissions', value: perms, mono: true),
         InfoRow(label: 'Path', value: stat.path, mono: true, divider: false),
         const SizedBox(height: Gap.lg),
+        if (onOpenInBrowser != null) ...[
+          AppButton(label: 'Open in browser', icon: LucideIcons.globe, expand: true, onPressed: onOpenInBrowser),
+          const SizedBox(height: Gap.sm),
+        ],
         Row(
           children: [
             Expanded(
@@ -93,7 +106,13 @@ class BinaryView extends StatelessWidget {
             if (onViewAsText != null) ...[
               const SizedBox(width: Gap.sm),
               Expanded(
-                child: AppButton(label: 'View as text', icon: LucideIcons.fileText, expand: true, onPressed: onViewAsText),
+                child: AppButton(
+                  label: 'View as text',
+                  icon: LucideIcons.fileText,
+                  expand: true,
+                  kind: onOpenInBrowser == null ? AppButtonKind.primary : AppButtonKind.secondary,
+                  onPressed: onViewAsText,
+                ),
               ),
             ],
           ],

@@ -244,9 +244,82 @@ Tailscale.
   `AnsiParser`/`WrapMemo`.
 - **Links in terminal output**: http(s) URLs and file paths are detected per
   line (`terminal_links.dart`), underlined, and a plain tap opens a sheet (URL:
-  open/copy, localhost-type addresses copy-only) or the file viewer. Plain
-  `http` is only opened from an explicit tap that shows the URL; the sign-in
-  banner path stays https-only.
+  open/copy; a plain `http` localhost-type address on a machine offers `Open on
+  phone`, an `https` one is copy-only) or the file viewer. Plain `http` is only
+  opened from an explicit tap that shows the URL; the sign-in banner path stays
+  https-only. `openPreviewUrl` is the only opener of `http://localhost`, and only
+  for URLs the app built.
+- **Web pages on the phone** (`WebBridgeHost`, `WebPreview`): measured before
+  built, with a Node prototype, real headless Chrome and a real sshd (120 ms
+  RTT, 10 Mbit model). What it settled, so nobody re-argues it:
+  - Cookie auth, not a path prefix (root-absolute assets). URL host `localhost`
+    (no measurable difference from `127.0.0.1`). A forward takes the *same port
+    number* as its target when free: a page that hardcodes
+    `ws://localhost:3000` only works then.
+  - `Range`, `Last-Modified`/304 and `Cache-Control: no-cache` on static files:
+    reload 0.54 s against 1.49 s cold. An extensionless HTML navigation to a
+    missing path gets `index.html` (single-page apps).
+  - One SFTP read is two round trips (open, read), so reads go three at a time,
+    256 KiB each: a 6 MiB page 5.9 s instead of 11.3 s, peak 63 MB.
+  - `HttpServer.idleTimeout` is 15 s: Chrome keeps sockets it has finished with,
+    and the idle timer only runs with nothing open.
+  - Aborting a body in dart:io: `detachSocket` throws once headers are out;
+    closing short of the announced Content-Length destroys the socket.
+  - Never return a map's `remove` from `whenComplete` on the future stored in
+    that map: it waits for itself.
+- **Web in this session** (`session_web.dart` in `data/acp`, the `Web` chip and
+  sheet in `ui/features/agent_session`): the servers and pages a session put
+  on the web, found by scanning the transcript, so a link printed an hour ago
+  is not lost with the chat. Nothing is stored; the scan is memoized per
+  transcript item, per list and per folder. The rules are narrow because a wide
+  scan was wrong: run over 6,000 recorded sessions, "every `localhost` URL and
+  every `.html` name in commands and output" was right for about 6% of its rows
+  (a `curl` probe of Milvus, the pages a `curl -o` downloaded, the files a
+  `grep` named, a heredoc's own links). So a row needs the agent to have MADE
+  or ANNOUNCED the thing:
+  - Pages (`.html`, `.htm`, `.xhtml`, `.svg`): a completed edit's diff or path;
+    a file a command writes (`>`, `>>`, `tee`, `-o`/`--output`, a `cp`/`mv`
+    target, `open`), with a leading `cd X` honoured; a path with a folder in
+    the agent's own words, or a bare name right after a word of making
+    ("created report.html"). A deleted or moved page leaves the list. NOT a
+    file only read, grepped, listed or downloaded; NOT command output; NOT the
+    body of a heredoc; NOT a fenced code block; NOT a path with `$`, a drive
+    letter or a URL; NOT `node_modules`, `.git` or system folders; NOT a
+    relative name when no folder is known (an empty session folder counts as
+    unknown: it would be taken against the login folder and open a decoy).
+  - Servers: a loopback link in the agent's own words (path kept; a bare
+    `localhost:5173` counts), or a BANNER line a launched command printed in
+    its first 8 KB (`Local: http://...`, `Uvicorn running on`, `Serving HTTP
+    on`), origin only. NOT the output of a probe (`curl`, `cat`, `rg`, `git`,
+    `ssh`, `docker exec`, ...) and NOT a command's own text. Only `localhost`,
+    `127.0.0.1`, `::1`, `0.0.0.0` and `::` count (`isPreviewHost`): another
+    `127.x`, `*.localhost` or `*.local` name is resolved by the machine, so the
+    address shown and the host dialed could differ. A port outside 1-65535, and
+    credentials in the link, are dropped.
+  - A server is `Running` only while a background task that is RUNNING and
+    whose command names its port exists, `Stopped` when only ended or paused
+    ones do, else `Seen`. A saved copy or a link that is down says `Seen` for
+    all: nothing in it is known to run now.
+  - A port that is not a web server (SSH, Docker, MySQL, PostgreSQL, Redis,
+    Elasticsearch, Memcached, MongoDB; `sensitiveServiceOf`) is listed dimmed
+    with its name and is not opened from the list: an agent, steered by text it
+    read, could name one, and a tap would forward the phone's browser to it. The
+    link sheet, where the whole address is on screen, still opens it.
+  - Cost: text is capped, a token is split by delimiters and then tested (a
+    lazy regex with a lookahead took 30 s on a 64 KB unbroken run), at most 40
+    mentions per item and 150 rows per session; a command's scan is memoized by
+    its input, which a streaming patch keeps. The chip and sheet compare what
+    the rows SHOW (`sameWebAssets`), not the list, because a streaming tool
+    replaces the transcript list on every chunk.
+  - A message that is still streaming is read once it has settled. UNVERIFIED:
+    after a `session/load` replay the last message may stay live until the next
+    item (`withSetup` does not settle it), so a link in it shows late.
+  - The sheet freezes its rows while it is open (a bottom sheet grows upward, so
+    a row added anywhere moves the others); a tap says `Opening X…`, one open
+    per row at a time, and the browser is only launched while the screen the
+    sheet came from is still there.
+  - Pictures and documents are left out on purpose: they have viewers in the
+    chat, and their paths come from free text, the least reliable part.
 - **Keys are not a send.** `PaneViewModel.sendKeys` never sets `sending` (a
   tapped hotkey must not disable the key row) and keeps calls in order; only
   `sendLine` is a tracked send.

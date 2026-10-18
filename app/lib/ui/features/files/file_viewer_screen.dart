@@ -8,9 +8,11 @@ import 'package:provider/provider.dart';
 
 import '../../../data/models/remote_file.dart';
 import '../../../data/repositories/machine_connection.dart';
+import '../../../data/repositories/web_preview.dart';
 import '../../core/chrome.dart';
 import '../../core/controls.dart';
 import '../../core/motion.dart';
+import '../../core/open_link.dart';
 import '../../core/rows.dart';
 import '../../core/status_panel.dart';
 import '../../core/theme.dart';
@@ -138,6 +140,12 @@ class _ViewerPageState extends State<_ViewerPage> {
             name: stat.name,
             path: stat.path,
             actions: [
+              if (ready && canPreviewInBrowser(stat.name))
+                CircleButton(
+                  icon: LucideIcons.globe,
+                  tooltip: 'Open in browser',
+                  onPressed: () => unawaited(_openInBrowser(context, stat)),
+                ),
               if (ready && vm.isText && vm.document != null && !vm.document!.isEmpty)
                 CircleButton(
                   icon: LucideIcons.clipboardCopy,
@@ -403,11 +411,35 @@ class _Body extends StatelessWidget {
               model: vm,
               onCopyPath: () => copyToClipboard(context, vm.stat.path, 'Path copied'),
               onViewAsText: vm.canViewAsText ? vm.viewAsText : null,
+              onOpenInBrowser: canPreviewInBrowser(vm.name) ? () => unawaited(_openInBrowser(context, vm.stat)) : null,
             ),
         };
     }
   }
 }
+
+/// Shows [stat] (an HTML or SVG file) in the phone's browser, served from its
+/// own folder on the machine. A failure says why in a toast.
+Future<void> _openInBrowser(BuildContext context, RemoteStat stat) async {
+  final machine = context.read<_ViewerMachine>().machine;
+  // One open per page at a time: a second tap while the connection is made
+  // would open a second browser tab.
+  final id = '${machine.profile.id}\u0000${stat.path}';
+  if (!_openingPages.add(id)) return;
+  try {
+    final url = await machine.web.staticUrl(stat);
+    if (await openPreviewUrl(url)) return;
+    if (context.mounted) {
+      showToast(context, "Couldn't open on this phone: no browser could open it.", kind: ToastKind.failed);
+    }
+  } on WebPreviewException catch (e) {
+    if (context.mounted) showToast(context, e.message, kind: ToastKind.failed);
+  } finally {
+    _openingPages.remove(id);
+  }
+}
+
+final _openingPages = <String>{};
 
 class _TextBody extends StatelessWidget {
   const _TextBody({required this.vm, required this.doc, this.rendered = false});

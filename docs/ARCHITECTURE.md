@@ -428,12 +428,15 @@ Stale data is labelled as stale:
 
 ### Network traffic
 
-The only socket the app opens is the SSH connection
-(`SSHSocket.connect`, `ssh_transport.dart:160`). Checked in the code:
+The only socket the app opens to the network is the SSH connection
+(`SSHSocket.connect`, `ssh_transport.dart:160`). It also listens on the phone's
+loopback address for the pages it opens in the browser (below). Checked in the
+code:
 
 - `app/pubspec.yaml` has no HTTP client, analytics, crash-reporting or
   telemetry dependency.
-- Nothing under `app/lib` makes HTTP requests or loads network images.
+- Nothing under `app/lib` makes HTTP requests or loads network images. The
+  loopback listeners below only answer; they never call out.
 - The app has no WebView.
 
 Other ways traffic can leave the phone:
@@ -446,8 +449,56 @@ Other ways traffic can leave the phone:
   approval) opens only if it is `https`. A link tapped in terminal output may
   be `http` or `https`, and the sheet shows the whole address first.
   Addresses that point at the host itself (`localhost`, loopback addresses,
-  `.local` names) are copy-only (`docs/ENGINEERING.md` "Links in terminal
-  output").
+  `.local` names) cannot be opened as they are; a plain `http` one can be
+  opened through the SSH connection (`Open on phone`, next point), an `https`
+  one is copy-only (`docs/ENGINEERING.md` "Links in terminal output").
+- **Pages from a machine** (`app/lib/data/services/web_bridge.dart`, the
+  transport isolate). `Open in browser` on an HTML or SVG file and `Open on
+  phone` on a `localhost` link start a listener on `127.0.0.1` of the phone and
+  open it in the same Custom Tab. A *static* listener serves the file's own
+  folder, read-only, over the machine's SFTP session; a *forward* listener
+  carries raw bytes to a port on the machine over a `direct-tcpip` channel of
+  the existing connection (never a connection of its own). What keeps it from
+  being a hole:
+  - Every answer needs the listener's token (16 random bytes, 32 hex). It is
+    sent once, in the entry URL (`/__herdr/open?t=…`), which answers with a
+    `HttpOnly; SameSite=Strict` cookie named for the port. Why a cookie and not
+    a path prefix: a built site refers to `/assets/x.js`, which a prefix breaks
+    (measured, scenario S2).
+  - The Host header must be `localhost:<port>` or `127.0.0.1:<port>` (DNS
+    rebinding). Without the token, with the entry URL, or with a foreign Host
+    the forward listener answers itself and never dials the machine.
+  - A static path is percent-decoded once and refused (404) if it holds NUL, a
+    backslash, a `..` segment or a segment that starts with a dot (`.env`,
+    `.git`, `.ssh`: a page in the home folder would otherwise read them); the
+    machine is only asked about paths built from the root. No listing; GET and
+    HEAD only. A symlink inside the folder that leads outside it is followed
+    by SFTP; telling would cost a `realpath` per request (not done).
+  - A forward listener removes its own `herdr_<port>` cookies from the first
+    request head it passes on (the dev server on the machine has no business
+    with them, and with two machines on one port the browser sends one's to the
+    other). A keep-alive connection's later requests are not rewritten (that
+    needs HTTP framing).
+  - A forward only takes `localhost`, `127.0.0.1`, `::1`, `0.0.0.0`, `::`: a
+    `*.local` name would reach other devices on the machine's network. When the
+    listener cannot take the target's own port number, the person is told once,
+    and a listener that comes back on another port gets a new token.
+  - A listener stops after 10 minutes with nothing in flight (one-shot timer);
+    its port and token are remembered, so a tab that was left open still
+    works after a relaunch. A forward listener serves at most 64 connections.
+  - Known limits: a page served by one listener (same site `localhost`, other
+    port) can call another open listener, and a cookie-less request from such a
+    page is let through when `Sec-Fetch-Site` is `same-site` and its `Origin`
+    is another live listener (a front end calling its API on a second port:
+    `fetch` never sends cookies cross-origin). Another app on the phone that
+    forges those headers and finds a live port reaches only the ports the
+    person opened. Agent-written HTML in a static listener is as trusted as the
+    machine itself. A host that forbids port forwarding
+    (`AllowTcpForwarding no`) says so when the link is opened.
+  - Not verified on a phone: Custom Tab cookie handling, Chrome's
+    secure-connections mode on loopback, and whether Android freezes the
+    listener in the background. The lab that settled the design is described in
+    `docs/ENGINEERING.md` "Web pages on the phone".
 - **`connectivity_plus`** only reads the state of the phone's network
   interfaces (`network_monitor.dart`).
 - **Notifications** are local, through `flutter_local_notifications`
@@ -498,7 +549,8 @@ dartssh2 reports the host key as an OpenSSH-style `SHA256:` fingerprint.
 - **Supported methods.** A private key (OpenSSH PEM, with an optional
   passphrase), a password, or no credential for Tailscale SSH, which uses only
   the `none` method (`ssh_transport.dart:167-196`). The app requests no agent
-  or port forwarding.
+  forwarding, and opens port-forward channels only to a port the person asked
+  to see.
 - **Storage.** Keys, passphrases and passwords live in `flutter_secure_storage`
   under `machine.<id>.<field>`, never in preferences
   (`machine_repository.dart:45-83`).
@@ -582,10 +634,11 @@ setting decides whether that text appears there.
   password authentication, the host's sshd receives the password. A host can
   also read anything you upload to its inbox.
 - *Cannot:* run code on the phone. The app renders text, Markdown and images,
-  with no WebView. It cannot open a link without your tap, and a link from a
+  with no WebView (a page opened in the browser runs in the browser). It cannot open a link without your tap, and a link from a
   login banner must be `https`.
 - *Cannot:* reach other machines through the app. Each machine has its own
-  connection and isolate, and the app does not forward agents or ports.
+  connection and isolate, and the app does not forward agents; it forwards a
+  port only to show its page on the phone.
 - *Cannot:* read phone files you did not attach, or answer a prompt for you.
 - *Limits on what it can send:* reads are capped (8 MB per SFTP read), and the
   keeper's log has byte bounds.

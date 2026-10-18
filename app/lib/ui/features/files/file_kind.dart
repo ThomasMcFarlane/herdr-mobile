@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import '../../../data/models/web_bridge.dart' show isWebPageName;
 import '../../../data/services/image_prep.dart' show pictureExtensions;
 
 /// How the viewer shows a file.
@@ -66,6 +67,11 @@ FileType typeForName(String name) {
   if (_binaryExt.contains(ext)) return FileType(FileKind.binary, '${ext.toUpperCase()} file');
   return const FileType(FileKind.text, 'Text');
 }
+
+/// Whether the phone's browser can show the file as a page: HTML, and SVG
+/// (which the viewer cannot draw). The browser, not the viewer, so its own
+/// scripts and styles run and its links work.
+bool canPreviewInBrowser(String name) => isWebPageName(name);
 
 bool _starts(Uint8List b, List<int> magic, [int at = 0]) {
   if (b.length < at + magic.length) return false;

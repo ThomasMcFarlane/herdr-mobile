@@ -7,6 +7,7 @@ import 'package:dartssh2/dartssh2.dart';
 import '../acp/json_rpc.dart' show splitLines;
 import '../models/machine_profile.dart';
 import '../models/remote_file.dart';
+import '../models/web_bridge.dart';
 import 'auth_notice.dart';
 import 'bridge_command.dart';
 import 'herdr_transport.dart';
@@ -14,6 +15,7 @@ import 'zipped_exec_channel.dart';
 import 'link_liveness.dart';
 import 'mux_client.dart';
 import 'sftp_files.dart';
+import 'web_bridge.dart';
 
 /// Thrown (wrapped in [HerdrTransportException]) when a pinned host key no
 /// longer matches.
@@ -693,10 +695,32 @@ class SshTransport implements HerdrTransport {
   @override
   void reset() => unawaited(_teardown());
 
+  /// The loopback listeners for pages (see [WebBridgeHost]). Files come from
+  /// the same SFTP session as the file viewer; a forward is a new channel on
+  /// the one authenticated connection, never a connection of its own.
+  late final WebBridgeHost _web = WebBridgeHost(stat: _files.stat, read: _files.read, dial: _dialForward);
+
+  Future<SSHSocket> _dialForward(String host, int port) async {
+    if (_closed) throw const HerdrTransportException('Transport closed');
+    final client = await _connected();
+    try {
+      return await client.forwardLocal(host, port);
+    } on SSHChannelOpenError catch (e) {
+      throw forwardRefusal(e);
+    } on Object catch (e) {
+      _drop(client);
+      client.close();
+      throw HerdrTransportException('Cannot open channel: $e');
+    }
+  }
+
+  @override
+  Future<WebBridgeInfo> openWebBridge(WebBridgeSpec spec) => _web.open(spec);
+
   @override
   Future<void> close() {
     _closed = true;
-    return _teardown();
+    return Future.wait([_teardown(), _web.close()]);
   }
 
   /// Synchronously invalidates the mux, event streams and SSH client (so
@@ -738,6 +762,21 @@ HerdrTransportException? channelRefusal(Object error) {
     );
   }
   return HerdrTransportException('The host would not open a channel: ${error.description}');
+}
+
+/// Why `direct-tcpip` (a port forward) was refused. Code 1 is the host's
+/// policy (`AllowTcpForwarding no`, a Tailscale SSH policy): fatal, because
+/// retrying cannot help and the person has to be told. Code 2 is the target
+/// itself refusing (nothing listens on that port): not fatal, the page the
+/// browser gets says so and a server that starts later works.
+HerdrTransportException forwardRefusal(SSHChannelOpenError error) {
+  if (error.code == 1) {
+    return const HerdrTransportException(
+      'the machine does not allow port forwarding',
+      fatal: true,
+    );
+  }
+  return HerdrTransportException('The machine could not reach that port: ${error.description}');
 }
 
 /// [SSHSocket] that tells `onData` about every inbound chunk: proof of life

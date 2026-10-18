@@ -1,0 +1,501 @@
+import '../models/remote_file.dart';
+import '../models/web_bridge.dart' show isPreviewHost, isWebPageName;
+import 'acp_models.dart';
+import 'background/background_work.dart' show BackgroundStatus, BackgroundTask;
+import 'session_state.dart';
+import 'turns/tool_summary.dart' show commandOf, outputTextOf;
+import 'turns/turns.dart' show pathOfCall;
+
+/// What a session put on the web for the person to look at: a dev server on the
+/// machine, or an HTML or SVG file. Found in the transcript, so it is not lost
+/// when the chat scrolls: a link an agent printed an hour ago is here.
+///
+/// What counts is deliberately narrow. Run over 6,000 recorded sessions, a
+/// scanner that took every `localhost` URL and every `.html` name from commands
+/// and their output was right for about 6% of its rows: it listed the Milvus a
+/// `curl` probed, the pages a `curl -o` downloaded, the files a `grep` named.
+/// So a row needs the agent to have MADE or ANNOUNCED the thing:
+/// - a page: a completed edit, a file a command writes (`>`, `tee`, `-o`,
+///   `cp`/`mv` target, `open`), or a path in the agent's own words;
+/// - a server: a link in the agent's own words, or a banner line a launched
+///   command printed (`Local: http://localhost:5173/`).
+enum WebKind { server, page }
+
+/// A server's state as far as the phone can tell. [seen] is the honest default:
+/// a link in the output says the server existed, not that it still runs.
+enum ServerState { running, stopped, seen }
+
+/// One server or page, with the last place the transcript mentioned it.
+class WebAsset {
+  const WebAsset({
+    required this.kind,
+    required this.key,
+    required this.title,
+    required this.where,
+    this.url,
+    this.path,
+    this.at,
+    required this.order,
+  });
+
+  final WebKind kind;
+
+  /// One row per key: the server's `localhost:5173`, a page's absolute path.
+  final String key;
+
+  /// What the row says: `localhost:5173/docs`, `report.html`. Raw text from the
+  /// agent: the screen shows it through `visibleText`.
+  final String title;
+
+  /// A page's folder (`reports/`); empty for a server and for the top folder.
+  final String where;
+
+  /// The server's link, cleaned: `http`, a machine-local host, a valid port, no
+  /// credentials.
+  final Uri? url;
+
+  /// The page's absolute path, or `~/...` when the home folder is not known
+  /// here (the file layer expands it).
+  final String? path;
+
+  /// When the last mention arrived; null when the transcript has no times.
+  final DateTime? at;
+
+  /// Position of the last mention in the transcript: bigger is newer.
+  final int order;
+
+  /// The port, for matching a background task.
+  int? get port => url == null ? null : (url!.hasPort ? url!.port : 80);
+}
+
+/// The most rows a session shows: a transcript can mention hundreds of ports.
+const webAssetsCap = 150;
+
+/// Whether [a] and [b] show the same rows. A tool call that streams replaces
+/// the transcript list on every chunk and with it the list this returns; the
+/// screens rebuild on a change of what they SHOW, not of the list.
+bool sameWebAssets(List<WebAsset> a, List<WebAsset> b) {
+  if (identical(a, b)) return true;
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    final x = a[i], y = b[i];
+    if (x.key != y.key || x.title != y.title || x.where != y.where || x.at != y.at || x.url != y.url) return false;
+  }
+  return true;
+}
+
+/// The servers and pages of [items], newest mention first, one row each.
+/// Memoized by list identity and [cwd] (the folder a relative path is taken
+/// against; empty counts as unknown), and the scan of each item by the item.
+List<WebAsset> webAssetsOf(List<TranscriptItem> items, {String? cwd}) {
+  final base = cwd == null || cwd.isEmpty ? null : cwd;
+  final byCwd = _lists[items] ??= {};
+  return byCwd[base] ??= _build(items, base);
+}
+
+/// A server's state against the session's background tasks: running while a
+/// task that names its port is running, stopped when only ended ones do, else
+/// just seen. [live] is false for a saved copy or a link that is not up: then
+/// nothing here is known to run.
+ServerState serverStateOf(WebAsset server, Iterable<BackgroundTask> tasks, {bool live = true}) {
+  final port = server.port;
+  if (port == null || !live) return ServerState.seen;
+  final pattern = RegExp('(?<!\\d)$port(?!\\d)');
+  var named = false;
+  for (final t in tasks) {
+    if (!pattern.hasMatch(t.title) && !(t.detail != null && pattern.hasMatch(t.detail!))) continue;
+    if (t.status == BackgroundStatus.running) return ServerState.running;
+    named = true;
+  }
+  return named ? ServerState.stopped : ServerState.seen;
+}
+
+final _lists = Expando<Map<String?, List<WebAsset>>>('session web list');
+final _mentions = Expando<List<_Mention>>('session web mentions');
+final _commandScans = Expando<List<_Mention>>('session web command');
+
+enum _Act { server, page, drop }
+
+/// One thing a transcript item said. [cd] is a `cd` the command made first.
+class _Mention {
+  const _Mention.server(this.url, this.at) : act = _Act.server, path = null, cwd = null, cd = null;
+  const _Mention.page(this.path, this.cwd, this.cd, this.at) : act = _Act.page, url = null;
+  const _Mention.drop(this.path, this.cwd, this.cd, this.at) : act = _Act.drop, url = null;
+
+  final _Act act;
+  final Uri? url;
+  final String? path;
+  final String? cwd;
+  final String? cd;
+  final DateTime? at;
+}
+
+List<WebAsset> _build(List<TranscriptItem> items, String? sessionCwd) {
+  final byKey = <String, WebAsset>{};
+  for (final (index, item) in items.indexed) {
+    var seq = 0;
+    for (final m in _mentionsOf(item)) {
+      // Items are 1000 apart, the mentions of one item in the order scanned.
+      final order = index * 1000 + seq++;
+      switch (m.act) {
+        case _Act.server:
+          final asset = _serverOf(m.url!, m.at, order);
+          // The command named a path and its own output only the server: the path stays.
+          final prev = byKey[asset.key];
+          if (prev != null && prev.order ~/ 1000 == index && prev.url?.path != '/' && asset.url?.path == '/') break;
+          byKey[asset.key] = asset;
+        case _Act.page:
+          final asset = _pageOf(m, sessionCwd, order);
+          if (asset != null) byKey[asset.key] = asset;
+        case _Act.drop:
+          final key = _placed(m, sessionCwd);
+          if (key != null) byKey.remove(key);
+      }
+    }
+  }
+  final out = byKey.values.toList()..sort((a, b) => b.order.compareTo(a.order));
+  return List.unmodifiable(out.length > webAssetsCap ? out.sublist(0, webAssetsCap) : out);
+}
+
+List<_Mention> _mentionsOf(TranscriptItem item) {
+  // A message that is still streaming grows under the same object and the
+  // item list is not replaced by a chunk: it is read once it has settled.
+  if (item is TranscriptMessage && item.live != null) return const [];
+  return _mentions[item] ??= _scan(item);
+}
+
+/// Per item, at most this many mentions: one message cannot bury the rest.
+const _perItem = 40;
+
+List<_Mention> _scan(TranscriptItem item) {
+  final out = <_Mention>[];
+  switch (item) {
+    case TranscriptMessage(role: MessageRole.agent, :final text, :final at):
+      _say(text.length > _textCap ? text.substring(0, _textCap) : text, at, out);
+    case TranscriptTool(:final call, :final at):
+      for (final c in call.content) {
+        if (c is ToolDiff && call.status == ToolStatus.completed && _isPage(c.path)) {
+          final p = _cleanPath(c.path);
+          if (p != null) out.add(_Mention.page(p, call.cwd, null, at));
+        }
+      }
+      if (call.status == ToolStatus.completed && (call.kind == ToolKind.edit || call.kind == ToolKind.delete)) {
+        final p = pathOfCall(call);
+        if (p != null && _isPage(p)) {
+          final clean = _cleanPath(p);
+          if (clean != null) {
+            out.add(call.kind == ToolKind.delete ? _Mention.drop(clean, call.cwd, null, at) : _Mention.page(clean, call.cwd, null, at));
+          }
+        }
+      }
+      if (call.kind == ToolKind.execute) {
+        final command = commandOf(call);
+        if (command != null) {
+          // The patches of a streaming call replace the call but keep its input.
+          final key = call.rawInput;
+          final scanned = key is Map ? (_commandScans[key] ??= _scanCommand(command, call.cwd)) : _scanCommand(command, call.cwd);
+          out.addAll(scanned.map((m) => _withTime(m, at)));
+          // What a launched command printed names the server. Not what a probe printed.
+          final printed = outputTextOf(call);
+          if (printed != null && !_isProbe(command)) _banners(printed, at, out);
+        }
+      }
+    default:
+  }
+  return out.length > _perItem ? out.sublist(0, _perItem) : out;
+}
+
+_Mention _withTime(_Mention m, DateTime? at) => switch (m.act) {
+  _Act.server => _Mention.server(m.url, at),
+  _Act.page => _Mention.page(m.path, m.cwd, m.cd, at),
+  _Act.drop => _Mention.drop(m.path, m.cwd, m.cd, at),
+};
+
+const _textCap = 20000;
+
+// ----- the agent's own words -----
+
+final _url = RegExp(
+  r'https?://(?:[^\s/@<>"`]+@)?(?:\[[0-9a-fA-F:.]+\]|[A-Za-z0-9.\-]+)(?::\d{1,5})?(?:[/?#][^\s<>"`)\]}]*)?',
+  caseSensitive: false,
+);
+final _bareLocalhost = RegExp(r'(?<![\w/.\-])localhost:(\d{2,5})(?![\w])', caseSensitive: false);
+final _fence = RegExp(r'```[\s\S]*?```');
+final _token = RegExp(r'''[^\s"'`()<>\[\]{}|;,=*?]+''');
+final _madeVerb = RegExp(
+  r'\b(?:created?|wrote|written|writing|saved?|generated?|exported?|built|produced?|made|output|report at|opened?|tạo|lưu|xuất|mở|ghi)\b',
+  caseSensitive: false,
+);
+
+void _say(String text, DateTime? at, List<_Mention> out) {
+  for (final m in _url.allMatches(text)) {
+    final s = _serverUri(m.group(0)!, keepPath: true);
+    if (s != null) out.add(_Mention.server(s, at));
+  }
+  for (final m in _bareLocalhost.allMatches(text)) {
+    final port = int.parse(m.group(1)!);
+    if (port >= 1 && port <= 65535) out.add(_Mention.server(Uri(scheme: 'http', host: 'localhost', port: port, path: '/'), at));
+  }
+  // Pages: a code block shows what a file CONTAINS (`<img src="logo.svg">`), so
+  // it is not read; a bare name needs a verb of making just before it.
+  final prose = text.replaceAll(_fence, ' ').replaceAll(_url, ' ');
+  for (final m in _token.allMatches(prose)) {
+    final raw = m.group(0)!;
+    if (raw.length > 400) continue;
+    // Nearly every token is a plain word: reject it before the costlier clean-up.
+    final lower = raw.toLowerCase();
+    if (!lower.contains('.htm') && !lower.contains('.xhtml') && !lower.contains('.svg')) continue;
+    final p = _cleanPath(raw);
+    if (p == null || !_isPage(p)) continue;
+    final bare = !p.contains('/');
+    if (bare) {
+      final from = m.start - 60 < 0 ? 0 : m.start - 60;
+      if (!_madeVerb.hasMatch(prose.substring(from, m.start))) continue;
+    }
+    out.add(_Mention.page(p, null, null, at));
+  }
+}
+
+// ----- commands -----
+
+/// The command up to where a heredoc body starts: what follows is the content
+/// of a file, whose own links and names are not what the agent made.
+String _commandHead(String command) {
+  final out = <String>[];
+  for (final line in command.split('\n').take(6)) {
+    out.add(line.length > 2000 ? line.substring(0, 2000) : line);
+    if (line.contains('<<')) break;
+  }
+  return out.join('\n');
+}
+
+final _segments = RegExp(r'&&|\|\||[;|\n]');
+const _wrappers = {'sudo', 'nohup', 'time', 'env', 'command', 'builtin'};
+
+/// What a command that reads or probes does not make: its output is not a
+/// banner. `localhost` after `ssh` or `docker exec` is another host.
+const _probes = {
+  'cat', 'rg', 'grep', 'egrep', 'sed', 'awk', 'git', 'head', 'tail', 'less', 'more', 'curl', 'wget', 'http',
+  'ssh', 'scp', 'kubectl', 'jq', 'ls', 'find', 'echo', 'printf', 'diff', 'nl', 'wc', 'psql', 'redis-cli', 'gh', 'nc',
+};
+
+bool _isProbe(String command) {
+  for (final seg in _commandHead(command).split(_segments)) {
+    final w = _words(seg).where((w) => !w.contains('=') && !_wrappers.contains(w)).toList();
+    if (w.isEmpty) continue;
+    final first = w.first;
+    if (_probes.contains(first)) return true;
+    if ((first == 'docker' || first == 'podman') && w.length > 1 && (w[1] == 'exec' || w[1] == 'run' && w.contains('-it'))) return true;
+  }
+  return false;
+}
+
+List<String> _words(String segment) {
+  final out = <String>[];
+  final buf = StringBuffer();
+  String? quote;
+  for (final ch in segment.split('')) {
+    if (quote != null) {
+      if (ch == quote) {
+        quote = null;
+      } else {
+        buf.write(ch);
+      }
+    } else if (ch == '"' || ch == "'") {
+      quote = ch;
+    } else if (ch == ' ' || ch == '\t') {
+      if (buf.isNotEmpty) {
+        out.add(buf.toString());
+        buf.clear();
+      }
+    } else {
+      buf.write(ch);
+    }
+  }
+  if (buf.isNotEmpty) out.add(buf.toString());
+  return out;
+}
+
+const _outFlags = {'-o', '--output', '--out', '--outfile', '--screenshot', '--save', '--export', '--html'};
+
+/// The pages a command writes, moves or removes: only what its words say it
+/// writes (a redirect, `tee`, an output flag, a `cp`/`mv` target, `open`). A
+/// leading `cd X` moves where a relative name is taken from.
+List<_Mention> _scanCommand(String command, String? callCwd) {
+  final out = <_Mention>[];
+  String? cd;
+  void page(String raw) {
+    final p = _cleanPath(raw);
+    if (p != null && _isPage(p)) out.add(_Mention.page(p, callCwd, cd, null));
+  }
+
+  void drop(String raw) {
+    final p = _cleanPath(raw);
+    if (p != null && _isPage(p)) out.add(_Mention.drop(p, callCwd, cd, null));
+  }
+
+  for (final seg in _commandHead(command).split(_segments)) {
+    final all = _words(seg);
+    var i = 0;
+    while (i < all.length && (all[i].contains('=') && !all[i].startsWith('-') || _wrappers.contains(all[i]))) {
+      i++;
+    }
+    if (i >= all.length) continue;
+    final cmd = all[i];
+    final args = all.sublist(i + 1);
+    if (cmd == 'cd') {
+      if (args.isNotEmpty) {
+        final to = args.first;
+        cd = cd == null || RemotePath.isAbsolute(to) || RemotePath.usesHome(to) ? to : RemotePath.normalize('$cd/$to');
+      }
+      continue;
+    }
+    // Redirects, wherever they stand in the segment.
+    for (var j = 0; j < all.length; j++) {
+      final w = all[j];
+      if (w == '>' || w == '>>') {
+        if (j + 1 < all.length) page(all[j + 1]);
+      } else if (w.startsWith('>') && !w.startsWith('>&') && w.length > 1) {
+        page(w.replaceFirst(RegExp(r'^>>?'), ''));
+      }
+    }
+    final plain = [for (final a in args) if (!a.startsWith('-') && !a.startsWith('>')) a];
+    switch (cmd) {
+      case 'tee':
+        plain.forEach(page);
+      case 'cp':
+        if (plain.length >= 2) page(plain.last);
+      case 'mv':
+        if (plain.length >= 2) {
+          page(plain.last);
+          plain.sublist(0, plain.length - 1).forEach(drop);
+        }
+      case 'rm' || 'unlink':
+        plain.forEach(drop);
+      case 'open' || 'xdg-open' || 'start' || 'sensible-browser':
+        plain.forEach(page);
+      case 'curl' || 'wget':
+        // A download is not something the agent made.
+        break;
+      default:
+        for (var j = 0; j < args.length; j++) {
+          final a = args[j];
+          if (_outFlags.contains(a) && j + 1 < args.length) {
+            page(args[j + 1]);
+          } else if (a.startsWith('--') && a.contains('=')) {
+            final eq = a.indexOf('=');
+            if (_outFlags.contains(a.substring(0, eq))) page(a.substring(eq + 1));
+          }
+        }
+    }
+  }
+  return out;
+}
+
+// ----- what a launched command printed -----
+
+final _banner = RegExp(
+  r'\blocal\b|\bnetwork\b|running (?:on|at)|serving http|listening (?:on|at)|ready (?:on|at|in)|started server|available at|'
+  r'server (?:is )?(?:running|started|listening)|development server|dev server|web server|app running|open .{0,20} at|view it at|you can now view',
+  caseSensitive: false,
+);
+
+/// A launch prints where it is up on a line of its own ("Local: http://...",
+/// "Uvicorn running on http://...", "Serving HTTP on 0.0.0.0 port 8000
+/// (http://0.0.0.0:8000/)"), near the top. Only those lines of the first 8 KB
+/// are read, and only for the origin: a log that names the server on every
+/// line, or an API response with a path, makes no row.
+void _banners(String printed, DateTime? at, List<_Mention> out) {
+  final head = printed.length > 8192 ? printed.substring(0, 8192) : printed;
+  for (final line in head.split('\n')) {
+    final l = line.length > 300 ? line.substring(0, 300) : line;
+    if (!_banner.hasMatch(l)) continue;
+    for (final m in _url.allMatches(l)) {
+      final s = _serverUri(m.group(0)!, keepPath: false);
+      if (s != null) out.add(_Mention.server(s, at));
+    }
+  }
+}
+
+// ----- servers -----
+
+Uri? _serverUri(String raw, {required bool keepPath}) {
+  final trimmed = raw.replaceFirst(RegExp(r'''[.,;:!?'"]+$'''), '');
+  final uri = Uri.tryParse(trimmed);
+  if (uri == null || uri.scheme.toLowerCase() != 'http' || !isPreviewHost(uri.host)) return null;
+  // `:0` parses as no port at all, so the digits are read from the text.
+  final written = RegExp(r'^https?://(?:[^/@]*@)?(?:\[[^\]]*\]|[^/:?#]*):(\d+)', caseSensitive: false).firstMatch(trimmed);
+  final port = written != null ? int.parse(written.group(1)!) : (uri.hasPort ? uri.port : 80);
+  if (port < 1 || port > 65535) return null;
+  // Rebuilt: no credentials, no fragment.
+  return Uri(
+    scheme: 'http',
+    host: uri.host,
+    port: uri.hasPort ? uri.port : null,
+    path: keepPath && uri.path.isNotEmpty ? uri.path : '/',
+    query: keepPath && uri.hasQuery && uri.query.isNotEmpty ? uri.query : null,
+  );
+}
+
+WebAsset _serverOf(Uri url, DateTime? at, int order) {
+  final port = url.hasPort ? url.port : 80;
+  final path = url.path == '/' ? '' : _display(url.path);
+  return WebAsset(
+    kind: WebKind.server,
+    key: 'localhost:$port',
+    title: 'localhost${url.hasPort ? ':$port' : ''}$path',
+    where: '',
+    url: url,
+    at: at,
+    order: order,
+  );
+}
+
+String _display(String encoded) {
+  try {
+    return Uri.decodeComponent(encoded);
+  } on FormatException {
+    return encoded;
+  }
+}
+
+// ----- pages -----
+
+final _noise = RegExp(r'(?:^|/)(?:node_modules|site-packages|\.git|\.dart_tool)/|^/(?:usr|proc|sys|lib|opt)/');
+final _drive = RegExp(r'^[A-Za-z]:[\\/]');
+
+bool _isPage(String path) => !_noise.hasMatch(path) && isWebPageName(path);
+
+/// A path as the scanner will keep it, or null when it is not a usable path of
+/// the machine: a shell variable, a URL, a Windows drive, `~user`.
+String? _cleanPath(String raw) {
+  var p = raw.trim();
+  if (p.startsWith('file://')) p = p.substring(7);
+  p = p.replaceFirst(RegExp(r'[.,:;!?]+$'), '').replaceFirst(RegExp(r':\d+(?::\d+)?$'), '').replaceFirst(RegExp(r'#[^/]*$'), '');
+  if (p.isEmpty || p.contains(r'$') || p.contains('`') || p.contains('://') || _drive.hasMatch(p)) return null;
+  if (p.startsWith('~') && !p.startsWith('~/')) return null;
+  if (p.startsWith('//')) return null;
+  return p;
+}
+
+/// The key of [m]'s path (absolute, normalized), or null when a relative path
+/// has no folder to be taken against.
+String? _placed(_Mention m, String? sessionCwd) {
+  final path = m.path!;
+  if (RemotePath.isAbsolute(path)) return RemotePath.normalize(path);
+  if (RemotePath.usesHome(path)) return RemotePath.normalize(path);
+  final cwd = m.cwd ?? sessionCwd;
+  if (cwd == null || cwd.isEmpty || !RemotePath.isAbsolute(cwd)) return null;
+  final base = m.cd == null ? cwd : RemotePath.resolve(m.cd!, cwd: cwd, home: null);
+  if (base == null) return null;
+  return RemotePath.resolve(path, cwd: base);
+}
+
+WebAsset? _pageOf(_Mention m, String? sessionCwd, int order) {
+  final key = _placed(m, sessionCwd);
+  if (key == null || !_isPage(key)) return null;
+  final name = RemotePath.basename(key);
+  final parent = RemotePath.parent(key);
+  final folder = parent == '/' || parent == '.' ? '' : '${RemotePath.basename(parent)}/';
+  return WebAsset(kind: WebKind.page, key: key, title: name, where: folder, path: key, at: m.at, order: order);
+}

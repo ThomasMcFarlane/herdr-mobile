@@ -3,6 +3,7 @@ import 'dart:isolate';
 import 'dart:typed_data';
 
 import '../models/remote_file.dart';
+import '../models/web_bridge.dart';
 import 'herdr_transport.dart';
 
 /// Builds the real transport inside the worker isolate.
@@ -117,6 +118,16 @@ class IsolateTransport implements HerdrTransport {
     final bytes = await _op('read', [path, offset, length.clamp(0, remoteReadCap)]);
     // Moved, not copied: the worker handed over ownership of the buffer.
     return (bytes! as TransferableTypedData).materialize().asUint8List();
+  }
+
+  @override
+  Future<WebBridgeInfo> openWebBridge(WebBridgeSpec spec) async {
+    // Only primitives cross: the worker rebuilds the spec.
+    final out = await _op('web', switch (spec) {
+      StaticSite() => ['static', spec.machineName, spec.root],
+      PortForward() => ['forward', spec.machineName, spec.host, spec.port],
+    }) as List;
+    return WebBridgeInfo(port: out[0]! as int, token: out[1]! as String);
   }
 
   @override
@@ -574,6 +585,7 @@ void _workerMain(List<Object?> init) {
             ),
           ]),
         'real' => await transport.realPath(args[0]! as String),
+        'web' => await _openWeb(transport, args),
         'mkdirs' => await transport.makeDirs(args[0]! as String).then((_) => true),
         'rm' => await transport.removeFile(args[0]! as String).then((_) => true),
         _ => throw HerdrTransportException('Unknown file operation $name'),
@@ -855,6 +867,19 @@ class _MainUpload implements UploadJob {
     fail(UploadCancelled());
     _cancelWorker?.call();
   }
+}
+
+/// The worker's half of [IsolateTransport.openWebBridge]: `['static', machine,
+/// root]` or `['forward', machine, host, port]` in, `[port, token]` out.
+Future<List<Object?>> _openWeb(HerdrTransport transport, List<Object?> args) async {
+  final machine = args[1]! as String;
+  final spec = switch (args[0]) {
+    'static' => StaticSite(args[2]! as String, machineName: machine),
+    'forward' => PortForward(args[2]! as String, args[3]! as int, machineName: machine),
+    final other => throw HerdrTransportException('Unknown web source $other'),
+  };
+  final info = await transport.openWebBridge(spec);
+  return [info.port, info.token];
 }
 
 /// `[kind, a, b]` for [Object]s that cannot cross the isolate boundary.

@@ -636,7 +636,7 @@ class _PaneViewState extends State<_PaneView> {
     final machine = context.read<MachineConnection>();
     switch (link.kind) {
       case TerminalLinkKind.url:
-        unawaited(showLinkSheet(context, link.target));
+        unawaited(showLinkSheet(context, link.target, machine: machine));
       case TerminalLinkKind.path:
         unawaited(
           openRemoteFile(

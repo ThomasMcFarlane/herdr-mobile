@@ -8,6 +8,7 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/machine_profile.dart';
 import 'package:herdr_mobile/data/models/remote_file.dart';
+import 'package:herdr_mobile/data/models/web_bridge.dart';
 import 'package:herdr_mobile/data/services/bridge_command.dart' show muxReadyLine;
 import 'package:herdr_mobile/data/services/herdr_api.dart';
 import 'package:herdr_mobile/data/services/herdr_transport.dart';
@@ -205,6 +206,9 @@ class _BgProbe implements HerdrTransport {
     required String remotePath,
     void Function(int sent, int total)? onProgress,
   }) => throw UnsupportedError('files');
+
+  @override
+  Future<WebBridgeInfo> openWebBridge(WebBridgeSpec spec) => throw UnimplementedError();
 
   @override
   Future<void> close() async {}
