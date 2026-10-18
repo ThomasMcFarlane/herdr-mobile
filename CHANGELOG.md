@@ -4,7 +4,9 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
-## [Unreleased]
+## [0.1.18] - 2026-10-19
+
+### Pages from your machine open inside herdr
 
 - A page from a machine (a dev server on its `localhost`, or an HTML file an
   agent wrote) now opens inside herdr and stays up. In the phone's browser
