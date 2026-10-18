@@ -39,6 +39,11 @@ release.
   and status panels are a tint without a border.
 - Settings has a hidden kit: hold Version to see every component, light and
   dark, at two text sizes.
+- Swiping sideways on an agent's screen shows who is next while your finger
+  moves: a card with the agent's status, title, machine and time slides in.
+  Let go past the mark (or flick) to go there; let go short and you stay. At
+  either end the card says there is no next agent. Screen readers get Next
+  agent and Previous agent actions.
 
 ### Fixes
 
