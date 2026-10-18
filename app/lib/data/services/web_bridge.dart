@@ -368,13 +368,13 @@ class WebBridgeHost {
   }
 
   /// Where the entry URL sends the browser: a path of this listener, never
-  /// another site (`//host` and `/\host` mean another site to a browser).
+  /// another site (`//host` and `/\host` mean another site to a browser, and a
+  /// browser strips tabs and newlines before it reads a URL, so `/<tab>/host`
+  /// does too). Only printable ASCII is let through; anything else is `/`.
   static String _safeTo(String? to) {
-    if (to == null ||
-        !to.startsWith('/') ||
-        to.startsWith('//') ||
-        to.contains(r'\')) {
-      return '/';
+    if (to == null || !to.startsWith('/') || to.startsWith('//')) return '/';
+    for (final c in to.codeUnits) {
+      if (c <= 0x20 || c >= 0x7f || c == 0x5c) return '/';
     }
     return to;
   }
@@ -412,8 +412,9 @@ class WebBridgeHost {
   static String _page(String title, String body) =>
       '<!doctype html><html><head>'
       '<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+      '<meta name="color-scheme" content="light dark">'
       '<title>${_esc(title)}</title></head>'
-      '<body style="font:16px system-ui;margin:24px;max-width:36em">'
+      '<body style="font:16px system-ui;margin:24px;max-width:36em;color:CanvasText;background:Canvas">'
       '<h1 style="font-size:20px">${_esc(title)}</h1>$body</body></html>';
 
   static const _openText = '<p>Open this from herdr-mobile.</p>';
@@ -453,7 +454,7 @@ void _send(
   res.headers
     ..set('x-content-type-options', 'nosniff')
     ..set('referrer-policy', 'no-referrer')
-    ..set('cache-control', 'no-cache');
+    ..set('cache-control', 'no-store');
   for (final e in headers.entries) {
     res.headers.set(e.key, e.value);
   }
@@ -728,7 +729,14 @@ final class _StaticBridge extends _Bridge {
       if (!WebBridgeHost._tokenOk(query['t'], token)) {
         return _errorPage(res, 403, 'Not allowed', WebBridgeHost._openText);
       }
-      return WebBridgeHost._enter(res, port, token, WebBridgeHost._safeTo(query['to']));
+      // Anchored to this listener's own origin, as the forward's is: a
+      // relative target is only as safe as the browser's reading of it.
+      return WebBridgeHost._enter(
+        res,
+        port,
+        token,
+        'http://localhost:$port${WebBridgeHost._safeTo(query['to'])}',
+      );
     }
     if (!WebBridgeHost._tokenOk(
       WebBridgeHost._cookie(WebBridgeHost._joined(req.headers, 'cookie', '; '), 'herdr_$port'),

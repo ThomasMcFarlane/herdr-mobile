@@ -29,9 +29,17 @@ class TabVisit {
 ///   `localhost:<b>` it is same-site (a site has no port).
 ///
 /// Cookies are host-only on `localhost` and ignore ports, as browsers keep
-/// them. Follows at most [hops] answers.
-Future<TabVisit> openInCustomTab(Uri entry, {int hops = 5}) async {
-  final jar = <String, ({String value, bool strict})>{};
+/// them. Pass the same [jar] to a second call for a returning visit, with the
+/// cookie the first one set. With [clickContinue] the person taps the entry
+/// page's Continue link instead of waiting for the `Refresh` (a click on a
+/// `localhost` page: same-site). Follows at most [hops] answers.
+Future<TabVisit> openInCustomTab(
+  Uri entry, {
+  int hops = 5,
+  CookieJar? jar,
+  bool clickContinue = false,
+}) async {
+  jar ??= {};
   final steps = <String>[];
   var url = entry;
   // The Custom Tab's own navigation: an opaque initiator.
@@ -59,18 +67,36 @@ Future<TabVisit> openInCustomTab(Uri entry, {int hops = 5}) async {
       );
     }
     final location = reply.headers['location'];
-    final refresh = sendsTo(reply);
+    final refresh = clickContinue ? _continueHref(reply.text) : sendsTo(reply);
     if (i == hops || (location == null && refresh == null)) return TabVisit(reply, steps);
     if (location != null && reply.status >= 300 && reply.status < 400) {
       // A redirect: the same navigation, the same (opaque) initiator.
       url = url.resolve(location);
     } else if (refresh != null) {
       final next = url.resolve(refresh);
-      // The page's own navigation: same-site when scheme and host match.
+      // The page's own navigation (or a click on it): same-site when scheme
+      // and host match.
       sameSiteInitiator = next.scheme == url.scheme && next.host == url.host;
       url = next;
     } else {
       return TabVisit(reply, steps);
     }
   }
+}
+
+/// The browser's cookies, by name.
+typedef CookieJar = Map<String, ({String value, bool strict})>;
+
+/// The `href` of the page's Continue link, unescaped as a browser reads it.
+String? _continueHref(String html) {
+  final m = RegExp(r'<a href="([^"]*)">Continue</a>').firstMatch(html);
+  if (m == null) return null;
+  return m
+      .group(1)!
+      .replaceAll('&quot;', '"')
+      .replaceAll('&#39;', "'")
+      .replaceAll('&lt;', '<')
+      .replaceAll('&gt;', '>')
+      .replaceAll('&#47;', '/')
+      .replaceAll('&amp;', '&');
 }

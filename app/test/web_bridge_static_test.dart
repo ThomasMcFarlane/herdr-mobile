@@ -62,19 +62,32 @@ void main() {
 
     test('the entry URL sets the cookie and sends the browser on, to a path of this listener only', () async {
       final site = await _open();
+      final home = 'http://localhost:${site.info.port}';
       final ok = await rawRequest(site.info.port, target: '/__herdr/open?t=${site.info.token}&to=%2Fsub%2F');
       expect(ok.status, 200);
-      expect(sendsTo(ok), '/sub/');
+      expect(sendsTo(ok), '$home/sub/');
       expect(ok.headers['set-cookie'], contains('herdr_${site.info.port}=${site.info.token}'));
       expect(ok.headers['set-cookie'], allOf(contains('HttpOnly'), contains('SameSite=Strict')));
+      // A dark phone does not flash a white page on the way.
+      expect(ok.text, contains('<meta name="color-scheme" content="light dark">'));
 
-      // Another site is never a destination, however it is spelled.
-      for (final to in ['//evil.example', r'/\evil.example', 'https://evil.example', '']) {
-        final r = await rawRequest(
-          site.info.port,
-          target: '/__herdr/open?t=${site.info.token}&to=${Uri.encodeQueryComponent(to)}',
-        );
-        expect(sendsTo(r), '/', reason: to);
+      // Another site is never a destination, however it is spelled: a browser
+      // drops tabs and newlines from a URL, so `/<tab>/evil` reads as `//evil`.
+      for (final to in [
+        '%2F%2Fevil.example',
+        '%2F%5Cevil.example',
+        'https%3A%2F%2Fevil.example',
+        '',
+        '%2F%09%2Fevil.example',
+        '%2F%0A%2Fevil.example',
+        '%2F%0D%2Fevil.example',
+        '%2F%20%2Fevil.example',
+        '%2F%7F%2Fevil.example',
+        '%2F%C3%A9',
+      ]) {
+        final r = await rawRequest(site.info.port, target: '/__herdr/open?t=${site.info.token}&to=$to');
+        expect(r.status, 200, reason: to);
+        expect(sendsTo(r), '$home/', reason: to);
       }
 
       final wrong = await rawRequest(site.info.port, target: '/__herdr/open?t=${'0' * 32}&to=%2F');
@@ -90,6 +103,28 @@ void main() {
       );
       expect(visit.page.status, 200, reason: visit.page.text);
       expect(visit.page.text, '<h1>home</h1>');
+    });
+
+    test('tapping Continue on the entry page ends on the page too', () async {
+      final site = await _open();
+      final visit = await openInCustomTab(
+        Uri.parse('http://localhost:${site.info.port}/__herdr/open?t=${site.info.token}&to=%2Findex.html'),
+        clickContinue: true,
+      );
+      expect(visit.page.status, 200, reason: visit.page.text);
+      expect(visit.page.text, '<h1>home</h1>');
+    });
+
+    test('a second visit, the cookie already set, opens the page straight from the entry URL', () async {
+      final site = await _open();
+      final entry = Uri.parse('http://localhost:${site.info.port}/__herdr/open?t=${site.info.token}&to=%2Findex.html');
+      final CookieJar jar = {};
+      await openInCustomTab(entry, jar: jar);
+      expect(jar, isNotEmpty);
+      final again = await openInCustomTab(entry, jar: jar);
+      expect(again.page.status, 200, reason: again.page.text);
+      expect(again.page.text, '<h1>home</h1>');
+      expect(again.steps, hasLength(2), reason: '${again.steps}');
     });
 
     test('a foreign Host header is refused even with the cookie (DNS rebinding)', () async {
@@ -221,7 +256,7 @@ void main() {
       for (final to in ['%ff', '%', '%zz']) {
         final r = await rawRequest(site.info.port, target: '/__herdr/open?t=${site.info.token}&to=$to');
         expect(r.status, 200, reason: to);
-        expect(sendsTo(r), '/', reason: to);
+        expect(sendsTo(r), 'http://localhost:${site.info.port}/', reason: to);
       }
       // In the path: no cookie is a 403, with the cookie a 404.
       expect((await rawRequest(site.info.port, target: '/%ff')).status, 403);

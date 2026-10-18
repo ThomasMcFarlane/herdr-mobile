@@ -198,10 +198,18 @@ void main() {
       expect(sendsTo(entry), 'http://localhost:${info.port}/app?a=1');
       expect(entry.headers['set-cookie'], contains('herdr_${info.port}=${info.token}'));
       expect((await rawRequest(info.entryPort, target: '/__herdr/open?t=bad&to=%2F')).status, 403);
-      expect(
-        sendsTo(await rawRequest(info.entryPort, target: '/__herdr/open?t=${info.token}&to=%2F%2Fevil.example')),
-        'http://localhost:${info.port}/',
-      );
+      for (final to in [
+        '%2F%2Fevil.example',
+        '%2F%09%2Fevil.example',
+        '%2F%0A%2Fevil.example',
+        '%2F%0D%2Fevil.example',
+        '%2F%20%2Fevil.example',
+        '%2F%C3%A9',
+      ]) {
+        final r = await rawRequest(info.entryPort, target: '/__herdr/open?t=${info.token}&to=$to');
+        expect(r.status, 200, reason: to);
+        expect(sendsTo(r), 'http://localhost:${info.port}/', reason: to);
+      }
       final foreignEntry = await rawRequest(
         info.entryPort,
         target: '/__herdr/open?t=${info.token}&to=%2F',
@@ -609,6 +617,17 @@ void main() {
       expect(visit.page.status, 200, reason: visit.page.text);
       expect(visit.page.text, contains('served /docs?a=1'));
       expect(asked, ['/docs?a=1'], reason: 'the dev server never sees the entry URL');
+
+      // The person taps Continue rather than waiting: the same page.
+      final clicked = await openInCustomTab(entry, clickContinue: true);
+      expect(clicked.page.text, contains('served /docs?a=1'), reason: clicked.page.text);
+
+      // Opened again, the cookie already set: straight from the entry URL to the page.
+      final CookieJar jar = {};
+      await openInCustomTab(entry, jar: jar);
+      final again = await openInCustomTab(entry, jar: jar);
+      expect(again.page.text, contains('served /docs?a=1'), reason: again.page.text);
+      expect(again.steps, hasLength(2), reason: '${again.steps}');
     });
   });
 
