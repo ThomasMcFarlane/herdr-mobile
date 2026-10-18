@@ -275,4 +275,76 @@ void main() {
       });
     });
   });
+
+  group('a hold (a page from a machine is open)', () {
+    test('keeps the connections past the 90 s while it is on, whatever the notifier wants', () {
+      run((h) {
+        final release = h.fleet.holdAlive();
+        expect(h.fleet.keepAliveInBackground, isTrue);
+        expect(h.fleet.watchingAgents, isFalse, reason: 'the notifier did not ask');
+        h.life(away);
+        h.advance(grace);
+        h.advance(const Duration(minutes: 2));
+        expect(h.connection.isLive, isTrue);
+
+        release();
+        expect(h.fleet.keepAliveInBackground, isFalse);
+        expect(h.connection.isLive, isFalse, reason: 'the grace period is long over: back to the usual rule, at once');
+      });
+    });
+
+    test('holds count: the connections go only when the last one is released', () {
+      run((h) {
+        final first = h.fleet.holdAlive();
+        final second = h.fleet.holdAlive();
+        h.life(away);
+        h.advance(grace);
+        first();
+        first(); // a second release of the same hold does nothing
+        expect(h.fleet.held, isTrue);
+        expect(h.connection.isLive, isTrue);
+        second();
+        expect(h.fleet.held, isFalse);
+        expect(h.connection.isLive, isFalse);
+      });
+    });
+
+    test('released, the notifier\'s choice applies again', () {
+      run((h) {
+        h.fleet.keepAliveInBackground = true;
+        final release = h.fleet.holdAlive();
+        h.life(away);
+        h.advance(grace);
+        release();
+        expect(h.fleet.keepAliveInBackground, isTrue);
+        expect(h.connection.isLive, isTrue, reason: 'agents are still watched');
+      });
+    });
+
+    test('a hold released inside the grace period suspends at 90 s, not before', () {
+      run((h) {
+        final release = h.fleet.holdAlive();
+        h.life(away);
+        h.advance(const Duration(seconds: 30));
+        release();
+        h.advance(const Duration(seconds: 59));
+        expect(h.connection.isLive, isTrue);
+        h.advance(const Duration(seconds: 1));
+        expect(h.connection.isLive, isFalse);
+      });
+    });
+
+    test('back after a long time away with a hold, a refresh is enough: the process was kept', () {
+      run((h) {
+        final release = h.fleet.holdAlive();
+        h.life(away);
+        h.advance(const Duration(minutes: 10));
+        h.life(back);
+        h.advance(const Duration(seconds: 1));
+        expect(h.transport.resets, 0);
+        expect(h.connection.isLive, isTrue);
+        release();
+      });
+    });
+  });
 }

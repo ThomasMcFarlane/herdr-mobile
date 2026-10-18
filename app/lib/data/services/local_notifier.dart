@@ -30,7 +30,8 @@ const _finishedChannel = AndroidNotificationChannel(
 const _watchingChannel = AndroidNotificationChannel(
   watchingChannelId,
   'Watching',
-  description: 'A quiet notice while agents work, so Android keeps the connection to your machines alive.',
+  description:
+      'A quiet notice while agents work or a page from a machine is open, so Android keeps the connection to your machines alive.',
   importance: Importance.min,
   playSound: false,
   enableVibration: false,
@@ -131,7 +132,7 @@ class LocalNotifier implements Notifier {
   void Function(String link)? _handler;
   AnswerHandler? _answerHandler;
   String? _pendingLink;
-  ({int count, int blocked}) _watching = (count: 0, blocked: 0);
+  ({int count, int blocked, bool page}) _watching = (count: 0, blocked: 0, page: false);
 
   /// The notifier for this platform, ready to use: a [LocalNotifier] on
   /// Android, a [NullNotifier] anywhere else or when the plugin cannot start.
@@ -241,19 +242,20 @@ class LocalNotifier implements Notifier {
   }
 
   @override
-  Future<bool> setWatching(int count, {int blocked = 0}) async {
+  Future<bool> setWatching(int count, {int blocked = 0, bool page = false}) async {
     try {
-      if (count <= 0) {
-        _watching = (count: 0, blocked: 0);
+      if (count <= 0 && !page) {
+        _watching = (count: 0, blocked: 0, page: false);
         await _android.stopForegroundService();
         return false;
       }
-      final glance = (count: count, blocked: blocked.clamp(0, count));
+      final n = count < 0 ? 0 : count;
+      final glance = (count: n, blocked: blocked.clamp(0, n), page: page);
       if (glance == _watching) return true;
       await _android.startForegroundService(
         id: watchingNotificationId,
-        title: watchingTitle(count),
-        body: watchingSummary(count, blocked),
+        title: watchingTitle(n),
+        body: watchingSummary(n, blocked, page: page),
         notificationDetails: AndroidNotificationDetails(
           _watchingChannel.id,
           _watchingChannel.name,
@@ -281,7 +283,7 @@ class LocalNotifier implements Notifier {
       // Android refuses to start a foreground service from the background in
       // some states; the connections then simply suspend as before.
       debugPrint('Watching notice not started: $error');
-      _watching = (count: 0, blocked: 0);
+      _watching = (count: 0, blocked: 0, page: false);
       return false;
     }
   }
@@ -346,18 +348,23 @@ class LocalNotifier implements Notifier {
   }
 }
 
-/// "Watching 1 agent", "Watching 3 agents".
+/// "Watching 1 agent", "Watching 3 agents"; with none, a page from a machine
+/// is what the notice is up for: "Keeping a page open".
 @visibleForTesting
-String watchingTitle(int count) => 'Watching ${countOf(count, 'agent')}';
+String watchingTitle(int count) => count > 0 ? 'Watching ${countOf(count, 'agent')}' : 'Keeping a page open';
 
 /// "2 need you · 3 working": [blocked] agents wait for the person, the rest
-/// of [count] work. Parts that are zero are left out; empty when none is left.
+/// of [count] work. Parts that are zero are left out. With [page], a page
+/// from a machine is open too: "1 working · a page open", or, with no agent,
+/// why the connection stays up.
 @visibleForTesting
-String watchingSummary(int count, int blocked) {
+String watchingSummary(int count, int blocked, {bool page = false}) {
+  if (count <= 0) return page ? 'herdr stays connected while the page is open' : '';
   final waiting = blocked.clamp(0, count);
   final working = count - waiting;
   return [
     if (waiting > 0) needYou(waiting),
     if (working > 0) '$working working',
+    if (page) 'a page open',
   ].join(' · ');
 }

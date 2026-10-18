@@ -81,22 +81,60 @@ class FleetRepository extends ChangeNotifier {
   Future<void> _reconciling = Future.value();
   bool _disposed = false;
   bool _keepAlive = false;
+  int _holds = 0;
   bool _graceElapsed = false;
   bool _background = false;
 
   /// Keep the connections up while the app is in the background, instead of
-  /// suspending them [backgroundSuspendAfter] after it left. The notifier turns
-  /// it on while it has agents to watch (and a quiet foreground notice keeps
-  /// Android from freezing the process). Off, the usual rule applies at once:
-  /// when the grace period has already run out by the time it goes off,
-  /// the connections are suspended right then.
-  bool get keepAliveInBackground => _keepAlive;
+  /// suspending them [backgroundSuspendAfter] after it left. Two things ask
+  /// for it: the notifier, which sets this while it has agents to watch (and
+  /// a quiet foreground notice keeps Android from freezing the process), and
+  /// any hold ([holdAlive]). Off, the usual rule applies at once: when the
+  /// grace period has already run out by the time it goes off, the
+  /// connections are suspended right then.
+  bool get keepAliveInBackground => _keepAlive || _holds > 0;
   set keepAliveInBackground(bool value) {
     if (_disposed || _keepAlive == value) return;
+    final was = keepAliveInBackground;
     _keepAlive = value;
+    _keepAliveChanged(was);
+  }
+
+  /// What the notifier asked for, without the holds: the agents it watches.
+  bool get watchingAgents => _keepAlive;
+
+  /// Whether a hold ([holdAlive]) is on: the notifier runs its foreground
+  /// notice for it, whether or not alerts are on.
+  bool get held => _holds > 0;
+
+  /// Keeps the connections up in the background until the returned callback
+  /// runs (once; a second call does nothing). Holds count: the connections
+  /// are let go when the last one is released and the notifier wants nothing.
+  ///
+  /// Why: a page from a machine (`WebPreviewScreen`) talks to it over the
+  /// connection, and in a Custom Tab the app went to the background, Android
+  /// dropped the SSH connection and the page waited forever. While the page
+  /// is open, switching apps or turning the screen off must not end it.
+  VoidCallback holdAlive() {
+    if (_disposed) return () {};
+    final was = keepAliveInBackground;
+    _holds++;
+    _keepAliveChanged(was);
+    var released = false;
+    return () {
+      if (released || _disposed) return;
+      released = true;
+      final was = keepAliveInBackground;
+      _holds--;
+      _keepAliveChanged(was);
+    };
+  }
+
+  void _keepAliveChanged(bool was) {
     _syncBackground();
-    notifyListeners(); // the screens that offer "keep watching" read it
-    if (!value && _backgroundedAt != null && _graceElapsed && !_suspended) onBackgroundTimeout();
+    notifyListeners(); // the notifier and the screens that offer "keep watching" read it
+    final now = keepAliveInBackground;
+    if (was && !now && _backgroundedAt != null && _graceElapsed && !_suspended) onBackgroundTimeout();
   }
 
   /// Connections in saved-machine order.
@@ -289,7 +327,7 @@ class FleetRepository extends ChangeNotifier {
       for (final c in connections) {
         c.goOffline();
       }
-    } else if (wasSuspended || (away > longAway && !_keepAlive)) {
+    } else if (wasSuspended || (away > longAway && !keepAliveInBackground)) {
       for (final c in connections) {
         c.reconnect();
       }
@@ -310,14 +348,14 @@ class FleetRepository extends ChangeNotifier {
 
   void _graceEnded() {
     _graceElapsed = true;
-    if (!_keepAlive) onBackgroundTimeout();
+    if (!keepAliveInBackground) onBackgroundTimeout();
   }
 
   /// The background profile (relaxed heartbeats and poll, see
   /// [MachineConnection.setBackground]) holds while the app is in the
-  /// background AND the connections are kept alive for watching.
+  /// background AND the connections are kept alive (watching, or a hold).
   void _syncBackground() {
-    final background = _backgroundedAt != null && _keepAlive;
+    final background = _backgroundedAt != null && keepAliveInBackground;
     if (background == _background) return;
     _background = background;
     for (final c in connections) {

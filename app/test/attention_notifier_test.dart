@@ -1157,6 +1157,75 @@ void main() {
     });
   });
 
+  group('a page held open', () {
+    test('with alerts off, runs the notice at once and keeps the connections; released, both go', () {
+      fakeAsync((async) {
+        final r = _Rig(async, {'a': {'w1:p1': 'idle'}}, enabled: false);
+        final release = r.fleet.holdAlive();
+        r.async.flushMicrotasks();
+        expect(r.notifier.log, ['watching:0+page'], reason: 'started while the app is in front, not debounced');
+        expect(r.fleet.keepAliveInBackground, isTrue);
+
+        r.life(away);
+        r.advance(const Duration(minutes: 3));
+        expect(r.connection('a').isLive, isTrue, reason: 'the page needs the connection');
+
+        r.life(back);
+        release();
+        r.async.flushMicrotasks();
+        expect(r.notifier.log.last, 'watching:0');
+        expect(r.notifier.pages.last, isFalse);
+        expect(r.fleet.keepAliveInBackground, isFalse);
+        r.dispose();
+      });
+    });
+
+    test('without the notification permission, still runs the notice: Android runs it unseen', () {
+      fakeAsync((async) {
+        final r = _Rig(async, {'a': {'w1:p1': 'working'}}, granted: false);
+        r.fleet.holdAlive();
+        r.async.flushMicrotasks();
+        expect(r.notifier.glances.last, (count: 0, blocked: 0), reason: 'no agents without the permission');
+        expect(r.notifier.pages.last, isTrue);
+        r.dispose();
+      });
+    });
+
+    test('beside watched agents, joins their notice; released, the agents\' notice and keep-alive stay', () {
+      fakeAsync((async) {
+        final r = _Rig(async, {'a': {'w1:p1': 'working', 'w1:p2': 'blocked'}});
+        expect(r.notifier.glances, [(count: 2, blocked: 1)]);
+        final release = r.fleet.holdAlive();
+        r.async.flushMicrotasks();
+        expect(r.notifier.glances.last, (count: 2, blocked: 1));
+        expect(r.notifier.pages.last, isTrue);
+
+        release();
+        r.async.flushMicrotasks();
+        expect(r.notifier.pages.last, isFalse);
+        expect(r.notifier.watching.last, 2, reason: 'the agents are still watched');
+        expect(r.fleet.keepAliveInBackground, isTrue);
+        expect(r.fleet.watchingAgents, isTrue);
+        r.dispose();
+      });
+    });
+
+    test('turning alerts off while a page is open keeps the notice for the page', () {
+      fakeAsync((async) {
+        final r = _Rig(async, {'a': {'w1:p1': 'working'}});
+        r.fleet.holdAlive();
+        r.async.flushMicrotasks();
+        r.settings.setEnabled(false);
+        r.async.flushMicrotasks();
+        expect(r.notifier.watching.last, 0);
+        expect(r.notifier.pages.last, isTrue, reason: 'the page still needs the connection');
+        expect(r.fleet.keepAliveInBackground, isTrue);
+        expect(r.fleet.watchingAgents, isFalse);
+        r.dispose();
+      });
+    });
+  });
+
   group('the glance', () {
     test('says how many agents are watched and how many of them need you', () {
       fakeAsync((async) {
