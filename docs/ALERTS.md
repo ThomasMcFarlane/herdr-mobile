@@ -68,7 +68,20 @@ While it runs the connections are not dropped after 90 s, and they go quiet:
 
 Returning to the app restores the live view. When nothing is working or
 blocked, or you switch the setting off, the service stops and the old rule
-(drop after 90 s) applies.
+(drop after 90 s) applies, unless a page is open (next).
+
+**While a page from a machine is open** (`WebPreviewScreen`: a dev server or
+an HTML file shown in herdr) the same service runs, whatever the setting and
+without the notification permission (Android runs it then, unseen in the
+shade): **"Keeping a page open"** over "herdr stays connected while the page
+is open", or "· a page open" after the agents' line. The page takes a hold on
+the fleet (`FleetRepository.holdAlive`) when it opens and lets it go when it
+closes; while any hold is on the connections are kept (background profile as
+above) and the 90 s rule waits. The notice starts at once, not on the 2 s
+debounce, because Android does not start it from the background. Agent
+sessions are not kept for a page. Why: in a Custom Tab herdr went to the
+background, Android dropped the SSH connection, and the page waited on
+"Opening…" forever. Not yet measured on a phone.
 
 Limits, plainly:
 

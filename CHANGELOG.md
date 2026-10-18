@@ -4,6 +4,22 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [Unreleased]
+
+- A page from a machine (a dev server on its `localhost`, or an HTML file an
+  agent wrote) now opens inside herdr and stays up. In the phone's browser
+  herdr went to the background, lost its connection, and the page never got
+  past "Opening…". Back goes back in the page, then returns where you were;
+  a link to the web still opens in your browser.
+- While such a page is open, herdr keeps its connection when you switch apps
+  or turn the screen off, with the quiet Watching notice ("Keeping a page
+  open"), even with notifications off.
+- `⋯` on a page has `Copy link` (its address on the machine) and `Open in
+  browser`, for pages that need your phone's browser, such as a Google
+  sign-in.
+- In the file viewer, `Open in browser` on an HTML or SVG file is now `Show
+  as page`.
+
 ## [0.1.17] - 2026-10-18
 
 ### One design language

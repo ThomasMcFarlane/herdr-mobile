@@ -546,5 +546,6 @@ that line or the one above. `--report` counts findings per rule and folder;
   composers, the terminal.
 - `docs/screens/session.md`: the agent session screen.
 - `docs/screens/attach.md`, `photos.md`, `files.md`, `markdown.md`.
+- `docs/screens/web.md`: a page from a machine shown in herdr.
 - `docs/screens/settings.md`: Settings, updates, root tabs, failed links, what
   survives a launch.

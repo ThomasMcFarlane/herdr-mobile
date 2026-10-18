@@ -249,9 +249,11 @@ Tailscale.
   open/copy; a plain `http` localhost-type address on a machine offers `Open on
   phone`, an `https` one is copy-only) or the file viewer. Plain `http` is only
   opened from an explicit tap that shows the URL; the sign-in banner path stays
-  https-only. `openPreviewUrl` is the only opener of `http://localhost`, and only
-  for URLs the app built.
-- **Web pages on the phone** (`WebBridgeHost`, `WebPreview`): measured before
+  https-only. `openPreviewUrl` is the only opener of `http://localhost` in the
+  phone's browser, and only for URLs the app built (`Open in browser` on a
+  page shown in herdr).
+- **Web pages on the phone** (`WebBridgeHost`, `WebPreview`, shown in herdr by
+  `WebPreviewScreen` in `ui/features/web/`): measured before
   built, with a Node prototype, real headless Chrome and a real sshd (120 ms
   RTT, 10 Mbit model). What it settled, so nobody re-argues it:
   - Cookie auth, not a path prefix (root-absolute assets). URL host `localhost`
@@ -280,6 +282,24 @@ Tailscale.
     closing short of the announced Content-Length destroys the socket.
   - Never return a map's `remove` from `whenComplete` on the future stored in
     that map: it waits for itself.
+  - Shown in herdr, not in a Custom Tab: with the tab in front herdr was in the
+    background, Android dropped the SSH connection and the page sat on
+    "Opening…" (0.1.17, Samsung, Android 14). The screen holds the fleet up
+    while it is open (`FleetRepository.holdAlive`, the Watching notice; see
+    `docs/ALERTS.md`). `webview_flutter` 4.14 (`webview_flutter_android` 4.13,
+    minSdk 24, Flutter's default: no change).
+  - The Android plugin cancels every navigation a page starts and loads it
+    again with `loadUrl` when the app allows it, so the entry page's refresh
+    adds a history entry instead of replacing it. Back that lands on an entry
+    URL goes on past it (`_skipEntry`) and its refresh is refused; a download
+    comes back as a second request for the same URL before any page starts,
+    which is refused (loading it again would loop). `test/support/fake_webview.dart`
+    models this; it is read from the plugin's code, not seen on a phone.
+  - What the view loads is one pure rule, `webNavigation` (`web_navigation.dart`,
+    `docs/ARCHITECTURE.md` "Network traffic"). Copy link copies the page's
+    address on the machine (`WebPreview.machinePage`: the machine's port, never
+    the phone's listener port or token); Retry and Open in browser ask for the
+    listener again (`WebPreview.reopen`), which restarts one that stopped.
 - **Made in this session** (`session_made.dart` in `data/acp`, the `Made` chip and
   sheet in `ui/features/agent_session`): the servers, pages, pictures and
   documents a session made, found by scanning the transcript, so a link printed an hour ago
