@@ -208,8 +208,8 @@ class WebBridgeHost {
   /// (seen with a real Chrome). On its own port the entry URL cannot meet that
   /// connection. The cookie it sets is named for the forward's port and is
   /// sent by the browser to that port too (cookies ignore ports), which is
-  /// where the forward checks it; the redirect then goes to
-  /// `http://localhost:<forward port>`.
+  /// where the forward checks it; the browser is then sent on to
+  /// `http://localhost:<forward port>` (see [_enter]).
   ///
   /// Up while a forward is up or starting; a static folder answers its own
   /// entry URL (an `HttpServer` reads every request).
@@ -278,14 +278,7 @@ class WebBridgeHost {
         return _errorPage(res, 403, 'Not allowed', _openText);
       }
       hit.arm();
-      _send(
-        res,
-        302,
-        headers: {
-          'set-cookie': _entryCookie(hit.port, hit.token),
-          'location': 'http://localhost:${hit.port}${_safeTo(query['to'])}',
-        },
-      );
+      _enter(res, hit.port, hit.token, 'http://localhost:${hit.port}${_safeTo(query['to'])}');
     } on Object {
       // This runs in the transport isolate: what nobody catches ends it.
       try {
@@ -388,6 +381,30 @@ class WebBridgeHost {
 
   static String _entryCookie(int port, String token) =>
       'herdr_$port=$token; Path=/; HttpOnly; SameSite=Strict';
+
+  /// The answer to a good entry URL: the cookie, and a page that sends the
+  /// browser on to [destination] with a `Refresh` header, not a 302.
+  ///
+  /// A Chrome Custom Tab navigates from an opaque origin, so that the app that
+  /// opened it cannot hand a site its same-site cookies
+  /// (`CustomTabActivityNavigationController.navigate`), and a redirect keeps
+  /// that initiator: the `SameSite=Strict` cookie this very answer sets was
+  /// not sent to [destination], which refused the browser ("Not allowed",
+  /// seen on a phone; a desktop browser given the URL by hand never showed
+  /// it). A refresh is a navigation the page starts itself, from `localhost`,
+  /// which is same-site with every listener (a site has no port), so the
+  /// cookie goes with it. At no delay it replaces this page in the tab's
+  /// history, so Back never returns to the token.
+  static void _enter(HttpResponse res, int port, String token, String destination) => _send(
+    res,
+    200,
+    type: 'text/html; charset=utf-8',
+    body: _page('Opening…', '<p><a href="${_esc(destination)}">Continue</a></p>'),
+    headers: {
+      'set-cookie': _entryCookie(port, token),
+      'refresh': '0; url=$destination',
+    },
+  );
 
   static String _esc(String s) =>
       const HtmlEscape(HtmlEscapeMode.attribute).convert(s);
@@ -711,14 +728,7 @@ final class _StaticBridge extends _Bridge {
       if (!WebBridgeHost._tokenOk(query['t'], token)) {
         return _errorPage(res, 403, 'Not allowed', WebBridgeHost._openText);
       }
-      return _send(
-        res,
-        302,
-        headers: {
-          'set-cookie': WebBridgeHost._entryCookie(port, token),
-          'location': WebBridgeHost._safeTo(query['to']),
-        },
-      );
+      return WebBridgeHost._enter(res, port, token, WebBridgeHost._safeTo(query['to']));
     }
     if (!WebBridgeHost._tokenOk(
       WebBridgeHost._cookie(WebBridgeHost._joined(req.headers, 'cookie', '; '), 'herdr_$port'),

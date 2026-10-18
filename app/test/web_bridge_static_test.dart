@@ -8,6 +8,7 @@ import 'package:herdr_mobile/data/models/web_bridge.dart';
 import 'package:herdr_mobile/data/services/web_bridge.dart';
 
 import 'support/fake_fs.dart';
+import 'support/custom_tab.dart';
 import 'support/raw_http.dart';
 
 const _root = '/home/dev/site';
@@ -62,8 +63,8 @@ void main() {
     test('the entry URL sets the cookie and sends the browser on, to a path of this listener only', () async {
       final site = await _open();
       final ok = await rawRequest(site.info.port, target: '/__herdr/open?t=${site.info.token}&to=%2Fsub%2F');
-      expect(ok.status, 302);
-      expect(ok.headers['location'], '/sub/');
+      expect(ok.status, 200);
+      expect(sendsTo(ok), '/sub/');
       expect(ok.headers['set-cookie'], contains('herdr_${site.info.port}=${site.info.token}'));
       expect(ok.headers['set-cookie'], allOf(contains('HttpOnly'), contains('SameSite=Strict')));
 
@@ -73,13 +74,22 @@ void main() {
           site.info.port,
           target: '/__herdr/open?t=${site.info.token}&to=${Uri.encodeQueryComponent(to)}',
         );
-        expect(r.headers['location'], '/', reason: to);
+        expect(sendsTo(r), '/', reason: to);
       }
 
       final wrong = await rawRequest(site.info.port, target: '/__herdr/open?t=${'0' * 32}&to=%2F');
       expect(wrong.status, 403);
       expect(wrong.headers.containsKey('set-cookie'), isFalse);
       expect(site.fs.calls, isEmpty);
+    });
+
+    test('opened in a Custom Tab, the entry URL ends on the page, not the listener\'s refusal', () async {
+      final site = await _open();
+      final visit = await openInCustomTab(
+        Uri.parse('http://localhost:${site.info.port}/__herdr/open?t=${site.info.token}&to=%2Findex.html'),
+      );
+      expect(visit.page.status, 200, reason: visit.page.text);
+      expect(visit.page.text, '<h1>home</h1>');
     });
 
     test('a foreign Host header is refused even with the cookie (DNS rebinding)', () async {
@@ -210,8 +220,8 @@ void main() {
       // A good token with a destination that cannot be read goes to the root.
       for (final to in ['%ff', '%', '%zz']) {
         final r = await rawRequest(site.info.port, target: '/__herdr/open?t=${site.info.token}&to=$to');
-        expect(r.status, 302, reason: to);
-        expect(r.headers['location'], '/', reason: to);
+        expect(r.status, 200, reason: to);
+        expect(sendsTo(r), '/', reason: to);
       }
       // In the path: no cookie is a 403, with the cookie a 404.
       expect((await rawRequest(site.info.port, target: '/%ff')).status, 403);

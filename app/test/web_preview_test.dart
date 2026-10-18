@@ -91,8 +91,8 @@ void main() {
       expect(url.port, transport.webInfo.entryPort);
       expect(url.path, '/__herdr/open');
       expect(url.queryParameters['t'], transport.webInfo.token);
-      expect(url.queryParameters['to'], '/app/x%20y?tab=a%26b&n=1');
-      expect(url.fragment, 'top');
+      expect(url.queryParameters['to'], '/app/x%20y?tab=a%26b&n=1#top');
+      expect(url.hasFragment, isFalse, reason: 'the page that sends the browser on would drop it');
       expect(transport.webBridges.single, isA<PortForward>().having((s) => s.port, 'port', 3000));
     });
 
@@ -105,7 +105,7 @@ void main() {
 
     test('an encoded fragment is not encoded twice', () async {
       final url = await web.forwardUrl(Uri.parse('http://localhost:3000/#a%20b'));
-      expect(url.fragment, 'a%20b');
+      expect(url.queryParameters['to'], '/#a%20b');
     });
 
     test('no port means 80, no path means the root', () async {
@@ -168,8 +168,7 @@ void main() {
       final url = await web.staticUrl(_file('/home/dev/report/out/index.html'), fragment: 'sec 2');
       final spec = transport.webBridges.single as StaticSite;
       expect(spec.root, '/home/dev/report/out');
-      expect(url.queryParameters['to'], '/index.html');
-      expect(url.fragment, 'sec%202');
+      expect(url.queryParameters['to'], '/index.html#sec%202');
       expect(url.host, 'localhost');
     });
 

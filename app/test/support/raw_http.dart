@@ -74,3 +74,12 @@ Future<RawReply> rawRequest(
 
 /// The cookie a listener's entry URL answers with, as the browser would send it.
 String cookieFrom(RawReply entry) => entry.headers['set-cookie']!.split(';').first;
+
+/// Where a listener's entry URL sends the browser on: the URL of its
+/// `Refresh` header (`0; url=<where>`), or null when it sends it nowhere.
+String? sendsTo(RawReply entry) {
+  final refresh = entry.headers['refresh'];
+  if (refresh == null) return null;
+  final at = refresh.indexOf('url=');
+  return at < 0 ? null : refresh.substring(at + 4);
+}
