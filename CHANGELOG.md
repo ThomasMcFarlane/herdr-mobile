@@ -4,6 +4,16 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [Unreleased]
+
+### Fixes
+
+- Opening a dev server or a page on the phone (Open on phone, a Made row,
+  Open in browser) shows the page again instead of "Not allowed": the browser
+  tab now keeps the sign-in it was given.
+- A link the agent wrote in bold or italics opens the link itself, without the
+  `**` around it.
+
 ## [0.1.16] - 2026-10-18
 
 ### Open what an agent made, on your phone

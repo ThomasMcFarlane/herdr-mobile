@@ -208,8 +208,8 @@ class WebBridgeHost {
   /// (seen with a real Chrome). On its own port the entry URL cannot meet that
   /// connection. The cookie it sets is named for the forward's port and is
   /// sent by the browser to that port too (cookies ignore ports), which is
-  /// where the forward checks it; the redirect then goes to
-  /// `http://localhost:<forward port>`.
+  /// where the forward checks it; the browser is then sent on to
+  /// `http://localhost:<forward port>` (see [_enter]).
   ///
   /// Up while a forward is up or starting; a static folder answers its own
   /// entry URL (an `HttpServer` reads every request).
@@ -278,14 +278,7 @@ class WebBridgeHost {
         return _errorPage(res, 403, 'Not allowed', _openText);
       }
       hit.arm();
-      _send(
-        res,
-        302,
-        headers: {
-          'set-cookie': _entryCookie(hit.port, hit.token),
-          'location': 'http://localhost:${hit.port}${_safeTo(query['to'])}',
-        },
-      );
+      _enter(res, hit.port, hit.token, 'http://localhost:${hit.port}${_safeTo(query['to'])}');
     } on Object {
       // This runs in the transport isolate: what nobody catches ends it.
       try {
@@ -375,13 +368,13 @@ class WebBridgeHost {
   }
 
   /// Where the entry URL sends the browser: a path of this listener, never
-  /// another site (`//host` and `/\host` mean another site to a browser).
+  /// another site (`//host` and `/\host` mean another site to a browser, and a
+  /// browser strips tabs and newlines before it reads a URL, so `/<tab>/host`
+  /// does too). Only printable ASCII is let through; anything else is `/`.
   static String _safeTo(String? to) {
-    if (to == null ||
-        !to.startsWith('/') ||
-        to.startsWith('//') ||
-        to.contains(r'\')) {
-      return '/';
+    if (to == null || !to.startsWith('/') || to.startsWith('//')) return '/';
+    for (final c in to.codeUnits) {
+      if (c <= 0x20 || c >= 0x7f || c == 0x5c) return '/';
     }
     return to;
   }
@@ -389,14 +382,39 @@ class WebBridgeHost {
   static String _entryCookie(int port, String token) =>
       'herdr_$port=$token; Path=/; HttpOnly; SameSite=Strict';
 
+  /// The answer to a good entry URL: the cookie, and a page that sends the
+  /// browser on to [destination] with a `Refresh` header, not a 302.
+  ///
+  /// A Chrome Custom Tab navigates from an opaque origin, so that the app that
+  /// opened it cannot hand a site its same-site cookies
+  /// (`CustomTabActivityNavigationController.navigate`), and a redirect keeps
+  /// that initiator: the `SameSite=Strict` cookie this very answer sets was
+  /// not sent to [destination], which refused the browser ("Not allowed",
+  /// seen on a phone; a desktop browser given the URL by hand never showed
+  /// it). A refresh is a navigation the page starts itself, from `localhost`,
+  /// which is same-site with every listener (a site has no port), so the
+  /// cookie goes with it. At no delay it replaces this page in the tab's
+  /// history, so Back never returns to the token.
+  static void _enter(HttpResponse res, int port, String token, String destination) => _send(
+    res,
+    200,
+    type: 'text/html; charset=utf-8',
+    body: _page('Opening…', '<p><a href="${_esc(destination)}">Continue</a></p>'),
+    headers: {
+      'set-cookie': _entryCookie(port, token),
+      'refresh': '0; url=$destination',
+    },
+  );
+
   static String _esc(String s) =>
       const HtmlEscape(HtmlEscapeMode.attribute).convert(s);
 
   static String _page(String title, String body) =>
       '<!doctype html><html><head>'
       '<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+      '<meta name="color-scheme" content="light dark">'
       '<title>${_esc(title)}</title></head>'
-      '<body style="font:16px system-ui;margin:24px;max-width:36em">'
+      '<body style="font:16px system-ui;margin:24px;max-width:36em;color:CanvasText;background:Canvas">'
       '<h1 style="font-size:20px">${_esc(title)}</h1>$body</body></html>';
 
   static const _openText = '<p>Open this from herdr-mobile.</p>';
@@ -436,7 +454,7 @@ void _send(
   res.headers
     ..set('x-content-type-options', 'nosniff')
     ..set('referrer-policy', 'no-referrer')
-    ..set('cache-control', 'no-cache');
+    ..set('cache-control', 'no-store');
   for (final e in headers.entries) {
     res.headers.set(e.key, e.value);
   }
@@ -711,13 +729,13 @@ final class _StaticBridge extends _Bridge {
       if (!WebBridgeHost._tokenOk(query['t'], token)) {
         return _errorPage(res, 403, 'Not allowed', WebBridgeHost._openText);
       }
-      return _send(
+      // Anchored to this listener's own origin, as the forward's is: a
+      // relative target is only as safe as the browser's reading of it.
+      return WebBridgeHost._enter(
         res,
-        302,
-        headers: {
-          'set-cookie': WebBridgeHost._entryCookie(port, token),
-          'location': WebBridgeHost._safeTo(query['to']),
-        },
+        port,
+        token,
+        'http://localhost:$port${WebBridgeHost._safeTo(query['to'])}',
       );
     }
     if (!WebBridgeHost._tokenOk(

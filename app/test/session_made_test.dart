@@ -163,6 +163,39 @@ void main() {
       expect(s.url.toString(), 'http://localhost:3000/x');
     });
 
+    test('a link the agent set in bold, italics or code is the link without the marks or the full stop', () {
+      final cases = {
+        '**http://127.0.0.1:8766/**': 'localhost:8766',
+        '__http://localhost:3000/docs__': 'localhost:3000/docs',
+        'See *http://localhost:3001/a*.': 'localhost:3001/a',
+        'See _http://localhost:3002/b_.': 'localhost:3002/b',
+        '~~http://localhost:3003/c~~': 'localhost:3003/c',
+        '`http://localhost:3004/d`': 'localhost:3004/d',
+        '(on http://localhost:3005/e).': 'localhost:3005/e',
+        '**http://localhost:3006/f?x=1**!': 'localhost:3006/f',
+      };
+      for (final c in cases.entries) {
+        final s = madeAssetsOf([_say(c.key)]).single;
+        expect(s.title, c.value, reason: c.key);
+        expect(s.url!.path, isNot(contains('*')), reason: c.key);
+        expect(s.url!.toString(), isNot(endsWith('_')), reason: c.key);
+      }
+      expect(madeAssetsOf([_say('**http://localhost:3006/f?x=1**')]).single.url.toString(), 'http://localhost:3006/f?x=1');
+    });
+
+    test('a link that ends in a mark of its own keeps it when nothing opened that mark before it', () {
+      final cases = {
+        'Open http://localhost:3000/search?q=snake_': 'http://localhost:3000/search?q=snake_',
+        'Open http://localhost:3000/?access_token=Ab3dEf_.': 'http://localhost:3000/?access_token=Ab3dEf_',
+        'API at http://localhost:3000/api/__': 'http://localhost:3000/api/__',
+        'Home: http://localhost:3000/~': 'http://localhost:3000/~',
+        '*http://localhost:3000/?q=snake_*': 'http://localhost:3000/?q=snake_',
+      };
+      for (final c in cases.entries) {
+        expect(madeAssetsOf([_say(c.key)]).single.url.toString(), c.value, reason: c.key);
+      }
+    });
+
     test('a server mentioned again moves to the top and takes the newest path', () {
       final items = [
         _say('Running http://localhost:3000/'),

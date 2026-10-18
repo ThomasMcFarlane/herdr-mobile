@@ -8,9 +8,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/web_bridge.dart';
 import 'package:herdr_mobile/data/services/herdr_transport.dart';
 import 'package:herdr_mobile/data/services/web_bridge.dart';
+import 'package:herdr_mobile/data/repositories/web_preview.dart';
 
 import 'support/fake_fs.dart';
 import 'support/raw_http.dart';
+import 'support/custom_tab.dart';
+import 'support/fake_transport.dart';
 
 /// A server on the "machine" that sends back every byte it gets and keeps them.
 class _Echo {
@@ -81,6 +84,16 @@ class _Rig {
 
   /// `host:port` of every dial, in order.
   final List<String> dials;
+}
+
+/// A machine whose pages are opened by a real [WebBridgeHost].
+class _Bridged extends FakeTransport {
+  _Bridged(this.host);
+
+  final WebBridgeHost host;
+
+  @override
+  Future<WebBridgeInfo> openWebBridge(WebBridgeSpec spec) => host.open(spec);
 }
 
 _Rig _rig({
@@ -181,14 +194,22 @@ void main() {
       // The entry URL is answered on its own port, and hands the cookie the
       // forward's port checks (cookies ignore ports) before sending the browser there.
       final entry = await rawRequest(info.entryPort, target: '/__herdr/open?t=${info.token}&to=%2Fapp%3Fa%3D1');
-      expect(entry.status, 302);
-      expect(entry.headers['location'], 'http://localhost:${info.port}/app?a=1');
+      expect(entry.status, 200);
+      expect(sendsTo(entry), 'http://localhost:${info.port}/app?a=1');
       expect(entry.headers['set-cookie'], contains('herdr_${info.port}=${info.token}'));
       expect((await rawRequest(info.entryPort, target: '/__herdr/open?t=bad&to=%2F')).status, 403);
-      expect(
-        (await rawRequest(info.entryPort, target: '/__herdr/open?t=${info.token}&to=%2F%2Fevil.example')).headers['location'],
-        'http://localhost:${info.port}/',
-      );
+      for (final to in [
+        '%2F%2Fevil.example',
+        '%2F%09%2Fevil.example',
+        '%2F%0A%2Fevil.example',
+        '%2F%0D%2Fevil.example',
+        '%2F%20%2Fevil.example',
+        '%2F%C3%A9',
+      ]) {
+        final r = await rawRequest(info.entryPort, target: '/__herdr/open?t=${info.token}&to=$to');
+        expect(r.status, 200, reason: to);
+        expect(sendsTo(r), 'http://localhost:${info.port}/', reason: to);
+      }
       final foreignEntry = await rawRequest(
         info.entryPort,
         target: '/__herdr/open?t=${info.token}&to=%2F',
@@ -279,8 +300,8 @@ void main() {
       }
       for (final to in ['%ff', '%', '%zz']) {
         final r = await rawRequest(info.entryPort, target: '/__herdr/open?t=${info.token}&to=$to');
-        expect(r.status, 302, reason: to);
-        expect(r.headers['location'], 'http://localhost:${info.port}/', reason: to);
+        expect(r.status, 200, reason: to);
+        expect(sendsTo(r), 'http://localhost:${info.port}/', reason: to);
       }
       expect((await rawRequest(info.port, target: '/%ff/x')).status, 403, reason: 'no cookie');
       expect(rig.dials, isEmpty, reason: 'none of these is let through');
@@ -294,7 +315,7 @@ void main() {
       await conn.socket.close();
 
       // And the listener answers a good request afterwards.
-      expect((await rawRequest(info.entryPort, target: '/__herdr/open?t=${info.token}&to=%2Fok')).headers['location'], 'http://localhost:${info.port}/ok');
+      expect(sendsTo(await rawRequest(info.entryPort, target: '/__herdr/open?t=${info.token}&to=%2Fok')), 'http://localhost:${info.port}/ok');
     });
   });
 
@@ -531,12 +552,12 @@ void main() {
       final ask = 'GET /__herdr/open?t=${info.token}&to=%2Fagain HTTP/1.1\r\nHost: localhost:${info.entryPort}\r\n\r\n';
       entry.socket.add(latin1.encode(ask));
       entry.socket.add(latin1.encode(ask));
-      for (var i = 0; i < 100 && '302 Found'.allMatches(latin1.decode(entry.got.toBytes())).length < 2; i++) {
+      for (var i = 0; i < 100 && '</html>'.allMatches(latin1.decode(entry.got.toBytes())).length < 2; i++) {
         await Future<void>.delayed(const Duration(milliseconds: 50));
       }
       final answers = latin1.decode(entry.got.toBytes());
       final lower = answers.toLowerCase();
-      expect('location: http://localhost:${info.port}/again'.allMatches(lower).length, 2);
+      expect('refresh: 0; url=http://localhost:${info.port}/again'.allMatches(lower).length, 2);
       expect('herdr_${info.port}=${info.token}'.allMatches(answers).length, 2);
 
       // Asked for by hand on the dev server's own port, it is refused here.
@@ -563,7 +584,7 @@ void main() {
       Future<RawReply> entry(String token) =>
           rawRequest(a.entryPort, target: '/__herdr/open?t=$token&to=%2Fx');
       final forB = await entry(b.token);
-      expect(forB.headers['location'], 'http://localhost:${b.port}/x');
+      expect(sendsTo(forB), 'http://localhost:${b.port}/x');
       expect(forB.headers['set-cookie'], contains('herdr_${b.port}=${b.token}'));
       expect((await entry(site.token)).status, 403, reason: 'the static site opens at its own port');
       expect((await entry('0' * 32)).status, 403);
@@ -574,7 +595,39 @@ void main() {
 
       final back = await rig.host.open(const PortForward('localhost', 4998, machineName: 'm'));
       expect((back.port, back.token), (a.port, a.token), reason: 'a tab left open still works');
-      expect((await rawRequest(back.entryPort, target: '/__herdr/open?t=${back.token}&to=%2F')).status, 302);
+      expect((await rawRequest(back.entryPort, target: '/__herdr/open?t=${back.token}&to=%2F')).status, 200);
+    });
+  });
+
+  group('opened in a Custom Tab', () {
+    test('a link the agent wrote opens the server\'s page, not the listener\'s refusal', () async {
+      final http = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => http.close(force: true));
+      final asked = <String>[];
+      http.listen((r) {
+        asked.add('${r.uri}');
+        r.response.write('served ${r.uri}');
+        r.response.close();
+      });
+      final rig = _rig(targetPort: () => http.port);
+      final web = WebPreview(_Bridged(rig.host), machineName: 'build-box');
+      final entry = await web.forwardUrl(Uri.parse('http://127.0.0.1:${http.port}/docs?a=1'));
+
+      final visit = await openInCustomTab(entry);
+      expect(visit.page.status, 200, reason: visit.page.text);
+      expect(visit.page.text, contains('served /docs?a=1'));
+      expect(asked, ['/docs?a=1'], reason: 'the dev server never sees the entry URL');
+
+      // The person taps Continue rather than waiting: the same page.
+      final clicked = await openInCustomTab(entry, clickContinue: true);
+      expect(clicked.page.text, contains('served /docs?a=1'), reason: clicked.page.text);
+
+      // Opened again, the cookie already set: straight from the entry URL to the page.
+      final CookieJar jar = {};
+      await openInCustomTab(entry, jar: jar);
+      final again = await openInCustomTab(entry, jar: jar);
+      expect(again.page.text, contains('served /docs?a=1'), reason: again.page.text);
+      expect(again.steps, hasLength(2), reason: '${again.steps}');
     });
   });
 

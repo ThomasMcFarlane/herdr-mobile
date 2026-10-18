@@ -261,6 +261,12 @@ Tailscale.
     from a machine". Pauses on a stream subscription nest: a stray
     `resume()` next to the backpressure `onPause` undid it, and 64 MiB went
     through a stalled channel (`web_bridge_forward_test`).
+  - The lab's Chrome was given the entry URL by hand, a navigation with no
+    initiator, which counts as same-site. A Custom Tab's has an opaque one, so
+    the 302 the entry URL first answered with lost the `Strict` cookie and
+    every page on the phone was "Not allowed". The entry now sends the browser
+    on with `Refresh: 0` (`docs/ARCHITECTURE.md` "Pages from a machine"), and
+    the tests open entry URLs the Custom Tab way (`test/support/custom_tab.dart`).
   - `Range`, `Last-Modified`/304 and `Cache-Control: no-cache` on static files:
     reload 0.54 s against 1.49 s cold. An extensionless HTML navigation to a
     missing path gets `index.html` (single-page apps).

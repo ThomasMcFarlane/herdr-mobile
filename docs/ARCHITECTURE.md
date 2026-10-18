@@ -467,13 +467,23 @@ Other ways traffic can leave the phone:
     a prefix breaks (measured, scenario S2). A static listener answers its own
     entry URL. A forward's entry URL is answered by one separate *entry
     listener* of the host (up while any forward is), which sets the cookie and
-    redirects to `http://localhost:<forward port>/…`; cookies ignore ports, so
-    the browser sends it to the forward. Why: a forward reads only the first
+    sends the browser on to `http://localhost:<forward port>/…`; cookies ignore
+    ports, so the browser sends it to the forward. Why: a forward reads only the first
     request of a connection and then passes bytes, and the browser reuses its
     connections to that port, so an entry URL on the forward's own port went
     down a kept connection to the dev server, token in its log (seen with
     Chrome). On its own port it cannot meet such a connection; the forward
     also answers a hand-made `/__herdr/open` with 404 and never dials.
+  - The entry URL sends the browser on with a page and a `Refresh: 0` header,
+    never a 302. A Custom Tab navigates from an opaque origin (Chrome's
+    `CustomTabActivityNavigationController.navigate`, so that an app cannot
+    hand a site its same-site cookies), and a redirect keeps that origin: the
+    `Strict` cookie the entry had just set was not sent on, and every page
+    opened on the phone was the listener's "Not allowed". A refresh is a
+    navigation the page starts from `localhost`, which is same-site with every
+    listener (a site has no port), and at no delay it replaces the entry page
+    in the tab's history. A fragment rides inside `to`: the browser keeps the
+    entry URL's own fragment across a redirect, not across a page.
   - The Host header must be `localhost:<port>` or `127.0.0.1:<port>` (DNS
     rebinding), once: a repeated Host, Cookie or Range header is read as a
     normal request, never an error. Without the token, or with a foreign Host,
@@ -507,9 +517,11 @@ Other ways traffic can leave the phone:
     person opened. Agent-written HTML in a static listener is as trusted as the
     machine itself. A host that forbids port forwarding
     (`AllowTcpForwarding no`) says so when the link is opened.
-  - Not verified on a phone: Custom Tab cookie handling, Chrome's
-    secure-connections mode on loopback, and whether Android freezes the
-    listener in the background. The lab that settled the design is described in
+  - Not verified on a phone: Chrome's secure-connections mode on loopback,
+    and whether Android freezes the listener in the background. Cookie
+    handling in a Custom Tab is read from Chromium's code and modelled in
+    `test/support/custom_tab.dart`, not yet seen working on a phone.
+    The lab that settled the design is described in
     `docs/ENGINEERING.md` "Web pages on the phone".
 - **`connectivity_plus`** only reads the state of the phone's network
   interfaces (`network_monitor.dart`).

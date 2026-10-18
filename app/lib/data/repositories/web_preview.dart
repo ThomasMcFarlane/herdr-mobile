@@ -115,14 +115,18 @@ class WebPreview {
 
   /// `http://localhost:<entryPort>/__herdr/open?t=<token>&to=<where>`: the one
   /// URL that carries the token. The listener on [WebBridgeInfo.entryPort]
-  /// answers it with a cookie and sends the browser on to [to] on
-  /// [WebBridgeInfo.port].
+  /// answers it with a cookie and a page that sends the browser on to [to] on
+  /// [WebBridgeInfo.port]. A [fragment] rides in `to`: the browser keeps the
+  /// entry URL's own fragment across a redirect, but not when a page sends it
+  /// on (see `WebBridgeHost._enter`).
   static Uri _entry(WebBridgeInfo info, String to, String? fragment) => Uri(
         scheme: 'http',
         host: 'localhost',
         port: info.entryPort,
         path: '/__herdr/open',
-        queryParameters: {'t': info.token, 'to': to},
-        fragment: fragment == null || fragment.isEmpty ? null : fragment,
+        queryParameters: {
+          't': info.token,
+          'to': fragment == null || fragment.isEmpty ? to : '$to${Uri(fragment: fragment)}',
+        },
       );
 }
