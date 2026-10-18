@@ -3,10 +3,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../core/controls.dart';
-import '../../core/glyphs.dart';
-import '../../core/rows.dart';
-import '../../core/theme.dart';
+import '../../../data/words/elapsed.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'file_format.dart';
 import 'file_kind.dart';
 import 'file_viewer_view_model.dart';
@@ -50,7 +48,7 @@ class BinaryView extends StatelessWidget {
                 FileKind.pdf => LucideIcons.fileText,
                 _ => fileIconForName(model.name) == LucideIcons.fileText ? LucideIcons.file : fileIconForName(model.name),
               },
-              size: 48,
+              size: IconSize.hero,
             ),
             const SizedBox(width: Gap.md),
             Expanded(
@@ -84,7 +82,7 @@ class BinaryView extends StatelessWidget {
                   ? formatBytes(stat.size)
                   : '${formatBytes(stat.size)} (${groupDigits(stat.size!)} bytes)',
         ),
-        if (stat.modified != null) InfoRow(label: 'Modified', value: formatExactTime(stat.modified)),
+        if (stat.modified case final at?) InfoRow(label: 'Modified', value: formatWhen(at, DateTime.now())),
         if (perms.isNotEmpty) InfoRow(label: 'Permissions', value: perms, mono: true),
         InfoRow(label: 'Path', value: stat.path, mono: true, divider: false),
         const SizedBox(height: Gap.lg),
@@ -107,7 +105,7 @@ class BinaryView extends StatelessWidget {
               const SizedBox(width: Gap.sm),
               Expanded(
                 child: AppButton(
-                  label: 'View as text',
+                  label: 'Show as text',
                   icon: LucideIcons.fileText,
                   expand: true,
                   kind: onOpenInBrowser == null ? AppButtonKind.primary : AppButtonKind.secondary,
@@ -167,14 +165,14 @@ class _HexDump extends StatelessWidget {
       padding: const EdgeInsets.all(Gap.md),
       decoration: BoxDecoration(
         color: ds.fill,
-        borderRadius: BorderRadius.circular(Radii.panel),
+        borderRadius: BorderRadius.circular(Radii.md),
         border: Border.all(color: ds.hairline),
       ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: SelectableText(
           dump(bytes),
-          style: codeStyle(ds, size: 12, color: ds.textSecondary).copyWith(height: 1.55),
+          style: Mono.base.copyWith(color: ds.textSecondary),
         ),
       ),
     );

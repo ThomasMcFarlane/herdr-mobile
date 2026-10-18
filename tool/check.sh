@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One command for "is the app healthy?": analyze + unit tests.
+# One command for "is the app healthy?": analyze + design lint + unit tests.
 # Usage: tool/check.sh [--quick]   (--quick skips tests)
 set -euo pipefail
 
@@ -15,6 +15,11 @@ flutter pub get >/dev/null
 
 echo "==> flutter analyze"
 flutter analyze
+
+# Every value a screen draws with comes from the kit (docs/DESIGN.md,
+# "Enforcement"); a finding names the token or component to use instead.
+echo "==> design lint"
+dart run ../tool/design_lint.dart
 
 if [ "${1:-}" != "--quick" ]; then
   # flutter test runs cores/2 files at once by default. Most of the suite

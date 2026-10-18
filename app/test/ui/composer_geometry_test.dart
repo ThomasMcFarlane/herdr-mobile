@@ -5,8 +5,7 @@
 // buttons used to stay glued to its bottom edge and look low.)
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:herdr_mobile/ui/core/tap_guard.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
 
 import '../support/fake_agent_session.dart';
@@ -34,7 +33,7 @@ void main() {
           home: AgentSessionScreen(key: ObjectKey(session), session: session),
         ),
       );
-      await tester.pump(tapGuard);
+      await tester.pump(Dwell.tapGuard);
 
       final field = tester.getRect(_field.first);
       final decoration = (tester.widget<Container>(_field.first).decoration! as BoxDecoration);

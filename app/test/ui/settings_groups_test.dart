@@ -17,9 +17,7 @@ import 'package:herdr_mobile/data/repositories/quick_phrases.dart';
 import 'package:herdr_mobile/data/repositories/terminal_settings.dart';
 import 'package:herdr_mobile/data/services/notifier.dart';
 import 'package:herdr_mobile/data/services/disk_cache.dart';
-import 'package:herdr_mobile/ui/core/chrome.dart';
-import 'package:herdr_mobile/ui/core/motion.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/settings/quick_phrases_editor.dart';
 import 'package:herdr_mobile/ui/features/settings/settings_screen.dart';
 import 'package:provider/provider.dart';
@@ -344,7 +342,7 @@ void main() {
 
       expect(find.text(reason), findsOneWidget, reason: 'said once, whole');
       expect(find.text('Update failed, open to see why'), findsOneWidget);
-      expect(find.text('Try again'), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
     });
 
     testWidgets('a download that finishes or fails is announced with its group closed', (tester) async {

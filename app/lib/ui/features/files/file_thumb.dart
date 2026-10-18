@@ -10,9 +10,7 @@ import '../../../data/services/image_decode.dart';
 import '../../../data/services/image_sniff.dart';
 import '../../../data/services/disk_cache.dart';
 import '../../../data/services/remote_files.dart';
-import '../../core/glyphs.dart';
-import '../../core/motion.dart';
-import '../../core/tokens.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'file_kind.dart';
 
 /// Images over this are never fetched for a thumbnail (a phone photo is
@@ -161,6 +159,7 @@ typedef Thumbnailer = Future<Uint8List?> Function(Uint8List original);
 
 /// Shrinks [original] to 240 px and encodes it (see [encodeThumbnail]).
 Future<Uint8List?> makeThumbnail(Uint8List original) async {
+  // design-lint: allow(raw-size) image pixels for the thumbnail file, not a layout size
   final decoded = await decodeImageFit(original, maxWidth: 240, maxHeight: 240);
   try {
     return await encodeThumbnail(decoded.image, png: mayHaveTransparency(original));
@@ -263,7 +262,7 @@ class _FileThumbState extends State<FileThumb> {
         width: size,
         height: size,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(Radii.tile),
+          borderRadius: BorderRadius.circular(Radii.xs),
           border: Border.all(color: ds.hairline, width: 1),
         ),
         clipBehavior: Clip.antiAlias,
@@ -274,18 +273,56 @@ class _FileThumbState extends State<FileThumb> {
           fit: BoxFit.cover,
           filterQuality: FilterQuality.medium,
           gaplessPlayback: true,
-          frameBuilder: (context, child, frame, sync) => sync || Motion.reduced(context)
-              ? child
-              : AnimatedOpacity(
-                  opacity: frame == null ? 0 : 1,
-                  duration: Motion.fade,
-                  curve: Motion.easeOut,
-                  child: child,
-                ),
+          frameBuilder: (context, child, frame, sync) =>
+              sync || Motion.reduced(context) ? child : _FadeIn(shown: frame != null, child: child),
           // Bytes the engine cannot decode: back to the glyph.
           errorBuilder: (context, error, stack) => Icon(LucideIcons.fileImage, size: size * 0.56, color: ds.textSecondary),
         ),
       ),
     );
+  }
+}
+
+/// Fades [child] in once, when [shown] turns true, then draws it with no
+/// opacity layer: a thumbnail at rest is not an animation.
+class _FadeIn extends StatefulWidget {
+  const _FadeIn({required this.shown, required this.child});
+
+  final bool shown;
+  final Widget child;
+
+  @override
+  State<_FadeIn> createState() => _FadeInState();
+}
+
+class _FadeInState extends State<_FadeIn> with SingleTickerProviderStateMixin {
+  AnimationController? _fade;
+
+  @override
+  void didUpdateWidget(_FadeIn old) {
+    super.didUpdateWidget(old);
+    if (widget.shown && !old.shown && _fade == null) {
+      _fade = AnimationController(vsync: this, duration: Motion.fade)
+        ..addStatusListener((s) {
+          if (s != AnimationStatus.completed || !mounted) return;
+          setState(() {
+            _fade?.dispose();
+            _fade = null;
+          });
+        })
+        ..forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _fade?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fade = _fade;
+    return fade == null ? widget.child : FadeTransition(opacity: Motion.curved(fade), child: widget.child);
   }
 }

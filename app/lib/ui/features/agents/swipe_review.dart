@@ -7,10 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/machine_connection.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
-import '../../core/toast.dart';
-import '../../core/tokens.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// Marks the finished state of [paneId] reviewed and says so with an Undo
 /// toast. False (and quiet) when there was nothing to review: the pane is not
@@ -151,13 +148,8 @@ class SwipeToReview extends StatefulWidget {
 }
 
 class _SwipeToReviewState extends State<SwipeToReview> with SingleTickerProviderStateMixin {
-  static final _back = SpringDescription.withDurationAndBounce(
-    duration: const Duration(milliseconds: 380),
-    bounce: 0.1,
-  );
-  static final _out = SpringDescription.withDurationAndBounce(
-    duration: const Duration(milliseconds: 260),
-  );
+  static final _back = Springs.recoil;
+  static final _out = Springs.out;
 
   /// The row's offset to the left, in px. Driven by the finger while dragging,
   /// by a spring after.
@@ -256,10 +248,10 @@ class _SwipeToReviewState extends State<SwipeToReview> with SingleTickerProvider
       _springBack(speed * slope);
       return;
     }
-    Haptics.sent();
+    // `sent` only once the mark was taken ([_finish]), never on the release.
     if (Motion.reduced(context)) {
       _offset.value = 0;
-      widget.onReviewed();
+      widget.onReviewed() ? Haptics.sent() : Haptics.failed();
       return;
     }
     setState(() => _leaving = true);
@@ -288,17 +280,19 @@ class _SwipeToReviewState extends State<SwipeToReview> with SingleTickerProvider
   // a still row must not keep a sub-pixel offset.
   static SpringSimulation _spring(SpringDescription spring, double from, double to, double velocity) =>
       SpringSimulation(spring, from, to, velocity,
-          snapToEnd: true, tolerance: const Tolerance(distance: 0.2, velocity: 8));
+          snapToEnd: true, tolerance: Springs.swipe);
 
   void _finish() {
     _offset.stop();
     final did = widget.onReviewed();
     if (did) {
+      Haptics.sent();
       // The board moves the row to another section: nothing of this slide is
       // left to undo, and a restored row (Undo) must start in place.
       _offset.value = 0;
       setState(() => _leaving = false);
     } else {
+      Haptics.failed();
       setState(() => _leaving = false);
       _offset.animateWith(_spring(_back, _offset.value, 0, 0));
     }
@@ -357,7 +351,7 @@ class _SwipeToReviewState extends State<SwipeToReview> with SingleTickerProvider
     Widget label = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(LucideIcons.check, size: 18, color: color),
+        Icon(LucideIcons.check, size: IconSize.bar, color: color),
         const SizedBox(width: Gap.sm),
         Text('Reviewed', maxLines: 1, softWrap: false, style: Type.label.copyWith(color: color)),
       ],

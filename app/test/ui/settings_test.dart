@@ -19,11 +19,8 @@ import 'package:herdr_mobile/data/services/herdr_api.dart';
 import 'package:herdr_mobile/ui/features/pane/pane_screen.dart';
 import 'package:herdr_mobile/data/repositories/terminal_settings.dart';
 import 'package:herdr_mobile/data/services/notifier.dart';
-import 'package:herdr_mobile/ui/core/chrome.dart';
-import 'package:herdr_mobile/ui/core/controls.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/machines/machines_screen.dart';
-import 'package:herdr_mobile/ui/features/settings/app_switch.dart';
 import 'package:herdr_mobile/ui/features/settings/font_size_control.dart';
 import 'package:herdr_mobile/ui/features/settings/settings_screen.dart';
 import 'package:herdr_mobile/ui/shell/home_shell.dart';
@@ -632,9 +629,10 @@ void main() {
 
       testWidgets('the text warms as the capsule arrives under it and cools as it leaves, in step with it', (tester) async {
         Color colour(String label) => tester.widget<Text>(find.text(label)).style!.color!;
-        // 0 at textSecondary, 1 at text, read off the red channel.
+        // 0 at textSecondary, 1 at accentText, read off the blue channel
+        // (the one that moves most between them).
         double warmth(String label) =>
-            (colour(label).r - Ds.paper.textSecondary.r) / (Ds.paper.text.r - Ds.paper.textSecondary.r);
+            (colour(label).b - Ds.paper.textSecondary.b) / (Ds.paper.accentText.b - Ds.paper.textSecondary.b);
         // 1 with the capsule centred on the cell, 0 a cell or more away.
         double under(WidgetTester tester, String label) {
           final c = cell(tester, label);

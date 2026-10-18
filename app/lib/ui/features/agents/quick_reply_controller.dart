@@ -8,7 +8,7 @@ import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/pane_answerer.dart' show promptDigest;
 import '../../../data/repositories/pane_previews.dart';
 import '../../../data/services/herdr_transport.dart';
-import '../../core/motion.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 enum ReplyPhase {
   /// Nothing in flight; chips are tappable.
@@ -48,9 +48,9 @@ class QuickReplyController extends ChangeNotifier {
     required this.machine,
     required this.paneId,
     required this.previews,
-    this.sentHold = const Duration(seconds: 3),
-    this.confirmWindow = const Duration(seconds: 4),
-    this.changedHold = const Duration(milliseconds: 1500),
+    this.sentHold = Dwell.answerSent,
+    this.confirmWindow = Dwell.confirm,
+    this.changedHold = Dwell.answerChanged,
     this.haptic = true,
   });
 

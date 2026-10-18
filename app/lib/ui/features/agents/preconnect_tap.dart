@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/repositories/agent_session.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// Starts attaching to a session the moment a finger goes DOWN on its row,
 /// ~100 ms before the tap completes and the route is pushed
@@ -41,7 +42,7 @@ class _PreconnectTapState extends State<PreconnectTap> {
   Timer? _grace;
 
   /// How long a hold outlives a finger that lifted without opening.
-  static const _lingers = Duration(milliseconds: 400);
+  static const _lingers = Dwell.preconnectLinger;
 
   void _down(PointerDownEvent e) {
     if (!widget.enabled || _pointer != null) return;

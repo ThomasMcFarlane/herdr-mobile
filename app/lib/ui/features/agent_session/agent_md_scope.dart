@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 
 import '../../../data/repositories/agent_session.dart';
-import '../../core/markdown/markdown.dart';
-import '../../core/motion.dart';
+import '../../render/markdown/markdown.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import '../files/files_navigation.dart';
 import '../pane/link_sheet.dart';
 import 'photo_thread.dart';

@@ -190,7 +190,7 @@ const _elevatedWords = [
 const _bypass = ModeAssessment(ModeRisk.dangerous, 'Every tool call runs without asking you.');
 const _fullAccess = ModeAssessment(
   ModeRisk.dangerous,
-  'Full access: the agent can change any file on the host and use the network without asking.',
+  'Full access: the agent can change any file on the machine and use the network without asking.',
 );
 const _acceptEdits = ModeAssessment(ModeRisk.elevated, 'File edits are accepted without asking you.');
 const _auto = ModeAssessment(ModeRisk.elevated, 'A classifier, not you, approves or denies the permission prompts.');

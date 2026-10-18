@@ -135,7 +135,7 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 20));
 
     expect(model.items, isEmpty);
-    expect(problems, ['Could not prepare that picture.']);
+    expect(problems, ['Couldn’t prepare that picture.']);
   });
 
   test('a chip removed while its copy is written leaves nothing behind', () async {

@@ -149,7 +149,7 @@ class OmpLogMapper implements SessionLogMapper {
       case 'branch_summary':
         return _note(e, line, 'Earlier messages were summarised');
       case 'reset_boundary':
-        return _note(e, line, 'The conversation was cleared on the host');
+        return _note(e, line, 'The conversation was cleared on the machine');
       case 'custom_message':
         return _customMessage(e, line);
       case 'custom':

@@ -1,8 +1,8 @@
 import 'dart:ui' show Offset, Rect;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:herdr_mobile/ui/core/box_drawing.dart';
-import 'package:herdr_mobile/ui/core/cell_width.dart';
+import 'package:herdr_mobile/ui/render/terminal/box_drawing.dart';
+import 'package:herdr_mobile/ui/render/terminal/cell_width.dart';
 
 /// Cell sizes in device pixels: (width, height), as seen on phones.
 const _sizes = [(8, 14), (12, 20), (18, 39), (30, 51), (31, 52), (45, 70)];

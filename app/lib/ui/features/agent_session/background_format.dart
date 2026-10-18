@@ -1,5 +1,6 @@
 import '../../../data/acp/background/background_work.dart';
-import 'visible_text.dart';
+import '../../../data/words/plural.dart';
+import '../../render/visible_text.dart';
 
 /// Words for background work. Pure: every sentence the strip, the bar, the
 /// status line, the toast and the sheet say comes from here, so the words for
@@ -13,42 +14,16 @@ String kindWord(BackgroundKind kind) => switch (kind) {
   BackgroundKind.workflow => 'workflow',
   BackgroundKind.monitor => 'monitor',
   BackgroundKind.agent => 'subagent',
-  BackgroundKind.other => 'task',
+  BackgroundKind.other => 'job',
 };
 
-/// `1 job`, `2 jobs`, `1 background terminal`, `3 background tasks` (a mix of
-/// kinds, or nothing more specific to say). Counts [tasks] as given.
+/// `1 job`, `2 jobs`, `3 subagents`: [tasks] counted as given. Shells, evals,
+/// terminals and anything else are all jobs to the person; only a set that is
+/// all subagents is counted as subagents.
 String nounPhrase(Iterable<BackgroundTask> tasks) {
   final list = tasks.toList();
-  final n = list.length;
-  final kinds = {for (final t in list) t.kind};
-  final plural = n != 1;
-  if (kinds.length == 1) {
-    final word = switch (kinds.single) {
-      BackgroundKind.shell || BackgroundKind.eval => plural ? 'jobs' : 'job',
-      BackgroundKind.terminal => plural ? 'background terminals' : 'background terminal',
-      BackgroundKind.agent => plural ? 'subagents' : 'subagent',
-      BackgroundKind.workflow => plural ? 'workflows' : 'workflow',
-      BackgroundKind.monitor => plural ? 'monitors' : 'monitor',
-      BackgroundKind.other => plural ? 'background tasks' : 'background task',
-    };
-    return '$n $word';
-  }
-  // Shell commands and evals are both "jobs" to the person.
-  if (kinds.every((k) => k == BackgroundKind.shell || k == BackgroundKind.eval)) {
-    return '$n ${plural ? 'jobs' : 'job'}';
-  }
-  return '$n ${plural ? 'background tasks' : 'background task'}';
-}
-
-/// `42s`, `14m`, `4h 36m`: how long a job has run, by the minute (the labels
-/// that show it move on the minute clock, never per second).
-String backgroundElapsed(Duration d) {
-  final s = d.inSeconds < 0 ? 0 : d.inSeconds;
-  if (s < 60) return '${s}s';
-  final m = s ~/ 60;
-  if (m < 60) return '${m}m';
-  return '${m ~/ 60}h ${(m % 60).toString().padLeft(2, '0')}m';
+  final allAgents = list.isNotEmpty && list.every((t) => t.kind == BackgroundKind.agent);
+  return countOf(list.length, allAgents ? 'subagent' : 'job');
 }
 
 /// The one running task's id (`bg_6`), shortened in the middle past
@@ -77,10 +52,10 @@ String _cut(String text, int end) {
   return text.substring(0, unit >= 0xD800 && unit <= 0xDBFF ? end - 1 : end);
 }
 
-/// `Waiting for bg_6`, `Waiting for 2 jobs`, `Waiting for background work`.
+/// `Waiting for bg_6`, `Waiting for 2 jobs`, `Waiting for jobs`.
 String waitingSentence(BackgroundWork work) {
   final subject = waitingSubject(work);
-  return subject == null ? 'Waiting for background work' : 'Waiting for $subject';
+  return subject == null ? 'Waiting for jobs' : 'Waiting for $subject';
 }
 
 /// `omp continues by itself when it finishes`: the consequence line of the
@@ -123,7 +98,7 @@ class StripText {
 /// | --- | --- | --- |
 /// | runs | n | `n running in background` |
 /// | over, waits, wakes | n | the same, then the consequence |
-/// | over, idle | n | `1 background terminal running` |
+/// | over, idle | n | `1 job running` |
 /// | any | none known | `Background work · details unavailable` |
 StripText? stripText(BackgroundWork work, {required bool waiting, required bool turnRunning}) {
   if (!work.hasRunning && !waiting) return null;
@@ -142,16 +117,15 @@ String stripSemantics(BackgroundWork work, {required bool waiting, required bool
   return ['Background work', state, ?text.secondary, 'double tap to open'].join(', ');
 }
 
-/// The small chip of the bar in the compact layout: `2 jobs`; `Background`
-/// when the count is unknown.
-String chipLabel(BackgroundWork work) =>
-    work.runningCount == 0 ? 'Background work' : nounPhrase(work.running);
+/// The small chip of the bar in the compact layout: `2 jobs`; `Jobs` when the
+/// count is unknown.
+String chipLabel(BackgroundWork work) => work.runningCount == 0 ? 'Jobs' : nounPhrase(work.running);
 
 /// The toast after Stop, when the turn ended and tasks remain:
 /// `Turn stopped · 1 job still running`. Null when nothing remains.
 String? stoppedToast(BackgroundWork work) {
   if (!work.hasRunning) return null;
-  if (work.runningCount == 0) return 'Turn stopped \u00b7 background work still running';
+  if (work.runningCount == 0) return 'Turn stopped \u00b7 jobs still running';
   return 'Turn stopped \u00b7 ${nounPhrase(work.running)} still running';
 }
 

@@ -9,9 +9,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/acp/acp_models.dart';
 import 'package:herdr_mobile/data/acp/session_state.dart';
 import 'package:herdr_mobile/data/services/image_decode.dart' show DecodedImage;
-import 'package:herdr_mobile/ui/core/controls.dart';
-import 'package:herdr_mobile/ui/core/markdown/markdown.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import 'package:herdr_mobile/ui/render/markdown/markdown.dart';
 import 'package:herdr_mobile/ui/features/agent_session/code_panel.dart';
 import 'package:herdr_mobile/ui/features/agent_session/content_blocks.dart';
 import 'package:herdr_mobile/ui/features/agent_session/content_copy.dart';
@@ -425,7 +424,7 @@ void main() {
       await tester.tap(find.byIcon(LucideIcons.copy));
       await tester.pump();
       expect(clipboard, text);
-      expect(find.text('Copied'), findsOneWidget);
+      expect(find.textContaining(' copied'), findsOneWidget);
       await tester.pump(const Duration(seconds: 4));
     });
 
@@ -484,7 +483,7 @@ void main() {
       await tester.pumpWidget(host(ToolLocationRows(locations: locations), taps: taps));
       expect(rich('parse.dart:42'), findsOneWidget);
       expect(rich('e.dart:2'), findsNothing);
-      expect(find.text('+2 more'), findsOneWidget);
+      expect(find.text('2 more'), findsOneWidget);
       expect(find.byType(PressBuilder), findsNWidgets(4));
       for (final row in find.byType(PressBuilder).evaluate()) {
         expect(tester.getSize(find.byElementPredicate((e) => e == row)).height, greaterThanOrEqualTo(kMinTap));
@@ -561,7 +560,7 @@ void main() {
       expect(find.text('Copy message'), findsOneWidget, reason: 'the toolbar carries it');
       await tapToolbar(tester, 'Copy as Markdown');
       expect(clipboard, source, reason: 'the Markdown source, byte for byte');
-      expect(find.text('Copied as Markdown'), findsOneWidget);
+      expect(find.text('Markdown copied'), findsOneWidget);
       await tester.pump(const Duration(seconds: 4));
     });
 
@@ -573,7 +572,7 @@ void main() {
       expect(clipboard, parseMd(source).plainText);
       expect(clipboard, isNot(contains('**')));
       expect(clipboard, contains('Some bold and code here.'));
-      expect(find.text('Copied'), findsOneWidget);
+      expect(find.text('Message copied'), findsOneWidget);
       await tester.pump(const Duration(seconds: 4));
     });
 

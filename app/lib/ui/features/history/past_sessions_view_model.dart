@@ -8,8 +8,8 @@ import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/agent_session_settings.dart';
 import '../../../data/repositories/fleet_repository.dart';
 import '../../../data/repositories/machine_connection.dart';
-import '../agent_session/visible_text.dart';
-import '../../core/rows.dart' show cwdTail;
+import '../../render/visible_text.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// What the Past sessions screen can show.
 enum PastPhase {

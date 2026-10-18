@@ -345,7 +345,7 @@ class MachineFormViewModel extends ChangeNotifier {
           HerdrTransportException(:final message) => message,
           HerdrApiException() => e.toString(),
           _ when secrets == null =>
-            'The saved secrets could not be read from this phone\'s keystore (${_describe(e)}). '
+            'The saved secrets could not be read from this phone’s keystore (${_describe(e)}). '
                 'Test again; if it keeps failing, restart the app.',
           TimeoutException() => 'The machine did not answer in time. Check that it is on and '
               'reachable from this phone, then test again.',
@@ -392,7 +392,7 @@ class MachineFormViewModel extends ChangeNotifier {
       dropKeyDraft();
       return true;
     } on Object catch (e) {
-      _saveError = 'This phone\'s storage refused it (${_describe(e)}). Everything you entered '
+      _saveError = 'This phone’s storage refused it (${_describe(e)}). Everything you entered '
           'is still here: save again. If it keeps failing, restart the app.';
       return false;
     } finally {

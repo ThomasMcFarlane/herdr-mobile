@@ -7,9 +7,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/acp/acp_models.dart';
 import 'package:herdr_mobile/data/acp/session_state.dart';
 import 'package:herdr_mobile/data/repositories/app_settings.dart';
-import 'package:herdr_mobile/ui/core/controls.dart';
-import 'package:herdr_mobile/ui/core/markdown/markdown.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/data/words/elapsed.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import 'package:herdr_mobile/ui/render/markdown/markdown.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
 import 'package:herdr_mobile/ui/features/agent_session/session_select.dart';
 import 'package:herdr_mobile/ui/features/agent_session/transcript_rows.dart';
@@ -423,6 +423,7 @@ void main() {
       await tester.tap(find.text('4 new'));
       await tester.pump(const Duration(milliseconds: 100));
       expect(transcriptPosition(tester).extentAfter, 0);
+      await tester.pump(const Duration(milliseconds: 200)); // the pill fades out
       expect(find.byTooltip('Jump to latest'), findsNothing);
       handle.dispose();
     });
@@ -558,12 +559,12 @@ void main() {
     });
 
     test('elapsed time reads as seconds, minutes and hours', () {
-      expect(elapsedLabel(Duration.zero), '0s');
-      expect(elapsedLabel(const Duration(seconds: 59)), '59s');
-      expect(elapsedLabel(const Duration(seconds: 60)), '1m 00s');
-      expect(elapsedLabel(const Duration(seconds: 125)), '2m 05s');
-      expect(elapsedLabel(const Duration(hours: 1, minutes: 2, seconds: 9)), '1h 02m');
-      expect(elapsedLabel(const Duration(seconds: -4)), '0s');
+      expect(Elapsed.compact(Duration.zero), '0s');
+      expect(Elapsed.compact(const Duration(seconds: 59)), '59s');
+      expect(Elapsed.compact(const Duration(seconds: 60)), '1m');
+      expect(Elapsed.compact(const Duration(seconds: 125)), '2m');
+      expect(Elapsed.compact(const Duration(hours: 1, minutes: 2, seconds: 9)), '1h 02m');
+      expect(Elapsed.compact(const Duration(seconds: -4)), '0s');
     });
   });
 

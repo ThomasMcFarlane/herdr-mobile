@@ -52,7 +52,7 @@ extension LinkStateColor on LinkState {
         LinkState.reconnecting => 'Reconnecting…',
         LinkState.attention => 'Needs attention',
         LinkState.disabled => 'Disabled',
-        LinkState.offline => 'No network',
+        LinkState.offline => 'Offline',
         LinkState.approval => 'Waiting for approval',
       };
 }
@@ -175,7 +175,7 @@ class _GlyphPainter extends CustomPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = size.width / 14
-          ..color = color.withValues(alpha: color.a * 0.5 * (1 - p)),
+          ..color = Ds.fade(color, 0.5 * (1 - p)),
       );
     }
   }
@@ -191,7 +191,7 @@ class _GlyphPainter extends CustomPainter {
     double draw,
     double alpha,
   ) {
-    Color a(Color c) => alpha >= 1 ? c : c.withValues(alpha: c.a * alpha.clamp(0, 1));
+    Color a(Color c) => Ds.fade(c, alpha);
     double part(double from, double to) => ((draw - from) / (to - from)).clamp(0.0, 1.0);
     final c = size.center(Offset.zero);
     final stroke = size.width / 11;
@@ -224,7 +224,7 @@ class _GlyphPainter extends CustomPainter {
         }
       case AgentStatus.working:
         // A quiet track and a half ring from the top, clockwise.
-        canvas.drawCircle(c, r, ring..color = a(color.withValues(alpha: 0.32)));
+        canvas.drawCircle(c, r, ring..color = a(Ds.fade(color, 0.32)));
         canvas.drawArc(
           Rect.fromCircle(center: c, radius: r),
           -math.pi / 2,
@@ -311,8 +311,8 @@ class IconTile extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: tint.withValues(alpha: ds.isDark ? 0.16 : 0.12),
-        borderRadius: BorderRadius.circular(Radii.tile),
+        color: ds.wash(tint),
+        borderRadius: BorderRadius.circular(Radii.xs),
       ),
       alignment: Alignment.center,
       child: Icon(icon, size: size * 0.56, color: tint),

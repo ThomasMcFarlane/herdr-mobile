@@ -21,13 +21,7 @@ import '../../../data/repositories/sent_phrases.dart';
 import '../../../data/repositories/slash_usage.dart';
 import '../../../data/services/dictation.dart';
 import '../../../data/models/herdr_models.dart' show AgentStatus;
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/glyphs.dart';
-import '../../core/motion.dart';
-import '../../core/status_panel.dart';
-import '../../core/theme.dart';
-import '../../core/toast.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import '../attach/attach_kit.dart';
 import 'attach_model.dart';
 import 'attach_picker.dart';
@@ -387,12 +381,10 @@ class _AgentSessionScreenState extends State<AgentSessionScreen> with WidgetsBin
   bool _stopAsked = false;
   Timer? _stopWindow;
 
-  static const _stopExpiry = Duration(seconds: 20);
-
   void _stopTapped() {
     _stopAsked = true;
     _stopWindow?.cancel();
-    _stopWindow = Timer(_stopExpiry, () => _stopAsked = false);
+    _stopWindow = Timer(Dwell.stopAsked, () => _stopAsked = false);
   }
 
   /// After Stop: when the turn is over and background work still runs, say so
@@ -707,7 +699,7 @@ class _Bottom extends StatelessWidget {
       SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.sm),
+          padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.sm),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -740,19 +732,43 @@ class _WaitsUntilLive extends StatelessWidget {
       final docked = s.cachedAsOf == null && s.state.pending.isNotEmpty;
       return blocked && !docked && !s.isObserved && (s.link != AgentLink.live || s.cachedAsOf != null);
     },
-    builder: (context, waits) {
-      if (!waits) return const SizedBox.shrink();
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.sm),
-        child: StatusStrip(
-          color: context.ds.blocked,
-          title: 'Needs you',
-          detail: 'Its request shows here once connected.',
-          leading: const StatusGlyph(status: AgentStatus.blocked, size: 16),
-        ),
-      );
-    },
+    builder: (context, waits) => _Folds(
+      child: !waits
+          ? null
+          : Padding(
+              padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.sm),
+              child: StatusStrip(
+                color: context.ds.blocked,
+                title: 'Needs you',
+                detail: 'Its request shows here once connected.',
+                leading: const StatusGlyph(status: AgentStatus.blocked, size: IconSize.row),
+              ),
+            ),
+    ),
   );
+}
+
+/// A status strip that folds in and out ([Collapse]) as [child] comes and
+/// goes, like the pane's banner: the transcript below slides instead of
+/// jumping. While folding away it keeps showing what it said last.
+class _Folds extends StatefulWidget {
+  const _Folds({required this.child});
+
+  final Widget? child;
+
+  @override
+  State<_Folds> createState() => _FoldsState();
+}
+
+class _FoldsState extends State<_Folds> {
+  Widget? _last;
+
+  @override
+  Widget build(BuildContext context) {
+    final child = widget.child;
+    if (child != null) _last = child;
+    return Collapse(open: child != null, child: _last ?? const SizedBox.shrink());
+  }
 }
 
 /// What the link is doing, when it is not live: connecting, reconnecting, the
@@ -780,111 +796,117 @@ class _LinkStrip extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => SessionSelect<(AgentLink, String?, bool, bool, bool, AuthNeeded?, DateTime?, bool)>(
+  Widget build(BuildContext context) => SessionSelect<(AgentLink, String?, bool, bool, bool, AuthNeeded?, DateTime?, bool, bool)>(
     session: session,
     select: (s) =>
-        (s.link, s.error, s.evicted, s.isObserved, s.needsTerminal, s.authNeeded, s.cachedAsOf, s.resumeTarget != null),
-    builder: (context, v) {
-      final (link, error, evicted, observed, needsTerminal, auth, cachedAsOf, resumable) = v;
-      final ds = context.ds;
-      // An agent in a terminal: its log cannot be read, or it waits on
-      // something only the terminal can show or answer. The terminal is the
-      // way out of both.
-      final openTerminal = observed && session.terminalPaneId != null
-          ? AppButton(
-              label: 'Open terminal',
-              compact: true,
-              kind: AppButtonKind.secondary,
-              onPressed: () => _openTerminal(context),
-            )
-          : null;
-      // The agent wants a login. The phone signs in nowhere: the panel says
-      // so and opens a terminal on the host (live, or failed to attach for
-      // it; its own "Try again" is the way back). It scrolls inside a share of
-      // the window and goes in the compact layout (landscape with the
-      // keyboard up), where there is no room for it.
-      if (auth != null && (link == AgentLink.live || link == AgentLink.failed)) {
-        return HideWhenCompact(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.6),
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.xs),
-                child: AuthPanel(session: session),
-              ),
+        (s.link, s.error, s.evicted, s.isObserved, s.needsTerminal, s.authNeeded, s.cachedAsOf, s.resumeTarget != null, s.errorFromAgent),
+    builder: (context, v) => _Folds(child: _content(context, v)),
+  );
+
+  /// The strip for [v], or null when the link needs no word (live, no error).
+  Widget? _content(BuildContext context, (AgentLink, String?, bool, bool, bool, AuthNeeded?, DateTime?, bool, bool) v) {
+    final (link, error, evicted, observed, needsTerminal, auth, cachedAsOf, resumable, fromAgent) = v;
+    final ds = context.ds;
+    // An agent in a terminal: its log cannot be read, or it waits on
+    // something only the terminal can show or answer. The terminal is the
+    // way out of both.
+    final openTerminal = observed && session.terminalPaneId != null
+        ? AppButton(
+            label: 'Open terminal',
+            compact: true,
+            kind: AppButtonKind.secondary,
+            onPressed: () => _openTerminal(context),
+          )
+        : null;
+    // The agent wants a login. The phone signs in nowhere: the panel says
+    // so and opens a terminal on the host (live, or failed to attach for
+    // it; its own "Try again" is the way back). It scrolls inside a share of
+    // the window and goes in the compact layout (landscape with the
+    // keyboard up), where there is no room for it.
+    if (auth != null && (link == AgentLink.live || link == AgentLink.failed)) {
+      return HideWhenCompact(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.6),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.xs),
+              child: AuthPanel(session: session),
             ),
           ),
+        ),
+      );
+    }
+    if (link == AgentLink.live) {
+      if (needsTerminal) {
+        return _strip(
+          color: ds.blocked,
+          state: LinkState.attention,
+          title: 'Needs you in the terminal',
+          detail: 'It asks something the chat cannot show.',
+          action: openTerminal,
         );
       }
-      if (link == AgentLink.live) {
-        if (needsTerminal) {
-          return _strip(
-            color: ds.blocked,
-            state: LinkState.attention,
-            title: 'Waiting for you in the terminal',
-            detail: 'It asks something the chat cannot show.',
-            action: openTerminal,
-          );
-        }
-        if (error != null) {
-          return _strip(
-            color: ds.danger,
-            state: LinkState.attention,
-            title: 'Something went wrong',
-            detail: error,
-            action: openTerminal,
-          );
-        }
-        return const SizedBox.shrink();
+      if (error != null) {
+        // Only what the agent answered is its error; the app's own trouble
+        // (not connected, the message not sent) leads with what happened.
+        final (title, detail) = fromAgent ? ('The agent reported an error', error) : _firstSentence(error);
+        return _strip(
+          color: ds.danger,
+          state: LinkState.attention,
+          title: title,
+          detail: detail,
+          action: openTerminal,
+        );
       }
-      final action = evicted ? 'Take over' : (link == AgentLink.failed && !observed ? 'Retry' : null);
-      // The keeper is gone but the agent still has the conversation.
-      final canContinue = link == AgentLink.ended && !evicted && resumable;
-      final (color, state, title, fallback) = switch (link) {
-        AgentLink.connecting when cachedAsOf != null => (ds.working, LinkState.connecting, 'Updating…', null),
-        AgentLink.connecting => (ds.working, LinkState.connecting, 'Connecting…', null),
-        AgentLink.reconnecting => (
-          ds.working,
-          LinkState.reconnecting,
-          'Reconnecting…',
-          observed ? 'The agent keeps running in its terminal.' : 'The agent keeps running on the host.',
-        ),
-        AgentLink.ended => (
-          ds.textTertiary,
-          LinkState.offline,
-          evicted ? 'Taken over' : 'Session ended',
-          null,
-        ),
-        AgentLink.failed => (
-          ds.danger,
-          LinkState.attention,
-          observed ? 'Can’t read the session log' : 'Couldn’t connect',
-          null,
-        ),
-        AgentLink.live => (ds.done, LinkState.online, '', null),
-      };
-      return _strip(
-        color: color,
-        state: state,
-        title: title,
-        detail: _withCopy(cachedAsOf, canContinue ? _keptByAgent(error) : error ?? fallback),
-        // Beside the button the strip is short of room: a tap shows it all.
-        expandFrom: canContinue ? 40 : 70,
-        action: canContinue
-            ? ContinueButton(session: session)
-            : link == AgentLink.failed && openTerminal != null
-            ? openTerminal
-            : action == null
-            ? null
-            : AppButton(
-                label: action,
-                compact: true,
-                kind: AppButtonKind.secondary,
-                onPressed: () => unawaited(session.reattach()),
-              ),
-      );
-    },
-  );
+      return null;
+    }
+    final action = evicted ? 'Take over' : (link == AgentLink.failed && !observed ? 'Retry' : null);
+    // The keeper is gone but the agent still has the conversation.
+    final canContinue = link == AgentLink.ended && !evicted && resumable;
+    final (color, state, title, fallback) = switch (link) {
+      AgentLink.connecting when cachedAsOf != null => (ds.working, LinkState.connecting, 'Updating…', null),
+      AgentLink.connecting => (ds.working, LinkState.connecting, 'Connecting…', null),
+      AgentLink.reconnecting => (
+        ds.working,
+        LinkState.reconnecting,
+        'Reconnecting…',
+        observed ? 'The agent keeps running in its terminal.' : 'The agent keeps running on the machine.',
+      ),
+      AgentLink.ended => (
+        ds.textTertiary,
+        LinkState.offline,
+        evicted ? 'Taken over' : 'Session ended',
+        null,
+      ),
+      AgentLink.failed => (
+        ds.danger,
+        LinkState.attention,
+        observed ? 'Can’t read the session log' : 'Couldn’t connect',
+        null,
+      ),
+      AgentLink.live => (ds.done, LinkState.online, '', null),
+    };
+    return _strip(
+      color: color,
+      state: state,
+      title: title,
+      detail: _withCopy(cachedAsOf, canContinue ? _keptByAgent(error) : error ?? fallback),
+      // Beside the button the strip is short of room: a tap shows it all.
+      expandFrom: canContinue ? 40 : 70,
+      action: canContinue
+          ? ContinueButton(session: session)
+          : link == AgentLink.failed && openTerminal != null
+          ? openTerminal
+          : action == null
+          ? null
+          : AppButton(
+              label: action,
+              compact: true,
+              kind: AppButtonKind.secondary,
+              onPressed: () => unawaited(session.reattach()),
+            ),
+    );
+  }
 
   /// What Continue brings back, then the reason the session ended.
   static String _keptByAgent(String? reason) {
@@ -903,6 +925,15 @@ class _LinkStrip extends StatelessWidget {
     return said == null || said.trim().isEmpty ? copy : '$copy $said';
   }
 
+  /// [text]'s first sentence as a title (no full stop), the rest as detail.
+  static (String, String?) _firstSentence(String text) {
+    final t = text.trim();
+    final end = t.indexOf('. ');
+    final head = end < 0 ? t : t.substring(0, end + 1);
+    final rest = end < 0 ? '' : t.substring(end + 2).trim();
+    return (head.endsWith('.') ? head.substring(0, head.length - 1) : head, rest.isEmpty ? null : rest);
+  }
+
   Widget _strip({
     required Color color,
     required LinkState state,
@@ -912,7 +943,7 @@ class _LinkStrip extends StatelessWidget {
     Widget? action,
   }) => Builder(
     builder: (context) => Padding(
-      padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.xs),
+      padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.xs),
       child: StatusStrip(
         color: color,
         title: title,
@@ -928,17 +959,10 @@ class _LinkStrip extends StatelessWidget {
     unawaited(
       showAppSheet<void>(
         context,
-        builder: (ctx) => Padding(
-          padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.xl, Gap.gutter, Gap.lg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Semantics(header: true, child: Text(title, style: Type.title.copyWith(color: ctx.ds.text))),
-              const SizedBox(height: Gap.sm),
-              SelectableText(reason, style: Type.compact.copyWith(color: ctx.ds.textSecondary)),
-            ],
-          ),
+        builder: (ctx) => SheetScaffold(
+          title: title,
+          kind: SheetKind.message,
+          child: SelectableText(reason, style: Type.compact.copyWith(color: ctx.ds.textSecondary)),
         ),
       ),
     );

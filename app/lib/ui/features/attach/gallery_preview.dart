@@ -8,13 +8,11 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/services/phone_gallery.dart';
 import '../../../data/services/remote_files.dart' show ReadCancel, ReadCancelled;
 import '../../../data/services/thumb_cache.dart';
-import '../../core/controls.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import '../files/file_format.dart';
 import '../photos/photo_item.dart';
 import '../photos/photo_viewer.dart';
 import 'gallery_model.dart';
-import 'selection_circle.dart';
 import 'tray.dart';
 
 /// A picture of the gallery for the immersive viewer: the original, read from
@@ -124,29 +122,29 @@ class _SelectPill extends StatelessWidget {
       return PressBuilder(
         onTap: toggle,
         haptic: true,
-        scale: 0.97,
+        scale: PressScale.button,
         minTapSize: kMinTap,
         selected: picked,
         semanticLabel: picked ? 'Selected, number $number. Tap to deselect' : 'Select this photo',
         builder: (context, pressed) => Container(
-          height: 40,
-          padding: const EdgeInsets.only(left: 8, right: 16),
+          height: _pickHeight,
+          padding: const EdgeInsets.only(left: Gap.sm, right: Gap.lg),
           decoration: BoxDecoration(
-            color: picked ? ds.accent : const Color(0x99000000),
-            borderRadius: BorderRadius.circular(20),
+            color: picked ? ds.accent : ds.photoScrim,
+            borderRadius: BorderRadius.circular(Radii.pill),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              SelectionMark(number: number, onPhoto: true),
-              const SizedBox(width: 8),
+              SelectMark(selected: picked, number: number, onPhoto: true, size: SelectMark.photoSize),
+              const SizedBox(width: Gap.sm),
               Text(
                 picked ? 'Selected' : 'Select',
-                style: Type.button.copyWith(fontSize: 14, color: picked ? ds.onAccent : Colors.white),
+                style: Type.buttonCompact.copyWith(color: picked ? ds.onAccent : ds.onPhoto),
               ),
               if (picked) ...[
-                const SizedBox(width: 6),
-                Icon(LucideIcons.check, size: 14, color: ds.onAccent),
+                const SizedBox(width: Gap.sm),
+                Icon(LucideIcons.check, size: IconSize.inline, color: ds.onAccent),
               ],
             ],
           ),
@@ -155,3 +153,6 @@ class _SelectPill extends StatelessWidget {
     },
   );
 }
+
+/// The pick button's pill, inside its 44 touch box.
+const _pickHeight = 40.0;

@@ -4,7 +4,6 @@ import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder, Cu
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'ansi.dart' show AnsiRun;
 import 'motion.dart';
 import 'tokens.dart';
 
@@ -123,30 +122,13 @@ class TerminalPalette extends ThemeExtension<TerminalPalette> {
     for (var i = 0; i < 16; i++) TerminalColors.ansi[i]: ansi[i],
   };
 
-  /// [run] as this palette draws it. The parser's [TerminalColors] become
-  /// this palette's; text that has a background of its own and no colour takes
-  /// whichever default reads on it; any text below [minContrast] against its
-  /// background is darkened. The dark palette returns [run] itself.
-  AnsiRun recolor(AnsiRun run) {
-    if (isDark) return run;
-    final bg = run.bg == null ? null : (_fromDark[run.bg] ?? run.bg);
-    var fg = run.fg == null ? null : (_fromDark[run.fg] ?? run.fg);
-    if (bg != null && fg == null) {
-      fg = bg.computeLuminance() < 0.35 ? TerminalColors.foreground : foreground;
-    }
-    if (fg != null) fg = _readable(fg, bg ?? background);
-    if (fg == run.fg && bg == run.bg) return run;
-    return AnsiRun(
-      run.text,
-      fg: fg,
-      bg: bg,
-      bold: run.bold,
-      dim: run.dim,
-      italic: run.italic,
-      underline: run.underline,
-      strike: run.strike,
-    );
-  }
+  /// [dark], one of the parser's [TerminalColors], as this palette draws it;
+  /// any other colour is returned as is. The terminal renderer's `recolor`
+  /// applies it to a run.
+  Color mapped(Color dark) => _fromDark[dark] ?? dark;
+
+  /// [fg], darkened until it reaches [minContrast] on [on].
+  static Color readable(Color fg, Color on) => _readable(fg, on);
 
   static double _contrast(Color a, Color b) {
     final la = a.computeLuminance();
@@ -176,10 +158,6 @@ extension TerminalPaletteContext on BuildContext {
   /// bare test) gets the dark palette.
   TerminalPalette get terminal => Theme.of(this).extension<TerminalPalette>() ?? TerminalPalette.dark;
 }
-
-/// Bundled monospace face (JetBrains Mono): the same on every phone, with
-/// proper box-drawing and symbol coverage for agent UIs.
-const monoFamily = 'JetBrainsMono';
 
 /// The Cupertino slide (parallax, edge-swipe back) at [Motion.page] instead of
 /// the SDK's 500 ms: opening a pane is the app's most frequent action.
@@ -293,7 +271,7 @@ abstract final class AppTheme {
     );
 
     OutlineInputBorder border(Color c, [double w = 1]) => OutlineInputBorder(
-          borderRadius: BorderRadius.circular(Radii.control),
+          borderRadius: BorderRadius.circular(Radii.sm),
           borderSide: BorderSide(color: c, width: w),
         );
 
@@ -344,15 +322,15 @@ abstract final class AppTheme {
       ),
       textSelectionTheme: TextSelectionThemeData(
         cursorColor: ds.accent,
-        selectionColor: ds.accent.withValues(alpha: 0.28),
+        selectionColor: ds.selection,
         selectionHandleColor: ds.accent,
       ),
       tooltipTheme: TooltipThemeData(
         decoration: BoxDecoration(
-          color: ds.isDark ? ds.fillPressed : const Color(0xFF2B2A27),
-          borderRadius: BorderRadius.circular(Radii.tooltip),
+          color: ds.inverseSurface,
+          borderRadius: BorderRadius.circular(Radii.xs),
         ),
-        textStyle: Type.caption.copyWith(color: const Color(0xFFF1F1EF)),
+        textStyle: Type.caption.copyWith(color: ds.onInverse),
       ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: ds.surface,
@@ -362,7 +340,7 @@ abstract final class AppTheme {
         elevation: 0,
         showDragHandle: false,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.lg)),
         ),
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(color: ds.textSecondary),

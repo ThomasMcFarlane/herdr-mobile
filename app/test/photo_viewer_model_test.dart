@@ -276,7 +276,7 @@ void main() {
       final failure = model.currentEntry.failure!;
       expect(failure.kind, PhotoFailureKind.notAnImage);
       expect(failure.retryable, isFalse);
-      expect(failure.message, contains("can't be shown"));
+      expect(failure.message, contains('can’t be shown'));
     });
 
     testWidgets('a dropped connection can be retried and then loads', (tester) async {

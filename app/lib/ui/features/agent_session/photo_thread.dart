@@ -7,12 +7,13 @@ import '../../../data/acp/session_state.dart';
 import '../../../data/observed/log_picture.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/services/disk_cache.dart';
-import '../files/file_format.dart';
+import '../../../data/words/elapsed.dart';
+import '../files/file_format.dart' show formatBytes;
 import '../photos/photo_item.dart';
 import '../photos/photo_viewer.dart';
 import 'content_image_cache.dart';
 import 'content_target.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// A picture in a conversation and where it came from.
 class ThreadPhoto {
@@ -35,7 +36,7 @@ List<ThreadPhoto> threadPhotos(AgentSessionState state, {required String agentLa
   for (final item in state.items) {
     switch (item) {
       case TranscriptMessage(:final role, :final blocks, :final at):
-        final when = at == null ? '' : ' · ${formatExactTime(at)}';
+        final when = at == null ? '' : ' · ${formatWhen(at, DateTime.now())}';
         final from = switch (role) {
           MessageRole.user => 'You attached it$when',
           MessageRole.agent => 'Sent by ${visibleText(agentLabel)}$when',

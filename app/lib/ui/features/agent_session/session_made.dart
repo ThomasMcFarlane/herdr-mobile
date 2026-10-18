@@ -13,20 +13,16 @@ import '../../../data/models/web_bridge.dart' show sensitiveServiceOf;
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/machine_connection.dart' show LinkState;
 import '../../../data/repositories/web_preview.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/glyphs.dart';
-import '../../core/open_link.dart';
-import '../../core/rows.dart';
-import '../../core/theme.dart';
-import '../../core/toast.dart';
-import '../files/file_format.dart' show formatModified;
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../support/open_link.dart';
+import '../../../data/words/elapsed.dart';
+import '../../../data/words/plural.dart';
 import '../files/files_navigation.dart' show machineSupportsFiles, openRemoteFile;
 import '../files/photo_files.dart' show photoRoute;
 import '../files/photo_grid.dart' show PhotoThumbFace;
 import '../files/photo_thumbs.dart' show PhotoThumbs;
 import 'session_select.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// What the sheet and the chip read from a session: the servers and pages, the
 /// background tasks that say whether a server still runs, and whether anything
@@ -146,11 +142,6 @@ class _SessionMadeSheetState extends State<SessionMadeSheet> {
     ];
   }
 
-  /// The grabber `showAppSheet` draws above whatever is built here (its 8 dp
-  /// gap and 4 dp bar): the room this sheet may take is the screen less the
-  /// status bar, the bottom inset and this.
-  static const _grabber = 12.0;
-
   /// What [_noFiles] takes at [width]: it is a sentence that wraps on a narrow
   /// phone or large text, so it is laid out, not guessed.
   static double _noteHeight(double width, TextScaler scaler) {
@@ -220,28 +211,18 @@ class _SessionMadeSheetState extends State<SessionMadeSheet> {
         final tabbed = kinds.length >= 2;
         final content = [for (final a in shown) if (a.kind == tab) a];
         final running = shown.any((a) => a.kind == MadeKind.server && serverStateOf(a, tasks, live: live) == ServerState.running);
-        // `showAppSheet` scrolls whatever it is given and caps it where the
-        // status bar starts; this sheet scrolls its own list under a pinned
-        // switch, so it is given a bounded height of its own.
-        final nav = MediaQuery.of(Navigator.of(context).context);
-        final cap = MediaQuery.sizeOf(context).height - nav.padding.top - nav.padding.bottom - _grabber;
         final scaler = MediaQuery.textScalerOf(context);
-        return ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: cap),
+        return SheetScaffold(
+          title: 'Made in this session',
+          kind: SheetKind.list,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(Gap.lg, 8, Gap.lg, Gap.lg),
+            // The list kind's inset 4 + 12: the rows sit 16 from the edge.
+            padding: const EdgeInsets.symmetric(horizontal: Gap.md),
             child: LayoutBuilder(
               builder: (context, box) => Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: Gap.sm, bottom: Gap.sm),
-                    child: Semantics(
-                      header: true,
-                      child: Text('Made in this session', style: Type.label.copyWith(color: ds.textSecondary)),
-                    ),
-                  ),
                   if (shown.isEmpty)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: Gap.xl),
@@ -260,8 +241,7 @@ class _SessionMadeSheetState extends State<SessionMadeSheet> {
                       onChanged: _pick,
                     ),
                   if (tab != null)
-                    Flexible(
-                      child: SizedBox(
+                    SizedBox(
                         height: math.min(
                           _bodyHeight(shown, kinds, box.maxWidth, scaler, files),
                           MediaQuery.sizeOf(context).height * _bodyShare,
@@ -291,7 +271,6 @@ class _SessionMadeSheetState extends State<SessionMadeSheet> {
                               ),
                           ],
                         ),
-                      ),
                     ),
                 ],
               ),
@@ -356,7 +335,6 @@ class _MoreRow extends StatelessWidget {
         leading: const IconTile(icon: LucideIcons.chevronDown),
         leadingOnTitle: false,
         title: '$count more',
-        divider: false,
         onTap: onTap,
       );
 }
@@ -416,7 +394,7 @@ Future<void> openMadeAsset(BuildContext sheet, BuildContext opener, AgentSession
                 await machine.files.stat(await machine.files.resolve(asset.path!, cwd: session.cwd)),
               );
         if (!opener.mounted) return;
-        if (!await openPreviewUrl(entry)) failed("Couldn't open on this phone: no browser could open it.");
+        if (!await openPreviewUrl(entry)) failed('Couldn’t open on this phone: no browser could open it.');
     }
   } on WebPreviewException catch (e) {
     failed(e.message);
@@ -453,7 +431,8 @@ class _WebRow extends StatelessWidget {
   /// What the row says under its name: the state of a server (said only as far
   /// as the phone knows), the folder and time of a file.
   String? get _subtitle {
-    final when = formatModified(asset.at);
+    final at = asset.at;
+    final when = at == null ? '' : formatAgo(at, DateTime.now());
     final service = asset.kind == MadeKind.server && asset.port != null ? sensitiveServiceOf(asset.port!) : null;
     if (service != null) return '$service, not a web page';
     if (_isFile && !filesAvailable) return _noFiles;
@@ -472,7 +451,7 @@ class _WebRow extends StatelessWidget {
     final running = state == ServerState.running;
     final blocked = asset.kind == MadeKind.server && asset.port != null && sensitiveServiceOf(asset.port!) != null;
     final unavailable = _isFile && !filesAvailable;
-    return ListRow(
+    final row = ListRow(
       leading: IconTile(
         icon: switch (asset.kind) {
           MadeKind.server => LucideIcons.server,
@@ -485,10 +464,14 @@ class _WebRow extends StatelessWidget {
       leadingOnTitle: false,
       title: visibleText(asset.title),
       subtitle: _subtitle,
-      divider: divider,
       dim: state == ServerState.stopped || blocked || unavailable,
       onTap: unavailable ? null : onTap,
       trailing: running ? const LinkDot(state: LinkState.online) : null,
+    );
+    if (!divider) return row;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [row, Hairline(indent: ListRow.textIndent())],
     );
   }
 }
@@ -608,7 +591,7 @@ class _PictureGrid extends StatelessWidget {
       // A row scrolled away lets go of its pictures at once.
       addAutomaticKeepAlives: false,
       itemBuilder: (context, row) => Padding(
-        padding: EdgeInsets.only(top: row == 0 ? 0 : Gap.md),
+        padding: row > 0 ? const EdgeInsets.only(top: Gap.md) : EdgeInsets.zero,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -700,14 +683,14 @@ class _PictureTileState extends State<_PictureTile> {
     return PressBuilder(
       onTap: !widget.enabled ? null : (unknown ? _retry : widget.onTap),
       haptic: true,
-      semanticLabel: unknown ? '$name, could not be loaded, tap to try again' : name,
+      semanticLabel: unknown ? '$name, could not be loaded, tap to retry' : name,
       builder: (context, pressed) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           AspectRatio(
             aspectRatio: 4 / 3,
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(Radii.control),
+              borderRadius: BorderRadius.circular(Radii.sm),
               child: entry == null
                   ? _QuietTile(
                       icon: switch (_face) {
@@ -757,7 +740,7 @@ class _QuietTile extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, size: 24, color: faint ? ds.textTertiary.withValues(alpha: 0.6) : ds.textMuted),
+                Icon(icon, size: IconSize.nav, color: faint ? ds.faint : ds.textMuted),
                 if (text != null) ...[
                   const SizedBox(height: Gap.xs),
                   FittedBox(
@@ -769,7 +752,7 @@ class _QuietTile extends StatelessWidget {
             ),
           ),
         ),
-        if (pressed) ColoredBox(color: ds.text.withValues(alpha: 0.12)),
+        if (pressed) ColoredBox(color: ds.wash(ds.text)),
       ],
     );
   }
@@ -789,7 +772,7 @@ class _MoreTile extends StatelessWidget {
         builder: (context, pressed) => AspectRatio(
           aspectRatio: 4 / 3,
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(Radii.control),
+            borderRadius: BorderRadius.circular(Radii.sm),
             child: _QuietTile(icon: LucideIcons.chevronDown, pressed: pressed, text: '$count more'),
           ),
         ),
@@ -814,12 +797,12 @@ class MadeChip extends StatelessWidget {
           if (assets.isEmpty) return const SizedBox.shrink();
           return Padding(
             // The bar's row places the chips; this one follows the subagents chip.
-            padding: EdgeInsets.only(left: besideSubagents ? Gap.sm : 0, bottom: 2),
+            padding: besideSubagents ? const EdgeInsets.only(left: Gap.sm, bottom: Gap.hair) : const EdgeInsets.only(bottom: Gap.hair),
             child: AppChip(
               label: 'Made',
               count: assets.length,
-              semanticLabel: assets.length == 1 ? '1 item made' : '${assets.length} items made',
-              leading: Icon(LucideIcons.globe, size: 14, color: context.ds.textSecondary),
+              semanticLabel: '${countOf(assets.length, 'item')} made',
+              leading: Icon(LucideIcons.globe, size: IconSize.inline, color: context.ds.textSecondary),
               onTap: () => unawaited(showSessionMade(context, session)),
             ),
           );

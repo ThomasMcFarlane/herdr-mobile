@@ -3,7 +3,7 @@ import 'package:flutter/scheduler.dart';
 
 import '../../../data/acp/live_text.dart';
 import '../../../data/streaming/reveal_pacer.dart';
-import '../../core/markdown/markdown.dart';
+import '../../render/markdown/markdown.dart';
 
 /// What the screen shows of the message that is streaming in right now: the
 /// text that has been *revealed* so far, as a [StreamingMd] (frozen blocks and

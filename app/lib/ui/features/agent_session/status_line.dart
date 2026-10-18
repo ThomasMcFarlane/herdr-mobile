@@ -5,10 +5,11 @@ import '../../../data/acp/session_state.dart';
 import '../../../data/acp/turns/turns.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/acp/background/background_work.dart' show BackgroundWork;
-import '../../core/step_clock.dart';
-import '../../core/theme.dart';
+import '../../../data/words/elapsed.dart';
+import '../../support/step_clock.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'background_format.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// The clock the status line and the subagent cards read (tests replace it).
 DateTime Function() statusNow = DateTime.now;
@@ -16,23 +17,7 @@ DateTime Function() statusNow = DateTime.now;
 /// One step a second: the elapsed time moves by the second. Runs only while a
 /// [StatusLine] or a subagent card shows its clock (a lease per widget), and
 /// not in the background ([StepClock] stops with the app).
-final secondsClock = StepClock(const Duration(seconds: 1));
-
-/// `12s`, `1m 05s`, `1h 02m`: how long a step or a turn has run.
-String elapsedLabel(Duration d) {
-  final s = d.inSeconds < 0 ? 0 : d.inSeconds;
-  if (s < 60) return '${s}s';
-  final m = s ~/ 60;
-  if (m < 60) return '${m}m ${(s % 60).toString().padLeft(2, '0')}s';
-  return '${m ~/ 60}h ${(m % 60).toString().padLeft(2, '0')}m';
-}
-
-/// `Quiet for 2m`: how long nothing has arrived.
-String quietLabel(Duration d) {
-  final s = d.inSeconds;
-  if (s < 3600) return 'Quiet for ${s ~/ 60}m';
-  return 'Quiet for ${s ~/ 3600}h ${((s % 3600) ~/ 60).toString().padLeft(2, '0')}m';
-}
+final secondsClock = StepClock(Dwell.second);
 
 /// What the agent does, as words: `Running flutter test`, `Reading parse.dart`,
 /// the first sentence of the thought, `Working`.
@@ -157,11 +142,11 @@ class _StatusLineState extends State<StatusLine> with StepClockLease<StatusLine>
     final ds = context.ds;
     final style = Type.secondary.copyWith(color: ds.textSecondary, fontFeatures: Type.tabular);
     final work = _waitingOn;
-    if (work != null) return Padding(padding: const EdgeInsets.only(top: 10), child: _WaitingLine(work: work, style: style));
+    if (work != null) return Padding(padding: const EdgeInsets.only(top: Gap.md), child: _WaitingLine(work: work, style: style));
     // A no-break space keeps the height of the line while it is empty.
-    if (!_active) return Padding(padding: const EdgeInsets.only(top: 10), child: Text('\u00A0', style: style));
+    if (!_active) return Padding(padding: const EdgeInsets.only(top: Gap.md), child: Text('\u00A0', style: style));
     return Padding(
-      padding: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.only(top: Gap.md),
       child: ValueListenableBuilder<int>(
         valueListenable: clock.steps,
         builder: (context, _, _) {
@@ -173,10 +158,11 @@ class _StatusLineState extends State<StatusLine> with StepClockLease<StatusLine>
           }
           final words = activityWords(activity);
           final since = activity.kind == ActivityKind.working ? widget.session.turnStartedAt : activity.since;
-          final clockText = since == null ? null : elapsedLabel(now.difference(since));
+          final clockText = since == null ? null : Elapsed.compact(now.difference(since));
           final quiet = activity.quiet;
+          final quietText = quiet == null ? null : 'Quiet for ${Elapsed.compact(quiet, seconds: false)}';
           return Semantics(
-            label: quiet == null ? words : '$words, ${quietLabel(quiet)}',
+            label: quietText == null ? words : '$words, $quietText',
             child: ExcludeSemantics(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -188,8 +174,8 @@ class _StatusLineState extends State<StatusLine> with StepClockLease<StatusLine>
                       if (clockText != null) Text(' \u00b7 $clockText', maxLines: 1, style: style),
                     ],
                   ),
-                  if (quiet != null)
-                    Text(quietLabel(quiet), maxLines: 1, style: style.copyWith(color: ds.text, fontWeight: FontWeight.w600)),
+                  if (quietText != null)
+                    Text(quietText, maxLines: 1, style: Type.secondaryStrong.copyWith(color: ds.text, fontFeatures: Type.tabular)),
                 ],
               ),
             ),
@@ -215,7 +201,7 @@ class _WaitingLine extends StatelessWidget {
     final start = work.oldestStart;
     return MinuteBuilder(
       builder: (context, now) {
-        final clock = start == null || work.runningCount == 0 ? null : backgroundElapsed(now.difference(start));
+        final clock = start == null || work.runningCount == 0 ? null : Elapsed.compact(now.difference(start));
         return Semantics(
           label: clock == null ? words : '$words, $clock',
           child: ExcludeSemantics(

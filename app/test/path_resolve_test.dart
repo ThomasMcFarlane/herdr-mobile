@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/remote_file.dart';
 import 'package:herdr_mobile/data/repositories/machine_connection.dart';
 import 'package:herdr_mobile/data/repositories/path_finder.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/files/file_viewer_screen.dart';
 import 'package:herdr_mobile/ui/features/files/file_widgets.dart';
 import 'package:herdr_mobile/ui/features/files/files_navigation.dart';
@@ -127,7 +127,7 @@ void main() {
       await _tap(tester, machineWithFiles(fs), 'docs/README.md');
 
       expect(find.text('Not found'), findsOneWidget);
-      expect(find.text("docs/README.md isn't in proj (also looked in 2 worktrees)"), findsOneWidget);
+      expect(find.text('docs/README.md isn’t in proj (also looked in 2 worktrees)'), findsOneWidget);
       expect(find.text('Search'), findsOneWidget, reason: 'README.md is too common to search for unasked');
       expect(find.byType(FileViewerScreen), findsNothing);
     });
@@ -151,7 +151,7 @@ void main() {
       expect(find.text('Found in a/b'), findsOneWidget);
 
       await _tap(tester, machine, 'MISSING_REPORT.txt');
-      expect(find.text("MISSING_REPORT.txt isn't in proj (also looked in 2 worktrees and searched by name)"), findsOneWidget);
+      expect(find.text('MISSING_REPORT.txt isn’t in proj (also looked in 2 worktrees and searched by name)'), findsOneWidget);
       expect(find.text('Search'), findsNothing);
     });
 
@@ -160,17 +160,17 @@ void main() {
       final long = 'packages/some/very/deep/folder/structure/that/keeps/going/and/going/NOT_THERE_AT_ALL.txt';
       await _tap(tester, machine, long);
 
-      final message = tester.widget<Text>(find.textContaining("isn't in proj")).data!;
+      final message = tester.widget<Text>(find.textContaining('isn’t in proj')).data!;
       expect(message, contains('…'));
-      expect(message, contains('NOT_THERE_AT_ALL.txt isn\'t in proj'));
-      expect(message.indexOf("isn't"), lessThan(80));
+      expect(message, contains('NOT_THERE_AT_ALL.txt isn’t in proj'));
+      expect(message.indexOf('isn’t'), lessThan(80));
     });
 
     testWidgets('a path outside the session folder is not hunted for in worktrees', (tester) async {
       final fs = _fs()..addFile('/work/wt-old/x/OTHER_FILE.txt', 'x');
       await _tap(tester, machineWithFiles(fs), '/etc/OTHER_FILE.txt');
 
-      expect(find.text("/etc/OTHER_FILE.txt isn't on this machine"), findsOneWidget);
+      expect(find.text('/etc/OTHER_FILE.txt isn’t on this machine'), findsOneWidget);
       expect(fs.calls.where((c) => c.contains('worktrees')), isEmpty);
     });
 
@@ -232,7 +232,7 @@ void main() {
         throwsA(isA<PathNotFound>()
             .having((e) => e.kind, 'kind', RemoteFileErrorKind.notFound)
             .having((e) => e.canSearch, 'canSearch', isTrue)
-            .having((e) => e.message, 'message', "nope.txt isn't in proj (also looked in 2 worktrees)")),
+            .having((e) => e.message, 'message', 'nope.txt isn’t in proj (also looked in 2 worktrees)')),
       );
     });
 
@@ -248,10 +248,10 @@ void main() {
     });
 
     test('pathNotFoundMessage and cutMiddle', () {
-      expect(pathNotFoundMessage('a.md', folder: 'p'), "a.md isn't in p");
-      expect(pathNotFoundMessage('a.md', folder: 'p', worktrees: 1), "a.md isn't in p (also looked in 1 worktree)");
-      expect(pathNotFoundMessage('a.md', folder: 'p', searched: true), "a.md isn't in p (also searched by name)");
-      expect(pathNotFoundMessage('a.md'), "a.md isn't on this machine");
+      expect(pathNotFoundMessage('a.md', folder: 'p'), 'a.md isn’t in p');
+      expect(pathNotFoundMessage('a.md', folder: 'p', worktrees: 1), 'a.md isn’t in p (also looked in 1 worktree)');
+      expect(pathNotFoundMessage('a.md', folder: 'p', searched: true), 'a.md isn’t in p (also searched by name)');
+      expect(pathNotFoundMessage('a.md'), 'a.md isn’t on this machine');
       expect(cutMiddle('short'), 'short');
       final cut = cutMiddle('${'d' * 100}/file.txt', 30);
       expect(cut.length, 30);

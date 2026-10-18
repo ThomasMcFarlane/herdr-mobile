@@ -8,7 +8,8 @@ import '../../../data/acp/prompt_queue.dart' show SendDelivery;
 import '../../../data/acp/session_state.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/attach_target.dart' show AttachMode;
-import '../../core/tap_guard.dart';
+import '../../core/kit.dart' show IconSize;
+import '../../support/tap_guard.dart';
 import '../composer/composer_frame.dart';
 import '../dictation/dictation_language_sheet.dart';
 import '../dictation/dictation_session.dart';
@@ -27,7 +28,7 @@ import 'session_select.dart';
 String? composerReason(AgentLink link) => switch (link) {
   AgentLink.live => null,
   AgentLink.connecting => 'Connecting…',
-  AgentLink.reconnecting => 'Reconnecting… you can write when it is back',
+  AgentLink.reconnecting => 'Offline · reconnecting',
   AgentLink.ended => 'Session ended · read only',
   AgentLink.failed => 'Not connected',
 };
@@ -41,7 +42,7 @@ String? composerReason(AgentLink link) => switch (link) {
 /// running turn), a quiet line above the field says which ([DeliveryHint]),
 /// and what waits shows above it ([QueuedMessages]). Send never moves: Stop is
 /// its own round button to its left, drawn when a turn runs and deaf for
-/// [tapGuard] after it appears, so the tap that sent a message cannot land on
+/// [Dwell.tapGuard] after it appears, so the tap that sent a message cannot land on
 /// it. An observed session (an agent in a terminal) has no queue: Stop takes
 /// the place of Send.
 ///
@@ -111,7 +112,7 @@ class Composer extends StatelessWidget {
       final observed = session.isObserved;
       final attaches = session.attachMode != AttachMode.none;
       final queuing = working && !observed;
-      final hint = reason ?? blocked ?? (relay != null ? '$relay…' : 'Message ${session.agentLabel}…');
+      final hint = composerHint(session.agentLabel, linkWord: reason ?? blocked ?? (relay != null ? '$relay…' : null));
       final field = ComposerFrame(
         // A subagent's run takes no attachments. In the compact layout the
         // chips are gone, and the paperclip says how many go along.
@@ -175,7 +176,7 @@ class Composer extends StatelessWidget {
                       key: const ValueKey('mic'),
                       label: dictate.listening ? 'Stop dictating' : 'Dictate',
                       icon: LucideIcons.mic,
-                      iconSize: 18,
+                      iconSize: IconSize.bar,
                       ready: true,
                       quiet: !dictate.listening,
                       onPressed: () => unawaited(dictate.toggle()),
@@ -188,7 +189,7 @@ class Composer extends StatelessWidget {
                       key: const ValueKey('send'),
                       label: sendLabel,
                       icon: sendIcon,
-                      iconSize: 18,
+                      iconSize: IconSize.bar,
                       ready: typing && hasContent && attachments.canSend,
                       onPressed: onSubmit,
                       onLongPress: delivery == SendDelivery.steered ? onSubmitAfter : null,
@@ -298,7 +299,7 @@ class _HideWhenCompactState extends State<HideWhenCompact> with WidgetsBindingOb
 }
 
 /// Stop is its own button, left of Send (or alone, in Send's place, for an
-/// agent in a terminal). It takes no tap for [tapGuard] after it appears: the
+/// agent in a terminal). It takes no tap for [Dwell.tapGuard] after it appears: the
 /// tap that started the turn, or its second half, must not cancel it. Beside
 /// Send (`quiet`) it is a neutral button; alone it is the primary one.
 class _StopButton extends StatefulWidget {
@@ -317,7 +318,7 @@ class _StopButtonState extends State<_StopButton> with TapGuardState<_StopButton
   Widget build(BuildContext context) => ComposerRoundButton(
         label: 'Stop',
         icon: LucideIcons.square,
-        iconSize: 14,
+        iconSize: IconSize.inline,
         busy: widget.stopping,
         ready: settled && !widget.stopping,
         quiet: widget.quiet,

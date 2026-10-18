@@ -3,13 +3,11 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/herdr_models.dart';
-import 'package:herdr_mobile/ui/core/ansi.dart';
-import 'package:herdr_mobile/ui/core/glyphs.dart';
-import 'package:herdr_mobile/ui/core/motion.dart';
-import 'package:herdr_mobile/ui/core/terminal_cells.dart';
-import 'package:herdr_mobile/ui/core/terminal_jump.dart';
-import 'package:herdr_mobile/ui/core/terminal_view.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import 'package:herdr_mobile/ui/render/terminal/ansi.dart';
+import 'package:herdr_mobile/ui/render/terminal/terminal_cells.dart';
+import 'package:herdr_mobile/ui/render/terminal/terminal_jump.dart';
+import 'package:herdr_mobile/ui/render/terminal/terminal_view.dart';
 import 'support/terminal_rows.dart';
 
 String _lines(int from, int to) =>
@@ -46,12 +44,18 @@ Future<void> _pump(
       ),
     );
 
-AnimatedOpacity _jumpButtonFade(WidgetTester tester) => tester.widget(
+FloatingPill _jumpPill(WidgetTester tester) => tester.widget(
       find.descendant(
         of: find.byType(TerminalView),
-        matching: find.byType(AnimatedOpacity),
+        matching: find.byType(FloatingPill),
       ),
     );
+
+/// The pill's fade while it is drawn; null once it is gone.
+FadeTransition? _jumpFade(WidgetTester tester) {
+  final fade = find.descendant(of: find.byType(FloatingPill), matching: find.byType(FadeTransition));
+  return fade.evaluate().isEmpty ? null : tester.widget<FadeTransition>(fade.first);
+}
 
 double _contrast(Color a, Color b) {
   final hi = a.computeLuminance() > b.computeLuminance() ? a : b;
@@ -200,26 +204,32 @@ void main() {
 
   testWidgets('the jump button shows only when scrolled up', (tester) async {
     await _pump(tester, _lines(0, 200));
-    expect(_jumpButtonFade(tester).opacity, 0);
+    expect(_jumpPill(tester).visible, isFalse);
 
     await tester.drag(find.byType(CustomScrollView), const Offset(0, 600));
     await tester.pumpAndSettle();
-    expect(_jumpButtonFade(tester).opacity, 1);
+    expect(_jumpPill(tester).visible, isTrue);
     expect(terminalRow('line 199'), findsNothing);
 
     await tester.tap(find.byTooltip('Jump to latest'));
     await tester.pumpAndSettle();
 
     expect(terminalRow('line 199'), findsOneWidget);
-    expect(_jumpButtonFade(tester).opacity, 0);
+    expect(_jumpPill(tester).visible, isFalse);
+    expect(_jumpFade(tester), isNull, reason: 'gone once it has faded out');
   });
 
-  testWidgets('the jump button animates, unless the phone asks for reduced motion', (tester) async {
-    await _pump(tester, _lines(0, 20));
-    expect(_jumpButtonFade(tester).duration, greaterThan(Duration.zero));
+  testWidgets('the jump button fades in; reduced motion keeps the fade and drops the scale', (tester) async {
+    await _pump(tester, _lines(0, 200));
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, 600));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 60));
+    expect(_jumpFade(tester)!.opacity.value, inExclusiveRange(0, 1));
+    expect(find.descendant(of: find.byType(FloatingPill), matching: find.byType(ScaleTransition)), findsWidgets);
+    await tester.pumpAndSettle();
 
-    await _pump(tester, _lines(0, 20), reduceMotion: true);
-    expect(_jumpButtonFade(tester).duration, Duration.zero);
+    await _pump(tester, _lines(0, 200), reduceMotion: true);
+    expect(find.descendant(of: find.byType(FloatingPill), matching: find.byType(ScaleTransition)), findsNothing);
   });
 
   testWidgets('renders SGR colours and attributes', (tester) async {
@@ -376,7 +386,7 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    bool shown(WidgetTester tester) => _jumpButtonFade(tester).opacity == 1;
+    bool shown(WidgetTester tester) => _jumpPill(tester).visible;
     Finder says(String text) => find.text(text);
     final anyCount = find.textContaining(RegExp(r'\d+\+? new'));
 
@@ -557,8 +567,8 @@ void main() {
       await tester.pump();
 
       expect(position(tester).pixels, 0);
-      expect(_jumpButtonFade(tester).duration, Duration.zero);
-      expect(tester.hasRunningAnimations, isFalse);
+      expect(find.descendant(of: find.byType(FloatingPill), matching: find.byType(ScaleTransition)), findsNothing,
+          reason: 'no movement, only the fade');
     });
 
     testWidgets('a tap is a tick, and nothing else is', (tester) async {
@@ -585,17 +595,19 @@ void main() {
 
     testWidgets('fades and scales in and out, never below 0.9', (tester) async {
       await _pump(tester, _lines(0, 200));
-      AnimatedScale scale() => tester.widget(find.descendant(
-            of: find.byType(TerminalView),
-            matching: find.byType(AnimatedScale),
-          ).first);
-      expect(scale().scale, inInclusiveRange(0.9, 1));
-      expect(scale().scale, lessThan(1));
+      expect(_jumpFade(tester), isNull, reason: 'nothing drawn at rest');
 
-      await scrollUp(tester);
-      expect(scale().scale, 1);
-      expect(scale().duration, greaterThan(Duration.zero));
-      expect(scale().curve, Motion.easeOut);
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, 600));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 60));
+      ScaleTransition scale() => tester.widget(find.descendant(
+            of: find.byType(FloatingPill),
+            matching: find.byType(ScaleTransition),
+          ).first);
+      expect(scale().scale.value, inInclusiveRange(0.9, 1));
+      expect(scale().scale.value, lessThan(1));
+      await tester.pumpAndSettle();
+      expect(scale().scale.value, 1);
     });
 
     testWidgets('keeps its words while it fades out', (tester) async {

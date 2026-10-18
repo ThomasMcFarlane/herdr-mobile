@@ -17,10 +17,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:herdr_mobile/ui/core/brand_mark.dart';
-import 'package:herdr_mobile/ui/core/chrome.dart';
-import 'package:herdr_mobile/ui/core/controls.dart';
-import 'package:herdr_mobile/ui/core/rows.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../support/shot.dart';
@@ -129,9 +126,9 @@ Widget _firstRun({int badge = 0}) => Stack(
             padding: const EdgeInsets.only(bottom: 28),
             child: FloatingTabBar(
               tabs: [
-                TabSpec(icon: LucideIcons.bot, label: 'Agents', badge: badge),
-                const TabSpec(icon: LucideIcons.server, label: 'Machines'),
-                const TabSpec(icon: LucideIcons.settings, label: 'Settings'),
+                TabSpec(icon: HerdrIcons.agents, label: 'Agents', badge: badge),
+                const TabSpec(icon: HerdrIcons.machines, label: 'Machines'),
+                const TabSpec(icon: HerdrIcons.settings, label: 'Settings'),
               ],
               index: badge == 0 ? 0 : 1,
               onChanged: (_) {},

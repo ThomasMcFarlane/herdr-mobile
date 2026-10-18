@@ -20,7 +20,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/acp/acp_models.dart';
 import 'package:herdr_mobile/data/acp/session_state.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/permission_dock.dart';
 import 'package:herdr_mobile/ui/features/agent_session/session_bar.dart';
 import 'package:herdr_mobile/ui/features/agent_session/session_overview.dart';
@@ -194,7 +194,7 @@ void main() {
       () => session(play(many()).withPending(PendingPermission(1, askFor('askc')))),
       (s) => Scaffold(body: SafeArea(child: Column(children: [SubagentsChip(session: s), Expanded(child: TranscriptView(session: s))]))),
       (t) async {
-        await t.tap(find.textContaining('waiting for you'));
+        await t.tap(find.textContaining('needs you'));
         await t.pump(const Duration(milliseconds: 400));
       },
     ),

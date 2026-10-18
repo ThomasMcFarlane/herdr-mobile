@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/models/slash_command.dart';
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'command_model.dart';
 
 /// Two lines of text: the row grows with the text size.
@@ -37,15 +35,15 @@ class CommandPalette extends StatelessWidget {
       final rows = matches.length < _visibleRows ? matches.length.toDouble() : _visibleRows;
       final rowHeight = MediaQuery.textScalerOf(context).scale(_commandRowHeight);
       return Padding(
-        padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.sm),
+        padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.sm),
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: ds.surface,
-            borderRadius: BorderRadius.circular(Radii.panel),
+            borderRadius: BorderRadius.circular(Radii.md),
             border: Border.all(color: ds.hairline),
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(Radii.panel),
+            borderRadius: BorderRadius.circular(Radii.md),
             child: SizedBox(
               height: rows * rowHeight,
               child: ListView.builder(
@@ -111,16 +109,15 @@ class _Row extends StatelessWidget {
       SlashSource.user => 'user',
       SlashSource.builtIn => null,
     };
-    return PressBuilder(
+    return PressRow(
       onTap: () {
         Haptics.tick();
         onTap(command);
       },
       onLongPress: () => onLongPress(command),
-      builder: (context, pressed) => ColoredBox(
-        color: pressed ? ds.fillPressed : Colors.transparent,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: Gap.lg),
+      // The list's itemExtent sets the height.
+      minHeight: 0,
+      padding: const EdgeInsets.symmetric(horizontal: Gap.lg - PressRow.inset),
           child: Row(
             children: [
               Expanded(
@@ -131,23 +128,12 @@ class _Row extends StatelessWidget {
                     Text.rich(
                       TextSpan(
                         text: command.text,
-                        style: TextStyle(
-                          fontFamily: monoFamily,
-                          fontSize: 13,
-                          height: 1.25,
-                          fontWeight: FontWeight.w500,
-                          color: ds.text,
-                        ),
+                        style: Mono.input.copyWith(color: ds.text),
                         children: [
                           if (hint != null && hint.isNotEmpty)
                             TextSpan(
                               text: '  $hint',
-                              style: TextStyle(
-                                fontFamily: monoFamily,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w400,
-                                color: ds.textMuted,
-                              ),
+                              style: Mono.base.copyWith(color: ds.textMuted),
                             ),
                         ],
                       ),
@@ -166,16 +152,14 @@ class _Row extends StatelessWidget {
               ),
               if (tag != null) ...[
                 const SizedBox(width: Gap.sm),
-                Text(tag, maxLines: 1, style: Type.caption.copyWith(color: ds.accentText)),
+                Text(tag, maxLines: 1, style: Type.caption.copyWith(color: ds.textMuted)),
               ],
               if (pinned) ...[
                 const SizedBox(width: Gap.sm),
-                Icon(LucideIcons.pin, size: 14, color: ds.textTertiary, semanticLabel: 'Pinned'),
+                Icon(LucideIcons.pin, size: IconSize.inline, color: ds.textTertiary, semanticLabel: 'Pinned'),
               ],
             ],
           ),
-        ),
-      ),
     );
   }
 }

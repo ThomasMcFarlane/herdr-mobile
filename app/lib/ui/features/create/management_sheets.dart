@@ -4,8 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/models/herdr_models.dart';
 import '../../../data/repositories/agent_screens.dart';
 import '../../../data/repositories/machine_connection.dart';
-import '../../core/chrome.dart';
-import '../../core/toast.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import '../agents/agent_navigation.dart';
 import 'machine_actions.dart';
 import 'rename_sheet.dart';
@@ -93,7 +92,7 @@ Future<void> showPaneActions(
       title: 'Rename pane',
       label: 'Name',
       initial: pane.label ?? '',
-      helper: "Leave empty to show the program's own title",
+      helper: 'Leave empty to show the program’s own title',
       allowEmpty: true,
     );
     if (label == null || label == (pane.label ?? '')) return;

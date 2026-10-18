@@ -4,7 +4,7 @@
 // keyboard lifts the sheet to full height.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
 import 'package:herdr_mobile/ui/features/agent_session/session_select.dart';
 import 'package:herdr_mobile/ui/features/attach/attach_bars.dart';
@@ -211,7 +211,7 @@ void main() {
       expect(scroll.position.pixels, 0);
     });
 
-    testWidgets('focusing the search field on the Host tab lifts the sheet to full height for the keyboard', (tester) async {
+    testWidgets('focusing the search field on the Machine tab lifts the sheet to full height for the keyboard', (tester) async {
       await openSheet(tester);
       await tester.tap(find.byKey(AttachTabBar.tabKey(AttachTab.host)));
       await tester.pump();

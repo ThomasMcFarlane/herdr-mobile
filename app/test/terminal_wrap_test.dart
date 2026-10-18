@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/repositories/terminal_settings.dart';
-import 'package:herdr_mobile/ui/core/terminal_cells.dart';
-import 'package:herdr_mobile/ui/core/terminal_view.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/render/terminal/terminal_cells.dart';
+import 'package:herdr_mobile/ui/render/terminal/terminal_view.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'support/terminal_rows.dart';
 
 /// The view is 360 wide with 12 px of padding on each side. How many cells fit

@@ -102,7 +102,7 @@ void main() {
   test('with no name read, the row reads as it always did', () {
     final r = row();
     expect(r.title, 'payments-api');
-    expect(r.subtitle, 'omp · payments-api');
+    expect(r.subtitle, 'omp', reason: 'the folder is the title: said once');
   });
 
   test('a pane with no title at all is still named after its agent when nothing was read', () {

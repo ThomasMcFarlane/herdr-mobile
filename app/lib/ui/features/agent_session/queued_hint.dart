@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/acp/prompt_queue.dart' show SendDelivery;
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// What happens to the message in the field if it is sent now, said before it
 /// is sent: it waits for the turn to end (`pi`, or anything already waiting) or
@@ -30,23 +29,23 @@ class DeliveryHint extends StatelessWidget {
     final ds = context.ds;
     final text = delivery == null ? null : deliveryHint(delivery!);
     return AnimatedSize(
-      duration: Motion.reduced(context) ? Duration.zero : Motion.expand,
+      duration: Motion.of(context, Motion.expand),
       curve: Motion.easeOut,
       alignment: Alignment.topCenter,
       child: text == null
           ? const SizedBox(width: double.infinity)
           : Padding(
-              padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.xs),
+              padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.xs),
               child: Row(
                 children: [
                   ExcludeSemantics(
                     child: Icon(
                       delivery == SendDelivery.steered ? LucideIcons.cornerDownRight : LucideIcons.clock,
-                      size: 12,
+                      size: IconSize.inline,
                       color: ds.textSecondary,
                     ),
                   ),
-                  const SizedBox(width: Gap.xs + 2),
+                  const SizedBox(width: Gap.sm),
                   Expanded(
                     child: Text(
                       text,

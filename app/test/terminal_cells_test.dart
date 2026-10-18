@@ -5,10 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/repositories/terminal_settings.dart';
-import 'package:herdr_mobile/ui/core/ansi.dart';
-import 'package:herdr_mobile/ui/core/terminal_cells.dart';
-import 'package:herdr_mobile/ui/core/terminal_view.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import 'package:herdr_mobile/ui/render/terminal/ansi.dart';
+import 'package:herdr_mobile/ui/render/terminal/terminal_cells.dart';
+import 'package:herdr_mobile/ui/render/terminal/terminal_view.dart';
 
 /// Pixel densities of real phones (a Galaxy A51 is 2.625) and the test default.
 const _densities = [1.0, 1.5, 2.0, 2.625, 3.0, 3.5];

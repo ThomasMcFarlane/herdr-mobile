@@ -4,9 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/services/dictation.dart';
-import '../../core/chrome.dart';
-import '../../core/tokens.dart';
-import '../../core/toast.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// The languages offered, from what the phone's speech service has: English and
 /// Vietnamese always have a row (dimmed, with the reason, when the phone lacks
@@ -28,9 +26,9 @@ List<({String? id, String label, String? missing})> dictationChoices(
   final other = chosen == null || (en?.id == chosen) || (vi?.id == chosen)
       ? null
       : available.where((l) => l.id == chosen).firstOrNull;
-  const missing = 'Not in this phone\'s speech service';
+  const missing = 'Not in this phone’s speech service';
   return [
-    (id: null, label: 'Phone\'s language', missing: null),
+    (id: null, label: 'Phone’s language', missing: null),
     (id: en?.id, label: 'English', missing: en == null ? missing : null),
     (id: vi?.id, label: 'Tiếng Việt', missing: vi == null ? missing : null),
     if (other != null) (id: other.id, label: other.name, missing: null),
@@ -53,19 +51,13 @@ Future<void> showDictationLanguageSheet(BuildContext context, Dictation dictatio
       context,
       builder: (ctx) {
         final ds = ctx.ds;
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(4, 8, 4, 12),
+        return SheetScaffold(
+          title: 'Dictate in',
+          kind: SheetKind.list,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                child: Semantics(
-                  header: true,
-                  child: Text('Dictate in', style: Type.label.copyWith(color: ds.textSecondary)),
-                ),
-              ),
               for (final c in choices)
                 SheetActionRow(
                   action: SheetAction(
@@ -80,9 +72,9 @@ Future<void> showDictationLanguageSheet(BuildContext context, Dictation dictatio
                   },
                 ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                padding: const EdgeInsets.only(left: Gap.lg, top: Gap.sm, right: Gap.lg),
                 child: Text(
-                  'One language at a time. The phone\'s speech service may send what you say '
+                  'One language at a time. The phone’s speech service may send what you say '
                   'to Google, unless an offline language is installed in it.',
                   style: Type.caption.copyWith(color: ds.textSecondary),
                 ),

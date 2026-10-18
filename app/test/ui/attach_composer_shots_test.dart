@@ -24,8 +24,7 @@ import 'package:herdr_mobile/ui/features/attach/attach_bars.dart';
 import 'package:herdr_mobile/ui/features/attach/attach_kit.dart';
 import 'package:herdr_mobile/data/services/image_prep.dart';
 import 'package:herdr_mobile/data/services/phone_gallery.dart';
-import 'package:herdr_mobile/ui/core/tap_guard.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
 import 'package:herdr_mobile/ui/features/agent_session/attach_picker.dart';
 import 'package:image/image.dart' as img;
@@ -140,7 +139,7 @@ void main() {
       ),
     );
     await tester.pump(const Duration(milliseconds: 100));
-    await tester.pump(tapGuard);
+    await tester.pump(Dwell.tapGuard);
     await then?.call();
     // Thumbnails decode on the engine's real clock.
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
@@ -176,7 +175,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
   }
 
-  /// Picks AGENTS.md in the sheet's Host tab and attaches it.
+  /// Picks AGENTS.md in the sheet's Machine tab and attaches it.
   Future<void> attachHostFile(WidgetTester tester, Size size) async {
     await tester.tap(find.byIcon(LucideIcons.paperclip).first);
     await tester.pump();
@@ -304,7 +303,7 @@ void main() {
         then: () async {
           await tapAttach(tester, 'Photo library');
           await tapAttach(tester, 'Photo library');
-          // The Host tab's list at 1.6x text on a 320 px screen is the sheet
+          // The Machine tab's list at 1.6x text on a 320 px screen is the sheet
           // shots' business; here the chips are what is looked at.
           if (scale == 1) await attachHostFile(tester, size);
           await tester.enterText(find.byType(TextField).last, 'What do these have in common?');

@@ -208,7 +208,7 @@ void main() {
       r.async.elapse(const Duration(minutes: 5));
 
       expect(r.session.link, AgentLink.ended);
-      expect(r.session.error, 'omp exited with code 2.');
+      expect(r.session.error, 'The omp agent exited with code 2.');
       expect(r.host.attachCalls, 0);
     }, seed: (h) => h.add(state: KeeperState.exited, exitCode: 2));
 
@@ -827,7 +827,7 @@ void main() {
       r.async.flushMicrotasks();
 
       expect(r.session.link, AgentLink.ended);
-      expect(r.session.error, 'omp exited with code 137.');
+      expect(r.session.error, 'The omp agent exited with code 137.');
       expect(r.host.listCalls, 0, reason: 'the notice says it all');
       r.async.elapse(const Duration(minutes: 5));
       expect(r.host.attachCalls, 1);
@@ -1239,7 +1239,7 @@ void main() {
     });
 
     const silent = 'The agent ended the turn without an answer. '
-        'If this keeps happening, its login on the host may have expired.';
+        'If this keeps happening, its login on the machine may have expired.';
 
     _rigTest('a turn that ends with end_turn and not a word says the login may have expired', (r) {
       r.connect();
@@ -1526,7 +1526,7 @@ void main() {
       r.pump();
 
       expect(r.session.link, AgentLink.ended);
-      expect(r.session.error, 'omp exited with code 137.');
+      expect(r.session.error, 'The omp agent exited with code 137.');
     });
   });
 
@@ -1991,7 +1991,7 @@ void main() {
 
       expect(sent.error, isNull);
       final need = r.session.authNeeded!;
-      expect(need.message, contains('sign in on the host'));
+      expect(need.message, contains('on the machine to continue'));
       expect(need.terminalHint, isTrue);
       expect(need.methods.single.terminalLabel, 'Launch pi');
       expect(r.session.error, need.message);
@@ -2024,7 +2024,7 @@ void main() {
       final need = r.session.authNeeded!;
       expect(need.keychain, isTrue);
       expect(need.message, contains('Keychain'));
-      expect(need.message, isNot(contains('sign in on the host')));
+      expect(need.message, isNot(contains('on the machine to continue')));
     }, seed: (h) => h.add(agent: 'claude', loginInKeychain: true));
 
     _rigTest('another -32000 is not an auth failure', (r) {
@@ -2043,7 +2043,7 @@ void main() {
 
       expect(r.session.link, AgentLink.failed);
       expect(r.session.authNeeded, isNotNull);
-      expect(r.session.error, contains('sign in on the host'));
+      expect(r.session.error, contains('on the machine to continue'));
 
       r.keeper.newFailure = null;
       unawaited(r.session.reattach());

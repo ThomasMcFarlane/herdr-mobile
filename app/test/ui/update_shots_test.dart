@@ -21,7 +21,7 @@ import 'package:herdr_mobile/data/repositories/quick_phrases.dart';
 import 'package:herdr_mobile/data/repositories/terminal_settings.dart';
 import 'package:herdr_mobile/data/services/apk_installer.dart';
 import 'package:herdr_mobile/data/services/notifier.dart';
-import 'package:herdr_mobile/ui/core/chrome.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/settings/settings_screen.dart';
 import 'package:herdr_mobile/ui/features/settings/update_group.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -254,8 +254,8 @@ void main() {
               index: 0,
               onChanged: _noop,
               tabs: [
-                TabSpec(icon: LucideIcons.bot, label: 'Agents', badge: 2),
-                TabSpec(icon: LucideIcons.server, label: 'Machines'),
+                TabSpec(icon: HerdrIcons.agents, label: 'Agents', badge: 2),
+                TabSpec(icon: HerdrIcons.machines, label: 'Machines'),
                 TabSpec(icon: LucideIcons.settings, label: 'Settings', mark: true, markLabel: 'update available'),
               ],
             ),

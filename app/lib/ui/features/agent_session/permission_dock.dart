@@ -10,19 +10,16 @@ import '../../../data/acp/subagents/subagent_run.dart' show SubagentOrigin;
 import '../../../data/decision/permission_evidence.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/command_risk.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/hold_confirm.dart';
-import '../../core/motion.dart';
-import '../../core/tap_guard.dart';
-import '../../core/theme.dart';
+import '../../../data/words/plural.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../support/tap_guard.dart';
 import 'agent_md_scope.dart';
 import 'permission_evidence_view.dart';
 import 'permission_subject.dart';
 import 'question_form.dart';
 import 'session_select.dart';
 import 'tool_rows.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// The agent's request that waits for the person, docked above the composer:
 /// the first permission (they come before questions), else the first
@@ -32,7 +29,7 @@ import 'visible_text.dart';
 /// It is built once by the screen and selects `state.pending` itself, so a
 /// streaming answer or the keyboard moving rebuilds nothing here. A panel is
 /// keyed by its request: a new request gets a new panel, which ignores taps
-/// for [tapGuard] (see [PermissionPanel]). What the person has put into a
+/// for [Dwell.tapGuard] (see [PermissionPanel]). What the person has put into a
 /// question is kept outside its panel ([QuestionDraft], per question), so a
 /// permission that takes the dock in the middle of it costs nothing.
 class PromptDock extends StatelessWidget {
@@ -145,17 +142,17 @@ class OriginLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final ds = context.ds;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, 6),
+      padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.sm),
       child: Row(
         children: [
-          Icon(LucideIcons.bot, size: 14, color: ds.textSecondary),
-          const SizedBox(width: 6),
+          Icon(HerdrIcons.agents, size: IconSize.inline, color: ds.textSecondary),
+          const SizedBox(width: Gap.sm),
           Expanded(
             child: Text(
               'From subagent: ${visibleText(origin.label)}',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: Type.caption.copyWith(color: ds.textSecondary, fontWeight: FontWeight.w500),
+              style: Type.caption.copyWith(color: ds.textSecondary),
             ),
           ),
         ],
@@ -180,9 +177,6 @@ String? optionGate(PermissionOption option, String? risk) {
   if (_allows(option)) return risk ?? option.gate ?? proseRisk(name);
   return null;
 }
-
-/// How long a primed option waits for its second activation (or a hold).
-const confirmWindow = Duration(seconds: 4);
 
 /// Why an allow waits for a hold while the command box has not been read to
 /// its end.
@@ -219,7 +213,7 @@ String answeredElsewhereText(AnsweredElsewhere a) {
 /// A permission request: what it will run or touch, why to look closely, and
 /// its answers.
 ///
-/// Nothing here answers for the person. An answer is ignored for [tapGuard]
+/// Nothing here answers for the person. An answer is ignored for [Dwell.tapGuard]
 /// after the panel appears. A standing, risky or unread allow is held, not
 /// tapped (a tap only says so): the chip fills while the finger stays down and
 /// sends at the end. Holding an allow on a command longer than its box scrolls
@@ -291,13 +285,6 @@ class _PermissionPanelState extends State<PermissionPanel> with TapGuardState<Pe
   bool get _unread => _overflows && !_atEnd && !_opened;
 
   @override
-  void initState() {
-    super.initState();
-    // A request is news: it is the thing the person is here for.
-    Haptics.armed();
-  }
-
-  @override
   void dispose() {
     _timer?.cancel();
     _scroll.dispose();
@@ -339,17 +326,10 @@ class _PermissionPanelState extends State<PermissionPanel> with TapGuardState<Pe
         context,
         builder: (ctx) {
           final ds = ctx.ds;
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.xl, Gap.gutter, Gap.lg),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Semantics(header: true, child: Text('Everything it will run', style: Type.title.copyWith(color: ds.text))),
-                const SizedBox(height: Gap.md),
-                SelectableText(_info.subject, style: dockMono(ds)),
-              ],
-            ),
+          return SheetScaffold(
+            title: 'Everything it will run',
+            kind: SheetKind.message,
+            child: SelectableText(_info.subject, style: Mono.base.copyWith(color: ds.text)),
           );
         },
       ),
@@ -362,26 +342,27 @@ class _PermissionPanelState extends State<PermissionPanel> with TapGuardState<Pe
     return optionGate(option, _info.risk);
   }
 
-  /// Primes [option] for a second activation or a hold, for [confirmWindow].
+  /// Primes [option] for a second activation or a hold, for [Dwell.confirm].
   void _prime(PermissionOption option, String reason) {
     _timer?.cancel();
     setState(() {
       _confirming = option.optionId;
       _confirmReason = reason;
     });
-    _timer = Timer(confirmWindow, () {
+    _timer = Timer(Dwell.confirm, () {
       if (mounted) setState(() => _confirming = null);
     });
   }
 
   void _send(PermissionOption option) {
     _timer?.cancel();
-    Haptics.sent();
     setState(() {
       _sent = option.optionId;
       _confirming = null;
     });
     widget.onAnswer(PermissionSelected(option.optionId));
+    // Handed to the session: the answer is out.
+    Haptics.sent();
   }
 
   /// Assistive activation (and a tap on an option that has no gate): a gated
@@ -415,12 +396,12 @@ class _PermissionPanelState extends State<PermissionPanel> with TapGuardState<Pe
   void _cancel() {
     if (_sent != null || !settled) return;
     _timer?.cancel();
-    Haptics.sent();
     setState(() {
       _sent = _cancelled;
       _confirming = null;
     });
     widget.onAnswer(const PermissionCancelled());
+    Haptics.sent();
   }
 
   @override
@@ -438,47 +419,24 @@ class _PermissionPanelState extends State<PermissionPanel> with TapGuardState<Pe
     final lines = '\n'.allMatches(info.subject).length + 1;
     return SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.sm),
+        padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.sm),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            DecoratedBox(
-              decoration: BoxDecoration(
-                color: ds.blockedWash,
-                borderRadius: BorderRadius.circular(Radii.chip),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: Icon(toolIcon(kind), size: 16, color: ds.blockedText),
-                        ),
-                        const SizedBox(width: Gap.sm),
-                        Expanded(
-                          child: Semantics(
-                            header: true,
-                            child: Text(
-                              header,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: Type.prompt.copyWith(fontWeight: FontWeight.w600, color: ds.text),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+            QuestionWash(
+              question: header,
+              size: QuestionWashSize.full,
+              questionIsHeader: true,
+              leading: Icon(toolIcon(kind), size: IconSize.row, color: ds.blockedText),
+              details: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
                     if (_evidence.intent case final said?) EvidenceIntent(text: said),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: Gap.sm),
                     if (_evidence.planMarkdown case final plan?) ...[
                       PlanEvidence(markdown: plan),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: Gap.sm),
                     ],
                     if (_showSubject) ...[
                       NotificationListener<ScrollMetricsNotification>(
@@ -489,7 +447,7 @@ class _PermissionPanelState extends State<PermissionPanel> with TapGuardState<Pe
                             text: info.subject,
                             controller: _scroll,
                             overflows: _overflows,
-                            style: dockMono(ds),
+                            style: Mono.base.copyWith(color: ds.text),
                           ),
                         ),
                       ),
@@ -500,89 +458,85 @@ class _PermissionPanelState extends State<PermissionPanel> with TapGuardState<Pe
                         ),
                     ],
                     if (_evidence.diffs.isNotEmpty) ...[
-                      const SizedBox(height: 6),
+                      const SizedBox(height: Gap.sm),
                       DiffEvidence(evidence: _evidence),
                     ],
                     if (_paths.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      _Paths(paths: _paths, style: dockMono(ds, size: 12)),
+                      const SizedBox(height: Gap.sm),
+                      _Paths(paths: _paths, style: Mono.base.copyWith(color: ds.text)),
                     ],
                     if (info.risk != null) ...[
-                      const SizedBox(height: 6),
+                      const SizedBox(height: Gap.sm),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Padding(
-                            padding: const EdgeInsets.only(top: 1),
-                            child: Icon(LucideIcons.triangleAlert, size: 14, color: ds.dangerText),
+                            padding: const EdgeInsets.only(top: Gap.hair),
+                            child: Icon(LucideIcons.triangleAlert, size: IconSize.inline, color: ds.dangerText),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: Gap.sm),
                           Expanded(
                             child: Text(
                               'Look closely: ${info.risk}',
-                              style: Type.secondary.copyWith(color: ds.dangerText, fontWeight: FontWeight.w500),
+                              style: Type.secondaryStrong.copyWith(color: ds.dangerText),
                             ),
                           ),
                         ],
                       ),
                     ],
-                  ],
-                ),
+                ],
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: Gap.sm),
             for (final option in request.options) ...[
-              Listener(
-                behavior: HitTestBehavior.translucent,
-                onPointerDown: (_) {
-                  if (!settled && !locked) Haptics.tick();
-                },
-                child: _OptionChip(
-                  // A hold belongs to this option of this request (the panel is
-                  // keyed by request): anything else under the finger drops it.
-                  key: ValueKey(option.optionId),
-                  label: visibleText(option.name),
-                  gate: _gate(option),
-                  confirming: _confirming == option.optionId,
-                  confirmReason: _confirmReason,
-                  sending: _sent == option.optionId,
-                  enabled: live,
-                  onTap: () => _choose(option),
-                  onHold: () => _held(option),
-                ),
+              AnswerChip(
+                // A hold belongs to this option of this request (the panel is
+                // keyed by request): anything else under the finger drops it.
+                key: ValueKey(option.optionId),
+                label: visibleText(option.name),
+                reason: _confirming == option.optionId ? _confirmReason : _gate(option),
+                risk: _gate(option) == null ? AnswerRisk.none : AnswerRisk.gate,
+                state: _sent == option.optionId
+                    ? AnswerChipState.sending
+                    : _confirming == option.optionId
+                    ? AnswerChipState.primed
+                    : AnswerChipState.rest,
+                // A primed option stays held until its window ends, even when
+                // its gate went away (the command was read meanwhile): a finger
+                // that is already on it must not send by lifting.
+                hold: _gate(option) != null || _confirming == option.optionId,
+                enabled: live,
+                onTap: () => _choose(option),
+                onHeld: () => _held(option),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: Gap.sm),
             ],
-            Row(
-              mainAxisAlignment: widget.more > 0 ? MainAxisAlignment.spaceBetween : MainAxisAlignment.end,
-              children: [
-                if (widget.more > 0)
-                  Flexible(
-                    child: Text(
+            // Side by side while both fit; at a large text size Cancel goes
+            // under the count rather than lose its words.
+            SizedBox(
+              width: double.infinity,
+              child: Wrap(
+                alignment: widget.more > 0 ? WrapAlignment.spaceBetween : WrapAlignment.end,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  if (widget.more > 0)
+                    Text(
                       '${widget.more} more waiting',
-                      style: Type.label.copyWith(color: ds.blockedText, fontWeight: FontWeight.w600),
+                      style: Type.labelStrong.copyWith(color: ds.blockedText),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: Gap.md),
+                    child: TextAction(
+                      label: 'Cancel request',
+                      tone: TextActionTone.quiet,
+                      // The answer's own haptic fires once it is handed over.
+                      haptic: false,
+                      enabled: live,
+                      onTap: _cancel,
                     ),
                   ),
-                Flexible(
-                  child: PressBuilder(
-                    onTap: live ? _cancel : null,
-                    button: true,
-                    builder: (context, pressed) => Container(
-                      constraints: const BoxConstraints(minHeight: kMinTap),
-                      padding: const EdgeInsets.symmetric(horizontal: Gap.md),
-                      alignment: Alignment.center,
-                      child: Text(
-                        'Cancel request',
-                        textAlign: TextAlign.end,
-                        style: Type.label.copyWith(
-                          color: live ? (pressed ? ds.text : ds.textSecondary) : ds.textMuted,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
@@ -612,7 +566,7 @@ class _SubjectBox extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: ds.surface,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(Radii.sm),
         border: Border.all(color: ds.hairline),
       ),
       child: ConstrainedBox(
@@ -622,7 +576,7 @@ class _SubjectBox extends StatelessWidget {
           thumbVisibility: overflows,
           child: SingleChildScrollView(
             controller: controller,
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: Gap.md, vertical: Gap.sm),
             child: SizedBox(
               width: double.infinity,
               child: Text(text, style: style),
@@ -651,130 +605,22 @@ class _Paths extends StatelessWidget {
       children: [
         for (final p in paths.take(_shown))
           Padding(
-            padding: const EdgeInsets.only(bottom: 2),
+            padding: const EdgeInsets.only(bottom: Gap.hair),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Icon(LucideIcons.file, size: 13, color: ds.textSecondary),
+                  padding: const EdgeInsets.only(top: Gap.hair),
+                  child: Icon(LucideIcons.file, size: IconSize.inline, color: ds.textSecondary),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: Gap.sm),
                 Expanded(child: Text(p, style: style)),
               ],
             ),
           ),
         if (paths.length > _shown)
-          Text('+${paths.length - _shown} more files', style: Type.caption.copyWith(color: ds.textSecondary)),
+          Text(countOf(paths.length - _shown, 'more file'), style: Type.caption.copyWith(color: ds.textSecondary)),
       ],
-    );
-  }
-}
-
-class _OptionChip extends StatelessWidget {
-  const _OptionChip({
-    super.key,
-    required this.label,
-    required this.gate,
-    required this.confirming,
-    required this.confirmReason,
-    required this.sending,
-    required this.enabled,
-    required this.onTap,
-    required this.onHold,
-  });
-
-  final String label;
-  final String? gate;
-  final bool confirming;
-  final String confirmReason;
-  final bool sending;
-  final bool enabled;
-
-  /// A tap on an option with no gate; for a gated one, the assistive
-  /// activation (the two-step flow).
-  final VoidCallback onTap;
-
-  /// A hold of a gated option reached its end.
-  final VoidCallback onHold;
-
-  /// A primed option stays held until its window ends, even when its gate went
-  /// away (the command was read meanwhile): a finger that is already on it
-  /// must not send by lifting.
-  bool get _gated => !sending && (gate != null || confirming);
-
-  String? get _semantic => confirming
-      ? 'Confirm: $label, $confirmReason'
-      : (gate == null ? null : '$label, needs holding or a second activation: $gate');
-
-  @override
-  Widget build(BuildContext context) {
-    if (!_gated) {
-      return PressBuilder(
-        onTap: enabled ? onTap : null,
-        scale: 0.985,
-        button: true,
-        semanticLabel: _semantic,
-        builder: (context, pressed) => _body(context, pressed: pressed),
-      );
-    }
-    return HoldToConfirm(
-      enabled: enabled,
-      semanticLabel: _semantic,
-      onActivate: onTap,
-      onConfirmed: onHold,
-      builder: (context, hold) => _body(context, pressed: hold.holding, hold: hold),
-    );
-  }
-
-  Widget _body(BuildContext context, {required bool pressed, HoldState? hold}) {
-    final ds = context.ds;
-    final (bg, pressedBg, fg, border) = confirming
-        ? (ds.danger.withValues(alpha: 0.14), ds.danger.withValues(alpha: 0.24), ds.dangerText, ds.danger.withValues(alpha: 0.55))
-        : (ds.fill, ds.fillPressed, ds.text, null as Color?);
-    final reason = gate ?? (confirming ? confirmReason : null);
-    final shown = (hold?.showsHold ?? false)
-        ? (reason == null ? 'Hold to send' : 'Hold to send · $reason')
-        : confirming
-            ? 'Hold or tap again · $confirmReason'
-            : label;
-    final row = Row(
-      children: [
-        if (sending) ...[
-          const BusySpinner(size: 14),
-          const SizedBox(width: 10),
-        ] else if (confirming) ...[
-          Icon(LucideIcons.triangleAlert, size: 16, color: fg),
-          const SizedBox(width: 8),
-        ],
-        Expanded(
-          child: Text(
-            shown,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: Type.answer.copyWith(
-              // Dimmed while the panel ignores taps (just appeared, or an
-              // answer is on its way): a static state, no animation.
-              color: enabled || sending ? fg : ds.textMuted,
-            ),
-          ),
-        ),
-        if (gate != null && !confirming && !sending) Icon(LucideIcons.triangleAlert, size: 15, color: ds.textSecondary),
-      ],
-    );
-    // The padding sits on the content, not the chip: the fill, a layer between
-    // the chip's colour and its words, covers the whole chip.
-    final content = Padding(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6), child: row);
-    return AnimatedContainer(
-      duration: Motion.pressing(pressed),
-      curve: Motion.easeOut,
-      constraints: const BoxConstraints(minHeight: kMinTap),
-      decoration: BoxDecoration(
-        color: pressed && enabled ? pressedBg : bg,
-        borderRadius: BorderRadius.circular(Radii.chip),
-        border: border == null ? null : Border.all(color: border),
-      ),
-      child: hold == null ? content : Stack(fit: StackFit.passthrough, children: [hold.fill, content]),
     );
   }
 }

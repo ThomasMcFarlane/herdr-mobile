@@ -8,13 +8,9 @@ import '../../../data/repositories/attach_target.dart';
 import '../../../data/repositories/recent_phone_files.dart';
 import '../../../data/services/attach_limits.dart';
 import '../../../data/services/phone_files.dart';
-import '../../core/controls.dart';
-import '../../core/glyphs.dart';
-import '../../core/motion.dart';
-import '../../core/rows.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import '../agent_session/attach_model.dart' show ComposerAttachments;
-import '../agent_session/visible_text.dart';
+import '../../render/visible_text.dart';
 import '../files/file_format.dart';
 import '../files/file_kind.dart';
 import '../files/file_widgets.dart' show fileIconForName;
@@ -58,7 +54,7 @@ class _FilesTabState extends State<FilesTab> {
   /// must not toggle twice.
   final _checking = <RecentPhoneFile>{};
 
-  static const goneMessage = 'That copy is gone from the host. Choose the file again.';
+  static const goneMessage = 'That copy is gone from the machine. Choose the file again.';
 
   @override
   void initState() {
@@ -171,40 +167,38 @@ class _FilesTabState extends State<FilesTab> {
     final imagesAsFiles = !widget.target.preparesPictures;
     final clearance = SheetScope.of(context).bottomClearance;
 
-    return ColoredBox(
-      color: ds.bg,
-      child: SheetScroll(
-        builder: (context, controller, physics) => ListView(
-          controller: controller,
-          physics: physics,
-          padding: EdgeInsets.only(top: Gap.sm, bottom: clearance),
-          children: [
-            _ChooseTile(onTap: _choose),
-            if (recents.isEmpty && _loaded && picked.isEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.lg, Gap.gutter, Gap.sm),
-                child: Text(
-                  'Files you attach from the phone are listed here.',
-                  style: Type.secondary.copyWith(color: ds.textMuted),
-                ),
+    // No fill of its own: the tab sits on the sheet's surface, like Gallery and Host.
+    return SheetScroll(
+      builder: (context, controller, physics) => ListView(
+        controller: controller,
+        physics: physics,
+        padding: EdgeInsets.only(top: Gap.sm, bottom: clearance),
+        children: [
+          _ChooseTile(onTap: _choose),
+          if (recents.isEmpty && _loaded && picked.isEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.lg, Gap.gutter, Gap.sm),
+              child: Text(
+                'Files you attach from the phone are listed here.',
+                style: Type.secondary.copyWith(color: ds.textMuted),
               ),
-            if (picked.isNotEmpty) ...[
-              SectionLabel(label: 'Picked', count: picked.length),
-              for (final item in picked)
-                _FileRow(
-                  key: ValueKey('picked:${item.key}'),
-                  name: item.name,
-                  detail: _pickedDetail(item, imagesAsFiles),
-                  number: tray.numberOf(item.key),
-                  onTap: () => tray.remove(item.key),
-                ),
-            ],
-            if (recents.isNotEmpty) ...[
-              SectionLabel(label: 'Recent', count: recents.length),
-              for (final r in recents) _recentRow(r),
-            ],
+            ),
+          if (picked.isNotEmpty) ...[
+            SectionLabel(label: 'Picked', count: picked.length),
+            for (final item in picked)
+              _FileRow(
+                key: ValueKey('picked:${item.key}'),
+                name: item.name,
+                detail: _pickedDetail(item, imagesAsFiles),
+                number: tray.numberOf(item.key),
+                onTap: () => tray.remove(item.key),
+              ),
           ],
-        ),
+          if (recents.isNotEmpty) ...[
+            SectionLabel(label: 'Recent', count: recents.length),
+            for (final r in recents) _recentRow(r),
+          ],
+        ],
       ),
     );
   }
@@ -215,7 +209,7 @@ class _FilesTabState extends State<FilesTab> {
     return _FileRow(
       key: ValueKey('recent:${r.name}:${r.size}:${r.hostPath}'),
       name: r.name,
-      detail: '${formatBytes(r.size)} · ${onHost ? 'already on the host' : 'choose it again'}',
+      detail: '${formatBytes(r.size)} · ${onHost ? 'already on the machine' : 'choose it again'}',
       number: pick == null ? null : widget.tray.numberOf(pick.key),
       onTap: () => unawaited(_openRecent(r)),
       onForget: () => unawaited(widget.kit.recents.remove(r)),
@@ -242,20 +236,13 @@ class _ChooseTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
-    return PressBuilder(
-      onTap: onTap,
-      haptic: true,
-      builder: (context, pressed) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: _rowInset),
-        child: AnimatedContainer(
-          duration: Motion.pressing(pressed),
-          curve: Motion.easeOut,
-          constraints: const BoxConstraints(minHeight: _rowHeight),
-          padding: const EdgeInsets.symmetric(horizontal: Gap.gutter - _rowInset, vertical: Gap.md),
-          decoration: BoxDecoration(
-            color: pressed ? ds.fill : Colors.transparent,
-            borderRadius: BorderRadius.circular(Radii.row),
-          ),
+    return PressRow(
+      onTap: () {
+        Haptics.tick();
+        onTap();
+      },
+      minHeight: _rowHeight,
+      padding: const EdgeInsets.symmetric(horizontal: Gap.gutter - _rowInset, vertical: Gap.md),
           child: Row(
             children: [
               IconTile(icon: LucideIcons.folderOpen, color: ds.accentText),
@@ -271,9 +258,9 @@ class _ChooseTile extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: Type.row.copyWith(color: ds.text),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: Gap.hair),
                     Text(
-                      'Opens the phone\'s file picker',
+                      'Opens the phone’s file picker',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Type.secondary.copyWith(color: ds.textSecondary),
@@ -283,13 +270,11 @@ class _ChooseTile extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
     );
   }
 }
 
-const _rowInset = 8.0;
+const _rowInset = PressRow.inset;
 const _rowHeight = 56.0;
 
 /// One file: type tile, name cut in the middle, one muted line, and the
@@ -329,22 +314,14 @@ class _FileRow extends StatelessWidget {
       children: [
         Stack(
           children: [
-            PressBuilder(
-              onTap: onTap,
-              haptic: true,
+            PressRow(
+              onTap: () {
+                Haptics.tick();
+                onTap();
+              },
               semanticLabel: label,
-              builder: (context, pressed) => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: _rowInset),
-                child: AnimatedContainer(
-                  duration: Motion.pressing(pressed),
-                  curve: Motion.easeOut,
-                  constraints: const BoxConstraints(minHeight: _rowHeight),
-                  alignment: Alignment.centerLeft,
-                  padding: EdgeInsets.fromLTRB(Gap.gutter - _rowInset, Gap.md, trailing + Gap.xs, Gap.md),
-                  decoration: BoxDecoration(
-                    color: pressed ? ds.fill : Colors.transparent,
-                    borderRadius: BorderRadius.circular(Radii.row),
-                  ),
+              minHeight: _rowHeight,
+              padding: EdgeInsets.fromLTRB(Gap.gutter - _rowInset, Gap.md, trailing + Gap.xs, Gap.md),
                   child: Row(
                     children: [
                       IconTile(icon: fileIconForName(shown)),
@@ -355,7 +332,7 @@ class _FileRow extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             MiddleEllipsisText(shown, style: Type.row.copyWith(color: ds.text)),
-                            const SizedBox(height: 2),
+                            const SizedBox(height: Gap.hair),
                             Text(
                               detail,
                               maxLines: 2,
@@ -367,8 +344,6 @@ class _FileRow extends StatelessWidget {
                       ),
                     ],
                   ),
-                ),
-              ),
             ),
             Positioned(
               top: 0,
@@ -386,10 +361,10 @@ class _FileRow extends StatelessWidget {
                     PressBuilder(
                       onTap: onForget,
                       haptic: true,
-                      scale: 0.9,
+                      scale: PressScale.icon,
                       minTapSize: kMinTap,
                       semanticLabel: 'Remove $shown from recent files',
-                      builder: (context, pressed) => Icon(LucideIcons.x, size: 16, color: ds.textSecondary),
+                      builder: (context, pressed) => Icon(LucideIcons.x, size: IconSize.row, color: ds.textSecondary),
                     ),
                 ],
               ),

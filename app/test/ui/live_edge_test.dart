@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/pane/live_edge.dart';
 
 final _epoch = DateTime(2026, 1, 1, 12);
@@ -71,10 +71,9 @@ class _Harness {
   }
 }
 
-Color _rule(WidgetTester tester) {
-  final box = tester.widget<AnimatedContainer>(find.byType(AnimatedContainer));
-  return (box.decoration! as BoxDecoration).color!;
-}
+Finder get _ruleBox => find.descendant(of: find.byType(LiveEdge), matching: find.byType(ColoredBox));
+
+Color _rule(WidgetTester tester) => tester.widget<ColoredBox>(_ruleBox).color;
 
 void main() {
   test('the label counts in the largest whole unit', () {
@@ -105,9 +104,9 @@ void main() {
       final ds = AppTheme.dark().extension<Ds>()!;
 
       await h.show(streaming: true);
-      await tester.pumpAndSettle();
-      expect(_rule(tester).a, lessThan(1));
-      expect(_rule(tester).toARGB32() & 0xFFFFFF, ds.accent.toARGB32() & 0xFFFFFF);
+      await tester.pump();
+      expect(_rule(tester), Color.lerp(ds.hairline, ds.accent, 0.6),
+          reason: 'agent-driven, so the tint lands in the same frame');
 
       await h.show();
       await tester.pumpAndSettle();
@@ -117,7 +116,7 @@ void main() {
 
     testWidgets('the rule is 2 px at the bottom edge', (tester) async {
       await _Harness(tester).show();
-      final rule = tester.getRect(find.byType(AnimatedContainer));
+      final rule = tester.getRect(_ruleBox);
       final box = tester.getRect(find.byType(LiveEdge));
       expect(rule.height, 2);
       expect(rule.bottom, box.bottom);

@@ -5,12 +5,10 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/acp/prompt_queue.dart';
 import '../../../data/repositories/agent_session.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import '../../../data/words/plural.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'session_select.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// Rows shown before "N more queued".
 const queuedRowsShown = 3;
@@ -41,7 +39,7 @@ class _QueuedMessagesState extends State<QueuedMessages> {
     // The session replaces the list whenever it changes.
     same: identical,
     builder: (context, queued) => AnimatedSize(
-      duration: Motion.reduced(context) ? Duration.zero : Motion.expand,
+      duration: Motion.of(context, Motion.expand),
       curve: Motion.easeOut,
       alignment: Alignment.topCenter,
       child: queued.isEmpty ? const SizedBox(width: double.infinity) : _list(context, queued),
@@ -64,7 +62,7 @@ class _QueuedMessagesState extends State<QueuedMessages> {
               padding: const EdgeInsets.only(bottom: Gap.xs),
               child: Row(
                 children: [
-                  Icon(LucideIcons.pause, size: 14, color: ds.textSecondary),
+                  Icon(LucideIcons.pause, size: IconSize.inline, color: ds.textSecondary),
                   const SizedBox(width: Gap.sm),
                   Expanded(
                     child: Text(
@@ -98,15 +96,14 @@ class _QueuedMessagesState extends State<QueuedMessages> {
               ),
             ),
           if (queued.length > queuedRowsShown)
-            PressBuilder(
-              onTap: () => setState(() => _all = !_all),
-              builder: (context, pressed) => Container(
-                constraints: const BoxConstraints(minHeight: kMinTap),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Gap.md),
+              child: Align(
                 alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.symmetric(horizontal: Gap.md),
-                child: Text(
-                  _all ? 'Show fewer' : '${queued.length - shown.length} more queued',
-                  style: Type.label.copyWith(color: pressed ? ds.text : ds.textSecondary),
+                child: TextAction(
+                  label: _all ? 'Show less' : '${queued.length - shown.length} more queued',
+                  tone: TextActionTone.quiet,
+                  onTap: () => setState(() => _all = !_all),
                 ),
               ),
             ),
@@ -135,65 +132,57 @@ class _QueuedRow extends StatelessWidget {
     final ds = context.ds;
     final attachments = message.attachments.length;
     final note = [
-      if (attachments > 0) '+ $attachments attachment${attachments == 1 ? '' : 's'}',
+      if (attachments > 0) '+ ${countOf(attachments, 'attachment')}',
       ?reason,
     ].join(' · ');
-    return DecoratedBox(
-      decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.chip)),
+    return Panel(
+      padding: const EdgeInsets.symmetric(vertical: Gap.xs),
       child: Row(
         children: [
           Expanded(
-            child: PressBuilder(
+            child: PressRow(
               onTap: onEdit,
-              builder: (context, pressed) => AnimatedContainer(
-                duration: Motion.pressing(pressed),
-                curve: Motion.easeOut,
-                constraints: const BoxConstraints(minHeight: kMinTap),
-                padding: const EdgeInsets.fromLTRB(Gap.md, Gap.sm, 0, Gap.sm),
-                decoration: BoxDecoration(
-                  color: pressed ? ds.fillPressed : Colors.transparent,
-                  borderRadius: const BorderRadius.horizontal(left: Radius.circular(Radii.chip)),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Icon(
-                      message.held ? LucideIcons.pause : LucideIcons.clock,
-                      size: 14,
-                      color: ds.textSecondary,
-                      semanticLabel: message.held ? 'Held' : 'Queued',
-                    ),
-                    const SizedBox(width: Gap.sm),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
+              minHeight: kMinTap - 2 * Gap.xs,
+              padding: const EdgeInsetsDirectional.fromSTEB(Gap.md - PressRow.inset, Gap.xs, 0, Gap.xs),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Icon(
+                    message.held ? LucideIcons.pause : LucideIcons.clock,
+                    size: IconSize.inline,
+                    color: ds.textSecondary,
+                    semanticLabel: message.held ? 'Held' : 'Queued',
+                  ),
+                  const SizedBox(width: Gap.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          message.text.isEmpty ? 'Attachment' : visibleText(message.text),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Type.compact.copyWith(color: ds.text),
+                        ),
+                        if (note.isNotEmpty)
                           Text(
-                            message.text.isEmpty ? 'Attachment' : visibleText(message.text),
+                            note,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: Type.compact.copyWith(color: ds.text),
+                            style: Type.caption.copyWith(color: ds.textMuted),
                           ),
-                          if (note.isNotEmpty)
-                            Text(
-                              note,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: Type.caption.copyWith(color: ds.textMuted),
-                            ),
-                        ],
-                      ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
           CircleButton(
             icon: LucideIcons.x,
             tooltip: 'Remove queued message',
-            size: 32,
+            size: kMinTap - Gap.md,
             filled: false,
             onPressed: onRemove,
           ),
@@ -255,7 +244,6 @@ class _EditQueuedState extends State<_EditQueued> {
 
   @override
   Widget build(BuildContext context) {
-    final ds = context.ds;
     return ListenableBuilder(
       listenable: widget.session,
       builder: (context, _) {
@@ -263,23 +251,14 @@ class _EditQueuedState extends State<_EditQueued> {
         final gone = message == null;
         final attachments = message?.attachments.length ?? 0;
         final changed = _text.text.trim().isNotEmpty && _text.text != _initial;
-        return Padding(
-          // Lifts the sheet over the keyboard.
-          padding: EdgeInsets.fromLTRB(
-            Gap.gutter,
-            Gap.xl,
-            Gap.gutter,
-            Gap.lg + MediaQuery.viewInsetsOf(context).bottom,
-          ),
+        return SheetScaffold(
+          title: 'Edit queued message',
+          kind: SheetKind.form,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Semantics(
-                header: true,
-                child: Text('Edit queued message', style: Type.title.copyWith(color: ds.text)),
-              ),
-              const SizedBox(height: Gap.lg),
+              const SizedBox(height: Gap.sm),
               LabeledField(
                 label: 'Message',
                 controller: _text,
@@ -290,7 +269,7 @@ class _EditQueuedState extends State<_EditQueued> {
                 helper: gone
                     ? 'Already sent. It can no longer be changed.'
                     : attachments > 0
-                    ? '+ $attachments attachment${attachments == 1 ? '' : 's'} stay with it'
+                    ? '+ ${countOf(attachments, 'attachment')} stay with it'
                     : null,
                 onChanged: (_) => setState(() {}),
               ),

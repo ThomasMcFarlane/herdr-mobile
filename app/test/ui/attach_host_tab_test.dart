@@ -1,4 +1,4 @@
-// The attach sheet's Host tab: the session folder with what changed recently,
+// The attach sheet's Machine tab: the session folder with what changed recently,
 // inline folders, search, picks in the shared tray, the states, and PNGs of the
 // tab for review (ATTACH_SHOTS=1).
 @TestOn('vm')
@@ -10,7 +10,7 @@ import 'dart:ui' show Tristate;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/remote_file.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/attach/host_tab.dart';
 import 'package:herdr_mobile/ui/features/attach/selection_circle.dart';
 import 'package:herdr_mobile/ui/features/attach/sheet_frame.dart';
@@ -368,7 +368,7 @@ void main() {
       await _pump(tester);
 
       var row = tester.getSemantics(find.byType(FileRow).at(1));
-      expect(row.label, allOf(contains('README.md'), contains('6 B'), contains('5 min ago')));
+      expect(row.label, allOf(contains('README.md'), contains('6 B'), contains('5m ago')));
       expect(row.flagsCollection.isSelected, Tristate.isFalse);
       expect(find.bySemanticsLabel('Select README.md'), findsOneWidget);
 

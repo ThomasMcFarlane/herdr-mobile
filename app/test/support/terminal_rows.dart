@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:herdr_mobile/ui/core/terminal_cells.dart';
+import 'package:herdr_mobile/ui/render/terminal/terminal_cells.dart';
 
 /// The paragraph showing one terminal row whose text is exactly [text]
 /// (box drawing shows as spaces, see `blankSprites`).

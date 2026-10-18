@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../../data/acp/turns/turns.dart';
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import '../../../data/words/plural.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'log_atoms.dart';
 import 'tool_rows.dart' show DiffPanel;
 import 'transcript_rows.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// The Changed card of a finished turn, drawn as rows of the transcript list
 /// (the head, one row per file, `N more`) that share one quiet panel, so a
@@ -18,8 +17,8 @@ import 'visible_text.dart';
 /// The card is absent when no file changed.
 
 BorderRadius _corners({required bool first, required bool last}) => BorderRadius.vertical(
-  top: first ? const Radius.circular(Radii.panel) : Radius.zero,
-  bottom: last ? const Radius.circular(Radii.panel) : Radius.zero,
+  top: first ? const Radius.circular(Radii.md) : Radius.zero,
+  bottom: last ? const Radius.circular(Radii.md) : Radius.zero,
 );
 
 /// `Changed · 3 files` and the totals.
@@ -45,7 +44,7 @@ class ChangedHeadRow extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(color: ds.fill, borderRadius: _corners(first: true, last: false)),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(Gap.md, 10, Gap.md, 4),
+          padding: const EdgeInsets.fromLTRB(Gap.md, Gap.md, Gap.md, Gap.xs),
           child: Row(
             children: [
               Expanded(
@@ -54,10 +53,10 @@ class ChangedHeadRow extends StatelessWidget {
                   child: Text.rich(
                     TextSpan(
                       text: 'Changed',
-                      style: Type.label.copyWith(color: ds.text, fontWeight: FontWeight.w600),
+                      style: Type.labelStrong.copyWith(color: ds.text),
                       children: [
                         TextSpan(
-                          text: '  ${files.length} ${files.length == 1 ? 'file' : 'files'}',
+                          text: '  ${countOf(files.length, 'file')}',
                           style: Type.caption.copyWith(color: ds.textMuted),
                         ),
                       ],
@@ -112,60 +111,54 @@ class ChangedFileRow extends StatelessWidget {
         children: [
           Semantics(
             expanded: open,
-            child: PressBuilder(
+            child: PressRow(
               onTap: () => onToggle(rowKey),
               semanticLabel: [
                 visibleText(file.path),
                 ?mark,
                 if (stats) DiffStats.words(file.added, file.removed),
               ].join(', '),
-              builder: (context, pressed) => AnimatedContainer(
-                duration: Motion.pressing(pressed),
-                curve: Motion.easeOut,
-                constraints: const BoxConstraints(minHeight: kMinTap),
-                padding: const EdgeInsets.symmetric(horizontal: Gap.md, vertical: 6),
-                decoration: BoxDecoration(
-                  color: pressed ? ds.fillPressed : Colors.transparent,
-                  borderRadius: _corners(first: false, last: last && !open),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text.rich(
-                        TextSpan(
-                          text: name,
-                          style: Type.secondary.copyWith(color: ds.text, fontWeight: FontWeight.w500),
-                          children: [
-                            if (hint != null && hint.isNotEmpty)
-                              TextSpan(
-                                text: '  ${visibleText(hint)}',
-                                style: Type.secondary.copyWith(color: ds.textMuted),
-                              ),
-                          ],
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+              minHeight: kMinTap,
+              padding: const EdgeInsets.symmetric(horizontal: Gap.md - PressRow.inset, vertical: Gap.xs),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text.rich(
+                      TextSpan(
+                        text: name,
+                        style: Type.secondaryStrong.copyWith(color: ds.text),
+                        children: [
+                          if (hint != null && hint.isNotEmpty)
+                            TextSpan(
+                              text: '  ${visibleText(hint)}',
+                              style: Type.secondary.copyWith(color: ds.textMuted),
+                            ),
+                        ],
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    if (mark != null) ...[
-                      const SizedBox(width: Gap.sm),
-                      Text(
-                        mark,
-                        style: Type.caption.copyWith(color: file.isDelete ? removedText(ds) : addedText(ds), fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                    if (stats) ...[
-                      const SizedBox(width: Gap.sm),
-                      DiffStats(added: file.added, removed: file.removed),
-                    ],
+                  ),
+                  if (mark != null) ...[
+                    const SizedBox(width: Gap.sm),
+                    Text(
+                      mark,
+                      style: Type.captionStrong.copyWith(color: file.isDelete ? removedText(ds) : ds.addedText),
+                    ),
                   ],
-                ),
+                  if (stats) ...[
+                    const SizedBox(width: Gap.sm),
+                    DiffStats(added: file.added, removed: file.removed),
+                  ],
+                ],
               ),
             ),
           ),
+          // The highlight keeps clear of the panel's bottom corners.
+          if (last && !open) const SizedBox(height: Gap.xs),
           if (open)
             Padding(
-              padding: const EdgeInsets.fromLTRB(Gap.md, 0, Gap.md, Gap.md),
+              padding: const EdgeInsets.only(left: Gap.md, right: Gap.md, bottom: Gap.md),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -188,7 +181,7 @@ class ChangedFileRow extends StatelessWidget {
 }
 
 /// The last line of a card that lists only some of its files: `12 more`, and
-/// `Show fewer` once all are listed.
+/// `Show less` once all are listed.
 class ChangedMoreRow extends StatelessWidget {
   const ChangedMoreRow({super.key, required this.rowKey, required this.count, required this.all, required this.onToggle});
 
@@ -201,23 +194,18 @@ class ChangedMoreRow extends StatelessWidget {
   Widget build(BuildContext context) {
     notifyRowBuilt(rowKey);
     final ds = context.ds;
-    final label = all ? 'Show fewer' : '$count more';
+    final label = all ? 'Show less' : '$count more';
     return DecoratedBox(
       decoration: BoxDecoration(color: ds.fill, borderRadius: _corners(first: false, last: true)),
-      child: PressBuilder(
-        onTap: () => onToggle(rowKey),
-        semanticLabel: all ? 'Show fewer files' : '$count more ${count == 1 ? 'file' : 'files'}',
-        builder: (context, pressed) => AnimatedContainer(
-          duration: Motion.pressing(pressed),
-          curve: Motion.easeOut,
-          constraints: const BoxConstraints(minHeight: kMinTap),
-          padding: const EdgeInsets.symmetric(horizontal: Gap.md),
-          alignment: Alignment.centerLeft,
-          decoration: BoxDecoration(
-            color: pressed ? ds.fillPressed : Colors.transparent,
-            borderRadius: _corners(first: false, last: true),
-          ),
-          child: Text(label, style: Type.label.copyWith(color: ds.accentText, fontWeight: FontWeight.w600)),
+      child: Padding(
+        // The highlight keeps clear of the panel's bottom corners.
+        padding: const EdgeInsets.only(bottom: Gap.xs),
+        child: PressRow(
+          onTap: () => onToggle(rowKey),
+          semanticLabel: all ? 'Show less' : countOf(count, 'more file'),
+          minHeight: kMinTap,
+          padding: const EdgeInsets.symmetric(horizontal: Gap.md - PressRow.inset),
+          child: Text(label, style: Type.labelStrong.copyWith(color: ds.accentText)),
         ),
       ),
     );

@@ -12,7 +12,7 @@ import 'package:herdr_mobile/data/repositories/slash_usage.dart';
 import 'package:herdr_mobile/data/repositories/terminal_settings.dart';
 import 'package:herdr_mobile/data/services/herdr_api.dart';
 import 'package:herdr_mobile/data/services/herdr_transport.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/composer/command_model.dart';
 import 'package:herdr_mobile/ui/features/composer/command_palette.dart';
 import 'package:herdr_mobile/ui/features/pane/pane_screen.dart';

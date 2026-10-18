@@ -8,10 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:herdr_mobile/ui/core/chrome.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
-import 'package:herdr_mobile/ui/core/toast.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 import '../support/shot.dart' show loadAppFonts;
 
@@ -75,8 +72,8 @@ Widget _tabBarPage() => Scaffold(
                   index: 0,
                   onChanged: (_) {},
                   tabs: const [
-                    TabSpec(icon: LucideIcons.bot, label: 'Agents'),
-                    TabSpec(icon: LucideIcons.settings, label: 'Settings'),
+                    TabSpec(icon: HerdrIcons.agents, label: 'Agents'),
+                    TabSpec(icon: HerdrIcons.settings, label: 'Settings'),
                   ],
                 ),
               ),
@@ -90,53 +87,55 @@ void main() {
   setUpAll(loadAppFonts);
 
   group('replacing', () {
-    testWidgets('a new toast replaces the one showing: one card, the new text, no queue behind it', (tester) async {
+    testWidgets('a new toast takes over: the old one leaves, the new text stays, no queue behind it', (tester) async {
       await _pump(tester);
       _toaster.show('First');
       await _ms(tester, 400);
       _toaster.show('Second');
       await _ms(tester, 400);
 
-      expect(_toast, findsOneWidget);
+      expect(_toast, findsOneWidget, reason: 'the old one is gone once its exit ran');
       expect(find.text('First'), findsNothing);
       expect(find.text('Second'), findsOneWidget);
 
-      // Past the first one's own time nothing of it comes back, and the
-      // second one's clock started when it arrived.
-      await _ms(tester, 2400);
-      expect(find.text('Second'), findsOneWidget, reason: '2.8 s after it arrived, with 3 s to live');
-      await _ms(tester, 400);
+      // Its clock started when it was in place (250 ms), and a short message
+      // stays 1.5 s.
+      await _ms(tester, 1300);
+      expect(find.text('Second'), findsOneWidget, reason: '1.7 s after it was shown, 1.45 s on its clock');
+      await _ms(tester, 200);
       await _ms(tester, _exit);
       expect(_toast, findsNothing);
       expect(find.text('First'), findsNothing, reason: 'a replaced toast is not queued');
       await _end(tester);
     });
 
-    testWidgets('a failure takes the place of a toast with an action at once', (tester) async {
+    testWidgets('a failure takes over from a toast with an action: its Undo leaves with it', (tester) async {
       await _pump(tester);
       _toaster.show('Closed tab', action: ToastAction('Undo', () {}));
       await _ms(tester, 400);
       _toaster.show('Could not reach the machine', kind: ToastKind.failed);
       await _ms(tester, 16);
+      expect(find.text('Could not reach the machine'), findsOneWidget, reason: 'it comes in at once');
 
-      expect(find.text('Could not reach the machine'), findsOneWidget);
+      await _ms(tester, _exit);
       expect(find.text('Closed tab'), findsNothing);
       expect(find.byKey(toastActionKey), findsNothing);
       await _end(tester);
     });
 
-    testWidgets('a toast that is already leaving comes back with the new text and a full clock', (tester) async {
+    testWidgets('a new message while one is leaving arrives on its own, with a full clock', (tester) async {
       await _pump(tester);
       _toaster.show('Old');
-      await _ms(tester, 3000);
+      await _ms(tester, 1750);
       await _ms(tester, 100); // mid-exit
       _toaster.show('New');
       await _ms(tester, 400);
 
       expect(find.text('New'), findsOneWidget);
-      await _ms(tester, 2500);
+      expect(find.text('Old'), findsNothing);
+      await _ms(tester, 1200);
       expect(find.text('New'), findsOneWidget);
-      await _ms(tester, 400);
+      await _ms(tester, 300);
       await _ms(tester, _exit);
       expect(_toast, findsNothing);
       await _end(tester);
@@ -191,54 +190,91 @@ void main() {
   });
 
   group('time on screen', () {
-    Future<void> staysUntil(WidgetTester tester, int ms) async {
-      await _ms(tester, ms - 100);
-      expect(_toast, findsOneWidget, reason: 'still showing at ${ms - 100} ms');
-      await _ms(tester, 100);
-      await tester.pumpAndSettle(const Duration(milliseconds: 20));
+    /// The clock starts once the toast is in place ([Motion.sheetIn]).
+    Future<void> staysFor(WidgetTester tester, int ms) async {
+      final arrive = Motion.sheetIn.inMilliseconds;
+      await _ms(tester, arrive + ms - 100);
+      expect(_toast, findsOneWidget, reason: 'still showing ${ms - 100} ms into its clock');
+      // A frame of slack: the clock starts on the frame the toast is in place.
+      await _ms(tester, 150);
+      await _ms(tester, _exit);
       expect(_toast, findsNothing, reason: 'gone after $ms ms and its exit');
     }
 
-    testWidgets('a plain message: 3 s', (tester) async {
+    testWidgets('a short message: 1.5 s', (tester) async {
       await _pump(tester);
       _toaster.show('Copied');
-      await staysUntil(tester, 3000);
+      await staysFor(tester, 1500);
+      await _end(tester);
+    });
+
+    testWidgets('a longer message: 2.75 s', (tester) async {
+      await _pump(tester);
+      _toaster.show('Marked 3 agents reviewed');
+      await staysFor(tester, 2750);
       await _end(tester);
     });
 
     testWidgets('a toast with an action: 5 s', (tester) async {
       await _pump(tester);
       _toaster.show('Closed tab', action: ToastAction('Undo', () {}));
-      await staysUntil(tester, 5000);
+      await staysFor(tester, 5000);
       await _end(tester);
     });
 
     testWidgets('a failure: 5 s', (tester) async {
       await _pump(tester);
       _toaster.show('No browser could open the link.', kind: ToastKind.failed);
-      await staysUntil(tester, 5000);
-      await _end(tester);
-    });
-
-    testWidgets('a success without an action is a plain message: 3 s', (tester) async {
-      await _pump(tester);
-      _toaster.show('Interrupted 2', kind: ToastKind.success);
-      await staysUntil(tester, 3000);
+      await staysFor(tester, 5000);
       await _end(tester);
     });
 
     testWidgets('an explicit duration wins', (tester) async {
       await _pump(tester);
       _toaster.show('Slow', duration: const Duration(seconds: 8));
-      await staysUntil(tester, 8000);
+      await staysFor(tester, 8000);
+      await _end(tester);
+    });
+
+    testWidgets('a finger on it holds the clock; letting go starts it again in full', (tester) async {
+      await _pump(tester);
+      // With a button, so letting go is not a tap that puts it away.
+      _toaster.show('Closed tab', action: ToastAction('Undo', () {}));
+      await _ms(tester, 250 + 4900);
+      final finger = await tester.startGesture(tester.getTopLeft(_toast) + const Offset(24, 24));
+      await _ms(tester, 3000);
+      expect(_toast, findsOneWidget, reason: 'held: it never leaves under a finger');
+      await finger.up();
+      await _ms(tester, 4900);
+      expect(_toast, findsOneWidget, reason: 'a full clock again after the release');
+      await _ms(tester, 150);
+      await _ms(tester, _exit);
+      expect(_toast, findsNothing);
       await _end(tester);
     });
 
     test('the defaults come from one table', () {
-      expect(ToastTiming.of(ToastKind.info, hasAction: false), const Duration(seconds: 3));
-      expect(ToastTiming.of(ToastKind.success, hasAction: false), const Duration(seconds: 3));
-      expect(ToastTiming.of(ToastKind.info, hasAction: true), const Duration(seconds: 5));
-      expect(ToastTiming.of(ToastKind.failed, hasAction: false), const Duration(seconds: 5));
+      expect(ToastTiming.of(ToastKind.info, hasAction: false, message: 'Copied'), Dwell.toastShort);
+      expect(ToastTiming.of(ToastKind.success, hasAction: false, message: 'Marked 3 agents reviewed'), Dwell.toastLong);
+      expect(ToastTiming.of(ToastKind.info, hasAction: true, message: 'Closed'), Dwell.toastAction);
+      expect(ToastTiming.of(ToastKind.failed, hasAction: false, message: 'Failed'), Dwell.toastAction);
+    });
+  });
+
+  group('swipe', () {
+    testWidgets('a swipe sideways puts it away; a nudge springs it back', (tester) async {
+      await _pump(tester);
+      _toaster.show('Closed tab', action: ToastAction('Undo', () {}));
+      await _ms(tester, 400);
+
+      await tester.drag(_toast, const Offset(30, 0));
+      await tester.pumpAndSettle(const Duration(milliseconds: 20));
+      expect(_toast, findsOneWidget, reason: 'a nudge is not a swipe');
+
+      await tester.drag(_toast, const Offset(250, 0));
+      await tester.pumpAndSettle(const Duration(milliseconds: 20));
+      expect(_toast, findsNothing);
+      await _end(tester);
     });
   });
 
@@ -334,7 +370,7 @@ void main() {
             groupMessage: (n) => 'Marked $n reviewed',
           );
       review(1);
-      await _ms(tester, 5000);
+      await _ms(tester, 5300); // 250 in, 5 s on its clock
       await _ms(tester, _exit);
       expect(_toast, findsNothing);
 
@@ -357,7 +393,7 @@ void main() {
             groupMessage: (n) => 'Marked $n reviewed',
           );
       review(1);
-      await _ms(tester, 5000);
+      await _ms(tester, 5300);
       await _ms(tester, 60); // started to leave
       review(2);
       await _ms(tester, 400);
@@ -438,7 +474,7 @@ void main() {
       await _ms(tester, 16);
       expect(tester.getTopLeft(_toast).dy, rest, reason: 'settled by 250 ms');
 
-      await _ms(tester, 750); // 1 s: starts to leave
+      await _ms(tester, 1000); // 250 in + 1 s on its clock: starts to leave
       await _ms(tester, 195);
       expect(_toast, findsNothing, reason: 'removed 190 ms after it starts to leave');
       await _end(tester);
@@ -517,7 +553,7 @@ void main() {
       _toaster.show('Copied');
       await tester.pumpAndSettle(const Duration(milliseconds: 50));
       final height = tester.view.physicalSize.height / tester.view.devicePixelRatio;
-      expect(tester.getRect(_toast).bottom, height - 34 - 16);
+      expect(tester.getRect(_toast).bottom, height - 34 - 8);
       await _end(tester);
     });
 
@@ -567,7 +603,7 @@ void main() {
 
       final bar = tester.getRect(find.byKey(const Key('bar')));
       expect(bar.bottom, 300, reason: 'the bar sits on the keyboard');
-      expect(tester.getRect(_toast).bottom, bar.top - 12);
+      expect(tester.getRect(_toast).bottom, bar.top - 8);
       await _end(tester);
     });
 
@@ -603,8 +639,30 @@ void main() {
       height.value = 160;
       await tester.pump();
       await tester.pump();
-      await tester.pump();
+      await _ms(tester, 300); // it glides up rather than jumping
       expect(tester.getRect(_toast).bottom, before - 100);
+      await _end(tester);
+    });
+  });
+
+  group('keyboard', () {
+    testWidgets('the toast follows a rising keyboard frame by frame', (tester) async {
+      tester.view
+        ..physicalSize = const Size(800, 1200) // 400 x 600 dp
+        ..devicePixelRatio = 2
+        ..padding = FakeViewPadding.zero
+        ..viewInsets = FakeViewPadding.zero;
+      addTearDown(tester.view.reset);
+      await _pump(tester);
+      _toaster.show('Copied', duration: const Duration(seconds: 30));
+      await tester.pumpAndSettle(const Duration(milliseconds: 50));
+      expect(tester.getRect(_toast).bottom, 600 - 8);
+
+      for (final inset in [40.0, 120.0, 210.0, 300.0]) {
+        tester.view.viewInsets = FakeViewPadding(bottom: inset * 2);
+        await tester.pump(const Duration(milliseconds: 16));
+        expect(tester.getRect(_toast).bottom, 600 - inset - 8, reason: 'on the keyboard at $inset, not trailing it');
+      }
       await _end(tester);
     });
   });
@@ -671,8 +729,8 @@ void main() {
       expect(paragraph.didExceedMaxLines, isTrue);
       expect(paragraph.size.height, lessThan(15 * 1.45 * 2 + 4));
       final card = tester.getRect(_toast);
-      expect(card.left, greaterThanOrEqualTo(16));
-      expect(card.right, lessThanOrEqualTo(320 - 16));
+      expect(card.left, greaterThanOrEqualTo(12));
+      expect(card.right, lessThanOrEqualTo(320 - 12));
       expect(tester.takeException(), isNull);
       await _end(tester);
     });

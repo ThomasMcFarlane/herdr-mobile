@@ -7,11 +7,8 @@ import 'package:herdr_mobile/data/models/machine_profile.dart';
 import 'package:herdr_mobile/data/models/pane_preview.dart';
 import 'package:herdr_mobile/data/repositories/agent_screens.dart';
 import 'package:herdr_mobile/data/services/herdr_transport.dart';
-import 'package:herdr_mobile/ui/core/chrome.dart';
-import 'package:herdr_mobile/ui/core/hold_confirm.dart';
-import 'package:herdr_mobile/ui/core/step_clock.dart';
-import 'package:herdr_mobile/ui/core/tap_guard.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import 'package:herdr_mobile/ui/support/step_clock.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_card.dart';
 import 'package:herdr_mobile/ui/features/agents/reply_sheet.dart';
 import 'package:herdr_mobile/ui/features/agents/triage_pill.dart';
@@ -310,7 +307,7 @@ void main() {
       await quickTap(tester, find.text('2. Yes, delete everything'));
       expect(_keysSent(h, 'a'), isEmpty);
       expect(find.text('Hold to send'), findsOneWidget);
-      await advance(tester, holdHintWindow);
+      await advance(tester, Dwell.holdHint);
       expect(find.text('2. Yes, delete everything'), findsOneWidget, reason: 'the hint went away');
 
       await holdFor(tester, find.text('2. Yes, delete everything'));
@@ -330,7 +327,7 @@ void main() {
       await advance(tester, const Duration(milliseconds: 300));
       expect(fillOf(tester), 0);
       expect(_keysSent(h, 'a'), isEmpty);
-      await advance(tester, holdHintWindow);
+      await advance(tester, Dwell.holdHint);
       await teardownBoard(tester, h);
     });
 
@@ -341,7 +338,7 @@ void main() {
       tester.semantics.tap(find.semantics.byLabel('2. Yes, delete everything, needs holding or a second activation'));
       await tester.pump();
       expect(_keysSent(h, 'a'), isEmpty);
-      expect(find.text('Hold or tap again to confirm'), findsOneWidget);
+      expect(find.text('Hold or tap again'), findsOneWidget);
 
       tester.semantics.tap(find.semantics.byLabel('Confirm: 2. Yes, delete everything'));
       await tester.pump();
@@ -357,7 +354,7 @@ void main() {
 
       tester.semantics.tap(find.semantics.byLabel('2. Yes, delete everything, needs holding or a second activation'));
       await tester.pump();
-      await holdFor(tester, find.text('Hold or tap again to confirm'));
+      await holdFor(tester, find.text('Hold or tap again'));
       expect(_keysSent(h, 'a'), hasLength(1));
       await tester.pump(const Duration(seconds: 4));
       semantics.dispose();
@@ -458,7 +455,7 @@ void main() {
       expect(_keysSent(h, 'a'), isEmpty);
 
       await settle(tester);
-      await tester.pump(tapGuard);
+      await tester.pump(Dwell.tapGuard);
       await tester.tap(find.text('1. Yes'));
       await tester.pump(const Duration(milliseconds: 50));
       expect(_keysSent(h, 'a'), hasLength(1));
@@ -549,11 +546,11 @@ void main() {
       await pumpBoard(tester, h, height: _tall);
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
       await tester.pump(const Duration(milliseconds: 300));
-      expect(find.textContaining(RegExp(r'idle \d')), findsNothing, reason: 'first sight: unknown, so unclaimed');
+      expect(_said(RegExp(r'^idle, ')), findsNothing, reason: 'first sight: unknown, so unclaimed');
 
       await h.changeStatuses(tester, 'a', [_pane(1, 'working'), _pane(2, 'idle')],
           ago: const Duration(minutes: 12), title: _title);
-      expect(find.text('working 12m'), findsOneWidget);
+      expect(_said('working, 12 minutes'), findsOneWidget);
       await teardownBoard(tester, h);
     });
   });
@@ -569,7 +566,8 @@ void main() {
       expect(find.text('3 need you'), findsOneWidget);
 
       h.network.goOffline();
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300)); // it leaves like every lane
       expect(find.byType(TriagePill), findsNothing, reason: 'offline: nothing can be answered');
       h.network.goOnline();
       await teardownBoard(tester, h);
@@ -664,7 +662,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
       expect(_keysSent(h, 'a'), isEmpty, reason: 'a tap aimed at the place it left');
 
-      await tester.pump(tapGuard);
+      await tester.pump(Dwell.tapGuard);
       await tester.tap(yes('task 2'));
       await tester.pump(const Duration(milliseconds: 50));
       expect(_keysSent(h, 'a').single, {'pane_id': 'w1:p2', 'keys': ['1', 'enter']});
@@ -729,7 +727,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
       expect(_keysSent(h, 'a'), hasLength(1), reason: 'the stray tap landed on the next agent: ignored');
 
-      await tester.pump(tapGuard);
+      await tester.pump(Dwell.tapGuard);
       await tester.tap(inSheet(find.text('1. Yes')));
       await tester.pump(const Duration(milliseconds: 50));
       expect(_keysSent(h, 'a').last, {'pane_id': 'w1:p2', 'keys': ['1', 'enter']});
@@ -1034,3 +1032,11 @@ void main() {
     });
   });
 }
+
+/// A time label by what a screen reader hears: the visible text is the time
+/// only, the words carry the state.
+Finder _said(Pattern label) => find.byWidgetPredicate((w) {
+      if (w is! Semantics) return false;
+      final l = w.properties.label;
+      return l != null && (label is String ? l == label : label.allMatches(l).isNotEmpty);
+    });

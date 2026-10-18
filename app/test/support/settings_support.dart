@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:herdr_mobile/ui/core/motion.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// Opens a group of the Settings screen by its row's title. The groups start
 /// closed and open one at a time; the row is scrolled to first, as a person

@@ -476,7 +476,7 @@ void main() {
         'First answer',
         'Earlier messages were summarised',
         'Earlier messages were summarised',
-        'The conversation was cleared on the host',
+        'The conversation was cleared on the machine',
       ]);
       expect(s.items.map((i) => i is TranscriptMessage ? i.role.name : 't').toList(), [
         'user',

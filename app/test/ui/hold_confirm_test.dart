@@ -1,8 +1,7 @@
 // HoldToConfirm: the press-and-hold that gates a risky answer.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:herdr_mobile/ui/core/hold_confirm.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 import 'hold_support.dart';
 
@@ -80,13 +79,13 @@ void main() {
     await g.up();
     await tester.pump();
     expect(find.text('hint'), findsOneWidget);
-    await advance(tester, holdSnapBack + const Duration(milliseconds: 50));
+    await advance(tester, Motion.holdSnapBack + const Duration(milliseconds: 50));
     expect(fillOf(tester), 0);
     expect(probe.confirmed, 0);
     await advance(tester, const Duration(seconds: 2));
     expect(probe.confirmed, 0);
 
-    await advance(tester, holdHintWindow);
+    await advance(tester, Dwell.holdHint);
     expect(find.text('hint'), findsNothing, reason: 'the hint is short-lived');
   });
 
@@ -101,7 +100,7 @@ void main() {
     await advance(tester, const Duration(seconds: 1));
     expect(probe.confirmed, 0);
     expect(probe.activated, 0, reason: 'a pointer tap is never the assistive activation');
-    await advance(tester, holdHintWindow);
+    await advance(tester, Dwell.holdHint);
   });
 
   testWidgets('under reduced motion the fill still shows but goes back at once', (tester) async {
@@ -113,7 +112,7 @@ void main() {
     await g.up();
     await tester.pump();
     expect(fillOf(tester), 0);
-    await advance(tester, holdHintWindow);
+    await advance(tester, Dwell.holdHint);
   });
 
   testWidgets('only the first finger counts: another one neither restarts nor ends the hold', (tester) async {

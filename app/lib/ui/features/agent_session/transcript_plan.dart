@@ -3,10 +3,10 @@ import 'dart:math' as math;
 import '../../../data/acp/acp_models.dart';
 import '../../../data/acp/session_state.dart';
 import '../../../data/acp/turns/turns.dart';
-import '../../core/markdown/markdown.dart';
+import '../../render/markdown/markdown.dart';
 
 /// What a [PlanRow] shows.
-enum RowKind {
+enum TranscriptRowKind {
   /// The person's message that starts a turn.
   user,
 
@@ -74,7 +74,7 @@ class PlanRow {
 
   /// Stable list key.
   final String key;
-  final RowKind kind;
+  final TranscriptRowKind kind;
 
   /// Space above the row.
   final double gap;
@@ -349,31 +349,31 @@ enum _Before { none, user, step, text, changed, note, divider }
 
 _Before _before(PlanRow? row) => switch (row?.kind) {
   null => _Before.none,
-  RowKind.user => _Before.user,
-  RowKind.fold || RowKind.thinking || RowKind.tool || RowKind.group => _Before.step,
-  RowKind.text || RowKind.content => _Before.text,
-  RowKind.changedHead || RowKind.changedFile || RowKind.changedMore => _Before.changed,
-  RowKind.stop || RowKind.note => _Before.note,
-  RowKind.divider => _Before.divider,
+  TranscriptRowKind.user => _Before.user,
+  TranscriptRowKind.fold || TranscriptRowKind.thinking || TranscriptRowKind.tool || TranscriptRowKind.group => _Before.step,
+  TranscriptRowKind.text || TranscriptRowKind.content => _Before.text,
+  TranscriptRowKind.changedHead || TranscriptRowKind.changedFile || TranscriptRowKind.changedMore => _Before.changed,
+  TranscriptRowKind.stop || TranscriptRowKind.note => _Before.note,
+  TranscriptRowKind.divider => _Before.divider,
 };
 
 /// The space above a row of [kind] under the row before it. The narration of
-/// the log and the answer are both [RowKind.text] and have the same gaps, so a
+/// the log and the answer are both [TranscriptRowKind.text] and have the same gaps, so a
 /// message that was the answer and becomes narration (a tool call starts after
 /// it) keeps its place.
-double gapAbove(PlanRow? previous, RowKind kind) {
+double gapAbove(PlanRow? previous, TranscriptRowKind kind) {
   final before = _before(previous);
   if (before == _Before.none) return 0;
   switch (kind) {
-    case RowKind.user:
+    case TranscriptRowKind.user:
       return before == _Before.divider ? 8 : 16;
-    case RowKind.fold || RowKind.thinking || RowKind.tool || RowKind.group:
+    case TranscriptRowKind.fold || TranscriptRowKind.thinking || TranscriptRowKind.tool || TranscriptRowKind.group:
       return switch (before) {
         _Before.step || _Before.divider => 0,
         _Before.changed => 8,
         _ => 6,
       };
-    case RowKind.text || RowKind.content:
+    case TranscriptRowKind.text || TranscriptRowKind.content:
       return switch (before) {
         _Before.user => 16,
         _Before.step => 10,
@@ -382,18 +382,18 @@ double gapAbove(PlanRow? previous, RowKind kind) {
         _Before.note => 10,
         _ => 8,
       };
-    case RowKind.changedHead:
+    case TranscriptRowKind.changedHead:
       return switch (before) {
         _Before.text => 12,
         _Before.note => 10,
         _Before.divider => 6,
         _ => 8,
       };
-    case RowKind.changedFile || RowKind.changedMore:
+    case TranscriptRowKind.changedFile || TranscriptRowKind.changedMore:
       return 0;
-    case RowKind.divider:
+    case TranscriptRowKind.divider:
       return 8;
-    case RowKind.stop || RowKind.note:
+    case TranscriptRowKind.stop || TranscriptRowKind.note:
       return before == _Before.divider ? 4 : 10;
   }
 }
@@ -419,8 +419,8 @@ class _Planner {
     if (key != null && !_placed && _turn == dividerTurn && covers != null && covers.any((i) => i.key == key)) {
       _placed = true;
       final before = previous;
-      final gap = gapAbove(before, RowKind.divider);
-      rows.add(PlanRow(_dividerRowKey, RowKind.divider, gap, label: plan._dividerLabel));
+      final gap = gapAbove(before, TranscriptRowKind.divider);
+      rows.add(PlanRow(_dividerRowKey, TranscriptRowKind.divider, gap, label: plan._dividerLabel));
       plan._rowTurn.add(_turn);
     }
     rows.add(row);
@@ -433,15 +433,15 @@ class _Planner {
     final open = t.live || plan.open.contains(logKey(t.key));
     final user = t.user;
     if (user != null && user.blocks.isNotEmpty) {
-      add(PlanRow(user.key, RowKind.user, gapAbove(previous, RowKind.user), item: user), [user]);
+      add(PlanRow(user.key, TranscriptRowKind.user, gapAbove(previous, TranscriptRowKind.user), item: user), [user]);
     }
     if (t.hasWork) {
       if (!t.live) {
         add(
           PlanRow(
             logKey(t.key),
-            RowKind.fold,
-            gapAbove(previous, RowKind.fold),
+            TranscriptRowKind.fold,
+            gapAbove(previous, TranscriptRowKind.fold),
             turn: t,
             open: open,
             label: plan.notes[t.key],
@@ -459,11 +459,11 @@ class _Planner {
     for (final item in t.items) {
       switch (item) {
         case TranscriptTool() when !open && _breaksOut(item):
-          add(PlanRow(item.key, RowKind.tool, gapAbove(previous, RowKind.tool), item: item), [item]);
+          add(PlanRow(item.key, TranscriptRowKind.tool, gapAbove(previous, TranscriptRowKind.tool), item: item), [item]);
         case TranscriptStop():
-          add(PlanRow(item.key, RowKind.stop, gapAbove(previous, RowKind.stop), item: item), [item]);
+          add(PlanRow(item.key, TranscriptRowKind.stop, gapAbove(previous, TranscriptRowKind.stop), item: item), [item]);
         case TranscriptNote():
-          add(PlanRow(item.key, RowKind.note, gapAbove(previous, RowKind.note), item: item), [item]);
+          add(PlanRow(item.key, TranscriptRowKind.note, gapAbove(previous, TranscriptRowKind.note), item: item), [item]);
         default:
       }
     }
@@ -483,7 +483,7 @@ class _Planner {
       if (thoughts.isNotEmpty) {
         final list = List<TranscriptMessage>.of(thoughts);
         add(
-          PlanRow(list.first.key, RowKind.thinking, gapAbove(previous, RowKind.thinking), item: list.first, thoughts: list),
+          PlanRow(list.first.key, TranscriptRowKind.thinking, gapAbove(previous, TranscriptRowKind.thinking), item: list.first, thoughts: list),
           list,
         );
         thoughts.clear();
@@ -494,17 +494,17 @@ class _Planner {
             final key = groupRowKey(group.key);
             final open = plan.open.contains(key);
             add(
-              PlanRow(key, RowKind.group, gapAbove(previous, RowKind.group), group: group, open: open),
+              PlanRow(key, TranscriptRowKind.group, gapAbove(previous, TranscriptRowKind.group), group: group, open: open),
               open ? null : group.tools,
             );
             if (open) {
               for (final tool in group.tools) {
-                add(PlanRow(tool.key, RowKind.tool, 0, item: tool, nested: true), [tool]);
+                add(PlanRow(tool.key, TranscriptRowKind.tool, 0, item: tool, nested: true), [tool]);
               }
             }
           } else {
             final tool = group.tools.single;
-            add(PlanRow(tool.key, RowKind.tool, gapAbove(previous, RowKind.tool), item: tool), [tool]);
+            add(PlanRow(tool.key, TranscriptRowKind.tool, gapAbove(previous, TranscriptRowKind.tool), item: tool), [tool]);
           }
         }
         run.clear();
@@ -533,8 +533,8 @@ class _Planner {
     add(
       PlanRow(
         '${t.key}:changed',
-        RowKind.changedHead,
-        gapAbove(previous, RowKind.changedHead),
+        TranscriptRowKind.changedHead,
+        gapAbove(previous, TranscriptRowKind.changedHead),
         turn: t,
         first: true,
         count: files.length,
@@ -545,7 +545,7 @@ class _Planner {
       add(
         PlanRow(
           '${t.key}:changed:${files[i].path}',
-          RowKind.changedFile,
+          TranscriptRowKind.changedFile,
           0,
           turn: t,
           file: files[i],
@@ -554,9 +554,9 @@ class _Planner {
       );
     }
     // A card that lists only some of its files ends in `N more`; one that
-    // lists all of a long list ends in `Show fewer`.
+    // lists all of a long list ends in `Show less`.
     if (trailing) {
-      add(PlanRow(changedAllKey(t.key), RowKind.changedMore, 0, turn: t, last: true, count: files.length - shown, open: all));
+      add(PlanRow(changedAllKey(t.key), TranscriptRowKind.changedMore, 0, turn: t, last: true, count: files.length - shown, open: all));
     }
   }
 
@@ -572,12 +572,12 @@ class _Planner {
     var i = 0;
     for (final segment in segments) {
       final inner = last == null
-          ? gapAbove(previous, segment is MdBlock ? RowKind.text : RowKind.content)
+          ? gapAbove(previous, segment is MdBlock ? TranscriptRowKind.text : TranscriptRowKind.content)
           : (last is MdBlock && segment is MdBlock ? mdBlockGap(last, segment) : 10.0);
       add(
         PlanRow(
           '${message.key}#${i++}',
-          segment is MdBlock ? RowKind.text : RowKind.content,
+          segment is MdBlock ? TranscriptRowKind.text : TranscriptRowKind.content,
           inner,
           item: message,
           part: segment,
@@ -591,8 +591,8 @@ class _Planner {
       add(
         PlanRow(
           liveRowKey(message.key),
-          RowKind.text,
-          gapAbove(previous, RowKind.text),
+          TranscriptRowKind.text,
+          gapAbove(previous, TranscriptRowKind.text),
           item: message,
           live: true,
           before: last,

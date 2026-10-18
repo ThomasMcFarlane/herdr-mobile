@@ -21,8 +21,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/acp/agent_host.dart';
 import 'package:herdr_mobile/data/acp/past_session.dart';
 import 'package:herdr_mobile/data/repositories/agent_session.dart';
-import 'package:herdr_mobile/ui/core/controls.dart';
-import 'package:herdr_mobile/ui/core/tap_guard.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
 
 import '../support/fake_agent_session.dart';
@@ -226,7 +225,7 @@ void main() {
       brightness: b,
       boundary: key,
     );
-    await tester.pump(tapGuard);
+    await tester.pump(Dwell.tapGuard);
     if (tap) {
       await tester.tap(find.widgetWithText(AppButton, 'Continue'));
       await tester.pump(const Duration(milliseconds: 300));

@@ -5,9 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/machine_profile.dart';
 import 'package:herdr_mobile/data/models/pane_preview.dart';
 import 'package:herdr_mobile/data/repositories/agent_screens.dart';
-import 'package:herdr_mobile/ui/core/tap_guard.dart';
-import 'package:herdr_mobile/ui/core/terminal_view.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/render/terminal/terminal_view.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_navigation.dart';
 import 'package:herdr_mobile/ui/features/agents/reply_chips.dart';
 import 'package:herdr_mobile/ui/features/agents/reply_sheet.dart';
@@ -105,7 +104,7 @@ Future<void> _pump(
   }
   await settle(tester);
   // Past the dock's guard, which starts when its question first shows.
-  await tester.pump(tapGuard);
+  await tester.pump(Dwell.tapGuard);
 }
 
 Future<void> _tearDown(WidgetTester tester, BoardHarness h) async {
@@ -147,7 +146,7 @@ void main() {
         expect(find.byType(PaneTopBar), findsOneWidget);
         expect(tester.getSize(find.byType(PaneTopBar)).height, 56);
         expect(find.text('task 1'), findsOneWidget, reason: 'the title is on screen once');
-        expect(_barText('claude · box'), findsOneWidget);
+        expect(_barText('Claude Code · box'), findsOneWidget);
         expect(find.textContaining(_id(1)), findsNothing);
         await _tearDown(tester, h);
       },
@@ -187,7 +186,7 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(tester.getSize(find.byType(PaneTopBar)).height, 52);
       expect(find.byTooltip('Back'), findsOneWidget);
-      expect(find.byTooltip('Wrap lines to screen'), findsOneWidget);
+      expect(find.byTooltip('Pane options'), findsOneWidget);
       await _tearDown(tester, h);
     });
   });
@@ -297,7 +296,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
       expect(_keysSent(h), isEmpty, reason: 'a tap on a dock that just appeared');
 
-      await tester.pump(tapGuard);
+      await tester.pump(Dwell.tapGuard);
       await tester.tap(dockText('1. Yes'));
       await settle(tester);
       expect(_keysSent(h), ['1+enter']);
@@ -314,7 +313,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
       expect(_keysSent(h), ['1+enter'], reason: 'a tap on a question that just changed');
 
-      await tester.pump(tapGuard);
+      await tester.pump(Dwell.tapGuard);
       await tester.tap(dockText('2. Skip'));
       await settle(tester);
       expect(_keysSent(h), ['1+enter', '2+enter']);

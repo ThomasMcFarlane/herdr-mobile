@@ -13,7 +13,7 @@ const _frame = Duration(milliseconds: 16);
 String _prose(int chars, {int seed = 1}) {
   final random = Random(seed);
   const words = [
-    'the', 'parser', 'lowercases', 'before', 'it', 'normalises', 'lib/ui/core/markdown/md_parser.dart:128',
+    'the', 'parser', 'lowercases', 'before', 'it', 'normalises', 'lib/ui/render/markdown/md_parser.dart:1',
     'Hà', 'Nội', 'Việt', 'Nam', 'tiếng', 'https://example.com/docs/streaming?x=1&y=22', '`inline`', '**bold**',
     '👨\u200D👩\u200D👧\u200D👦', '🇻🇳', 'e\u0323\u0302', '–', 'a', 'of', 'anthropomorphization',
   ];

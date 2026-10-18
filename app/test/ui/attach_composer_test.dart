@@ -19,10 +19,7 @@ import 'package:herdr_mobile/data/services/phone_gallery.dart';
 import 'package:herdr_mobile/ui/features/attach/attach_bars.dart';
 import 'package:herdr_mobile/ui/features/attach/attach_kit.dart';
 import 'package:herdr_mobile/ui/features/attach/host_tab.dart';
-import 'package:herdr_mobile/ui/core/controls.dart';
-import 'package:herdr_mobile/ui/core/status_panel.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
-import 'package:herdr_mobile/ui/core/toast.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
 import 'package:herdr_mobile/ui/features/agent_session/attach_chips.dart';
 import 'package:herdr_mobile/ui/features/agent_session/attach_picker.dart';
@@ -138,7 +135,7 @@ Future<void> attach(WidgetTester tester, String item) async {
   await settle(tester);
 }
 
-/// Picks a file of the machine in the sheet's Host tab: opens the sheet, the
+/// Picks a file of the machine in the sheet's Machine tab: opens the sheet, the
 /// tab, lifts the sheet to full height, shows every file and walks [path].
 Future<void> attachHostFile(WidgetTester tester, List<String> path) async {
   await tester.tap(attachButton);
@@ -266,13 +263,14 @@ void main() {
   });
 
   group('the attach button', () {
-    testWidgets('opens a sheet with Gallery, Files and Host tabs and the camera tile', (tester) async {
+    testWidgets('opens a sheet with Gallery, Files and Machine tabs and the camera tile', (tester) async {
       await pump(tester, FakeAgentSession(machine: machineWithFiles(projectFs())), kit: FakeKit().kit);
       await tester.tap(attachButton);
       await settle(tester);
       expect(find.byKey(AttachTabBar.tabKey(AttachTab.gallery)), findsOneWidget);
       expect(find.byKey(AttachTabBar.tabKey(AttachTab.files)), findsOneWidget);
       expect(find.byKey(AttachTabBar.tabKey(AttachTab.host)), findsOneWidget);
+      expect(find.text('Machine'), findsOneWidget, reason: 'the vocabulary says machine, not host');
       expect(find.text('Camera'), findsOneWidget);
       expect(find.text('This agent does not take images. Photos go up as files.'), findsNothing);
     });
@@ -286,7 +284,7 @@ void main() {
       expect(find.text('Camera'), findsOneWidget, reason: 'the tab is not taken away');
     });
 
-    testWidgets('a host with no file access says so in the Host tab', (tester) async {
+    testWidgets('a machine with no file access says so in the Machine tab', (tester) async {
       await pump(tester, FakeAgentSession());
       await tester.tap(attachButton);
       await settle(tester);
@@ -584,7 +582,7 @@ void main() {
       final session = FakeAgentSession()..auth = need();
       await pump(tester, session);
       expect(find.byType(StatusPanel), findsOneWidget);
-      expect(find.text('Sign in on the host'), findsOneWidget);
+      expect(find.text('Sign in on the machine'), findsOneWidget);
       expect(find.textContaining('Log in with Claude \u00b7 Use an API key'), findsOneWidget);
       expect(find.text('Open a terminal on devbox'), findsOneWidget);
       expect(find.text('claude /login'), findsOneWidget);
@@ -597,12 +595,12 @@ void main() {
       expect(find.byType(StatusPanel), findsNothing);
     });
 
-    testWidgets('a connection that failed for the login offers Try again', (tester) async {
+    testWidgets('a connection that failed for the login offers Retry', (tester) async {
       final session = FakeAgentSession(link: AgentLink.failed, error: 'Claude Code needs you to sign in on the host.')
         ..auth = need();
       await pump(tester, session);
-      expect(find.text('Sign in on the host'), findsOneWidget);
-      await tester.tap(find.text('Try again'));
+      expect(find.text('Sign in on the machine'), findsOneWidget);
+      await tester.tap(find.text('Retry'));
       await settle(tester);
       expect(session.reattachCount, 1);
     });

@@ -1,12 +1,14 @@
 import 'dart:async';
 
+import 'package:herdr_mobile/data/words/elapsed.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/remote_file.dart';
 import 'package:herdr_mobile/data/services/photo_export.dart';
 import 'package:herdr_mobile/data/services/remote_files.dart';
-import 'package:herdr_mobile/ui/core/controls.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/photos/photo_item.dart';
 import 'package:herdr_mobile/ui/features/photos/photo_math.dart';
 import 'package:herdr_mobile/ui/features/photos/photo_pictures.dart';
@@ -244,7 +246,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Photo info'), findsOneWidget);
-      for (final text in ['Name', 'IMG_0001.jpg', 'Path', '/home/dev/shots/IMG_0001.jpg', 'Dimensions', '4,000 × 3,000 · 12.0 MP', 'Size', 'Modified', 'May 20, 2026 at']) {
+      for (final text in ['Name', 'IMG_0001.jpg', 'Path', '/home/dev/shots/IMG_0001.jpg', 'Dimensions', '4,000 × 3,000 · 12.0 MP', 'Size', 'Modified', '20 May']) {
         expect(find.textContaining(text), findsWidgets, reason: text);
       }
       expect(find.textContaining('Screen-size preview'), findsOneWidget, reason: 'it says the bitmap is a preview until zoomed');
@@ -289,7 +291,7 @@ void main() {
       expect(find.text('Camera'), findsOneWidget);
       expect(find.text('Canon EOS R5'), findsOneWidget);
       expect(find.text('Taken'), findsOneWidget);
-      expect(find.text('May 20, 2026 at 09:30'), findsOneWidget);
+      expect(find.text(formatWhen(DateTime(2026, 5, 20, 9, 30), DateTime.now())), findsOneWidget);
       expect(find.text('40 × 80 · 0.0 MP'.replaceAll(' · 0.0 MP', '')), findsOneWidget, reason: 'upright size, orientation applied');
       expect(find.textContaining('EXIF 6'), findsOneWidget);
     });
@@ -745,8 +747,8 @@ void main() {
         decoder,
         viewAsText: () => const Scaffold(body: Text('as text')),
       );
-      expect(find.text("Can't show this as a picture"), findsOneWidget);
-      await tester.tap(find.text('View as text'));
+      expect(find.text('Can’t show this as a picture'), findsOneWidget);
+      await tester.tap(find.text('Show as text'));
       // One frame and a little more: the buttons of a failure answer at once,
       // not after the 300 ms a double-tap recogniser would hold a tap for.
       await tester.pump();

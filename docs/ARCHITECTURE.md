@@ -443,7 +443,7 @@ Other ways traffic can leave the phone:
 
 - **Links you tap** open in a browser tab over the app (a Chrome Custom Tab,
   `LaunchMode.inAppBrowserView`, through `url_launcher`;
-  `app/lib/ui/core/open_link.dart`), so Back returns to the app. The page is
+  `app/lib/ui/support/open_link.dart`), so Back returns to the app. The page is
   the phone's browser, not a WebView of ours: Google refuses sign-in inside
   embedded WebViews and Tailscale's login offers Google. A link from a login banner (Tailscale SSH
   approval) opens only if it is `https`. A link tapped in terminal output may
@@ -604,7 +604,7 @@ Terminal prompts:
   (`app/lib/ui/features/agents/quick_reply_controller.dart:41-45`,
   `app/lib/data/repositories/pane_answerer.dart:16-42`).
 - **Stale taps are ignored.** An answer control that just appeared or moved
-  ignores taps for 450 ms (`app/lib/ui/core/tap_guard.dart:5-9`).
+  ignores taps for 450 ms (`Dwell.tapGuard`, `app/lib/ui/support/tap_guard.dart`).
 - **Batch actions skip blocked agents.** They never type into a blocked
   terminal agent unless `Send anyway` is on, which is off by default, and never
   into a blocked agent session (`docs/ENGINEERING.md` "Batch actions").

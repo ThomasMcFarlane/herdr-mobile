@@ -5,9 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// The one composer every terminal agent and chat shares: the chat's
 /// ([Composer]) and the pane's. A person who switches between the two views of
@@ -16,9 +14,9 @@ const composerMinHeight = 48.0;
 const composerButtonSize = 36.0;
 const composerButtonHit = 44.0;
 
-/// The text of the field. The line is fixed (a strut), so the field's one-line
-/// height is known at any text size and the round buttons can be centred on it.
-const composerFontSize = 15.5;
+/// The text of the field is [Type.body] on a fixed line (a strut), so the
+/// field's one-line height is known at any text size and the round buttons
+/// can be centred on it.
 const composerLineHeight = 1.4;
 
 /// Asks for the keyboard now. Focus brings it up; a field that kept its focus
@@ -31,6 +29,13 @@ void showComposerKeyboard(FocusNode focus) {
   }
 }
 
+/// The one composer placeholder: `Message Claude Code…` while the agent can
+/// be written to, else what is in the way ([linkWord]: `Offline`,
+/// `Connecting…`). [agent] is the agent's display name (`agentName`); null
+/// for a pane with no agent, where what is typed is a command.
+String composerHint(String? agent, {String? linkWord}) =>
+    linkWord ?? (agent == null ? 'Type a command…' : 'Message $agent…');
+
 /// One line of the field is [inner] tall at any text size (the strut fixes the
 /// line). The field is a stadium of that height and the round buttons sit the
 /// same distance from every edge, so its corner is concentric with them
@@ -39,7 +44,7 @@ class ComposerMetrics {
   const ComposerMetrics._(this.inner, this.vpad, this.vb, this.radius, this.inset, this.side, this.lineHeightPx);
 
   factory ComposerMetrics.of(BuildContext context) {
-    final line = MediaQuery.textScalerOf(context).scale(composerFontSize) * composerLineHeight;
+    final line = MediaQuery.textScalerOf(context).scale(Type.body.fontSize!) * composerLineHeight;
     final inner = math.max(composerMinHeight - 2, 2 * 12.5 + line);
     final inset = (inner + 2 - composerButtonSize) / 2;
     return ComposerMetrics._(
@@ -108,11 +113,12 @@ class ComposerField extends StatelessWidget {
   const ComposerField({
     super.key,
     required this.controller,
-    required this.focusNode,
+    this.focusNode,
     required this.enabled,
     required this.hint,
     required this.onSubmit,
     this.mono = false,
+    this.maxLines = 5,
     this.inputFormatters = const [],
     this.autocorrect = true,
     this.enableSuggestions = true,
@@ -122,13 +128,18 @@ class ComposerField extends StatelessWidget {
   });
 
   final TextEditingController controller;
-  final FocusNode focusNode;
+
+  /// Null for a field that does not ask for the keyboard on pointer-down.
+  final FocusNode? focusNode;
   final bool enabled;
   final String hint;
   final VoidCallback onSubmit;
 
   /// A shell's line stays in the terminal's font; an agent's prompt is prose.
   final bool mono;
+
+  /// The field grows to this many lines, then scrolls.
+  final int maxLines;
   final List<TextInputFormatter> inputFormatters;
   final bool autocorrect;
   final bool enableSuggestions;
@@ -146,10 +157,11 @@ class ComposerField extends StatelessWidget {
     final m = ComposerMetrics.of(context);
     const none = InputBorder.none;
     final color = enabled ? ds.text : ds.textMuted;
+    final focus = focusNode;
     return Listener(
       // The keyboard takes ~300 ms to start moving once it is asked for: ask
       // when the finger lands, not when it lifts.
-      onPointerDown: keyboardOnPointerDown ? (_) => showComposerKeyboard(focusNode) : null,
+      onPointerDown: keyboardOnPointerDown && focus != null ? (_) => showComposerKeyboard(focus) : null,
       child: TextField(
         controller: controller,
         focusNode: focusNode,
@@ -160,20 +172,20 @@ class ComposerField extends StatelessWidget {
         enableSuggestions: enableSuggestions,
         enabled: enabled,
         minLines: 1,
-        maxLines: 5,
+        maxLines: maxLines,
         textInputAction: TextInputAction.send,
         keyboardType: keyboardType,
         // Not onSubmitted: a send action given only that unfocuses the field
         // and drops the keyboard after every message.
         onEditingComplete: onSubmit,
-        strutStyle: const StrutStyle(fontSize: composerFontSize, height: composerLineHeight, forceStrutHeight: true),
+        strutStyle: StrutStyle.fromTextStyle(Type.body, height: composerLineHeight, forceStrutHeight: true),
         style: mono
-            ? TextStyle(fontFamily: monoFamily, fontSize: 14, height: m.lineHeightPx / 14, color: color)
-            : Type.body.copyWith(fontSize: composerFontSize, height: composerLineHeight, color: color),
+            ? Mono.input.copyWith(height: m.lineHeightPx / Mono.input.fontSize!, color: color)
+            : Type.body.copyWith(height: composerLineHeight, color: color),
         cursorColor: ds.accent,
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: Type.body.copyWith(height: 1.4, color: ds.textMuted),
+          hintStyle: Type.body.copyWith(height: composerLineHeight, color: ds.textMuted),
           hintMaxLines: 1,
           filled: false,
           isDense: true,
@@ -194,9 +206,9 @@ class ComposerField extends StatelessWidget {
 }
 
 /// The paperclip at the field's left: the same soft disc as the round buttons
-/// at its right, so both ends of the field weigh the same and sit the same 6 dp
-/// inside the edge; 44 dp to touch. With [count] (the compact layout, which has
-/// no chips) a small round badge says how many pictures and files go along.
+/// at its right ([CircleButton] at [composerButtonSize]), so both ends of the
+/// field weigh the same. With [count] (the compact layout, which has no chips)
+/// a small badge says how many pictures and files go along.
 class ComposerAttachButton extends StatelessWidget {
   const ComposerAttachButton({super.key, required this.enabled, required this.onPressed, this.onWarm, this.count = 0});
 
@@ -212,52 +224,22 @@ class ComposerAttachButton extends StatelessWidget {
       // A finger landing starts the library query and the first thumbnails, so
       // the sheet that opens a moment later finds them.
       onPointerDown: enabled ? (_) => onWarm?.call() : null,
-      child: PressBuilder(
-        onTap: enabled ? onPressed : null,
-        scale: 0.92,
-        semanticLabel: count == 0 ? 'Attach' : 'Attach, $count attached',
-        builder: (context, pressed) => SizedBox.square(
-          dimension: composerButtonHit,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              AnimatedContainer(
-                duration: Motion.standard,
-                curve: Motion.easeOut,
-                width: composerButtonSize,
-                height: composerButtonSize,
-                decoration: BoxDecoration(shape: BoxShape.circle, color: enabled && pressed ? ds.fillPressed : ds.fill),
-                alignment: Alignment.center,
-                // The clip's ink is heavier at its lower left, so a centred
-                // glyph reads low; lift it a hair.
-                child: Transform.translate(
-                  offset: const Offset(0.5, -1),
-                  child: Icon(
-                    LucideIcons.paperclip,
-                    size: 18,
-                    color: !enabled ? ds.textTertiary : (pressed ? ds.text : ds.textSecondary),
-                  ),
-                ),
-              ),
-              if (count > 0)
-                Positioned(
-                  top: 2,
-                  right: 0,
-                  child: ExcludeSemantics(
-                    child: Container(
-                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(color: ds.accent, borderRadius: BorderRadius.circular(8)),
-                      child: Text(
-                        '$count',
-                        style: Type.caption.copyWith(color: ds.onAccent, fontSize: 10, height: 1.2, fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          CircleButton(
+            icon: LucideIcons.paperclip,
+            tooltip: count == 0 ? 'Attach' : 'Attach, $count attached',
+            size: composerButtonSize,
+            onPressed: enabled ? onPressed : null,
           ),
-        ),
+          if (count > 0)
+            Positioned(
+              top: Gap.hair,
+              right: 0,
+              child: CountBadge(count: count, tone: CountTone.accent, ring: ds.surface),
+            ),
+        ],
       ),
     );
   }
@@ -295,13 +277,13 @@ class ComposerRoundButton extends StatelessWidget {
     return PressBuilder(
       onTap: ready ? onPressed : null,
       onLongPress: ready ? onLongPress : null,
-      scale: 0.92,
+      scale: PressScale.icon,
       semanticLabel: label,
       builder: (context, pressed) => SizedBox.square(
         dimension: composerButtonHit,
         child: Center(
           child: AnimatedContainer(
-            duration: Motion.standard,
+            duration: Motion.pressing(pressed),
             curve: Motion.easeOut,
             width: composerButtonSize,
             height: composerButtonSize,
@@ -310,7 +292,7 @@ class ComposerRoundButton extends StatelessWidget {
               color: ready
                   ? (quiet
                         ? (pressed ? ds.fillPressed : ds.fill)
-                        : (pressed ? Color.alphaBlend(Colors.black.withValues(alpha: 0.12), ds.accent) : ds.accent))
+                        : (pressed ? ds.accentPressed : ds.accent))
                   : ds.fill,
             ),
             alignment: Alignment.center,

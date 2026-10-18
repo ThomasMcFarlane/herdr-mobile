@@ -7,13 +7,12 @@ import '../../../data/models/herdr_models.dart';
 import '../../../data/repositories/agent_screens.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/attention_set.dart';
-import '../../core/glyphs.dart';
-import '../../core/motion.dart';
-import '../../core/rows.dart';
-import '../../core/step_clock.dart';
-import '../../core/tokens.dart';
+import '../../../data/words/elapsed.dart';
+import '../../../data/words/where_line.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../support/step_clock.dart';
 import 'agent_navigation.dart';
-import 'agents_grouping.dart' show boardStatus, formatElapsed, timeInState;
+import 'agents_grouping.dart' show boardStatus, timeInState, timeInStateWords;
 import 'board_selection.dart';
 import 'preconnect_tap.dart';
 import 'swipe_review.dart';
@@ -52,15 +51,16 @@ String _permissionLine(PermissionRequest r) {
 }
 
 /// `Claude Code · studio-mac · herdr-mobile`.
-String sessionMeta(AgentSessionView s) => [
-      s.agentLabel,
-      s.machine.profile.label,
-      cwdTail(s.cwd),
-    ].where((p) => p.isNotEmpty).join(' · ');
+String sessionMeta(AgentSessionView s) => whereLine(
+      agent: s.agentLabel,
+      machine: s.machine.profile.label,
+      folder: cwdTail(s.cwd),
+      title: s.title,
+    );
 
-/// "needs you 3m", "working 12m", "waiting 14m" (the turn is over and the
-/// agent waits on background work), "reconnecting": the time in the phase
-/// while the link is up, the link's own word while it is not.
+/// "3m", "12m", "idle · jobs 14m" (the turn is over and the agent waits on
+/// background work), "reconnecting": the time in the phase while the link is
+/// up (the glyph says the phase), the link's own word while it is not.
 String sessionStateLabel(AgentSessionView s, DateTime now) {
   switch (s.link) {
     case AgentLink.connecting:
@@ -75,9 +75,21 @@ String sessionStateLabel(AgentSessionView s, DateTime now) {
       final since = s.phaseSince;
       if (since == null) return '';
       final elapsed = now.difference(since);
-      if (boardStatus(s) == AgentStatus.idle && s.waitingOnBackground) return 'waiting ${formatElapsed(elapsed)}';
+      if (_onJobs(s)) return 'idle · jobs ${Elapsed.compact(elapsed, seconds: false)}';
       return timeInState(boardStatus(s), elapsed);
   }
+}
+
+bool _onJobs(AgentSessionView s) => boardStatus(s) == AgentStatus.idle && s.waitingOnBackground;
+
+/// [sessionStateLabel] for screen readers: the state in words ("needs you,
+/// 3 minutes", "idle, jobs running, 14 minutes").
+String sessionStateWords(AgentSessionView s, DateTime now) {
+  final since = s.phaseSince;
+  if (s.link != AgentLink.live || since == null) return sessionStateLabel(s, now);
+  final elapsed = now.difference(since);
+  if (_onJobs(s)) return 'idle, jobs running, ${Elapsed.words(elapsed)}';
+  return timeInStateWords(boardStatus(s), elapsed);
 }
 
 /// One agent session as a compact board row: status shape, title, what it
@@ -107,7 +119,7 @@ class AgentSessionRow extends StatelessWidget {
     final swipeable = sessionReviewable(session) && !sel.active;
     bool review() => markSessionReviewedWithUndo(context, session);
 
-    return SwipeToReview(
+    final row = SwipeToReview(
       enabled: swipeable,
       onReviewed: review,
       inset: Gap.md,
@@ -122,7 +134,7 @@ class AgentSessionRow extends StatelessWidget {
             sessionKey: session.key,
             enabled: !sel.active,
             builder: (context, takePreconnect) => ListRow(
-              leading: StatusGlyph(status: status, size: 20),
+              leading: StatusGlyph(status: status, size: IconSize.lead),
               title: session.title,
               subtitle: summary ?? meta,
               subtitle2: summary == null ? null : meta,
@@ -132,13 +144,12 @@ class AgentSessionRow extends StatelessWidget {
                 children: [
                   _StateTime(session: session),
                   if (sel.active) ...[
-                    const SizedBox(width: 6),
-                    SelectMark(selected: sel.selected, size: 18),
+                    const SizedBox(width: Gap.sm),
+                    SelectMark(selected: sel.selected, size: IconSize.bar),
                   ],
                 ],
               ),
               dim: !live,
-              divider: divider,
               semanticLabel: live
                   ? null
                   : [
@@ -146,7 +157,7 @@ class AgentSessionRow extends StatelessWidget {
                       session.title,
                       ?summary,
                       if (meta.isNotEmpty) meta,
-                      sessionStateLabel(session, DateTime.now()),
+                      sessionStateWords(session, DateTime.now()),
                     ].join(', '),
               onTap: sel.active
                   ? pick
@@ -160,6 +171,8 @@ class AgentSessionRow extends StatelessWidget {
         ),
       ),
     );
+    if (!divider) return row;
+    return Column(mainAxisSize: MainAxisSize.min, children: [row, Hairline(indent: ListRow.textIndent())]);
   }
 }
 
@@ -172,18 +185,26 @@ class _StateTime extends StatelessWidget {
   Widget build(BuildContext context) {
     final ds = context.ds;
     final blocked = boardStatus(session) == AgentStatus.blocked;
-    final style = Type.caption.copyWith(
-      fontSize: 12.5,
+    // Say it once: the glyph names the state; the time takes the status's
+    // colour and weight only when the person is needed.
+    final style = (blocked ? Type.captionStrong : Type.caption).copyWith(
       color: blocked ? ds.blockedText : ds.textMuted,
       fontFeatures: Type.tabular,
     );
-    Widget label(String text) => text.isEmpty
-        ? const SizedBox.shrink()
-        : Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Text(text, maxLines: 1, softWrap: false, style: style),
-          );
-    if (session.link != AgentLink.live) return label(sessionStateLabel(session, DateTime.now()));
-    return MinuteBuilder(builder: (context, now) => label(sessionStateLabel(session, now)));
+    Widget label(DateTime now) {
+      final text = sessionStateLabel(session, now);
+      if (text.isEmpty) return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.only(top: Gap.hair),
+        child: Semantics(
+          label: sessionStateWords(session, now),
+          excludeSemantics: true,
+          child: Text(text, maxLines: 1, softWrap: false, style: style),
+        ),
+      );
+    }
+
+    if (session.link != AgentLink.live) return label(DateTime.now());
+    return MinuteBuilder(builder: (context, now) => label(now));
   }
 }

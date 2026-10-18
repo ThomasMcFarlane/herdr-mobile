@@ -6,12 +6,11 @@ import 'package:flutter_test/flutter_test.dart' hide testWidgets;
 import 'package:flutter_test/flutter_test.dart' as ft show testWidgets;
 import 'package:herdr_mobile/data/acp/acp_models.dart';
 import 'package:herdr_mobile/data/acp/session_state.dart';
-import 'package:herdr_mobile/ui/core/markdown/markdown.dart';
-import 'package:herdr_mobile/ui/core/markdown/md_code_block.dart';
-import 'package:herdr_mobile/ui/core/markdown/md_table_view.dart';
-import 'package:herdr_mobile/ui/core/markdown/md_text.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
-import 'package:herdr_mobile/ui/core/toast.dart';
+import 'package:herdr_mobile/ui/render/markdown/markdown.dart';
+import 'package:herdr_mobile/ui/render/markdown/md_code_block.dart';
+import 'package:herdr_mobile/ui/render/markdown/md_table_view.dart';
+import 'package:herdr_mobile/ui/render/markdown/md_text.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_md_scope.dart';
 import 'package:herdr_mobile/ui/features/agent_session/transcript_rows.dart';
 import 'package:herdr_mobile/ui/features/agent_session/work_log_rows.dart';
@@ -370,10 +369,25 @@ void main() {
       await tester.tap(find.byIcon(LucideIcons.copy));
       await tester.pump();
       expect(_clipboard, 'final a = 1;\n  print(a); // \u202Ex');
-      expect(find.text('Copied'), findsOneWidget);
+      expect(find.byIcon(LucideIcons.check), findsOneWidget, reason: 'the button turns into a check');
       await tester.pump(const Duration(seconds: 2));
-      expect(find.text('Copied'), findsNothing);
+      expect(find.byIcon(LucideIcons.check), findsNothing);
       expect(find.byIcon(LucideIcons.copy), findsOneWidget);
+      await tester.pump(const Duration(seconds: 4)); // the toast's clock
+    });
+
+    testWidgets('a clipboard that refuses leaves the copy button as it was', (tester) async {
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        if (call.method == 'Clipboard.setData') throw PlatformException(code: 'refused');
+        return null;
+      });
+      addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
+      await tester.pumpWidget(_app(_doc('```dart\nfinal a = 1;\n```')));
+      await tester.tap(find.byIcon(LucideIcons.copy));
+      await tester.pump();
+      expect(find.byIcon(LucideIcons.check), findsNothing, reason: 'no success mark for a failed copy');
+      expect(find.byIcon(LucideIcons.copy), findsOneWidget);
+      await tester.pump(const Duration(seconds: 6));
     });
 
     testWidgets('bidi overrides and control characters are visible in code', (tester) async {

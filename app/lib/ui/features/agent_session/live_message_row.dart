@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-import '../../core/markdown/markdown.dart';
+import '../../render/markdown/markdown.dart';
 import 'live_message_model.dart';
 import 'transcript_plan.dart' show liveRowKey;
 import 'transcript_rows.dart';

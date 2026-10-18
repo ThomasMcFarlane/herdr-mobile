@@ -10,17 +10,13 @@ import 'package:herdr_mobile/data/models/machine_profile.dart';
 import 'package:herdr_mobile/data/repositories/agent_session.dart';
 import 'package:herdr_mobile/data/repositories/app_settings.dart';
 import 'package:herdr_mobile/data/services/herdr_transport.dart';
-import 'package:herdr_mobile/ui/core/chrome.dart';
-import 'package:herdr_mobile/ui/core/controls.dart';
-import 'package:herdr_mobile/ui/core/rows.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
-import 'package:herdr_mobile/ui/core/toast.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_card.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_session_rows.dart';
 import 'package:herdr_mobile/ui/features/agents/batch_actions_sheet.dart';
 import 'package:herdr_mobile/ui/features/agents/triage_pill.dart';
-import 'package:herdr_mobile/ui/features/settings/app_switch.dart';
 import 'package:herdr_mobile/ui/shell/home_shell.dart';
+import 'package:herdr_mobile/ui/support/home_tabs.dart';
 import 'package:provider/provider.dart';
 
 import '../support/fake_agent_session.dart';
@@ -92,6 +88,7 @@ Future<void> _pump(
   double textScale = 1,
   Brightness brightness = Brightness.dark,
   double bottomInset = 0,
+  HomeTabs? tabs,
 }) async {
   tester.view
     ..physicalSize = Size(width, height) * 2
@@ -113,7 +110,7 @@ Future<void> _pump(
           data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
           child: child!,
         ),
-        home: const HomeShell(),
+        home: HomeShell(tabs: tabs),
       ),
     ),
   );
@@ -232,6 +229,87 @@ void main() {
       await teardownBoard(tester, h);
     });
 
+    testWidgets('leaving the board ends picking: the tab bar is never left hidden over another tab', (tester) async {
+      final tabs = HomeTabs();
+      final h = await _studio([_pane(1, 'working'), _pane(2, 'blocked')]);
+      await _pump(tester, h, tabs: tabs);
+      await _longPress(tester, _row('task 1'));
+      expect(find.byType(FloatingTabBar), findsNothing, reason: 'the action bar takes its place on the board');
+
+      tabs.select(HomeTab.machines);
+      await _settle(tester);
+      expect(find.byType(FloatingTabBar), findsOneWidget, reason: 'Machines has its tab bar');
+      expect(find.text('Cancel'), findsNothing);
+
+      tabs.select(HomeTab.agents);
+      await _settle(tester);
+      expect(find.textContaining('selected'), findsNothing, reason: 'picking ended when the board was left');
+      expect(find.byType(FloatingTabBar), findsOneWidget);
+      await teardownBoard(tester, h);
+    });
+
+    testWidgets('a screen pushed over the board (a notification, a deep link) keeps the picked set', (tester) async {
+      final h = await _studio([_pane(1, 'working'), _pane(2, 'blocked')]);
+      await _pump(tester, h);
+      await _pick(tester, ['task 1', 'task 2']);
+      expect(_selected(2), findsOneWidget);
+
+      unawaited(tester.state<NavigatorState>(find.byType(Navigator).first).push(
+            MaterialPageRoute<void>(builder: (_) => const Scaffold(body: Text('pushed'))),
+          ));
+      await _settle(tester);
+      expect(find.text('pushed'), findsOneWidget);
+
+      await tester.binding.handlePopRoute();
+      await _settle(tester);
+      expect(_selected(2), findsOneWidget, reason: 'the person comes back to the set they picked');
+      expect(find.byType(FloatingTabBar), findsNothing, reason: 'the action bar is still up');
+      await teardownBoard(tester, h);
+    });
+
+    testWidgets('a running batch, then another tab: the set and its bar are kept', (tester) async {
+      final tabs = HomeTabs();
+      final h = await _studio([_pane(1, 'idle')]);
+      final slow = _SlowEnd(key: 'a/k1', title: 'agent one', machine: h.fleet.connection('a'));
+      final sessions = _Sessions([slow]);
+      await _pump(tester, h, sessions: sessions, tabs: tabs);
+      await _pick(tester, ['agent one']);
+      await _tap(tester, find.text('Close'));
+      await _tap(tester, find.text('Close 1 agent'));
+      expect(find.text('Closing 1 agent…'), findsOneWidget);
+
+      tabs.select(HomeTab.machines);
+      await _settle(tester);
+      expect(find.byType(FloatingTabBar), findsOneWidget, reason: 'Machines has its tab bar');
+      tabs.select(HomeTab.agents);
+      await _settle(tester);
+      expect(_selected(1), findsOneWidget, reason: 'a running batch is not cancelled by a tab switch');
+      expect(find.text('Closing 1 agent…'), findsOneWidget);
+      expect(find.byType(FloatingTabBar), findsNothing);
+
+      slow.gate.complete();
+      await _settle(tester);
+      sessions.dispose();
+      await teardownBoard(tester, h);
+    });
+
+    testWidgets('a toast stands above the triage pill, never over it', (tester) async {
+      final h = await _studio([_pane(1, 'working'), _pane(2, 'blocked')]);
+      await _pump(tester, h, width: 412, height: 892);
+      for (final scale in [1.0, 2.0]) {
+        await _pump(tester, h, width: scale == 1 ? 412 : 320, height: scale == 1 ? 892 : 640, textScale: scale);
+        Toaster.of(tester.element(find.byType(TriagePill))).show('Marked reviewed', action: ToastAction('Undo', () {}));
+        await _settle(tester);
+        final toast = tester.getRect(find.byKey(toastKey));
+        final pill = tester.getRect(find.byType(TriagePill));
+        final bar = tester.getRect(find.byType(FloatingTabBar));
+        expect(toast.bottom, lessThanOrEqualTo(pill.top - 8), reason: 'x$scale: 8 above the pill');
+        expect(pill.bottom, lessThanOrEqualTo(bar.top - 8 + 0.01), reason: 'x$scale: the pill 8 above the bar');
+        await tester.pump(const Duration(seconds: 6));
+      }
+      await teardownBoard(tester, h);
+    });
+
     testWidgets('compact rows pick the same way', (tester) async {
       final h = await _studio([_pane(1, 'working'), _pane(2, 'idle')]);
       await h.appSettings.setDensity(BoardDensity.compact);
@@ -282,7 +360,7 @@ void main() {
       expect(_selected(2), findsOneWidget);
       expect(_row('task 6'), findsOneWidget, reason: 'what is picked is on screen');
       expect(_enabled(tester, 'Close'), isTrue);
-      expect(_enabled(tester, 'Interrupt'), isFalse);
+      expect(_enabled(tester, 'Stop'), isFalse);
       await teardownBoard(tester, h);
     });
 
@@ -296,8 +374,8 @@ void main() {
       expect(_selected(2), findsOneWidget);
       expect(find.byKey(toastKey), findsNothing);
 
-      await _tap(tester, find.text('Interrupt'));
-      expect(_confirm('Interrupt 2 agents'), findsOneWidget);
+      await _tap(tester, find.text('Stop'));
+      expect(_confirm('Stop 2 agents'), findsOneWidget);
       await teardownBoard(tester, h);
     });
 
@@ -308,8 +386,8 @@ void main() {
 
       await h.changeStatuses(tester, 'a', [_pane(1, 'idle'), _pane(2, 'working')]);
       expect(_selected(2), findsOneWidget);
-      await _tap(tester, find.text('Interrupt'));
-      expect(_confirm('Interrupt 1 agent'), findsOneWidget, reason: 'built from live data');
+      await _tap(tester, find.text('Stop'));
+      expect(_confirm('Stop 1 agent'), findsOneWidget, reason: 'built from live data');
       expect(find.text('Not working'), findsOneWidget);
       await teardownBoard(tester, h);
     });
@@ -321,22 +399,22 @@ void main() {
       await _pump(tester, h);
 
       await _longPress(tester, _row('task 1')); // working
-      expect([for (final a in ['Interrupt', 'Message', 'Close']) _enabled(tester, a)], [true, true, false]);
+      expect([for (final a in ['Stop', 'Message', 'Close']) _enabled(tester, a)], [true, true, false]);
 
       await _tap(tester, _row('task 1'));
       expect(_selected(0), findsOneWidget);
-      expect([for (final a in ['Interrupt', 'Message', 'Close']) _enabled(tester, a)], [false, false, false]);
+      expect([for (final a in ['Stop', 'Message', 'Close']) _enabled(tester, a)], [false, false, false]);
 
       await _tap(tester, _row('task 4')); // blocked: only a message (on the person's say so)
-      expect([for (final a in ['Interrupt', 'Message', 'Close']) _enabled(tester, a)], [false, true, false]);
+      expect([for (final a in ['Stop', 'Message', 'Close']) _enabled(tester, a)], [false, true, false]);
 
       await _tap(tester, _row('task 4'));
       await _tap(tester, _row('task 6')); // done
-      expect([for (final a in ['Interrupt', 'Message', 'Close']) _enabled(tester, a)], [false, true, true]);
+      expect([for (final a in ['Stop', 'Message', 'Close']) _enabled(tester, a)], [false, true, true]);
 
       await _tap(tester, _row('task 6'));
       await _tap(tester, _row('task 8')); // idle
-      expect([for (final a in ['Interrupt', 'Message', 'Close']) _enabled(tester, a)], [false, true, true]);
+      expect([for (final a in ['Stop', 'Message', 'Close']) _enabled(tester, a)], [false, true, true]);
       await teardownBoard(tester, h);
     });
 
@@ -344,10 +422,10 @@ void main() {
       final h = await _studio([_pane(1, 'working')]);
       await _pump(tester, h);
       await _longPress(tester, _row('task 1'));
-      expect(_enabled(tester, 'Interrupt'), isTrue);
+      expect(_enabled(tester, 'Stop'), isTrue);
 
       await h.changeStatuses(tester, 'a', [_pane(1, 'done')]);
-      expect(_enabled(tester, 'Interrupt'), isFalse);
+      expect(_enabled(tester, 'Stop'), isFalse);
       expect(_enabled(tester, 'Close'), isTrue);
       await teardownBoard(tester, h);
     });
@@ -357,7 +435,7 @@ void main() {
       await _pump(tester, h, height: 740, bottomInset: 40);
       await _longPress(tester, _row('task 1'));
 
-      for (final label in ['Interrupt', 'Message', 'Close']) {
+      for (final label in ['Stop', 'Message', 'Close']) {
         final node = find.ancestor(of: find.text(label), matching: find.byType(PressBuilder));
         final box = tester.getRect(node.first);
         expect(box.bottom, lessThanOrEqualTo(740 - 40), reason: label);
@@ -378,28 +456,28 @@ void main() {
     });
   });
 
-  group('interrupt', () {
+  group('stop', () {
     testWidgets('three working agents: two taps, a confirm, esc to each pane', (tester) async {
       final h = await _studio(_ten());
       await _pump(tester, h);
 
       await _pick(tester, ['task 1', 'task 2', 'task 3']);
-      await _tap(tester, find.text('Interrupt'));
+      await _tap(tester, find.text('Stop'));
 
-      expect(find.text('Interrupt agents'), findsOneWidget);
+      expect(find.text('Stop agents'), findsOneWidget);
       for (final t in ['task 1', 'task 2', 'task 3']) {
         expect(find.text(t), findsNWidgets(2), reason: '$t on the board and in the sheet');
       }
-      expect(find.text('claude · studio-mac'), findsNWidgets(3));
+      expect(find.text('Claude Code · studio-mac'), findsNWidgets(3));
       expect(find.text('Skipped'), findsNothing);
-      expect(_confirm('Interrupt 3 agents'), findsOneWidget);
+      expect(_confirm('Stop 3 agents'), findsOneWidget);
 
-      await _tap(tester, find.text('Interrupt 3 agents'));
+      await _tap(tester, find.text('Stop 3 agents'));
       final keys = _sent(h, 'a', 'pane.send_keys');
       expect(_panesOf(keys), ['w1:p1', 'w1:p2', 'w1:p3']);
       expect([for (final k in keys) k['keys']], everyElement(['esc']));
       expect(_sent(h, 'a', 'pane.send_input'), isEmpty);
-      expect(find.text('Interrupted 3'), findsOneWidget);
+      expect(find.text('Stopped 3'), findsOneWidget);
       expect(find.textContaining('selected'), findsNothing, reason: 'picking ends');
       expect(find.byType(FloatingTabBar), findsOneWidget);
       await teardownBoard(tester, h);
@@ -409,16 +487,16 @@ void main() {
       final h = await _studio(_ten());
       await _pump(tester, h);
       await _pick(tester, ['task 1', 'task 4', 'task 6', 'task 8']);
-      await _tap(tester, find.text('Interrupt'));
+      await _tap(tester, find.text('Stop'));
 
-      expect(_confirm('Interrupt 1 agent'), findsOneWidget);
+      expect(_confirm('Stop 1 agent'), findsOneWidget);
       expect(find.text('Skipped'), findsOneWidget);
       expect(find.text('Waiting for an answer'), findsOneWidget);
       expect(find.text('Not working'), findsNWidgets(2));
 
-      await _tap(tester, find.text('Interrupt 1 agent'));
+      await _tap(tester, find.text('Stop 1 agent'));
       expect(_panesOf(_sent(h, 'a', 'pane.send_keys')), ['w1:p1']);
-      expect(find.text('Interrupted 1 · 3 skipped'), findsOneWidget);
+      expect(find.text('Stopped 1 · 3 skipped'), findsOneWidget);
       await teardownBoard(tester, h);
     });
 
@@ -426,7 +504,7 @@ void main() {
       final h = await _studio(_ten());
       await _pump(tester, h);
       await _pick(tester, ['task 1', 'task 2']);
-      await _tap(tester, find.text('Interrupt'));
+      await _tap(tester, find.text('Stop'));
       await _tap(tester, _sheetCancel);
 
       expect(_sent(h, 'a', 'pane.send_keys'), isEmpty);
@@ -444,15 +522,15 @@ void main() {
       await _settle(tester);
 
       await _pick(tester, ['task 1', 'task 2']);
-      await _tap(tester, find.text('Interrupt'));
-      expect(_confirm('Interrupt 1 agent'), findsOneWidget);
+      await _tap(tester, find.text('Stop'));
+      expect(_confirm('Stop 1 agent'), findsOneWidget);
       expect(find.text('Offline'), findsOneWidget);
 
       final before = h.transports['b']!.calls.length;
-      await _tap(tester, find.text('Interrupt 1 agent'));
+      await _tap(tester, find.text('Stop 1 agent'));
       expect(_panesOf(_sent(h, 'a', 'pane.send_keys')), ['w1:p1']);
       expect(h.transports['b']!.calls.length, before, reason: 'nothing is sent to an offline machine');
-      expect(find.text('Interrupted 1 · 1 skipped'), findsOneWidget);
+      expect(find.text('Stopped 1 · 1 skipped'), findsOneWidget);
       await teardownBoard(tester, h);
     });
 
@@ -463,12 +541,12 @@ void main() {
       ]);
       await _pump(tester, h);
       await _pick(tester, ['task 1', 'task 2']);
-      await _tap(tester, find.text('Interrupt'));
+      await _tap(tester, find.text('Stop'));
       h.transports['b']!.failure = const HerdrTransportException('Connection reset');
 
-      await _tap(tester, find.text('Interrupt 2 agents'));
+      await _tap(tester, find.text('Stop 2 agents'));
       expect(_panesOf(_sent(h, 'a', 'pane.send_keys')), ['w1:p1']);
-      expect(find.text('Interrupted 1 · 1 failed: build-box: Connection reset'), findsOneWidget);
+      expect(find.text('Stopped 1 · 1 failed: build-box: Connection reset'), findsOneWidget);
       h.transports['b']!.failure = null;
       await teardownBoard(tester, h);
     });
@@ -659,7 +737,7 @@ void main() {
           state: state ?? const AgentSessionState('s1'),
         );
 
-    testWidgets('interrupt, message and close go through cancel, send and end', (tester) async {
+    testWidgets('stop, message and close go through cancel, send and end', (tester) async {
       final h = await _studio([_pane(1, 'working')]);
       final working = session(h, 'k1', 'agent one', state: stateWith(turnActive: true));
       final idle = session(h, 'k2', 'agent two');
@@ -668,11 +746,11 @@ void main() {
       final sessions = _Sessions([working, idle, idle2, idle4]);
       await _pump(tester, h, sessions: sessions);
 
-      // Interrupt: a terminal agent and a session together.
+      // Stop: a terminal agent and a session together.
       await _pick(tester, ['task 1', 'agent one']);
-      await _tap(tester, find.text('Interrupt'));
-      expect(_confirm('Interrupt 2 agents'), findsOneWidget);
-      await _tap(tester, find.text('Interrupt 2 agents'));
+      await _tap(tester, find.text('Stop'));
+      expect(_confirm('Stop 2 agents'), findsOneWidget);
+      await _tap(tester, find.text('Stop 2 agents'));
       expect(working.cancelCount, 1);
       expect(_panesOf(_sent(h, 'a', 'pane.send_keys')), ['w1:p1']);
 
@@ -819,7 +897,7 @@ void main() {
         expect(tester.takeException(), isNull);
         expect(_selected(30), findsOneWidget);
 
-        for (final action in ['Interrupt', 'Message', 'Close']) {
+        for (final action in ['Stop', 'Message', 'Close']) {
           await _tap(tester, find.text(action));
           expect(tester.takeException(), isNull, reason: action);
           if (action == 'Message') {
@@ -827,6 +905,9 @@ void main() {
             await _settle(tester);
             expect(tester.takeException(), isNull);
           }
+          // At 2x text on a short phone the sheet scrolls to its buttons.
+          await tester.ensureVisible(_sheetCancel);
+          await _settle(tester);
           await _tap(tester, _sheetCancel);
           expect(find.byType(BatchSheet), findsNothing);
         }
@@ -839,8 +920,8 @@ void main() {
       await _pump(tester, h, width: 320, height: 640, textScale: 2);
       await _longPress(tester, _row('task 1'));
       expect(tester.takeException(), isNull);
-      await _tap(tester, find.text('Interrupt'));
-      expect(_confirm('Interrupt 1 agent'), findsOneWidget);
+      await _tap(tester, find.text('Stop'));
+      expect(_confirm('Stop 1 agent'), findsOneWidget);
       expect(tester.takeException(), isNull);
       await teardownBoard(tester, h);
     });

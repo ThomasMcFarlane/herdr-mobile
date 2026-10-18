@@ -4,14 +4,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../data/repositories/agent_session.dart';
+import '../../../data/words/elapsed.dart';
+import '../../../data/words/plural.dart';
 import '../../../data/repositories/observed_session.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/step_clock.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../support/step_clock.dart';
 import 'agent_session_navigation.dart';
 import 'session_select.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// What the pane shows right now, under the transcript, while the agent works
 /// and its log is quiet (the model is writing its next message, which the log
@@ -32,11 +32,9 @@ class LiveOutput extends StatelessWidget {
       if (rows == null || rows.isEmpty) return const SizedBox.shrink();
       final ds = context.ds;
       return Padding(
-        padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.sm),
-        child: DecoratedBox(
-          decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.chip)),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.sm),
+        child: Panel(
+          padding: const EdgeInsets.symmetric(horizontal: Gap.md, vertical: Gap.sm),
             child: Semantics(
               label: 'Live output from the terminal',
               child: Column(
@@ -45,7 +43,7 @@ class LiveOutput extends StatelessWidget {
                   ExcludeSemantics(
                     child: Text('Live from terminal', style: Type.caption.copyWith(color: ds.textMuted)),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: Gap.xs),
                   for (final row in rows)
                     ExcludeSemantics(
                       child: Text(
@@ -53,25 +51,19 @@ class LiveOutput extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         softWrap: false,
-                        style: TextStyle(
-                          fontFamily: monoFamily,
-                          fontSize: 11.5,
-                          height: 1.4,
-                          color: ds.textSecondary,
-                        ),
+                        style: Mono.small.copyWith(color: ds.textSecondary),
                       ),
                     ),
                 ],
               ),
             ),
-          ),
         ),
       );
     },
   );
 }
 
-/// `Working · 42 s` next to the status glyph while the log is quiet: how long
+/// `Working · 42s` next to the status glyph while the log is quiet: how long
 /// the agent has been in this phase, moving by the minute clock (30 s steps),
 /// never per second.
 class WorkingLabel extends StatelessWidget {
@@ -79,20 +71,13 @@ class WorkingLabel extends StatelessWidget {
 
   final DateTime? since;
 
-  /// `42 s`, `3 min`, `1 h 05 min`.
-  static String elapsed(Duration d) {
-    if (d.inSeconds < 60) return '${d.inSeconds < 0 ? 0 : d.inSeconds} s';
-    if (d.inMinutes < 60) return '${d.inMinutes} min';
-    return '${d.inHours} h ${(d.inMinutes % 60).toString().padLeft(2, '0')} min';
-  }
-
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
     return MinuteBuilder(
       builder: (context, now) {
         final at = since;
-        final text = at == null ? 'Working' : 'Working · ${elapsed(now.difference(at))}';
+        final text = at == null ? 'Working' : 'Working · ${Elapsed.compact(now.difference(at))}';
         return Text(
           text,
           maxLines: 1,
@@ -125,25 +110,15 @@ class _Roster extends StatelessWidget {
     select: (s) => s.subagents,
     same: (a, b) => a.length == b.length && _same(a, b),
     builder: (context, entries) {
-      final ds = context.ds;
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(4, 8, 4, 12),
+      return SheetScaffold(
+        title: 'Subagents',
+        kind: SheetKind.list,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: Semantics(
-                header: true,
-                child: Text('Subagents', style: Type.label.copyWith(color: ds.textSecondary)),
-              ),
-            ),
             if (entries.isEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-                child: Text('None started yet.', style: Type.secondary.copyWith(color: ds.textMuted)),
-              ),
+              const EmptyState.inline('None started yet.', padding: EdgeInsets.fromLTRB(Gap.lg, Gap.xs, Gap.lg, Gap.md)),
             for (final e in entries) _SubagentRow(session: session, entry: e),
           ],
         ),
@@ -176,7 +151,7 @@ class _SubagentRow extends StatelessWidget {
   static String _state(SubagentState s) => switch (s) {
     SubagentState.waiting => 'Waiting',
     SubagentState.running => 'Running',
-    SubagentState.finished => 'Finished',
+    SubagentState.finished => 'Done',
     SubagentState.failed => 'Failed',
   };
 
@@ -193,10 +168,10 @@ class _SubagentRow extends StatelessWidget {
     final tools = info.recentTools.isEmpty ? null : info.recentTools.join(' · ');
     final detail = [
       _state(entry.state),
-      if (info.toolCount > 0) '${info.toolCount} ${info.toolCount == 1 ? 'tool' : 'tools'}',
+      if (info.toolCount > 0) countOf(info.toolCount, 'tool'),
     ].join(' · ');
     final parent = session;
-    return PressBuilder(
+    return PressRow(
       onTap: parent is ObservedAgentSession
           ? () {
               final navigator = Navigator.of(context)..pop();
@@ -204,14 +179,8 @@ class _SubagentRow extends StatelessWidget {
               unawaited(openSubagentChat(navigator.context, parent, entry.name));
             }
           : null,
-      button: true,
-      builder: (context, pressed) => Container(
-        constraints: const BoxConstraints(minHeight: kMinTap),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: pressed ? ds.fill : Colors.transparent,
-          borderRadius: BorderRadius.circular(Radii.row),
-        ),
+      minHeight: kMinTap,
+      padding: const EdgeInsets.symmetric(horizontal: Gap.lg - PressRow.inset, vertical: Gap.sm),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -226,7 +195,7 @@ class _SubagentRow extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: Gap.sm),
-                Text(detail, style: Type.caption.copyWith(color: color, fontWeight: FontWeight.w600)),
+                Text(detail, style: Type.captionStrong.copyWith(color: color)),
               ],
             ),
             if (info.assignment.isNotEmpty)
@@ -241,10 +210,9 @@ class _SubagentRow extends StatelessWidget {
                 tools,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontFamily: monoFamily, fontSize: 11.5, color: ds.textMuted),
+                style: Mono.small.copyWith(color: ds.textMuted),
               ),
           ],
-        ),
       ),
     );
   }

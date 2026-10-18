@@ -6,11 +6,7 @@ import 'package:herdr_mobile/data/models/machine_profile.dart';
 import 'package:herdr_mobile/data/repositories/machine_connection.dart';
 import 'package:herdr_mobile/data/repositories/pane_previews.dart';
 import 'package:herdr_mobile/data/services/herdr_transport.dart';
-import 'package:herdr_mobile/ui/core/chrome.dart';
-import 'package:herdr_mobile/ui/core/controls.dart';
-import 'package:herdr_mobile/ui/core/rows.dart';
-import 'package:herdr_mobile/ui/core/status_panel.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_card.dart';
 import 'package:herdr_mobile/ui/features/agents/agents_screen.dart';
 import 'package:herdr_mobile/ui/features/machines/machine_form_screen.dart';
@@ -194,8 +190,8 @@ void main() {
       ]);
       await pumpUi(tester, h, height: _tall);
 
-      expect(_row('claude'), findsOneWidget);
-      expect(_row('codex'), findsOneWidget);
+      expect(_row('Claude Code'), findsOneWidget);
+      expect(_row('Codex'), findsOneWidget);
       await teardownUi(tester, h);
     });
 
@@ -235,8 +231,8 @@ void main() {
         await teardownUi(tester, h);
       }
 
-      await expectLine(['a'], 'claude · main');
-      await expectLine(['a', 'b'], 'claude · box-a · main');
+      await expectLine(['a'], 'Claude Code · main');
+      await expectLine(['a', 'b'], 'Claude Code · box-a · main');
     });
 
     testWidgets('120 agents in one section: counted in full, last row clears the tab bar',
@@ -410,7 +406,7 @@ void main() {
       h.network.goOffline();
       await settle(tester);
 
-      expect(find.textContaining('No network'), findsOneWidget);
+      expect(find.textContaining('Offline'), findsOneWidget);
       expect(_row('Needs a decision'), findsOneWidget);
       // The row's own Opacity and no second one on the glyph: dimmed twice,
       // the status shape is all but invisible.
@@ -513,8 +509,9 @@ void main() {
         of: find.widgetWithText(SectionLabel, 'Working'),
         matching: find.byType(RotationTransition),
       );
-      expect(tester.widget<RotationTransition>(chevron).turns.value, -0.25,
-          reason: 'the chevron must not spin to catch up');
+      // Folded, the caret points right (no turn).
+      expect(tester.widget<RotationTransition>(chevron).turns.value, 0,
+          reason: 'the caret must not spin to catch up');
       await teardownUi(tester, h);
     });
 
@@ -649,7 +646,7 @@ void main() {
       await pumpUi(tester, h, height: _tall);
 
       final label = tester.getSemantics(_body('Pick a strategy')).label;
-      for (final part in ['Pick a strategy', 'Needs you', 'claude']) {
+      for (final part in ['Pick a strategy', 'Needs you', 'Claude Code']) {
         expect(RegExp(RegExp.escape(part)).allMatches(label), hasLength(1),
             reason: '"$part" in: $label');
       }

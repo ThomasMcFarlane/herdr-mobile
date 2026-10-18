@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import '../../core/rows_snapshot.dart';
+import '../../render/terminal/rows_snapshot.dart';
 
 /// Keeps the rows that scrolled off the top of a sliding `pane.read` window.
 ///

@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import 'controls.dart';
+import 'press.dart';
 import 'motion.dart';
 import 'tokens.dart';
 
@@ -29,10 +29,73 @@ class Hairline extends StatelessWidget {
   }
 }
 
+/// A pressable row: the one pressed look for every row in the app.
+///
+/// The highlight is a soft rounded [Ds.pressTint] fill inset [Gap.sm] from the
+/// screen edge (the Notion row); [selected] rows rest on [Ds.accentWash].
+/// [padding] sits inside the highlight, on top of the inset that brings the
+/// content back to the page gutter.
+class PressRow extends StatelessWidget {
+  const PressRow({
+    super.key,
+    required this.child,
+    this.onTap,
+    this.onLongPress,
+    this.minHeight = 56,
+    this.padding = EdgeInsets.zero,
+    this.semanticLabel,
+    this.selected = false,
+    this.button,
+  });
+
+  final Widget child;
+  final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+  final double minHeight;
+  final EdgeInsetsGeometry padding;
+  final String? semanticLabel;
+  final bool selected;
+
+  /// Announce as a button though inert: a dimmed action row ([PressBuilder.button]).
+  final bool? button;
+
+  /// Distance of the highlight from the screen edge.
+  static const inset = Gap.sm;
+
+  @override
+  Widget build(BuildContext context) {
+    final ds = context.ds;
+    return PressBuilder(
+      onTap: onTap,
+      onLongPress: onLongPress,
+      semanticLabel: semanticLabel,
+      selected: selected ? true : null,
+      button: button,
+      builder: (context, pressed) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: inset),
+        child: AnimatedContainer(
+          duration: Motion.pressing(pressed),
+          curve: Motion.easeOut,
+          constraints: BoxConstraints(minHeight: minHeight),
+          alignment: AlignmentDirectional.centerStart,
+          decoration: BoxDecoration(
+            color: selected
+                ? (pressed ? ds.accentWashPressed : ds.accentWash)
+                : (pressed ? ds.pressTint : ds.pressTint.withAlpha(0)),
+            borderRadius: BorderRadius.circular(Radii.sm),
+          ),
+          child: Padding(padding: padding, child: child),
+        ),
+      ),
+    );
+  }
+}
+
 /// A flat list row: leading glyph, title, quiet secondary lines, trailing.
 ///
-/// No card and no elevation. Pressed state is a soft rounded highlight inset
-/// from the screen edge (the Notion row), and the divider starts at the text.
+/// No card and no elevation. Pressed state comes from [PressRow]. Dividers are
+/// not the row's: [RowList] derives them, or a caller places a [Hairline] at
+/// [textIndent].
 ///
 /// The text column starts at 64 on the page grid (gutter 20 + [leadingExtent]
 /// 32 + gap 12). A small [leading] (a status glyph) is centred on the TITLE
@@ -53,12 +116,11 @@ class ListRow extends StatelessWidget {
     this.trailing,
     this.onTap,
     this.onLongPress,
-    this.divider = true,
     this.dim = false,
     this.titleMaxLines = 2,
     this.subtitleMaxLines = 1,
     this.subtitleColor,
-    this.padding = const EdgeInsets.symmetric(vertical: 12),
+    this.padding = const EdgeInsets.symmetric(vertical: Gap.md),
     this.semanticLabel,
   });
 
@@ -78,7 +140,6 @@ class ListRow extends StatelessWidget {
   final Widget? trailing;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
-  final bool divider;
 
   /// Stale data: whole row at reduced opacity.
   final bool dim;
@@ -96,14 +157,18 @@ class ListRow extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final String? semanticLabel;
 
-  static const _leadingGap = 12.0;
-  static const _inset = 8.0;
-  static const _minHeight = 56.0;
+  static const _leadingGap = Gap.md;
+
+  /// Opacity of a stale row.
+  static const _dimOpacity = 0.55;
+
+  /// Where the text column starts: the divider under a row starts here.
+  static double textIndent({bool hasLeading = true, double leadingExtent = 32}) =>
+      Gap.gutter + (hasLeading ? leadingExtent + _leadingGap : 0);
 
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
-    final indent = Gap.gutter + (leading == null ? 0 : leadingExtent + _leadingGap);
     final titleLine = MediaQuery.textScalerOf(context).scale(Type.row.fontSize!) * Type.row.height!;
     final text = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -117,7 +182,7 @@ class ListRow extends StatelessWidget {
         ),
         if (subtitle != null && subtitle!.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(top: 2),
+            padding: const EdgeInsets.only(top: Gap.hair),
             child: Text(
               subtitle!,
               maxLines: subtitleMaxLines,
@@ -127,7 +192,7 @@ class ListRow extends StatelessWidget {
           ),
         if (subtitle2 != null && subtitle2!.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(top: 1),
+            padding: const EdgeInsets.only(top: Gap.hair),
             child: Text(
               subtitle2!,
               maxLines: 1,
@@ -137,54 +202,35 @@ class ListRow extends StatelessWidget {
           ),
       ],
     );
-    Widget row = Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        PressBuilder(
-          onTap: onTap,
-          onLongPress: onLongPress,
-          semanticLabel: semanticLabel,
-          builder: (context, pressed) => Padding(
-            padding: const EdgeInsets.symmetric(horizontal: _inset),
-            child: AnimatedContainer(
-              duration: Motion.pressing(pressed),
-              curve: Motion.easeOut,
-              constraints: const BoxConstraints(minHeight: _minHeight),
-              alignment: Alignment.centerLeft,
-              decoration: BoxDecoration(
-                color: pressed ? ds.fill : Colors.transparent,
-                borderRadius: BorderRadius.circular(Radii.row),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: Gap.gutter - _inset).add(padding),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Row(
-                      crossAxisAlignment: leadingOnTitle ? CrossAxisAlignment.start : CrossAxisAlignment.center,
-                      children: [
-                        if (leading != null) ...[
-                          if (leadingOnTitle)
-                            _TitleLineSlot(width: leadingExtent, lineHeight: titleLine, child: leading!)
-                          else
-                            SizedBox(width: leadingExtent, child: Center(child: leading)),
-                          const SizedBox(width: _leadingGap),
-                        ],
-                        Expanded(child: text),
-                      ],
-                    ),
-                  ),
-                  if (trailing != null) ...[const SizedBox(width: 12), trailing!],
+    Widget row = PressRow(
+      onTap: onTap,
+      onLongPress: onLongPress,
+      semanticLabel: semanticLabel,
+      padding: const EdgeInsets.symmetric(horizontal: Gap.gutter - PressRow.inset).add(padding),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Row(
+              crossAxisAlignment: leadingOnTitle ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+              children: [
+                if (leading != null) ...[
+                  if (leadingOnTitle)
+                    _TitleLineSlot(width: leadingExtent, lineHeight: titleLine, child: leading!)
+                  else
+                    SizedBox(width: leadingExtent, child: Center(child: leading)),
+                  const SizedBox(width: _leadingGap),
                 ],
-              ),
+                Expanded(child: text),
+              ],
             ),
           ),
-        ),
-        if (divider) Hairline(indent: indent, endIndent: 0),
-      ],
+          if (trailing != null) ...[const SizedBox(width: Gap.md), trailing!],
+        ],
+      ),
     );
     // An Opacity layer only for the rare stale row, never for the usual one.
-    if (dim) row = Opacity(opacity: 0.55, child: row);
+    if (dim) row = Opacity(opacity: _dimOpacity, child: row);
     return row;
   }
 }
@@ -261,7 +307,8 @@ class _RenderTitleLineSlot extends RenderShiftedBox {
 }
 
 /// Section header in sentence case ("Needs you  2"), optionally collapsible
-/// with a rotating chevron, like Notion's "Recents ⌄".
+/// with a [Caret], like Notion's "Recents ⌄". The one section-header style:
+/// lists and forms alike.
 ///
 /// Announced as a heading; a collapsible one is also a button that reports its
 /// expanded state.
@@ -299,13 +346,13 @@ class SectionLabel extends StatelessWidget {
           // the label's air above and below shrinks to keep the rhythm.
           padding: EdgeInsets.fromLTRB(
             Gap.gutter,
-            trailing == null ? 22 : 8,
+            trailing == null ? Gap.xl : Gap.sm,
             Gap.gutter,
-            trailing == null ? 6 : 0,
+            trailing == null ? Gap.sm : 0,
           ),
           child: Row(
             children: [
-              if (leading != null) ...[leading!, const SizedBox(width: 8)],
+              if (leading != null) ...[leading!, const SizedBox(width: Gap.sm)],
               // Label, count and chevron share the leftover width; only the label
               // yields (ellipsis), so counts and the chevron are never truncated.
               Expanded(
@@ -317,33 +364,25 @@ class SectionLabel extends StatelessWidget {
                         curve: Motion.easeOut,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Type.label.copyWith(
-                          color: pressed ? ds.text : ds.textSecondary,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: Type.labelStrong.copyWith(color: pressed ? ds.text : ds.textSecondary),
                         child: Text(label),
                       ),
                     ),
                     if (count != null) ...[
-                      const SizedBox(width: 6),
+                      const SizedBox(width: Gap.sm),
                       Text(
                         '$count',
                         style: Type.label.copyWith(color: ds.textMuted, fontFeatures: Type.tabular),
                       ),
                     ],
                     if (expanded != null) ...[
-                      const SizedBox(width: 4),
-                      AnimatedRotation(
-                        turns: expanded! ? 0 : -0.25,
-                        duration: Motion.reduced(context) ? Duration.zero : Motion.expand,
-                        curve: Motion.easeOut,
-                        child: Icon(LucideIcons.chevronDown, size: 14, color: ds.textTertiary),
-                      ),
+                      const SizedBox(width: Gap.xs),
+                      Caret(open: expanded!),
                     ],
                   ],
                 ),
               ),
-              if (trailing != null) ...[const SizedBox(width: 8), trailing!],
+              if (trailing != null) ...[const SizedBox(width: Gap.sm), trailing!],
             ],
           ),
         ),
@@ -370,12 +409,8 @@ class Collapse extends StatefulWidget {
 class _CollapseState extends State<Collapse> with SingleTickerProviderStateMixin {
   late final AnimationController _controller =
       AnimationController(vsync: this, value: widget.open ? 1 : 0);
-  late final Animation<double> _progress = CurvedAnimation(
-    parent: _controller,
-    curve: Motion.easeOut,
-    // Closing is an ease-out in time too, not the opening curve played backwards.
-    reverseCurve: Motion.easeOut.flipped,
-  );
+  // Closing is an ease-out in time too, not the opening curve played backwards.
+  late final CurvedAnimation _progress = Motion.curved(_controller);
 
   /// Lets the child move between wrappers (clip/fade while animating, bare when
   /// fully open) without being rebuilt from scratch.
@@ -385,12 +420,13 @@ class _CollapseState extends State<Collapse> with SingleTickerProviderStateMixin
   void didUpdateWidget(Collapse old) {
     super.didUpdateWidget(old);
     if (old.open == widget.open) return;
-    _controller.duration = Motion.reduced(context) ? Duration.zero : Motion.expand;
+    _controller.duration = Motion.of(context, Motion.expand);
     widget.open ? _controller.forward() : _controller.reverse();
   }
 
   @override
   void dispose() {
+    _progress.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -427,6 +463,9 @@ class _CollapseState extends State<Collapse> with SingleTickerProviderStateMixin
 /// Quiet empty state: text first, one optional action. The art is an [icon]
 /// on a soft tile, or a [mark] widget in its place (the brand mark on first
 /// run).
+///
+/// [EmptyState.inline] is the small form: one muted line where a list in a
+/// sheet or a section has nothing yet (`None started yet.`).
 class EmptyState extends StatelessWidget {
   const EmptyState({
     super.key,
@@ -435,7 +474,20 @@ class EmptyState extends StatelessWidget {
     required this.title,
     required this.message,
     this.action,
-  }) : assert((icon == null) != (mark == null), 'an icon or a mark, not both');
+  }) : assert((icon == null) != (mark == null), 'an icon or a mark, not both'),
+       padding = null;
+
+  /// One line in place of a list: [title] in muted secondary text. [padding]
+  /// defaults to a sheet's sides.
+  const EmptyState.inline(
+    String text, {
+    super.key,
+    EdgeInsetsGeometry this.padding = const EdgeInsets.fromLTRB(Gap.lg, Gap.sm, Gap.lg, Gap.lg),
+  }) : title = text,
+       message = '',
+       icon = null,
+       mark = null,
+       action = null;
 
   final IconData? icon;
   final Widget? mark;
@@ -443,9 +495,18 @@ class EmptyState extends StatelessWidget {
   final String message;
   final Widget? action;
 
+  /// Set only for [EmptyState.inline].
+  final EdgeInsetsGeometry? padding;
+
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
+    if (padding case final inline?) {
+      return Padding(
+        padding: inline,
+        child: Text(title, style: Type.secondary.copyWith(color: ds.textMuted)),
+      );
+    }
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 36),
@@ -460,7 +521,7 @@ class EmptyState extends StatelessWidget {
                     height: 52,
                     decoration: BoxDecoration(
                       color: ds.fill,
-                      borderRadius: BorderRadius.circular(Radii.emptyTile),
+                      borderRadius: BorderRadius.circular(Radii.md),
                     ),
                     child: Icon(icon, size: 24, color: ds.textSecondary),
                   ),
@@ -489,4 +550,23 @@ String cwdTail(String? cwd) {
   if (cwd == null || cwd.isEmpty) return '';
   final parts = cwd.split('/').where((s) => s.isNotEmpty);
   return parts.isEmpty ? '/' : parts.last;
+}
+
+/// The small disclosure caret of a fold: points right when folded, down when
+/// open, turning over [Motion.expand] (a rotation, nothing else moves). Still
+/// at rest once it has turned; reduced motion turns it at once.
+class Caret extends StatelessWidget {
+  const Caret({super.key, required this.open});
+
+  final bool open;
+
+  @override
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: AnimatedRotation(
+      turns: open ? 0.25 : 0,
+      duration: Motion.of(context, Motion.expand),
+      curve: Motion.easeOut,
+      child: Icon(LucideIcons.chevronRight, size: IconSize.row, color: context.ds.textTertiary),
+    ),
+  );
 }

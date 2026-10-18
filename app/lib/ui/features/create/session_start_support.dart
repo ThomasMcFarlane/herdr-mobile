@@ -7,7 +7,7 @@ import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/session_launcher.dart';
 import '../../../data/services/herdr_api.dart';
 import '../../../data/services/herdr_transport.dart';
-import '../../core/toast.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// Most working directories offered as one-tap suggestions.
 const maxRecentFolders = 8;
@@ -58,19 +58,19 @@ NewSessionError describeLaunchFailure(Object error, MachineConnection machine, S
     HerdrUnsupportedException() => NewSessionError(
         'Not supported by this herdr',
         'herdr${machine.snapshot.version.isEmpty ? '' : ' ${machine.snapshot.version}'} on $name '
-            "can't create workspaces from here. Update herdr on that machine to start sessions from your phone.",
+            'can’t create workspaces from here. Update herdr on that machine to start sessions from your phone.',
       ),
     FolderNotFoundException() => NewSessionError(
         'Folder not found',
-        "$folder doesn't exist on $name. Pick a folder that does.",
+        '$folder doesn’t exist on $name. Pick a folder that does.',
       ),
-    HerdrApiException(:final message) => NewSessionError("Couldn't start the session", message),
-    HerdrTransportException(:final message) => NewSessionError("Couldn't start the session", message),
+    HerdrApiException(:final message) => NewSessionError('Couldn’t start the session', message),
+    HerdrTransportException(:final message) => NewSessionError('Couldn’t start the session', message),
     TimeoutException() => const NewSessionError(
-        "Couldn't start the session",
+        'Couldn’t start the session',
         'The machine did not answer in time.',
       ),
-    _ => NewSessionError("Couldn't start the session", '$error'),
+    _ => NewSessionError('Couldn’t start the session', '$error'),
   };
 }
 

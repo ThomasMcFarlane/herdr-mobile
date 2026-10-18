@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:herdr_mobile/ui/core/terminal_view.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/render/terminal/terminal_view.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'support/terminal_rows.dart';
 
 String _lines(int from, int to) =>

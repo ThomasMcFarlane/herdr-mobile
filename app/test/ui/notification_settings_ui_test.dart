@@ -8,8 +8,7 @@ import 'package:herdr_mobile/data/repositories/app_settings.dart';
 import 'package:herdr_mobile/data/repositories/notification_settings.dart';
 import 'package:herdr_mobile/data/repositories/terminal_settings.dart';
 import 'package:herdr_mobile/data/services/notifier.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
-import 'package:herdr_mobile/ui/features/settings/app_switch.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/settings/settings_screen.dart';
 import 'package:provider/provider.dart';
 

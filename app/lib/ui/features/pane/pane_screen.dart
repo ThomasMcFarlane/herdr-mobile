@@ -22,16 +22,10 @@ import '../../../data/repositories/terminal_prompt.dart';
 import '../../../data/repositories/terminal_settings.dart';
 import '../../../data/services/dictation.dart';
 import '../../../data/services/image_prep.dart' show PreparedImage, prepareImage;
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/glyphs.dart';
-import '../../core/motion.dart';
-import '../../core/rows.dart';
-import '../../core/status_panel.dart';
-import '../../core/terminal_links.dart';
-import '../../core/terminal_view.dart';
-import '../../core/theme.dart';
-import '../../core/toast.dart';
+import '../../../data/words/agent_names.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../render/terminal/terminal_links.dart';
+import '../../render/terminal/terminal_view.dart';
 import '../agents/agent_navigation.dart';
 import '../agents/agent_swipe.dart';
 import '../agent_session/attach_chips.dart';
@@ -58,10 +52,6 @@ import '../composer/command_model.dart';
 import '../composer/command_palette.dart';
 import '../composer/command_hint.dart';
 import '../composer/unknown_command.dart';
-
-/// Screens shorter than this (a phone on its side) get a lower bar and no
-/// docked answers: a question and its chips would leave the terminal a few rows.
-const shortScreen = 520.0;
 
 /// One agent's terminal, one screen: the slim bar ([PaneTopBar]), then the
 /// pane's banner, terminal, answer dock, quick keys and composer. A swipe on
@@ -183,9 +173,7 @@ class _PaneScreenState extends State<PaneScreen> {
     return changed;
   }
 
-  void _toggleWrap() {
-    Haptics.tick();
-    final next = !_settings.wrap;
+  void _setWrap(bool next) {
     _vm?.setWrap(next);
     unawaited(_settings.setWrap(next));
   }
@@ -238,6 +226,19 @@ class _PaneScreenState extends State<PaneScreen> {
       showActionSheet(
         context,
         title: title,
+        // Fit to the screen or keep the agent's exact layout: a setting
+        // changed now and then, so it lives here, not in the bar.
+        footer: [
+          ListenableBuilder(
+            listenable: _settings,
+            builder: (context, _) => SwitchRow(
+              title: 'Wrap lines',
+              value: _settings.wrap,
+              enabled: _vm != null,
+              onChanged: _setWrap,
+            ),
+          ),
+        ],
         actions: [
           // An agent whose log the app can follow has its chat as well.
           if (machine != null && observed != null && observed.supports(machine, _paneId))
@@ -252,12 +253,12 @@ class _PaneScreenState extends State<PaneScreen> {
           SheetAction(
             label: 'Copy title',
             icon: LucideIcons.copy,
-            onTap: () => unawaited(Clipboard.setData(ClipboardData(text: title))),
+            onTap: () => copyText(context, title, what: 'Title copied'),
           ),
           SheetAction(
             label: 'Copy pane id $_paneId',
             icon: LucideIcons.hash,
-            onTap: () => unawaited(Clipboard.setData(ClipboardData(text: _paneId))),
+            onTap: () => copyText(context, _paneId, what: 'Pane id copied'),
           ),
         ],
       ),
@@ -276,12 +277,9 @@ class _PaneScreenState extends State<PaneScreen> {
               bar: PaneTopBar(
                 title: _title,
                 viewModel: vm,
-                actions: PaneBarActions(
-                  machine: machine,
-                  onToggleWrap: vm == null ? null : _toggleWrap,
-                  onOpenFiles: machine == null ? null : () => _openFiles(machine),
-                  onMore: _showActions,
-                ),
+                machine: machine,
+                onOpenFiles: machine == null ? null : () => _openFiles(machine),
+                onMore: _showActions,
               ),
             ),
             Expanded(child: _page ?? const _MissingMachine()),
@@ -317,7 +315,7 @@ class _MissingMachine extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(LucideIcons.serverOff, size: 28, color: ds.textTertiary),
+            Icon(HerdrIcons.machinesOff, size: IconSize.empty, color: ds.textTertiary),
             const SizedBox(height: Gap.md),
             Text(
               'This machine is no longer saved',
@@ -506,6 +504,7 @@ class _PaneViewState extends State<_PaneView> {
   /// Enter still go through: those are deliberate moves in the agent's menu.
   bool _refusesEnter(List<String> keys) {
     if (!_dockAsking.value || keys.length != 1 || keys.single != 'enter') return false;
+    Haptics.failed();
     showToast(context, 'Pick an answer above');
     return true;
   }
@@ -547,10 +546,7 @@ class _PaneViewState extends State<_PaneView> {
     final text = _input.text;
     final chips = _attachments.items;
     if (text.trim().isEmpty && chips.isEmpty) {
-      if (_refusesEnter(const ['enter'])) {
-        Haptics.tick();
-        return;
-      }
+      if (_refusesEnter(const ['enter'])) return;
       _input.clear();
       // The haptic follows the outcome: a heavy one for a failure, so it
       // cannot be mistaken for the click of a send that went out.
@@ -740,7 +736,9 @@ class _PaneLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     final compact = compactLayout(context);
     final top = MediaQuery.paddingOf(context).top;
-    final short = MediaQuery.sizeOf(context).height < shortScreen;
+    // A phone on its side: no docked answers, a question and its chips
+    // would leave the terminal a few rows.
+    final short = AppTopBar.isShort(context);
     return Column(
         children: [
           banner,
@@ -770,7 +768,7 @@ class _PaneLayout extends StatelessWidget {
           SafeArea(
             top: false,
             child: Padding(
-              padding: EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, compact ? Gap.xs : Gap.sm),
+              padding: EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: compact ? Gap.xs : Gap.sm),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -812,7 +810,7 @@ class _TerminalPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(Radii.panel);
+    final radius = BorderRadius.circular(Radii.md);
     final palette = context.terminal;
     return DecoratedBox(
       position: DecorationPosition.foreground,
@@ -866,6 +864,7 @@ class _TerminalPanel extends StatelessWidget {
                       nearTop: s.nearTop,
                       following: s.following,
                     ),
+                    // design-lint: allow(raw-type) the terminal's own font size, which the person sets
                     fontSize: fontSize,
                     wrap: wrap,
                     onFontSizeChanged: settings.previewFontSize,
@@ -874,11 +873,13 @@ class _TerminalPanel extends StatelessWidget {
                   if (closed || stale)
                     IgnorePointer(
                       child: ColoredBox(
+                        // design-lint: allow(raw-alpha) a veil of the terminal's own background (no Ds role: the terminal palette is the person's)
                         color: palette.background.withValues(alpha: 0.6),
                       ),
                     ),
                   // Inside the 1 px outline, which is drawn over the content.
                   Padding(
+                    // design-lint: allow(raw-size) the terminal's 1 px outline, not a spacing step
                     padding: const EdgeInsets.fromLTRB(1, 0, 1, 1),
                     child: LiveEdge(
                       stale: stale,
@@ -984,7 +985,7 @@ class _BannerState extends State<_Banner> {
               padding: const EdgeInsets.fromLTRB(Gap.lg, Gap.xs, Gap.lg, Gap.xs),
               child: StatusStrip(
                 color: shown.color,
-                leading: Icon(shown.icon, size: 18, color: shown.color),
+                leading: Icon(shown.icon, size: IconSize.bar, color: shown.color),
                 title: shown.title,
                 detail: shown.detail,
                 action: shown.retry
@@ -1042,14 +1043,17 @@ class _Composer extends StatelessWidget {
     );
     final sending = context.select<PaneViewModel, bool>((v) => v.sending);
     final enabled = state == LinkState.online && open;
-    final hint = switch (state) {
-      LinkState.online => open ? 'Message ${agent ?? 'pane'}…' : 'Pane closed',
-      LinkState.connecting => 'Connecting…',
-      LinkState.approval => 'Waiting for sign-in approval',
-      LinkState.reconnecting || LinkState.offline => 'Offline — reconnecting',
-      LinkState.attention => 'Needs attention — see above',
-      LinkState.disabled => 'Machine disabled',
-    };
+    final hint = composerHint(
+      agent == null || agent.isEmpty ? null : agentName(agent),
+      linkWord: switch (state) {
+        LinkState.online => open ? null : 'Pane closed',
+        LinkState.connecting => 'Connecting…',
+        LinkState.approval => 'Waiting for sign-in approval',
+        LinkState.reconnecting || LinkState.offline => 'Offline · reconnecting',
+        LinkState.attention => 'Needs attention · see above',
+        LinkState.disabled => 'Machine disabled',
+      },
+    );
     return ComposerFrame(
       // An agent's prompt takes pictures and files, as the chat's does; a
       // shell's line takes none, as it takes no dictation. In the compact
@@ -1094,7 +1098,7 @@ class _Composer extends StatelessWidget {
             return ComposerRoundButton(
               label: dictate.listening ? 'Stop dictating' : 'Dictate',
               icon: LucideIcons.mic,
-              iconSize: 18,
+              iconSize: IconSize.bar,
               ready: true,
               quiet: !dictate.listening,
               onPressed: () => unawaited(dictate.toggle()),
@@ -1106,7 +1110,7 @@ class _Composer extends StatelessWidget {
           return ComposerRoundButton(
             label: 'Send',
             icon: LucideIcons.arrowUp,
-            iconSize: 18,
+            iconSize: IconSize.bar,
             ready: enabled && !sending && hasContent && attachments.canSend,
             busy: sending,
             onPressed: onSubmit,

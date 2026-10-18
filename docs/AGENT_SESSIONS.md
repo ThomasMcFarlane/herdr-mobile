@@ -660,7 +660,7 @@ session per keeper of every online machine.
   unreviewed when an attach becomes whole is kept as this device's own review
   (the load clears the keeper's flag): an Undo of the screen's review would
   otherwise be undone by the next listing. The screen reviews only from the
-  live replay, never from a saved copy (DESIGN.md, "Opening is instant").
+  live replay, never from a saved copy (`docs/screens/session.md`, "Opening is instant").
 - **Requests.** Nothing is answered except through `answerPermission` /
   `answerQuestion`; cancel, a dropped link, `end` and `dispose` answer as
   cancelled; there is no timeout.
@@ -716,7 +716,7 @@ neither changes the protocol.
   that arrives after the replay began is dropped; a copy of another ACP session
   (the keeper started over) is not shown. `AgentSessionView.cachedAsOf` is the
   time the copy was last right, non-null until the live replay replaced it; the
-  link strip says `Showing the copy saved at 14:02. Nothing here can be
+  link strip says `Showing the copy saved today at 14:02. Nothing here can be
   answered.` for it in every state but live (under `Updating…` while connecting).
   **A saved copy is not a live request**: requests are not in a log, they come
   from the keeper with a live attach, so a copy has none; `PromptDock` shows
@@ -807,7 +807,7 @@ its own store (omp `~/.omp/agent/sessions`, Claude `~/.claude/projects`, Codex
 What makes a frame of streaming cost the same at row 20 and at row 2 000.
 The widgets that consume it are the live row
 of the transcript (`LiveMessageRow`, `LiveMessageModel`, `TranscriptPlan`;
-`docs/DESIGN.md`, "Agent session screen (ACP)"); this is the data layer's contract.
+`docs/screens/session.md`); this is the data layer's contract.
 
 - **The live slot.** The message streaming in right now keeps the end of its
   text in a `LiveText` (`data/acp/live_text.dart`: append-only, pieces kept as
@@ -842,7 +842,7 @@ of the transcript (`LiveMessageRow`, `LiveMessageModel`, `TranscriptPlan`;
   and only the live row listens to the text.
 - **Flush.** `AcpAgentSession` marks itself dirty on every change and a
   `FlushScheduler` (`data/streaming/flush_scheduler.dart`) decides when the
-  listeners are told: `FrameFlush` (`ui/core/frame_flush.dart`, injected by
+  listeners are told: `FrameFlush` (`ui/support/frame_flush.dart`, injected by
   `bootApp` through `AgentSessionRepository(flush:)`) runs the flush as a
   transient frame callback, **at the start of the next frame, before build**, so
   the notification lands in the frame the chunks belong to and never a frame
@@ -897,7 +897,7 @@ of the transcript (`LiveMessageRow`, `LiveMessageModel`, `TranscriptPlan`;
 
 The data half of the turn model: pure Dart in `app/lib/data/acp/turns/` (barrel `turns.dart`) plus additive
 changes in `session_state.dart` and `acp_client.dart`. The transcript consumes it
-(`docs/DESIGN.md` "Turns": `TranscriptPlan` over `turnsOf`, the fold line, quiet
+(`docs/screens/session.md` "Turns": `TranscriptPlan` over `turnsOf`, the fold line, quiet
 tool rows with `toolSummary` and `groupTools`, the Changed card, `StatusLine`
 over `activityOf`). Tests: `test/acp/turns_test.dart`, `test/acp/turn_state_test.dart`, folded
 from the recorded traces with their own clock (`test/acp/support/trace_state.dart`).
@@ -1023,7 +1023,7 @@ from the recorded traces with their own clock (`test/acp/support/trace_state.dar
   line, not this.
 - **Status line** (`activity.dart`): `activityOf(state, now:)` is null when no
   turn runs, else, in order: `waiting` (a call with a pending permission, its
-  summary; or `Waiting for you` for a question), `tool` (the latest call that
+  summary; or `Needs you` for a question), `tool` (the latest call that
   is pending or in progress, its `ToolSummary.plain`; Claude never says
   `in_progress`), `thought` (the first sentence of the latest thought, only
   while it is the last thing of the turn: Markdown marks removed, cut at the
@@ -1214,7 +1214,7 @@ Everything is in `AgentSessionState`
   roster stays `subagents`). Read `run.items` for the drill-in, `run.liveTextOf` for the
   streaming message, `origin` on `state.pending` for the dock. A disconnected session
   leaves its runs as they were: the UI must not show "running" for it. The status line
-  (`activityOf`) says "Waiting for you" for a child's permission (the child's call is not
+  (`activityOf`) says "Needs you" for a child's permission (the child's call is not
   in the turn); `origin` names who.
   Unmodelled: the adapter's `subagent_spawned` / `subagent_state_update`
   (sent only to a client that advertises `subagents`, which this app never does)
@@ -1434,7 +1434,7 @@ panel say so and give the token steps (`claude setup-token`,
 `CLAUDE_CODE_OAUTH_TOKEN` in `~/.zshenv`, a new session) instead of another
 sign-in. The marker is a guess from the environment, not a look into the
 Keychain. A keeper that runs as the desktop job is not marked, so an auth error
-from it gets the ordinary `Sign in on the host` panel: a login made in a herdr
+from it gets the ordinary `Sign in on the machine` panel: a login made in a herdr
 terminal is in the same session and the job reads it.
 
 Checked: the real start, a working keeper with the starter's environment, the job
@@ -1451,7 +1451,7 @@ phone.
 
 An ACP prompt can carry an image as bytes, but any other phone file has to be
 UPLOADED to the host and handed to the agent as a `resource_link` with its host
-path. Data side only; the attach sheet is another piece (`docs/DESIGN.md`).
+path. Data side only; the attach sheet is another piece (`docs/screens/attach.md`).
 
 - **Where it lands.** `reserveInboxPath(machine, sessionKey:, fileName:)`
   (`host_inbox.dart`) returns `<home>/.herdr-mobile/inbox/<sha1(sessionKey)[0:12]>/<yyyyMMdd-HHmmss>-<safe name>`,
@@ -1539,7 +1539,7 @@ transport). One slim bar (status glyph by phase, title over
 plan header (`1 of 3` and the current step), a virtualized transcript stuck to
 the bottom with Jump to latest, the permission dock or question form, and the
 composer. Items: user message as a quiet block (folds after 8 lines), agent
-message as Markdown (`ui/core/markdown/`, DESIGN.md "Markdown": code blocks with
+message as Markdown (`ui/render/markdown/`, `docs/screens/markdown.md`: code blocks with
 syntax colour and a copy button, tables, tappable paths and links through
 `AgentMdScope`), thoughts collapsed to "Thinking" (Markdown inside), tool calls as one-line
 rows that expand (diff with +/- colours, terminal output capped to the last 40
@@ -1820,7 +1820,7 @@ the app goes to the background. `sinceLeft(key, state)` returns `SinceLeft`
   `steps == 0`, `needsYou == 1`, `firstUnseenKey == null`.
 
 **Who reads it** (the session screen, `app/lib/ui/features/agent_session/`, drawn
-as DESIGN.md "What a decision shows" says): the permission dock and the
+as `docs/screens/session.md` "What a decision shows" says): the permission dock and the
 question form call `permissionEvidence` / `planApprovalEvidence` once per
 request (the panel is keyed by it) with `session.state.items` at that moment;
 `SessionChipsRow` (above the composer) reads `sessionChipsOf`;

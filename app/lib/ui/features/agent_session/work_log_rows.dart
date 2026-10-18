@@ -3,14 +3,11 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/acp/session_state.dart';
 import '../../../data/acp/turns/turns.dart';
-import '../../core/controls.dart';
-import '../../core/markdown/markdown.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../render/markdown/markdown.dart';
 import 'code_panel.dart';
-import 'log_atoms.dart';
 import 'transcript_rows.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// The folded work log of a finished turn, one line:
 /// `▸ Worked 42s · 3 files · 4 commands · 1 failed`. Made of counts, times and
@@ -43,23 +40,16 @@ class FoldRow extends StatelessWidget {
     notifyRowBuilt(rowKey);
     final ds = context.ds;
     final parts = [...workSummaryParts(turn), ?note];
-    final base = Type.secondary.copyWith(color: ds.textSecondary, fontWeight: FontWeight.w500, fontFeatures: Type.tabular);
+    final base = Type.secondaryStrong.copyWith(color: ds.textSecondary, fontFeatures: Type.tabular);
     return Padding(
       padding: EdgeInsets.only(top: gap),
       child: Semantics(
         expanded: open,
-        child: PressBuilder(
+        child: PressRow(
           onTap: () => onToggle(rowKey),
           semanticLabel: parts.join(', '),
-          builder: (context, pressed) => AnimatedContainer(
-            duration: Motion.pressing(pressed),
-            curve: Motion.easeOut,
-            constraints: const BoxConstraints(minHeight: kMinTap),
-            padding: const EdgeInsets.symmetric(horizontal: Gap.xs, vertical: 6),
-            decoration: BoxDecoration(
-              color: pressed ? ds.fill : Colors.transparent,
-              borderRadius: BorderRadius.circular(Radii.row),
-            ),
+          minHeight: kMinTap,
+          padding: const EdgeInsets.symmetric(horizontal: Gap.xs, vertical: Gap.xs),
             child: Row(
               children: [
                 Caret(open: open),
@@ -82,7 +72,6 @@ class FoldRow extends StatelessWidget {
                 ),
               ],
             ),
-          ),
         ),
       ),
     );
@@ -157,29 +146,21 @@ class ThinkingRow extends StatelessWidget {
         children: [
           Semantics(
             expanded: open,
-            child: PressBuilder(
+            child: PressRow(
               onTap: () => onToggle(rowKey),
               semanticLabel: 'Thinking',
-              builder: (context, pressed) => AnimatedContainer(
-                duration: Motion.pressing(pressed),
-                curve: Motion.easeOut,
-                constraints: const BoxConstraints(minHeight: kMinTap),
-                padding: const EdgeInsets.symmetric(horizontal: Gap.xs),
-                decoration: BoxDecoration(
-                  color: pressed ? ds.fill : Colors.transparent,
-                  borderRadius: BorderRadius.circular(Radii.row),
-                ),
+              minHeight: kMinTap,
+              padding: const EdgeInsets.symmetric(horizontal: Gap.xs),
                 child: Row(
                   children: [
-                    Icon(LucideIcons.brain, size: 16, color: ds.textSecondary),
-                    const SizedBox(width: 10),
+                    Icon(LucideIcons.brain, size: IconSize.row, color: ds.textSecondary),
+                    const SizedBox(width: Gap.sm),
                     Text(
                       'Thinking',
-                      style: Type.secondary.copyWith(color: ds.textSecondary, fontWeight: FontWeight.w500),
+                      style: Type.secondaryStrong.copyWith(color: ds.textSecondary),
                     ),
                   ],
                 ),
-              ),
             ),
           ),
           if (open)
@@ -218,33 +199,25 @@ class GroupRow extends StatelessWidget {
       padding: EdgeInsets.only(top: gap),
       child: Semantics(
         expanded: open,
-        child: PressBuilder(
+        child: PressRow(
           onTap: () => onToggle(rowKey),
           semanticLabel: label,
-          builder: (context, pressed) => AnimatedContainer(
-            duration: Motion.pressing(pressed),
-            curve: Motion.easeOut,
-            constraints: const BoxConstraints(minHeight: kMinTap),
-            padding: const EdgeInsets.symmetric(horizontal: Gap.xs, vertical: 6),
-            decoration: BoxDecoration(
-              color: pressed ? ds.fill : Colors.transparent,
-              borderRadius: BorderRadius.circular(Radii.row),
-            ),
+          minHeight: kMinTap,
+          padding: const EdgeInsets.symmetric(horizontal: Gap.xs, vertical: Gap.xs),
             child: Row(
               children: [
-                Icon(group.reads > 0 ? LucideIcons.fileText : LucideIcons.search, size: 16, color: ds.textSecondary),
-                const SizedBox(width: 10),
+                Icon(group.reads > 0 ? LucideIcons.fileText : LucideIcons.search, size: IconSize.row, color: ds.textSecondary),
+                const SizedBox(width: Gap.sm),
                 Expanded(
                   child: Text(
                     visibleText(label),
-                    style: Type.secondary.copyWith(color: ds.textSecondary, fontWeight: FontWeight.w500),
+                    style: Type.secondaryStrong.copyWith(color: ds.textSecondary),
                   ),
                 ),
                 const SizedBox(width: Gap.sm),
                 Caret(open: open),
               ],
             ),
-          ),
         ),
       ),
     );

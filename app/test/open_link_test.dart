@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/web_bridge.dart' show isMachineLocalUrl;
-import 'package:herdr_mobile/ui/core/open_link.dart';
+import 'package:herdr_mobile/ui/support/open_link.dart';
 import 'package:url_launcher_platform_interface/link.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 

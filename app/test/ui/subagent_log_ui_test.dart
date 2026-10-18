@@ -6,8 +6,7 @@ import 'package:herdr_mobile/data/acp/session_state.dart';
 import 'package:herdr_mobile/data/acp/subagents/subagent_overlay.dart';
 import 'package:herdr_mobile/data/acp/subagents/subagent_run.dart';
 import 'package:herdr_mobile/data/observed/omp_log_mapper.dart';
-import 'package:herdr_mobile/ui/core/controls.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/subagent_screen.dart';
 import 'package:herdr_mobile/ui/features/agent_session/transcript_view.dart';
 
@@ -64,7 +63,7 @@ void main() {
       expect(find.byType(PinnedPrompt), findsOneWidget);
       expect(find.byType(TranscriptView), findsOneWidget);
       expect(_text('Complete assignment thoroughly'), findsWidgets, reason: 'the subagent\'s own first message');
-      expect(_text('From omp’s log on the host'), findsOneWidget);
+      expect(_text('From omp’s log on the machine'), findsOneWidget);
       expect(_text('Earlier part not shown'), findsNothing);
       expect(find.byType(TextField), findsNothing, reason: 'read-only');
       expect(find.text('Loading…'), findsNothing);
@@ -73,7 +72,7 @@ void main() {
     testWidgets('says when the start of the log is missing, and when lines were left out', (tester) async {
       final session = _omp(attached: const SubagentLogInfo(earlierNotShown: true, skippedLines: 2), status: SubagentLogStatus.shown);
       await _pump(tester, _app(SubagentRunScreen(session: session, runId: _id)));
-      expect(_text('From omp’s log on the host · Earlier part not shown · 2 oversized lines left out'), findsOneWidget);
+      expect(_text('From omp’s log on the machine · Earlier part not shown · 2 oversized lines left out'), findsOneWidget);
     });
 
     testWidgets('a transcript the agent sent says nothing about a log', (tester) async {
@@ -83,7 +82,7 @@ void main() {
       await _pump(tester, _app(SubagentRunScreen(session: session, runId: 't')));
       expect(find.byType(TranscriptView), findsOneWidget);
       expect(_text('Looking now.'), findsOneWidget);
-      expect(_text('log on the host'), findsNothing);
+      expect(_text('log on the machine'), findsNothing);
     });
   });
 
@@ -97,7 +96,7 @@ void main() {
         expect(find.byType(LogStatusLine), findsOneWidget);
         expect(find.text('Loading…'), findsNothing);
         expect(_text('Couldn’t read the log'), findsNothing);
-        expect(_text('log on the host'), findsNothing);
+        expect(_text('log on the machine'), findsNothing);
       }
     });
 

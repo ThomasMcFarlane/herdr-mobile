@@ -1,22 +1,17 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/acp/auth_needed.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/session_launcher.dart';
-import '../../core/controls.dart';
-import '../../core/status_panel.dart';
-import '../../core/theme.dart';
-import '../../core/toast.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import '../create/session_start_support.dart' show describeLaunchFailure;
-import '../files/file_widgets.dart' show codeStyle;
 import '../agents/agent_navigation.dart';
 import '../../../data/repositories/agent_screens.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// Opens pane [paneId] of [machine] as a terminal.
 typedef OpenPane = Future<void> Function(BuildContext context, MachineConnection machine, String paneId);
@@ -81,10 +76,7 @@ class _AuthPanelState extends State<AuthPanel> {
     }
   }
 
-  Future<void> _copy(String command) async {
-    await Clipboard.setData(ClipboardData(text: command));
-    if (mounted) showToast(context, 'Command copied');
-  }
+  void _copy(String command) => copyText(context, command, what: 'Command copied');
 
   @override
   Widget build(BuildContext context) {
@@ -104,7 +96,7 @@ class _AuthPanelState extends State<AuthPanel> {
     return StatusPanel(
       color: ds.blocked,
       icon: LucideIcons.keyRound,
-      title: need.keychain ? '${visibleText(_session.agentLabel)} needs a token' : 'Sign in on the host',
+      title: need.keychain ? '${visibleText(_session.agentLabel)} needs a token' : 'Sign in on the machine',
       message: [
         visibleText(need.message),
         // Signing in again stores the login in the Keychain again, so the
@@ -129,7 +121,7 @@ class _AuthPanelState extends State<AuthPanel> {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 textDirection: TextDirection.ltr,
-                style: codeStyle(ds, size: 12, color: ds.textSecondary),
+                style: Mono.base.copyWith(color: ds.textSecondary),
               ),
             ),
           AppButton(
@@ -147,7 +139,7 @@ class _AuthPanelState extends State<AuthPanel> {
                 icon: large ? null : LucideIcons.copy,
                 kind: AppButtonKind.secondary,
                 expand: true,
-                onPressed: () => unawaited(_copy(command)),
+                onPressed: () => _copy(command),
               ),
             ),
           // A connection that failed for the login tries again only when
@@ -156,7 +148,7 @@ class _AuthPanelState extends State<AuthPanel> {
             Padding(
               padding: const EdgeInsets.only(top: Gap.sm),
               child: AppButton(
-                label: 'Try again',
+                label: 'Retry',
                 kind: AppButtonKind.secondary,
                 expand: true,
                 onPressed: () => unawaited(_session.reattach()),

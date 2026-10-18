@@ -4,11 +4,10 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/acp/acp_models.dart' show MessageRole;
 import '../../../data/acp/session_state.dart';
-import '../../core/chrome.dart';
-import '../../core/markdown/markdown.dart';
-import '../files/file_widgets.dart' show copyToClipboard;
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../render/markdown/markdown.dart';
 
-/// Copying a message (docs/DESIGN.md "Copying").
+/// Copying a message (docs/screens/session.md "Copying").
 ///
 /// A long press on text belongs to `SelectionArea`: it selects the word and
 /// shows the selection toolbar. A long-press handler on the row wins that
@@ -117,10 +116,10 @@ class _ContentSelectionAreaState extends State<ContentSelectionArea> {
 }
 
 void copyMessage(BuildContext context, TranscriptMessage message) =>
-    copyToClipboard(context, messagePlainText(message), 'Copied');
+    copyText(context, messagePlainText(message), what: 'Message copied');
 
 void copyMessageMarkdown(BuildContext context, TranscriptMessage message) =>
-    copyToClipboard(context, messageMarkdown(message), 'Copied as Markdown');
+    copyText(context, messageMarkdown(message), what: 'Markdown copied');
 
 /// The choice `Copy message` offers a screen reader: the text, or the Markdown
 /// source for an answer.

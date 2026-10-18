@@ -5,9 +5,8 @@ import 'package:flutter/material.dart';
 import '../../../data/models/remote_file.dart';
 import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/path_finder.dart';
-import '../../core/motion.dart';
-import '../../core/toast.dart';
-import '../../core/tokens.dart';
+import '../../../data/words/plural.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'file_browser_screen.dart';
 import 'file_viewer_screen.dart';
 import 'file_widgets.dart';
@@ -114,13 +113,13 @@ String cutMiddle(String text, [int max = _quotedPath]) {
   return '${text.substring(0, head)}…${text.substring(text.length - tail)}';
 }
 
-/// "docs/a.md isn't in herdr-mobile (also looked in 3 worktrees)".
+/// "docs/a.md isn’t in herdr-mobile (also looked in 3 worktrees)".
 String pathNotFoundMessage(String shown, {String? folder, int worktrees = 0, bool searched = false}) {
   final also = [
-    if (worktrees > 0) 'looked in $worktrees ${worktrees == 1 ? 'worktree' : 'worktrees'}',
+    if (worktrees > 0) 'looked in ${countOf(worktrees, 'worktree')}',
     if (searched) 'searched by name',
   ];
-  final where = folder == null ? "isn't on this machine" : "isn't in $folder";
+  final where = folder == null ? 'isn’t on this machine' : 'isn’t in $folder';
   return '${cutMiddle(shown)} $where${also.isEmpty ? '' : ' (also ${also.join(' and ')})'}';
 }
 
@@ -437,7 +436,9 @@ class _OpenPathScreenState extends State<_OpenPathScreen> {
     return ColoredBox(
       color: context.ds.bg,
       child: AnimatedSwitcher(
-        duration: Motion.reduced(context) ? Duration.zero : Motion.fade,
+        duration: Motion.of(context, Motion.fade),
+        switchInCurve: Motion.easeOut,
+        switchOutCurve: Motion.easeOutExit,
         child: page,
       ),
     );

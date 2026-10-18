@@ -502,7 +502,7 @@ class ComposerAttachments extends ChangeNotifier {
         return;
       } on Object {
         _drop(id);
-        _problem('Could not read that picture.');
+        _problem('Couldn’t read that picture.');
         return;
       }
     }
@@ -515,7 +515,7 @@ class ComposerAttachments extends ChangeNotifier {
     final file = known ?? await _galleryFile(pick);
     if (file == null || _disposed) {
       _drop(id);
-      _problem('Could not read that picture.');
+      _problem('Couldn’t read that picture.');
       return;
     }
     if (sizeVerdict(file.size) == SizeVerdict.tooLarge) {
@@ -534,7 +534,7 @@ class ComposerAttachments extends ChangeNotifier {
   Future<PreparedImage> _prepareGallery(GalleryPick pick) async {
     final f = await _galleryFile(pick);
     if (pick.work.cancelled) throw const _Abandoned();
-    if (f == null) throw const ImagePrepException('Could not read that picture.');
+    if (f == null) throw const ImagePrepException('Couldn’t read that picture.');
     if (f.size > maxImageInputBytes) throw _TooBigForImage(f);
     final bytes = await readFile(f.path);
     if (pick.work.cancelled) throw const _Abandoned();
@@ -571,7 +571,7 @@ class ComposerAttachments extends ChangeNotifier {
       _problem(e.message);
     } on Object {
       _drop(id);
-      _problem('Could not read that picture.');
+      _problem('Couldn’t read that picture.');
     }
   }
 
@@ -592,7 +592,7 @@ class ComposerAttachments extends ChangeNotifier {
       path = await writeTemp(image.bytes, name);
     } on Object {
       _drop(id);
-      _problem('Could not prepare that picture.');
+      _problem('Couldn’t prepare that picture.');
       return;
     }
     if (_disposed || !_items.any((a) => a.id == id)) {
@@ -661,7 +661,7 @@ class ComposerAttachments extends ChangeNotifier {
         onProgress: (sent, total) => t.progress.value = total <= 0 ? 0 : (sent / total).clamp(0.0, 1.0),
       );
     } on Object {
-      _replace(id, (a) => a._with(phase: AttachPhase.failed, error: 'Could not start the upload'));
+      _replace(id, (a) => a._with(phase: AttachPhase.failed, error: 'Couldn’t start the upload'));
       return;
     }
     t.upload = upload;

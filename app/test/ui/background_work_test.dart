@@ -11,9 +11,7 @@ import 'package:herdr_mobile/data/acp/session_state.dart' show AgentSessionState
 import 'package:herdr_mobile/data/acp/prompt_queue.dart' show SendDelivery;
 import 'package:herdr_mobile/data/observed/observed_contracts.dart' show SubagentInfo;
 import 'package:herdr_mobile/data/repositories/agent_session.dart';
-import 'package:herdr_mobile/ui/core/tap_guard.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
-import 'package:herdr_mobile/ui/core/toast.dart' show toastKey;
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
 import 'package:herdr_mobile/ui/features/agent_session/background_strip.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_session_rows.dart' show sessionStateLabel;
@@ -56,7 +54,7 @@ Future<void> pump(WidgetTester tester, FakeAgentSession session, {Size size = co
       home: AgentSessionScreen(key: ObjectKey(session), session: session),
     ),
   );
-  await tester.pump(tapGuard);
+  await tester.pump(Dwell.tapGuard);
 }
 
 /// A sheet or a route starts on the frame after the change.
@@ -119,11 +117,11 @@ void main() {
       expect(find.byIcon(LucideIcons.square), findsNothing, reason: 'there is no turn to stop');
     });
 
-    testWidgets('idle with a background terminal that does not wake: one line', (tester) async {
+    testWidgets('idle with a terminal job that does not wake: one line', (tester) async {
       final session = idle();
       session.backgroundWork = work([task('t1', kind: BackgroundKind.terminal)]);
       await pump(tester, session);
-      expect(find.text('1 background terminal running'), findsOneWidget);
+      expect(find.text('1 job running'), findsOneWidget);
       expect(find.byIcon(LucideIcons.arrowUp), findsOneWidget);
     });
 
@@ -222,7 +220,7 @@ void main() {
       session.backgroundWork = work(const [], unknown: true);
       session.waitingOnBackground = true;
       await pump(tester, session);
-      expect(find.text('Waiting for background work'), findsOneWidget);
+      expect(find.text('Waiting for jobs'), findsOneWidget);
     });
 
     testWidgets('an unknown start has no clock', (tester) async {
@@ -378,12 +376,12 @@ void main() {
       );
       await tester.pump();
       expect(find.text('Stopping\u2026'), findsNothing);
-      expect(find.text('Could not confirm'), findsNothing);
-      expect(find.text('Finished \u00b7 1'), findsOneWidget);
+      expect(find.text('Couldn’t confirm'), findsNothing);
+      expect(find.text('Done \u00b7 1'), findsOneWidget);
       expect(find.textContaining('stopped'), findsOneWidget);
     });
 
-    testWidgets('after 12 s: Could not confirm and Retry, which asks again', (tester) async {
+    testWidgets('after 12 s: Couldn’t confirm and Retry, which asks again', (tester) async {
       final session = idle();
       session.backgroundWork = work([task('bg_6')]);
       await pump(tester, session);
@@ -393,7 +391,7 @@ void main() {
       expect(find.text('Stopping\u2026'), findsOneWidget, reason: 'still waiting');
       await tester.pump(const Duration(seconds: 2));
       expect(find.text('Stopping\u2026'), findsNothing);
-      expect(find.text('Could not confirm'), findsOneWidget);
+      expect(find.text('Couldn’t confirm'), findsOneWidget);
       expect(find.text('Retry'), findsOneWidget);
 
       await tester.tap(find.text('Retry'));
@@ -409,20 +407,20 @@ void main() {
       await openSheet(tester);
       await holdFor(tester, find.text('Stop'));
       await tester.pump();
-      expect(find.text('Could not confirm \u00b7 The host did not answer.'), findsOneWidget);
+      expect(find.text('Couldn’t confirm \u00b7 The host did not answer.'), findsOneWidget);
       expect(find.text('Retry'), findsOneWidget);
     });
 
-    testWidgets('a task that ended meanwhile says Already finished, not an error', (tester) async {
+    testWidgets('a task that ended meanwhile says Already done, not an error', (tester) async {
       final session = idle()..stopResult = const BackgroundAlreadyDone();
       session.backgroundWork = work([task('bg_6')]);
       await pump(tester, session);
       await openSheet(tester);
       await holdFor(tester, find.text('Stop'));
       await tester.pump();
-      expect(find.text('Already finished'), findsOneWidget);
+      expect(find.text('Already done'), findsOneWidget);
       expect(find.text('Retry'), findsNothing);
-      expect(find.text('Could not confirm'), findsNothing);
+      expect(find.text('Couldn’t confirm'), findsNothing);
       expect(find.text('Stopping\u2026'), findsNothing);
     });
 
@@ -553,7 +551,7 @@ void main() {
       session.setBackground(session.backgroundWork.copyWith(unknownRunning: true));
       await tester.pump();
       await openSheet(tester);
-      expect(find.text('Finished \u00b7 7'), findsOneWidget);
+      expect(find.text('Done \u00b7 7'), findsOneWidget);
       expect(find.text('Show 2 more'), findsOneWidget);
       expect(find.text('finished job 2'), findsOneWidget);
       expect(find.text('finished job 0'), findsNothing, reason: 'oldest of the same end is last');
@@ -562,7 +560,7 @@ void main() {
         lessThan(tester.getTopLeft(find.text('finished job 6')).dy),
         reason: 'failed first',
       );
-      expect(find.textContaining('finished \u00b7 37s'), findsOneWidget);
+      expect(find.textContaining('done \u00b7 37s'), findsOneWidget);
       expect(find.textContaining('failed'), findsOneWidget);
 
       await tester.tap(find.text('Show 2 more'));
@@ -570,7 +568,7 @@ void main() {
       await tester.drag(find.byType(ListView).last, const Offset(0, -400));
       await tester.pump();
       expect(find.text('finished job 0'), findsOneWidget);
-      expect(find.text('Show fewer'), findsOneWidget);
+      expect(find.text('Show less'), findsOneWidget);
     });
 
     testWidgets('40 tasks: the list is lazy', (tester) async {
@@ -597,7 +595,7 @@ void main() {
       ]);
       await pump(tester, session);
       await openSheet(tester);
-      expect(find.descendant(of: find.byType(BottomSheet), matching: find.byIcon(LucideIcons.bot)), findsOneWidget);
+      expect(find.descendant(of: find.byType(BottomSheet), matching: find.byIcon(HerdrIcons.agents)), findsOneWidget);
       await tester.tap(find.text('Survey RL frameworks'));
       await settle(tester);
       expect(find.text('Background work \u00b7 1'), findsNothing, reason: 'the sheet closed');
@@ -646,7 +644,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
     }
 
-    testWidgets('Turn stopped · 1 job still running, with View, once', (tester) async {
+    testWidgets('Turn stopped · 1 job still running, with Open, once', (tester) async {
       final session = working();
       session.backgroundWork = work([task('bg_6')]);
       await pump(tester, session);
@@ -659,7 +657,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.text('Turn stopped \u00b7 1 job still running'), findsOneWidget);
-      expect(find.text('View'), findsOneWidget);
+      expect(find.text('Open'), findsOneWidget);
 
       // Later notifications do not say it again.
       session.setBackground(work([task('bg_6'), task('bg_7')]));
@@ -669,13 +667,13 @@ void main() {
       expect(find.text('Turn stopped \u00b7 1 job still running'), findsOneWidget);
     });
 
-    testWidgets('View opens the sheet', (tester) async {
+    testWidgets('Open opens the sheet', (tester) async {
       final session = working();
       session.backgroundWork = work([task('bg_6'), task('bg_7')]);
       await pump(tester, session);
       await stopAndEnd(tester, session);
       expect(find.text('Turn stopped \u00b7 2 jobs still running'), findsOneWidget);
-      await tester.tap(find.text('View'));
+      await tester.tap(find.text('Open'));
       await settle(tester);
       expect(find.text('Background work \u00b7 2'), findsOneWidget);
     });
@@ -715,20 +713,20 @@ void main() {
   group('the board row', () {
     final now = DateTime(2026, 10, 5, 12, 30);
 
-    test('says waiting, with the time, while the turn is over and a job runs', () {
+    test('says idle with jobs and the time while the turn is over and a job runs', () {
       final s = idle()
         ..phaseSinceValue = now.subtract(const Duration(minutes: 14))
         ..setBackground(work([task('bg_6')]), waiting: true);
-      expect(sessionStateLabel(s, now), 'waiting 14m');
+      expect(sessionStateLabel(s, now), 'idle · jobs 14m');
     });
 
-    test('says idle when nothing waits, and working while the turn runs', () {
+    test('says only the time when nothing waits, and while the turn runs (the glyph says the state)', () {
       final s = idle()..phaseSinceValue = now.subtract(const Duration(minutes: 14));
-      expect(sessionStateLabel(s, now), 'idle 14m');
+      expect(sessionStateLabel(s, now), '14m');
       final w = working()
         ..phaseSinceValue = now.subtract(const Duration(minutes: 3))
         ..setBackground(work([task('bg_6')]));
-      expect(sessionStateLabel(w, now), 'working 3m');
+      expect(sessionStateLabel(w, now), '3m');
     });
   });
 }

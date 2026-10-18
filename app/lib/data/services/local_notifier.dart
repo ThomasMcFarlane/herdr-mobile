@@ -5,6 +5,7 @@ import 'dart:ui' show Color, DartPluginRegistrant, IsolateNameServer;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import '../words/plural.dart';
 import 'notifier.dart';
 
 /// The drawable in `android/app/src/main/res/drawable`, kept by `raw/keep.xml`.
@@ -19,8 +20,8 @@ const _needsYouChannel = AndroidNotificationChannel(
 
 const _finishedChannel = AndroidNotificationChannel(
   'finished',
-  'Agents that finished',
-  description: 'An agent finished its work.',
+  'Agents that are done',
+  description: 'An agent is done with its work.',
   importance: Importance.defaultImportance,
   playSound: false,
   enableVibration: false,
@@ -347,7 +348,7 @@ class LocalNotifier implements Notifier {
 
 /// "Watching 1 agent", "Watching 3 agents".
 @visibleForTesting
-String watchingTitle(int count) => 'Watching $count agent${count == 1 ? '' : 's'}';
+String watchingTitle(int count) => 'Watching ${countOf(count, 'agent')}';
 
 /// "2 need you · 3 working": [blocked] agents wait for the person, the rest
 /// of [count] work. Parts that are zero are left out; empty when none is left.
@@ -356,7 +357,7 @@ String watchingSummary(int count, int blocked) {
   final waiting = blocked.clamp(0, count);
   final working = count - waiting;
   return [
-    if (waiting > 0) waiting == 1 ? '1 needs you' : '$waiting need you',
+    if (waiting > 0) needYou(waiting),
     if (working > 0) '$working working',
   ].join(' · ');
 }

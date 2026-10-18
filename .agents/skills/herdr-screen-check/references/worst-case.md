@@ -21,7 +21,7 @@ like a host or address.
 
 | Value | Breaks |
 | --- | --- |
-| Labels `claude`, `codex`, `omp`, `pi`, `opencode`, unknown/none | Per-agent tables (slash commands), icons, the label slot |
+| Agent ids `claude`, `codex`, `omp`, `pi`, `opencode`, unknown/none (shown as `Claude Code`, `Codex`, `omp`, `pi`, the id itself, `Shell`) | Per-agent tables (slash commands), icons, the label slot |
 | A title of 120 characters with a path in it | Two-line wrap, the leading glyph on the title line |
 | `Thiết kế giao diện · Đặng Thị Ngọc Hân` | Stacked diacritics clipped by a tight height |
 | `修复登录问题` / `إصلاح تسجيل الدخول` | CJK has no spaces; RTL punctuation and alignment |
@@ -72,7 +72,7 @@ like a host or address.
 | --- | --- |
 | 0, 1, 2 | Plurals: `1 agent`, `0 need you` (should the line show at all?) |
 | 99, 100, 1,284 | `99+`, the badge width, thousands separators |
-| Just now, 59 s, 12 m, 3 h, 9 d, 11 months | Relative-time steps; an absolute date after a week |
+| Just now, 59 s, 12 m, 3 h, 9 d, 11 months | Relative-time steps (`5m ago`, `3h ago`, `Yesterday`, `3 Oct`); an absolute date after a week |
 | A clock skewed 5 minutes into the future | Negative durations (`-3m`) |
 | `stale · 12s` growing to `1h` | A label that changes width every second |
 
@@ -94,6 +94,6 @@ like a host or address.
 | 892x412 plus keyboard (compact) | The dock, the palette and the quick phrases hidden; the composer still reachable |
 | Text scale 1.6 and 2.0 | Fixed heights that clip growing text; the tab bar |
 | Dark, light, dark terminal on paper | Hard-coded colours, invisible hairlines |
-| Reduced motion | Sheets with no animation, page fade, no settle or pop |
+| Reduced motion | Sheets with no animation, page fade, no settle, roll or badge scale |
 | TalkBack | One node per control, headers, a hold as prime-then-send |
 | Keyboard open on every screen with a field | Bottom insets, the action bar riding on the keyboard |

@@ -11,9 +11,7 @@ import '../../../data/repositories/app_settings.dart';
 import '../../../data/repositories/attention_set.dart';
 import '../../../data/repositories/fleet_repository.dart';
 import '../../../data/repositories/observed_sessions.dart';
-import '../../core/chrome.dart' show SheetAction;
-import '../../core/motion.dart';
-import '../../core/toast.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import '../agent_session/agent_session_screen.dart';
 import '../pane/pane_screen.dart';
 import 'agents_grouping.dart';
@@ -119,7 +117,7 @@ List<AgentRef> agentsInBoardOrder(BuildContext context) {
 Future<void> resumeAgent(
   NavigatorState navigator,
   FrontAgent front, {
-  Duration patience = const Duration(seconds: 8),
+  Duration patience = Dwell.resumePatience,
 }) async {
   final context = navigator.context;
   if (_screenFor(context, front.agent, front.view, strict: true) case final screen?) {
@@ -379,7 +377,7 @@ class _EntranceTransition extends StatefulWidget {
 }
 
 class _EntranceTransitionState extends State<_EntranceTransition> {
-  late final CurvedAnimation _curve = CurvedAnimation(parent: widget.animation, curve: Motion.easeOut);
+  late final CurvedAnimation _curve = Motion.curved(widget.animation);
   late bool _done = widget.animation.isCompleted;
 
   @override

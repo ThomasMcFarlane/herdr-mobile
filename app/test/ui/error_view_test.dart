@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:herdr_mobile/ui/core/error_view.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/support/error_view.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 class _Throws extends StatelessWidget {
   const _Throws();

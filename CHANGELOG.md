@@ -6,6 +6,40 @@ release.
 
 ## [Unreleased]
 
+### One design language
+
+- Copying a path, a link, code or a pane id no longer shows two
+  confirmations on Android 13 and later: the system's own is the one. On older
+  Android herdr says it once.
+- A toast is a dark card that rises from behind the bar it sits on, waits
+  until it has arrived before its clock starts, holds still under your finger
+  and swipes away. It never covers the "needs you" pill again.
+- The tab bar says where you are: the selected tab takes the accent colour on
+  a soft capsule, the icons are larger, and the count sits on the icon's
+  corner and rolls when it changes. Dragging along the bar lifts it slightly
+  and the selection springs to where you let go.
+- Picking agents and then going to Machines or Settings no longer leaves
+  those tabs without a tab bar.
+- Every agent and machine has one icon everywhere, drawn for herdr so the
+  three tabs and the Stop, Message, Close bar weigh the same (the Machines
+  icon was the biggest thing in the bar). A machine is a screen on a stand.
+- An agent has one name everywhere: Claude Code, Codex, omp, pi, never
+  `claude`. Counts read right (`1 subagent`, `2 need you`), times read one
+  way (`4m`, `1h 05m`, `4m ago`), Interrupt is Stop and Try again is Retry.
+- A board row ends with the time alone (`4m`, orange when it needs you): the
+  glyph and the section already say the state.
+- Machines rows are two lines with the connection dot in front, and a waiting
+  count carries the needs-you mark.
+- Every screen's top bar is the same: Back in the same place, at most two
+  buttons. The terminal's bar keeps files and the menu; Wrap lines moved into
+  Pane options, so titles are cut less.
+- Answer buttons look and behave the same on the board, the pane, the reply
+  sheet and the permission dock; the question above them has one style.
+- Selected chips and switches are a soft accent tint instead of an outline,
+  and status panels are a tint without a border.
+- Settings has a hidden kit: hold Version to see every component, light and
+  dark, at two text sizes.
+
 ### Fixes
 
 - Opening a dev server or a page on the phone (Open on phone, a Made row,

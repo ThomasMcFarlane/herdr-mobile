@@ -6,9 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/acp/session_state.dart' show AgentPhase;
 import '../../../data/acp/background/background_work.dart';
 import '../../../data/repositories/agent_session.dart';
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'background_format.dart';
 import 'background_sheet.dart';
 import 'composer.dart' show HideWhenCompact;
@@ -71,23 +69,20 @@ class _StripRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final ds = context.ds;
     final second = text.secondary;
-    return PressBuilder(
-      onTap: onTap,
-      scale: 0.985,
-      haptic: true,
-      semanticLabel: semantics,
-      builder: (context, pressed) => AnimatedContainer(
-        duration: Motion.pressing(pressed),
-        curve: Motion.easeOut,
-        constraints: const BoxConstraints(minHeight: 48),
-        padding: const EdgeInsets.symmetric(horizontal: Gap.md, vertical: Gap.sm),
-        decoration: BoxDecoration(
-          color: pressed ? ds.fillPressed : ds.fill,
-          borderRadius: BorderRadius.circular(Radii.chip),
-        ),
+    // One tap target: the whole panel is the row, its press tint inset inside.
+    return Panel(
+      padding: const EdgeInsets.symmetric(vertical: Gap.xs),
+      child: PressRow(
+        onTap: () {
+          Haptics.tick();
+          onTap();
+        },
+        semanticLabel: semantics,
+        minHeight: _stripHeight - 2 * Gap.xs,
+        padding: const EdgeInsets.symmetric(horizontal: Gap.md - PressRow.inset, vertical: Gap.xs),
         child: Row(
           children: [
-            Icon(LucideIcons.layers, size: 14, color: ds.textSecondary),
+            Icon(LucideIcons.layers, size: IconSize.inline, color: ds.textSecondary),
             const SizedBox(width: Gap.sm),
             Expanded(
               child: Column(
@@ -112,7 +107,7 @@ class _StripRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: Gap.sm),
-            Icon(LucideIcons.chevronUp, size: 14, color: ds.textTertiary),
+            Icon(LucideIcons.chevronUp, size: IconSize.inline, color: ds.textTertiary),
           ],
         ),
       ),
@@ -139,11 +134,13 @@ class BackgroundChip extends StatelessWidget {
         if (stripText(work, waiting: waiting, turnRunning: turnRunning) == null) return const SizedBox.shrink();
         return Padding(
           // The bar's row places the chips; this one follows the subagents chip.
-          padding: EdgeInsets.only(left: besideSubagents ? Gap.sm : 0, bottom: 2),
+          padding: besideSubagents
+              ? const EdgeInsets.only(left: Gap.sm, bottom: Gap.hair)
+              : const EdgeInsets.only(bottom: Gap.hair),
           child: AppChip(
             label: chipLabel(work),
             semanticLabel: stripSemantics(work, waiting: waiting, turnRunning: turnRunning),
-            leading: Icon(LucideIcons.layers, size: 14, color: context.ds.textSecondary),
+            leading: Icon(LucideIcons.layers, size: IconSize.inline, color: context.ds.textSecondary),
             onTap: () => unawaited(showBackgroundWork(context, session)),
           ),
         );
@@ -152,3 +149,6 @@ class BackgroundChip extends StatelessWidget {
     child: const SizedBox.shrink(),
   );
 }
+
+/// The strip's height, its panel padding included.
+const _stripHeight = 48.0;

@@ -7,6 +7,7 @@ import 'subagents/run_facts.dart';
 import 'subagents/subagent_book.dart';
 import 'subagents/subagent_run.dart';
 import 'turns/tool_summary.dart' show kindWord, toolSummary;
+import '../words/plural.dart';
 
 /// Why the agent session needs (or does not need) the person.
 enum AgentPhase {
@@ -206,7 +207,7 @@ class TranscriptNote extends TranscriptItem {
 const hostDroppedKey = 'host-dropped';
 
 String hostDroppedText(int turns) =>
-    'Earlier messages are no longer kept on the host ($turns ${turns == 1 ? 'turn' : 'turns'}).';
+    'Earlier messages are no longer kept on the machine (${countOf(turns, 'turn')}).';
 
 /// The key and words of the divider between what only this phone still has
 /// (above) and what the host replayed (below), written when the two could not

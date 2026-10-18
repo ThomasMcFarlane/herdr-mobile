@@ -2,18 +2,17 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
-/// The round selection mark of a tile or a row: an empty ring, or, when
-/// picked, the accent filled with the pick's place (1, 2, 3...).
+/// The tappable selection mark of a tile or a row: the kit's [SelectMark]
+/// (an empty ring, or the accent filled with the pick's place: 1, 2, 3...)
+/// painted [SelectMark.photoSize], hit-tested [kMinTap] around its centre.
+/// On a photo ([onPhoto]) the empty ring is white on a dark wash so it reads
+/// on any picture.
 ///
-/// Painted 24 dp, hit-tested [kMinTap] around its centre. The press and the
-/// change are feedback on the circle itself: it presses to 0.9 and a new
-/// number pops in from 0.9 to 1 over `Motion.press`. On a photo the empty ring
-/// is white on a dark wash so it reads on any picture; on a row ([onPhoto]
-/// false) it is the quiet outline of the design system.
+/// The change is feedback on the circle itself: a new number pops in from 0.9
+/// to 1 over `Motion.press`, so the eye that tapped sees the pick land where
+/// it tapped. Not under reduced motion.
 class SelectionCircle extends StatelessWidget {
   const SelectionCircle({
     super.key,
@@ -31,61 +30,19 @@ class SelectionCircle extends StatelessWidget {
   final String label;
   final bool onPhoto;
 
-  static const size = 24.0;
-
   @override
-  Widget build(BuildContext context) {
-    final reduced = Motion.reduced(context);
-    final mark = SelectionMark(number: number, onPhoto: onPhoto);
-    return PressBuilder(
-      onTap: onTap,
-      haptic: true,
-      scale: 0.9,
-      minTapSize: kMinTap,
-      semanticLabel: label,
-      selected: number != null,
-      builder: (context, pressed) => reduced ? mark : _Pop(number: number, child: mark),
-    );
-  }
-}
-
-/// Just the painted mark (no touch target): for places that bring their own.
-class SelectionMark extends StatelessWidget {
-  const SelectionMark({super.key, required this.number, this.onPhoto = false});
-
-  final int? number;
-  final bool onPhoto;
-
-  @override
-  Widget build(BuildContext context) {
-    final ds = context.ds;
-    final picked = number != null;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: picked ? ds.accent : (onPhoto ? const Color(0x59000000) : Colors.transparent),
-        border: Border.all(color: picked ? ds.onAccent.withValues(alpha: 0.9) : (onPhoto ? Colors.white : ds.textTertiary), width: 1.5),
-      ),
-      child: SizedBox.square(
-        dimension: SelectionCircle.size,
-        child: picked
-            ? Center(
-                child: Text(
-                  '$number',
-                  style: TextStyle(
-                    fontFamily: Type.family,
-                    fontSize: 12.5,
-                    height: 1,
-                    fontWeight: FontWeight.w700,
-                    fontFeatures: Type.tabular,
-                    color: ds.onAccent,
-                  ),
-                ),
-              )
-            : null,
-      ),
-    );
-  }
+  Widget build(BuildContext context) => PressBuilder(
+    onTap: onTap,
+    haptic: true,
+    scale: PressScale.icon,
+    minTapSize: kMinTap,
+    semanticLabel: label,
+    selected: number != null,
+    builder: (context, pressed) {
+      final mark = SelectMark(selected: number != null, number: number, onPhoto: onPhoto, size: SelectMark.photoSize);
+      return Motion.reduced(context) ? mark : _Pop(number: number, child: mark);
+    },
+  );
 }
 
 /// Scales its child from 0.9 to 1 over `Motion.press` when [number] changes

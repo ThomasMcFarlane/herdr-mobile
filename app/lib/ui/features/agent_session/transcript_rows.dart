@@ -4,13 +4,12 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/acp/acp_models.dart';
 import '../../../data/acp/session_state.dart';
 import '../../../data/acp/turns/plain_text.dart' show safeEnd;
-import '../../core/controls.dart';
-import '../../core/markdown/markdown.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../render/markdown/markdown.dart';
 import 'code_panel.dart';
 import 'content_blocks.dart';
 import 'content_copy.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// Called with the row key each time a transcript row's `build` runs. Tests
 /// use it to prove a streaming answer rebuilds only the rows that changed.
@@ -69,10 +68,8 @@ class UserRow extends StatelessWidget {
       gap,
       MessageCopyTarget(
         message: message,
-        child: DecoratedBox(
-          decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.panel)),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(Gap.md, Gap.sm + 2, Gap.md, Gap.sm + 2),
+        child: Panel(
+          padding: const EdgeInsets.symmetric(horizontal: Gap.md, vertical: Gap.sm + Gap.hair),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -82,7 +79,7 @@ class UserRow extends StatelessWidget {
                     maxLines: collapsible && !open ? _collapsedLines : null,
                     // An ellipsis without a line cap would cut the text to one line.
                     overflow: collapsible && !open ? TextOverflow.ellipsis : TextOverflow.clip,
-                    style: Type.body.copyWith(fontSize: 14.5, color: ds.text),
+                    style: Type.compact.copyWith(color: ds.text),
                   ),
                 for (final block in message.blocks)
                   if (block is! TextBlock) ...[
@@ -90,21 +87,8 @@ class UserRow extends StatelessWidget {
                     ContentBlockView(block: block, expanded: all, onToggle: () => onToggle(allKey(rowKey))),
                   ],
                 if (collapsible)
-                  PressBuilder(
-                    onTap: () => onToggle(rowKey),
-                    builder: (context, pressed) => ConstrainedBox(
-                      constraints: const BoxConstraints(minHeight: kMinTap),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          open ? 'Show less' : 'Show more',
-                          style: Type.label.copyWith(color: ds.accentText, fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ),
-                  ),
+                  TextAction(label: open ? 'Show less' : 'Show more', onTap: () => onToggle(rowKey)),
               ],
-            ),
           ),
         ),
       ),
@@ -221,8 +205,8 @@ class StopNoteRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Icon(LucideIcons.circleAlert, size: 15, color: ds.textTertiary),
+            padding: const EdgeInsets.only(top: Gap.hair),
+            child: Icon(LucideIcons.circleAlert, size: IconSize.row, color: ds.textTertiary),
           ),
           const SizedBox(width: Gap.sm),
           Expanded(child: Text(stopNoteText(reason), style: Type.secondary.copyWith(color: ds.textSecondary))),
@@ -234,8 +218,8 @@ class StopNoteRow extends StatelessWidget {
 
 /// Something that changed in the session and that the agent did not say (it
 /// switched the mode by itself), as one quiet line. The app wrote it.
-class NoteRow extends StatelessWidget {
-  const NoteRow({super.key, required this.rowKey, required this.text, required this.gap});
+class TranscriptNoteRow extends StatelessWidget {
+  const TranscriptNoteRow({super.key, required this.rowKey, required this.text, required this.gap});
 
   final String rowKey;
   final String text;
@@ -251,8 +235,8 @@ class NoteRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Icon(LucideIcons.info, size: 15, color: ds.textTertiary),
+            padding: const EdgeInsets.only(top: Gap.hair),
+            child: Icon(LucideIcons.info, size: IconSize.row, color: ds.textTertiary),
           ),
           const SizedBox(width: Gap.sm),
           Expanded(child: Text(visibleText(text), style: Type.secondary.copyWith(color: ds.textSecondary))),

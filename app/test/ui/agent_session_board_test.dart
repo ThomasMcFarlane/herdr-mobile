@@ -12,10 +12,7 @@ import 'package:herdr_mobile/data/models/machine_profile.dart';
 import 'package:herdr_mobile/data/repositories/agent_session.dart';
 import 'package:herdr_mobile/data/repositories/agent_session_repository.dart';
 import 'package:herdr_mobile/data/repositories/attention_set.dart';
-import 'package:herdr_mobile/ui/core/chrome.dart';
-import 'package:herdr_mobile/ui/core/controls.dart' show AppChip;
-import 'package:herdr_mobile/ui/core/rows.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_session_rows.dart';
 import 'package:herdr_mobile/ui/shell/home_shell.dart';
 import 'package:provider/provider.dart';
@@ -129,8 +126,8 @@ void main() {
       expect(_row('Fix login'), findsOneWidget);
       expect(find.descendant(of: _row('Fix login'), matching: find.text('omp · studio-mac · api')), findsOneWidget);
       expect(find.descendant(of: _row('Refactor billing'), matching: find.text('Claude Code · studio-mac · billing')), findsOneWidget);
-      expect(find.descendant(of: _row('Refactor billing'), matching: find.text('working <1m')), findsOneWidget);
-      expect(find.descendant(of: _row('Fix login'), matching: find.text('idle <1m')), findsOneWidget);
+      expect(find.descendant(of: _row('Refactor billing'), matching: _said('working, under a minute')), findsOneWidget);
+      expect(find.descendant(of: _row('Fix login'), matching: _said('idle, under a minute')), findsOneWidget);
       expect(_top(tester, _row('Refactor billing')), lessThan(_top(tester, _section('Idle'))), reason: 'working before idle');
       expect(_top(tester, _row('Fix login')), greaterThan(_top(tester, _section('Idle'))));
       await _teardown(tester, e);
@@ -161,7 +158,7 @@ void main() {
       expect(tester.widget<SectionLabel>(_section('Needs you')).count, 2);
       final row = _row('Deploy');
       expect(find.descendant(of: row, matching: find.text('npm test -- --coverage --watchAll=false')), findsOneWidget);
-      expect(find.descendant(of: row, matching: find.text('needs you <1m')), findsOneWidget);
+      expect(find.descendant(of: row, matching: _said('needs you, under a minute')), findsOneWidget);
       expect(find.text('Allow'), findsNothing, reason: 'answers are given inside the session');
       expect(find.text('2 need you'), findsOneWidget, reason: 'the pill counts it');
       await _teardown(tester, e);
@@ -242,10 +239,10 @@ void main() {
       unawaited(e.repo.byKey('a/k1')!.send('go'));
       await _settle(tester);
 
-      expect(find.descendant(of: _row('Write docs'), matching: find.text('done <1m')), findsOneWidget);
+      expect(find.descendant(of: _row('Write docs'), matching: _said('done, under a minute')), findsOneWidget);
       e.repo.byKey('a/k1')!.markSeen();
       await _settle(tester);
-      expect(find.descendant(of: _row('Write docs'), matching: find.text('idle <1m')), findsOneWidget);
+      expect(find.descendant(of: _row('Write docs'), matching: _said('idle, under a minute')), findsOneWidget);
       await _teardown(tester, e);
     });
 
@@ -264,7 +261,7 @@ void main() {
       expect(find.descendant(of: _row('Ended'), matching: find.text('ended')), findsOneWidget);
       e.host.attachGate!.complete();
       await _settle(tester, 40);
-      expect(find.descendant(of: _row('Dropped'), matching: find.text('idle <1m')), findsOneWidget);
+      expect(find.descendant(of: _row('Dropped'), matching: _said('idle, under a minute')), findsOneWidget);
       await _teardown(tester, e);
     });
 
@@ -372,8 +369,8 @@ void main() {
       await _settle(tester);
     }
 
-    Finder idleLabel(String title) => find.descendant(of: _row(title), matching: find.text('idle <1m'));
-    Finder doneLabel(String title) => find.descendant(of: _row(title), matching: find.text('done <1m'));
+    Finder idleLabel(String title) => find.descendant(of: _row(title), matching: _said('idle, under a minute'));
+    Finder doneLabel(String title) => find.descendant(of: _row(title), matching: _said('done, under a minute'));
     AgentStatus paneStatus(_Env e, int i) => e.h.fleet.connection('a')!.paneById('w1:p$i')!.status;
 
     testWidgets('swiping a finished session marks it reviewed, offers Undo, and Undo brings it back', (tester) async {
@@ -591,3 +588,8 @@ void main() {
     });
   });
 }
+
+/// A time label by what a screen reader hears: the visible text is the time
+/// only, the words carry the state.
+Finder _said(String label) =>
+    find.byWidgetPredicate((w) => w is Semantics && w.properties.label == label);

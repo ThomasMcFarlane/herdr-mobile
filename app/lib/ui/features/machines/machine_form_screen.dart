@@ -6,16 +6,9 @@ import 'package:provider/provider.dart';
 import '../../../data/models/machine_profile.dart';
 import '../../../data/repositories/machine_repository.dart';
 import '../../../data/services/key_generator.dart';
-import '../../core/approval_button.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/rows.dart';
-import '../../core/form_sections.dart';
-import '../../core/draw_check.dart';
-import '../../core/status_panel.dart';
-import '../../core/theme.dart';
-import '../../core/toast.dart';
+import '../../../data/words/plural.dart';
+import 'approval_button.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'machine_form_view_model.dart';
 
 final _sessionName = RegExp(r'^[A-Za-z0-9._-]+$');
@@ -228,11 +221,7 @@ class _FormState extends State<_Form> with RestorationMixin {
     setState(() {});
   }
 
-  Future<void> _copy(String text, String done) async {
-    final toaster = Toaster.of(context);
-    await Clipboard.setData(ClipboardData(text: text));
-    toaster.show(done);
-  }
+  void _copy(String text, String done) => copyText(context, text, what: done);
 
   /// Validates every field. Fields inside a collapsed "Advanced" are not built,
   /// so a bad session name there would slip through: open the section and
@@ -382,38 +371,34 @@ class _FormState extends State<_Form> with RestorationMixin {
   /// key, null = close the sheet and carry on editing.
   Future<bool?> _askAfterFailedTest(String? why) => showAppSheet<bool>(
         context,
-        builder: (ctx) => Padding(
-          padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.xl, Gap.gutter, Gap.lg),
+        builder: (ctx) => SheetScaffold(
+          title: 'The new key could not connect',
+          kind: SheetKind.message,
+          actions: [
+            AppButton(
+              label: 'Keep the old key',
+              expand: true,
+              onPressed: () => Navigator.of(ctx).pop(false),
+            ),
+            AppButton(
+              label: 'Save anyway',
+              kind: AppButtonKind.danger,
+              expand: true,
+              onPressed: () => Navigator.of(ctx).pop(true),
+            ),
+          ],
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Semantics(
-                header: true,
-                child: Text('The new key could not connect', style: Type.title.copyWith(color: ctx.ds.text)),
-              ),
               if (why != null && why.isNotEmpty) ...[
-                const SizedBox(height: Gap.sm),
                 Text(why, style: Type.secondary.copyWith(color: ctx.ds.textSecondary)),
+                const SizedBox(height: Gap.sm),
               ],
-              const SizedBox(height: Gap.sm),
               Text(
                 'If its public key is not on the machine yet, saving now locks this phone out '
                 'of it, and the old key is gone.',
                 style: Type.compact.copyWith(color: ctx.ds.textSecondary),
-              ),
-              const SizedBox(height: Gap.xl),
-              AppButton(
-                label: 'Keep the old key',
-                expand: true,
-                onPressed: () => Navigator.of(ctx).pop(false),
-              ),
-              const SizedBox(height: Gap.sm),
-              AppButton(
-                label: 'Save anyway',
-                kind: AppButtonKind.danger,
-                expand: true,
-                onPressed: () => Navigator.of(ctx).pop(true),
               ),
             ],
           ),
@@ -460,7 +445,7 @@ class _FormState extends State<_Form> with RestorationMixin {
         icon: _obscure ? LucideIcons.eye : LucideIcons.eyeOff,
         tooltip: _obscure ? 'Show' : 'Hide',
         filled: false,
-        size: 36,
+        size: CircleButton.compact,
         onPressed: () => setState(() => _obscure = !_obscure),
       );
 
@@ -481,13 +466,8 @@ class _FormState extends State<_Form> with RestorationMixin {
               child: CustomScrollView(
                 keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                 slivers: [
-                  SliverLargeTitle(
+                  SliverLargeTitle.back(
                     title: _editing ? 'Edit machine' : 'Add machine',
-                    leading: CircleButton(
-                      icon: LucideIcons.chevronLeft,
-                      tooltip: 'Back',
-                      onPressed: () => Navigator.of(context).maybePop(),
-                    ),
                   ),
                   SliverToBoxAdapter(
                     child: Column(
@@ -570,7 +550,7 @@ class _FormState extends State<_Form> with RestorationMixin {
                                       icon: LucideIcons.clipboardPaste,
                                       tooltip: 'Paste from clipboard',
                                       filled: false,
-                                      size: 36,
+                                      size: CircleButton.compact,
                                       onPressed: _paste,
                                     ),
                                   ),
@@ -605,7 +585,7 @@ class _FormState extends State<_Form> with RestorationMixin {
                               ),
                           ],
                         ),
-                        FormSectionHeader(
+                        SectionLabel(
                           label: 'Advanced',
                           expanded: _advanced,
                           onTap: () => setState(() => _advancedR.value = !_advanced),
@@ -765,14 +745,14 @@ class _TestResult extends StatelessWidget {
                 ds.done,
                 LucideIcons.circleCheck,
                 'Connected · herdr ${vm.version}',
-                '${vm.workspaceCount} workspace${vm.workspaceCount == 1 ? '' : 's'}'
+                '${countOf(vm.workspaceCount, 'workspace')}'
                     '${vm.fingerprint == null ? '' : '\nHost key ${vm.fingerprint}'}',
               ),
             TestState.failed => (ds.danger, LucideIcons.circleAlert, 'Could not connect', vm.message),
             _ => null,
           };
     return AnimatedSize(
-      duration: Motion.reduced(context) ? Duration.zero : Motion.expand,
+      duration: Motion.of(context, Motion.expand),
       curve: Motion.easeOut,
       alignment: Alignment.topCenter,
       child: view == null
@@ -818,12 +798,12 @@ class _ConnectedPanel extends StatelessWidget {
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(StatusTint.pad),
-        decoration: StatusTint.decoration(color),
+        decoration: StatusTint.decoration(ds, color),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.only(right: Gap.md, top: 1),
+              padding: const EdgeInsets.only(right: Gap.md, top: Gap.hair),
               child: DrawCheck(color: color),
             ),
             Expanded(
@@ -835,16 +815,15 @@ class _ConnectedPanel extends StatelessWidget {
                     header: true,
                     child: Text(
                       title,
-                      style: Type.label.copyWith(color: ds.text, fontWeight: FontWeight.w600, fontSize: 14),
+                      style: Type.answer.copyWith(color: ds.text),
                     ),
                   ),
                   if (detail.isNotEmpty)
                     Padding(
-                      padding: const EdgeInsets.only(top: 2),
+                      padding: const EdgeInsets.only(top: Gap.hair),
                       child: Text(
                         detail,
-                        style: const TextStyle(fontFamily: monoFamily, fontSize: 12, height: 1.45)
-                            .copyWith(color: ds.textSecondary),
+                        style: Mono.base.copyWith(color: ds.textSecondary),
                       ),
                     ),
                 ],
@@ -926,7 +905,7 @@ class _PublicKeyPanel extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: ds.fill,
-        borderRadius: BorderRadius.circular(Radii.control),
+        borderRadius: BorderRadius.circular(Radii.sm),
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(Gap.md, Gap.md, Gap.md, Gap.sm),
@@ -937,7 +916,7 @@ class _PublicKeyPanel extends StatelessWidget {
             const SizedBox(height: Gap.xs),
             Text(
               key,
-              style: TextStyle(fontFamily: monoFamily, fontSize: 12, height: 1.45, color: ds.text),
+              style: Mono.base.copyWith(color: ds.text),
             ),
             const SizedBox(height: Gap.sm),
             _CopyRow(icon: LucideIcons.copy, label: 'Copy public key', onTap: onCopyKey),
@@ -946,7 +925,7 @@ class _PublicKeyPanel extends StatelessWidget {
             const SizedBox(height: Gap.xs),
             if (replacesSaved) ...[
               Text(
-                'This replaces the key this machine uses now. Run the command on the host first, '
+                'This replaces the key this machine uses now. Run the command on the machine first, '
                 'then Test connection, then Save.',
                 style: Type.secondary.copyWith(color: ds.text),
               ),
@@ -984,7 +963,7 @@ class _CopyRow extends StatelessWidget {
         alignment: Alignment.centerLeft,
         child: Row(
           children: [
-            ExcludeSemantics(child: Icon(icon, size: 18, color: pressed ? ds.textSecondary : ds.accentText)),
+            ExcludeSemantics(child: Icon(icon, size: IconSize.bar, color: pressed ? ds.textSecondary : ds.accentText)),
             const SizedBox(width: Gap.md),
             Expanded(child: Text(label, style: Type.row.copyWith(color: pressed ? ds.textSecondary : ds.text))),
           ],

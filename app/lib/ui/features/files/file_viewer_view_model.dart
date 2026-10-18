@@ -405,7 +405,7 @@ class FileViewerViewModel extends ChangeNotifier {
     }
     final formatted = await _formatJson(doc.text);
     if (!_current(epoch)) return null;
-    if (formatted == null) return "This isn't valid JSON, so it is shown as written.";
+    if (formatted == null) return 'This isn’t valid JSON, so it is shown as written.';
     _prettyDoc = TextDocument()..append(utf8.encode(formatted), last: true);
     _pretty = true;
     notifyListeners();

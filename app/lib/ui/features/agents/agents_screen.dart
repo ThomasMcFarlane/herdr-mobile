@@ -10,17 +10,11 @@ import '../../../data/models/herdr_models.dart';
 import '../../../data/repositories/app_settings.dart';
 import '../../../data/repositories/fleet_repository.dart';
 import '../../../data/repositories/agent_session.dart';
+import '../../../data/words/plural.dart';
 import '../../../data/repositories/attention_set.dart';
-import '../../core/approval_button.dart';
-import '../../core/brand_mark.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/glyphs.dart';
-import '../../core/motion.dart';
-import '../../core/rows.dart';
-import '../../core/status_panel.dart';
-import '../../core/tap_guard.dart';
-import '../../core/tokens.dart';
+import '../machines/approval_button.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../support/tap_guard.dart';
 import '../create/new_agent_session_screen.dart';
 import '../history/past_sessions_navigation.dart';
 import '../machines/machine_form_screen.dart';
@@ -42,7 +36,14 @@ import 'triage_pill.dart';
 /// under the thumb). Needs you and Done count and order what [AttentionSet]
 /// says, the same as the badge, the pill and the triage sheet.
 class AgentsScreen extends StatefulWidget {
-  const AgentsScreen({super.key, this.onShowMachines, this.onSelectingChanged});
+  const AgentsScreen({super.key, this.onShowMachines, this.onSelectingChanged, this.current = true});
+
+  /// Whether the Agents tab is the shell's chosen tab. Picking ends when it
+  /// stops being (unless a batch is running), so the tab bar is never left
+  /// hidden over another tab. A route pushed over the shell (a notification,
+  /// a deep link) leaves the tab chosen, and the picked set waits for the
+  /// person's return.
+  final bool current;
 
   /// Takes the person to the Machines tab, where connection problems are
   /// explained and fixed.
@@ -112,6 +113,17 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
 
   /// Tells the shell when picking starts and ends, so it can put its tab bar
   /// away.
+  @override
+  void didUpdateWidget(AgentsScreen old) {
+    super.didUpdateWidget(old);
+    if (old.current && !widget.current && _selection.active && _selection.busy == null) {
+      // After this frame: cancelling notifies the shell, which is building.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !widget.current && _selection.busy == null) _selection.cancel();
+      });
+    }
+  }
+
   void _onSelection() {
     final active = _selection.active;
     if (active == _wasSelecting) return;
@@ -154,9 +166,13 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
     if (_reportedVisible == visible) return;
     _reportedVisible = visible;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _sessions?.setBoardVisible(_reportedVisible ?? false);
+      if (!mounted) return;
+      _sessions?.setBoardVisible(_reportedVisible ?? false);
     });
   }
+
+  /// The pill's count while it leaves: the last one it showed.
+  int _pillCount = 0;
 
   /// An explicit choice, from what the board shows now (which `auto` may have
   /// decided): the other look, and it stays.
@@ -234,8 +250,7 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
     final troubled = overview.troubled;
     final blockedCount = attention.needsYou.length;
     final review = attention.toReview.length;
-    // Room under the last row for the floating triage pill.
-    final pillSpace = blockedCount == 0 ? 0.0 : TriagePill.height + Gap.md;
+    if (blockedCount > 0) _pillCount = blockedCount;
 
     // What All picks: the rows the board shows (open sections, this filter),
     // and what a pane that went away takes out of the selection.
@@ -301,7 +316,7 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
                           AppChip(
                             label: s.status.label,
                             count: s.count,
-                            leading: StatusGlyph(status: s.status, size: 14),
+                            leading: StatusGlyph(status: s.status, size: IconSize.inline),
                             selected: filter == s.status,
                             onTap: () => _toggleFilter(s.status),
                           ),
@@ -378,7 +393,9 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
                   ),
               },
             ),
-            SliverToBoxAdapter(child: SizedBox(height: clearance + pillSpace)),
+            // Room under the last row for the lanes: the Dock, and the Pin
+            // (the triage pill) while it shows.
+            SliverToBoxAdapter(child: SizedBox(height: FloatingBar.listEnd(context, pin: blockedCount > 0))),
           ],
         ],
       ),
@@ -411,23 +428,37 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
                 onAction: (action) => unawaited(performBatchAction(context, action, _selection)),
               ),
             ),
-            if (blockedCount > 0)
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: clearance,
-                child: Center(
-                  child: HideWhileSelecting(
-                    child: TriagePill(
-                      count: blockedCount,
-                      review: review,
-                      // The sheet walks the same set, in the same order:
-                      // terminal agents and agent sessions.
-                      onTap: () => showTriageSheet(context),
+            // The Pin lane: 8 above the Dock, in the Dock's slot (the same
+            // side margins and width), toasts standing above it while it
+            // shows. It comes and goes like every lane, and steps aside while
+            // the board picks.
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: ListenableBuilder(
+                listenable: _selection,
+                builder: (context, child) => BottomStackTransition(
+                  visible: blockedCount > 0 && !_selection.active,
+                  builder: (_) => child!,
+                ),
+                child: FloatingBarSlot(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: FloatingBar.height + FloatingBar.margin),
+                    child: ToastShelf(
+                      lift: FloatingBar.pinLift(context),
+                      child: TriagePill(
+                        count: _pillCount,
+                        review: review,
+                        // The sheet walks the same set, in the same order:
+                        // terminal agents and agent sessions.
+                        onTap: () => showTriageSheet(context),
+                      ),
                     ),
                   ),
                 ),
               ),
+            ),
           ],
         ),
       ),
@@ -598,23 +629,21 @@ class _ReviewActions extends StatelessWidget {
             Flexible(child: _OfflineNote(count: offline)),
             const SizedBox(width: Gap.sm),
           ],
-          if (onMarkAll case final markAll?)
+          if (onMarkAll case final markAll?) ...[
             Flexible(
-              child: AppButton(
+              child: TextAction(
                 key: const ValueKey('mark-all-reviewed'),
                 label: 'Mark all reviewed',
-                kind: AppButtonKind.ghost,
-                compact: true,
-                onPressed: markAll,
+                onTap: markAll,
               ),
             ),
+            const SizedBox(width: Gap.md),
+          ],
           Flexible(
-            child: AppButton(
+            child: TextAction(
               key: const ValueKey('select-all-done'),
               label: 'Select all',
-              kind: AppButtonKind.ghost,
-              compact: true,
-              onPressed: onSelectAll,
+              onTap: onSelectAll,
             ),
           ),
         ],
@@ -641,11 +670,10 @@ class _BackLeavesSelection extends StatelessWidget {
 }
 
 String _summary(AgentsOverview o, int agentSessions) {
-  String count(int n, String noun) => '$n $noun${n == 1 ? '' : 's'}';
   return [
-    count(o.machineCount, 'machine'),
-    o.agents.isEmpty ? 'no agents' : count(o.agents.length, 'agent'),
-    if (agentSessions > 0) count(agentSessions, 'agent session'),
+    countOf(o.machineCount, 'machine'),
+    o.agents.isEmpty ? 'no agents' : countOf(o.agents.length, 'agent'),
+    if (agentSessions > 0) countOf(agentSessions, 'agent session'),
     if (o.troubled.isNotEmpty) '${o.troubled.length} not connected',
   ].join(' · ');
 }
@@ -667,8 +695,8 @@ class _ConnectionStrip extends StatelessWidget {
       return StatusStrip(
         color: state.color(ds),
         leading: LinkDot(state: state),
-        title: '${troubled.length} machines not connected',
-        action: Icon(LucideIcons.chevronRight, size: 16, color: ds.textSecondary),
+        title: '${countOf(troubled.length, 'machine')} not connected',
+        action: Icon(LucideIcons.chevronRight, size: IconSize.row, color: ds.textSecondary),
         onTap: onShowMachines,
       );
     }

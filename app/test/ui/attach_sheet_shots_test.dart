@@ -1,6 +1,6 @@
 // Renders the attach sheet to PNGs for review: the Gallery grid with picks
 // (half and full height), the permission reason, a refused permission, the
-// Files and Host tabs, the chips strip with an upload in flight, and the
+// Files and Machine tabs, the chips strip with an upload in flight, and the
 // worst cases (no photos, one photo, 500 photos, long and Vietnamese names).
 // Light and dark at 412x892 and 320x640. Off by default; it writes files:
 //
@@ -22,8 +22,7 @@ import 'package:herdr_mobile/data/repositories/recent_phone_files.dart';
 import 'package:herdr_mobile/data/services/image_prep.dart';
 import 'package:herdr_mobile/data/services/phone_files.dart';
 import 'package:herdr_mobile/data/services/phone_gallery.dart';
-import 'package:herdr_mobile/ui/core/tap_guard.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
 import 'package:herdr_mobile/ui/features/agent_session/attach_picker.dart';
 import 'package:herdr_mobile/ui/features/attach/attach_kit.dart';
@@ -104,7 +103,7 @@ void main() {
       ),
     );
     await tester.pump(const Duration(milliseconds: 100));
-    await tester.pump(tapGuard);
+    await tester.pump(Dwell.tapGuard);
     await then?.call(fake);
     // Thumbnails decode on the engine's real clock.
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 400)));

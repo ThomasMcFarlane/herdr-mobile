@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:herdr_mobile/ui/core/markdown/md_text.dart';
-import 'package:herdr_mobile/ui/core/terminal_links.dart';
+import 'package:herdr_mobile/ui/render/markdown/md_text.dart';
+import 'package:herdr_mobile/ui/render/terminal/terminal_links.dart';
 
 /// What a link must be: kind, displayed text, target, line and column.
 typedef _Link = ({

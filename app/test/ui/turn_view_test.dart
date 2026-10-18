@@ -5,8 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/acp/acp_models.dart';
 import 'package:herdr_mobile/data/acp/session_state.dart';
 import 'package:herdr_mobile/data/repositories/last_seen.dart';
-import 'package:herdr_mobile/ui/core/controls.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
 import 'package:herdr_mobile/ui/features/agent_session/log_atoms.dart';
 import 'package:herdr_mobile/ui/features/agent_session/plan_header.dart';
@@ -118,18 +117,20 @@ void main() {
       await pumpView(tester, session);
       await tester.tap(rich('Worked 42s'));
       await tester.pump(const Duration(milliseconds: 40));
-      FadeTransition fade() =>
-          tester.widget<FadeTransition>(find.ancestor(of: find.text('Thinking'), matching: find.byType(FadeTransition)).first);
-      expect(fade().opacity.value, lessThan(1));
+      Finder fades() => find.ancestor(of: find.text('Thinking'), matching: find.byType(FadeTransition));
+      final revealing = fades().evaluate().length;
+      expect(tester.widget<FadeTransition>(fades().first).opacity.value, lessThan(1));
       await tester.pump(const Duration(milliseconds: 400));
-      expect(fade().opacity.value, 1);
+      expect(fades().evaluate().length, revealing - 1, reason: 'at rest the row has no fade layer left at 1');
+      expect(find.text('Thinking'), findsOneWidget);
       expect(tester.binding.hasScheduledFrame, isFalse, reason: 'it settles; nothing loops');
 
       await tester.pumpWidget(const SizedBox());
       await pumpView(tester, FakeAgentSession(state: stateWith(items: richTurn())), reducedMotion: true);
       await tester.tap(rich('Worked 42s'));
       await tester.pump(const Duration(milliseconds: 1));
-      expect(fade().opacity.value, 1);
+      expect([for (final e in fades().evaluate()) (e.widget as FadeTransition).opacity.value], everyElement(1.0));
+      expect(tester.binding.hasScheduledFrame, isFalse, reason: 'reduced motion: no reveal at all');
     });
 
     testWidgets('a turn that ran under a replay says no duration', (tester) async {
@@ -314,7 +315,7 @@ void main() {
 
       for (final ds in [Ds.paper, Ds.ink]) {
         for (final bg in [ds.bg, ds.surface, ds.fill, ds.fillPressed]) {
-          expect(ratio(addedText(ds), bg), greaterThanOrEqualTo(4.5), reason: '${ds.brightness} added on $bg');
+          expect(ratio(ds.addedText, bg), greaterThanOrEqualTo(4.5), reason: '${ds.brightness} added on $bg');
           expect(ratio(removedText(ds), bg), greaterThanOrEqualTo(4.5), reason: '${ds.brightness} removed on $bg');
         }
       }
@@ -352,8 +353,8 @@ void main() {
       await tester.tap(find.text('2 more'));
       await tester.pumpAndSettle();
       expect(rich('f7.dart'), findsOneWidget);
-      expect(find.text('Show fewer'), findsOneWidget);
-      await tester.tap(find.text('Show fewer'));
+      expect(find.text('Show less'), findsOneWidget);
+      await tester.tap(find.text('Show less'));
       await tester.pumpAndSettle();
       expect(rich('f7.dart'), findsNothing);
     });
@@ -377,7 +378,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       expect(built.length, lessThan(30), reason: 'only the rows in view are built: ${built.length}');
-      expect(find.text('Show fewer'), findsNothing, reason: 'at the far end of 300 rows');
+      expect(find.text('Show less'), findsNothing, reason: 'at the far end of 300 rows');
     });
   });
 

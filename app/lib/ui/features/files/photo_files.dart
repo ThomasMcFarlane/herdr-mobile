@@ -79,7 +79,7 @@ Future<void> openFolderPhotos(
 /// pictures are [siblings] when the caller has the listing already, else they
 /// are listed from the machine once the viewer is open ([listSiblings] false
 /// leaves the viewer on this picture alone). A file whose bytes are not a
-/// picture offers "View as text".
+/// picture offers "Show as text".
 Route<T> photoRoute<T>(
   MachineConnection machine,
   RemoteStat stat, {

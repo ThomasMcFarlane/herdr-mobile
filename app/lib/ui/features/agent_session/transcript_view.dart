@@ -11,10 +11,8 @@ import '../../../data/acp/turns/turns.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/app_settings.dart';
 import '../../../data/repositories/last_seen.dart' show SinceLeft;
-import '../../core/controls.dart';
-import '../../core/markdown/markdown.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../render/markdown/markdown.dart';
 import 'agent_md_scope.dart';
 import 'content_copy.dart' show ContentSelectionArea;
 import 'changed_card.dart';
@@ -130,20 +128,20 @@ bool _samePayload(PlanRow a, PlanRow b) {
   if (a.kind != b.kind || a.live != b.live || a.quiet != b.quiet || a.nested != b.nested) return false;
   if (a.first != b.first || a.last != b.last || a.count != b.count || a.label != b.label) return false;
   switch (a.kind) {
-    case RowKind.text || RowKind.content:
+    case TranscriptRowKind.text || TranscriptRowKind.content:
       if (a.live) return identical(a.item, b.item);
       return _sameBlock(a.part, b.part);
-    case RowKind.fold || RowKind.changedHead || RowKind.changedMore:
+    case TranscriptRowKind.fold || TranscriptRowKind.changedHead || TranscriptRowKind.changedMore:
       return identical(a.turn, b.turn);
-    case RowKind.changedFile:
+    case TranscriptRowKind.changedFile:
       return identical(a.turn, b.turn) && identical(a.file, b.file);
-    case RowKind.thinking:
+    case TranscriptRowKind.thinking:
       return _sameList(a.thoughts, b.thoughts);
-    case RowKind.group:
+    case TranscriptRowKind.group:
       return _sameList(a.group!.tools, b.group!.tools);
-    case RowKind.divider:
+    case TranscriptRowKind.divider:
       return true;
-    case RowKind.user || RowKind.tool || RowKind.stop || RowKind.note:
+    case TranscriptRowKind.user || TranscriptRowKind.tool || TranscriptRowKind.stop || TranscriptRowKind.note:
       return identical(a.item, b.item);
   }
 }
@@ -639,7 +637,7 @@ class _TranscriptViewState extends State<TranscriptView> with TickerProviderStat
       );
     }
     final Widget child = switch (row.kind) {
-      RowKind.user => UserRow(
+      TranscriptRowKind.user => UserRow(
         rowKey: row.key,
         message: item as TranscriptMessage,
         gap: row.gap,
@@ -647,7 +645,7 @@ class _TranscriptViewState extends State<TranscriptView> with TickerProviderStat
         onToggle: _toggle,
         all: all,
       ),
-      RowKind.fold => FoldRow(
+      TranscriptRowKind.fold => FoldRow(
         rowKey: row.key,
         turn: row.turn!,
         gap: row.gap,
@@ -655,14 +653,14 @@ class _TranscriptViewState extends State<TranscriptView> with TickerProviderStat
         onToggle: _toggle,
         note: row.label,
       ),
-      RowKind.thinking => ThinkingRow(
+      TranscriptRowKind.thinking => ThinkingRow(
         rowKey: row.key,
         thoughts: row.thoughts,
         gap: row.gap,
         open: open,
         onToggle: _toggle,
       ),
-      RowKind.tool => toolOrSubagentRow(
+      TranscriptRowKind.tool => toolOrSubagentRow(
         session: widget.session,
         rowKey: row.key,
         item: item as TranscriptTool,
@@ -672,8 +670,8 @@ class _TranscriptViewState extends State<TranscriptView> with TickerProviderStat
         onToggle: _toggle,
         nested: row.nested,
       ),
-      RowKind.group => GroupRow(rowKey: row.key, group: row.group!, gap: row.gap, open: open, onToggle: _toggle),
-      RowKind.text => AgentTextRow(
+      TranscriptRowKind.group => GroupRow(rowKey: row.key, group: row.group!, gap: row.gap, open: open, onToggle: _toggle),
+      TranscriptRowKind.text => AgentTextRow(
         rowKey: row.key,
         block: row.part as MdBlock,
         gap: row.gap,
@@ -682,15 +680,15 @@ class _TranscriptViewState extends State<TranscriptView> with TickerProviderStat
         message: item as TranscriptMessage,
         onToggle: _toggle,
       ),
-      RowKind.content => ContentRow(
+      TranscriptRowKind.content => ContentRow(
         rowKey: row.key,
         block: row.part as ContentBlock,
         gap: row.gap,
         expanded: all,
         onToggle: _toggle,
       ),
-      RowKind.changedHead => ChangedHeadRow(rowKey: row.key, turn: row.turn!, gap: row.gap),
-      RowKind.changedFile => ChangedFileRow(
+      TranscriptRowKind.changedHead => ChangedHeadRow(rowKey: row.key, turn: row.turn!, gap: row.gap),
+      TranscriptRowKind.changedFile => ChangedFileRow(
         rowKey: row.key,
         file: row.file!,
         last: row.last,
@@ -698,14 +696,14 @@ class _TranscriptViewState extends State<TranscriptView> with TickerProviderStat
         all: all,
         onToggle: _toggle,
       ),
-      RowKind.changedMore => ChangedMoreRow(rowKey: row.key, count: row.count, all: open, onToggle: _toggle),
-      RowKind.divider => SinceDivider(rowKey: row.key, label: row.label ?? 'New', gap: row.gap),
-      RowKind.stop => StopNoteRow(
+      TranscriptRowKind.changedMore => ChangedMoreRow(rowKey: row.key, count: row.count, all: open, onToggle: _toggle),
+      TranscriptRowKind.divider => SinceDivider(rowKey: row.key, label: row.label ?? 'New', gap: row.gap),
+      TranscriptRowKind.stop => StopNoteRow(
         rowKey: row.key,
         reason: (item as TranscriptStop).reason,
         gap: row.gap,
       ),
-      RowKind.note => NoteRow(rowKey: row.key, text: (item as TranscriptNote).text, gap: row.gap),
+      TranscriptRowKind.note => TranscriptNoteRow(rowKey: row.key, text: (item as TranscriptNote).text, gap: row.gap),
     };
     return _Reveal(key: key, animate: _entering.contains(row.key), reduced: _reducedMotion, child: child);
   }
@@ -744,7 +742,18 @@ class _TranscriptViewState extends State<TranscriptView> with TickerProviderStat
   Widget build(BuildContext context) {
     notifyRegionBuilt('transcript');
     if (_rows.isEmpty) {
-      if (_earlier == EarlierHistory.none) return const _EmptyTranscript();
+      if (_earlier == EarlierHistory.none) {
+        // Scrolls when the keyboard leaves it little room.
+        return const Center(
+          child: SingleChildScrollView(
+            child: EmptyState(
+              icon: LucideIcons.messageSquare,
+              title: 'Nothing said yet',
+              message: 'Tell the agent what to do.',
+            ),
+          ),
+        );
+      }
       // The end of the log is all tool output with nothing to show: what was
       // said is earlier, so read it rather than say nothing was.
       if (_earlier == EarlierHistory.available) {
@@ -788,12 +797,12 @@ class _TranscriptViewState extends State<TranscriptView> with TickerProviderStat
                     if (earlierRow != null)
                       SliverPadding(
                         key: center == 0 ? _centerKey : null,
-                        padding: const EdgeInsets.fromLTRB(Gap.lg, Gap.sm, Gap.lg, 0),
+                        padding: const EdgeInsets.only(left: Gap.lg, top: Gap.sm, right: Gap.lg),
                         sliver: SliverToBoxAdapter(child: earlierRow),
                       ),
                     if (center > 0)
                       SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(Gap.lg, Gap.sm, Gap.lg, 0),
+                        padding: const EdgeInsets.only(left: Gap.lg, top: Gap.sm, right: Gap.lg),
                         sliver: SliverList(
                           delegate: SliverChildBuilderDelegate(
                             (context, j) => _row(context, center - 1 - j),
@@ -809,7 +818,9 @@ class _TranscriptViewState extends State<TranscriptView> with TickerProviderStat
                       ),
                     SliverPadding(
                       key: center == 0 && earlierRow != null ? null : _centerKey,
-                      padding: EdgeInsets.fromLTRB(Gap.lg, center == 0 && earlierRow == null ? Gap.sm : 0, Gap.lg, 0),
+                      padding: center == 0 && earlierRow == null
+                          ? const EdgeInsets.only(left: Gap.lg, top: Gap.sm, right: Gap.lg)
+                          : const EdgeInsets.symmetric(horizontal: Gap.lg),
                       sliver: SliverList(
                         delegate: SliverChildBuilderDelegate(
                           (context, j) => _row(context, center + j),
@@ -825,7 +836,7 @@ class _TranscriptViewState extends State<TranscriptView> with TickerProviderStat
                     ),
                     // What the agent is doing right now, after the last row.
                     SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.lg),
+                      padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.lg),
                       sliver: SliverToBoxAdapter(child: StatusLine(session: widget.session)),
                     ),
                   ],
@@ -839,9 +850,8 @@ class _TranscriptViewState extends State<TranscriptView> with TickerProviderStat
           bottom: Gap.md,
           child: ListenableBuilder(
             listenable: Listenable.merge([_away, _frozen]),
-            builder: (context, _) => _away.value
-                ? JumpToLatest(newBlocks: _newBlocks(), onPressed: _jumpToLatest)
-                : const SizedBox.shrink(),
+            builder: (context, _) =>
+                JumpToLatest(visible: _away.value, newBlocks: _newBlocks(), onPressed: _jumpToLatest),
           ),
         ),
       ],
@@ -867,38 +877,50 @@ class _Reveal extends StatefulWidget {
 
 class _RevealState extends State<_Reveal> with SingleTickerProviderStateMixin {
   AnimationController? _controller;
-  Animation<double> _fade = const AlwaysStoppedAnimation(1);
-  Animation<Offset> _slide = const AlwaysStoppedAnimation(Offset.zero);
+  CurvedAnimation? _curve;
+
+  /// Keeps the row's state when the reveal's wrappers go at its end.
+  GlobalKey? _childKey;
 
   @override
   void initState() {
     super.initState();
     if (widget.animate && !widget.reduced) {
+      _childKey = GlobalKey();
       final controller = _controller = AnimationController(vsync: this, duration: Motion.expand);
-      final curve = CurvedAnimation(parent: controller, curve: Motion.easeOut);
-      _fade = curve;
-      _slide = Tween(begin: const Offset(0, -0.12), end: Offset.zero).animate(curve);
+      _curve = Motion.curved(controller);
       controller.forward().whenComplete(() {
         if (!mounted) return;
-        _controller?.dispose();
-        _controller = null;
-        setState(() {
-          _fade = const AlwaysStoppedAnimation(1);
-          _slide = const AlwaysStoppedAnimation(Offset.zero);
-        });
+        setState(_release);
       });
     }
   }
 
-  @override
-  void dispose() {
+  void _release() {
+    _curve?.dispose();
+    _curve = null;
     _controller?.dispose();
-    super.dispose();
+    _controller = null;
   }
 
   @override
-  Widget build(BuildContext context) =>
-      FadeTransition(opacity: _fade, child: SlideTransition(position: _slide, child: widget.child));
+  void dispose() {
+    _release();
+    super.dispose();
+  }
+
+  /// A row arrives from just above its place: an eighth of its height.
+  static final _from = Tween(begin: const Offset(0, -0.12), end: Offset.zero);
+
+  @override
+  Widget build(BuildContext context) {
+    final key = _childKey;
+    final child = key == null ? widget.child : KeyedSubtree(key: key, child: widget.child);
+    final curve = _curve;
+    // At rest the row is bare: no fade or slide layer left at 1.
+    if (curve == null) return child;
+    return FadeTransition(opacity: curve, child: SlideTransition(position: _from.animate(curve), child: child));
+  }
 }
 
 /// Above the first row, when the log holds earlier messages: reading them
@@ -924,19 +946,10 @@ class _EarlierRow extends StatelessWidget {
             compact: true,
             onPressed: onLoad,
           ),
-          EarlierHistory.loading => Semantics(
-            liveRegion: true,
-            child: SizedBox(
-              height: 36,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const BusySpinner(),
-                  const SizedBox(width: Gap.sm),
-                  Text('Loading earlier messages…', style: style),
-                ],
-              ),
-            ),
+          // As tall as the button it replaces, so the list does not jump.
+          EarlierHistory.loading => const SizedBox(
+            height: kMinTap,
+            child: LoadingRow('Loading earlier messages…', padding: EdgeInsets.zero, center: true),
           ),
           // 64 MB: `_maxTail` of the observed session and the host's ceiling.
           EarlierHistory.tooLong => Text(
@@ -948,38 +961,6 @@ class _EarlierRow extends StatelessWidget {
         },
       ),
     );
-  }
-}
-
-class _EmptyTranscript extends StatelessWidget {
-  const _EmptyTranscript();
-
-  @override
-  Widget build(BuildContext context) {
-    final ds = context.ds;
-    return Center(
-      child: SingleChildScrollView(
-        child: Padding(
-        padding: const EdgeInsets.all(Gap.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(LucideIcons.messageSquare, size: 28, color: ds.textTertiary),
-            const SizedBox(height: Gap.md),
-            Semantics(
-              header: true,
-              child: Text('Nothing said yet', style: Type.row.copyWith(color: ds.text)),
-            ),
-            const SizedBox(height: Gap.xs),
-            Text(
-              'Tell the agent what to do.',
-              textAlign: TextAlign.center,
-              style: Type.secondary.copyWith(color: ds.textSecondary),
-            ),
-          ],
-        ),
-      ),
-    ));
   }
 }
 

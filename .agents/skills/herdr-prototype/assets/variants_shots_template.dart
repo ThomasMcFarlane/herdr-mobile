@@ -17,10 +17,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/herdr_models.dart' show AgentStatus;
-import 'package:herdr_mobile/ui/core/chrome.dart';
-import 'package:herdr_mobile/ui/core/glyphs.dart';
-import 'package:herdr_mobile/ui/core/rows.dart';
-import 'package:herdr_mobile/ui/core/tokens.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 import '../support/shot.dart';
 
@@ -28,16 +25,15 @@ import '../support/shot.dart';
 typedef _Row = ({AgentStatus status, String shown, String ask, String where, String time});
 
 const _data = <_Row>[
-  (status: AgentStatus.working, shown: 'Claude Code', ask: 'Refactor the settings page into tabs', where: 'claude · studio-mac · web-app', time: 'working 18m'),
-  (status: AgentStatus.idle, shown: 'Claude Code', ask: 'Fix the Hà Nội locale bug', where: 'claude · studio-mac · payments-api', time: 'idle 12m'),
-  (status: AgentStatus.idle, shown: 'Claude Code', ask: 'Add regression tests for currency rounding', where: 'claude · studio-mac · payments-api', time: 'idle 47m'),
+  (status: AgentStatus.working, shown: 'Claude Code', ask: 'Refactor the settings page into tabs', where: 'Claude Code · studio-mac · web-app', time: '18m'),
+  (status: AgentStatus.idle, shown: 'Claude Code', ask: 'Fix the Hà Nội locale bug', where: 'Claude Code · studio-mac · payments-api', time: '12m'),
+  (status: AgentStatus.idle, shown: 'Claude Code', ask: 'Add regression tests for currency rounding', where: 'Claude Code · studio-mac · payments-api', time: '47m'),
 ];
 
-Widget _row(BuildContext c, _Row r, {required String title, bool divider = true}) => ListRow(
-      leading: StatusGlyph(status: r.status, size: 20),
+Widget _row(BuildContext c, _Row r, {required String title}) => ListRow(
+      leading: StatusGlyph(status: r.status, size: IconSize.lead),
       title: title,
       subtitle: r.where,
-      divider: divider,
       trailing: Text(
         r.time,
         maxLines: 1,
@@ -66,12 +62,12 @@ class _Page extends StatelessWidget {
 
 // 0. The baseline: today, on the same data. It must show the owner's complaint.
 List<Widget> _today(BuildContext c) => [
-      for (final (i, r) in _data.indexed) _row(c, r, title: r.shown, divider: i < _data.length - 1),
+      for (final r in _data) _row(c, r, title: r.shown),
     ];
 
 // 1. One axis: identity. Title is what the person asked.
 List<Widget> _byAsk(BuildContext c) => [
-      for (final (i, r) in _data.indexed) _row(c, r, title: r.ask, divider: i < _data.length - 1),
+      for (final r in _data) _row(c, r, title: r.ask),
     ];
 
 void main() {

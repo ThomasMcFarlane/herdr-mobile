@@ -5,13 +5,11 @@ import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/repositories/attach_target.dart';
+import '../../../data/words/elapsed.dart';
+import '../../../data/words/plural.dart';
 import '../../../data/services/phone_gallery.dart';
 import '../../../data/services/thumb_cache.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/rows.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import '../agent_session/session_select.dart' show notifyRegionBuilt;
 import '../files/file_format.dart';
 import 'attach_kit.dart';
@@ -32,20 +30,6 @@ int galleryColumnsFor(double width) => (width / 130).round().clamp(3, 8);
 /// A scroll faster than this (dp/s) holds the thumbnail queue: the tiles
 /// flying past are not worth decoding.
 const galleryFlingPause = 2400.0;
-
-/// `today 14:02`, `yesterday 09:10`, `May 20, 14:02`, `May 20, 2025`.
-String describeTaken(DateTime when, DateTime now) {
-  final t = when.toLocal();
-  String two(int n) => n.toString().padLeft(2, '0');
-  final clock = '${two(t.hour)}:${two(t.minute)}';
-  final today = DateTime(now.year, now.month, now.day);
-  final days = today.difference(DateTime(t.year, t.month, t.day)).inDays;
-  if (days == 0) return 'today $clock';
-  if (days == 1) return 'yesterday $clock';
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  final date = '${months[t.month - 1]} ${t.day}';
-  return t.year == now.year ? '$date, $clock' : '$date, ${t.year}';
-}
 
 /// The Gallery tab: the phone's recent pictures as a 3-column grid, newest
 /// first, the camera as the first tile, a round mark on every picture.
@@ -181,7 +165,7 @@ class _Header extends StatelessWidget {
             AppChip(
               label: album?.name ?? 'Recent',
               semanticLabel: 'Album: ${album?.name ?? 'Recent'}',
-              leading: Icon(LucideIcons.chevronsUpDown, size: 14, color: ds.textSecondary),
+              leading: Icon(LucideIcons.chevronsUpDown, size: IconSize.inline, color: ds.textSecondary),
               onTap: () => unawaited(_chooseAlbum(context, model)),
             ),
             if (limited) ...[
@@ -189,14 +173,14 @@ class _Header extends StatelessWidget {
               AppChip(
                 label: 'Manage',
                 semanticLabel: 'Manage which photos herdr can see',
-                leading: Icon(LucideIcons.slidersHorizontal, size: 14, color: ds.textSecondary),
+                leading: Icon(LucideIcons.slidersHorizontal, size: IconSize.inline, color: ds.textSecondary),
                 onTap: () => unawaited(model.manage()),
               ),
             ],
             const Spacer(),
             if (album != null && album.count > 0)
               Text(
-                '${groupDigits(album.count)} ${album.count == 1 ? 'photo' : 'photos'}',
+                '${groupDigits(album.count)} ${plural(album.count, 'photo')}',
                 style: Type.caption.copyWith(color: ds.textMuted, fontFeatures: Type.tabular),
               ),
           ],
@@ -215,13 +199,16 @@ class _NoImagesNote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(Gap.gutter, 0, Gap.gutter, Gap.sm),
+    padding: const EdgeInsets.only(left: Gap.gutter, right: Gap.gutter, bottom: Gap.sm),
     child: Align(
       alignment: Alignment.centerLeft,
       child: Text(text, style: Type.caption.copyWith(color: context.ds.textSecondary)),
     ),
   );
 }
+
+/// An album row: one line, the height of a [SheetActionRow].
+const _albumRowHeight = 52.0;
 
 Future<void> _chooseAlbum(BuildContext context, GalleryModel model) async {
   await model.loadAlbums();
@@ -231,16 +218,13 @@ Future<void> _chooseAlbum(BuildContext context, GalleryModel model) async {
     builder: (sheet) {
       final ds = sheet.ds;
       final albums = model.albums;
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(4, 8, 4, 12),
+      return SheetScaffold(
+        title: 'Albums',
+        kind: SheetKind.list,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: Semantics(header: true, child: Text('Albums', style: Type.label.copyWith(color: ds.textSecondary))),
-            ),
             for (final a in albums)
               PressBuilder(
                 onTap: () {
@@ -249,24 +233,24 @@ Future<void> _chooseAlbum(BuildContext context, GalleryModel model) async {
                 },
                 selected: a.id == model.album?.id,
                 builder: (context, pressed) => Container(
-                  constraints: const BoxConstraints(minHeight: 52),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  constraints: const BoxConstraints(minHeight: _albumRowHeight),
+                  padding: const EdgeInsets.symmetric(horizontal: Gap.lg),
                   decoration: BoxDecoration(
-                    color: pressed ? ds.fill : Colors.transparent,
-                    borderRadius: BorderRadius.circular(Radii.row),
+                    color: pressed ? ds.pressTint : Colors.transparent,
+                    borderRadius: BorderRadius.circular(Radii.sm),
                   ),
                   child: Row(
                     children: [
-                      Icon(a.isRecent ? LucideIcons.images : LucideIcons.folder, size: 20, color: ds.textSecondary),
-                      const SizedBox(width: 12),
+                      Icon(a.isRecent ? LucideIcons.images : LucideIcons.folder, size: IconSize.lead, color: ds.textSecondary),
+                      const SizedBox(width: Gap.md),
                       Expanded(
                         child: Text(a.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: Type.row.copyWith(color: ds.text)),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: Gap.md),
                       Text(groupDigits(a.count), style: Type.secondary.copyWith(color: ds.textMuted, fontFeatures: Type.tabular)),
                       if (a.id == model.album?.id) ...[
-                        const SizedBox(width: 12),
-                        Icon(LucideIcons.check, size: 18, color: ds.accentText),
+                        const SizedBox(width: Gap.md),
+                        Icon(LucideIcons.check, size: IconSize.bar, color: ds.accentText),
                       ],
                     ],
                   ),
@@ -319,7 +303,7 @@ class _PanelState extends State<_Panel> {
     if (box is! RenderBox || !box.hasSize) return;
     final position = SheetScope.of(context).position;
     // What shows at half height: its height less the grabber and the bars.
-    final room = position.halfHeight - 20 - sheetBarsReserve;
+    final room = position.halfHeight - sheetGrabberSpace - Gap.sm - sheetBarsReserve;
     if (box.size.height + Gap.lg > room) position.expand();
   }
 
@@ -450,6 +434,8 @@ class _GridState extends State<_Grid> {
         _tile = (box.maxWidth - galleryGap * (_columns + 1)) / _columns;
         final count = model.count;
         final empty = model.checked && model.access.canRead && !model.loading && model.album != null && count == 0;
+        // An empty library shows its note right under the grid, not above the bars.
+        final tail = empty ? 0.0 : clearance;
         return SheetScroll(
           controller: _scroll,
           builder: (context, controller, physics) => NotificationListener<ScrollNotification>(
@@ -462,7 +448,7 @@ class _GridState extends State<_Grid> {
               scrollCacheExtent: ScrollCacheExtent.pixels(_tile * 2),
               slivers: [
                 SliverPadding(
-                  padding: EdgeInsets.fromLTRB(galleryGap, 0, galleryGap, empty ? 0 : clearance),
+                  padding: EdgeInsets.only(left: galleryGap, right: galleryGap, bottom: tail),
                   sliver: SliverGrid(
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: _columns,
@@ -577,7 +563,7 @@ class _CameraTile extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(LucideIcons.camera, size: 30, color: ds.textSecondary),
+              Icon(LucideIcons.camera, size: IconSize.empty, color: ds.textSecondary),
               const SizedBox(height: Gap.xs),
               Text('Camera', style: Type.caption.copyWith(color: ds.textSecondary)),
             ],
@@ -650,10 +636,9 @@ class _PhotoTileState extends State<PhotoTile> {
     final ds = context.ds;
     final n = _number;
     final picked = n != null;
-    final reduced = Motion.reduced(context);
-    final label = 'Photo ${widget.index + 1}, taken ${describeTaken(widget.asset.createdAt, widget.now())}';
+    final label = 'Photo ${widget.index + 1}, taken ${formatWhen(widget.asset.createdAt, widget.now(), sentence: true)}';
     Widget picture = GalleryThumb(asset: widget.asset, cache: widget.cache);
-    if (picked) picture = ClipRRect(borderRadius: BorderRadius.circular(Radii.tile), child: picture);
+    if (picked) picture = ClipRRect(borderRadius: BorderRadius.circular(Radii.xs), child: picture);
     return Semantics(
       container: true,
       label: '$label, ${picked ? 'selected, number $n' : 'not selected'}',
@@ -673,8 +658,8 @@ class _PhotoTileState extends State<PhotoTile> {
           children: [
             ColoredBox(color: ds.fill),
             AnimatedScale(
-              scale: picked ? 0.88 : 1,
-              duration: reduced ? Duration.zero : Motion.press,
+              scale: picked ? PressScale.icon : 1,
+              duration: Motion.of(context, Motion.press),
               curve: Motion.easeOut,
               child: picture,
             ),

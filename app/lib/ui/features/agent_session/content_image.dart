@@ -8,15 +8,13 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/acp/acp_models.dart';
 import '../../../data/observed/log_picture.dart';
 import '../../../data/services/disk_cache.dart';
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import '../../../data/services/image_decode.dart' show DecodedImage;
 import '../files/file_format.dart';
 import 'content_chip.dart';
 import 'content_image_cache.dart';
 import 'photo_thread.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 import 'content_target.dart';
 
 /// Tallest an inline picture is drawn, in dp.
@@ -252,15 +250,15 @@ class _InlineImageState extends State<_InlineImage> {
       return Align(
         alignment: Alignment.centerLeft,
         child: _Frame(
-          width: 120,
-          height: 96,
+          width: _placeholder.width,
+          height: _placeholder.height,
           child: ColoredBox(
             color: ds.fill,
             // A fetch the person started is a wait they can see: the one spinner.
             child: Center(
               child: logPicture && (widget.waited || _retried)
-                  ? const BusySpinner(size: 20)
-                  : Icon(LucideIcons.image, size: 20, color: ds.textTertiary),
+                  ? const BusySpinner(size: IconSize.lead)
+                  : Icon(LucideIcons.image, size: IconSize.lead, color: ds.textTertiary),
             ),
           ),
         ),
@@ -319,7 +317,7 @@ class _Frame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
-    final radius = BorderRadius.circular(Radii.panel);
+    final radius = BorderRadius.circular(Radii.md);
     return SizedBox(
       width: width,
       height: height,
@@ -338,3 +336,6 @@ String imageSemanticLabel(ImageBlock block, String name) => [
   if (block.mimeType.isNotEmpty) block.mimeType,
   if (name.isNotEmpty) visibleText(name),
 ].join(', ');
+
+/// The frame an image that has not loaded (or cannot) holds.
+const _placeholder = Size(120, 96);

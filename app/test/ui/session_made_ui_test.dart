@@ -15,9 +15,7 @@ import 'package:herdr_mobile/data/observed/observed_contracts.dart' show Subagen
 import 'package:herdr_mobile/data/repositories/agent_session.dart' show AgentLink, SubagentEntry, SubagentState;
 import 'package:herdr_mobile/data/repositories/machine_connection.dart';
 import 'package:herdr_mobile/data/services/herdr_api.dart';
-import 'package:herdr_mobile/ui/core/controls.dart' show AppChip, Segmented;
-import 'package:herdr_mobile/ui/core/glyphs.dart' show LinkDot;
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/session_bar.dart';
 import 'package:herdr_mobile/ui/features/files/file_viewer_screen.dart';
 import 'package:herdr_mobile/ui/features/files/photo_thumbs.dart';
@@ -262,7 +260,9 @@ void main() {
     await tester.tap(find.text('localhost:5173'));
     await tester.pump(const Duration(milliseconds: 200));
     expect(find.text('Opening localhost:5173…'), findsOneWidget);
-    await tester.pump(const Duration(seconds: 6)); // the toast over the sheet's bottom row is gone
+    // The toast's clock starts once it is in place; then it is gone from over the sheet's bottom row.
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(seconds: 6));
 
     // A second tap on the same row, from a reopened sheet, while it connects.
     await tester.tap(find.text('Made'));

@@ -11,14 +11,11 @@ import '../../../data/acp/turns/turns.dart';
 import '../../../data/decision/mode_danger.dart';
 import '../../../data/decision/session_chips.dart';
 import '../../../data/repositories/agent_session.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/glyphs.dart';
-import '../../core/motion.dart';
-import '../../core/step_clock.dart';
-import '../../core/theme.dart';
+import '../../../data/words/elapsed.dart';
+import '../../../data/words/plural.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../support/step_clock.dart';
 import 'log_atoms.dart';
-import 'observed_widgets.dart' show WorkingLabel;
 import 'permission_subject.dart';
 import 'session_bar.dart' show sessionStatus;
 import 'session_overview_model.dart';
@@ -28,7 +25,7 @@ import 'subagent_format.dart';
 import 'subagent_roster.dart';
 import 'transcript_rows.dart' show allKey;
 import 'changed_card.dart' show ChangedFileRow;
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// The orchestration view of one agent without scrolling its transcript: a
 /// sheet over the session.
@@ -109,18 +106,15 @@ class _SessionOverviewState extends State<SessionOverview> {
         final usage = state.usage;
         final runs = state.subagents;
         final observed = session.subagents;
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(Gap.lg, 8, Gap.lg, Gap.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(top: Gap.sm),
-                child: Semantics(
-                  header: true,
-                  child: Text('Session overview', style: Type.label.copyWith(color: ds.textSecondary)),
-                ),
-              ),
+        return SheetScaffold(
+          title: 'Session overview',
+          kind: SheetKind.list,
+          child: Padding(
+            // The list kind's inset 4 + 12: the facts sit 16 from the edge.
+            padding: const EdgeInsets.symmetric(horizontal: Gap.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
               _StatusRow(snap: snap),
               if (model.goal != null) ...[
                 _Section('Goal'),
@@ -136,7 +130,7 @@ class _SessionOverviewState extends State<SessionOverview> {
                 _Bar(fraction: progress.done / progress.total, color: ds.done),
                 if (progress.current != null)
                   Padding(
-                    padding: const EdgeInsets.only(top: 6),
+                    padding: const EdgeInsets.only(top: Gap.sm),
                     child: Text(
                       visibleText(progress.current!),
                       maxLines: 2,
@@ -151,7 +145,8 @@ class _SessionOverviewState extends State<SessionOverview> {
               if (chips.isNotEmpty) ..._settings(context, chips),
               if (usage != null || state.turnUsage != null) ..._usage(context, usage, state.turnUsage),
               if (state.pending.isNotEmpty) ..._pending(context, state.pending),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -166,11 +161,11 @@ class _SessionOverviewState extends State<SessionOverview> {
     return [
       _Section(
         'Changed',
-        detail: files.length == 1 ? '1 file' : '${files.length} files',
+        detail: countOf(files.length, 'file'),
         trailing: DiffStats(added: model.added, removed: model.removed),
       ),
       ClipRRect(
-        borderRadius: BorderRadius.circular(Radii.panel),
+        borderRadius: BorderRadius.circular(Radii.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -185,18 +180,11 @@ class _SessionOverviewState extends State<SessionOverview> {
                 onToggle: (id) => _toggle(id.startsWith('overview:') ? id.replaceFirst('overview:', 'file:') : id),
               ),
             if (more > 0)
-              PressBuilder(
+              PressRow(
                 onTap: () => setState(() => _filesShown += 16),
-                builder: (context, pressed) => Container(
-                  constraints: const BoxConstraints(minHeight: kMinTap),
-                  alignment: Alignment.centerLeft,
-                  padding: const EdgeInsets.symmetric(horizontal: Gap.md),
-                  color: pressed ? ds.fillPressed : ds.fill,
-                  child: Text(
-                    '$more more',
-                    style: Type.secondary.copyWith(color: ds.textSecondary, fontWeight: FontWeight.w600),
-                  ),
-                ),
+                minHeight: kMinTap,
+                padding: const EdgeInsets.symmetric(horizontal: Gap.md - PressRow.inset),
+                child: Text('$more more', style: Type.labelStrong.copyWith(color: ds.accentText)),
               ),
           ],
         ),
@@ -237,32 +225,24 @@ class _SessionOverviewState extends State<SessionOverview> {
     } else {
       final running = observed.where((e) => e.state == SubagentState.running).length;
       text = [
-        observed.length == 1 ? '1 subagent' : '${observed.length} subagents',
+        countOf(observed.length, 'subagent'),
         if (running > 0) '$running running',
       ].join(' · ');
     }
     return [
       _Section('Subagents'),
-      PressBuilder(
+      PressRow(
         onTap: () => _leave((c) => unawaited(showSubagents(c, widget.session))),
-        builder: (context, pressed) => AnimatedContainer(
-          duration: Motion.pressing(pressed),
-          curve: Motion.easeOut,
-          constraints: const BoxConstraints(minHeight: kMinTap),
-          padding: const EdgeInsets.symmetric(horizontal: Gap.xs),
-          decoration: BoxDecoration(
-            color: pressed ? ds.fill : Colors.transparent,
-            borderRadius: BorderRadius.circular(Radii.row),
-          ),
+        minHeight: kMinTap,
+        padding: const EdgeInsets.symmetric(horizontal: Gap.xs),
           child: Row(
             children: [
-              Icon(LucideIcons.bot, size: 16, color: ds.textSecondary),
-              const SizedBox(width: 10),
-              Expanded(child: Text(text, style: Type.secondary.copyWith(color: ds.text, fontWeight: FontWeight.w500))),
-              Icon(LucideIcons.chevronRight, size: 14, color: ds.textTertiary),
+              Icon(HerdrIcons.agents, size: IconSize.row, color: ds.textSecondary),
+              const SizedBox(width: Gap.sm),
+              Expanded(child: Text(text, style: Type.secondaryStrong.copyWith(color: ds.text))),
+              Icon(LucideIcons.chevronRight, size: IconSize.inline, color: ds.textTertiary),
             ],
           ),
-        ),
       ),
     ];
   }
@@ -273,7 +253,7 @@ class _SessionOverviewState extends State<SessionOverview> {
       _Section('Mode and model'),
       for (final c in chips)
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
+          padding: const EdgeInsets.symmetric(vertical: Gap.xs),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -281,20 +261,19 @@ class _SessionOverviewState extends State<SessionOverview> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(
-                    width: 72,
+                    width: _nameWidth,
                     child: Text(visibleText(c.title), style: Type.secondary.copyWith(color: ds.textMuted)),
                   ),
                   if (c.risk == ModeRisk.dangerous)
                     Padding(
-                      padding: const EdgeInsets.only(top: 2, right: 6),
-                      child: Icon(LucideIcons.triangleAlert, size: 14, color: ds.dangerText),
+                      padding: const EdgeInsets.only(top: Gap.hair, right: Gap.sm),
+                      child: Icon(LucideIcons.triangleAlert, size: IconSize.inline, color: ds.dangerText),
                     ),
                   Expanded(
                     child: Text(
                       visibleText(c.label),
-                      style: Type.secondary.copyWith(
+                      style: Type.secondaryStrong.copyWith(
                         color: c.risk == ModeRisk.dangerous ? ds.dangerText : ds.text,
-                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
@@ -302,7 +281,7 @@ class _SessionOverviewState extends State<SessionOverview> {
               ),
               if (c.isRisky && c.reason != null)
                 Padding(
-                  padding: const EdgeInsets.only(left: 72, top: 2),
+                  padding: const EdgeInsets.only(left: _nameWidth, top: Gap.hair),
                   child: Text(
                     c.reason!,
                     style: Type.caption.copyWith(color: c.risk == ModeRisk.dangerous ? ds.dangerText : ds.textSecondary),
@@ -325,12 +304,11 @@ class _SessionOverviewState extends State<SessionOverview> {
       if (fraction != null) ...[
         _Bar(fraction: fraction, color: warn ? ds.danger : ds.textSecondary),
         Padding(
-          padding: const EdgeInsets.only(top: 6),
+          padding: const EdgeInsets.only(top: Gap.sm),
           child: Text(
             '${formatTokens(usage!.used)} of ${formatTokens(usage.size)} tokens · $percent% of context',
-            style: Type.secondary.copyWith(
+            style: (warn ? Type.secondaryStrong : Type.secondary).copyWith(
               color: warn ? ds.dangerText : ds.textSecondary,
-              fontWeight: warn ? FontWeight.w600 : FontWeight.w400,
               fontFeatures: Type.tabular,
             ),
           ),
@@ -350,27 +328,20 @@ class _SessionOverviewState extends State<SessionOverview> {
   List<Widget> _pending(BuildContext context, List<PendingRequest> pending) {
     final ds = context.ds;
     return [
-      _Section('Waiting for you', detail: '${pending.length}', detailColor: ds.blockedText),
+      _Section('Needs you', detail: '${pending.length}', detailColor: ds.blockedText),
       for (final p in pending.take(3))
-        PressBuilder(
+        PressRow(
           onTap: () => Navigator.of(context).pop(),
-          builder: (context, pressed) => AnimatedContainer(
-            duration: Motion.pressing(pressed),
-            curve: Motion.easeOut,
-            constraints: const BoxConstraints(minHeight: kMinTap),
-            padding: const EdgeInsets.symmetric(horizontal: Gap.xs, vertical: 6),
-            decoration: BoxDecoration(
-              color: pressed ? ds.fill : Colors.transparent,
-              borderRadius: BorderRadius.circular(Radii.row),
-            ),
+          minHeight: kMinTap,
+          padding: const EdgeInsets.symmetric(horizontal: Gap.xs, vertical: Gap.xs),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: StatusGlyph(status: AgentStatus.blocked, size: 16),
+                  padding: const EdgeInsets.only(top: Gap.hair),
+                  child: StatusGlyph(status: AgentStatus.blocked, size: IconSize.row),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: Gap.sm),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -379,7 +350,7 @@ class _SessionOverviewState extends State<SessionOverview> {
                         _pendingText(p),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: Type.secondary.copyWith(color: ds.text, fontWeight: FontWeight.w500),
+                        style: Type.secondaryStrong.copyWith(color: ds.text),
                       ),
                       if (p.origin != null)
                         Text(
@@ -393,11 +364,10 @@ class _SessionOverviewState extends State<SessionOverview> {
                 ),
               ],
             ),
-          ),
         ),
       if (pending.length > 3)
         Padding(
-          padding: const EdgeInsets.only(left: Gap.xs, top: 2),
+          padding: const EdgeInsets.only(left: Gap.xs, top: Gap.hair),
           child: Text('${pending.length - 3} more', style: Type.caption.copyWith(color: ds.textMuted)),
         ),
     ];
@@ -432,16 +402,12 @@ class _Section extends StatelessWidget {
               child: Text.rich(
                 TextSpan(
                   text: title,
-                  style: Type.label.copyWith(color: ds.textSecondary, fontWeight: FontWeight.w600),
+                  style: Type.labelStrong.copyWith(color: ds.textSecondary),
                   children: [
                     if (detail != null)
                       TextSpan(
                         text: ' · $detail',
-                        style: Type.label.copyWith(
-                          color: detailColor ?? ds.textMuted,
-                          fontWeight: FontWeight.w500,
-                          fontFeatures: Type.tabular,
-                        ),
+                        style: Type.label.copyWith(color: detailColor ?? ds.textMuted, fontFeatures: Type.tabular),
                       ),
                   ],
                 ),
@@ -467,9 +433,9 @@ class _Bar extends StatelessWidget {
     final ds = context.ds;
     return ExcludeSemantics(
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(2),
+        borderRadius: BorderRadius.circular(Radii.pill),
         child: SizedBox(
-          height: 4,
+          height: _barHeight,
           child: Stack(
             children: [
               Positioned.fill(child: ColoredBox(color: ds.fillPressed)),
@@ -498,11 +464,11 @@ class _Fact extends StatelessWidget {
   Widget build(BuildContext context) {
     final ds = context.ds;
     return Padding(
-      padding: const EdgeInsets.only(top: 6),
+      padding: const EdgeInsets.only(top: Gap.sm),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 72, child: Text(name, style: Type.secondary.copyWith(color: ds.textMuted))),
+          SizedBox(width: _nameWidth, child: Text(name, style: Type.secondary.copyWith(color: ds.textMuted))),
           Expanded(
             child: Text(
               value,
@@ -530,19 +496,15 @@ class _StatusRow extends StatelessWidget {
       padding: const EdgeInsets.only(top: Gap.sm),
       child: Row(
         children: [
-          StatusGlyph(status: status, size: 16),
-          const SizedBox(width: 10),
+          StatusGlyph(status: status, size: IconSize.row),
+          const SizedBox(width: Gap.md),
           Expanded(
             child: MinuteBuilder(
               builder: (context, _) {
-                final time = since == null ? null : WorkingLabel.elapsed(statusNow().difference(since));
+                final time = since == null ? null : Elapsed.compact(statusNow().difference(since));
                 return Text(
                   [status.label, ?time].join(' · '),
-                  style: Type.compact.copyWith(
-                    color: status.textColor(ds),
-                    fontWeight: FontWeight.w600,
-                    fontFeatures: Type.tabular,
-                  ),
+                  style: Type.answer.copyWith(color: status.textColor(ds), fontFeatures: Type.tabular),
                 );
               },
             ),
@@ -568,32 +530,25 @@ class _CommandRow extends StatelessWidget {
     final code = command.signal != null && command.signal!.isNotEmpty
         ? 'signal ${visibleText(command.signal!)}'
         : (command.exitCode == null ? null : 'exit ${command.exitCode}');
-    final mono = TextStyle(fontFamily: monoFamily, fontSize: 12.5, color: ds.text);
+    final mono = Mono.base.copyWith(color: ds.text);
     final text = visibleText(command.command);
     return Semantics(
       expanded: open,
-      child: PressBuilder(
+      child: PressRow(
         onTap: onTap,
         semanticLabel: [text, if (command.failed) 'failed', ?code].join(', '),
-        builder: (context, pressed) => AnimatedContainer(
-          duration: Motion.pressing(pressed),
-          curve: Motion.easeOut,
-          constraints: const BoxConstraints(minHeight: kMinTap),
-          padding: const EdgeInsets.symmetric(horizontal: Gap.xs, vertical: 6),
-          decoration: BoxDecoration(
-            color: pressed ? ds.fill : Colors.transparent,
-            borderRadius: BorderRadius.circular(Radii.row),
-          ),
+        minHeight: kMinTap,
+        padding: const EdgeInsets.symmetric(horizontal: Gap.xs, vertical: Gap.xs),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: const EdgeInsets.only(top: 1),
+                padding: const EdgeInsets.only(top: Gap.hair),
                 child: command.failed
-                    ? Icon(LucideIcons.circleX, size: 16, color: ds.danger)
-                    : Icon(LucideIcons.terminal, size: 16, color: ds.textSecondary),
+                    ? Icon(LucideIcons.circleX, size: IconSize.row, color: ds.danger)
+                    : Icon(LucideIcons.terminal, size: IconSize.row, color: ds.textSecondary),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: Gap.sm),
               Expanded(
                 child: Text(
                   text,
@@ -606,17 +561,21 @@ class _CommandRow extends StatelessWidget {
                 const SizedBox(width: Gap.sm),
                 Text(
                   code,
-                  style: Type.caption.copyWith(
+                  style: (command.failed ? Type.captionStrong : Type.caption).copyWith(
                     color: command.failed ? ds.dangerText : ds.textMuted,
-                    fontWeight: command.failed ? FontWeight.w600 : FontWeight.w500,
                     fontFeatures: Type.tabular,
                   ),
                 ),
               ],
             ],
           ),
-        ),
       ),
     );
   }
 }
+
+/// Width of the name column of a fact row (`Cost`, `Mode`), so values line up.
+const _nameWidth = 72.0;
+
+/// Thickness of the context bar.
+const _barHeight = 4.0;

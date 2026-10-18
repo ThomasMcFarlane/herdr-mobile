@@ -6,9 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/repositories/agent_session.dart';
 import 'package:herdr_mobile/data/models/herdr_models.dart' show AgentStatus;
-import 'package:herdr_mobile/ui/core/glyphs.dart';
-import 'package:herdr_mobile/ui/core/status_panel.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
 import 'package:herdr_mobile/ui/features/agent_session/permission_dock.dart';
 import 'package:herdr_mobile/ui/features/agent_session/saved_copy.dart';
@@ -58,7 +56,9 @@ void main() {
       session
         ..setLink(AgentLink.live)
         ..setSavedCopy(null);
+      // The strip folds away (Collapse) rather than popping.
       await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(Motion.expand);
       expect(find.byType(StatusStrip), findsNothing);
       expect(find.textContaining('Fix the build', findRichText: true), findsOneWidget);
     });
@@ -114,6 +114,7 @@ void main() {
         ..setLink(AgentLink.live)
         ..setSavedCopy(null);
       await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(Motion.expand);
       expect(find.byType(PermissionPanel), findsOneWidget);
       expect(waiting, findsNothing, reason: 'the request itself is shown now');
     });
@@ -130,6 +131,7 @@ void main() {
         ..setSavedCopy(null);
       await tester.pump(const Duration(milliseconds: 600));
       expect(session.unseenDone, isFalse, reason: 'the live replay shows it: reviewed');
+      await tester.pump(const Duration(milliseconds: 300)); // the Undo toast rises into place
 
       await tester.tap(find.text('Undo'));
       await tester.pump(const Duration(milliseconds: 600));
@@ -137,13 +139,13 @@ void main() {
     });
   });
 
-  group('savedCopyLabel', () {
+  group('savedCopyNotice', () {
     final now = DateTime(2026, 3, 1, 15, 30);
     test('today, yesterday, earlier', () {
-      expect(savedCopyLabel(DateTime(2026, 3, 1, 14, 2), now), 'at 14:02');
-      expect(savedCopyLabel(DateTime(2026, 3, 1, 9, 5), now), 'at 09:05');
-      expect(savedCopyLabel(DateTime(2026, 2, 28, 23, 59), now), 'yesterday at 23:59');
-      expect(savedCopyLabel(DateTime(2026, 2, 3, 8, 0), now), 'on 3 Feb at 08:00');
+      expect(savedCopyNotice(DateTime(2026, 3, 1, 14, 2), now), 'Showing the copy saved today at 14:02. Nothing here can be answered.');
+      expect(savedCopyNotice(DateTime(2026, 3, 1, 9, 5), now), contains('saved today at 09:05.'));
+      expect(savedCopyNotice(DateTime(2026, 2, 28, 23, 59), now), contains('saved yesterday at 23:59.'));
+      expect(savedCopyNotice(DateTime(2026, 2, 3, 8, 0), now), contains('saved on 3 Feb at 08:00.'));
     });
   });
 

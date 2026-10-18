@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/remote_file.dart';
 import 'package:herdr_mobile/data/repositories/machine_connection.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/files/binary_view.dart';
 import 'package:herdr_mobile/ui/features/files/code_view.dart';
 import 'package:herdr_mobile/ui/features/files/file_browser_screen.dart';
@@ -346,7 +346,7 @@ void main() {
 
       expect(find.byType(FileViewerScreen), findsNothing);
       expect(find.text('Not found'), findsOneWidget);
-      expect(find.text("./lib/main.dart isn't in docs"), findsOneWidget);
+      expect(find.text('./lib/main.dart isn’t in docs'), findsOneWidget);
     });
 
     test('lookupAttempts: the plain place first, then the suffix-less text, git prefix, parents', () {
@@ -402,7 +402,7 @@ void main() {
       await tester.tap(find.text('go'));
       await _settle(tester);
       expect(find.text('Not found'), findsOneWidget);
-      expect(find.text("/home/dev/missing.txt isn't on this machine"), findsOneWidget);
+      expect(find.text('/home/dev/missing.txt isn’t on this machine'), findsOneWidget);
       expect(find.byType(FileViewerScreen), findsNothing);
       expect(find.text('Copy path'), findsOneWidget, reason: 'the page offers what it can');
 
@@ -431,13 +431,13 @@ void main() {
       await _pump(tester, _viewer(fs, '/home/dev/herdr-mobile/pubspec.yaml'));
       await tester.pump();
 
-      expect(find.byType(FileSkeleton), findsOneWidget);
+      expect(find.byType(Skeleton), findsOneWidget);
       expect(find.byType(CodeView), findsNothing);
 
       fs.gate!.complete();
       await _settle(tester);
 
-      expect(find.byType(FileSkeleton), findsNothing);
+      expect(find.byType(Skeleton), findsNothing);
       expect(find.text('name: herdr_mobile'), findsOneWidget);
       expect(find.text('1'), findsOneWidget);
       expect(find.text('2'), findsOneWidget);
@@ -525,12 +525,17 @@ void main() {
       await _pump(tester, _viewer(projectFs(), '/home/dev/herdr-mobile/pubspec.yaml'));
       await _settle(tester);
 
-      await tester.tap(find.byTooltip('Copy path'));
+      await tester.tap(find.byTooltip('File options'));
+      await _settle(tester);
+      await tester.tap(find.text('Copy path'));
       await tester.pump();
       expect(copied.last, '/home/dev/herdr-mobile/pubspec.yaml');
       expect(find.text('Path copied'), findsOneWidget);
+      await _settle(tester);
 
-      await tester.tap(find.byTooltip('Copy contents'));
+      await tester.tap(find.byTooltip('File options'));
+      await _settle(tester);
+      await tester.tap(find.text('Copy contents'));
       await _settle(tester);
       expect(copied.last, 'name: herdr_mobile\nversion: 1.4.0+4102');
     });
@@ -544,10 +549,12 @@ void main() {
       await _pump(tester, _viewer(projectFs(), '/home/dev/herdr-mobile/pubspec.yaml'));
       await _settle(tester);
 
-      await tester.tap(find.byTooltip('Copy contents'));
+      await tester.tap(find.byTooltip('File options'));
+      await _settle(tester);
+      await tester.tap(find.text('Copy contents'));
       await _settle(tester);
 
-      expect(find.textContaining("Couldn't copy"), findsOneWidget);
+      expect(find.textContaining('Couldn’t copy'), findsOneWidget);
     });
 
     testWidgets('an empty file says so and offers no copy', (tester) async {
@@ -555,7 +562,10 @@ void main() {
       await _settle(tester);
 
       expect(find.text('Empty file'), findsOneWidget);
-      expect(find.byTooltip('Copy contents'), findsNothing);
+      await tester.tap(find.byTooltip('File options'));
+      await _settle(tester);
+      expect(find.text('Copy contents'), findsNothing);
+      expect(find.text('Copy path'), findsOneWidget);
       expect(find.text('Wrap'), findsNothing);
     });
 
@@ -668,7 +678,7 @@ void main() {
       await _settle(tester);
       expect(find.byType(BinaryView), findsOneWidget);
 
-      await tester.tap(find.text('View as text'));
+      await tester.tap(find.text('Show as text'));
       await _settle(tester);
 
       expect(find.byType(BinaryView), findsNothing);

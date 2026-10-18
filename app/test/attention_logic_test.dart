@@ -6,6 +6,7 @@ import 'dart:ui' show AppLifecycleState;
 
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:herdr_mobile/data/words/elapsed.dart';
 import 'package:herdr_mobile/data/models/herdr_models.dart';
 import 'package:herdr_mobile/data/models/machine_profile.dart';
 import 'package:herdr_mobile/data/models/status_time.dart';
@@ -780,7 +781,7 @@ void main() {
       expect(time, StatusTime.after(lastSeen));
       expect(time.exact, isFalse);
       expect(timeInState(AgentStatus.blocked, time.since(r.now), exact: time.exact),
-          'needs you ≤ 30m');
+          '≤ 30m');
     });
 
     _rig('suspended in the background for 25 minutes is a gap too', [
@@ -794,7 +795,7 @@ void main() {
 
       final time = r.c.statusTime('w1:p1')!;
       expect(timeInState(AgentStatus.blocked, time.since(r.now), exact: time.exact),
-          'needs you ≤ 25m');
+          '≤ 25m');
     });
 
     _rig('a short blip is dated as it happened: under the observation gap the error is invisible', [
@@ -817,9 +818,9 @@ void main() {
 
       final time = r.c.statusTime('w1:p1')!;
       expect(time, StatusTime.exact(r.now));
-      expect(timeInState(AgentStatus.blocked, time.since(r.now), exact: time.exact), 'needs you <1m');
+      expect(timeInState(AgentStatus.blocked, time.since(r.now), exact: time.exact), '<1m');
       r.advance(const Duration(minutes: 12));
-      expect(timeInState(AgentStatus.blocked, time.since(r.now)), 'needs you 12m');
+      expect(timeInState(AgentStatus.blocked, time.since(r.now)), '12m');
     });
 
     _rig('panes already there at the very first sight have no known start', [
@@ -830,10 +831,10 @@ void main() {
     });
 
     test('the label says what a bound is: at most that old, and never less than a minute', () {
-      expect(timeInState(AgentStatus.blocked, const Duration(minutes: 25), exact: false), 'needs you ≤ 25m');
-      expect(timeInState(AgentStatus.working, const Duration(minutes: 12)), 'working 12m');
-      expect(timeInState(AgentStatus.done, const Duration(hours: 2), exact: false), 'done ≤ 2h');
-      expect(timeInState(AgentStatus.blocked, const Duration(seconds: 5), exact: false), 'needs you ≤ 1m');
+      expect(timeInState(AgentStatus.blocked, const Duration(minutes: 25), exact: false), '≤ 25m');
+      expect(timeInState(AgentStatus.working, const Duration(minutes: 12)), '12m');
+      expect(timeInState(AgentStatus.done, const Duration(hours: 2), exact: false), '≤ 2h');
+      expect(timeInState(AgentStatus.blocked, const Duration(seconds: 5), exact: false), '≤ 1m');
       expect(timeInState(AgentStatus.unknown, _min, exact: false), '');
     });
 
@@ -876,7 +877,7 @@ void main() {
         expect(second.c.statusTime('w1:p1'), StatusTime.exact(blockedAt),
             reason: 'still blocked: the time carries over');
         expect(timeInState(AgentStatus.blocked, second.c.statusTime('w1:p1')!.since(second.now)),
-            'needs you 40m');
+            '40m');
         expect(second.c.statusTime('w1:p2'), isNull, reason: 'its start was never known, and is not made up');
         expect(second.c.statusTime('w1:p3'), StatusTime.after(blockedAt),
             reason: 'changed while the app was away');
@@ -1302,9 +1303,9 @@ void main() {
       expect(keys(groupByStatus(rows.reversed), AgentStatus.blocked), first);
     });
 
-    test('the quiet label reads whole minutes', () {
-      expect(quietLabel(const Duration(minutes: 14, seconds: 59)), 'quiet 14m');
-      expect(quietLabel(const Duration(hours: 1, minutes: 5)), 'quiet 1h 05m');
+    test('the quiet time reads whole minutes', () {
+      expect(Elapsed.compact(const Duration(minutes: 14, seconds: 59), seconds: false), '14m');
+      expect(Elapsed.compact(const Duration(hours: 1, minutes: 5), seconds: false), '1h 05m');
     });
   });
 

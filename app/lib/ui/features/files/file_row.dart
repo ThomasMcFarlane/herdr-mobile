@@ -3,11 +3,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/models/remote_file.dart';
 import '../../../data/services/remote_files.dart';
-import '../../core/controls.dart';
-import '../../core/glyphs.dart';
-import '../../core/motion.dart';
-import '../../core/rows.dart';
-import '../../core/theme.dart';
+import '../../../data/words/elapsed.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'file_format.dart';
 import 'file_thumb.dart';
 import 'file_widgets.dart';
@@ -51,13 +48,11 @@ class FileRow extends StatelessWidget {
   /// has no selection at all.
   final bool? selected;
 
-  static const _inset = 8.0;
-
   /// `12 KB · 3 min ago`, `Link → target`, `No permission`.
   String subtitle() {
     final e = entry;
     if (denied) return 'No permission';
-    final when = formatModified(e.modified, now: now);
+    final when = e.modified == null ? '' : formatAgo(e.modified!, now);
     if (e.kind == RemoteEntryKind.link) {
       final to = e.linkTarget == null ? '' : ' → ${e.linkTarget}';
       return e.isBrokenLink ? 'Broken link$to' : 'Link$to';
@@ -72,33 +67,23 @@ class FileRow extends StatelessWidget {
     final ds = context.ds;
     final e = entry;
     final sub = subtitle();
-    final indent = Gap.gutter + 32 + 12;
+    final indent = Gap.gutter + 32 + Gap.md;
     Widget row = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        PressBuilder(
+        PressRow(
           onTap: onTap,
-          builder: (context, pressed) => Padding(
-            padding: const EdgeInsets.symmetric(horizontal: _inset),
-            child: AnimatedContainer(
-              duration: Motion.pressing(pressed),
-              curve: Motion.easeOut,
-              constraints: const BoxConstraints(minHeight: 64),
-              alignment: Alignment.centerLeft,
-              decoration: BoxDecoration(
-                color: pressed ? ds.fill : Colors.transparent,
-                borderRadius: BorderRadius.circular(Radii.row),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: Gap.gutter - _inset, vertical: 12),
+          minHeight: _rowHeight,
+          padding: const EdgeInsets.symmetric(horizontal: Gap.gutter - PressRow.inset, vertical: Gap.md),
               child: Row(
                 children: [
                   SizedBox(
-                    width: 32,
+                    width: RowMetrics.leadingExtent,
                     child: e.isDirectory
-                        ? IconTile(icon: iconForEntry(e), color: ds.accentText)
+                        ? IconTile(icon: iconForEntry(e), color: ds.textSecondary)
                         : FileThumb(files: files, entry: e, icon: iconForEntry(e), loader: thumbs),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: Gap.md),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -107,7 +92,7 @@ class FileRow extends StatelessWidget {
                         MiddleEllipsisText(e.name, style: Type.row.copyWith(color: ds.text)),
                         if (sub.isNotEmpty)
                           Padding(
-                            padding: const EdgeInsets.only(top: 2),
+                            padding: const EdgeInsets.only(top: Gap.hair),
                             child: Text(
                               sub,
                               maxLines: 1,
@@ -119,14 +104,12 @@ class FileRow extends StatelessWidget {
                       ],
                     ),
                   ),
-                  if (trailing != null) ...[const SizedBox(width: 4), trailing!] else if (e.isDirectory) ...[
-                    const SizedBox(width: 12),
-                    Icon(LucideIcons.chevronRight, size: 16, color: ds.textTertiary),
+                  if (trailing != null) ...[const SizedBox(width: Gap.xs), trailing!] else if (e.isDirectory) ...[
+                    const SizedBox(width: Gap.md),
+                    Icon(LucideIcons.chevronRight, size: IconSize.row, color: ds.textTertiary),
                   ],
                 ],
               ),
-            ),
-          ),
         ),
         Hairline(indent: indent),
       ],
@@ -136,3 +119,6 @@ class FileRow extends StatelessWidget {
     return Semantics(hint: e.isDirectory ? 'Folder' : null, selected: selected, child: row);
   }
 }
+
+/// A file row: a thumbnail-sized leading column and two lines.
+const _rowHeight = 64.0;

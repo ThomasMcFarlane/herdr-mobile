@@ -1,23 +1,19 @@
 import 'package:flutter/material.dart';
 
-import 'controls.dart';
+import 'press.dart';
+import 'buttons.dart';
 import 'motion.dart';
 import 'theme.dart';
 
-/// Shared look of [StatusPanel] and [StatusStrip]: a 12% tint of the state's
-/// colour with a faint outline in the same colour. Tint instead of elevation;
-/// the colour is the state's colour, never decoration.
+/// Shared look of [StatusPanel] and [StatusStrip]: the state's [Ds.wash].
+/// Tint, not outline and not elevation; the colour is the state's colour,
+/// never decoration.
 abstract final class StatusTint {
-  /// Fill opacity. `blockedText` / `dangerText` reach 4.5:1 on it in both themes.
-  static const fillAlpha = 0.12;
-  static const borderAlpha = 0.22;
-
   static const pad = Gap.md;
 
-  static BoxDecoration decoration(Color color, {bool pressed = false}) => BoxDecoration(
-        color: color.withValues(alpha: pressed ? fillAlpha + 0.06 : fillAlpha),
-        borderRadius: BorderRadius.circular(Radii.panel),
-        border: Border.all(color: color.withValues(alpha: borderAlpha)),
+  static BoxDecoration decoration(Ds ds, Color color, {bool pressed = false}) => BoxDecoration(
+        color: pressed ? ds.washPressed(color) : ds.wash(color),
+        borderRadius: BorderRadius.circular(Radii.md),
       );
 }
 
@@ -37,6 +33,7 @@ class StatusPanel extends StatelessWidget {
     this.messageMaxLines,
     this.footer,
     this.trailing,
+    this.liveRegion = false,
   });
 
   final Color color;
@@ -50,6 +47,9 @@ class StatusPanel extends StatelessWidget {
   final Widget? footer;
   final Widget? trailing;
 
+  /// Announce the panel when it appears (a state that arrives on its own).
+  final bool liveRegion;
+
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
@@ -58,10 +58,11 @@ class StatusPanel extends StatelessWidget {
     final vertical = trailing == null ? StatusTint.pad : Gap.sm;
     return Semantics(
       container: true,
+      liveRegion: liveRegion,
       child: Container(
         width: double.infinity,
         padding: EdgeInsets.fromLTRB(StatusTint.pad, vertical, trailing == null ? StatusTint.pad : Gap.sm, vertical),
-        decoration: StatusTint.decoration(color),
+        decoration: StatusTint.decoration(ds, color),
         child: Row(
           // A titled panel reads top-down (icon beside the title); a one-line
           // message with an action centres on the action.
@@ -87,7 +88,7 @@ class StatusPanel extends StatelessWidget {
                         header: true,
                         child: Text(
                           title!,
-                          style: Type.label.copyWith(color: ds.text, fontWeight: FontWeight.w600, fontSize: 14),
+                          style: Type.answer.copyWith(color: ds.text),
                         ),
                       ),
                     if (message != null && message!.isNotEmpty)
@@ -97,7 +98,7 @@ class StatusPanel extends StatelessWidget {
                           message!,
                           maxLines: messageMaxLines,
                           overflow: messageMaxLines == null ? null : TextOverflow.ellipsis,
-                          style: (mono ? const TextStyle(fontFamily: monoFamily, fontSize: 12, height: 1.45) : Type.secondary)
+                          style: (mono ? Mono.base : Type.secondary)
                               .copyWith(color: ds.textSecondary),
                         ),
                       ),
@@ -157,7 +158,7 @@ class StatusStrip extends StatelessWidget {
           width: double.infinity,
           constraints: const BoxConstraints(minHeight: height),
           padding: EdgeInsets.fromLTRB(StatusTint.pad, 0, action == null ? StatusTint.pad : Gap.xs, 0),
-          decoration: StatusTint.decoration(color, pressed: pressed && onTap != null),
+          decoration: StatusTint.decoration(ds, color, pressed: pressed && onTap != null),
           child: Row(
             children: [
               if (leading != null) ...[
@@ -170,7 +171,7 @@ class StatusStrip extends StatelessWidget {
                   child: Text.rich(
                     TextSpan(
                       text: title,
-                      style: Type.label.copyWith(color: ds.text, fontWeight: FontWeight.w600, fontSize: 14),
+                      style: Type.answer.copyWith(color: ds.text),
                       children: [
                         if (detail != null && detail!.isNotEmpty)
                           TextSpan(

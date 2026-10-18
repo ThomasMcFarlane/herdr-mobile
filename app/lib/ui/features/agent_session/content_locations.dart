@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/acp/acp_models.dart';
-import '../../core/controls.dart';
-import '../../core/markdown/markdown.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../render/markdown/markdown.dart';
 import '../files/file_viewer_screen.dart' show shortenFront;
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// Locations listed before `N more`.
 const locationsShown = 4;
@@ -39,8 +37,8 @@ class ToolLocationRows extends StatelessWidget {
           _LocationRow(location: l, onTap: onPath == null ? null : () => onPath(context, l.path, l.line)),
         if (shown.length > locationsShown)
           Padding(
-            padding: const EdgeInsets.fromLTRB(Gap.sm + 15 + Gap.sm, Gap.xs, 0, 0),
-            child: Text('+${shown.length - locationsShown} more', style: Type.caption.copyWith(color: ds.textMuted)),
+            padding: const EdgeInsets.only(left: Gap.sm + IconSize.row + Gap.sm, top: Gap.xs),
+            child: Text('${shown.length - locationsShown} more', style: Type.caption.copyWith(color: ds.textMuted)),
           ),
       ],
     );
@@ -63,13 +61,13 @@ class _LocationRow extends StatelessWidget {
     final tail = line == null ? file : '$file:$line';
     final full = cut >= 0 ? '${path.substring(0, cut + 1)}$tail' : tail;
     final tappable = onTap != null;
-    final mono = TextStyle(fontFamily: monoFamily, fontSize: 12, height: 1.4);
+    final mono = Mono.base;
     final scaler = MediaQuery.textScalerOf(context);
     final row = Padding(
       padding: const EdgeInsets.symmetric(horizontal: Gap.sm),
       child: Row(
         children: [
-          Icon(LucideIcons.fileText, size: 15, color: ds.textTertiary),
+          Icon(LucideIcons.fileText, size: IconSize.row, color: ds.textTertiary),
           const SizedBox(width: Gap.sm),
           // The folder gives way (`…/deep/folder/`), the file name and the line
           // never do, short of a name wider than the screen.
@@ -81,10 +79,10 @@ class _LocationRow extends StatelessWidget {
                 return Text.rich(
                   TextSpan(
                     children: [
-                      if (head.isNotEmpty) TextSpan(text: head, style: TextStyle(color: ds.textMuted)),
+                      if (head.isNotEmpty) TextSpan(text: head, style: mono.copyWith(color: ds.textMuted)),
                       TextSpan(
                         text: shown.substring(head.length),
-                        style: TextStyle(color: tappable ? ds.accentText : ds.textSecondary),
+                        style: mono.copyWith(color: tappable ? ds.accentText : ds.textSecondary),
                       ),
                     ],
                     style: mono,
@@ -100,21 +98,12 @@ class _LocationRow extends StatelessWidget {
         ],
       ),
     );
-    if (!tappable) return Padding(padding: const EdgeInsets.symmetric(vertical: 2), child: row);
-    return PressBuilder(
+    if (!tappable) return Padding(padding: const EdgeInsets.symmetric(vertical: Gap.hair), child: row);
+    return PressRow(
       onTap: onTap,
       semanticLabel: line == null ? 'Open $path' : 'Open $path at line $line',
-      builder: (context, pressed) => AnimatedContainer(
-        duration: Motion.pressing(pressed),
-        curve: Motion.easeOut,
-        constraints: const BoxConstraints(minHeight: kMinTap),
-        alignment: Alignment.centerLeft,
-        decoration: BoxDecoration(
-          color: pressed ? ds.fillPressed : const Color(0x00000000),
-          borderRadius: BorderRadius.circular(Radii.row),
-        ),
-        child: row,
-      ),
+      minHeight: kMinTap,
+      child: row,
     );
   }
 }

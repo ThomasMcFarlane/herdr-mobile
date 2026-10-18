@@ -23,7 +23,7 @@ import 'package:herdr_mobile/data/repositories/quick_phrases.dart';
 import 'package:herdr_mobile/data/repositories/terminal_settings.dart';
 import 'package:herdr_mobile/data/services/notifier.dart';
 import 'package:herdr_mobile/data/services/disk_cache.dart';
-import 'package:herdr_mobile/ui/core/markdown/markdown.dart';
+import 'package:herdr_mobile/ui/render/markdown/markdown.dart';
 import 'package:herdr_mobile/ui/features/agent_session/content_image.dart';
 import 'package:herdr_mobile/ui/features/agent_session/content_image_cache.dart';
 import 'package:herdr_mobile/ui/features/agent_session/photo_thread.dart';

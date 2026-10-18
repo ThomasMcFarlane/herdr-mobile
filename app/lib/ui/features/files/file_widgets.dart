@@ -1,18 +1,9 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/models/remote_file.dart';
 import '../../../data/repositories/path_finder.dart' show PathNotFound;
-import '../../../data/services/system_clipboard.dart';
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/rows.dart';
-import '../../core/status_panel.dart';
-import '../../core/theme.dart';
-import '../../core/toast.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'file_kind.dart';
 
 const _codeExt = {
@@ -56,17 +47,6 @@ IconData iconForEntry(RemoteEntry e) {
   return fileIconForName(e.name);
 }
 
-/// Copies [text] and says so with a toast. Where the system already shows its
-/// own confirmation (Android 13+: "Copied to clipboard"), a plain `Copied` is
-/// left to it, so the phone does not say it twice; words that tell more than
-/// that (`Copied as Markdown`, `Copied the first 1 MB`) still show.
-void copyToClipboard(BuildContext context, String text, String done) {
-  Clipboard.setData(ClipboardData(text: text));
-  Haptics.tick();
-  if (SystemClipboard.confirms && done == 'Copied') return;
-  showToast(context, done);
-}
-
 /// What a failed file operation says: an icon, a short title, a sentence.
 ({IconData icon, String title, String message, bool retry, bool danger}) describeFileError(
   RemoteFileException e,
@@ -83,12 +63,12 @@ void copyToClipboard(BuildContext context, String text, String done) {
       RemoteFileErrorKind.permission => (
           icon: LucideIcons.lock,
           title: 'No permission',
-          message: "Your login on this machine isn't allowed to read $name.",
+          message: 'Your login on this machine isn’t allowed to read $name.',
           retry: true,
           danger: true,
         ),
       RemoteFileErrorKind.unsupported => (
-          icon: LucideIcons.serverOff,
+          icon: HerdrIcons.machinesOff,
           title: 'Files are unavailable',
           message: e.message,
           retry: false,
@@ -103,7 +83,7 @@ void copyToClipboard(BuildContext context, String text, String done) {
         ),
       RemoteFileErrorKind.notAFile => (
           icon: LucideIcons.fileCog,
-          title: "Can't open this",
+          title: 'Can’t open this',
           message: e.message,
           retry: false,
           danger: false,
@@ -124,7 +104,7 @@ void copyToClipboard(BuildContext context, String text, String done) {
         ),
       RemoteFileErrorKind.failed => (
           icon: LucideIcons.triangleAlert,
-          title: "Couldn't read this",
+          title: 'Couldn’t read this',
           message: e.message,
           retry: true,
           danger: true,
@@ -175,127 +155,8 @@ class FileErrorPanel extends StatelessWidget {
   }
 }
 
-/// Static placeholder bars while a file or folder loads: no animation, so a
-/// slow link does not keep the GPU busy.
-class FileSkeleton extends StatelessWidget {
-  const FileSkeleton({super.key, this.rows = false});
-
-  /// Bars shaped like list rows (a tile and two lines) instead of code lines.
-  final bool rows;
-
-  static const _widths = [0.62, 0.84, 0.4, 0.74, 0.55, 0.9, 0.3, 0.68, 0.5, 0.78];
-
-  @override
-  Widget build(BuildContext context) {
-    final fill = context.ds.fill;
-    Widget bar(double width, double height) => FractionallySizedBox(
-          widthFactor: width,
-          alignment: Alignment.centerLeft,
-          child: Container(
-            height: height,
-            decoration: BoxDecoration(color: fill, borderRadius: BorderRadius.circular(5)),
-          ),
-        );
-    return Semantics(
-      label: 'Loading',
-      excludeSemantics: true,
-      child: ExcludeFocus(
-        child: IgnorePointer(
-          child: ListView.builder(
-            physics: const NeverScrollableScrollPhysics(),
-            padding: EdgeInsets.fromLTRB(Gap.gutter, Gap.md, Gap.gutter, MediaQuery.paddingOf(context).bottom),
-            itemCount: rows ? 14 : 30,
-            itemBuilder: (_, i) => rows
-                ? SizedBox(
-                    height: 64,
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(color: fill, borderRadius: BorderRadius.circular(Radii.tile)),
-                        ),
-                        const SizedBox(width: Gap.md),
-                        Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              bar(_widths[i % _widths.length] * 0.8 + 0.1, 12),
-                              const SizedBox(height: 8),
-                              bar(0.28, 9),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : SizedBox(height: 22, child: Align(alignment: Alignment.centerLeft, child: bar(_widths[i % _widths.length], 10))),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// A skeleton that stays out of sight for [delay]: a link that answers inside
-/// that time shows the real content straight away, with no grey placeholder
-/// flashing in and out. The one timer is cancelled with the widget.
-class DelayedSkeleton extends StatefulWidget {
-  const DelayedSkeleton({super.key, this.rows = false, this.delay = skeletonDelay, this.note});
-
-  final bool rows;
-  final Duration delay;
-
-  /// What the wait is for when it is more than one read ("Looking in other
-  /// checkouts…"), drawn above the placeholder.
-  final String? note;
-
-  @override
-  State<DelayedSkeleton> createState() => _DelayedSkeletonState();
-}
-
-/// How long a loading screen waits before it draws its placeholder.
-const skeletonDelay = Duration(milliseconds: 120);
-
-class _DelayedSkeletonState extends State<DelayedSkeleton> {
-  Timer? _timer;
-  var _show = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer(widget.delay, () {
-      if (mounted) setState(() => _show = true);
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (!_show) return const SizedBox.expand();
-    final note = widget.note;
-    if (note == null) return FileSkeleton(rows: widget.rows);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.md, Gap.gutter, 0),
-          child: Text(note, style: Type.secondary.copyWith(color: context.ds.textSecondary)),
-        ),
-        Expanded(child: FileSkeleton(rows: widget.rows)),
-      ],
-    );
-  }
-}
-
 /// A whole page for a path that is still being looked up (or could not be):
-/// Back, what was asked for, and a skeleton after [skeletonDelay]; or the
+/// Back, what was asked for, and a skeleton after [Dwell.spinnerDelay]; or the
 /// reason it failed with what to do. The route is on screen at once, so a tap
 /// answers on the next frame instead of after the host has been asked.
 class FileResolvingPage extends StatelessWidget {
@@ -336,36 +197,7 @@ class FileResolvingPage extends StatelessWidget {
       backgroundColor: ds.bg,
       body: Column(
         children: [
-          MediaQuery.withClampedTextScaling(
-            maxScaleFactor: kBarTextScale,
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(Gap.gutter - 6, MediaQuery.paddingOf(context).top, Gap.gutter - 6, 0),
-              child: SizedBox(
-                height: 60,
-                child: Row(
-                  children: [
-                    CircleButton(
-                      icon: LucideIcons.chevronLeft,
-                      tooltip: 'Back',
-                      onPressed: () => Navigator.of(context).maybePop(),
-                    ),
-                    const SizedBox(width: Gap.sm),
-                    Expanded(
-                      child: Semantics(
-                        header: true,
-                        child: Text(
-                          title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Type.barTitle.copyWith(color: ds.text),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          AppTopBar(title: title),
           Expanded(
             child: failed == null
                 ? DelayedSkeleton(rows: rows, note: note)
@@ -400,7 +232,7 @@ class FileResolvingPage extends StatelessWidget {
                             label: 'Copy path',
                             icon: LucideIcons.copy,
                             kind: AppButtonKind.secondary,
-                            onPressed: () => copyToClipboard(context, path!, 'Path copied'),
+                            onPressed: () => copyText(context, path!, what: 'Path copied'),
                           ),
                         ),
                       ],
@@ -412,15 +244,6 @@ class FileResolvingPage extends StatelessWidget {
     );
   }
 }
-
-/// Mono-font style shared by every code and hex surface.
-TextStyle codeStyle(Ds ds, {double size = 13, Color? color}) => TextStyle(
-      fontFamily: monoFamily,
-      fontSize: size,
-      height: 1.5,
-      color: color ?? ds.text,
-      fontFeatures: const [FontFeature.disable('liga'), FontFeature.disable('calt')],
-    );
 
 /// One label and value of an info card.
 class InfoRow extends StatelessWidget {
@@ -443,14 +266,14 @@ class InfoRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(
-                width: 96,
+                width: _labelWidth,
                 child: Text(label, style: Type.secondary.copyWith(color: ds.textSecondary)),
               ),
               Expanded(
                 child: Text(
                   value,
                   style: mono
-                      ? codeStyle(ds, size: 12.5).copyWith(height: 1.4)
+                      ? Mono.base.copyWith(color: ds.text)
                       : Type.secondary.copyWith(color: ds.text),
                 ),
               ),
@@ -462,3 +285,6 @@ class InfoRow extends StatelessWidget {
     );
   }
 }
+
+/// The label column of a details table: the longest label fits at 1.0.
+const _labelWidth = 96.0;

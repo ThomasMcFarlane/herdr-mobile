@@ -197,7 +197,7 @@ The app speaks like the docs:
 - **Plain, short, specific, sentence case.**
 - **Outcome first, with numbers and units,** joined by a middle dot:
   `Hold to send · pushes to a remote`, `Quiet for 2m`, `Marked 3 reviewed`,
-  `Interrupt 3 agents`, `Couldn't refresh · Retry`.
+  `Stop 3 agents`, `Couldn't refresh · Retry`.
 - **Name the thing, not the category.**
 - **Say how to recover:** `This photo is 52 MB. The viewer opens photos up to 40 MB.`
 - **No apology, exclamation or cuteness.**
@@ -209,15 +209,20 @@ The app speaks like the docs:
 The look is not Material. It is Notion-like paper in light and Linear-like ink in
 dark: flat rows, hairlines instead of elevation, type for hierarchy, one accent,
 status shown as a shape first (`StatusGlyph`), Lucide icons, press instead of ripple, and quiet motion.
-Everything is built from `app/lib/ui/core/` (`tokens`, `controls`, `rows`,
-`glyphs`, `chrome`, `status_panel`, `toast`, `motion`).
+Everything is built from the kit in `app/lib/ui/core/`, imported through one
+barrel, `ui/core/kit.dart` (`tokens`, `motion`, `rows`, `buttons`, `sheets`,
+`bottom_stack`, `top_bar`, `toast`, …). `tool/design_lint.dart` enforces the
+table below in `tool/check.sh` (`dart run ../tool/design_lint.dart` from `app/`).
 
 | Never | Instead |
 | --- | --- |
 | `Card`, `ListTile`, `AppBar`, `NavigationBar`, FAB, Material buttons, `AlertDialog`, `SnackBar`, `PopupMenuButton`, `SegmentedButton`, `ExpansionTile`, `InkWell`, `Icons.*` | `ui/core` equivalents, Lucide icons |
 | A raw `Color`, hex or `Colors.*` in a widget | `context.ds` |
 | `textTertiary` for text | `textSecondary` / `textMuted` (≥ 4.5:1); status words in `blockedText` / `dangerText` |
-| `copyWith(fontSize:)` to land between styles | A `Type.*` token, or a new token |
+| `copyWith(fontSize:)` to land between styles | A `Type.*` / `Mono.*` token, or a new token |
+| `fontWeight:` to make a style bolder | The `Strong` variants (`Type.labelStrong`, `secondaryStrong`, `captionStrong`) |
+| A raw radius (`BorderRadius.circular(8)`) | `Radii.xs` / `sm` / `md` / `lg` / `pill` |
+| `Clipboard.setData` | `copyText` (`ui/core/clipboard.dart`): it stays quiet where Android confirms the copy itself |
 | A touch target under 44 dp | `PressBuilder(minTapSize: kMinTap)` |
 | Status shown only by colour | `StatusGlyph` shape plus colour |
 | A second toast, sheet, viewer or guard system | The one in `ui/core` or `features/` |
@@ -266,4 +271,5 @@ with one line on when each wins and what it costs, for the owner to choose.
   any flow.
 - `references/foundations.md` holds the general principles behind all of this (Apple's
   design principles, feedback, wayfinding, typography, craft), translated for this app.
-- `docs/DESIGN.md` is the system and each screen's settled behaviour.
+- `docs/DESIGN.md` is the system (tokens, kit, motion, words); `docs/screens/`
+  holds each screen's settled behaviour.

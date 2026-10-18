@@ -1,0 +1,355 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+
+import 'buttons.dart';
+import 'motion.dart';
+import 'rows.dart';
+import 'tokens.dart';
+
+/// Modal bottom sheet in the app's style: rounded top, [SheetGrabber],
+/// safe-area aware. [builder] returns a [SheetScaffold], which pads, titles
+/// and scrolls the body by its [SheetKind].
+///
+/// Colours come from the theme (`bottomSheetTheme`, `modalBarrierColor`), so a
+/// light/dark switch while a sheet is open restyles it. A tall sheet stops
+/// below the status bar: the session overview used to grow under the clock,
+/// its grabber and title drawn over the status icons. Its height is capped
+/// rather than `useSafeArea` set, which also takes the side insets off the
+/// sheet itself, so a landscape phone with a side navigation bar showed the
+/// page in a strip beside it. The cap reads the top inset from the navigator
+/// that hosts the sheet (inside the route the sheet's own top padding is
+/// already removed); the size dependency rebuilds it on rotation. The exit
+/// runs the enter curve flipped (never ease-in). Under reduced motion the
+/// sheet appears and goes without sliding (drag to dismiss still works).
+Future<T?> showAppSheet<T>(
+  BuildContext context, {
+  required WidgetBuilder builder,
+  bool dismissible = true,
+}) => showModalBottomSheet<T>(
+  context: context,
+  isScrollControlled: true,
+  isDismissible: dismissible,
+  sheetAnimationStyle: Motion.reduced(context)
+      ? AnimationStyle.noAnimation
+      : AnimationStyle(
+          curve: Motion.easeOut,
+          reverseCurve: Motion.easeOutExit,
+          duration: Motion.sheetIn,
+          reverseDuration: Motion.sheetOut,
+        ),
+  builder: (ctx) => ConstrainedBox(
+    constraints: BoxConstraints(
+      maxHeight: MediaQuery.sizeOf(ctx).height - MediaQuery.paddingOf(Navigator.of(ctx).context).top,
+    ),
+    child: SafeArea(
+      top: false,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Padding(padding: EdgeInsets.only(top: Gap.sm), child: SheetGrabber()),
+          Flexible(child: builder(ctx)),
+        ],
+      ),
+    ),
+  ),
+);
+
+/// The handle at the top of every sheet (app sheets and the attach sheet).
+class SheetGrabber extends StatelessWidget {
+  const SheetGrabber({super.key});
+
+  static const width = 36.0;
+  static const height = 4.0;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: width,
+    height: height,
+    decoration: BoxDecoration(color: context.ds.faint, borderRadius: BorderRadius.circular(Radii.pill)),
+  );
+}
+
+/// The quiet title of an action or list sheet, announced as a heading.
+class SheetTitle extends StatelessWidget {
+  const SheetTitle(this.text, {super.key});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    header: true,
+    child: Text(text, style: Type.label.copyWith(color: context.ds.textSecondary)),
+  );
+}
+
+/// What a sheet holds; it sets the padding, the title style and how the body
+/// scrolls.
+enum SheetKind {
+  /// Rows of actions (replaces popup menus). Quiet [SheetTitle].
+  actions,
+
+  /// A long list: the title stays pinned and the body scrolls, the sheet
+  /// capped at [SheetScaffold.listCap] of the screen. A body that scrolls on
+  /// its own (a lazy list) sets [SheetScaffold.scrolls]; give it `shrinkWrap`
+  /// while it is short.
+  list,
+
+  /// A short message with buttons. [Type.title] title.
+  message,
+
+  /// Fields: like [message], and lifted above the keyboard.
+  form,
+}
+
+/// The body of every app sheet: padding, title, scrolling and the closing
+/// [actions] (usually [AppButton]s, stacked full width) by [kind].
+class SheetScaffold extends StatelessWidget {
+  const SheetScaffold({
+    super.key,
+    this.title,
+    required this.kind,
+    required this.child,
+    this.actions = const [],
+    this.scrolls = false,
+    this.bleed = false,
+  });
+
+  final String? title;
+  final SheetKind kind;
+  final Widget child;
+
+  /// Stacked [Gap.lg] under [child], [Gap.sm] apart; the primary one first.
+  final List<Widget> actions;
+
+  /// [SheetKind.list] only: [child] is its own scroll view (a lazy list), so
+  /// it is given the room under the title instead of being wrapped in one.
+  final bool scrolls;
+
+  /// [child] runs edge to edge: its rows bring their own gutter (a
+  /// [SectionLabel], full-width rows). The title and [actions] keep theirs.
+  final bool bleed;
+
+  /// The tallest a [SheetKind.list] sheet grows, as a share of the screen.
+  static const listCap = 0.9;
+
+  @override
+  Widget build(BuildContext context) {
+    final ds = context.ds;
+    final title = this.title;
+    final rows = kind == SheetKind.actions || kind == SheetKind.list;
+    // The side inset; vertical padding wraps the whole sheet.
+    final side = rows ? Gap.xs : Gap.gutter;
+    final padding = rows
+        ? const EdgeInsets.only(top: Gap.sm, bottom: Gap.md)
+        : EdgeInsets.only(
+            top: Gap.xl,
+            bottom: Gap.lg + (kind == SheetKind.form ? MediaQuery.viewInsetsOf(context).bottom : 0),
+          );
+    final heading = title == null
+        ? null
+        : rows
+        // Outer inset 4 + 16: the title sits on the 20 gutter, with the rows.
+        ? Padding(
+            padding: EdgeInsets.fromLTRB(side + Gap.lg, Gap.sm, side + Gap.lg, Gap.sm),
+            child: SheetTitle(title),
+          )
+        : Padding(
+            padding: EdgeInsets.fromLTRB(side, 0, side, Gap.sm),
+            child: Semantics(
+              header: true,
+              child: Text(title, style: Type.title.copyWith(color: ds.text)),
+            ),
+          );
+    final buttons = actions.isEmpty
+        ? null
+        : Padding(
+            padding: EdgeInsets.fromLTRB(rows ? side + Gap.lg : side, Gap.lg, rows ? side + Gap.lg : side, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var i = 0; i < actions.length; i++) ...[
+                  if (i > 0) const SizedBox(height: Gap.sm),
+                  actions[i],
+                ],
+              ],
+            ),
+          );
+    final body = bleed ? child : Padding(padding: EdgeInsets.symmetric(horizontal: side), child: child);
+    if (kind == SheetKind.list) {
+      return ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * listCap),
+        child: Padding(
+          padding: padding,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ?heading,
+              Flexible(child: scrolls ? body : SingleChildScrollView(child: body)),
+              ?buttons,
+            ],
+          ),
+        ),
+      );
+    }
+    return SingleChildScrollView(
+      padding: padding,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [?heading, body, ?buttons],
+      ),
+    );
+  }
+}
+
+class SheetAction {
+  const SheetAction({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+    this.destructive = false,
+    this.unavailable,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool destructive;
+
+  /// Why the action cannot be used now. The row stays, dimmed and inert, and
+  /// says this under its label.
+  final String? unavailable;
+}
+
+/// One row of an action sheet: [onTap] runs when the action is available.
+class SheetActionRow extends StatelessWidget {
+  const SheetActionRow({super.key, required this.action, required this.onTap});
+
+  final SheetAction action;
+  final VoidCallback onTap;
+
+  /// One line with its icon; a dimmed row grows to say why.
+  static const _rowHeight = 52.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final ds = context.ds;
+    final reason = action.unavailable;
+    final inert = reason != null;
+    return PressRow(
+      onTap: inert ? null : onTap,
+      // A dimmed row is still read as a button, a disabled one.
+      button: inert ? true : null,
+      minHeight: _rowHeight,
+      padding: EdgeInsets.symmetric(horizontal: Gap.lg - PressRow.inset, vertical: inert ? Gap.sm : 0),
+        child: Row(
+          children: [
+            Icon(
+              action.icon,
+              size: IconSize.lead,
+              color: inert
+                  ? ds.textTertiary
+                  : action.destructive
+                  ? ds.dangerText
+                  : ds.textSecondary,
+            ),
+            const SizedBox(width: Gap.md),
+            Expanded(
+              child: Column(
+                // Shrink-wrapped, so the row centres the label with its icon
+                // (a full-height column pinned the label to the top).
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    action.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Type.row.copyWith(
+                      color: inert
+                          ? ds.textMuted
+                          : action.destructive
+                          ? ds.dangerText
+                          : ds.text,
+                    ),
+                  ),
+                  if (reason != null)
+                    Text(
+                      reason,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Type.caption.copyWith(color: ds.textSecondary),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+    );
+  }
+}
+
+/// A list of actions in a sheet (replaces popup menus). [footer] follows the
+/// actions (a [SwitchRow] for a setting that belongs with them).
+Future<void> showActionSheet(
+  BuildContext context, {
+  String? title,
+  required List<SheetAction> actions,
+  List<Widget> footer = const [],
+}) => showAppSheet<void>(
+  context,
+  builder: (ctx) => SheetScaffold(
+    title: title,
+    kind: SheetKind.actions,
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final a in actions)
+          SheetActionRow(
+            action: a,
+            onTap: () {
+              Navigator.of(ctx).pop();
+              a.onTap();
+            },
+          ),
+        ...footer,
+      ],
+    ),
+  ),
+);
+
+/// Confirmation in a sheet. Returns true if confirmed.
+Future<bool> showConfirmSheet(
+  BuildContext context, {
+  required String title,
+  required String message,
+  required String confirmLabel,
+  bool destructive = true,
+}) async {
+  final result = await showAppSheet<bool>(
+    context,
+    builder: (ctx) => SheetScaffold(
+      title: title,
+      kind: SheetKind.message,
+      actions: [
+        AppButton(
+          label: confirmLabel,
+          kind: destructive ? AppButtonKind.danger : AppButtonKind.primary,
+          expand: true,
+          onPressed: () => Navigator.of(ctx).pop(true),
+        ),
+        AppButton(
+          label: 'Cancel',
+          kind: AppButtonKind.secondary,
+          expand: true,
+          onPressed: () => Navigator.of(ctx).pop(false),
+        ),
+      ],
+      child: Text(message, style: Type.compact.copyWith(color: ctx.ds.textSecondary)),
+    ),
+  );
+  return result ?? false;
+}

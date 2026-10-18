@@ -5,8 +5,7 @@ import 'package:herdr_mobile/data/repositories/agent_session.dart' show Subagent
 import 'package:herdr_mobile/data/acp/acp_models.dart';
 import 'package:herdr_mobile/data/acp/session_state.dart';
 import 'package:herdr_mobile/data/acp/subagents/subagent_run.dart';
-import 'package:herdr_mobile/ui/core/controls.dart' show AppChip;
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/permission_dock.dart';
 import 'package:herdr_mobile/ui/features/agent_session/session_bar.dart';
 import 'package:herdr_mobile/ui/features/agent_session/session_overview.dart';
@@ -90,7 +89,7 @@ void main() {
       final run = s.subagents.single;
       expect(blockedRunIds(s), {'t'});
       expect(toneOf(run, blocked: blockedRunIds(s), live: true), RunTone.waitingForYou);
-      expect(runLine(run, RunTone.waitingForYou, now: at(30)), 'Waiting for you \u00b7 1 tool');
+      expect(runLine(run, RunTone.waitingForYou, now: at(30)), 'Needs you \u00b7 1 tool');
       expect(toneOf(run, blocked: blockedRunIds(s), live: false), RunTone.stale, reason: 'never says running for a dead link');
       expect(runLine(run, RunTone.stale, now: at(90)).startsWith('was running'), isTrue);
     });
@@ -163,7 +162,7 @@ void main() {
         RosterHeader(:final section, :final count) => '${section.title} $count',
         RosterEntry(:final run) => run.id,
       };
-      expect(items.map(name).toList(), ['Waiting 2', 'ask', 'new', 'Running 1', 'run', 'Finished 2', 'failed', 'done']);
+      expect(items.map(name).toList(), ['Waiting 2', 'ask', 'new', 'Running 1', 'run', 'Done 2', 'failed', 'done']);
     });
 
     test('context warning: only from 85%, never without a window', () {
@@ -223,7 +222,7 @@ void main() {
       s = s.withPending(PendingPermission(1, askFor('c')));
       final session = FakeAgentSession(state: s);
       await _pumpTranscript(tester, session);
-      expect(_text('Waiting for you \u00b7 1 tool'), findsOneWidget);
+      expect(_text('Needs you \u00b7 1 tool'), findsOneWidget);
       expect(find.text('From subagent: Explore'), findsOneWidget);
       expect(find.text('rtk ls -1 /tmp/scratch'), findsWidgets, reason: 'the command is still on the dock');
     });
@@ -435,7 +434,7 @@ void main() {
     testWidgets('the chip counts what needs you first', (tester) async {
       final session = many();
       await _pump(tester, _app(SubagentsChip(session: session)));
-      expect(find.text('1 waiting for you'), findsOneWidget);
+      expect(find.text('1 needs you'), findsOneWidget);
     });
 
     testWidgets('an ACP session with a few runs: the chip says running, the roster groups them', (tester) async {
@@ -448,14 +447,14 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Subagents \u00b7 2'), findsOneWidget);
       expect(find.text('Running \u00b7 1'), findsOneWidget);
-      expect(find.text('Finished \u00b7 1'), findsOneWidget);
+      expect(find.text('Done \u00b7 1'), findsOneWidget);
       expect(find.text('Alpha'), findsOneWidget);
     });
 
     testWidgets('25 runs: grouped, virtualized, and a row opens the run', (tester) async {
       final session = many();
       await _pump(tester, _app(SubagentsChip(session: session)));
-      await tester.tap(find.text('1 waiting for you'));
+      await tester.tap(find.text('1 needs you'));
       await tester.pumpAndSettle();
       expect(find.text('Waiting \u00b7 1'), findsOneWidget);
       final waiting = tester.getTopLeft(find.text('Waiting \u00b7 1')).dy;
@@ -494,7 +493,7 @@ void main() {
     testWidgets('the chip under the bar ellipsizes on a small phone at large text', (tester) async {
       await _pump(tester, _app(SessionBar(session: many()), textScale: 2), size: const Size(320, 640));
       expect(tester.takeException(), isNull);
-      expect(find.text('1 waiting for you'), findsOneWidget);
+      expect(find.text('1 needs you'), findsOneWidget);
       expect(tester.getRect(find.byType(AppChip)).right, lessThanOrEqualTo(320));
     });
   });
@@ -557,14 +556,14 @@ void main() {
       expect(_text('182k of 200k tokens \u00b7 91% of context'), findsOneWidget);
       expect(_text('\$1.23'), findsOneWidget);
       expect(_text('Last turn'), findsOneWidget);
-      expect(_text('Waiting for you'), findsOneWidget);
+      expect(_text('Needs you'), findsWidgets, reason: 'the section header (the subagents line may say it too)');
       expect(_text('Run flutter test'), findsOneWidget);
     });
 
     testWidgets('almost nothing: only what exists', (tester) async {
       await open(tester, FakeAgentSession(state: stateWith(items: [userAt('u', 'Say hi', 0)])));
       expect(_text('Goal'), findsOneWidget);
-      for (final absent in ['Plan', 'Changed', 'Commands', 'Subagents', 'Mode and model', 'Context and cost', 'Waiting for you']) {
+      for (final absent in ['Plan', 'Changed', 'Commands', 'Subagents', 'Mode and model', 'Context and cost', 'Needs you']) {
         expect(_text(absent), findsNothing, reason: absent);
       }
     });

@@ -3,23 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
-import '../../../data/models/herdr_models.dart';
+import '../../../data/models/herdr_models.dart' show AgentStatus;
 import '../../../data/repositories/attention_set.dart';
 import '../../../data/repositories/fleet_repository.dart';
 import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/machine_repository.dart';
-import '../../core/approval_button.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/glyphs.dart';
-import '../../core/motion.dart';
-import '../../core/rows.dart';
-import '../../core/tokens.dart';
-import '../../core/status_panel.dart';
+import '../../../data/words/plural.dart';
+import 'approval_button.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'machine_form_screen.dart';
 import 'machine_screen.dart';
-
-String _plural(int n, String one, [String? many]) => '$n ${n == 1 ? one : (many ?? '${one}s')}';
 
 class MachinesScreen extends StatelessWidget {
   const MachinesScreen({super.key});
@@ -46,7 +39,7 @@ class MachinesScreen extends StatelessWidget {
                 SliverLargeTitle(
                   title: 'Machines',
                   subtitle: Text(
-                    count == 0 ? 'None yet' : _plural(count, 'machine'),
+                    count == 0 ? 'None yet' : countOf(count, 'machine'),
                     style: Type.secondary.copyWith(color: ds.textSecondary),
                   ),
                   actions: [
@@ -63,7 +56,7 @@ class MachinesScreen extends StatelessWidget {
                     child: Padding(
                       padding: EdgeInsets.only(bottom: FloatingBar.clearance(context)),
                       child: EmptyState(
-                        icon: LucideIcons.server,
+                        icon: HerdrIcons.machines,
                         title: 'No machines yet',
                         message: 'Add a machine that runs herdr. You can connect as many as '
                             'you like and see them all together.',
@@ -83,7 +76,7 @@ class MachinesScreen extends StatelessWidget {
                       machine: connections[i],
                     ),
                   ),
-                  SliverToBoxAdapter(child: SizedBox(height: FloatingBar.clearance(context))),
+                  SliverToBoxAdapter(child: SizedBox(height: FloatingBar.listEnd(context))),
                 ],
               ],
             ),
@@ -102,9 +95,9 @@ class _MachineRow extends StatelessWidget {
 
   final MachineConnection machine;
 
-  static const _tile = 32.0;
-  static const _gap = 12.0;
-  static const _inset = 8.0;
+  static const _tile = RowMetrics.leadingExtent;
+  static const _gap = RowMetrics.gap;
+  static const _inset = PressRow.inset;
 
   void _open(BuildContext context) => Navigator.of(context).push(
         MaterialPageRoute<void>(builder: (_) => MachineScreen(machine: machine)),
@@ -116,7 +109,7 @@ class _MachineRow extends StatelessWidget {
       context,
       title: 'Remove ${p.label}?',
       message: 'The saved connection and its credentials are deleted from this '
-          'device. Agents on the machine keep running.',
+          'phone. Agents on the machine keep running.',
       confirmLabel: 'Remove',
     );
     if (ok) await repo.remove(p.id);
@@ -160,7 +153,7 @@ class _MachineRow extends StatelessWidget {
     // The same "needs you" as the badge and the board: reachable panes and
     // agent sessions of this machine. An offline machine's last-known waits
     // are not counted; its status line says it is offline.
-    final needYou = context.select<AttentionSet, int>((a) => a.needsYouOn(p.id));
+    final waiting = context.select<AttentionSet, int>((a) => a.needsYouOn(p.id));
     final problem = state == LinkState.attention || state == LinkState.reconnecting;
     final approval = machine.approvalUrl;
     final indent = Gap.gutter + _tile + _gap;
@@ -168,7 +161,7 @@ class _MachineRow extends StatelessWidget {
     final semantic = [
       p.label,
       state.label,
-      if (needYou > 0) '$needYou need you',
+      if (waiting > 0) needYou(waiting),
     ].join(', ');
 
     // "Enable" sits beside the text when there is room, under it on a narrow
@@ -185,25 +178,18 @@ class _MachineRow extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        PressBuilder(
+        PressRow(
           // A disabled machine has nothing to open: the tap offers the menu,
           // where Enable is.
           onTap: p.enabled ? () => _open(context) : () => _menu(context),
           onLongPress: () => _menu(context),
           semanticLabel: semantic,
-          builder: (context, pressed) => Padding(
-            padding: const EdgeInsets.symmetric(horizontal: _inset),
-            child: AnimatedContainer(
-              duration: pressed ? Motion.press : Motion.release,
-              curve: Motion.easeOut,
-              decoration: BoxDecoration(
-                color: pressed ? ds.fill : Colors.transparent,
-                borderRadius: BorderRadius.circular(Radii.row),
-              ),
-              padding: const EdgeInsets.fromLTRB(Gap.gutter - _inset, 12, Gap.gutter - _inset - 8, 12),
+          padding: const EdgeInsets.fromLTRB(Gap.gutter - _inset, Gap.md, Gap.gutter - _inset - Gap.sm, Gap.md),
               child: Row(
                 children: [
-                  const SizedBox(width: _tile, child: Center(child: IconTile(icon: LucideIcons.server))),
+                  // The link state is the one thing that tells machines apart
+                  // at a glance, so it leads the row.
+                  SizedBox(width: _tile, child: Center(child: LinkDot(state: state))),
                   const SizedBox(width: _gap),
                   Expanded(
                     child: Column(
@@ -219,44 +205,40 @@ class _MachineRow extends StatelessWidget {
                           style: Type.row.copyWith(color: p.enabled ? ds.text : ds.textSecondary),
                         ),
                         Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: Text(
-                            '${p.username}@${p.host}${p.port == 22 ? '' : ':${p.port}'}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Type.secondary.copyWith(color: ds.textSecondary),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(top: 3),
-                          child: _StatusLine(machine: machine),
+                          padding: const EdgeInsets.only(top: Gap.hair),
+                          child: _Subtitle(machine: machine),
                         ),
                       ],
                     ),
                   ),
-                  if (needYou > 0) ...[const SizedBox(width: Gap.sm), _NeedsChip(count: needYou)],
+                  // Status as a shape first: the needs-you glyph with its count,
+                  // as on the board's filter chip (a bare number read as unread).
+                  if (waiting > 0) ...[
+                    const SizedBox(width: Gap.sm),
+                    const StatusGlyph(status: AgentStatus.blocked, size: IconSize.inline),
+                    const SizedBox(width: Gap.xs),
+                    Text(waiting > 99 ? '99+' : '$waiting', style: Type.count.copyWith(color: ds.blockedText)),
+                  ],
                   if (!p.enabled && roomy) ...[const SizedBox(width: Gap.sm), enable],
                   const SizedBox(width: Gap.xs),
                   CircleButton(
                     icon: LucideIcons.ellipsis,
                     tooltip: 'More',
                     filled: false,
-                    size: 36,
+                    size: CircleButton.compact,
                     onPressed: () => _menu(context),
                   ),
                 ],
               ),
-            ),
-          ),
         ),
         if (!p.enabled && !roomy)
           Padding(
-            padding: EdgeInsets.fromLTRB(indent, 0, Gap.gutter, 12),
+            padding: EdgeInsets.only(left: indent, right: Gap.gutter, bottom: Gap.md),
             child: Align(alignment: Alignment.centerLeft, child: enable),
           ),
         if (problem && machine.error != null)
           Padding(
-            padding: EdgeInsets.fromLTRB(indent, 0, Gap.gutter, 12),
+            padding: EdgeInsets.only(left: indent, right: Gap.gutter, bottom: Gap.md),
             child: StatusPanel(
               color: state.color(ds),
               message: machine.error,
@@ -271,7 +253,7 @@ class _MachineRow extends StatelessWidget {
           ),
         if (approval != null)
           Padding(
-            padding: EdgeInsets.fromLTRB(indent, 0, Gap.gutter, 12),
+            padding: EdgeInsets.only(left: indent, right: Gap.gutter, bottom: Gap.md),
             child: StatusPanel(
               color: ds.blocked,
               message: 'Tailscale needs you to approve this sign-in.',
@@ -284,105 +266,66 @@ class _MachineRow extends StatelessWidget {
   }
 }
 
-/// Link dot + one quiet line: the meta line when online, otherwise the state
-/// in words.
-class _StatusLine extends StatelessWidget {
-  const _StatusLine({required this.machine});
+/// The row's second line: how many agents when online, otherwise the state in
+/// words; then the address, cut in the middle so its end (the host) stays.
+class _Subtitle extends StatelessWidget {
+  const _Subtitle({required this.machine});
 
   final MachineConnection machine;
 
+  /// Characters of the address kept whole at its end.
+  static const _tailKept = 12;
+
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
+    final p = machine.profile;
     final state = machine.state;
-    final snap = machine.snapshot;
-    final workspaces = snap.workspaces.length;
-    final counts = workspaces == 0
-        ? 'No workspaces'
-        : '${_plural(workspaces, 'workspace')} · ${_plural(machine.agentPanes.length, 'agent')}';
-
-    final style = Type.secondary.copyWith(color: ds.textMuted);
+    final agents = machine.agentPanes.length;
     // Only the states that need the person are tinted (with the AA text tone,
     // not the glyph colour); the dot carries the rest.
     final loud = state == LinkState.attention || state == LinkState.approval;
-    final stateStyle = style.copyWith(
-      color: loud ? ds.blockedText : ds.textSecondary,
-      fontWeight: loud ? FontWeight.w500 : null,
-    );
-
-    return Row(
-      children: [
-        LinkDot(state: state, size: 7),
-        const SizedBox(width: 7),
-        Expanded(
-          child: LayoutBuilder(
-            builder: (context, box) {
-              if (state == LinkState.online) {
-                // The version is the first thing to go on a narrow row: a
-                // half-cut "herdr 0.…" says nothing.
-                final full = snap.version.isEmpty ? counts : '$counts · herdr ${snap.version}';
-                final fits = _fits(context, full, style, box.maxWidth);
-                return Text(fits ? full : counts, maxLines: 1, overflow: TextOverflow.ellipsis, style: style);
-              }
-              return Text.rich(
-                TextSpan(children: [
-                  TextSpan(text: state.label, style: stateStyle),
-                  if (!machine.profile.enabled) TextSpan(text: ' · not connecting', style: style),
-                ]),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              );
-            },
-          ),
-        ),
-      ],
+    final lead = state == LinkState.online
+        ? (agents == 0 ? 'No agents' : countOf(agents, 'agent'))
+        : p.enabled
+        ? state.label
+        : '${state.label} · not connecting';
+    final address = '${p.username}@${p.host}${p.port == 22 ? '' : ':${p.port}'}';
+    final cut = address.length > _tailKept ? address.length - _tailKept : 0;
+    final style = Type.secondary.copyWith(color: ds.textMuted);
+    final leadStyle = loud ? Type.secondaryStrong.copyWith(color: ds.blockedText) : style;
+    final tail = address.substring(cut);
+    return LayoutBuilder(
+      builder: (context, box) {
+        // The count or state comes first and is cut last; the address gives
+        // way from its middle, and goes when even its end has no room.
+        final room = box.maxWidth - _width(context, '$lead · ', leadStyle) - _width(context, tail, style);
+        if (room <= 0) {
+          return Text(lead, maxLines: 1, overflow: TextOverflow.ellipsis, style: leadStyle);
+        }
+        return Row(
+          children: [
+            Text(lead, maxLines: 1, style: leadStyle),
+            Text(' · ', maxLines: 1, style: style),
+            Flexible(
+              child: Text(address.substring(0, cut), maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis, style: style),
+            ),
+            Text(tail, maxLines: 1, softWrap: false, style: style),
+          ],
+        );
+      },
     );
   }
-}
 
-bool _fits(BuildContext context, String text, TextStyle style, double width) {
-  final painter = TextPainter(
-    text: TextSpan(text: text, style: style),
-    textDirection: TextDirection.ltr,
-    textScaler: MediaQuery.textScalerOf(context),
-    maxLines: 1,
-  )..layout();
-  final fits = painter.width <= width;
-  painter.dispose();
-  return fits;
-}
-
-/// "Agents need you" count: the blocked glyph and the number, never clipped.
-class _NeedsChip extends StatelessWidget {
-  const _NeedsChip({required this.count});
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    final ds = context.ds;
-    return Container(
-      height: 24,
-      padding: const EdgeInsets.fromLTRB(7, 0, 9, 0),
-      decoration: BoxDecoration(
-        color: ds.blocked.withValues(alpha: ds.isDark ? 0.16 : 0.12),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const StatusGlyph(status: AgentStatus.blocked, size: 13),
-          const SizedBox(width: 5),
-          Text(
-            '$count',
-            style: Type.caption.copyWith(
-              color: ds.blockedText,
-              fontWeight: FontWeight.w600,
-              fontFeatures: Type.tabular,
-            ),
-          ),
-        ],
-      ),
-    );
+  static double _width(BuildContext context, String text, TextStyle style) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    final width = painter.width;
+    painter.dispose();
+    return width;
   }
 }

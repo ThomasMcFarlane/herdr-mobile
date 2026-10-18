@@ -1,16 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/models/web_bridge.dart';
 import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/web_preview.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/open_link.dart';
-import '../../core/theme.dart';
-import '../../core/toast.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../support/open_link.dart';
 
 /// What a tapped web link offers: the whole address (selectable, so nothing
 /// is hidden behind a shortened label), then open or copy.
@@ -34,16 +29,14 @@ Future<void> showLinkSheet(BuildContext context, String url, {MachineConnection?
     context,
     builder: (ctx) {
       final ds = ctx.ds;
-      Future<void> copy() async {
+      void copy() {
         Navigator.of(ctx).pop();
-        await Clipboard.setData(ClipboardData(text: url));
-        Haptics.tick();
-        toast('Link copied');
+        copyText(context, url, what: 'Link copied');
       }
 
       Future<void> open() async {
         Navigator.of(ctx).pop();
-        if (!await openTappedLink(url)) toast('No browser could open the link.', kind: ToastKind.failed);
+        if (!await openTappedLink(url)) toast('Couldn’t open on this phone: no browser could open it.', kind: ToastKind.failed);
       }
 
       // The sheet goes first: the connection is asked after the screen has
@@ -54,7 +47,7 @@ Future<void> showLinkSheet(BuildContext context, String url, {MachineConnection?
         try {
           final entry = await machine!.web.forwardUrl(Uri.parse(url), onNote: toast);
           if (!await openPreviewUrl(entry)) {
-            toast("Couldn't open on this phone: no browser could open it.", kind: ToastKind.failed);
+            toast('Couldn’t open on this phone: no browser could open it.', kind: ToastKind.failed);
           }
         } on WebPreviewException catch (e) {
           toast(e.message, kind: ToastKind.failed);
@@ -67,8 +60,8 @@ Future<void> showLinkSheet(BuildContext context, String url, {MachineConnection?
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Icon(icon, size: 16, color: ds.textSecondary),
+                  padding: const EdgeInsets.only(top: Gap.hair),
+                  child: Icon(icon, size: IconSize.row, color: ds.textSecondary),
                 ),
                 const SizedBox(width: Gap.sm),
                 Expanded(
@@ -78,74 +71,51 @@ Future<void> showLinkSheet(BuildContext context, String url, {MachineConnection?
             ),
           );
 
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.xl, Gap.gutter, Gap.lg),
+      return SheetScaffold(
+        title: host.isEmpty ? 'Link' : host,
+        kind: SheetKind.message,
+        actions: [
+          if (!local)
+            AppButton(
+              label: 'Open in browser',
+              icon: LucideIcons.externalLink,
+              expand: true,
+              onPressed: open,
+            )
+          else if (previewable)
+            AppButton(
+              label: 'Open on phone',
+              icon: LucideIcons.smartphone,
+              expand: true,
+              onPressed: openOnPhone,
+            ),
+          AppButton(
+            label: 'Copy link',
+            icon: LucideIcons.copy,
+            kind: local && !previewable ? AppButtonKind.primary : AppButtonKind.secondary,
+            expand: true,
+            onPressed: copy,
+          ),
+        ],
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Semantics(
-              header: true,
-              child: Text(
-                host.isEmpty ? 'Link' : host,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Type.title.copyWith(color: ds.text),
-              ),
-            ),
-            const SizedBox(height: Gap.md),
-            Container(
-              padding: const EdgeInsets.all(Gap.md),
-              decoration: BoxDecoration(
-                color: ds.fill,
-                borderRadius: BorderRadius.circular(Radii.row),
-              ),
-              child: SelectableText(
-                url,
-                style: TextStyle(
-                  fontFamily: monoFamily,
-                  fontSize: 13,
-                  height: 1.45,
-                  color: ds.text,
-                ),
-              ),
+            const SizedBox(height: Gap.xs),
+            Panel(
+              child: SelectableText(url, style: Mono.input.copyWith(color: ds.text)),
             ),
             if (previewable)
               note(
-                LucideIcons.server,
+                HerdrIcons.machines,
                 'This address is on ${machine.profile.label}. Open on phone reaches it over your SSH connection.',
               )
             else if (local && https)
-              note(LucideIcons.server, "HTTPS on the machine can't be opened on the phone yet.")
+              note(HerdrIcons.machines, 'HTTPS on the machine can’t be opened on the phone yet.')
             else if (local)
-              note(LucideIcons.server, 'This address is on the machine, not your phone.')
+              note(HerdrIcons.machines, 'This address is on the machine, not your phone.')
             else if (plain)
               note(LucideIcons.triangleAlert, 'This link is not encrypted.'),
-            const SizedBox(height: Gap.xl),
-            if (!local) ...[
-              AppButton(
-                label: 'Open in browser',
-                icon: LucideIcons.externalLink,
-                expand: true,
-                onPressed: open,
-              ),
-              const SizedBox(height: Gap.sm),
-            ] else if (previewable) ...[
-              AppButton(
-                label: 'Open on phone',
-                icon: LucideIcons.smartphone,
-                expand: true,
-                onPressed: openOnPhone,
-              ),
-              const SizedBox(height: Gap.sm),
-            ],
-            AppButton(
-              label: 'Copy link',
-              icon: LucideIcons.copy,
-              kind: local && !previewable ? AppButtonKind.primary : AppButtonKind.secondary,
-              expand: true,
-              onPressed: copy,
-            ),
           ],
         ),
       );

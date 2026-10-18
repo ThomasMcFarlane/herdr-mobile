@@ -18,7 +18,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:herdr_mobile/ui/core/brand_mark.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 const _px = 1024;
 const _white = Color(0xFFFFFFFF);

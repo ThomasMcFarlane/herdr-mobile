@@ -19,8 +19,8 @@ import 'package:herdr_mobile/data/repositories/notification_settings.dart';
 import 'package:herdr_mobile/data/services/herdr_api.dart';
 import 'package:herdr_mobile/data/services/herdr_transport.dart' show HerdrTransportException;
 import 'package:herdr_mobile/data/services/notifier.dart';
-import 'package:herdr_mobile/ui/core/deep_link.dart';
-import 'package:herdr_mobile/ui/features/agent_session/visible_text.dart';
+import 'package:herdr_mobile/ui/support/deep_link.dart';
+import 'package:herdr_mobile/ui/render/visible_text.dart';
 
 import 'support/fake_agent_session.dart';
 import 'support/fake_network.dart';
@@ -247,7 +247,7 @@ void main() {
         expect(n.id, _id('a', 'w1:p1'));
         expect(n.kind, NotifyKind.needsYou);
         expect(n.title, 'title w1:p1');
-        expect(n.body, 'needs you · claude · Alpha');
+        expect(n.body, 'needs you · Claude Code · Alpha');
         expect(n.link, 'herdr://agent/a/w1%3Ap1');
 
         // Events about the same agent are not news.
@@ -344,7 +344,7 @@ void main() {
         r.set('a', {'w1:p1': 'working', 'w1:p2': 'done', 'w1:p3': 'blocked', 'w1:p4': 'working'});
         // The same id now says "done": replaced, not duplicated.
         expect(r.notifier.active[_id('a', 'w1:p2')]!.kind, NotifyKind.finished);
-        expect(r.notifier.active[_id('a', 'w1:p2')]!.body, 'done · claude · Alpha');
+        expect(r.notifier.active[_id('a', 'w1:p2')]!.body, 'done · Claude Code · Alpha');
 
         r.set('a', {'w1:p1': 'working', 'w1:p2': 'done', 'w1:p4': 'working'}); // pane closed
         expect(r.notifier.active.keys, [_id('a', 'w1:p2')]);
@@ -456,7 +456,7 @@ void main() {
 
         String title(String pane) => r.notifier.active[_id('a', pane)]!.title;
         expect(title('w1:p1'), 'payments-api');
-        expect(title('w1:p2'), 'claude');
+        expect(title('w1:p2'), 'Claude Code');
         expect(title('w1:p3'), '${'x' * 59}…');
         r.dispose();
       });
@@ -470,7 +470,7 @@ void main() {
         final n = r.notifier.shown.single;
         expect(n.link, 'herdr://agent/box%2F1%20%C3%A9/w1%3Ap1');
         expect(parseAgentLink(n.link), const AgentLink('box/1 é', 'w1:p1'));
-        expect(n.body, 'needs you · claude · Máy Việt');
+        expect(n.body, 'needs you · Claude Code · Máy Việt');
         expect(n.id, notificationIdFor('box/1 é/w1:p1'));
         r.dispose();
       });
@@ -624,7 +624,7 @@ void main() {
         final own = r.notifier.shown.where((n) => n.id != _summaryId && n.id != _finishedSummaryId);
         expect(own, hasLength(3));
         final summary = r.notifier.active[_finishedSummaryId]!;
-        expect(summary.title, '9 agents finished');
+        expect(summary.title, '9 agents done');
         expect(summary.kind, NotifyKind.finished);
         expect(summary.link, agentsBoardLink);
         expect(r.notifier.active.containsKey(_summaryId), isFalse, reason: 'nothing needs the person');
@@ -647,7 +647,7 @@ void main() {
         r.set('a', {for (final (i, p) in all.indexed) p: i < 5 ? 'blocked' : 'done'});
 
         expect(r.notifier.active[_summaryId]!.title, '5 agents need you');
-        expect(r.notifier.active[_finishedSummaryId]!.title, '5 agents finished');
+        expect(r.notifier.active[_finishedSummaryId]!.title, '5 agents done');
         expect(r.notifier.shown.where((n) => n.id != _summaryId && n.id != _finishedSummaryId), hasLength(3),
             reason: 'one burst: three in all, blocked first');
         r.dispose();
@@ -673,7 +673,7 @@ void main() {
         final n = r.notifier.shown.single;
         expect(n.id, _id('a', 'w1:p2'));
         expect(n.kind, NotifyKind.finished);
-        expect(n.body, 'done · claude · Alpha');
+        expect(n.body, 'done · Claude Code · Alpha');
         r.dispose();
       });
     });
@@ -709,7 +709,7 @@ void main() {
         final own = r.notifier.shown.where((n) => n.id != _finishedSummaryId).toList();
         expect(own.map((n) => n.kind), everyElement(NotifyKind.needsYou));
         expect(own, hasLength(3));
-        expect(r.notifier.active[_finishedSummaryId]!.title, '3 agents finished',
+        expect(r.notifier.active[_finishedSummaryId]!.title, '3 agents done',
             reason: 'the done ones are not dropped: they are summarised');
         r.dispose();
       });
@@ -1249,11 +1249,11 @@ void main() {
       fakeAsync((async) {
         final r = blocked(async, lsPrompt);
         expect(r.notifier.showsOf(id), 2);
-        expect(r.notifier.shown.first.body, 'needs you · claude · Alpha');
+        expect(r.notifier.shown.first.body, 'needs you · Claude Code · Alpha');
         expect(r.notifier.shown.first.answers, isEmpty);
 
         final n = r.notifier.active[id]!;
-        expect(n.body, 'Do you want to proceed?\nls -la\nneeds you · claude · Alpha');
+        expect(n.body, 'Do you want to proceed?\nls -la\nneeds you · Claude Code · Alpha');
         expect(n.collapsed, 'ls -la', reason: 'a heads-up shows the command, not a bare "proceed?"');
         expect(n.link, 'herdr://agent/a/w1%3Ap1');
         r.dispose();

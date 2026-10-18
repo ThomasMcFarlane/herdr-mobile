@@ -7,9 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/machine_profile.dart';
 import 'package:herdr_mobile/data/repositories/app_settings.dart';
 import 'package:herdr_mobile/data/repositories/attention_set.dart';
-import 'package:herdr_mobile/ui/core/chrome.dart';
-import 'package:herdr_mobile/ui/core/controls.dart';
-import 'package:herdr_mobile/ui/core/rows.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_card.dart';
 import 'package:herdr_mobile/ui/features/agents/reply_sheet.dart';
 import 'package:herdr_mobile/ui/features/agents/triage_pill.dart';
@@ -126,7 +124,7 @@ void main() {
       await settle(tester);
 
       expect(find.byType(ReplySheet), findsOneWidget);
-      expect(find.text('1 of 1 need you'), findsOneWidget, reason: 'finished agents are not walked');
+      expect(find.text('1 of 1 needs you'), findsOneWidget, reason: 'finished agents are not walked');
       await teardownBoard(tester, h);
     });
 
@@ -141,6 +139,8 @@ void main() {
       expect(find.byKey(const ValueKey('mark-all-reviewed')), findsOneWidget);
 
       h.network.goOffline();
+      await tester.pump(const Duration(milliseconds: 300));
+      // The pill leaves through the bottom stack's exit, which starts on that frame.
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.byType(TriagePill), findsNothing);
@@ -184,7 +184,7 @@ void main() {
       ]);
       await pumpBoard(tester, h, height: _tall);
       expect(find.text('1 needs you · 2 to review'), findsOneWidget);
-      expect(_badge(tester), 'Agents, 1 need you');
+      expect(_badge(tester), 'Agents, 1 needs you');
 
       await tester.tap(_card('task 2'));
       await settle(tester);
@@ -193,7 +193,7 @@ void main() {
       await _back(tester);
 
       expect(find.text('1 needs you · 1 to review'), findsOneWidget);
-      expect(_badge(tester), 'Agents, 1 need you', reason: 'reviewing does not touch what needs you');
+      expect(_badge(tester), 'Agents, 1 needs you', reason: 'reviewing does not touch what needs you');
       expect(_sectionCount(tester, 'Done'), 1);
       expect(_sectionCount(tester, 'Idle'), 1, reason: 'the reviewed agent is idle on this phone');
       expect(find.descendant(of: _chip('Done'), matching: find.text('1')), findsOneWidget);
@@ -262,7 +262,7 @@ void main() {
       h.fleet.connection('a')!.reconnect();
       await settle(tester);
 
-      expect(find.text('needs you ≤ 30m'), findsOneWidget);
+      expect(_said('needs you, at most 30 minutes'), findsOneWidget);
       expect(find.textContaining('<1m'), findsNothing);
       await teardownBoard(tester, h);
     });
@@ -274,7 +274,8 @@ void main() {
       await h.changeStatuses(tester, 'a', [_pane(1, 'blocked')],
           ago: const Duration(minutes: 12), title: _title);
 
-      expect(find.text('needs you 12m'), findsOneWidget);
+      expect(find.text('12m'), findsOneWidget);
+      expect(_said('needs you, 12 minutes'), findsOneWidget);
       expect(find.textContaining('≤'), findsNothing);
       await teardownBoard(tester, h);
     });
@@ -310,9 +311,9 @@ void main() {
         title: _title,
       );
 
-      expect(find.text('needs you 20m'), findsOneWidget);
-      expect(find.text('needs you 5m'), findsOneWidget);
-      expect(find.text('needs you 1m'), findsOneWidget);
+      expect(_said('needs you, 20 minutes'), findsOneWidget);
+      expect(_said('needs you, 5 minutes'), findsOneWidget);
+      expect(_said('needs you, 1 minute'), findsOneWidget);
       final y = [for (final i in [1, 2, 3]) _top(tester, _card('task $i'))];
       expect(y[1], lessThan(y[0]), reason: '20 minutes above 5');
       expect(y[0], lessThan(y[2]), reason: '5 minutes above 1');
@@ -345,11 +346,11 @@ void main() {
         observedAgo: const Duration(minutes: 14),
       );
       await pumpBoard(tester, h, height: _tall);
-      expect(find.textContaining('quiet'), findsNothing, reason: 'on connecting, nothing has been listened to yet');
+      expect(_said(RegExp('quiet')), findsNothing, reason: 'on connecting, nothing has been listened to yet');
 
       final panes = [_pane(1, 'working'), _pane(2, 'working')];
       await h.changeStatuses(tester, 'a', panes, title: _title);
-      expect(find.text('quiet 14m'), findsNWidgets(2), reason: 'the next refresh, 14 minutes on');
+      expect(_said('working, quiet for 14 minutes'), findsNWidgets(2), reason: 'the next refresh, 14 minutes on');
       expect(_top(tester, _card('task 1')), lessThan(_top(tester, _card('task 2'))),
           reason: 'equally quiet: machine, then pane');
 
@@ -374,7 +375,7 @@ void main() {
       await h.changeStatuses(tester, 'a', panes, title: _title);
       expect(_top(tester, _card('task 2')), lessThan(_top(tester, _card('task 1'))),
           reason: 'now the quietest one is first');
-      expect(find.text('quiet 14m'), findsOneWidget, reason: 'only task 2 is still quiet');
+      expect(_said('working, quiet for 14 minutes'), findsOneWidget, reason: 'only task 2 is still quiet');
       await teardownBoard(tester, h);
     });
 
@@ -508,3 +509,11 @@ void main() {
     });
   });
 }
+
+/// A time label by what a screen reader hears: the visible text is the time
+/// only, the words carry the state.
+Finder _said(Pattern label) => find.byWidgetPredicate((w) {
+      if (w is! Semantics) return false;
+      final l = w.properties.label;
+      return l != null && (label is String ? l == label : label.allMatches(l).isNotEmpty);
+    });

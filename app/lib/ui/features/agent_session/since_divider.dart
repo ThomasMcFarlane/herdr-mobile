@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'transcript_rows.dart';
 
 /// The line above the first thing the person has not seen: a hairline, `6
@@ -17,14 +17,14 @@ class SinceDivider extends StatelessWidget {
   Widget build(BuildContext context) {
     notifyRowBuilt(rowKey);
     final ds = context.ds;
-    final line = Expanded(child: SizedBox(height: 1, child: ColoredBox(color: ds.border)));
+    const line = Expanded(child: Hairline());
     return Padding(
-      padding: EdgeInsets.only(top: gap, bottom: 4),
+      padding: EdgeInsets.only(top: gap, bottom: Gap.xs),
       child: Semantics(
         label: label,
         excludeSemantics: true,
         child: SizedBox(
-          height: 24,
+          height: _height,
           child: Row(
             children: [
               line,
@@ -40,3 +40,6 @@ class SinceDivider extends StatelessWidget {
     );
   }
 }
+
+/// The divider's band: the label's line with room above and below.
+const _height = 24.0;

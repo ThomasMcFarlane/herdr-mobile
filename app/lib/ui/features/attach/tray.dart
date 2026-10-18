@@ -55,7 +55,7 @@ final class PhonePick extends TrayItem {
   String get key => 'p:$path';
 }
 
-/// A file that already lies on the host (picked in the Host tab, or a recent
+/// A file that already lies on the host (picked in the Machine tab, or a recent
 /// phone file whose copy is still there): attached as a link, nothing is sent.
 final class HostPick extends TrayItem {
   const HostPick({required this.path, required this.name, this.size, this.fromPhone = false});

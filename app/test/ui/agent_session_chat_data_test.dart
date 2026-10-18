@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/acp/acp_models.dart';
 import 'package:herdr_mobile/data/acp/session_state.dart';
-import 'package:herdr_mobile/ui/core/tap_guard.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
 import 'package:herdr_mobile/ui/features/agent_session/question_form.dart';
 import 'package:herdr_mobile/ui/features/agent_session/tool_rows.dart';
 import 'package:herdr_mobile/ui/features/agent_session/transcript_rows.dart';
-import 'package:herdr_mobile/ui/features/agent_session/visible_text.dart';
+import 'package:herdr_mobile/ui/render/visible_text.dart';
 
 import '../support/fake_agent_session.dart';
 
@@ -24,7 +23,7 @@ Future<void> pumpScreen(WidgetTester tester, FakeAgentSession session) async {
     MaterialApp(theme: AppTheme.light(), home: AgentSessionScreen(key: ObjectKey(session), session: session)),
   );
   await tester.pump(const Duration(milliseconds: 100));
-  await tester.pump(tapGuard);
+  await tester.pump(Dwell.tapGuard);
 }
 
 SessionUpdate _u(Json json) => SessionUpdate.parse(json);
@@ -107,7 +106,7 @@ void main() {
       expect(find.text('Output'), findsOneWidget);
       expect(find.text('collecting…'), findsOneWidget);
       expect(find.text('+12 -0: All tests passed!'), findsOneWidget);
-      expect(find.text('The output is in a terminal on the host.'), findsNothing);
+      expect(find.text('The output is in a terminal on the machine.'), findsNothing);
       expect(find.textContaining('Exited with code'), findsNothing, reason: 'a success says nothing about its exit');
     });
 
@@ -172,7 +171,7 @@ void main() {
       await tester.tap(find.text('flutter test'));
       await tester.pump();
       expect(find.text('No output.'), findsOneWidget);
-      expect(find.text('The output is in a terminal on the host.'), findsNothing);
+      expect(find.text('The output is in a terminal on the machine.'), findsNothing);
 
       final starting = FakeAgentSession(state: _command());
       await pumpScreen(tester, starting);
@@ -201,7 +200,7 @@ void main() {
       await pumpScreen(tester, session);
       await tester.tap(find.text('flutter test'));
       await tester.pump();
-      expect(find.text('The output is in a terminal on the host.'), findsOneWidget);
+      expect(find.text('The output is in a terminal on the machine.'), findsOneWidget);
     });
 
     test('exitWords names a code or a signal', () {
@@ -279,7 +278,7 @@ void main() {
       );
       await pumpScreen(tester, session);
       expect(find.text('Which approach?'), findsOneWidget);
-      expect(find.textContaining('The agent goes on without an answer within 9 min'), findsOneWidget);
+      expect(find.textContaining('The agent goes on without an answer within 9 minutes'), findsOneWidget);
     });
 
     testWidgets('a request the agent withdraws takes the panel and its label with it', (tester) async {
@@ -320,15 +319,15 @@ void main() {
           ),
         ),
       );
-      expect(find.text('The agent goes on without an answer within 1 min.'), findsOneWidget);
+      expect(find.text('The agent goes on without an answer within 1 minute.'), findsOneWidget);
 
       now = start.add(const Duration(seconds: 15));
       await tester.pump(const Duration(seconds: 1));
-      expect(find.text('The agent goes on without an answer within 45 s.'), findsOneWidget);
+      expect(find.text('The agent goes on without an answer within 45 seconds.'), findsOneWidget);
 
       now = start.add(const Duration(seconds: 59, milliseconds: 200));
       await tester.pump(const Duration(seconds: 1));
-      expect(find.text('The agent goes on without an answer within 1 s.'), findsOneWidget, reason: 'rounded up, never "0 s"');
+      expect(find.text('The agent goes on without an answer within 1 second.'), findsOneWidget, reason: 'rounded up, never "0 seconds"');
 
       now = start.add(const Duration(seconds: 61));
       await tester.pump(const Duration(seconds: 1));
@@ -339,13 +338,24 @@ void main() {
       expect(find.byType(QuestionPanel), findsOneWidget);
     });
 
-    test('autoResolveWords', () {
-      expect(autoResolveWords(const Duration(seconds: 45)), 'The agent goes on without an answer within 45 s.');
-      expect(autoResolveWords(const Duration(milliseconds: 44001)), 'The agent goes on without an answer within 45 s.');
-      expect(autoResolveWords(const Duration(seconds: 60)), 'The agent goes on without an answer within 1 min.');
-      expect(autoResolveWords(const Duration(seconds: 80)), 'The agent goes on without an answer within 1 min 20 s.');
-      expect(autoResolveWords(Duration.zero), 'The agent is going on without an answer.');
-      expect(autoResolveWords(const Duration(seconds: -3)), 'The agent is going on without an answer.');
+    testWidgets('the label words: whole seconds rounded up, in the sentence register', (tester) async {
+      final now = DateTime.utc(2026, 10, 5, 10);
+      Future<String> words(Duration left) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.light(),
+            home: AutoResolveLabel(key: UniqueKey(), deadline: now.add(left), now: () => now),
+          ),
+        );
+        return tester.widget<Text>(find.byType(Text)).data!;
+      }
+
+      expect(await words(const Duration(seconds: 45)), 'The agent goes on without an answer within 45 seconds.');
+      expect(await words(const Duration(milliseconds: 44001)), 'The agent goes on without an answer within 45 seconds.');
+      expect(await words(const Duration(seconds: 60)), 'The agent goes on without an answer within 1 minute.');
+      expect(await words(const Duration(seconds: 80)), 'The agent goes on without an answer within 2 minutes.', reason: 'never shorter than the time left');
+      expect(await words(Duration.zero), 'The agent is going on without an answer.');
+      expect(await words(const Duration(seconds: -3)), 'The agent is going on without an answer.');
     });
   });
 }

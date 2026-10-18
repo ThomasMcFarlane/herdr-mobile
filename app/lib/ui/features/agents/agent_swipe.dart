@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
+import 'package:herdr_mobile/ui/core/kit.dart';
+
 /// Turns a quick, clearly horizontal one-finger swipe into a step to the
 /// neighbouring agent (+1 = next, for a swipe to the left).
 ///
@@ -31,7 +33,7 @@ class AgentSwipeDetector extends StatefulWidget {
     required this.onSwipe,
     required this.child,
     this.distance = 64,
-    this.window = const Duration(milliseconds: 450),
+    this.window = Dwell.edgeSwipe,
     this.edge = 24,
   });
 

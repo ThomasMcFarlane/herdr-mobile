@@ -7,14 +7,10 @@ import 'package:provider/provider.dart';
 import '../../../data/models/herdr_models.dart';
 import '../../../data/repositories/agent_screens.dart';
 import '../../../data/repositories/machine_connection.dart';
-import '../../core/approval_button.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/glyphs.dart';
-import '../../core/motion.dart';
-import '../../core/rows.dart';
-import '../../core/tokens.dart';
-import '../../core/status_panel.dart';
+import 'approval_button.dart';
+import '../../../data/words/agent_names.dart';
+import '../../../data/words/where_line.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import '../agents/agent_navigation.dart';
 import '../create/management_sheets.dart';
 import '../create/new_agent_session_screen.dart';
@@ -67,16 +63,16 @@ class _MachineViewState extends State<_MachineView> {
     final subtitle = Row(
       children: [
         LinkDot(state: state),
-        const SizedBox(width: 7),
+        const SizedBox(width: Gap.sm),
         Expanded(
           child: Text.rich(
             TextSpan(children: [
               TextSpan(
                 text: state.label,
-                style: TextStyle(color: loud ? ds.blockedText : ds.textSecondary),
+                style: Type.secondary.copyWith(color: loud ? ds.blockedText : ds.textSecondary),
               ),
               if (snap.version.isNotEmpty)
-                TextSpan(text: ' · herdr ${snap.version}', style: TextStyle(color: ds.textMuted)),
+                TextSpan(text: ' · herdr ${snap.version}', style: Type.secondary.copyWith(color: ds.textMuted)),
             ]),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -100,14 +96,9 @@ class _MachineViewState extends State<_MachineView> {
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
-            SliverLargeTitle(
+            SliverLargeTitle.back(
               title: machine.profile.label,
               subtitle: subtitle,
-              leading: CircleButton(
-                icon: LucideIcons.chevronLeft,
-                tooltip: 'Back',
-                onPressed: () => Navigator.of(context).maybePop(),
-              ),
               actions: [
                 if (machineSupportsFiles(machine))
                   CircleButton(
@@ -224,27 +215,32 @@ class _WorkspaceSection extends StatelessWidget {
     final live = machine.isLive;
 
     // A tab label only matters when there is more than one.
-    // These are widget descriptions only: [Collapse] builds nothing for a
+    // These are row descriptions only: [Collapse] builds nothing for a
     // workspace that is closed.
-    final rows = <Widget>[];
+    final rows = <RowSpec>[];
     var total = 0;
+    var shown = 0;
     for (final tab in tabs) {
       final label = tab.label.isEmpty ? 'Tab ${tab.number}' : tab.label;
       for (final pane in snap.panesOf(tab.id)) {
         total++;
         if (!showAll && total > _paneCap) continue;
-        rows.add(RepaintBoundary(
-          key: ValueKey(pane.id),
-          child: _PaneRow(
-            machine: machine,
-            pane: pane,
-            tabLabel: multiTab ? label : null,
-            dim: !live,
+        shown++;
+        rows.add(CustomRow(
+          id: pane.id,
+          dividerIndent: ListRow.textIndent(leadingExtent: _PaneRow.leadingExtent),
+          child: RepaintBoundary(
+            child: _PaneRow(
+              machine: machine,
+              pane: pane,
+              tabLabel: multiTab ? label : null,
+              dim: !live,
+            ),
           ),
         ));
       }
     }
-    if (total > rows.length) rows.add(_ShowAllRow(total: total, onTap: onShowAll));
+    if (total > shown) rows.add(CustomRow(id: 'show-all', child: _ShowAllRow(total: total, onTap: onShowAll)));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -254,27 +250,30 @@ class _WorkspaceSection extends StatelessWidget {
           count: workspace.paneCount,
           expanded: open,
           onTap: onToggle,
-          leading: StatusGlyph(status: workspace.status, size: 14, dim: !live),
+          leading: StatusGlyph(status: workspace.status, size: IconSize.inline, dim: !live),
           // Nudged right so the dots line up with the chevrons of the rows below;
           // the hit box moves with them.
           trailing: Transform.translate(
-            offset: const Offset(10, 0),
+            offset: const Offset(_dotsNudge, 0),
             child: CircleButton(
               icon: LucideIcons.ellipsis,
               tooltip: 'Workspace actions',
               filled: false,
-              size: 36,
+              size: CircleButton.compact,
               onPressed: live ? () => showWorkspaceActions(context, machine, workspace) : null,
             ),
           ),
         ),
         Collapse(
           open: open,
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: rows),
+          child: RowColumn(rows: rows),
         ),
       ],
     );
   }
+
+  /// Moves the workspace's ⋯ right so its dots line up with the row chevrons.
+  static const _dotsNudge = 10.0;
 }
 
 /// "Show all 120 panes": the quiet row that ends a capped workspace.
@@ -285,23 +284,22 @@ class _ShowAllRow extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final ds = context.ds;
-    return PressBuilder(
-      onTap: onTap,
-      builder: (context, pressed) => Container(
-        constraints: const BoxConstraints(minHeight: 48),
-        alignment: Alignment.centerLeft,
-        // Aligned with the pane titles above (gutter + leadingExtent 28 + gap).
-        padding: const EdgeInsets.only(left: Gap.gutter + 28 + Gap.md, right: Gap.gutter),
-        color: pressed ? ds.fill : Colors.transparent,
+  Widget build(BuildContext context) => PressRow(
+        onTap: onTap,
+        minHeight: _minHeight,
+        // Aligned with the pane titles above.
+        padding: EdgeInsetsDirectional.only(
+          start: ListRow.textIndent(leadingExtent: _PaneRow.leadingExtent) - PressRow.inset,
+          end: Gap.gutter - PressRow.inset,
+        ),
         child: Text(
           'Show all $total panes',
-          style: Type.label.copyWith(color: ds.accentText, fontWeight: FontWeight.w600),
+          style: Type.labelStrong.copyWith(color: context.ds.accentText),
         ),
-      ),
-    );
-  }
+      );
+
+  /// A quiet closing row, lower than a pane row.
+  static const _minHeight = 48.0;
 }
 
 class _PaneRow extends StatelessWidget {
@@ -317,21 +315,28 @@ class _PaneRow extends StatelessWidget {
   final String? tabLabel;
   final bool dim;
 
+  /// Leading column: the terminal tile is 28, so the glyphs share that width.
+  static const leadingExtent = 28.0;
+
   @override
   Widget build(BuildContext context) {
     final agent = pane.agent;
-    final title = pane.title.isNotEmpty ? pane.title : (agent ?? 'Shell');
+    final name = agentName(agent);
+    final title = pane.title.isNotEmpty ? pane.title : name;
+    // whereLine's drop rules for the agent and the folder; the tab sits
+    // between them, since a workspace with several tabs needs it as well as
+    // the folder.
     final subtitle = [
-      if (agent != null && agent != title) agent,
+      whereLine(agent: agent != null ? name : null, title: title),
       ?tabLabel,
-      if (cwdTail(pane.cwd).isNotEmpty) cwdTail(pane.cwd),
-    ].join(' · ');
+      whereLine(folder: cwdTail(pane.cwd), title: title),
+    ].where((s) => s.isNotEmpty).join(' · ');
 
     return ListRow(
       leading: agent != null
-          ? StatusGlyph(status: pane.status, size: 20)
-          : const IconTile(icon: LucideIcons.squareTerminal, size: 28),
-      leadingExtent: 28,
+          ? StatusGlyph(status: pane.status, size: IconSize.lead)
+          : const IconTile(icon: LucideIcons.squareTerminal, size: leadingExtent),
+      leadingExtent: leadingExtent,
       title: title,
       titleMaxLines: 2,
       subtitle: subtitle,

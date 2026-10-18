@@ -58,8 +58,8 @@ dependencies:
   # imports it.
   speech_to_text: ^7.5.0
   # Pure-Dart CommonMark/GFM parser behind the MdDocument seam
-  # (ui/core/markdown/md_parser.dart); chosen by the bench-off in
-  # tool/md-bench. Nothing outside ui/core/markdown/ imports it.
+  # (ui/render/markdown/md_parser.dart); chosen by the bench-off in
+  # tool/md-bench. Nothing outside ui/render/markdown/ imports it.
   markdown: ^7.3.1
   # Grapheme-cluster boundaries for the reveal pacer
   # (data/streaming/reveal_pacer.dart); already in the SDK's tree.
@@ -122,6 +122,10 @@ flutter:
         - asset: assets/fonts/JetBrainsMono-BoldItalic.ttf
           weight: 700
           style: italic
+    # herdr's own icons, where icons sit as peers (tool/icons/build_icons.py).
+    - family: HerdrIcons
+      fonts:
+        - asset: assets/fonts/HerdrIcons.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:

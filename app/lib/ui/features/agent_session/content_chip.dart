@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show OverflowBoxFit;
 
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
-import 'visible_text.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../render/visible_text.dart';
 
 /// One quiet line for a piece of content that is not text: an icon, what it
 /// is, where it lives, and (when something could not be shown) why in a
@@ -51,7 +49,7 @@ class ContentChip extends StatelessWidget {
     final row = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(height: lineHeight, child: Center(child: Icon(icon, size: 15, color: ds.textTertiary))),
+        SizedBox(height: lineHeight, child: Center(child: Icon(icon, size: IconSize.row, color: ds.textTertiary))),
         const SizedBox(width: Gap.sm),
         Expanded(
           child: Column(
@@ -60,15 +58,14 @@ class ContentChip extends StatelessWidget {
               Text.rich(
                 TextSpan(
                   text: visibleText(title),
-                  style: Type.secondary.copyWith(
+                  style: Type.secondaryStrong.copyWith(
                     color: tappable ? ds.accentText : (muted ? ds.textMuted : ds.textSecondary),
-                    fontWeight: FontWeight.w500,
                   ),
                   children: [
                     if (detail.isNotEmpty)
                       TextSpan(
                         text: '  ${visibleText(detail)}',
-                        style: TextStyle(fontFamily: monoFamily, fontSize: 12, color: ds.textMuted),
+                        style: Mono.base.copyWith(color: ds.textMuted),
                       ),
                   ],
                 ),
@@ -77,7 +74,7 @@ class ContentChip extends StatelessWidget {
               ),
               if (note != null)
                 Padding(
-                  padding: const EdgeInsets.only(top: 2),
+                  padding: const EdgeInsets.only(top: Gap.hair),
                   child: Text(visibleText(note!), style: Type.caption.copyWith(color: ds.textMuted)),
                 ),
             ],
@@ -106,8 +103,8 @@ class ContentChip extends StatelessWidget {
             duration: Motion.pressing(pressed),
             curve: Motion.easeOut,
             decoration: BoxDecoration(
-              color: pressed ? ds.fillPressed : const Color(0x00000000),
-              borderRadius: BorderRadius.circular(Radii.row),
+              color: pressed ? ds.fillPressed : Colors.transparent,
+              borderRadius: BorderRadius.circular(Radii.sm),
             ),
             child: body,
           ),

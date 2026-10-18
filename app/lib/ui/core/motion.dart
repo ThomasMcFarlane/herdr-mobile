@@ -3,12 +3,23 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Motion tokens. UI motion stays under ~300ms and uses strong ease-out curves:
-/// built-in curves are too weak, and ease-in delays the moment the user is
-/// watching most closely.
+/// Motion tokens. UI motion stays under ~300ms and uses one strong ease-out
+/// curve (the same curve Telegram calls EASE_OUT_QUINT): built-in curves are
+/// too weak, and ease-in delays the moment the person is watching. Exits run
+/// the same curve forward ([curved], [easeOutExit]), so they start fast too;
+/// Material 3 accelerates exits, herdr deliberately does not.
 abstract final class Motion {
   /// Entering / responding to input. Starts fast, settles gently.
   static const easeOut = Cubic(0.23, 1, 0.32, 1);
+
+  /// [easeOut] for a value running backwards (an exit, a collapse): fast
+  /// first, like the entrance. A plain reverse of [easeOut] would be ease-in.
+  static final easeOutExit = easeOut.flipped;
+
+  /// [parent] through [easeOut], and through [easeOutExit] when it reverses.
+  /// Every curved animation that can run both ways uses this.
+  static CurvedAnimation curved(Animation<double> parent) =>
+      CurvedAnimation(parent: parent, curve: easeOut, reverseCurve: easeOutExit);
 
   /// Press-down feedback: snap in.
   static const press = Duration(milliseconds: 100);
@@ -16,45 +27,215 @@ abstract final class Motion {
   /// Release: slightly slower than the press, so the response never feels abrupt.
   static const release = Duration(milliseconds: 180);
 
+  /// An opacity-only change of what is on screen (a tab switch, and a page
+  /// under reduced motion in place of the slide).
+  static const fade = Duration(milliseconds: 120);
+
   /// Default for state changes (colour, size of small elements).
   static const standard = Duration(milliseconds: 200);
 
-  /// Expanding/collapsing sections.
+  /// Expanding/collapsing sections, a scroll the app makes.
   static const expand = Duration(milliseconds: 220);
 
-  /// A status glyph settling into a new status (a one-shot draw-in).
+  /// A one-shot draw-in: a status glyph settling, a badge arriving, a number
+  /// rolling.
   static const settle = Duration(milliseconds: 240);
 
-  /// How long the wash on a card that just changed section takes to fade. A
-  /// fade-out of a highlight, not a movement: it may outlast a transition.
-  static const arrival = Duration(milliseconds: 420);
-
-  /// Honour the platform's reduced-motion setting: drop movement, keep
-  /// colour/opacity changes.
-  static bool reduced(BuildContext context) =>
-      MediaQuery.disableAnimationsOf(context);
-
-  /// Duration for a control's pressed/released colour and scale: snap in,
-  /// ease out.
-  static Duration pressing(bool down) => down ? press : release;
-
-  /// Bottom sheet / tray open and close: the response snaps (out < in).
+  /// Bottom sheet, toast and floating bars, in and out (out < in).
   static const sheetIn = Duration(milliseconds: 250);
   static const sheetOut = Duration(milliseconds: 190);
 
   /// Page push/pop (the Cupertino slide, shortened from the SDK's 500 ms).
   static const page = Duration(milliseconds: 260);
 
-  /// An opacity-only change of what is on screen (a tab switch, and a page
-  /// under reduced motion in place of the slide).
-  static const fade = Duration(milliseconds: 120);
+  /// The check that draws itself after a connection test passes.
+  static const draw = Duration(milliseconds: 320);
+
+  /// How long the wash on a card that just changed section takes to fade. A
+  /// fade-out of a highlight, not a movement: it may outlast a transition.
+  static const arrival = Duration(milliseconds: 420);
+
+  /// The brand mark drawing itself on first run.
+  static const brand = Duration(milliseconds: 420);
+
+  /// A hold-to-confirm fills slowly and linearly, then snaps back fast.
+  static const holdFill = Duration(milliseconds: 550);
+  static const holdSnapBack = Duration(milliseconds: 200);
+
+  /// How far a floating thing (a pill, a bar, a toast) travels as it enters.
+  static const travel = 16.0;
+
+  /// The scale an entering element starts from (never below 0.9).
+  static const enterScale = 0.97;
+
+  /// How far a changed number rolls, as a fraction of its font size.
+  static const rollTravel = 0.3;
+
+  /// Honour the platform's reduced-motion setting: drop movement, keep
+  /// colour/opacity changes.
+  static bool reduced(BuildContext context) => MediaQuery.disableAnimationsOf(context);
+
+  /// [d], or nothing under reduced motion.
+  static Duration of(BuildContext context, Duration d) => reduced(context) ? Duration.zero : d;
+
+  /// Duration for a control's pressed/released colour and scale: snap in,
+  /// ease out.
+  static Duration pressing(bool down) => down ? press : release;
+}
+
+/// How far a control shrinks under the finger, by its size: the bigger the
+/// surface, the less it moves.
+abstract final class PressScale {
+  /// Wide surfaces: answer chips, strips, toasts' actions.
+  static const panel = 0.985;
+
+  /// Buttons and floating pills.
+  static const button = 0.97;
+
+  /// Chips.
+  static const chip = 0.96;
+
+  /// Round and icon-only controls, tiles in a grid.
+  static const icon = 0.92;
+}
+
+/// Springs for anything a finger hands over (a drag released, a fling).
+/// Critically damped unless the gesture carried momentum; then a little
+/// bounce (ratio >= 0.85), never more.
+abstract final class Springs {
+  /// A sheet or a photo let go: carries the finger's speed and lands softly.
+  static final carry = SpringDescription.withDampingRatio(mass: 1, stiffness: 420, ratio: 0.88);
+
+  /// Back to rest with no overshoot (a drag cancelled, a double tap).
+  static final settle = SpringDescription.withDampingRatio(mass: 1, stiffness: 420, ratio: 1);
+
+  /// A light, quick object (the tab bar's capsule after a scrub).
+  static final snap = SpringDescription.withDampingRatio(mass: 1, stiffness: 1500, ratio: 0.85);
+
+  /// A swiped row that did not go far enough, coming back.
+  static final recoil = SpringDescription.withDurationAndBounce(duration: const Duration(milliseconds: 380), bounce: 0.1);
+
+  /// A swiped row leaving.
+  static final out = SpringDescription.withDurationAndBounce(duration: const Duration(milliseconds: 260));
+
+  /// When a spring counts as arrived, by what it moves.
+  static const pixel = Tolerance(distance: 0.05, velocity: 1);
+  static const scale = Tolerance(distance: 0.0005, velocity: 0.002);
+  static const swipe = Tolerance(distance: 0.2, velocity: 8);
+
+  /// Seconds of a fling's speed that carry on after the finger lifts, to pick
+  /// where a sheet or the tab capsule lands (Apple's projection).
+  static const projectSheet = 0.25;
+  static const projectTab = 0.1;
+}
+
+/// Timers, not animations: how long something waits or stays.
+abstract final class Dwell {
+  /// New content under a finger takes no tap for this long.
+  static const tapGuard = Duration(milliseconds: 450);
+
+  /// A press held this long is a hold (before it, a tap).
+  static const holdIntent = Duration(milliseconds: 150);
+
+  /// How long the "hold to …" hint stays after an early release.
+  static const holdHint = Duration(milliseconds: 2400);
+
+  /// A primed risky answer waits this long for its second tap.
+  static const confirm = Duration(seconds: 4);
+
+  /// A copy button shows its check this long.
+  static const copied = Duration(milliseconds: 1600);
+
+  /// A held key repeats after [keyRepeatDelay], then every [keyRepeatGap].
+  static const keyRepeatDelay = Duration(milliseconds: 320);
+  static const keyRepeatGap = Duration(milliseconds: 45);
+
+  /// The keyboard counts as still once its inset has not moved for this long.
+  static const keyboardQuiet = Duration(milliseconds: 120);
+
+  /// A spinner or a skeleton shows only for work that takes longer than this.
+  static const spinnerDelay = Duration(milliseconds: 120);
+
+  /// A toast stays: short words, longer words, and one with an action.
+  static const toastShort = Duration(milliseconds: 1500);
+  static const toastLong = Duration(milliseconds: 2750);
+  static const toastAction = Duration(milliseconds: 5000);
+
+  /// Clocks that count seconds (a turn's elapsed time, an auto-resolve countdown) step this often.
+  static const second = Duration(seconds: 1);
+
+  /// `Stopping…` waits this long for a stopped job to leave the running set before it says it could not confirm.
+  static const stopConfirm = Duration(seconds: 12);
+
+  /// While the app is hidden no frame comes, so a coalesced flush waits this long instead.
+  static const hiddenFlush = Duration(milliseconds: 250);
+
+  /// Elapsed-time labels at minute resolution are polled this often.
+  static const minuteStep = Duration(seconds: 30);
+
+  /// A deep link waits this long for its machine to connect before giving up.
+  static const linkPatience = Duration(seconds: 8);
+
+  /// A Stop the person tapped counts as theirs this long: a later, unrelated turn end is never taken for it.
+  static const stopAsked = Duration(seconds: 20);
+
+  /// The triage walk's `All clear` stays this long before the sheet leaves.
+  static const allClear = Duration(milliseconds: 900);
+
+  /// A sent answer's `Sent: …` stays this long before the walk moves on.
+  static const sentRead = Duration(milliseconds: 700);
+
+  /// A preconnect outlives a finger that lifted without opening by this much.
+  static const preconnectLinger = Duration(milliseconds: 400);
+
+  /// An edge swipe between agents must finish within this long.
+  static const edgeSwipe = Duration(milliseconds: 450);
+
+  /// A board answer's `Sent` and `Changed` states stay this long.
+  static const answerSent = Duration(seconds: 3);
+  static const answerChanged = Duration(milliseconds: 1500);
+
+  /// A batch action's result toast stays this long: it may list what failed.
+  static const batchResult = Duration(seconds: 6);
+
+  /// A reopened app waits this long for the agent it was showing to be listed.
+  static const resumePatience = Duration(seconds: 8);
+
+  /// `ArrivalCue`: quiet this long after start, then at most one buzz per [arrivalSpacing].
+  static const arrivalCalm = Duration(seconds: 3);
+  static const arrivalSpacing = Duration(seconds: 2);
+
+  /// Warming the transcript's plan does at most [planBudget] of work per [planGap], between frames.
+  static const planBudget = Duration(milliseconds: 4);
+  static const planGap = Duration(milliseconds: 2);
+
+  /// A machine's list refresh after an action gives up after this long; events catch up later.
+  static const refreshTimeout = Duration(seconds: 5);
+
+  /// The pane's screen reads: at most one per [paneRead] while output streams, a
+  /// deeper (scrollback) read at most per [paneDeepRead], back to the short read
+  /// after [paneDeepRevert] of quiet, and a poll every [paneFallback] if events stop.
+  static const paneRead = Duration(milliseconds: 120);
+  static const paneDeepRead = Duration(milliseconds: 1500);
+  static const paneDeepRevert = Duration(seconds: 2);
+  static const paneFallback = Duration(seconds: 4);
+
+  /// Waits one frame or so past an animation, so a measurement sees its end state.
+  static const afterSettle = Duration(milliseconds: 30);
+
+  /// An open file viewer stats its file this often to notice a change on disk.
+  static const diskWatch = Duration(seconds: 15);
+
+  /// A photo zoomed back out to fit keeps its sharp decode this long: zooming in again does not decode twice.
+  static const photoSharp = Duration(seconds: 2);
 }
 
 /// The app's haptic vocabulary, as `Motion` is its motion vocabulary. Five
 /// meanings, each one feel; screens say what happened, never which motor
 /// pattern. Android's `HapticFeedback` has few strengths, so they are kept for
 /// distinct moments: a tick is common, everything else is rare enough to mean
-/// something.
+/// something. [hold] and [armed] share a motor: both say "something firm
+/// happened under your finger".
 abstract final class Haptics {
   /// A tap, a selection, a step: the light click of choosing something.
   static void tick() => unawaited(HapticFeedback.selectionClick());
@@ -62,10 +243,12 @@ abstract final class Haptics {
   /// A long press registered (pick, open actions): a firmer press.
   static void hold() => unawaited(HapticFeedback.mediumImpact());
 
-  /// Something went out: an answer, a message, a key. Soft, once.
+  /// Something went out: an answer, a message, a key. Soft, once, and only
+  /// when it was accepted, never on the tap that asked for it.
   static void sent() => unawaited(HapticFeedback.lightImpact());
 
-  /// A risky answer is primed and waits for its confirmation.
+  /// A risky answer is primed and waits for its confirmation; a new question
+  /// arrived (rate-limited by `ArrivalCue`, never fired by a widget's build).
   static void armed() => unawaited(HapticFeedback.mediumImpact());
 
   /// Something failed, or a guarded action was refused: the heaviest one, so

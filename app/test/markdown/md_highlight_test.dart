@@ -2,9 +2,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:herdr_mobile/ui/core/markdown/highlight/highlight.dart';
-import 'package:herdr_mobile/ui/core/markdown/md_highlight.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/render/markdown/highlight/highlight.dart';
+import 'package:herdr_mobile/ui/render/markdown/md_highlight.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 Future<MdCodeColors> _colors(WidgetTester tester, ThemeData theme) async {
   late MdCodeColors colors;

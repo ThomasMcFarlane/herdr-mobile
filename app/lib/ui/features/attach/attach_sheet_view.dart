@@ -3,8 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../data/repositories/attach_target.dart';
-import '../../core/chrome.dart' show FloatingBar;
-import '../../core/motion.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'attach_bars.dart';
 import 'attach_kit.dart';
 import 'files_tab.dart';

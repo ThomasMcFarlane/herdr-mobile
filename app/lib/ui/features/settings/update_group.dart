@@ -6,12 +6,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/app_info.dart';
 import '../../../data/models/release_info.dart';
 import '../../../data/repositories/app_update.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/markdown/markdown.dart';
-import '../../core/open_link.dart';
-import '../../core/toast.dart';
-import '../../core/tokens.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../render/markdown/markdown.dart';
+import '../../support/open_link.dart';
 import 'settings_group.dart';
 
 /// The top of Settings while a newer version exists: one row that says what
@@ -57,13 +54,15 @@ class UpdateGroup extends StatelessWidget {
             onToggle: onToggle,
             footer: update.stage == UpdateStage.downloading
                 ? Padding(
-                    padding: const EdgeInsets.fromLTRB(Gap.gutter, 0, Gap.gutter, Gap.md),
+                    padding: const EdgeInsets.only(left: Gap.gutter, right: Gap.gutter, bottom: Gap.md),
                     child: _ProgressBar(update.received / release.size),
                   )
                 : null,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.xs, Gap.gutter, 0),
+            rows: [
+              CustomRow(
+                id: 'update',
+                child: Padding(
+                padding: const EdgeInsets.only(left: Gap.gutter, top: Gap.xs, right: Gap.gutter),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -87,6 +86,7 @@ class UpdateGroup extends StatelessWidget {
                     const SizedBox(height: Gap.md),
                     _Actions(update: update, release: release),
                   ],
+                  ),
                 ),
               ),
             ],
@@ -129,9 +129,9 @@ class _ProgressBar extends StatelessWidget {
       label: 'Download progress',
       value: '${(value * 100).floor()}%',
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(2),
+        borderRadius: BorderRadius.circular(Radii.pill),
         child: SizedBox(
-          height: 4,
+          height: _progressHeight,
           child: Stack(
             children: [
               Positioned.fill(child: ColoredBox(color: ds.fill)),
@@ -173,7 +173,7 @@ class _Actions extends StatelessWidget {
           onPressed: () => unawaited(update.install()),
         ),
       _ => AppButton(
-          label: retry ? 'Try again' : 'Download',
+          label: retry ? 'Retry' : 'Download',
           icon: LucideIcons.download,
           expand: true,
           onPressed: () => unawaited(update.download()),
@@ -211,7 +211,7 @@ Future<void> showReleaseNotes(BuildContext context, ReleaseInfo release) async {
   if (release.notes.isEmpty) {
     final toaster = Toaster.of(context);
     if (!await openInBrowser(release.pageUrl)) {
-      toaster.show('No browser could open the link.', kind: ToastKind.failed);
+      toaster.show('Couldn’t open on this phone: no browser could open it.', kind: ToastKind.failed);
     }
     return;
   }
@@ -219,22 +219,16 @@ Future<void> showReleaseNotes(BuildContext context, ReleaseInfo release) async {
   if (!context.mounted) return;
   await showAppSheet<void>(
     context,
-    builder: (context) => Padding(
-      padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.lg, Gap.gutter, Gap.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Semantics(
-            header: true,
-            child: Text(
-              'What\u2019s new in ${release.version}',
-              style: Type.title.copyWith(color: context.ds.text),
-            ),
-          ),
-          const SizedBox(height: Gap.md),
-          MdDocumentView(document: document),
-        ],
+    builder: (context) => SheetScaffold(
+      title: 'What\u2019s new in ${release.version}',
+      kind: SheetKind.message,
+      child: Padding(
+        padding: const EdgeInsets.only(top: Gap.xs),
+        child: MdDocumentView(document: document),
       ),
     ),
   );
 }
+
+/// The download bar's thickness.
+const _progressHeight = 4.0;

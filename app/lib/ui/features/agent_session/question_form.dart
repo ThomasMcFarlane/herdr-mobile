@@ -4,14 +4,12 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/acp/acp_models.dart';
 import '../../../data/acp/session_state.dart' show TranscriptItem;
 import '../../../data/decision/permission_evidence.dart';
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/step_clock.dart';
-import '../../core/tap_guard.dart';
-import '../../core/theme.dart';
-import '../settings/app_switch.dart';
+import '../../../data/words/elapsed.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../support/step_clock.dart';
+import '../../support/tap_guard.dart';
 import 'permission_evidence_view.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// The names of the form fields the agent marked secret (Codex's
 /// `_meta.codex.isSecret`, a bare `_meta.isSecret`, or a password format).
@@ -57,7 +55,7 @@ class QuestionDraft {
 
 /// The agent's question, docked above the composer as a form: its message,
 /// one control per schema field, and Accept / Decline. Like a permission
-/// request it ignores Accept and Decline for [tapGuard] after it appears, so
+/// request it ignores Accept and Decline for [Dwell.tapGuard] after it appears, so
 /// a tap meant for what was on screen before cannot answer it.
 ///
 /// Only form requests are answered. A URL request (which this app never
@@ -130,8 +128,6 @@ class _QuestionPanelState extends State<QuestionPanel> with TapGuardState<Questi
   @override
   void initState() {
     super.initState();
-    // A question is news, like a permission request.
-    Haptics.armed();
     for (final f in _schema?.fields ?? const <ElicitationField>[]) {
       switch (f) {
         case StringField():
@@ -205,7 +201,7 @@ class _QuestionPanelState extends State<QuestionPanel> with TapGuardState<Questi
     if (_sent || !settled) return;
     setState(() => _submitted = true);
     if (_schema!.validate(_content()).isNotEmpty) {
-      Haptics.tick();
+      Haptics.failed();
       return;
     }
     Haptics.sent();
@@ -231,87 +227,63 @@ class _QuestionPanelState extends State<QuestionPanel> with TapGuardState<Questi
         if (_secret.contains(f.name)) f.label,
     ];
     return Padding(
-      padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.sm),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: ds.blockedWash,
-          borderRadius: BorderRadius.circular(Radii.chip),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Flexible(
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: Icon(LucideIcons.circleHelp, size: 16, color: ds.blockedText),
-                          ),
-                          const SizedBox(width: Gap.sm),
-                          Expanded(
-                            child: Semantics(
-                              header: true,
-                              child: Text(
-                                _heading,
-                                style: Type.prompt.copyWith(height: 1.4, fontWeight: FontWeight.w600, color: ds.text),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (_plan case final plan?) ...[
-                        if (plan.intent case final said?) EvidenceIntent(text: said),
-                        const SizedBox(height: Gap.sm),
-                        PlanEvidence(markdown: plan.planMarkdown!, preview: plan.planIsPreview),
-                      ],
-                      if (schema == null) ...[
-                        const SizedBox(height: Gap.sm),
-                        Text(
-                          'The agent asked you to open a web page. This app does not open links an agent asks for, so you can only decline.',
-                          style: Type.secondary.copyWith(color: ds.textSecondary),
-                        ),
-                      ] else ...[
-                        if (schema.description != null && schema.description!.isNotEmpty) ...[
-                          const SizedBox(height: 4),
-                          Text(schema.description!, style: Type.secondary.copyWith(color: ds.textSecondary)),
-                        ],
-                        if (secrets.isNotEmpty) ...[
-                          const SizedBox(height: Gap.sm),
-                          _SecretWarning(fields: secrets),
-                        ],
-                        for (final f in schema.fields) ...[
-                          const SizedBox(height: Gap.md),
-                          _FieldBlock(
-                            field: f,
-                            secret: _secret.contains(f.name),
-                            error: errors[f.name],
-                            controller: _texts[f.name],
-                            boolValue: _bools[f.name],
-                            single: _single[f.name],
-                            multi: _multi[f.name],
-                            onBool: (v) => _changed(() => _bools[f.name] = v),
-                            onSingle: (v) => _changed(() => _single[f.name] = v),
-                            onMulti: (v, on) => _changed(() {
-                              final set = _multi[f.name]!;
-                              on ? set.add(v) : set.remove(v);
-                            }),
-                            onText: () => _changed(() {}),
-                          ),
-                        ],
-                      ],
-                    ],
-                  ),
-                ),
+      padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.sm),
+      child: QuestionWash(
+        question: _heading,
+        size: QuestionWashSize.full,
+        questionIsHeader: true,
+        leading: Icon(LucideIcons.circleHelp, size: IconSize.row, color: ds.blockedText),
+        details: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (_plan case final plan?) ...[
+              if (plan.intent case final said?) EvidenceIntent(text: said),
+              const SizedBox(height: Gap.sm),
+              PlanEvidence(markdown: plan.planMarkdown!, preview: plan.planIsPreview),
+            ],
+            if (schema == null) ...[
+              const SizedBox(height: Gap.sm),
+              Text(
+                'The agent asked you to open a web page. This app does not open links an agent asks for, so you can only decline.',
+                style: Type.secondary.copyWith(color: ds.textSecondary),
               ),
+            ] else ...[
+              if (schema.description != null && schema.description!.isNotEmpty) ...[
+                const SizedBox(height: Gap.xs),
+                Text(schema.description!, style: Type.secondary.copyWith(color: ds.textSecondary)),
+              ],
+              if (secrets.isNotEmpty) ...[
+                const SizedBox(height: Gap.sm),
+                _SecretWarning(fields: secrets),
+              ],
+              for (final f in schema.fields) ...[
+                const SizedBox(height: Gap.md),
+                _FieldBlock(
+                  field: f,
+                  secret: _secret.contains(f.name),
+                  error: errors[f.name],
+                  controller: _texts[f.name],
+                  boolValue: _bools[f.name],
+                  single: _single[f.name],
+                  multi: _multi[f.name],
+                  onBool: (v) => _changed(() => _bools[f.name] = v),
+                  onSingle: (v) => _changed(() => _single[f.name] = v),
+                  onMulti: (v, on) => _changed(() {
+                    final set = _multi[f.name]!;
+                    on ? set.add(v) : set.remove(v);
+                  }),
+                  onText: () => _changed(() {}),
+                ),
+              ],
+            ],
+          ],
+        ),
+        // The answers stay in reach; the question and the fields scroll.
+        footer: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
               if (schema != null && request.autoResolution != null) ...[
                 const SizedBox(height: Gap.sm),
                 AutoResolveLabel(deadline: _arrived.add(request.autoResolution!), now: widget.now),
@@ -344,13 +316,12 @@ class _QuestionPanelState extends State<QuestionPanel> with TapGuardState<Questi
                 const SizedBox(height: Gap.sm),
                 Text(
                   '${widget.more} more waiting',
-                  style: Type.label.copyWith(color: ds.blockedText, fontWeight: FontWeight.w600),
+                  style: Type.labelStrong.copyWith(color: ds.blockedText),
                 ),
               ],
             ],
           ),
         ),
-      ),
     );
   }
 }
@@ -367,10 +338,10 @@ class _SecretWarning extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(top: 1),
-          child: Icon(LucideIcons.triangleAlert, size: 14, color: ds.dangerText),
+          padding: const EdgeInsets.only(top: Gap.hair),
+          child: Icon(LucideIcons.triangleAlert, size: IconSize.inline, color: ds.dangerText),
         ),
-        const SizedBox(width: 6),
+        const SizedBox(width: Gap.sm),
         Expanded(
           child: Text(
             'The agent marked ${fields.join(', ')} as secret. What you type here goes to the agent in plain text; it is not hidden. Don’t enter a password or key unless you accept that.',
@@ -419,7 +390,7 @@ class _FieldBlock extends StatelessWidget {
     final hasDetails = f is! BooleanField && f is! UnknownField && ((description != null && description.isNotEmpty) || secret);
     final Widget? details = hasDetails
         ? Padding(
-            padding: const EdgeInsets.only(bottom: 6),
+            padding: const EdgeInsets.only(bottom: Gap.sm),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -496,7 +467,7 @@ class _FieldBlock extends StatelessWidget {
         control,
         if (errorText != null && (isBool || f is EnumField || f is MultiEnumField || f is UnknownField))
           Padding(
-            padding: const EdgeInsets.only(top: 2),
+            padding: const EdgeInsets.only(top: Gap.hair),
             child: Text(errorText, style: Type.caption.copyWith(color: ds.dangerText)),
           ),
       ],
@@ -532,9 +503,9 @@ class _TextControl extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(bottom: 6),
+          padding: const EdgeInsets.only(bottom: Gap.sm),
           child: ExcludeSemantics(
-            child: Text(label, style: Type.label.copyWith(color: ds.textSecondary, fontWeight: FontWeight.w600)),
+            child: Text(label, style: Type.labelStrong.copyWith(color: ds.textSecondary)),
           ),
         ),
         ?details,
@@ -548,7 +519,7 @@ class _TextControl extends StatelessWidget {
             autocorrect: false,
             enableSuggestions: false,
             onChanged: (_) => onChanged(),
-            style: Type.body.copyWith(fontSize: 16, color: ds.text),
+            style: Type.input.copyWith(color: ds.text),
             cursorColor: ds.accent,
             decoration: InputDecoration(hintText: hint, errorText: error, errorMaxLines: 2),
           ),
@@ -587,17 +558,17 @@ class _Choices extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.only(bottom: 2),
-            child: Text(title, style: Type.label.copyWith(color: ds.textSecondary, fontWeight: FontWeight.w600)),
+            padding: const EdgeInsets.only(bottom: Gap.hair),
+            child: Text(title, style: Type.labelStrong.copyWith(color: ds.textSecondary)),
           ),
           ?details,
           if (hint != null)
             Padding(
-              padding: const EdgeInsets.only(bottom: 2),
+              padding: const EdgeInsets.only(bottom: Gap.hair),
               child: Text(hint!, style: Type.caption.copyWith(color: ds.textMuted)),
             ),
           if (options.isEmpty)
-            Text('No choices offered.', style: Type.secondary.copyWith(color: ds.textMuted)),
+            const EmptyState.inline('No choices offered.', padding: EdgeInsets.zero),
           for (final o in options)
             _ChoiceRow(
               label: o.title,
@@ -622,43 +593,21 @@ class _ChoiceRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
-    return PressBuilder(
-      onTap: onTap,
+    // Selection is the mark's, not a row wash: `selected` reaches semantics only.
+    return Semantics(
       selected: selected,
-      builder: (context, pressed) => AnimatedContainer(
-        duration: Motion.pressing(pressed),
-        curve: Motion.easeOut,
-        constraints: const BoxConstraints(minHeight: kMinTap),
-        decoration: BoxDecoration(
-          color: pressed ? ds.fill : Colors.transparent,
-          borderRadius: BorderRadius.circular(Radii.row),
-        ),
+      child: PressRow(
+        onTap: onTap,
+        minHeight: kMinTap,
         child: Row(
           children: [
-            const SizedBox(width: 2),
-            ExcludeSemantics(
-              child: Container(
-                width: 20,
-                height: 20,
-                decoration: BoxDecoration(
-                  shape: multi ? BoxShape.rectangle : BoxShape.circle,
-                  borderRadius: multi ? BorderRadius.circular(5) : null,
-                  color: selected && multi ? ds.accent : Colors.transparent,
-                  border: Border.all(color: selected ? ds.accent : ds.textTertiary, width: selected && !multi ? 2 : 1.5),
-                ),
-                alignment: Alignment.center,
-                child: selected
-                    ? (multi
-                        ? Icon(LucideIcons.check, size: 14, color: ds.onAccent)
-                        : Container(width: 8, height: 8, decoration: BoxDecoration(shape: BoxShape.circle, color: ds.accent)))
-                    : null,
-              ),
-            ),
+            const SizedBox(width: Gap.hair),
+            SelectMark(selected: selected, shape: multi ? SelectMarkShape.square : SelectMarkShape.circle),
             const SizedBox(width: Gap.md),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: Gap.sm),
-                child: Text(label, style: Type.body.copyWith(fontSize: 14.5, color: ds.text)),
+                child: Text(label, style: Type.compact.copyWith(color: ds.text)),
               ),
             ),
           ],
@@ -666,6 +615,13 @@ class _ChoiceRow extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A countdown said in words is never shorter than the time left: whole
+/// seconds under a minute, whole minutes after (80 s is `2 minutes`, not `1`).
+Duration _roundedUp(Duration left) {
+  final s = (left.inMilliseconds + 999) ~/ 1000;
+  return s < 60 ? Dwell.second * s : Dwell.second * 60 * ((s + 59) ~/ 60);
 }
 
 /// "The agent goes on without an answer within 45 s.": what Codex does when a
@@ -688,7 +644,7 @@ class AutoResolveLabel extends StatefulWidget {
 }
 
 class _AutoResolveLabelState extends State<AutoResolveLabel> with StepClockLease<AutoResolveLabel> {
-  static final _second = StepClock(const Duration(seconds: 1));
+  static final _second = StepClock(Dwell.second);
 
   @override
   StepClock get clock => _second;
@@ -714,19 +670,13 @@ class _AutoResolveLabelState extends State<AutoResolveLabel> with StepClockLease
         });
       }
       return Text(
-        autoResolveWords(left),
+        left <= Duration.zero
+            ? 'The agent is going on without an answer.'
+            // Whole seconds, rounded up, so the last second reads `1 second`, not `0 seconds`.
+            : 'The agent goes on without an answer within ${Elapsed.words(_roundedUp(left))}.',
         style: Type.secondary.copyWith(color: context.ds.textSecondary),
       );
     },
   );
 }
 
-/// The words for [left] time before an agent goes on without an answer.
-String autoResolveWords(Duration left) {
-  if (left <= Duration.zero) return 'The agent is going on without an answer.';
-  final seconds = (left.inMilliseconds + 999) ~/ 1000;
-  final minutes = seconds ~/ 60;
-  final rest = seconds % 60;
-  final span = minutes == 0 ? '$seconds s' : (rest == 0 ? '$minutes min' : '$minutes min $rest s');
-  return 'The agent goes on without an answer within $span.';
-}

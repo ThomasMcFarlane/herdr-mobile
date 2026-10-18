@@ -3,9 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/acp/acp_models.dart';
-import 'package:herdr_mobile/ui/core/controls.dart';
-import 'package:herdr_mobile/ui/core/tap_guard.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -21,7 +19,7 @@ Future<void> pump(WidgetTester tester, FakeAgentSession session) async {
       home: AgentSessionScreen(key: ObjectKey(session), session: session),
     ),
   );
-  await tester.pump(tapGuard);
+  await tester.pump(Dwell.tapGuard);
 }
 
 FakeAgentSession working() => FakeAgentSession(state: stateWith(turnActive: true));
@@ -220,7 +218,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
     expect(session.cancelCount, 0, reason: 'a tap meant for Send');
 
-    await tester.pump(tapGuard);
+    await tester.pump(Dwell.tapGuard);
     await tester.tap(find.byIcon(LucideIcons.square));
     await tester.pump(const Duration(milliseconds: 50));
     expect(session.cancelCount, 1);
@@ -265,6 +263,6 @@ void main() {
     await tester.tap(find.text('2 more queued'));
     await settle(tester, 300);
     expect(find.text('five'), findsOneWidget);
-    expect(find.text('Show fewer'), findsOneWidget);
+    expect(find.text('Show less'), findsOneWidget);
   });
 }

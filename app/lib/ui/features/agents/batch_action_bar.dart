@@ -1,16 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/batch_actions.dart';
 import '../../../data/repositories/fleet_repository.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/rows.dart';
-import '../../core/toast.dart';
-import '../../core/tokens.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'agents_grouping.dart' show AgentsOverview;
 import 'board_selection.dart';
 
@@ -30,10 +24,14 @@ class SelectionHeader extends StatelessWidget {
     final state = context.select<BoardSelection?, ({bool active, int count, bool busy})>(
       (s) => (active: s?.active ?? false, count: s?.count ?? 0, busy: s?.busy != null),
     );
-    if (!state.active) return const SizedBox.shrink();
+    final selection = context.read<BoardSelection?>();
+    if (selection == null) return const SizedBox.shrink();
     final ds = context.ds;
-    final selection = context.read<BoardSelection>();
-    return MediaQuery.withClampedTextScaling(
+    // It comes and goes with a fade, as the batch bar does below.
+    return BottomStackTransition(
+      visible: state.active,
+      slide: false,
+      builder: (context) => MediaQuery.withClampedTextScaling(
       maxScaleFactor: kBarTextScale,
       child: Container(
         color: ds.bg,
@@ -50,10 +48,8 @@ class SelectionHeader extends StatelessWidget {
                     Expanded(
                       child: Semantics(
                         header: true,
-                        child: Text(
-                          '${state.count} selected',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        child: RollText(
+                          text: '${state.count} selected',
                           style: Type.barTitle.copyWith(color: ds.text, fontFeatures: Type.tabular),
                         ),
                       ),
@@ -78,6 +74,7 @@ class SelectionHeader extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 }
@@ -97,12 +94,16 @@ class BatchActionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final selection = context.watch<BoardSelection?>();
-    if (selection == null || !selection.active) return const SizedBox.shrink();
+    if (selection == null) return const SizedBox.shrink();
     final clearance = FloatingBar.clearance(context);
     // Toasts stand above it, as above the tab bar it replaces. The shell hides
     // its scrim with the tab bar, and the board sits under the shell's
-    // overlays, so the bar brings its own.
-    return ToastShelf(
+    // overlays, so the bar brings its own. It swaps with the tab bar in place:
+    // a fade, no slide.
+    return BottomStackTransition(
+      visible: selection.active,
+      slide: false,
+      builder: (context) => ToastShelf(
       lift: clearance,
       child: SizedBox(
         height: clearance,
@@ -118,6 +119,7 @@ class BatchActionBar extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -138,40 +140,25 @@ class BatchActionBar extends StatelessWidget {
           (a == BatchAction.message && plan.waiting.any((s) => s.canSendAnyway));
     }
 
-    final ds = context.ds;
     final busy = selection.busy;
     if (busy != null) {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const BusySpinner(),
-          const SizedBox(width: Gap.md),
-          Flexible(
-            child: Text(
-              '$busy…',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Type.label.copyWith(color: ds.textSecondary),
-            ),
-          ),
-        ],
-      );
+      return LoadingRow('$busy…', padding: EdgeInsets.zero, center: true, maxLines: 1);
     }
     return Row(
       children: [
         _BarAction(
-          label: 'Interrupt',
-          icon: LucideIcons.circleStop,
-          onTap: can(BatchAction.interrupt) ? () => onAction(BatchAction.interrupt) : null,
+          label: 'Stop',
+          icon: HerdrIcons.stop,
+          onTap: can(BatchAction.stop) ? () => onAction(BatchAction.stop) : null,
         ),
         _BarAction(
           label: 'Message',
-          icon: LucideIcons.messageSquare,
+          icon: HerdrIcons.message,
           onTap: can(BatchAction.message) ? () => onAction(BatchAction.message) : null,
         ),
         _BarAction(
           label: 'Close',
-          icon: LucideIcons.x,
+          icon: HerdrIcons.close,
           danger: true,
           onTap: can(BatchAction.close) ? () => onAction(BatchAction.close) : null,
         ),
@@ -213,13 +200,13 @@ class _BarAction extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 22, color: enabled ? fg : ds.textTertiary),
-              const SizedBox(height: 2),
+              Icon(icon, size: IconSize.nav, color: enabled ? fg : ds.textTertiary),
+              const SizedBox(height: Gap.hair),
               Text(
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: Type.label.copyWith(color: fg, fontWeight: FontWeight.w500),
+                style: Type.caption.copyWith(color: fg),
               ),
             ],
           ),

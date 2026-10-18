@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/tokens.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// Asks for a new name in a sheet. Returns the trimmed text, or null when
 /// dismissed. With [allowEmpty] an empty name is a valid answer (it clears the
@@ -62,35 +60,21 @@ class _RenameBodyState extends State<_RenameBody> {
   }
 
   @override
-  Widget build(BuildContext context) => Padding(
-        // Lifts the sheet over the keyboard.
-        padding: EdgeInsets.fromLTRB(
-          Gap.gutter,
-          Gap.xl,
-          Gap.gutter,
-          Gap.lg + MediaQuery.viewInsetsOf(context).bottom,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Semantics(
-              header: true,
-              child: Text(widget.title, style: Type.title.copyWith(color: context.ds.text)),
-            ),
-            const SizedBox(height: Gap.lg),
-            LabeledField(
-              label: widget.label,
-              controller: _controller,
-              helper: widget.helper,
-              autofocus: true,
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) => _save(),
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: Gap.sm),
-            AppButton(label: 'Save', expand: true, onPressed: _valid ? _save : null),
-          ],
+  Widget build(BuildContext context) => SheetScaffold(
+        title: widget.title,
+        kind: SheetKind.form,
+        actions: [AppButton(label: 'Save', expand: true, onPressed: _valid ? _save : null)],
+        child: Padding(
+          padding: const EdgeInsets.only(top: Gap.sm),
+          child: LabeledField(
+            label: widget.label,
+            controller: _controller,
+            helper: widget.helper,
+            autofocus: true,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _save(),
+            onChanged: (_) => setState(() {}),
+          ),
         ),
       );
 }

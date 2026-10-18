@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/acp/acp_models.dart';
 import 'package:herdr_mobile/data/acp/session_state.dart';
-import 'package:herdr_mobile/ui/core/hold_confirm.dart';
-import 'package:herdr_mobile/ui/core/tap_guard.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
-import 'package:herdr_mobile/ui/core/toast.dart' show toastKey;
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
 import 'package:herdr_mobile/ui/features/agent_session/permission_dock.dart';
 import 'package:herdr_mobile/ui/features/agent_session/permission_subject.dart';
 import 'package:herdr_mobile/ui/features/agent_session/question_form.dart';
-import 'package:herdr_mobile/ui/features/agent_session/visible_text.dart';
+import 'package:herdr_mobile/ui/render/visible_text.dart';
 
 import '../support/fake_agent_session.dart';
 import 'hold_support.dart';
@@ -37,7 +35,7 @@ Future<void> pumpScreen(
   );
   await tester.pump(const Duration(milliseconds: 100));
   // A permission panel ignores taps for a moment after it appears.
-  if (settle) await tester.pump(tapGuard);
+  if (settle) await tester.pump(Dwell.tapGuard);
 }
 
 FakeAgentSession withPermission(
@@ -177,7 +175,7 @@ void main() {
       expect(session.permissionAnswers, isEmpty);
       expect(find.textContaining('Hold to send'), findsOneWidget);
 
-      await advance(tester, holdHintWindow);
+      await advance(tester, Dwell.holdHint);
       expect(find.text('Allow once'), findsOneWidget, reason: 'the chip is itself again');
     });
 
@@ -191,7 +189,7 @@ void main() {
       expect(session.permissionAnswers, isEmpty);
       expect(find.textContaining('Hold or tap again · '), findsOneWidget);
 
-      await tester.pump(confirmWindow + const Duration(milliseconds: 100));
+      await tester.pump(Dwell.confirm + const Duration(milliseconds: 100));
       expect(find.textContaining('Hold or tap again'), findsNothing);
       tester.semantics.tap(gated);
       await tester.pump();
@@ -244,6 +242,34 @@ void main() {
       expect(answered(session, 0), isA<PermissionCancelled>());
     });
 
+    testWidgets('Cancel request keeps its words beside "N more waiting" at 320 dp ×1.6, and reads disabled while taps are ignored',
+        (tester) async {
+      final handle = tester.ensureSemantics();
+      final session = FakeAgentSession(
+        state: stateWith(
+          turnActive: true,
+          pending: [
+            PendingPermission(1, permissionRequest(rawInput: {'command': 'ls'})),
+            PendingPermission(2, permissionRequest(rawInput: {'command': 'pwd'})),
+            PendingPermission(3, permissionRequest(rawInput: {'command': 'id'})),
+          ],
+        ),
+      );
+      await pumpScreen(tester, session, size: const Size(320, 640), textScale: 1.6, settle: false);
+      final cancel = find.text('Cancel request');
+      await tester.ensureVisible(cancel);
+      await tester.pump();
+      expect(tester.renderObject<RenderParagraph>(cancel).didExceedMaxLines, isFalse, reason: 'not cut');
+      expect(tester.getSemantics(cancel), isSemantics(isButton: true, isEnabled: false));
+      await tester.tap(cancel, warnIfMissed: false);
+      await tester.pump();
+      expect(session.permissionAnswers, isEmpty, reason: 'a guarded tap sends nothing');
+
+      await tester.pump(Dwell.tapGuard);
+      expect(tester.getSemantics(cancel), isSemantics(isButton: true, isEnabled: true));
+      handle.dispose();
+    });
+
     testWidgets('waiting requests are counted and shown one at a time', (tester) async {
       final session = FakeAgentSession(
         state: stateWith(
@@ -262,7 +288,7 @@ void main() {
 
       await tester.tap(find.text('Allow once'));
       await tester.pump();
-      await tester.pump(tapGuard);
+      await tester.pump(Dwell.tapGuard);
       expect(session.permissionAnswers.single.$1, 1);
       expect(find.text('echo second'), findsOneWidget);
       expect(find.text('echo first'), findsNothing);
@@ -375,7 +401,7 @@ void main() {
       await quickTap(tester, find.text('Allow once'));
       expect(find.textContaining('More below'), findsOneWidget);
       expect(session.permissionAnswers, isEmpty);
-      await tester.pump(holdHintWindow);
+      await tester.pump(Dwell.holdHint);
 
       tester.semantics.tap(find.semantics.byLabel(RegExp('^Allow once, needs holding')));
       await tester.pump();
@@ -485,7 +511,7 @@ void main() {
       await tester.pump();
       expect(session.permissionAnswers.map((a) => a.$1), [1]);
 
-      await tester.pump(tapGuard);
+      await tester.pump(Dwell.tapGuard);
       await tester.tap(find.text('Allow once'));
       await tester.pump();
       expect(session.permissionAnswers.map((a) => a.$1), [1, 2]);
@@ -755,10 +781,10 @@ void main() {
       await tester.pump();
       expect(find.text('A question'), findsNothing);
       expect(find.text('1 more waiting'), findsOneWidget);
-      await tester.pump(tapGuard);
+      await tester.pump(Dwell.tapGuard);
       await tester.tap(find.text('Allow once'));
       await tester.pump();
-      await tester.pump(tapGuard);
+      await tester.pump(Dwell.tapGuard);
 
       // The question is back with what was typed and chosen.
       expect(find.text('A question'), findsOneWidget);
@@ -899,7 +925,7 @@ void main() {
       await tester.pump();
       expect(session.questionAnswers, isEmpty, reason: 'a tap meant for what was there before');
 
-      await tester.pump(tapGuard);
+      await tester.pump(Dwell.tapGuard);
       await tester.tap(accept());
       await tester.pump();
       expect(session.questionAnswers, hasLength(1));

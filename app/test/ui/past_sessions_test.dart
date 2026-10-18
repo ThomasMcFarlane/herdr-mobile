@@ -7,8 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/acp/agent_host.dart';
 import 'package:herdr_mobile/data/repositories/agent_session.dart';
 import 'package:herdr_mobile/data/acp/session_state.dart' show AgentSessionState;
-import 'package:herdr_mobile/ui/core/controls.dart';
-import 'package:herdr_mobile/ui/core/toast.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
 import 'package:herdr_mobile/ui/features/create/new_agent_session_screen.dart';
 import 'package:herdr_mobile/ui/features/history/past_session_row.dart';
@@ -58,10 +57,10 @@ void main() {
 
       expect(e.sessions.historyCalls, [(machineId: 'a', agent: 'omp', cwd: null)]);
       expect(_inRow('Fix the parser', 'payments-api'), findsOneWidget);
-      expect(_inRow('Fix the parser', '5 min ago · 14 messages'), findsOneWidget);
+      expect(_inRow('Fix the parser', '5m ago · 14 messages'), findsOneWidget);
       expect(_inRow('Untitled session', 'billing'), findsOneWidget);
       expect(_inRow('Untitled session', 'No messages'), findsOneWidget, reason: 'no time known: only the count');
-      expect(_inRow('One line', '20 min ago · 1 message'), findsOneWidget);
+      expect(_inRow('One line', '20m ago · 1 message'), findsOneWidget);
       await e.tearDown(tester);
     });
 
@@ -269,7 +268,7 @@ void main() {
       final e = await historyEnv();
       e.sessions.answers['omp'] = remembered(const [], canList: false);
       await pumpPast(tester, e);
-      expect(find.text("omp doesn't keep a list the phone can read."), findsOneWidget);
+      expect(find.text('omp doesn’t keep a list the phone can read.'), findsOneWidget);
       expect(find.textContaining('Nothing remembered'), findsNothing);
       await e.tearDown(tester);
     });
@@ -279,7 +278,7 @@ void main() {
       e.sessions.answers['omp'] = remembered([past('s1', title: 'Fix the parser')], canLoad: false);
       await pumpPast(tester, e);
 
-      expect(find.text("omp can't reopen a past session from the phone."), findsOneWidget);
+      expect(find.text('omp can’t reopen a past session from the phone.'), findsOneWidget);
       expect(_row('Fix the parser'), findsOneWidget);
       await tester.tap(_row('Fix the parser'));
       await settleHistory(tester, 3);

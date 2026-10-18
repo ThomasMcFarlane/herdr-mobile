@@ -4,10 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/acp/acp_models.dart';
 import '../../../data/models/herdr_models.dart' show AgentStatus;
 import '../../../data/repositories/agent_session.dart';
-import '../../core/controls.dart';
-import '../../core/glyphs.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'session_select.dart';
 
 const _listHeight = 216.0;
@@ -117,71 +114,45 @@ class _PlanState extends State<_Plan> {
     // In whatever room the screen gives it (see the screen's layout): a plan
     // that does not fit scrolls there instead of overflowing.
     return SingleChildScrollView(child: Padding(
-      padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.xs),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: ds.fill,
-          borderRadius: BorderRadius.circular(Radii.panel),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+      padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.xs),
+      child: FoldPanel(
+        expanded: _open,
+        onToggle: (open) => setState(() => _open = open),
+        header: Row(
           children: [
-            Semantics(
-              expanded: _open,
-              child: PressBuilder(
-                onTap: () => setState(() => _open = !_open),
-                builder: (context, pressed) => AnimatedContainer(
-                  duration: Motion.pressing(pressed),
-                  curve: Motion.easeOut,
-                  constraints: const BoxConstraints(minHeight: kMinTap),
-                  padding: const EdgeInsets.symmetric(horizontal: Gap.md),
-                  decoration: BoxDecoration(
-                    color: pressed ? ds.fillPressed : Colors.transparent,
-                    borderRadius: BorderRadius.circular(Radii.panel),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(LucideIcons.listChecks, size: 16, color: ds.textSecondary),
-                      const SizedBox(width: Gap.sm),
-                      Expanded(
-                        child: Text.rich(
-                          TextSpan(
-                            text: 'Plan',
-                            style: Type.label.copyWith(color: ds.text, fontWeight: FontWeight.w600),
-                            children: [
-                              TextSpan(
-                                text: '  $done of ${plan.length}',
-                                style: Type.label.copyWith(color: ds.textSecondary, fontFeatures: Type.tabular),
-                              ),
-                              if (current != null && !_open)
-                                TextSpan(
-                                  text: '  ${current.content}',
-                                  style: Type.secondary.copyWith(color: ds.textMuted),
-                                ),
-                            ],
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+            Icon(LucideIcons.listChecks, size: IconSize.row, color: ds.textSecondary),
+            const SizedBox(width: Gap.sm),
+            Expanded(
+              child: Text.rich(
+                TextSpan(
+                  text: 'Plan',
+                  style: Type.labelStrong.copyWith(color: ds.text),
+                  children: [
+                    TextSpan(
+                      text: '  $done of ${plan.length}',
+                      style: Type.label.copyWith(color: ds.textSecondary, fontFeatures: Type.tabular),
+                    ),
+                    if (current != null && !_open)
+                      TextSpan(
+                        text: '  ${current.content}',
+                        style: Type.secondary.copyWith(color: ds.textMuted),
                       ),
-                      const SizedBox(width: Gap.xs),
-                      Icon(_open ? LucideIcons.chevronUp : LucideIcons.chevronDown, size: 14, color: ds.textTertiary),
-                    ],
-                  ),
+                  ],
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            if (_open)
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: _listHeight),
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  padding: const EdgeInsets.fromLTRB(Gap.md, 0, Gap.md, Gap.sm),
-                  itemCount: plan.length,
-                  itemBuilder: (context, i) => _Step(entry: plan[i]),
-                ),
-              ),
           ],
+        ),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: _listHeight),
+          child: ListView.builder(
+            shrinkWrap: true,
+            padding: EdgeInsets.zero,
+            itemCount: plan.length,
+            itemBuilder: (context, i) => _Step(entry: plan[i]),
+          ),
         ),
       ),
     ));
@@ -197,10 +168,10 @@ class _Step extends StatelessWidget {
   Widget build(BuildContext context) {
     final ds = context.ds;
     final glyph = switch (entry.status) {
-      PlanStatus.pending => const StatusGlyph(status: AgentStatus.idle, size: 14),
-      PlanStatus.inProgress => const StatusGlyph(status: AgentStatus.working, size: 14),
-      PlanStatus.completed => const StatusGlyph(status: AgentStatus.done, size: 14),
-      PlanStatus.cancelled => Icon(LucideIcons.ban, size: 14, color: ds.textTertiary),
+      PlanStatus.pending => const StatusGlyph(status: AgentStatus.idle, size: IconSize.inline),
+      PlanStatus.inProgress => const StatusGlyph(status: AgentStatus.working, size: IconSize.inline),
+      PlanStatus.completed => const StatusGlyph(status: AgentStatus.done, size: IconSize.inline),
+      PlanStatus.cancelled => Icon(LucideIcons.ban, size: IconSize.inline, color: ds.textTertiary),
     };
     final word = switch (entry.status) {
       PlanStatus.pending => 'pending',
@@ -212,19 +183,18 @@ class _Step extends StatelessWidget {
       label: '${entry.content}, $word',
       excludeSemantics: true,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 5),
+        padding: const EdgeInsets.symmetric(vertical: Gap.xs),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(padding: const EdgeInsets.only(top: 2), child: glyph),
-            const SizedBox(width: 10),
+            Padding(padding: const EdgeInsets.only(top: Gap.hair), child: glyph),
+            const SizedBox(width: Gap.md),
             Expanded(
               child: Text(
                 entry.content,
-                style: Type.secondary.copyWith(
-                  color: entry.status == PlanStatus.inProgress ? ds.text : ds.textSecondary,
-                  fontWeight: entry.status == PlanStatus.inProgress ? FontWeight.w600 : FontWeight.w400,
-                ),
+                style: entry.status == PlanStatus.inProgress
+                    ? Type.secondaryStrong.copyWith(color: ds.text)
+                    : Type.secondary.copyWith(color: ds.textSecondary),
               ),
             ),
           ],

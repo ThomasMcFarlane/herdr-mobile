@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'command_model.dart';
 
 /// Holds a send whose first word is a `/command` the agent does not list, and
@@ -95,13 +93,13 @@ class UnknownCommandNote extends StatelessWidget {
       final ds = context.ds;
       final agent = guard.agent;
       return Padding(
-        padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.sm),
+        padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.sm),
         child: Semantics(
           liveRegion: true,
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: ds.surface,
-              borderRadius: BorderRadius.circular(Radii.panel),
+              borderRadius: BorderRadius.circular(Radii.md),
               border: Border.all(color: ds.hairline),
             ),
             child: Padding(
@@ -117,8 +115,8 @@ class UnknownCommandNote extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Icon(LucideIcons.info, size: 16, color: ds.textSecondary),
+                        padding: const EdgeInsets.only(top: Gap.hair),
+                        child: Icon(LucideIcons.info, size: IconSize.row, color: ds.textSecondary),
                       ),
                       const SizedBox(width: Gap.sm),
                       Expanded(
@@ -127,7 +125,7 @@ class UnknownCommandNote extends StatelessWidget {
                             children: [
                               TextSpan(
                                 text: '/$word',
-                                style: TextStyle(fontFamily: monoFamily, fontSize: 13, color: ds.text),
+                                style: Mono.input.copyWith(color: ds.text),
                               ),
                               TextSpan(
                                 text: agent == null ? ' is not a command.' : ' is not one of $agent\u2019s commands.',

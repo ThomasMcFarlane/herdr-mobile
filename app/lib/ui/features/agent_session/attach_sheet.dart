@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../data/repositories/attach_target.dart';
-import '../../core/toast.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import '../attach/attach_sheet_view.dart';
 import '../attach/sheet_frame.dart';
 import '../attach/tray.dart';

@@ -11,8 +11,7 @@ import 'package:herdr_mobile/data/models/machine_profile.dart';
 import 'package:herdr_mobile/data/repositories/machine_repository.dart';
 import 'package:herdr_mobile/data/services/herdr_transport.dart';
 import 'package:herdr_mobile/data/services/key_generator.dart';
-import 'package:herdr_mobile/ui/core/controls.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/machines/machine_form_screen.dart';
 import 'package:herdr_mobile/ui/features/machines/machine_form_view_model.dart';
 import 'package:provider/provider.dart';
@@ -592,7 +591,7 @@ void main() {
       return _keyText(tester);
     }
 
-    const warning = 'This replaces the key this machine uses now. Run the command on the host first, '
+    const warning = 'This replaces the key this machine uses now. Run the command on the machine first, '
         'then Test connection, then Save.';
 
     testWidgets('the generated-key panel says to install it first, but only when it replaces a saved key', (tester) async {

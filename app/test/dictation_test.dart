@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/services/dictation.dart';
-import 'package:herdr_mobile/ui/core/tap_guard.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
 import 'package:herdr_mobile/ui/features/dictation/dictation_language_sheet.dart';
 import 'package:herdr_mobile/ui/features/dictation/dictation_session.dart';
@@ -105,7 +104,7 @@ void main() {
 
     test('English and Vietnamese always have a row; a missing one says why', () {
       final rows = dictationChoices([en], null);
-      expect([for (final r in rows) r.label], ['Phone\'s language', 'English', 'Tiếng Việt']);
+      expect([for (final r in rows) r.label], ['Phone’s language', 'English', 'Tiếng Việt']);
       expect(rows[1].id, 'en_US');
       expect(rows[2].id, isNull);
       expect(rows[2].missing, isNotNull);
@@ -228,7 +227,7 @@ void main() {
         ),
       );
       await tester.pump(const Duration(milliseconds: 100));
-      await tester.pump(tapGuard);
+      await tester.pump(Dwell.tapGuard);
       return (session, engine);
     }
 

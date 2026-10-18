@@ -103,6 +103,10 @@ abstract interface class AgentSessionView implements Listenable, AttachTarget {
   /// [AgentLink.ended]; null otherwise.
   String? get error;
 
+  /// Whether [error] is what the agent itself answered (it refused or failed
+  /// a request), not the app's own account (not connected, the link dropped).
+  bool get errorFromAgent;
+
   /// Derived from [state]: idle, working, blocked on a permission or a
   /// question.
   AgentPhase get phase;

@@ -2,16 +2,15 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemNavigator;
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../data/repositories/app_update.dart';
 import '../../data/repositories/attention_set.dart';
 import '../../data/repositories/fleet_repository.dart';
-import '../core/chrome.dart';
-import '../core/home_tabs.dart';
+import '../../data/words/plural.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../support/home_tabs.dart';
 import 'arrival_cue.dart';
-import '../core/motion.dart';
 import '../features/agents/agents_screen.dart';
 import '../features/machines/machines_screen.dart';
 import '../features/settings/settings_screen.dart';
@@ -74,7 +73,7 @@ class _HomeShellState extends State<HomeShell> with RestorationMixin, SingleTick
   // not at all under reduced motion. Rests at 1, so nothing is composited
   // outside the 120 ms of a switch.
   late final _fade = AnimationController(vsync: this, duration: Motion.fade, value: 1);
-  late final _opacity = CurvedAnimation(parent: _fade, curve: Motion.easeOut);
+  late final _opacity = Motion.curved(_fade);
 
   @override
   String get restorationId => 'home';
@@ -177,6 +176,7 @@ class _HomeShellState extends State<HomeShell> with RestorationMixin, SingleTick
                     child: AgentsScreen(
                       onShowMachines: () => _select(_machines),
                       onSelectingChanged: (selecting) => _selecting.value = selecting,
+                      current: index == _agents,
                     ),
                   ),
                 ),
@@ -206,7 +206,8 @@ class _HomeShellState extends State<HomeShell> with RestorationMixin, SingleTick
           ),
           // The scrim under the tab bar (see [FloatingBarScrim]). Picking
           // agents puts the board's own action bar, with its own scrim, in the
-          // tab bar's place.
+          // tab bar's place, and only on the board: picking belongs to it.
+          // The two swap in place with a fade.
           Positioned(
             left: 0,
             right: 0,
@@ -214,7 +215,11 @@ class _HomeShellState extends State<HomeShell> with RestorationMixin, SingleTick
             height: FloatingBar.clearance(context),
             child: ValueListenableBuilder<bool>(
               valueListenable: _selecting,
-              builder: (context, selecting, child) => selecting ? const SizedBox.shrink() : child!,
+              builder: (context, selecting, child) => BottomStackTransition(
+                visible: !(selecting && index == _agents),
+                slide: false,
+                builder: (_) => child!,
+              ),
               child: const FloatingBarScrim(),
             ),
           ),
@@ -224,7 +229,11 @@ class _HomeShellState extends State<HomeShell> with RestorationMixin, SingleTick
             bottom: 0,
             child: ValueListenableBuilder<bool>(
               valueListenable: _selecting,
-              builder: (context, selecting, child) => selecting ? const SizedBox.shrink() : child!,
+              builder: (context, selecting, child) => BottomStackTransition(
+                visible: !(selecting && index == _agents),
+                slide: false,
+                builder: (_) => child!,
+              ),
               child: ListenableBuilder(
                 listenable: widget.update ?? _noUpdate,
                 builder: (context, _) => FloatingTabBar(
@@ -232,16 +241,16 @@ class _HomeShellState extends State<HomeShell> with RestorationMixin, SingleTick
                   onChanged: _select,
                   tabs: [
                     TabSpec(
-                      icon: LucideIcons.bot,
+                      icon: HerdrIcons.agents,
                       label: 'Agents',
                       badge: needsYou,
-                      badgeLabel: 'need you',
+                      badgeLabel: needYouVerb(needsYou),
                     ),
-                    const TabSpec(icon: LucideIcons.server, label: 'Machines'),
+                    const TabSpec(icon: HerdrIcons.machines, label: 'Machines'),
                     // A newer version is a quiet dot, never a count: it is not
                     // something that needs the person.
                     TabSpec(
-                      icon: LucideIcons.settings,
+                      icon: HerdrIcons.settings,
                       label: 'Settings',
                       mark: widget.update?.release != null,
                       markLabel: 'update available',
@@ -266,9 +275,9 @@ class _HomeShellState extends State<HomeShell> with RestorationMixin, SingleTick
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
         if (index != _agents) {
-          // Selection mode lives on the Agents board; if it is still up
-          // (picking, then Machines from the connection strip), its own scope
-          // clears it on this same Back.
+          // Leaving the board cancels picking, so a selection is still up
+          // here only while a batch action runs; the board's own scope then
+          // takes this same Back.
           _select(_agents);
           return;
         }

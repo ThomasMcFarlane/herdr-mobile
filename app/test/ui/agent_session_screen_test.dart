@@ -11,11 +11,9 @@ import 'package:herdr_mobile/data/repositories/agent_session.dart';
 import 'package:herdr_mobile/data/repositories/command_source.dart';
 import 'package:herdr_mobile/data/repositories/slash_usage.dart';
 import 'package:herdr_mobile/data/models/slash_command.dart';
-import 'package:herdr_mobile/ui/core/tap_guard.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_navigation.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
-import 'package:herdr_mobile/ui/core/status_panel.dart';
 import 'package:herdr_mobile/ui/features/composer/command_model.dart';
 import 'package:herdr_mobile/ui/features/agent_session/diff_lines.dart';
 import 'package:herdr_mobile/ui/features/agent_session/plan_header.dart';
@@ -421,6 +419,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       expect(transcriptPosition(tester).extentAfter, 0);
       expect(find.text('new paragraph at the end'), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 200)); // the pill fades out
       expect(find.byTooltip('Jump to latest'), findsNothing);
     });
 
@@ -459,6 +458,7 @@ void main() {
       expect(find.text('Step 0'), findsNothing);
 
       await tester.tap(find.textContaining('Plan', findRichText: true));
+      await tester.pump(); // the fold starts opening
       await tester.pump(const Duration(milliseconds: 100));
       expect(find.text('Step 0'), findsOneWidget);
       expect(find.text('Step 6'), findsOneWidget);
@@ -541,7 +541,7 @@ void main() {
       await tester.testTextInput.receiveAction(TextInputAction.send);
       await tester.pump();
       expect(session.sent, isEmpty);
-      await tester.pump(tapGuard);
+      await tester.pump(Dwell.tapGuard);
       await tester.tap(find.byIcon(LucideIcons.square));
       await tester.pump(const Duration(milliseconds: 50));
       expect(session.cancelCount, 1);
@@ -564,7 +564,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
       expect(session.cancelCount, 0, reason: 'the second tap of a double tap on Send');
 
-      await tester.pump(tapGuard);
+      await tester.pump(Dwell.tapGuard);
       await tester.tap(find.byIcon(LucideIcons.square));
       await tester.pump(const Duration(milliseconds: 50));
       expect(session.cancelCount, 1);
@@ -574,7 +574,7 @@ void main() {
       final session = FakeAgentSession(link: AgentLink.reconnecting);
       await pumpScreen(tester, session);
       expect(composerField(tester).enabled, isFalse);
-      expect(find.text('Reconnecting… you can write when it is back'), findsOneWidget);
+      expect(find.text('Offline · reconnecting'), findsOneWidget);
 
       session.setLink(AgentLink.live);
       await tester.pump();
@@ -708,8 +708,47 @@ void main() {
 
       session.setLink(AgentLink.live);
       await tester.pump();
+      await tester.pump(Motion.expand);
       expect(strip('Reconnecting…'), findsNothing);
       expect(strip('Couldn’t connect'), findsNothing);
+    });
+
+    testWidgets('the link strip folds in and out instead of popping', (tester) async {
+      final session = FakeAgentSession();
+      await pumpScreen(tester, session);
+      expect(find.byType(StatusStrip), findsNothing);
+
+      session.setLink(AgentLink.reconnecting, error: 'Wi-Fi dropped');
+      await tester.pump();
+      await tester.pump(Motion.expand ~/ 2);
+      final fold = find.ancestor(of: find.byType(StatusStrip), matching: find.byType(Collapse)).first;
+      final mid = tester.getSize(fold).height;
+      await tester.pump(Motion.expand);
+      expect(mid, lessThan(tester.getSize(fold).height), reason: 'still opening');
+
+      session.setLink(AgentLink.live);
+      await tester.pump();
+      await tester.pump(Motion.expand ~/ 2);
+      expect(strip('Reconnecting…'), findsOneWidget, reason: 'it says what it said while it folds away');
+      await tester.pump(Motion.expand);
+      expect(find.byType(StatusStrip), findsNothing);
+    });
+
+    testWidgets('an error of the app’s own leads with what happened; only the agent’s own is the agent’s', (tester) async {
+      final session = FakeAgentSession();
+      await pumpScreen(tester, session);
+      session.setLink(AgentLink.live, error: 'Not connected. The message was not sent.');
+      await tester.pump();
+      await tester.pump(Motion.expand);
+      expect(strip('The agent reported an error'), findsNothing);
+      expect(strip('Not connected'), findsOneWidget);
+      expect(find.textContaining('The message was not sent.', findRichText: true), findsOneWidget);
+
+      session
+        ..errorFromAgentValue = true
+        ..setLink(AgentLink.live, error: 'Rate limit exceeded');
+      await tester.pump();
+      expect(strip('The agent reported an error'), findsOneWidget);
     });
 
     testWidgets('a long reason opens in full', (tester) async {
@@ -730,6 +769,7 @@ void main() {
 
       await tester.tap(find.text('Take over'));
       await tester.pump();
+      await tester.pump(Motion.expand);
       expect(session.reattachCount, 1);
       expect(find.byType(StatusStrip), findsNothing);
       expect(composerField(tester).enabled, isTrue);
@@ -979,6 +1019,7 @@ void main() {
 
       session.setLink(AgentLink.failed, error: 'x' * 300);
       await tester.pump();
+      await tester.pump(Motion.expand);
       expect(tester.takeException(), isNull);
       expect(find.text('Retry'), findsOneWidget);
       expect(tester.getRect(find.text('Retry')).right, lessThanOrEqualTo(320));

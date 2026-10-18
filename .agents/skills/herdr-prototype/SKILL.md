@@ -44,7 +44,7 @@ the owner's question is usually the design problem.
 
 | Rung | What | Use when | Cost |
 | --- | --- | --- | --- |
-| 1. Stand-ins | Compose the screen from `ui/core` parts (`ListRow`, `StatusGlyph`, `SectionLabel`, `AppChip`, `SliverLargeTitle`) over plain records in a test file | Layout, information design, what to show or fold. Most questions. | Minutes. Touches nothing in `lib/`. |
+| 1. Stand-ins | Compose the screen from kit parts (one import, `ui/core/kit.dart`: `ListRow`, `StatusGlyph`, `SectionLabel`, `AppChip`, `SliverLargeTitle`) over plain records in a test file | Layout, information design, what to show or fold. Most questions. | Minutes. Touches nothing in `lib/`. |
 | 2. Real screen on the demo fleet | `app/screenshot_test/demo_fleet.dart` (`DemoFleet.create`) with `HomeShell`, as `store_shots_test.dart` does | The baseline must be the real screen, or a data change alone shows the effect | Wiring; still no `lib/` change |
 | 3. Patched app | The variant needs behaviour, or must be felt on the phone | Gestures, motion, anything pixels can't show | A throwaway worktree and a device build (`docs/DEVELOPMENT.md`) |
 

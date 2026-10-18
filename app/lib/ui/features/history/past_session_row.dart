@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/acp/past_session.dart';
-import '../../core/controls.dart';
-import '../../core/rows.dart';
-import '../../core/tokens.dart';
-import '../agent_session/visible_text.dart';
-import '../files/file_format.dart' show formatModified;
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../render/visible_text.dart';
+import '../../../data/words/elapsed.dart';
+import '../files/file_format.dart' show groupDigits;
 
 /// `Untitled session`, or the agent's title.
 String pastSessionTitle(PastSession s) {
@@ -20,15 +19,15 @@ String messageCountLabel(int? count) => switch (count) {
   null => '',
   <= 0 => 'No messages',
   1 => '1 message',
-  final n => '${_grouped(n)} messages',
+  final n => '${groupDigits(n)} messages',
 };
-
-String _grouped(int n) => n.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+$)'), (_) => ',');
 
 /// `2 h ago · 14 messages`: when it last changed and how long it is, whichever
 /// the agent reports.
 String pastSessionDetail(PastSession s, DateTime now) =>
-    [formatModified(s.updatedAt, now: now), messageCountLabel(s.messageCount)].where((p) => p.isNotEmpty).join(' · ');
+    [if (s.updatedAt case final at?) formatAgo(at, now), messageCountLabel(s.messageCount)]
+        .where((p) => p.isNotEmpty)
+        .join(' · ');
 
 /// One session an agent remembers: its title, the folder it ran in, when it
 /// last changed. The whole row is the tap target.
@@ -65,12 +64,12 @@ class PastSessionRow extends StatelessWidget {
       subtitle2: detail.isEmpty ? null : detail,
       onTap: busy ? null : onTap,
       trailing: busy
-          ? const BusySpinner(size: 18)
+          ? const BusySpinner(size: IconSize.bar)
           : open
-          ? Text('Open', style: Type.label.copyWith(color: ds.accentText, fontWeight: FontWeight.w600))
+          ? Text('Open', style: Type.labelStrong.copyWith(color: ds.accentText))
           : onTap == null
           ? null
-          : Icon(LucideIcons.chevronRight, size: 16, color: ds.textTertiary),
+          : Icon(LucideIcons.chevronRight, size: IconSize.row, color: ds.textTertiary),
     );
   }
 }

@@ -14,6 +14,10 @@ sealed class AttentionItem {
   /// an agent session: stable, and never the same for a pane and a session.
   String get key;
 
+  /// What the arrival cue keys on: [key], plus the request shown for a
+  /// session, so a new request in a session that stays blocked is news too.
+  String get cueKey => key;
+
   MachineConnection get machine;
 
   /// When it began to wait (or finished), by this phone's clock; for a pane
@@ -46,6 +50,12 @@ final class SessionAttention extends AttentionItem {
 
   @override
   String get key => 'session/${session.key}';
+
+  @override
+  String get cueKey {
+    final pending = session.state.pending;
+    return pending.isEmpty ? key : '$key#${pending.first.id}';
+  }
 
   @override
   MachineConnection get machine => session.machine;
@@ -108,10 +118,11 @@ class AttentionSet extends ChangeNotifier {
   /// Finished agents not yet reviewed, now out of reach (not counted).
   List<AttentionItem> get offlineToReview => _offlineToReview;
 
-  /// The keys of [needsYou]. The same object until the set changes.
+  /// The [AttentionItem.cueKey]s of [needsYou]. The same object until the
+  /// set changes.
   Set<String> get needsYouKeys => _needsYouKeys;
 
-  /// The keys of every agent last known to wait, reachable or not: one that
+  /// The cue keys of every agent last known to wait, reachable or not: one that
   /// went out of reach (a Wi-Fi to mobile handover) and comes back is the
   /// same wait, not a new one. The same object until the set changes.
   Set<String> get waitingKeys => _waitingKeys;
@@ -166,7 +177,7 @@ class AttentionSet extends ChangeNotifier {
     for (final list in [needs, needsOff, review, reviewOff]) {
       list.sort(_longestWaiting);
     }
-    final changed = !_sameKeys(needs, _needsYou) ||
+    var changed = !_sameKeys(needs, _needsYou) ||
         !_sameKeys(needsOff, _offlineNeedsYou) ||
         !_sameKeys(review, _toReview) ||
         !_sameKeys(reviewOff, _offlineToReview);
@@ -182,8 +193,15 @@ class AttentionSet extends ChangeNotifier {
         perMachine.update(i.machine.profile.id, (n) => n + 1, ifAbsent: () => 1);
       }
       _perMachine = perMachine;
-      _needsYouKeys = Set.unmodifiable({for (final i in needs) i.key});
-      _waitingKeys = Set.unmodifiable({..._needsYouKeys, for (final i in needsOff) i.key});
+    }
+    // A new request in a session that stays blocked changes no key, only its
+    // cue key.
+    final cues = {for (final i in needs) i.cueKey};
+    final waiting = {...cues, for (final i in needsOff) i.cueKey};
+    if (!setEquals(cues, _needsYouKeys) || !setEquals(waiting, _waitingKeys)) {
+      _needsYouKeys = Set.unmodifiable(cues);
+      _waitingKeys = Set.unmodifiable(waiting);
+      changed = true;
     }
     return changed;
   }

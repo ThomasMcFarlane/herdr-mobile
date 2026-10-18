@@ -5,15 +5,13 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import '../attach/gallery_thumb.dart';
 import '../files/file_format.dart';
 import '../photos/photo_item.dart';
 import '../photos/photo_viewer.dart';
 import 'attach_model.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 const _thumb = 32.0;
 
@@ -32,7 +30,7 @@ class AttachmentChips extends StatelessWidget {
     builder: (context, _) {
       final items = attachments.items;
       return AnimatedSize(
-        duration: Motion.reduced(context) ? Duration.zero : Motion.expand,
+        duration: Motion.of(context, Motion.expand),
         curve: Motion.easeOut,
         alignment: Alignment.topCenter,
         child: items.isEmpty
@@ -131,9 +129,9 @@ class _Chip extends StatelessWidget {
       container: true,
       label: '${a.kind == AttachmentKind.image ? 'Picture' : 'File'} $label, ${_status(progress?.value)}',
       child: DecoratedBox(
-        decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.chip)),
+        decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.sm)),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: kMinTap, maxWidth: 280),
+          constraints: const BoxConstraints(minHeight: kMinTap, maxWidth: _chipMaxWidth),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -176,7 +174,7 @@ class _Chip extends StatelessWidget {
                   semanticLabel: 'Retry upload of $label',
                   builder: (context, pressed) => Padding(
                     padding: const EdgeInsets.symmetric(horizontal: Gap.sm),
-                    child: Text('Retry', style: Type.answer.copyWith(fontSize: 13.5, color: pressed ? ds.text : ds.accentText)),
+                    child: Text('Retry', style: Type.buttonCompact.copyWith(color: pressed ? ds.text : ds.accentText)),
                   ),
                 ),
               PressBuilder(
@@ -186,7 +184,7 @@ class _Chip extends StatelessWidget {
                 semanticLabel: a.uploading ? 'Cancel upload of $label' : 'Remove $label',
                 builder: (context, pressed) => SizedBox.square(
                   dimension: kMinTap,
-                  child: Center(child: Icon(LucideIcons.x, size: 16, color: pressed ? ds.text : ds.textSecondary)),
+                  child: Center(child: Icon(LucideIcons.x, size: IconSize.row, color: pressed ? ds.text : ds.textSecondary)),
                 ),
               ),
             ],
@@ -221,7 +219,7 @@ class _Thumb extends StatelessWidget {
         cacheWidth: (_thumb * 3).round(),
         gaplessPlayback: true,
         excludeFromSemantics: true,
-        errorBuilder: (_, _, _) => Icon(LucideIcons.image, size: 18, color: ds.textSecondary),
+        errorBuilder: (_, _, _) => Icon(LucideIcons.image, size: IconSize.bar, color: ds.textSecondary),
       );
     } else if (a.previewPath != null) {
       picture = Image(
@@ -229,7 +227,7 @@ class _Thumb extends StatelessWidget {
         fit: BoxFit.cover,
         gaplessPlayback: true,
         excludeFromSemantics: true,
-        errorBuilder: (_, _, _) => Icon(LucideIcons.image, size: 18, color: ds.textSecondary),
+        errorBuilder: (_, _, _) => Icon(LucideIcons.image, size: IconSize.bar, color: ds.textSecondary),
       );
     }
     final Widget child;
@@ -238,10 +236,10 @@ class _Thumb extends StatelessWidget {
     } else if (a.preparing) {
       child = const Center(child: BusySpinner());
     } else {
-      child = Icon(a.kind == AttachmentKind.image ? LucideIcons.image : LucideIcons.fileText, size: 18, color: ds.textSecondary);
+      child = Icon(a.kind == AttachmentKind.image ? LucideIcons.image : LucideIcons.fileText, size: IconSize.bar, color: ds.textSecondary);
     }
     final tile = ClipRRect(
-      borderRadius: BorderRadius.circular(Radii.tile),
+      borderRadius: BorderRadius.circular(Radii.xs),
       child: SizedBox.square(
         dimension: _thumb,
         child: ColoredBox(color: ds.fillPressed, child: child),
@@ -280,10 +278,13 @@ class _RingPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3
       ..strokeCap = StrokeCap.round;
-    canvas.drawArc(rect, 0, math.pi * 2, false, paint..color = track.withValues(alpha: 0.7));
+    canvas.drawArc(rect, 0, math.pi * 2, false, paint..color = track);
     canvas.drawArc(rect, -math.pi / 2, math.pi * 2 * progress.clamp(0.02, 1.0), false, paint..color = color);
   }
 
   @override
   bool shouldRepaint(_RingPainter old) => old.progress != progress || old.color != color;
 }
+
+/// A long file name is cut here rather than pushing the other chips off the row.
+const _chipMaxWidth = 280.0;

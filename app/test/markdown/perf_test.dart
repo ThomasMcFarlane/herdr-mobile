@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:herdr_mobile/ui/core/markdown/markdown.dart';
-import 'package:herdr_mobile/ui/core/markdown/md_parser.dart' show parseMdUnchunked;
+import 'package:herdr_mobile/ui/render/markdown/markdown.dart';
+import 'package:herdr_mobile/ui/render/markdown/md_parser.dart' show parseMdUnchunked;
 
 import 'support/all_texts.dart';
 import 'support/corpus.dart';

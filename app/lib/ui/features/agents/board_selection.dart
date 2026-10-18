@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/batch_actions.dart';
 import '../../../data/repositories/fleet_repository.dart';
-import '../../core/tokens.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'agents_grouping.dart';
 
 /// How the selection names a terminal agent row (`AgentRowData.key`).
@@ -31,7 +30,7 @@ class BoardSelection extends ChangeNotifier {
   /// A copy, in no particular order.
   Set<String> get refs => Set.of(_refs);
 
-  /// What the running batch says ("Interrupting 3 agents"), null when none
+  /// What the running batch says ("Stopping 3 agents"), null when none
   /// runs. While one runs the selection is frozen.
   String? get busy => _busy;
 
@@ -103,33 +102,6 @@ RowSelect rowSelect(BuildContext context, String ref) => context.select<BoardSel
       (s) => (active: s?.active ?? false, selected: s?.isSelected(ref) ?? false),
     );
 
-/// The round mark of a picked (or pickable) row.
-class SelectMark extends StatelessWidget {
-  const SelectMark({super.key, required this.selected, this.size = 20});
-
-  final bool selected;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    final ds = context.ds;
-    // The row says "selected" once; the mark is only the picture.
-    return ExcludeSemantics(
-      child: Container(
-        width: size,
-        height: size,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: selected ? ds.accent : ds.surface,
-          border: Border.all(color: selected ? ds.accent : ds.textTertiary, width: 1.5),
-        ),
-        child: selected ? Icon(LucideIcons.check, size: size - 8, color: ds.onAccent) : null,
-      ),
-    );
-  }
-}
-
 /// The look of a flat board row (the compact list, an agent session) while the
 /// board is picking: a soft rounded tint inset like the pressed highlight, and
 /// the selected state for screen readers. The structure is the same whether
@@ -150,11 +122,11 @@ class SelectableRowFrame extends StatelessWidget {
         children: [
           Positioned.fill(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: Gap.sm),
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: state.selected ? ds.accent.withValues(alpha: ds.isDark ? 0.16 : 0.09) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(Radii.row),
+                  color: state.selected ? ds.accentWash : Colors.transparent,
+                  borderRadius: BorderRadius.circular(Radii.sm),
                 ),
               ),
             ),
@@ -164,17 +136,6 @@ class SelectableRowFrame extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Shows [child] only while the board is not picking (the triage pill).
-class HideWhileSelecting extends StatelessWidget {
-  const HideWhileSelecting({super.key, required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) =>
-      context.select<BoardSelection?, bool>((s) => s?.active ?? false) ? const SizedBox.shrink() : child;
 }
 
 /// The picked agents as they are right now: the terminal agents by section,

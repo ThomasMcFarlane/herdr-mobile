@@ -757,11 +757,11 @@ HerdrTransportException? channelRefusal(Object error) {
   // RFC 4254 reason codes: 1 administratively prohibited, 4 resource shortage.
   if (error.code == 1 || error.code == 4) {
     return const HerdrTransportException(
-      'Too many sessions are open on this host (sshd MaxSessions). Close a '
-      'session and try again.',
+      'Too many sessions are open on this machine (sshd MaxSessions). Close a '
+      'session and retry.',
     );
   }
-  return HerdrTransportException('The host would not open a channel: ${error.description}');
+  return HerdrTransportException('The machine would not open a channel: ${error.description}');
 }
 
 /// Why `direct-tcpip` (a port forward) was refused. Code 1 is the host's

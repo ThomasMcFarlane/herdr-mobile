@@ -6,9 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/repositories/terminal_settings.dart';
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// The terminal font size: a stepper (smaller, the size, larger) over a sample
 /// line drawn in the terminal font at that size.
@@ -50,7 +48,7 @@ class FontSizeControl extends StatelessWidget {
               : null,
         ),
         const SizedBox(height: Gap.sm),
-        _Sample(fontSize: size),
+        _Sample(size: size),
       ],
     );
   }
@@ -74,7 +72,7 @@ class _Stepper extends StatelessWidget {
         height: kMinTap,
         decoration: BoxDecoration(
           color: ds.fill,
-          borderRadius: BorderRadius.circular(Radii.segmented),
+          borderRadius: BorderRadius.circular(Radii.sm),
         ),
         child: Row(
           children: [
@@ -88,11 +86,7 @@ class _Stepper extends StatelessWidget {
                 child: Text(
                   value,
                   maxLines: 1,
-                  style: Type.row.copyWith(
-                    color: ds.text,
-                    fontWeight: FontWeight.w600,
-                    fontFeatures: Type.tabular,
-                  ),
+                  style: Type.barTitle.copyWith(color: ds.text, fontFeatures: Type.tabular),
                 ),
               ),
             ),
@@ -128,26 +122,26 @@ class _StepButton extends StatelessWidget {
       builder: (context, pressed) => AnimatedContainer(
         duration: Motion.pressing(pressed),
         curve: Motion.easeOut,
-        width: 64,
+        width: _stepWidth,
         height: kMinTap,
         decoration: BoxDecoration(
           color: pressed ? ds.fillPressed : Colors.transparent,
-          borderRadius: BorderRadius.circular(Radii.segmented),
+          borderRadius: BorderRadius.circular(Radii.sm),
         ),
-        child: Icon(icon, size: 18, color: onTap == null ? ds.textTertiary : ds.text),
+        child: Icon(icon, size: IconSize.bar, color: onTap == null ? ds.textTertiary : ds.text),
       ),
     );
   }
 }
 
-/// A terminal-coloured strip with one line in the terminal font at [fontSize],
+/// A terminal-coloured strip with one line in the terminal font at [size],
 /// scaled the way the pane scales it (large text sizes grow it, up to 1.6x).
 /// Its height is that of the largest size, so stepping never moves what
 /// follows it.
 class _Sample extends StatelessWidget {
-  const _Sample({required this.fontSize});
+  const _Sample({required this.size});
 
-  final double fontSize;
+  final double size;
 
   static const _lineHeight = 1.3;
 
@@ -165,7 +159,7 @@ class _Sample extends StatelessWidget {
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: palette.background,
-            borderRadius: BorderRadius.circular(Radii.control),
+            borderRadius: BorderRadius.circular(Radii.sm),
             border: Border.all(color: palette.border),
           ),
           child: Padding(
@@ -179,12 +173,11 @@ class _Sample extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.clip,
                   softWrap: false,
-                  style: TextStyle(
-                    fontFamily: monoFamily,
-                    fontSize: _scaled(scaler, fontSize),
+                  style: Mono.input.copyWith(
+                    // design-lint: allow(raw-type) the sample is the terminal at the person's own font size
+                    fontSize: _scaled(scaler, size),
                     height: _lineHeight,
                     color: palette.foreground,
-                    fontFeatures: const [FontFeature.disable('liga'), FontFeature.disable('calt')],
                   ),
                 ),
               ),
@@ -195,3 +188,6 @@ class _Sample extends StatelessWidget {
     );
   }
 }
+
+/// A step button: wide enough for a thumb on either side of the value.
+const _stepWidth = 64.0;

@@ -10,14 +10,8 @@ import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/agent_session_settings.dart';
 import '../../../data/repositories/fleet_repository.dart';
 import '../../../data/repositories/machine_connection.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/form_sections.dart';
-import '../../core/motion.dart';
-import '../../core/rows.dart';
-import '../../core/status_panel.dart';
-import '../../core/toast.dart';
-import '../../core/tokens.dart';
+import '../../../data/words/agent_names.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import '../agents/agent_navigation.dart';
 import '../history/past_sessions_navigation.dart';
 import '../files/files_navigation.dart';
@@ -143,24 +137,18 @@ class _FormState extends State<_Form> {
   Widget build(BuildContext context) {
     final ds = context.ds;
     final vm = context.watch<NewAgentSessionViewModel>();
-    final back = CircleButton(
-      icon: LucideIcons.chevronLeft,
-      tooltip: 'Back',
-      onPressed: () => Navigator.of(context).maybePop(),
-    );
-
     if (vm.machines.isEmpty) {
       return Scaffold(
         backgroundColor: ds.bg,
         body: CustomScrollView(
           slivers: [
-            SliverLargeTitle(title: 'New agent session', leading: back),
+            SliverLargeTitle.back(title: 'New agent session'),
             SliverFillRemaining(
               hasScrollBody: false,
               child: Padding(
                 padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom),
                 child: EmptyState(
-                  icon: LucideIcons.serverOff,
+                  icon: HerdrIcons.machinesOff,
                   title: 'No machine is online',
                   message: 'An agent session starts on a connected machine. Check the Machines '
                       'tab, then come back.',
@@ -189,7 +177,7 @@ class _FormState extends State<_Form> {
               child: CustomScrollView(
                 keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                 slivers: [
-                  SliverLargeTitle(title: 'New agent session', leading: back),
+                  SliverLargeTitle.back(title: 'New agent session'),
                   SliverToBoxAdapter(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -221,7 +209,7 @@ class _FormState extends State<_Form> {
                                         icon: LucideIcons.folderOpen,
                                         tooltip: 'Browse folders',
                                         filled: false,
-                                        size: 36,
+                                        size: CircleButton.compact,
                                         onPressed: () => _browse(machine),
                                       ),
                                     ),
@@ -244,9 +232,8 @@ class _FormState extends State<_Form> {
                         ListRow(
                           title: 'Past sessions',
                           subtitle: 'Continue a conversation an agent kept',
-                          leading: Icon(LucideIcons.history, size: 20, color: ds.textSecondary),
-                          trailing: Icon(LucideIcons.chevronRight, size: 16, color: ds.textTertiary),
-                          divider: false,
+                          leading: Icon(LucideIcons.history, size: IconSize.lead, color: ds.textSecondary),
+                          trailing: Icon(LucideIcons.chevronRight, size: IconSize.row, color: ds.textTertiary),
                           onTap: () {
                             Haptics.tick();
                             unawaited(openPastSessions(context, machine: machine, cwd: _folder.text));
@@ -277,9 +264,13 @@ class _AgentChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
-    final reasons = [
-      for (final r in agentRoutes) ?vm.unavailableReason(r),
-    ];
+    // Said once per reason, naming the agents it covers: three chips that are
+    // all missing read `Not installed on build-box: omp, Claude Code, pi`.
+    final missing = <String, List<String>>{};
+    for (final r in agentRoutes) {
+      if (vm.unavailableReason(r) case final reason?) (missing[reason] ??= []).add(agentName(r.id));
+    }
+    final reasons = [for (final MapEntry(:key, :value) in missing.entries) '$key: ${value.join(', ')}'];
     final failure = vm.probeFailure;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -292,22 +283,22 @@ class _AgentChips extends StatelessWidget {
         ),
         if (vm.checking)
           Padding(
-            padding: const EdgeInsets.only(top: 2),
+            padding: const EdgeInsets.only(top: Gap.hair),
             child: Text('Checking what is installed…', style: Type.caption.copyWith(color: ds.textMuted)),
           ),
         for (final reason in reasons)
           Padding(
-            padding: const EdgeInsets.only(top: 2),
+            padding: const EdgeInsets.only(top: Gap.hair),
             child: Text(
               reason,
-              maxLines: 1,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: Type.caption.copyWith(color: ds.textSecondary),
             ),
           ),
         if (failure != null)
           Padding(
-            padding: const EdgeInsets.only(top: 2),
+            padding: const EdgeInsets.only(top: Gap.hair),
             child: Text(
               failure,
               maxLines: 2,
@@ -319,15 +310,12 @@ class _AgentChips extends StatelessWidget {
     );
   }
 
-  Widget _chip(AgentRoute r) {
-    final available = vm.isAvailable(r.id) != false;
-    final chip = AppChip(
-      label: r.label,
-      selected: vm.agent == r.id,
-      onTap: available ? () => vm.selectAgent(r.id) : null,
-    );
-    return available ? chip : Opacity(opacity: 0.45, child: chip);
-  }
+  Widget _chip(AgentRoute r) => AppChip(
+        label: agentName(r.id),
+        selected: vm.agent == r.id,
+        enabled: vm.isAvailable(r.id) != false,
+        onTap: () => vm.selectAgent(r.id),
+      );
 }
 
 /// The error (if any) and the Start buttons, pinned under the form.
@@ -352,7 +340,7 @@ class _StartBar extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           AnimatedSize(
-            duration: Motion.reduced(context) ? Duration.zero : Motion.expand,
+            duration: Motion.of(context, Motion.expand),
             curve: Motion.easeOut,
             alignment: Alignment.topCenter,
             child: error == null

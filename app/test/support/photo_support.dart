@@ -9,7 +9,7 @@ import 'package:herdr_mobile/data/services/exif.dart';
 import 'package:herdr_mobile/data/services/image_decode.dart';
 import 'package:herdr_mobile/data/services/photo_export.dart';
 import 'package:herdr_mobile/data/services/remote_files.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/photos/photo_item.dart';
 import 'package:image/image.dart' as img;
 

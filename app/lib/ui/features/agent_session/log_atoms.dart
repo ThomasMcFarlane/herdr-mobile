@@ -1,13 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../core/motion.dart';
-import '../../core/theme.dart';
-
-/// Added lines as TEXT: >= 4.5:1 on the page, on `fill` and on `fillPressed`
-/// (the theme's `done` is a fill colour for shapes and reaches 4.2:1 on paper
-/// only). Dark reuses `done` (6.7:1 or better).
-Color addedText(Ds ds) => ds.isDark ? ds.done : const Color(0xFF1B7343);
+import '../../../data/words/plural.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// Removed lines as text: the theme's danger text tone.
 Color removedText(Ds ds) => ds.dangerText;
@@ -23,14 +17,14 @@ class DiffStats extends StatelessWidget {
 
   /// The words a screen reader says.
   static String words(int added, int removed) => [
-    if (added > 0) '$added ${added == 1 ? 'line' : 'lines'} added',
-    if (removed > 0) '$removed ${removed == 1 ? 'line' : 'lines'} removed',
+    if (added > 0) '${countOf(added, 'line')} added',
+    if (removed > 0) '${countOf(removed, 'line')} removed',
   ].join(', ');
 
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
-    final base = (style ?? Type.caption).copyWith(fontFeatures: Type.tabular, fontWeight: FontWeight.w600);
+    final base = (style ?? Type.captionStrong).copyWith(fontFeatures: Type.tabular);
     return Semantics(
       label: words(added, removed),
       excludeSemantics: true,
@@ -44,7 +38,7 @@ class DiffStats extends StatelessWidget {
           child: Text.rich(
             TextSpan(
               children: [
-                if (added > 0) TextSpan(text: '+$added', style: base.copyWith(color: addedText(ds))),
+                if (added > 0) TextSpan(text: '+$added', style: base.copyWith(color: ds.addedText)),
                 if (added > 0 && removed > 0) const TextSpan(text: ' '),
                 if (removed > 0) TextSpan(text: '\u2212$removed', style: base.copyWith(color: removedText(ds))),
               ],
@@ -58,22 +52,3 @@ class DiffStats extends StatelessWidget {
   }
 }
 
-/// The small disclosure caret of a fold: points right when folded, down when
-/// open, turning over [Motion.expand] (a rotation, nothing else moves). Still
-/// at rest once it has turned; reduced motion turns it at once.
-class Caret extends StatelessWidget {
-  const Caret({super.key, required this.open, this.size = 14});
-
-  final bool open;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) => ExcludeSemantics(
-    child: AnimatedRotation(
-      turns: open ? 0.25 : 0,
-      duration: Motion.reduced(context) ? Duration.zero : Motion.expand,
-      curve: Motion.easeOut,
-      child: Icon(LucideIcons.chevronRight, size: size, color: context.ds.textTertiary),
-    ),
-  );
-}

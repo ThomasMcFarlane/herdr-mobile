@@ -4,9 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 
-import '../../core/chrome.dart' show FloatingBar;
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// Where the sheet is: a translation `offset` from its full-height position
 /// (0 = full, [restHalf] = half height, [dismissAt] = off the screen).
@@ -17,7 +15,7 @@ import '../../core/theme.dart';
 /// down; the bars pinned to the bottom do not follow that part of the move
 /// (see [SheetFrame]).
 ///
-/// A release hands the finger's velocity to a spring ([_spring]); the target
+/// A release hands the finger's velocity to a spring ([Springs.carry]); the target
 /// is picked from where the sheet would end up if it kept going
 /// ([_project]), so a flick goes one stop further than a slow drag.
 class SheetPosition {
@@ -41,8 +39,6 @@ class SheetPosition {
   var _dragging = false;
   var _dismissed = false;
   var _laidOut = false;
-
-  static final _spring = SpringDescription.withDampingRatio(mass: 1, stiffness: 420, ratio: 0.88);
 
   /// The sheet's height at half, and its full height.
   double get halfHeight => _half;
@@ -79,8 +75,11 @@ class SheetPosition {
     _dragging = true;
     final next = offset.value + dy;
     // A little give past full height, none past the screen's edge.
-    offset.value = next < 0 ? next * 0.25 : math.min(next, dismissAt);
+    offset.value = next < 0 ? next * _overpull : math.min(next, dismissAt);
   }
+
+  /// How much of a drag past full height the sheet follows: it gives, a quarter.
+  static const _overpull = 0.25;
 
   /// The finger lifted at [velocity] dp/s (positive = downwards).
   ///
@@ -139,12 +138,12 @@ class SheetPosition {
       return;
     }
     _controller.value = offset.value;
-    unawaited(_controller.animateWith(SpringSimulation(_spring, offset.value, target, velocity)).catchError((Object _) {}));
+    unawaited(_controller.animateWith(SpringSimulation(Springs.carry, offset.value, target, velocity)).catchError((Object _) {}));
   }
 
   /// Apple's projection of a fling: where it would stop with the usual
   /// deceleration.
-  static double _project(double velocity) => velocity * 0.25;
+  static double _project(double velocity) => velocity * Springs.projectSheet;
 
   void dispose() {
     _controller.dispose();
@@ -275,6 +274,9 @@ class SheetFrame extends StatefulWidget {
   State<SheetFrame> createState() => _SheetFrameState();
 }
 
+/// The grabber strip at the sheet's top (its gap and the bar), above the content.
+const sheetGrabberSpace = Gap.sm + SheetGrabber.height;
+
 /// Height of the bars region's reserve: the action bar, its 8 dp gap, the tab
 /// pill and the margin under it; tabs add it to their end padding via
 /// [SheetScope.bottomClearance].
@@ -301,11 +303,11 @@ class _SheetFrameState extends State<SheetFrame> with SingleTickerProviderStateM
     if (widget.animation.status == AnimationStatus.completed) _position.dismiss();
   }
 
-  /// The route's progress with the app's curve, both ways: the sheet leaves
-  /// fast and settles slowly in either direction.
+  /// The route's progress with the app's curve, both ways ([Motion.curved]'s
+  /// pair): the sheet leaves fast and settles slowly in either direction.
   double _enter() {
     final a = widget.animation;
-    if (a.status == AnimationStatus.reverse) return 1 - Motion.easeOut.transform(1 - a.value);
+    if (a.status == AnimationStatus.reverse) return Motion.easeOutExit.transform(a.value);
     return Motion.easeOut.transform(a.value);
   }
 
@@ -351,7 +353,7 @@ class _SheetFrameState extends State<SheetFrame> with SingleTickerProviderStateM
                       behavior: HitTestBehavior.opaque,
                       onTap: _tapScrim,
                       excludeFromSemantics: true,
-                      child: ColoredBox(color: ds.scrim.withValues(alpha: ds.scrim.a * alpha)),
+                      child: ColoredBox(color: Color.lerp(ds.scrim.withAlpha(0), ds.scrim, alpha)!),
                     ),
                   );
                 },
@@ -388,20 +390,15 @@ class _Body extends StatelessWidget {
     // screen's bottom edge while the sheet is between half and full height.
     final surface = DecoratedBox(
       decoration: BoxDecoration(
-        color: ds.bg,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(Radii.sheet)),
-        border: Border(top: BorderSide(color: ds.hairline)),
+        color: ds.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(Radii.lg)),
       ),
       child: Column(
         children: [
           // The grabber is the drag handle everywhere; the whole header is
           // too (a vertical drag on non-scrolling content reaches the frame).
-          const SizedBox(height: 8),
-          Container(
-            width: 36,
-            height: 4,
-            decoration: BoxDecoration(color: ds.textTertiary.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(2)),
-          ),
+          const SizedBox(height: Gap.sm),
+          const SheetGrabber(),
           Expanded(child: Builder(builder: frame.widget.content)),
         ],
       ),

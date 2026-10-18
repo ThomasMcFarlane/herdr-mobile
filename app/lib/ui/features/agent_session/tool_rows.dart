@@ -8,17 +8,14 @@ import '../../../data/acp/session_state.dart';
 import '../../../data/models/herdr_models.dart' show AgentStatus;
 import '../../../data/acp/turns/turns.dart';
 import '../../../data/acp/turns/plain_text.dart' show safeEnd;
-import '../../core/controls.dart';
-import '../../core/glyphs.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
-import '../files/file_widgets.dart' show copyToClipboard;
+import '../../../data/words/plural.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'code_panel.dart';
 import 'content_blocks.dart';
 import 'content_locations.dart';
 import 'diff_lines.dart';
 import 'transcript_rows.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 import 'log_atoms.dart';
 
 /// Lines an opened call shows of the text it returned that is not command
@@ -139,28 +136,21 @@ class ToolRow extends StatelessWidget {
     final title = toolTitle(call);
     final stats = summary.kind == ToolKind.edit && (summary.added ?? 0) + (summary.removed ?? 0) > 0;
     return Padding(
-      padding: EdgeInsets.only(top: gap, left: nested ? Gap.xl : 0),
+      padding: nested ? EdgeInsets.only(top: gap, left: Gap.xl) : EdgeInsets.only(top: gap),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Semantics(
             expanded: open,
-            child: PressBuilder(
+            child: PressRow(
               onTap: () => onToggle(rowKey),
               semanticLabel: _toolLabel(summary, state, call.detailTrimmed),
-              builder: (context, pressed) => AnimatedContainer(
-                duration: Motion.pressing(pressed),
-                curve: Motion.easeOut,
-                constraints: const BoxConstraints(minHeight: kMinTap),
-                padding: const EdgeInsets.symmetric(horizontal: Gap.xs, vertical: 6),
-                decoration: BoxDecoration(
-                  color: pressed ? ds.fill : Colors.transparent,
-                  borderRadius: BorderRadius.circular(Radii.row),
-                ),
+              minHeight: kMinTap,
+              padding: const EdgeInsets.symmetric(horizontal: Gap.xs, vertical: Gap.xs),
                 child: Row(
                   children: [
-                    Icon(toolIcon(call.kind), size: 16, color: ds.textSecondary),
-                    const SizedBox(width: 10),
+                    Icon(toolIcon(call.kind), size: IconSize.row, color: ds.textSecondary),
+                    const SizedBox(width: Gap.sm),
                     Expanded(child: _ToolLine(summary: summary, failed: failed, trimmed: call.detailTrimmed)),
                     if (stats) ...[
                       const SizedBox(width: Gap.sm),
@@ -174,7 +164,6 @@ class ToolRow extends StatelessWidget {
                     ],
                   ],
                 ),
-              ),
             ),
           ),
           if (open)
@@ -184,7 +173,7 @@ class ToolRow extends StatelessWidget {
             Stack(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(Gap.xl, 0, 0, Gap.sm),
+                  padding: const EdgeInsets.only(left: Gap.xl, bottom: Gap.sm),
                   child: _ToolBody(call: call, all: all, onToggleAll: () => onToggle(allKey(rowKey)), title: title),
                 ),
                 Positioned(
@@ -212,7 +201,7 @@ void foldKeepingInView(BuildContext context, VoidCallback fold) {
     if (!context.mounted) return;
     Scrollable.ensureVisible(
       context,
-      duration: Motion.reduced(context) ? Duration.zero : Motion.expand,
+      duration: Motion.of(context, Motion.expand),
       curve: Motion.easeOut,
       alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtStart,
     );
@@ -241,7 +230,7 @@ class FoldRail extends StatelessWidget {
           curve: Motion.easeOut,
           decoration: BoxDecoration(
             color: pressed ? ds.fill : Colors.transparent,
-            borderRadius: BorderRadius.circular(Radii.row),
+            borderRadius: BorderRadius.circular(Radii.sm),
           ),
           alignment: Alignment.topCenter,
           child: AnimatedContainer(
@@ -276,14 +265,9 @@ class _ToolLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
-    final main = Type.secondary.copyWith(color: failed ? ds.text : ds.textSecondary, fontWeight: FontWeight.w500);
+    final main = Type.secondaryStrong.copyWith(color: failed ? ds.text : ds.textSecondary);
     final muted = Type.secondary.copyWith(color: ds.textMuted);
-    final mono = TextStyle(
-      fontFamily: monoFamily,
-      fontSize: 12.5,
-      height: 1.35,
-      color: failed ? ds.text : ds.textSecondary,
-    );
+    final mono = Mono.base.copyWith(color: failed ? ds.text : ds.textSecondary);
     final text = visibleText(summary.text);
     final hint = summary.hint == null ? null : visibleText(summary.hint!);
     final span = switch (summary.kind) {
@@ -291,7 +275,7 @@ class _ToolLine extends StatelessWidget {
         text: text,
         style: mono,
         children: [
-          if (summary.extraLines > 0) TextSpan(text: '  +${summary.extraLines} lines', style: muted),
+          if (summary.extraLines > 0) TextSpan(text: '  +${countOf(summary.extraLines, 'line')}', style: muted),
           if (trimmed) TextSpan(text: '  Details trimmed', style: muted),
         ],
       ),
@@ -325,20 +309,20 @@ class _ToolLine extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         line,
-        const SizedBox(height: 2),
+        const SizedBox(height: Gap.hair),
         Text.rich(
           TextSpan(
             children: [
               if (code != null)
                 TextSpan(
                   text: code,
-                  style: Type.caption.copyWith(color: ds.dangerText, fontWeight: FontWeight.w600),
+                  style: Type.captionStrong.copyWith(color: ds.dangerText),
                 ),
               if (code != null && why != null) const TextSpan(text: '  '),
               if (why != null)
                 TextSpan(
                   text: why,
-                  style: TextStyle(fontFamily: monoFamily, fontSize: 12, height: 1.35, color: ds.dangerText),
+                  style: Mono.base.copyWith(color: ds.dangerText),
                 ),
             ],
           ),
@@ -350,7 +334,7 @@ class _ToolLine extends StatelessWidget {
   }
 }
 
-String _hitsWords(int hits) => hits == 0 ? 'no matches' : (hits == 1 ? '1 match' : '$hits matches');
+String _hitsWords(int hits) => hits == 0 ? 'no matches' : countOf(hits, 'match', 'matches');
 
 // ---------------------------------------------------------------------------
 // the expanded body
@@ -452,7 +436,7 @@ List<_Part> _partsOf(ToolCall call) {
     if (o.text.isNotEmpty) {
       final lines = textLines(terminalText(o.text), fromEnd: true);
       out.add(
-        _TextPart([if (o.cutChars > 0) CodeLine('… ${o.cutChars} characters not shown'), ...lines], label: 'Output', fromEnd: true),
+        _TextPart([if (o.cutChars > 0) CodeLine('${countOf(o.cutChars, 'character')} not shown'), ...lines], label: 'Output', fromEnd: true),
       );
     }
     if (o.progress.isNotEmpty) out.add(_TextPart(textLines(terminalText(o.progress)), label: 'Progress'));
@@ -490,7 +474,7 @@ List<_Part> _partsOf(ToolCall call) {
           // Nothing arrived in `_meta`: an agent that really keeps the output
           // in a terminal (`terminal/create`), or one still starting.
           out.add(
-            _NotePart(call.status.isFinished ? 'The output is in a terminal on the host.' : 'Waiting for output…'),
+            _NotePart(call.status.isFinished ? 'The output is in a terminal on the machine.' : 'Waiting for output…'),
           );
         }
       case UnknownToolContent(:final type):
@@ -537,7 +521,7 @@ class _ToolBody extends StatelessWidget {
     final term = context.terminal;
     final parts = _partsOf(call);
 
-    Widget panel(List<CodeLine> lines, {bool fromEnd = false, int cap = 40, String? copyText, String copyLabel = 'Copy output'}) =>
+    Widget panel(List<CodeLine> lines, {bool fromEnd = false, int cap = 40, String? body, String copyLabel = 'Copy output', String copied = 'Output copied'}) =>
         CodePanel(
           lines: lines,
           background: term.background,
@@ -547,7 +531,7 @@ class _ToolBody extends StatelessWidget {
           fromEnd: fromEnd,
           cap: cap,
           onToggleAll: onToggleAll,
-          onCopy: () => copyToClipboard(context, copyText ?? [for (final l in lines) l.text].join('\n'), 'Copied'),
+          onCopy: () => copyText(context, body ?? [for (final l in lines) l.text].join('\n'), what: copied),
           copyLabel: copyLabel,
         );
 
@@ -566,7 +550,7 @@ class _ToolBody extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               label('Command'),
-              panel(textLines('\$ ${visibleText(part.command)}'), cap: 12, copyText: part.command, copyLabel: 'Copy command'),
+              panel(textLines('\$ ${visibleText(part.command)}'), cap: 12, body: part.command, copyLabel: 'Copy command', copied: 'Command copied'),
             ],
           ),
           _TextPart() => Column(
@@ -580,7 +564,7 @@ class _ToolBody extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               label(visibleText(part.path)),
-              panel(_colourDiff(part, term), cap: 60, copyLabel: 'Copy diff'),
+              panel(_colourDiff(part, term, context.ds), cap: 60, copyLabel: 'Copy diff'),
             ],
           ),
           _BlockPart() => ContentBlockView(block: part.block, expanded: all, onToggle: onToggleAll),
@@ -606,7 +590,7 @@ class _ToolBody extends StatelessWidget {
 
 /// A diff coloured in the terminal palette of the theme: added lines green,
 /// removed red (text and a faint band), the left-out runs dim.
-List<CodeLine> _colourDiff(_DiffPart part, TerminalPalette term) {
+List<CodeLine> _colourDiff(_DiffPart part, TerminalPalette term, Ds ds) {
   final brightness = term.isDark ? Brightness.dark : Brightness.light;
   final have = part.coloured;
   if (have != null && have.$1 == brightness) return have.$2;
@@ -615,8 +599,8 @@ List<CodeLine> _colourDiff(_DiffPart part, TerminalPalette term) {
   final lines = [
     for (final l in part.lines)
       switch (l.kind) {
-        DiffKind.add => CodeLine('+ ${clipLine(l.text)}', color: add, background: add.withValues(alpha: 0.14)),
-        DiffKind.del => CodeLine('- ${clipLine(l.text)}', color: del, background: del.withValues(alpha: 0.14)),
+        DiffKind.add => CodeLine('+ ${clipLine(l.text)}', color: add, background: ds.wash(add)),
+        DiffKind.del => CodeLine('- ${clipLine(l.text)}', color: del, background: ds.wash(del)),
         DiffKind.same => CodeLine('  ${clipLine(l.text)}'),
         DiffKind.gap => CodeLine('… ${l.text}', color: term.dim),
       },
@@ -649,7 +633,7 @@ class DiffPanel extends StatelessWidget {
           child: Text(visibleText(part.path), style: Type.caption.copyWith(color: ds.textMuted)),
         ),
         CodePanel(
-          lines: _colourDiff(part, term),
+          lines: _colourDiff(part, term, context.ds),
           background: term.background,
           foreground: term.foreground,
           border: term.border,
@@ -657,7 +641,7 @@ class DiffPanel extends StatelessWidget {
           fromEnd: false,
           cap: 60,
           onToggleAll: onToggleAll,
-          onCopy: () => copyToClipboard(context, [for (final l in _colourDiff(part, term)) l.text].join('\n'), 'Copied'),
+          onCopy: () => copyText(context, [for (final l in _colourDiff(part, term, context.ds)) l.text].join('\n'), what: 'Diff copied'),
           copyLabel: 'Copy diff',
         ),
       ],

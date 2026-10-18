@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-import '../core/motion.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// One haptic when another agent starts waiting for the person: a key entered
 /// [needsYou] (reachable agents that need an answer, terminal panes and
@@ -25,8 +25,8 @@ class ArrivalCue extends StatefulWidget {
     required this.needsYou,
     this.waiting = const {},
     required this.child,
-    this.calm = const Duration(seconds: 3),
-    this.spacing = const Duration(seconds: 2),
+    this.calm = Dwell.arrivalCalm,
+    this.spacing = Dwell.arrivalSpacing,
     this.now = DateTime.now,
   });
 

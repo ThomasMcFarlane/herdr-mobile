@@ -9,8 +9,7 @@ import 'package:herdr_mobile/data/models/machine_profile.dart';
 import 'package:herdr_mobile/data/repositories/agent_session.dart';
 import 'package:herdr_mobile/data/repositories/agent_session_repository.dart';
 import 'package:herdr_mobile/data/repositories/agent_session_settings.dart';
-import 'package:herdr_mobile/ui/core/controls.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
 import 'package:herdr_mobile/ui/features/create/new_agent_session_screen.dart';
 import 'package:provider/provider.dart';
@@ -154,12 +153,10 @@ void main() {
       for (final label in ['omp', 'Claude Code', 'Codex', 'pi']) {
         expect(_chip(label), findsOneWidget, reason: label);
       }
-      expect(tester.widget<AppChip>(_chip('omp')).onTap, isNull);
-      expect(tester.widget<AppChip>(_chip('pi')).onTap, isNull);
-      expect(tester.widget<AppChip>(_chip('Codex')).onTap, isNotNull);
-      expect(find.text('omp is not installed on studio-mac'), findsOneWidget);
-      expect(find.text('pi is not installed on studio-mac'), findsOneWidget);
-      expect(find.text('Codex is not installed on studio-mac'), findsNothing);
+      expect(tester.widget<AppChip>(_chip('omp')).enabled, isFalse);
+      expect(tester.widget<AppChip>(_chip('pi')).enabled, isFalse);
+      expect(tester.widget<AppChip>(_chip('Codex')).enabled, isTrue);
+      expect(find.text('Not installed on studio-mac: omp, pi'), findsOneWidget, reason: 'one line names both');
       expect(_selected(tester, 'Claude Code'), isTrue, reason: 'the first agent that can run');
 
       await tester.tap(_chip('omp'));
@@ -210,7 +207,7 @@ void main() {
 
       expect(_folder(tester), '/srv/app');
       expect(_selected(tester, 'Codex'), isTrue, reason: 'omp is not on build-box');
-      expect(find.text('omp is not installed on build-box'), findsOneWidget);
+      expect(find.text('Not installed on build-box: omp, Claude Code, pi'), findsOneWidget);
       await _teardown(tester, e);
     });
 
@@ -316,7 +313,7 @@ void main() {
 
       await _tapStart(tester);
 
-      expect(find.text("Couldn't start the session"), findsOneWidget);
+      expect(find.text('Couldn’t start the session'), findsOneWidget);
       expect(find.text('omp is not installed on studio-mac.'), findsOneWidget);
       expect(find.byType(NewAgentSessionScreen), findsOneWidget);
       expect(e.host('a').startCalls, 0);

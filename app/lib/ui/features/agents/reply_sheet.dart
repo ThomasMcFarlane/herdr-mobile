@@ -11,17 +11,16 @@ import '../../../data/repositories/agent_screens.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/attention_set.dart';
 import '../../../data/repositories/fleet_repository.dart';
+import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/pane_previews.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/draw_check.dart';
-import '../../core/glyphs.dart';
-import '../../core/motion.dart';
-import '../../core/tap_guard.dart';
-import '../../core/theme.dart';
-import '../../core/toast.dart';
+import '../../../data/words/agent_names.dart';
+import '../../../data/words/plural.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../support/tap_guard.dart';
+import '../composer/composer_frame.dart';
 import 'agent_navigation.dart';
 import 'agent_card.dart';
+import 'answer_surface.dart';
 import 'agent_session_rows.dart';
 import 'agents_grouping.dart';
 import 'quick_reply_controller.dart';
@@ -73,7 +72,7 @@ class _ReplySheetState extends State<ReplySheet> {
   Timer? _closeTimer;
 
   /// How long "All clear" shows before the sheet leaves.
-  static const _allClearHold = Duration(milliseconds: 900);
+  static const _allClearHold = Dwell.allClear;
 
   @override
   void initState() {
@@ -154,9 +153,9 @@ class _ReplySheetState extends State<ReplySheet> {
       final agent = row(_key);
       if (agent == null) {
         _close();
-        return const SizedBox(height: 120);
+        return const SizedBox(height: _frameHeight);
       }
-      return _SheetFrame(triage: null, child: AgentReply(key: ValueKey(agent.key), agent: agent));
+      return SheetScaffold(kind: SheetKind.form, child: AgentReply(key: ValueKey(agent.key), agent: agent));
     }
 
     // A session opened from the walk is on top: leave the walk as it is. It
@@ -178,7 +177,7 @@ class _ReplySheetState extends State<ReplySheet> {
       if (fallback == null) {
         if (!_answeredAny) {
           _close();
-          return const SizedBox(height: 120);
+          return const SizedBox(height: _frameHeight);
         }
         _close(after: _allClearHold);
         return const _AllClear();
@@ -201,18 +200,24 @@ class _ReplySheetState extends State<ReplySheet> {
           onAnswered: () => _advance(waiting),
         ),
       // A pane the set lists and the board has not built yet: a frame.
-      _ => const SizedBox(height: 120),
+      _ => const SizedBox(height: _frameHeight),
     };
-    return _lastWalk = _SheetFrame(
-      triage: total > 0
-          ? _TriageBar(
+    return _lastWalk = SheetScaffold(
+      kind: SheetKind.form,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (total > 0)
+            _TriageBar(
               index: math.max(index, 0),
               total: total,
               onPrev: total > 1 && !holding ? () => _go(-1, waiting) : null,
               onNext: total > 1 && !holding ? () => _go(1, waiting) : null,
-            )
-          : null,
-      child: child,
+            ),
+          child,
+        ],
+      ),
     );
   }
 
@@ -249,10 +254,10 @@ class _SessionAsk extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Padding(
-              padding: EdgeInsets.only(top: 2),
-              child: StatusGlyph(status: AgentStatus.blocked, size: 20, dim: false),
+              padding: EdgeInsets.only(top: Gap.hair),
+              child: StatusGlyph(status: AgentStatus.blocked, size: IconSize.lead, dim: false),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: Gap.md),
             Expanded(
               child: Semantics(
                 header: true,
@@ -268,7 +273,7 @@ class _SessionAsk extends StatelessWidget {
         ),
         if (meta.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(left: 30, top: 2),
+            padding: const EdgeInsets.only(left: IconSize.lead + Gap.md, top: Gap.hair),
             child: Text(
               meta,
               maxLines: 1,
@@ -278,7 +283,7 @@ class _SessionAsk extends StatelessWidget {
           ),
         if (blockedSummary(session) case final summary?) ...[
           const SizedBox(height: Gap.md),
-          _SheetQuestion(question: summary, subject: ''),
+          QuestionWash(question: summary, size: QuestionWashSize.full),
         ],
         const SizedBox(height: Gap.md),
         AppButton(
@@ -303,46 +308,20 @@ class _AllClear extends StatelessWidget {
   Widget build(BuildContext context) {
     final ds = context.ds;
     return SizedBox(
-      height: 120,
+      height: _frameHeight,
       child: Semantics(
         liveRegion: true,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            DrawCheck(color: ds.done, size: 22),
-            const SizedBox(width: 10),
+            DrawCheck(color: ds.done, size: IconSize.lead),
+            const SizedBox(width: Gap.md),
             Text('All clear', style: Type.row.copyWith(color: ds.text)),
           ],
         ),
       ),
     );
   }
-}
-
-class _SheetFrame extends StatelessWidget {
-  const _SheetFrame({required this.triage, required this.child});
-
-  final Widget? triage;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        // Lifts the sheet over the keyboard.
-        padding: EdgeInsets.fromLTRB(
-          Gap.gutter,
-          Gap.sm,
-          Gap.gutter,
-          Gap.md + MediaQuery.viewInsetsOf(context).bottom,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            ?triage,
-            child,
-          ],
-        ),
-      );
 }
 
 class _TriageBar extends StatelessWidget {
@@ -368,13 +347,9 @@ class _TriageBar extends StatelessWidget {
           child: Semantics(
             liveRegion: true,
             child: Text(
-              '${index + 1} of $total need you',
+              '${index + 1} of ${needYou(total)}',
               textAlign: TextAlign.center,
-              style: Type.label.copyWith(
-                color: ds.blockedText,
-                fontWeight: FontWeight.w600,
-                fontFeatures: Type.tabular,
-              ),
+              style: Type.labelStrong.copyWith(color: ds.blockedText, fontFeatures: Type.tabular),
             ),
           ),
         ),
@@ -406,39 +381,37 @@ class AgentReply extends StatefulWidget {
   State<AgentReply> createState() => _AgentReplyState();
 }
 
-class _AgentReplyState extends State<AgentReply> with TapGuardState<AgentReply> {
-  late final QuickReplyController _reply;
-  late final PreviewHandle _handle;
+class _AgentReplyState extends State<AgentReply> with TapGuardState<AgentReply>, AnswerSurfaceMixin<AgentReply> {
+  late final PanePreviews _previews = context.read<PanePreviews>();
   final _input = TextEditingController();
   Timer? _advance;
 
-  /// The question the chips were last drawn for: a different one arms the
-  /// guard again, so a tap meant for the old chips cannot answer the new ones.
-  PromptInfo? _shown;
+  @override
+  MachineConnection get answerMachine => widget.agent.machine;
+  @override
+  String get answerPaneId => widget.agent.paneId;
+  @override
+  PanePreviews get answerPreviews => _previews;
+
+  /// The sheet walks on after an answer instead of showing the next question
+  /// in place.
+  @override
+  bool get resetsOnNewQuestion => false;
+
+  QuickReplyController get _reply => answerController;
+  PreviewHandle get _handle => answerHandle!;
 
   @override
   void initState() {
     super.initState();
-    final previews = context.read<PanePreviews>();
-    _handle = previews.watch(widget.agent.machine.profile.id, widget.agent.paneId);
-    _reply = QuickReplyController(machine: widget.agent.machine, paneId: widget.agent.paneId, previews: previews);
-    _shown = _handle.preview.value?.prompt;
-    _handle.preview.addListener(_onPreview);
-  }
-
-  void _onPreview() {
-    final prompt = _handle.preview.value?.prompt;
-    if (prompt == _shown) return;
-    _shown = prompt;
-    if (prompt != null) rearmGuard();
+    watchAnswers();
+    // The guard is already armed: the sheet, and its answers, just appeared.
+    shownPrompt = _handle.preview.value?.prompt;
   }
 
   @override
   void dispose() {
     _advance?.cancel();
-    _handle.preview.removeListener(_onPreview);
-    _handle.release();
-    _reply.dispose();
     _input.dispose();
     super.dispose();
   }
@@ -448,7 +421,7 @@ class _AgentReplyState extends State<AgentReply> with TapGuardState<AgentReply> 
     widget.onSent?.call();
     _advance?.cancel();
     // Long enough to read "Sent: 1. Yes".
-    _advance = Timer(const Duration(milliseconds: 700), () {
+    _advance = Timer(Dwell.sentRead, () {
       if (mounted) widget.onAnswered!();
     });
   }
@@ -469,7 +442,7 @@ class _AgentReplyState extends State<AgentReply> with TapGuardState<AgentReply> 
     if (text.trim().isEmpty) {
       if (!settled) return;
       if (_asking) {
-        Haptics.tick();
+        Haptics.failed();
         showToast(context, 'Pick an answer above');
         return;
       }
@@ -479,7 +452,7 @@ class _AgentReplyState extends State<AgentReply> with TapGuardState<AgentReply> 
     _answered(sent);
   }
 
-  Future<void> _choose(PromptInfo asked, QuickReply r) async => _answered(await _reply.choose(r, asked: asked));
+  Future<void> _choose(PromptInfo asked, QuickReply r) async => _answered(await chooseAnswer(asked, r));
 
   void _openFull() {
     final a = widget.agent;
@@ -502,10 +475,10 @@ class _AgentReplyState extends State<AgentReply> with TapGuardState<AgentReply> 
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: StatusGlyph(status: a.status, size: 20, dim: false),
+              padding: const EdgeInsets.only(top: Gap.hair),
+              child: StatusGlyph(status: a.status, size: IconSize.lead, dim: false),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: Gap.md),
             Expanded(
               child: Semantics(
                 header: true,
@@ -517,13 +490,13 @@ class _AgentReplyState extends State<AgentReply> with TapGuardState<AgentReply> 
                 ),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: Gap.sm),
             StateTime(agent: a),
           ],
         ),
         if (a.subtitle.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(left: 30, top: 2),
+            padding: const EdgeInsets.only(left: IconSize.lead + Gap.md, top: Gap.hair),
             child: Text(
               a.subtitle,
               maxLines: 1,
@@ -543,7 +516,7 @@ class _AgentReplyState extends State<AgentReply> with TapGuardState<AgentReply> 
                 _SheetPreview(lines: preview?.lines, dim: !live),
                 if (a.status == AgentStatus.blocked && live && prompt != null) ...[
                   const SizedBox(height: Gap.md),
-                  _SheetQuestion(question: prompt.question, subject: prompt.subject),
+                  QuestionWash(question: prompt.question, subject: prompt.subject, size: QuestionWashSize.full),
                   const SizedBox(height: Gap.sm),
                   ReplyChips(
                     prompt: prompt,
@@ -561,12 +534,33 @@ class _AgentReplyState extends State<AgentReply> with TapGuardState<AgentReply> 
           },
         ),
         const SizedBox(height: Gap.md),
-        _SheetComposer(
-          controller: _input,
-          agent: a.title,
-          enabled: live,
-          sending: _reply,
-          onSubmit: _submit,
+        ComposerFrame(
+          field: ComposerField(
+            controller: _input,
+            enabled: live,
+            hint: composerHint(agentName(a.machine.paneById(a.paneId)?.agent), linkWord: live ? null : 'Offline'),
+            onSubmit: _submit,
+            // A line for the agent's prompt, in the terminal's font.
+            mono: true,
+            maxLines: 1,
+            autocorrect: false,
+            enableSuggestions: false,
+            hasLeading: false,
+          ),
+          trailing: ListenableBuilder(
+            listenable: Listenable.merge([_input, _reply]),
+            builder: (context, _) {
+              final busy = _reply.busy;
+              return ComposerRoundButton(
+                label: 'Send',
+                icon: LucideIcons.arrowUp,
+                iconSize: IconSize.bar,
+                ready: live && !busy && _input.text.trim().isNotEmpty,
+                busy: busy,
+                onPressed: _submit,
+              );
+            },
+          ),
         ),
         const SizedBox(height: Gap.sm),
         ListenableBuilder(
@@ -581,27 +575,26 @@ class _AgentReplyState extends State<AgentReply> with TapGuardState<AgentReply> 
                     spacing: Gap.sm,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      _KeyButton(
+                      KeyCap(
                         label: 'esc',
                         // Moving through a menu is not an answer: it never
                         // moves the walk on to another agent.
-                        onPressed: enabled ? () => _reply.sendKey('esc') : null,
+                        onTap: enabled ? () => _reply.sendKey('esc') : null,
                       ),
-                      _KeyButton(
+                      KeyCap(
                         icon: LucideIcons.arrowUp,
-                        semantic: 'Up',
-                        onPressed: enabled ? () => _reply.sendKey('up') : null,
+                        semanticLabel: 'Up',
+                        onTap: enabled ? () => _reply.sendKey('up') : null,
                       ),
-                      _KeyButton(
+                      KeyCap(
                         icon: LucideIcons.arrowDown,
-                        semantic: 'Down',
-                        onPressed: enabled ? () => _reply.sendKey('down') : null,
+                        semanticLabel: 'Down',
+                        onTap: enabled ? () => _reply.sendKey('down') : null,
                       ),
-                      _KeyButton(
+                      KeyCap(
                         icon: LucideIcons.cornerDownLeft,
-                        semantic: 'Enter',
-                        onPressed:
-                            enabled ? () => _reply.sendKey('enter') : null,
+                        semanticLabel: 'Enter',
+                        onTap: enabled ? () => _reply.sendKey('enter') : null,
                       ),
                     ],
                   ),
@@ -636,7 +629,7 @@ class _AgentReplyState extends State<AgentReply> with TapGuardState<AgentReply> 
                   };
             final failed = _reply.phase == ReplyPhase.failed;
             return AnimatedSize(
-              duration: Motion.reduced(context) ? Duration.zero : Motion.standard,
+              duration: Motion.of(context, Motion.standard),
               curve: Motion.easeOut,
               alignment: Alignment.topCenter,
               child: text == null
@@ -663,41 +656,6 @@ class _AgentReplyState extends State<AgentReply> with TapGuardState<AgentReply> 
   }
 }
 
-class _SheetQuestion extends StatelessWidget {
-  const _SheetQuestion({required this.question, required this.subject});
-
-  final String question;
-
-  /// What the question is about, in full (up to 6 rows); empty when none.
-  final String subject;
-
-  @override
-  Widget build(BuildContext context) {
-    final ds = context.ds;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: ds.blockedWash,
-        borderRadius: BorderRadius.circular(Radii.chip),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            question,
-            style: Type.prompt.copyWith(color: ds.text),
-          ),
-          if (subject.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(subject, style: promptSubjectStyle.copyWith(color: ds.text)),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
 /// The terminal tail: [rows] rows in view, up to everything the preview kept
 /// (8) by scrolling up; nothing wraps, a long line (a command about to run)
 /// scrolls sideways instead of being cut off.
@@ -713,9 +671,9 @@ class _SheetPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final ds = context.ds;
     final scaler = MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.15);
-    final line = scaler.scale(previewFontSize) * previewHeightFactor;
+    const style = Mono.small;
+    final line = scaler.scale(style.fontSize!) * style.height!;
     final tail = lines;
-    final style = previewTextStyle.copyWith(fontSize: previewFontSize + 0.5);
     Widget content;
     if (tail == null) {
       content = Align(
@@ -748,12 +706,12 @@ class _SheetPreview extends StatelessWidget {
         ),
       );
     }
-    final panel = Container(
-      height: rows * line * 1.04 + 20,
-      alignment: Alignment.bottomLeft,
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-      decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(10)),
-      child: content,
+    final panel = SizedBox(
+      height: rows * line * 1.04 + 2 * (Gap.sm + Gap.hair),
+      child: Panel(
+        padding: const EdgeInsets.symmetric(horizontal: Gap.md, vertical: Gap.sm + Gap.hair),
+        child: Align(alignment: Alignment.bottomLeft, child: content),
+      ),
     );
     return Semantics(
       label: tail == null || tail.isEmpty ? 'Terminal preview' : 'Terminal preview: ${tail.last.text}',
@@ -763,157 +721,6 @@ class _SheetPreview extends StatelessWidget {
   }
 }
 
-class _SheetComposer extends StatelessWidget {
-  const _SheetComposer({
-    required this.controller,
-    required this.agent,
-    required this.enabled,
-    required this.sending,
-    required this.onSubmit,
-  });
 
-  final TextEditingController controller;
-  final String agent;
-  final bool enabled;
-  final QuickReplyController sending;
-  final Future<void> Function() onSubmit;
-
-  @override
-  Widget build(BuildContext context) {
-    final ds = context.ds;
-    const none = InputBorder.none;
-    return Container(
-      constraints: const BoxConstraints(minHeight: 48),
-      decoration: BoxDecoration(
-        color: ds.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: ds.border),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: controller,
-              enabled: enabled,
-              maxLines: 1,
-              textInputAction: TextInputAction.send,
-              onEditingComplete: onSubmit,
-              autocorrect: false,
-              enableSuggestions: false,
-              style: TextStyle(
-                fontFamily: monoFamily,
-                fontSize: 14,
-                height: 1.5,
-                color: enabled ? ds.text : ds.textTertiary,
-              ),
-              cursorColor: ds.accent,
-              decoration: InputDecoration(
-                hintText: enabled ? 'Message the agent…' : 'Offline',
-                hintStyle: Type.body.copyWith(height: 1.4, color: ds.textMuted),
-                filled: false,
-                isDense: true,
-                contentPadding: const EdgeInsets.fromLTRB(Gap.lg, 12.5, Gap.sm, 12.5),
-                border: none,
-                enabledBorder: none,
-                focusedBorder: none,
-                disabledBorder: none,
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(1),
-            child: ListenableBuilder(
-              listenable: Listenable.merge([controller, sending]),
-              builder: (context, _) {
-                final busy = sending.busy;
-                final ready = enabled && !busy && controller.text.trim().isNotEmpty;
-                return PressBuilder(
-                  onTap: ready ? onSubmit : null,
-                  scale: 0.92,
-                  semanticLabel: 'Send',
-                  builder: (context, pressed) => SizedBox.square(
-                    dimension: 46,
-                    child: Center(
-                      child: AnimatedContainer(
-                        duration: Motion.standard,
-                        curve: Motion.easeOut,
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: ready
-                              ? (pressed
-                                  ? Color.alphaBlend(Colors.black.withValues(alpha: 0.12), ds.accent)
-                                  : ds.accent)
-                              : ds.fill,
-                        ),
-                        alignment: Alignment.center,
-                        child: busy
-                            ? const BusySpinner()
-                            : Icon(
-                                LucideIcons.arrowUp,
-                                size: 18,
-                                color: ready ? ds.onAccent : ds.textTertiary,
-                              ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _KeyButton extends StatelessWidget {
-  const _KeyButton({this.label, this.icon, this.semantic, required this.onPressed});
-
-  final String? label;
-  final IconData? icon;
-  final String? semantic;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final ds = context.ds;
-    final color = onPressed == null ? ds.textTertiary : ds.text;
-    return PressBuilder(
-      onTap: onPressed,
-      scale: 0.96,
-      button: true,
-      minTapSize: kMinTap,
-      semanticLabel: icon != null ? semantic : null,
-      builder: (context, pressed) => AnimatedContainer(
-        duration: pressed ? Motion.press : Motion.release,
-        curve: Motion.easeOut,
-        height: 36,
-        constraints: const BoxConstraints(minWidth: 44),
-        padding: const EdgeInsets.symmetric(horizontal: Gap.md),
-        decoration: BoxDecoration(
-          color: pressed ? ds.fillPressed : ds.fill,
-          borderRadius: BorderRadius.circular(Radii.control),
-        ),
-        // widthFactor: shrink-wrap, so a Wrap gives it its own width, not all.
-        child: Center(
-          widthFactor: 1,
-          child: icon != null
-              ? Icon(icon, size: 16, color: color)
-              : Text(
-                  label!,
-                  maxLines: 1,
-                  style: TextStyle(
-                    fontFamily: monoFamily,
-                    fontSize: 13,
-                    height: 1.2,
-                    fontWeight: FontWeight.w500,
-                    color: color,
-                  ),
-                ),
-        ),
-      ),
-    );
-  }
-}
+/// A sheet's height while it has nothing to show yet, or `All clear`.
+const _frameHeight = 120.0;

@@ -5,19 +5,19 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/acp/subagents/subagent_run.dart';
 import '../../../data/acp/turns/plain_text.dart' show safeEnd;
 import '../../../data/repositories/agent_session.dart';
-import '../../core/controls.dart';
-import '../../core/markdown/markdown.dart';
-import '../../core/rows.dart' show EmptyState;
-import '../../core/theme.dart';
+import '../../../data/words/agent_names.dart';
+import '../../../data/words/elapsed.dart';
+import '../../../data/words/plural.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../render/markdown/markdown.dart';
 import 'agent_md_scope.dart';
-import 'log_atoms.dart';
 import 'permission_dock.dart';
 import 'session_select.dart';
 import 'subagent_card.dart';
 import 'subagent_format.dart';
 import 'subagent_run_session.dart';
 import 'transcript_view.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// A subagent opened from the roster or its card: a pushed, read-only screen.
 ///
@@ -81,7 +81,7 @@ class _SubagentRunScreenState extends State<SubagentRunScreen> {
                 final (exists, transcript) = v;
                 if (!exists) {
                   return const EmptyState(
-                    icon: LucideIcons.bot,
+                    icon: HerdrIcons.agents,
                     title: 'Subagent gone',
                     message: 'The agent no longer lists this subagent.',
                   );
@@ -124,67 +124,20 @@ class _RunBar extends StatelessWidget {
   final String runId;
 
   @override
-  Widget build(BuildContext context) {
-    final ds = context.ds;
-    return Padding(
-      padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: Gap.md),
-        child: Row(
-          children: [
-            CircleButton(
-              icon: LucideIcons.chevronLeft,
-              tooltip: 'Back',
-              onPressed: () => Navigator.of(context).maybePop(),
-            ),
-            const SizedBox(width: Gap.xs),
-            Expanded(
-              child: SessionSelect<(String, String?)>(
-                session: session,
-                select: (s) {
-                  final run = s.subagentRun(runId);
-                  return (run == null ? 'Subagent' : runTitle(run), run?.agentType);
-                },
-                builder: (context, v) {
-                  final (title, type) = v;
-                  final kind = type == null || type.trim().isEmpty ? 'Subagent' : 'Subagent · ${visibleText(type.trim())}';
-                  return ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 52),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: Gap.sm),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Semantics(
-                            header: true,
-                            child: Text(
-                              visibleText(title),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Type.barTitle.copyWith(color: ds.text),
-                            ),
-                          ),
-                          const SizedBox(height: 1),
-                          Text(
-                            kind,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Type.secondary.copyWith(color: ds.textSecondary),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => SessionSelect<(String, String?)>(
+    session: session,
+    select: (s) {
+      final run = s.subagentRun(runId);
+      return (run == null ? 'Subagent' : runTitle(run), run?.agentType);
+    },
+    builder: (context, v) {
+      final (title, type) = v;
+      return AppTopBar(
+        title: visibleText(title),
+        subtitle: type == null || type.trim().isEmpty ? 'Subagent' : 'Subagent · ${visibleText(type.trim())}',
+      );
+    },
+  );
 }
 
 class _StripSnap {
@@ -222,8 +175,8 @@ class RunStateStrip extends StatelessWidget {
         final tone = toneOf(run, blocked: snap.blocked, live: snap.live);
         return Container(
           width: double.infinity,
-          constraints: const BoxConstraints(minHeight: 36),
-          padding: const EdgeInsets.symmetric(horizontal: Gap.lg, vertical: 6),
+          constraints: const BoxConstraints(minHeight: _blockMinHeight),
+          padding: const EdgeInsets.symmetric(horizontal: Gap.lg, vertical: Gap.sm),
           decoration: BoxDecoration(border: Border(bottom: BorderSide(color: ds.hairline))),
           child: RunClock(
             run: run,
@@ -233,7 +186,7 @@ class RunStateStrip extends StatelessWidget {
               return Row(
                 children: [
                   RunGlyph(tone: tone),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: Gap.md),
                   Expanded(
                     child: Semantics(
                       liveRegion: false,
@@ -243,9 +196,8 @@ class RunStateStrip extends StatelessWidget {
                           line,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: Type.secondary.copyWith(
+                          style: Type.secondaryStrong.copyWith(
                             color: runLineColor(ds, tone),
-                            fontWeight: FontWeight.w500,
                             fontFeatures: Type.tabular,
                           ),
                         ),
@@ -288,49 +240,30 @@ class _PinnedPromptState extends State<PinnedPrompt> {
         if (text.isEmpty) return const SizedBox.shrink();
         final shown = visibleText(text);
         final maxOpen = MediaQuery.sizeOf(context).height * 0.4;
-        return Semantics(
-          expanded: _open,
-          child: PressBuilder(
-            onTap: () => setState(() => _open = !_open),
-            builder: (context, pressed) => Container(
-              constraints: const BoxConstraints(minHeight: kMinTap),
-              padding: const EdgeInsets.fromLTRB(Gap.lg, 8, Gap.md, 8),
-              decoration: BoxDecoration(
-                color: pressed ? ds.fillPressed : ds.fill,
-                border: Border(bottom: BorderSide(color: ds.hairline)),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Asked to',
-                          style: Type.caption.copyWith(color: ds.textMuted, fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 2),
-                        if (_open)
-                          ConstrainedBox(
-                            constraints: BoxConstraints(maxHeight: maxOpen),
-                            child: SingleChildScrollView(
-                              child: Text(shown, style: Type.secondary.copyWith(color: ds.text)),
-                            ),
-                          )
-                        else
-                          Text(
-                            shown,
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
-                            style: Type.secondary.copyWith(color: ds.text),
-                          ),
-                      ],
-                    ),
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(Gap.lg, Gap.xs, Gap.lg, Gap.xs),
+          child: FoldPanel(
+            expanded: _open,
+            onToggle: (open) => setState(() => _open = open),
+            header: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Asked to', style: Type.captionStrong.copyWith(color: ds.textMuted)),
+                if (!_open) ...[
+                  const SizedBox(height: Gap.hair),
+                  Text(
+                    shown,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: Type.secondary.copyWith(color: ds.text),
                   ),
-                  const SizedBox(width: Gap.sm),
-                  Padding(padding: const EdgeInsets.only(top: 4), child: Caret(open: _open)),
                 ],
+              ],
+            ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxOpen),
+              child: SingleChildScrollView(
+                child: Text(shown, style: Type.secondary.copyWith(color: ds.text)),
               ),
             ),
           ),
@@ -359,18 +292,18 @@ class LogOriginNote extends StatelessWidget {
       builder: (context, log) {
         if (log == null) return const SizedBox.shrink();
         final text = [
-          'From ${session.agentLabel}’s log on the host',
+          'From ${agentName(session.agent)}’s log on the machine',
           if (log.earlierNotShown) 'Earlier part not shown',
-          if (log.skippedLines > 0) '${log.skippedLines} oversized ${log.skippedLines == 1 ? 'line' : 'lines'} left out',
+          if (log.skippedLines > 0) '${countOf(log.skippedLines, 'oversized line')} left out',
         ].join(' · ');
         return Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: Gap.lg, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: Gap.lg, vertical: Gap.sm),
           decoration: BoxDecoration(border: Border(bottom: BorderSide(color: ds.hairline))),
           child: Row(
             children: [
-              Icon(LucideIcons.fileText, size: 14, color: ds.textSecondary),
-              const SizedBox(width: 8),
+              Icon(LucideIcons.fileText, size: IconSize.inline, color: ds.textSecondary),
+              const SizedBox(width: Gap.sm),
               Expanded(
                 child: Text(text, style: Type.caption.copyWith(color: ds.textSecondary)),
               ),
@@ -400,33 +333,42 @@ class LogStatusLine extends StatelessWidget {
       builder: (context, status) {
         if (status != SubagentLogStatus.loading && status != SubagentLogStatus.failed) return const SizedBox.shrink();
         final failed = status == SubagentLogStatus.failed;
-        final row = Container(
-          width: double.infinity,
-          constraints: const BoxConstraints(minHeight: kMinTap),
-          padding: const EdgeInsets.symmetric(horizontal: Gap.lg),
-          decoration: BoxDecoration(border: Border(bottom: BorderSide(color: ds.hairline))),
-          child: Row(
-            children: [
-              if (failed)
-                Icon(LucideIcons.refreshCw, size: 14, color: ds.textSecondary)
-              else
-                const BusySpinner(size: 14),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  failed ? 'Couldn’t read the log · Tap to retry' : 'Loading…',
-                  style: Type.secondary.copyWith(color: ds.textSecondary),
-                ),
+        if (!failed) {
+          return Semantics(
+            liveRegion: false,
+            label: 'Loading the subagent’s log',
+            child: ExcludeSemantics(
+              child: Container(
+                width: double.infinity,
+                constraints: const BoxConstraints(minHeight: kMinTap),
+                alignment: Alignment.centerLeft,
+                decoration: BoxDecoration(border: Border(bottom: BorderSide(color: ds.hairline))),
+                child: const LoadingRow('Loading…', padding: EdgeInsets.symmetric(horizontal: Gap.lg)),
               ),
-            ],
-          ),
+            ),
+          );
+        }
+        final content = Row(
+          children: [
+            Icon(LucideIcons.refreshCw, size: IconSize.inline, color: ds.textSecondary),
+            const SizedBox(width: Gap.sm),
+            Expanded(
+              child: Text('Couldn’t read the log · Tap to retry', style: Type.secondary.copyWith(color: ds.textSecondary)),
+            ),
+          ],
         );
-        if (!failed) return Semantics(liveRegion: false, label: 'Loading the subagent’s log', child: ExcludeSemantics(child: row));
-        return PressBuilder(
-          onTap: () => session.retrySubagentLog(runId),
-          button: true,
-          semanticLabel: 'Couldn’t read the log. Retry',
-          builder: (context, pressed) => ColoredBox(color: pressed ? ds.fillPressed : Colors.transparent, child: row),
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            PressRow(
+              onTap: () => session.retrySubagentLog(runId),
+              semanticLabel: 'Couldn’t read the log. Retry',
+              minHeight: kMinTap,
+              padding: const EdgeInsets.symmetric(horizontal: Gap.lg - PressRow.inset),
+              child: content,
+            ),
+            const Hairline(),
+          ],
         );
       },
     );
@@ -481,25 +423,24 @@ class SubagentSummaryBody extends StatelessWidget {
     final doc = result.isEmpty ? null : (_resultDocs[run] ??= parseMd(result));
     final why = failureText(run);
     final note = run.note?.trim();
+    double gapBefore(int i) => mdBlockGap(i == 0 ? null : doc!.blocks[i - 1], doc!.blocks[i]);
     Widget section(String title) => Padding(
       padding: const EdgeInsets.only(top: Gap.lg, bottom: Gap.xs),
       child: Semantics(
         header: true,
-        child: Text(title, style: Type.label.copyWith(color: ds.textSecondary, fontWeight: FontWeight.w600)),
+        child: Text(title, style: Type.labelStrong.copyWith(color: ds.textSecondary)),
       ),
     );
     return [
-      (c) => Container(
-        padding: const EdgeInsets.all(Gap.md),
-        decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.chip)),
+      (c) => Panel(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(padding: const EdgeInsets.only(top: 2), child: Icon(LucideIcons.info, size: 16, color: ds.textSecondary)),
-            const SizedBox(width: 10),
+            Padding(padding: const EdgeInsets.only(top: Gap.hair), child: Icon(LucideIcons.info, size: IconSize.row, color: ds.textSecondary)),
+            const SizedBox(width: Gap.sm),
             Expanded(
               child: Text(
-                'Summary only. ${session.agentLabel} sends a summary of its subagents, not their conversation.',
+                'Summary only. ${agentName(session.agent)} sends a summary of its subagents, not their conversation.',
                 style: Type.secondary.copyWith(color: ds.textSecondary),
               ),
             ),
@@ -535,7 +476,7 @@ class SubagentSummaryBody extends StatelessWidget {
           child: Text(
             [
               retry.maxAttempts == null ? 'Retrying' : 'Retrying, attempt ${retry.attempt} of ${retry.maxAttempts}',
-              if (retry.delay != null) 'in ${elapsedWords(retry.delay!)}',
+              if (retry.delay != null) 'in ${Elapsed.words(retry.delay!)}',
               if (retry.message.trim().isNotEmpty) visibleText(retry.message.trim()),
             ].join(' · '),
             style: Type.secondary.copyWith(color: ds.textSecondary),
@@ -552,7 +493,7 @@ class SubagentSummaryBody extends StatelessWidget {
             _clip(visibleText(run.lastToolLine!.trim()), 300),
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontFamily: monoFamily, fontSize: 12.5, color: ds.text),
+            style: Mono.base.copyWith(color: ds.text),
           ),
         if (run.recentTools.isNotEmpty)
           (c) => Padding(
@@ -565,14 +506,8 @@ class SubagentSummaryBody extends StatelessWidget {
       ],
       if (output.isNotEmpty) ...[
         (c) => section('Recent output'),
-        (c) => Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(Gap.md),
-          decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.chip)),
-          child: Text(
-            output.join('\n'),
-            style: TextStyle(fontFamily: monoFamily, fontSize: 11.5, height: 1.4, color: ds.textSecondary),
-          ),
+        (c) => Panel(
+          child: Text(output.join('\n'), style: Mono.small.copyWith(color: ds.textSecondary)),
         ),
       ],
       if (note != null && note.isNotEmpty && (doc == null))
@@ -588,7 +523,7 @@ class SubagentSummaryBody extends StatelessWidget {
         (c) => section('Result'),
         for (var i = 0; i < doc.blocks.length; i++)
           (c) => Padding(
-            padding: EdgeInsets.only(top: mdBlockGap(i == 0 ? null : doc.blocks[i - 1], doc.blocks[i])),
+            padding: EdgeInsets.only(top: gapBefore(i)),
             child: MdToneScope(tone: MdTone.quiet, child: MdBlockView(block: doc.blocks[i])),
           ),
       ],
@@ -598,5 +533,5 @@ class SubagentSummaryBody extends StatelessWidget {
   static String _clip(String s, int max) => s.length <= max ? s : '${s.substring(0, safeEnd(s, max - 1))}…';
 }
 
-/// `30 s`, `2 min`: a duration in words for a sentence.
-String elapsedWords(Duration d) => d.inSeconds < 90 ? '${d.inSeconds} s' : '${d.inMinutes} min';
+/// A one-line block is this high, so an empty one still reads as a block.
+const _blockMinHeight = 36.0;

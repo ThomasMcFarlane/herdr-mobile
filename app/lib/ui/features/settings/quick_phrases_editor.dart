@@ -7,13 +7,8 @@ import 'package:provider/provider.dart';
 
 import '../../../data/repositories/quick_phrases.dart';
 import '../../../data/repositories/sent_phrases.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/form_sections.dart';
-import '../../core/motion.dart';
-import '../../core/rows.dart';
-import '../../core/tokens.dart';
-import 'app_switch.dart';
+import '../../../data/words/plural.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// Settings > Agents > Quick phrases: its own page, because the list grows
 /// with the person (up to [QuickPhrases.maxCount]) and would stretch the group
@@ -26,14 +21,7 @@ class QuickPhrasesPage extends StatelessWidget {
         backgroundColor: context.ds.bg,
         body: CustomScrollView(
           slivers: [
-            SliverLargeTitle(
-              title: 'Quick phrases',
-              leading: CircleButton(
-                icon: LucideIcons.chevronLeft,
-                tooltip: 'Back',
-                onPressed: () => unawaited(Navigator.of(context).maybePop()),
-              ),
-            ),
+            const SliverLargeTitle.back(title: 'Quick phrases'),
             SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + Gap.lg),
@@ -102,7 +90,7 @@ class QuickPhrasesSection extends StatelessWidget {
           ),
           if (sent.tracked > 0)
             AppButton(
-              label: 'Forget ${sent.tracked} remembered ${sent.tracked == 1 ? 'message' : 'messages'}',
+              label: 'Forget ${sent.tracked} remembered ${plural(sent.tracked, 'message')}',
               kind: AppButtonKind.secondary,
               expand: true,
               onPressed: () => unawaited(sent.forget()),
@@ -125,19 +113,13 @@ class _PhraseRow extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        PressBuilder(
-          onTap: onTap,
-          haptic: true,
-          builder: (context, pressed) => AnimatedContainer(
-            duration: Motion.pressing(pressed),
-            curve: Motion.easeOut,
-            constraints: const BoxConstraints(minHeight: 48),
-            padding: const EdgeInsets.symmetric(vertical: Gap.sm),
-            alignment: Alignment.centerLeft,
-            decoration: BoxDecoration(
-              color: pressed ? ds.fill : Colors.transparent,
-              borderRadius: BorderRadius.circular(Radii.row),
-            ),
+        PressRow(
+          onTap: () {
+            Haptics.tick();
+            onTap();
+          },
+          minHeight: _rowHeight,
+          padding: const EdgeInsets.symmetric(vertical: Gap.sm),
             child: Row(
               children: [
                 Expanded(
@@ -149,10 +131,9 @@ class _PhraseRow extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: Gap.md),
-                Icon(LucideIcons.pencil, size: 16, color: ds.textTertiary),
+                Icon(LucideIcons.pencil, size: IconSize.row, color: ds.textTertiary),
               ],
             ),
-          ),
         ),
         const Hairline(),
       ],
@@ -217,51 +198,37 @@ class _QuickPhraseEditorState extends State<QuickPhraseEditor> {
     final problem = _problem;
     // An empty field is not an error yet: Save just waits.
     final shown = _controller.text.trim().isEmpty ? null : problem;
-    return Padding(
-      // Lifts the sheet over the keyboard.
-      padding: EdgeInsets.fromLTRB(
-        Gap.gutter,
-        Gap.xl,
-        Gap.gutter,
-        Gap.lg + MediaQuery.viewInsetsOf(context).bottom,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Semantics(
-            header: true,
-            child: Text(
-              widget.editing == null ? 'New quick phrase' : 'Edit quick phrase',
-              style: Type.title.copyWith(color: context.ds.text),
-            ),
+    return SheetScaffold(
+      title: widget.editing == null ? 'New quick phrase' : 'Edit quick phrase',
+      kind: SheetKind.form,
+      actions: [
+        AppButton(label: 'Save', expand: true, onPressed: problem == null ? _save : null),
+        if (widget.editing != null)
+          AppButton(
+            label: 'Delete',
+            icon: LucideIcons.trash2,
+            kind: AppButtonKind.danger,
+            expand: true,
+            onPressed: _delete,
           ),
-          const SizedBox(height: Gap.lg),
-          LabeledField(
-            label: 'Phrase',
-            hint: 'e.g. run the tests',
-            controller: _controller,
-            autofocus: true,
-            helper: shown?.message ?? 'Up to ${QuickPhrases.maxLength} characters, one line.',
-            inputFormatters: [LengthLimitingTextInputFormatter(QuickPhrases.maxLength)],
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => _save(),
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: Gap.sm),
-          AppButton(label: 'Save', expand: true, onPressed: problem == null ? _save : null),
-          if (widget.editing != null) ...[
-            const SizedBox(height: Gap.sm),
-            AppButton(
-              label: 'Delete',
-              icon: LucideIcons.trash2,
-              kind: AppButtonKind.danger,
-              expand: true,
-              onPressed: _delete,
-            ),
-          ],
-        ],
+      ],
+      child: Padding(
+        padding: const EdgeInsets.only(top: Gap.sm),
+        child: LabeledField(
+          label: 'Phrase',
+          hint: 'e.g. run the tests',
+          controller: _controller,
+          autofocus: true,
+          helper: shown?.message ?? 'Up to ${QuickPhrases.maxLength} characters, one line.',
+          inputFormatters: [LengthLimitingTextInputFormatter(QuickPhrases.maxLength)],
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _save(),
+          onChanged: (_) => setState(() {}),
+        ),
       ),
     );
   }
 }
+
+/// A phrase row: one line of text with room for its handle.
+const _rowHeight = 48.0;

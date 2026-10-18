@@ -17,10 +17,9 @@ import 'package:herdr_mobile/data/services/herdr_transport.dart';
 import 'package:herdr_mobile/data/services/image_prep.dart';
 import 'package:herdr_mobile/data/services/phone_gallery.dart';
 import 'package:herdr_mobile/data/services/dictation.dart';
-import 'package:herdr_mobile/ui/core/controls.dart';
-import 'package:herdr_mobile/ui/core/terminal_cells.dart';
-import 'package:herdr_mobile/ui/core/terminal_view.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import 'package:herdr_mobile/ui/render/terminal/terminal_cells.dart';
+import 'package:herdr_mobile/ui/render/terminal/terminal_view.dart';
 import 'package:herdr_mobile/ui/features/agent_session/attach_picker.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_navigation.dart';
 import 'package:herdr_mobile/ui/features/files/file_browser_screen.dart';
@@ -250,7 +249,7 @@ void main() {
     expect(transport.sources, ['recent']);
     expect(terminalRow('rows as the terminal has them'), findsOneWidget);
     expect(tester.widget<TerminalView>(find.byType(TerminalView)).wrap, isFalse);
-    expect(find.byTooltip('Wrap lines to screen'), findsOneWidget);
+    expect(find.byTooltip('Pane options'), findsOneWidget);
     await teardown(tester);
   });
 
@@ -261,7 +260,7 @@ void main() {
 
     // The fake snapshot gives every pane the title "title <id>".
     expect(inBar('title $_pane'), findsOneWidget);
-    expect(inBar('claude · box'), findsOneWidget);
+    expect(inBar('Claude Code · box'), findsOneWidget);
     for (final raw in [' · $_pane', _pane]) {
       expect(
         find.descendant(of: find.byType(PaneTopBar), matching: find.text(raw)),
@@ -274,7 +273,7 @@ void main() {
     final node = tester.getSemantics(inBar('title $_pane'));
     expect(node.label, contains('title $_pane'));
     expect(node.label, contains('Working'));
-    expect(node.label, contains('claude · box'));
+    expect(node.label, contains('Claude Code · box'));
     expect(node, isSemantics(isHeader: true));
     semantics.dispose();
     await teardown(tester);
@@ -287,7 +286,7 @@ void main() {
 
     await pumpPane(tester);
 
-    expect(inBar('claude'), findsOneWidget);
+    expect(inBar('Claude Code'), findsOneWidget);
     expect(inBar('box'), findsOneWidget,
         reason: 'the agent is not repeated on the subtitle line');
     await teardown(tester);
@@ -307,7 +306,7 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(inBar('title $_pane'), findsOneWidget);
-    expect(find.byTooltip('Wrap lines to screen'), findsOneWidget,
+    expect(find.byTooltip('Pane options'), findsOneWidget,
         reason: 'the buttons keep their room');
     await teardown(tester);
   });
@@ -334,27 +333,30 @@ void main() {
     await teardown(tester);
   });
 
-  testWidgets('the wrap button switches to unwrapped lines and back, and '
-      'remembers', (tester) async {
+  testWidgets('Wrap lines in the pane options switches to unwrapped lines '
+      'and back, and remembers', (tester) async {
     await pumpPane(tester);
 
-    await tester.tap(find.byTooltip('Wrap lines to screen'));
+    await tester.tap(find.byTooltip('Pane options'));
+    await _settle(tester);
+    await tester.tap(find.text('Wrap lines'));
     await _settle(tester);
 
     expect(transport.sources, ['recent', 'recent_unwrapped']);
     expect(terminalRow('joined line from herdr'), findsOneWidget);
     expect(terminalRow('rows as the terminal has them'), findsNothing);
     expect(tester.widget<TerminalView>(find.byType(TerminalView)).wrap, isTrue);
-    expect(find.byTooltip('Show exact terminal layout'), findsOneWidget);
+    expect(tester.widget<SwitchRow>(find.byType(SwitchRow)).value, isTrue);
     expect(settings.wrap, isTrue);
     expect(store.wrap, isTrue);
 
-    await tester.tap(find.byTooltip('Show exact terminal layout'));
+    await tester.tap(find.text('Wrap lines'));
     await _settle(tester);
 
     expect(transport.sources.last, 'recent');
     expect(terminalRow('rows as the terminal has them'), findsOneWidget);
     expect(tester.widget<TerminalView>(find.byType(TerminalView)).wrap, isFalse);
+    expect(tester.widget<SwitchRow>(find.byType(SwitchRow)).value, isFalse);
     expect(store.wrap, isFalse);
     await teardown(tester);
   });
@@ -367,7 +369,9 @@ void main() {
 
     expect(transport.sources.first, 'recent_unwrapped');
     expect(terminalRow('joined line from herdr'), findsOneWidget);
-    expect(find.byTooltip('Show exact terminal layout'), findsOneWidget);
+    await tester.tap(find.byTooltip('Pane options'));
+    await _settle(tester);
+    expect(tester.widget<SwitchRow>(find.byType(SwitchRow)).value, isTrue);
     await teardown(tester);
   });
 
@@ -521,11 +525,11 @@ void main() {
 
     testWidgets('says why it cannot be used while offline', (tester) async {
       await pumpPane(tester);
-      expect(find.text('Message claude…'), findsOneWidget);
+      expect(find.text('Message Claude Code…'), findsOneWidget);
 
       await goOffline(tester);
 
-      expect(find.text('Offline — reconnecting'), findsOneWidget);
+      expect(find.text('Offline · reconnecting'), findsOneWidget);
       expect(tester.widget<TextField>(composer()).enabled, isFalse);
       await teardown(tester);
     });
@@ -1197,7 +1201,7 @@ void main() {
 
         await tapText(tester, 'listening on', column: 16);
 
-        expect(find.textContaining("HTTPS on the machine can't be opened on the phone yet."), findsOneWidget);
+        expect(find.textContaining('HTTPS on the machine can’t be opened on the phone yet.'), findsOneWidget);
         expect(find.text('Open on phone'), findsNothing);
         expect(find.text('Open in browser'), findsNothing);
         expect(find.text('Copy link'), findsOneWidget);
