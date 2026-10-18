@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/streaming/flush_scheduler.dart';
-import 'package:herdr_mobile/ui/core/frame_flush.dart';
+import 'package:herdr_mobile/ui/support/frame_flush.dart';
 
 void main() {
   testWidgets('nextFrame runs once, at the start of the next frame, not before', (tester) async {

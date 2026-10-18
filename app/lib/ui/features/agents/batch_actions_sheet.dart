@@ -7,13 +7,7 @@ import '../../../data/models/herdr_models.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/batch_actions.dart';
 import '../../../data/repositories/fleet_repository.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/glyphs.dart';
-import '../../core/rows.dart';
-import '../../core/toast.dart';
-import '../../core/tokens.dart';
-import '../settings/app_switch.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'agents_grouping.dart' show AgentsOverview;
 import 'board_selection.dart';
 

@@ -5,12 +5,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/models/web_bridge.dart';
 import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/web_preview.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/open_link.dart';
-import '../../core/theme.dart';
-import '../../core/toast.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../support/open_link.dart';
 
 /// What a tapped web link offers: the whole address (selectable, so nothing
 /// is hidden behind a shortened label), then open or copy.

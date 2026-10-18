@@ -8,7 +8,7 @@ import 'package:herdr_mobile/data/models/web_bridge.dart';
 import 'package:herdr_mobile/data/repositories/machine_connection.dart';
 import 'package:herdr_mobile/data/services/herdr_api.dart';
 import 'package:herdr_mobile/data/services/herdr_transport.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/files/file_viewer_screen.dart';
 import 'package:url_launcher_platform_interface/link.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';

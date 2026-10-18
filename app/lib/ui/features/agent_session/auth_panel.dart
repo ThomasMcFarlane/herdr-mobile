@@ -8,15 +8,12 @@ import '../../../data/acp/auth_needed.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/session_launcher.dart';
-import '../../core/controls.dart';
-import '../../core/status_panel.dart';
-import '../../core/theme.dart';
-import '../../core/toast.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import '../create/session_start_support.dart' show describeLaunchFailure;
 import '../files/file_widgets.dart' show codeStyle;
 import '../agents/agent_navigation.dart';
 import '../../../data/repositories/agent_screens.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// Opens pane [paneId] of [machine] as a terminal.
 typedef OpenPane = Future<void> Function(BuildContext context, MachineConnection machine, String paneId);

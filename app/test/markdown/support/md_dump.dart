@@ -4,7 +4,7 @@
 /// (`tool/md-bench`, which has `herdr_mobile` as a path dependency) compiles it.
 library;
 
-import 'package:herdr_mobile/ui/core/markdown/md_document.dart';
+import 'package:herdr_mobile/ui/render/markdown/md_document.dart';
 
 import 'dump_writer.dart';
 

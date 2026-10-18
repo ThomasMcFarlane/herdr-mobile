@@ -3,7 +3,7 @@ import '../../../data/acp/session_state.dart';
 import '../../../data/acp/subagents/subagent_run.dart';
 import '../../../data/acp/turns/plain_text.dart' show safeEnd;
 import 'status_line.dart' show elapsedLabel;
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// How a subagent shows itself: one tone per state the person can tell apart.
 /// The glyph, the colour of the live line and the order in the roster all

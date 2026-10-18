@@ -6,14 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../../data/models/remote_file.dart';
 import '../../../data/repositories/machine_connection.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/rows.dart';
-import '../../core/theme.dart';
-import '../../core/toast.dart';
-import '../../core/tokens.dart';
-import '../settings/app_switch.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'file_browser_view_model.dart';
 import 'file_format.dart';
 import 'file_listing.dart';

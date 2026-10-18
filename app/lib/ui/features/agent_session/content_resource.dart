@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/acp/acp_models.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import '../files/file_format.dart';
 import '../files/file_widgets.dart' show copyToClipboard, fileIconForName;
 import 'code_panel.dart';

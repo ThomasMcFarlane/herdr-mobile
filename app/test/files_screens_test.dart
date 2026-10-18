@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/remote_file.dart';
 import 'package:herdr_mobile/data/repositories/machine_connection.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/files/binary_view.dart';
 import 'package:herdr_mobile/ui/features/files/code_view.dart';
 import 'package:herdr_mobile/ui/features/files/file_browser_screen.dart';
@@ -431,13 +431,13 @@ void main() {
       await _pump(tester, _viewer(fs, '/home/dev/herdr-mobile/pubspec.yaml'));
       await tester.pump();
 
-      expect(find.byType(FileSkeleton), findsOneWidget);
+      expect(find.byType(Skeleton), findsOneWidget);
       expect(find.byType(CodeView), findsNothing);
 
       fs.gate!.complete();
       await _settle(tester);
 
-      expect(find.byType(FileSkeleton), findsNothing);
+      expect(find.byType(Skeleton), findsNothing);
       expect(find.text('name: herdr_mobile'), findsOneWidget);
       expect(find.text('1'), findsOneWidget);
       expect(find.text('2'), findsOneWidget);

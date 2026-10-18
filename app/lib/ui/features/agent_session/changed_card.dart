@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../../data/acp/turns/turns.dart';
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'log_atoms.dart';
 import 'tool_rows.dart' show DiffPanel;
 import 'transcript_rows.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// The Changed card of a finished turn, drawn as rows of the transcript list
 /// (the head, one row per file, `N more`) that share one quiet panel, so a

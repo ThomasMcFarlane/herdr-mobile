@@ -15,8 +15,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:herdr_mobile/ui/core/markdown/markdown.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/render/markdown/markdown.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 import '../support/shot.dart' show loadAppFonts;
 import 'support/render_corpus.dart';

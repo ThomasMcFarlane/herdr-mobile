@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:herdr_mobile/ui/core/hold_confirm.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// How full the fill of the [chip]th hold chip on screen is (0..1).
 double fillOf(WidgetTester tester, {int chip = 0}) {

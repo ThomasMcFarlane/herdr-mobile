@@ -7,10 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/machine_connection.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
-import '../../core/toast.dart';
-import '../../core/tokens.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// Marks the finished state of [paneId] reviewed and says so with an Undo
 /// toast. False (and quiet) when there was nothing to review: the pane is not

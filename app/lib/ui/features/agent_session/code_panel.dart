@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../data/acp/turns/plain_text.dart' show safeEnd;
-import '../../core/markdown/md_more_row.dart';
-import '../../core/theme.dart';
-import 'visible_text.dart';
+import '../../render/markdown/md_more_row.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../render/visible_text.dart';
 
 /// Longest text a panel works on. Anything beyond is cut (the end for a
 /// panel that shows the end, else the start) and says so, so one runaway

@@ -13,20 +13,15 @@ import '../../../data/models/web_bridge.dart' show sensitiveServiceOf;
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/machine_connection.dart' show LinkState;
 import '../../../data/repositories/web_preview.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/glyphs.dart';
-import '../../core/open_link.dart';
-import '../../core/rows.dart';
-import '../../core/theme.dart';
-import '../../core/toast.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../support/open_link.dart';
 import '../files/file_format.dart' show formatModified;
 import '../files/files_navigation.dart' show machineSupportsFiles, openRemoteFile;
 import '../files/photo_files.dart' show photoRoute;
 import '../files/photo_grid.dart' show PhotoThumbFace;
 import '../files/photo_thumbs.dart' show PhotoThumbs;
 import 'session_select.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// What the sheet and the chip read from a session: the servers and pages, the
 /// background tasks that say whether a server still runs, and whether anything

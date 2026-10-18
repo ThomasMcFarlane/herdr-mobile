@@ -4,10 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/acp/acp_models.dart';
 import '../../../data/models/herdr_models.dart' show AgentStatus;
 import '../../../data/repositories/agent_session.dart';
-import '../../core/controls.dart';
-import '../../core/glyphs.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'session_select.dart';
 
 const _listHeight = 216.0;

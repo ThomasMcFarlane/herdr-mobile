@@ -7,19 +7,14 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/acp/background/background_work.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/observed_session.dart' show ObservedAgentSession;
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/hold_confirm.dart';
-import '../../core/motion.dart';
-import '../../core/step_clock.dart';
-import '../../core/theme.dart';
-import '../../core/toast.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../support/step_clock.dart';
 import 'agent_session_navigation.dart';
 import 'background_format.dart';
 import 'permission_dock.dart' show confirmWindow;
 import 'session_select.dart';
 import 'subagent_roster.dart' show showSubagents;
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// How long `Stopping…` waits for the task to leave the running set before it
 /// says it could not confirm.

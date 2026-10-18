@@ -8,17 +8,14 @@ import '../../../data/acp/session_state.dart';
 import '../../../data/models/herdr_models.dart' show AgentStatus;
 import '../../../data/acp/turns/turns.dart';
 import '../../../data/acp/turns/plain_text.dart' show safeEnd;
-import '../../core/controls.dart';
-import '../../core/glyphs.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import '../files/file_widgets.dart' show copyToClipboard;
 import 'code_panel.dart';
 import 'content_blocks.dart';
 import 'content_locations.dart';
 import 'diff_lines.dart';
 import 'transcript_rows.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 import 'log_atoms.dart';
 
 /// Lines an opened call shows of the text it returned that is not command

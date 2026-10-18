@@ -12,7 +12,7 @@ import '../photos/photo_item.dart';
 import '../photos/photo_viewer.dart';
 import 'content_image_cache.dart';
 import 'content_target.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// A picture in a conversation and where it came from.
 class ThreadPhoto {

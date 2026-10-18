@@ -21,8 +21,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/acp/agent_host.dart';
 import 'package:herdr_mobile/data/acp/past_session.dart';
 import 'package:herdr_mobile/data/repositories/agent_session.dart';
-import 'package:herdr_mobile/ui/core/controls.dart';
-import 'package:herdr_mobile/ui/core/tap_guard.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import 'package:herdr_mobile/ui/support/tap_guard.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
 
 import '../support/fake_agent_session.dart';

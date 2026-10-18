@@ -6,11 +6,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/acp/acp_models.dart';
 import 'package:herdr_mobile/data/acp/session_state.dart';
 import 'package:herdr_mobile/data/acp/turns/plain_text.dart' show safeEnd;
-import 'package:herdr_mobile/ui/core/markdown/markdown.dart' show proseText;
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/render/markdown/markdown.dart' show proseText;
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/code_panel.dart' show clipLine, textLines;
 import 'package:herdr_mobile/ui/features/agent_session/transcript_view.dart';
-import 'package:herdr_mobile/ui/features/agent_session/visible_text.dart';
+import 'package:herdr_mobile/ui/render/visible_text.dart';
 
 import '../support/fake_agent_session.dart';
 

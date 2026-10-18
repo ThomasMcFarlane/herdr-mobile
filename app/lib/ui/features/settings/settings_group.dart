@@ -4,11 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show RenderAbstractViewport;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../core/chrome.dart';
-import '../../core/glyphs.dart';
-import '../../core/motion.dart';
-import '../../core/rows.dart';
-import '../../core/tokens.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// One group of Settings: a row that says what the group is set to now, and
 /// opens in place to show its controls. The page keeps one group open, so it

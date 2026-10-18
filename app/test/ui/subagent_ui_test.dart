@@ -5,8 +5,7 @@ import 'package:herdr_mobile/data/repositories/agent_session.dart' show Subagent
 import 'package:herdr_mobile/data/acp/acp_models.dart';
 import 'package:herdr_mobile/data/acp/session_state.dart';
 import 'package:herdr_mobile/data/acp/subagents/subagent_run.dart';
-import 'package:herdr_mobile/ui/core/controls.dart' show AppChip;
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/permission_dock.dart';
 import 'package:herdr_mobile/ui/features/agent_session/session_bar.dart';
 import 'package:herdr_mobile/ui/features/agent_session/session_overview.dart';

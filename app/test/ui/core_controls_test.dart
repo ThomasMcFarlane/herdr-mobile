@@ -4,12 +4,7 @@ import 'dart:ui' show Tristate;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/herdr_models.dart';
-import 'package:herdr_mobile/ui/core/chrome.dart';
-import 'package:herdr_mobile/ui/core/controls.dart';
-import 'package:herdr_mobile/ui/core/glyphs.dart';
-import 'package:herdr_mobile/ui/core/rows.dart';
-import 'package:herdr_mobile/ui/core/status_panel.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 Future<void> pumpCore(
   WidgetTester tester,

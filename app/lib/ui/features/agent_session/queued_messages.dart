@@ -5,12 +5,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/acp/prompt_queue.dart';
 import '../../../data/repositories/agent_session.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'session_select.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// Rows shown before "N more queued".
 const queuedRowsShown = 3;

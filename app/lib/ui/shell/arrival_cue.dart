@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-import '../core/motion.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// One haptic when another agent starts waiting for the person: a key entered
 /// [needsYou] (reachable agents that need an answer, terminal panes and

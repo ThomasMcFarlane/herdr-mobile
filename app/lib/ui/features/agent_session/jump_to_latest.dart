@@ -2,9 +2,7 @@ import 'package:flutter/material.dart' show Tooltip;
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// The way back to the end of the conversation, shown while the reader is
 /// away from it: a round chevron, or, when blocks of the answer have been

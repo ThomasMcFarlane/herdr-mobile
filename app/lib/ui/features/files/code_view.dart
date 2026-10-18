@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../data/acp/turns/plain_text.dart' show safeEnd;
-import '../../core/tokens.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'file_widgets.dart';
 import 'text_document.dart';
 

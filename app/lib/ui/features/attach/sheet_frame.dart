@@ -4,9 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 
-import '../../core/chrome.dart' show FloatingBar;
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// Where the sheet is: a translation `offset` from its full-height position
 /// (0 = full, [restHalf] = half height, [dismissAt] = off the screen).

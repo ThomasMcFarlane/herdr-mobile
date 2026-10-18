@@ -26,7 +26,7 @@ import 'package:herdr_mobile/data/models/machine_profile.dart';
 import 'package:herdr_mobile/data/models/remote_file.dart';
 import 'package:herdr_mobile/data/repositories/machine_connection.dart';
 import 'package:herdr_mobile/data/services/herdr_api.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/session_bar.dart';
 import 'package:herdr_mobile/ui/features/files/file_viewer_screen.dart';
 import 'package:herdr_mobile/ui/features/pane/link_sheet.dart';

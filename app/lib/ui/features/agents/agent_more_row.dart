@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../core/controls.dart';
-import '../../core/tokens.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'agents_grouping.dart';
 
 /// The row that stands for the rows a section folds away ("22 more idle", the

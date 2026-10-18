@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/herdr_models.dart';
 import 'package:herdr_mobile/data/services/herdr_api.dart' show ReadSource;
 import 'package:herdr_mobile/data/services/herdr_transport.dart';
-import 'package:herdr_mobile/ui/core/terminal_view.dart' show TerminalTop;
+import 'package:herdr_mobile/ui/render/terminal/terminal_view.dart' show TerminalTop;
 import 'package:herdr_mobile/ui/features/pane/pane_view_model.dart';
 import 'package:herdr_mobile/ui/features/pane/scrollback_history.dart';
 

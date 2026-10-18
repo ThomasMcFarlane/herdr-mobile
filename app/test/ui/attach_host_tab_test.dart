@@ -10,7 +10,7 @@ import 'dart:ui' show Tristate;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/remote_file.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/attach/host_tab.dart';
 import 'package:herdr_mobile/ui/features/attach/selection_circle.dart';
 import 'package:herdr_mobile/ui/features/attach/sheet_frame.dart';

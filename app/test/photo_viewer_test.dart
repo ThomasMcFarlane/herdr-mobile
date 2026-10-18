@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/remote_file.dart';
 import 'package:herdr_mobile/data/services/photo_export.dart';
 import 'package:herdr_mobile/data/services/remote_files.dart';
-import 'package:herdr_mobile/ui/core/controls.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/photos/photo_item.dart';
 import 'package:herdr_mobile/ui/features/photos/photo_math.dart';
 import 'package:herdr_mobile/ui/features/photos/photo_pictures.dart';

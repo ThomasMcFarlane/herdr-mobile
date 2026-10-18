@@ -4,7 +4,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/machine_profile.dart';
 import 'package:herdr_mobile/data/models/pane_preview.dart';
-import 'package:herdr_mobile/ui/core/chrome.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_card.dart';
 
 import '../support/shot.dart' show loadAppFonts;

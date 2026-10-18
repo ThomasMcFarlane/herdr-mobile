@@ -4,8 +4,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/acp/acp_models.dart' show MessageRole;
 import '../../../data/acp/session_state.dart';
-import '../../core/chrome.dart';
-import '../../core/markdown/markdown.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../render/markdown/markdown.dart';
 import '../files/file_widgets.dart' show copyToClipboard;
 
 /// Copying a message (docs/DESIGN.md "Copying").

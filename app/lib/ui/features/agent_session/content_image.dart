@@ -8,15 +8,13 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/acp/acp_models.dart';
 import '../../../data/observed/log_picture.dart';
 import '../../../data/services/disk_cache.dart';
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import '../../../data/services/image_decode.dart' show DecodedImage;
 import '../files/file_format.dart';
 import 'content_chip.dart';
 import 'content_image_cache.dart';
 import 'photo_thread.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 import 'content_target.dart';
 
 /// Tallest an inline picture is drawn, in dp.

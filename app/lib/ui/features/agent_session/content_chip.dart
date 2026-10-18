@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show OverflowBoxFit;
 
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
-import 'visible_text.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../render/visible_text.dart';
 
 /// One quiet line for a piece of content that is not text: an icon, what it
 /// is, where it lives, and (when something could not be shown) why in a

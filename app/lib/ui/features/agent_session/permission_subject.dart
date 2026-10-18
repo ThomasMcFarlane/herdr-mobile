@@ -3,7 +3,7 @@ import 'dart:convert';
 import '../../../data/acp/acp_models.dart';
 import '../../../data/repositories/command_risk.dart';
 import '../../../data/repositories/prompt_detector.dart' show longCommand;
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// Most characters of a command, input or path list that are drawn. What is
 /// cut is counted and named in the text itself, never dropped silently.

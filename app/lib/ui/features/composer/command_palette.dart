@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/models/slash_command.dart';
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'command_model.dart';
 
 /// Two lines of text: the row grows with the text size.

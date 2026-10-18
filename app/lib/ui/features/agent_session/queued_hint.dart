@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/acp/prompt_queue.dart' show SendDelivery;
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// What happens to the message in the field if it is sent now, said before it
 /// is sent: it waits for the turn to end (`pi`, or anything already waiting) or

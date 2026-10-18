@@ -5,7 +5,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/services/thumb_cache.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/attach/gallery_model.dart';
 import 'package:herdr_mobile/ui/features/attach/gallery_preview.dart';
 import 'package:herdr_mobile/ui/features/attach/tray.dart';

@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import '../../../data/acp/acp_models.dart';
 import '../../../data/acp/session_state.dart';
 import '../../../data/acp/turns/turns.dart';
-import '../../core/markdown/markdown.dart';
+import '../../render/markdown/markdown.dart';
 
 /// What a [PlanRow] shows.
 enum RowKind {

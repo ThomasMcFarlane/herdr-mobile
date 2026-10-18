@@ -7,7 +7,7 @@ import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/session_launcher.dart';
 import '../../../data/services/herdr_api.dart';
 import '../../../data/services/herdr_transport.dart';
-import '../../core/toast.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// Most working directories offered as one-tap suggestions.
 const maxRecentFolders = 8;

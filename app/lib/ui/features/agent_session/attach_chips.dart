@@ -5,15 +5,13 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import '../attach/gallery_thumb.dart';
 import '../files/file_format.dart';
 import '../photos/photo_item.dart';
 import '../photos/photo_viewer.dart';
 import 'attach_model.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 const _thumb = 32.0;
 

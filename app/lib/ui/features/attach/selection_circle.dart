@@ -2,9 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// The round selection mark of a tile or a row: an empty ring, or, when
 /// picked, the accent filled with the pick's place (1, 2, 3...).

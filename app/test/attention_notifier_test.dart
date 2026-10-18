@@ -19,8 +19,8 @@ import 'package:herdr_mobile/data/repositories/notification_settings.dart';
 import 'package:herdr_mobile/data/services/herdr_api.dart';
 import 'package:herdr_mobile/data/services/herdr_transport.dart' show HerdrTransportException;
 import 'package:herdr_mobile/data/services/notifier.dart';
-import 'package:herdr_mobile/ui/core/deep_link.dart';
-import 'package:herdr_mobile/ui/features/agent_session/visible_text.dart';
+import 'package:herdr_mobile/ui/support/deep_link.dart';
+import 'package:herdr_mobile/ui/render/visible_text.dart';
 
 import 'support/fake_agent_session.dart';
 import 'support/fake_network.dart';

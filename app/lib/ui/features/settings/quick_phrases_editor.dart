@@ -7,13 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../../../data/repositories/quick_phrases.dart';
 import '../../../data/repositories/sent_phrases.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/form_sections.dart';
-import '../../core/motion.dart';
-import '../../core/rows.dart';
-import '../../core/tokens.dart';
-import 'app_switch.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// Settings > Agents > Quick phrases: its own page, because the list grows
 /// with the person (up to [QuickPhrases.maxCount]) and would stretch the group

@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/remote_file.dart';
 import 'package:herdr_mobile/data/repositories/machine_connection.dart';
 import 'package:herdr_mobile/data/repositories/path_finder.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/files/file_viewer_screen.dart';
 import 'package:herdr_mobile/ui/features/files/file_widgets.dart';
 import 'package:herdr_mobile/ui/features/files/files_navigation.dart';

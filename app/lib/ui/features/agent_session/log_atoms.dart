@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// Added lines as TEXT: >= 4.5:1 on the page, on `fill` and on `fillPressed`
 /// (the theme's `done` is a fill colour for shapes and reaches 4.2:1 on paper
@@ -58,22 +56,3 @@ class DiffStats extends StatelessWidget {
   }
 }
 
-/// The small disclosure caret of a fold: points right when folded, down when
-/// open, turning over [Motion.expand] (a rotation, nothing else moves). Still
-/// at rest once it has turned; reduced motion turns it at once.
-class Caret extends StatelessWidget {
-  const Caret({super.key, required this.open, this.size = 14});
-
-  final bool open;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) => ExcludeSemantics(
-    child: AnimatedRotation(
-      turns: open ? 0.25 : 0,
-      duration: Motion.reduced(context) ? Duration.zero : Motion.expand,
-      curve: Motion.easeOut,
-      child: Icon(LucideIcons.chevronRight, size: size, color: context.ds.textTertiary),
-    ),
-  );
-}

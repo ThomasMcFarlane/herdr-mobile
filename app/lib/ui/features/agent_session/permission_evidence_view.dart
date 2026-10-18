@@ -4,13 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/decision/permission_evidence.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/markdown/markdown.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../render/markdown/markdown.dart';
 import 'code_panel.dart' show clipLine;
 import 'diff_lines.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// What a decision shows of what it approves:
 /// the agent's last sentence, the edits as a diff, the plan as Markdown. The

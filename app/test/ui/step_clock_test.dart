@@ -4,9 +4,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/herdr_models.dart';
-import 'package:herdr_mobile/ui/core/glyphs.dart';
-import 'package:herdr_mobile/ui/core/step_clock.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import 'package:herdr_mobile/ui/support/step_clock.dart';
 
 Future<void> _pump(WidgetTester tester, Widget child) => tester.pumpWidget(
       MaterialApp(

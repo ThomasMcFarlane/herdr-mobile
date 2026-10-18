@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/acp/acp_models.dart';
-import '../../core/controls.dart';
-import '../../core/markdown/markdown.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../render/markdown/markdown.dart';
 import '../files/file_viewer_screen.dart' show shortenFront;
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// Locations listed before `N more`.
 const locationsShown = 4;

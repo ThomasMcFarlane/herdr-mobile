@@ -1,8 +1,8 @@
 import '../acp/acp_models.dart';
 import '../models/pane_preview.dart';
 import '../observed/observed_contracts.dart';
-import '../repositories/command_risk.dart' show grantsStandingPermission;
-import '../repositories/prompt_detector.dart' show isNegativeReply;
+import 'command_risk.dart' show grantsStandingPermission;
+import 'prompt_detector.dart' show isNegativeReply;
 
 /// The value of the choice that stands for "something else" in a question's
 /// form (the agent's question tool always offers it).

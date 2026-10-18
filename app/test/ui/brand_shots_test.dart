@@ -17,10 +17,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:herdr_mobile/ui/core/brand_mark.dart';
-import 'package:herdr_mobile/ui/core/chrome.dart';
-import 'package:herdr_mobile/ui/core/controls.dart';
-import 'package:herdr_mobile/ui/core/rows.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../support/shot.dart';

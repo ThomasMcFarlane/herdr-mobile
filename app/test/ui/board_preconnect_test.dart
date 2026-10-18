@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/machine_profile.dart';
 import 'package:herdr_mobile/data/repositories/agent_session.dart';
 import 'package:herdr_mobile/data/repositories/agent_session_repository.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_session_rows.dart';
 import 'package:herdr_mobile/ui/shell/home_shell.dart';

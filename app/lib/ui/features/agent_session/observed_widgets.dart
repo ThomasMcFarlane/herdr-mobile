@@ -5,13 +5,11 @@ import 'package:flutter/material.dart';
 
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/observed_session.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/step_clock.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../support/step_clock.dart';
 import 'agent_session_navigation.dart';
 import 'session_select.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// What the pane shows right now, under the transcript, while the agent works
 /// and its log is quiet (the model is writing its next message, which the log

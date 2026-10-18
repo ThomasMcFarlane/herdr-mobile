@@ -11,12 +11,8 @@ import '../../../data/acp/turns/turns.dart';
 import '../../../data/decision/mode_danger.dart';
 import '../../../data/decision/session_chips.dart';
 import '../../../data/repositories/agent_session.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/glyphs.dart';
-import '../../core/motion.dart';
-import '../../core/step_clock.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../support/step_clock.dart';
 import 'log_atoms.dart';
 import 'observed_widgets.dart' show WorkingLabel;
 import 'permission_subject.dart';
@@ -28,7 +24,7 @@ import 'subagent_format.dart';
 import 'subagent_roster.dart';
 import 'transcript_rows.dart' show allKey;
 import 'changed_card.dart' show ChangedFileRow;
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// The orchestration view of one agent without scrolling its transcript: a
 /// sheet over the session.

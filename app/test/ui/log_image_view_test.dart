@@ -8,7 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/observed/log_picture.dart';
 import 'package:herdr_mobile/data/services/image_decode.dart' show DecodedImage;
 import 'package:herdr_mobile/data/services/disk_cache.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/content_image.dart';
 import 'package:herdr_mobile/ui/features/agent_session/content_image_cache.dart';
 import 'package:herdr_mobile/ui/features/agent_session/photo_thread.dart';

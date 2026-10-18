@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/acp/acp_models.dart';
 import 'package:herdr_mobile/data/acp/session_state.dart';
-import 'package:herdr_mobile/ui/core/tap_guard.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/support/tap_guard.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
 import 'package:herdr_mobile/ui/features/agent_session/question_form.dart';
 import 'package:herdr_mobile/ui/features/agent_session/tool_rows.dart';
 import 'package:herdr_mobile/ui/features/agent_session/transcript_rows.dart';
-import 'package:herdr_mobile/ui/features/agent_session/visible_text.dart';
+import 'package:herdr_mobile/ui/render/visible_text.dart';
 
 import '../support/fake_agent_session.dart';
 

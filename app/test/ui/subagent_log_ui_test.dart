@@ -6,8 +6,7 @@ import 'package:herdr_mobile/data/acp/session_state.dart';
 import 'package:herdr_mobile/data/acp/subagents/subagent_overlay.dart';
 import 'package:herdr_mobile/data/acp/subagents/subagent_run.dart';
 import 'package:herdr_mobile/data/observed/omp_log_mapper.dart';
-import 'package:herdr_mobile/ui/core/controls.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/subagent_screen.dart';
 import 'package:herdr_mobile/ui/features/agent_session/transcript_view.dart';
 

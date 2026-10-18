@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/scheduler.dart';
 
-import '../../core/motion.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'photo_math.dart';
 import 'photo_pictures.dart';
 import 'photo_viewer_view_model.dart';

@@ -4,9 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/services/dictation.dart';
-import '../../core/chrome.dart';
-import '../../core/tokens.dart';
-import '../../core/toast.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// The languages offered, from what the phone's speech service has: English and
 /// Vietnamese always have a row (dimmed, with the reason, when the phone lacks

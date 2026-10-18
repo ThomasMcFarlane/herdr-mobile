@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'transcript_rows.dart';
 
 /// The line above the first thing the person has not seen: a hairline, `6

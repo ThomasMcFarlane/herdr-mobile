@@ -24,8 +24,8 @@ import 'package:herdr_mobile/data/observed/observed_contracts.dart' show Subagen
 import 'package:herdr_mobile/data/repositories/agent_session.dart';
 import 'package:herdr_mobile/data/acp/session_state.dart' show AgentSessionState;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:herdr_mobile/ui/core/tap_guard.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/support/tap_guard.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
 import 'package:herdr_mobile/ui/features/agent_session/background_strip.dart';
 

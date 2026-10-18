@@ -4,14 +4,11 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/acp/acp_models.dart';
 import '../../../data/acp/session_state.dart' show TranscriptItem;
 import '../../../data/decision/permission_evidence.dart';
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/step_clock.dart';
-import '../../core/tap_guard.dart';
-import '../../core/theme.dart';
-import '../settings/app_switch.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../support/step_clock.dart';
+import '../../support/tap_guard.dart';
 import 'permission_evidence_view.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// The names of the form fields the agent marked secret (Codex's
 /// `_meta.codex.isSecret`, a bare `_meta.isSecret`, or a password format).

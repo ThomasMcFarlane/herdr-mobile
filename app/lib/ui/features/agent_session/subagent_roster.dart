@@ -6,9 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/acp/subagents/subagent_run.dart';
 import '../../../data/repositories/agent_session.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'agent_session_navigation.dart';
 import 'observed_widgets.dart' show showObservedSubagents;
 import 'session_select.dart';

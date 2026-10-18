@@ -5,10 +5,10 @@ import '../../../data/acp/session_state.dart';
 import '../../../data/acp/turns/turns.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/acp/background/background_work.dart' show BackgroundWork;
-import '../../core/step_clock.dart';
-import '../../core/theme.dart';
+import '../../support/step_clock.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'background_format.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// The clock the status line and the subagent cards read (tests replace it).
 DateTime Function() statusNow = DateTime.now;

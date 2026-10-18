@@ -9,14 +9,8 @@ import 'package:provider/provider.dart';
 import '../../../data/models/remote_file.dart';
 import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/web_preview.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/open_link.dart';
-import '../../core/rows.dart';
-import '../../core/status_panel.dart';
-import '../../core/theme.dart';
-import '../../core/toast.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../support/open_link.dart';
 import 'binary_view.dart';
 import 'code_view.dart';
 import 'file_format.dart';
@@ -378,7 +372,7 @@ class _Body extends StatelessWidget {
   Widget build(BuildContext context) {
     switch (vm.phase) {
       case ViewerPhase.loading:
-        return const FileSkeleton();
+        return const Skeleton();
       case ViewerPhase.failed:
         return ListView(
           padding: EdgeInsets.fromLTRB(
@@ -406,7 +400,7 @@ class _Body extends StatelessWidget {
           FileKind.text || FileKind.json => _TextBody(vm: vm, doc: vm.document!),
           FileKind.markdown => _TextBody(vm: vm, doc: vm.document!, rendered: !vm.showSource),
           // Handed to the photo viewer in the same frame (see _handOverPicture).
-          FileKind.image => const FileSkeleton(),
+          FileKind.image => const Skeleton(),
           FileKind.svg || FileKind.pdf || FileKind.binary => BinaryView(
               model: vm,
               onCopyPath: () => copyToClipboard(context, vm.stat.path, 'Path copied'),

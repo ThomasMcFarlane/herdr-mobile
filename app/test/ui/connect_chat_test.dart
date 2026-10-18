@@ -2,9 +2,7 @@
 // after the person confirms it, and what herdr answers is told.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:herdr_mobile/ui/core/controls.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
-import 'package:herdr_mobile/ui/core/toast.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/pane/connect_chat.dart';
 
 import '../support/create_harness.dart';

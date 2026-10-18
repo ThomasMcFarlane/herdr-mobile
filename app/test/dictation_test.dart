@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/services/dictation.dart';
-import 'package:herdr_mobile/ui/core/tap_guard.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/support/tap_guard.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
 import 'package:herdr_mobile/ui/features/dictation/dictation_language_sheet.dart';
 import 'package:herdr_mobile/ui/features/dictation/dictation_session.dart';

@@ -3,14 +3,11 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/acp/session_state.dart';
 import '../../../data/acp/turns/turns.dart';
-import '../../core/controls.dart';
-import '../../core/markdown/markdown.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../render/markdown/markdown.dart';
 import 'code_panel.dart';
-import 'log_atoms.dart';
 import 'transcript_rows.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// The folded work log of a finished turn, one line:
 /// `▸ Worked 42s · 3 files · 4 commands · 1 failed`. Made of counts, times and

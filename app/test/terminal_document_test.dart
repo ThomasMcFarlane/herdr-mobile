@@ -1,10 +1,9 @@
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:herdr_mobile/ui/core/ansi.dart';
-import 'package:herdr_mobile/ui/core/line_wrap.dart';
-import 'package:herdr_mobile/ui/core/terminal_document.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import 'package:herdr_mobile/ui/render/terminal/line_wrap.dart';
+import 'package:herdr_mobile/ui/render/terminal/terminal_document.dart';
 import 'package:herdr_mobile/ui/features/pane/scrollback_history.dart';
 
 const _esc = '\x1b';

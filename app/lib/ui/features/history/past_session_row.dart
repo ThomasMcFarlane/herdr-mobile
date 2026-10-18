@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/acp/past_session.dart';
-import '../../core/controls.dart';
-import '../../core/rows.dart';
-import '../../core/tokens.dart';
-import '../agent_session/visible_text.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../render/visible_text.dart';
 import '../files/file_format.dart' show formatModified;
 
 /// `Untitled session`, or the agent's title.

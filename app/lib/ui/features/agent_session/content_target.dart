@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 
-import '../../core/markdown/markdown.dart';
-import '../../core/terminal_links.dart' show looksLikeSlashCommand;
+import '../../render/markdown/markdown.dart';
+import '../../render/terminal/terminal_links.dart' show looksLikeSlashCommand;
 
 /// Where a link or uri from an agent leads, decided without touching the
 /// network or the host.

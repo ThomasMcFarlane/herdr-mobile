@@ -36,12 +36,10 @@ import 'data/services/snapshot_cache.dart';
 import 'data/services/ssh_agent_host.dart';
 import 'data/services/ssh_log_source.dart';
 import 'data/services/transcript_cache.dart';
-import 'ui/core/frame_flush.dart';
-import 'ui/features/agent_session/visible_text.dart' show visibleText;
+import 'ui/support/frame_flush.dart';
+import 'ui/render/visible_text.dart' show visibleText;
 import 'data/services/system_clipboard.dart';
-import 'ui/core/controls.dart';
-import 'ui/core/status_panel.dart';
-import 'ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// Runs the app: boots it and shows it with [show]. When booting throws (a
 /// store that cannot be read at all, a platform plugin that fails) the person

@@ -5,7 +5,7 @@ import 'package:herdr_mobile/data/acp/acp_models.dart';
 import 'package:herdr_mobile/data/acp/turns/turns.dart';
 import 'package:herdr_mobile/data/decision/plain_text.dart';
 import 'package:herdr_mobile/data/repositories/pane_previews.dart' show previewRows;
-import 'package:herdr_mobile/ui/features/agent_session/visible_text.dart';
+import 'package:herdr_mobile/ui/render/visible_text.dart';
 
 void main() {
   group('stripAnsi', () {

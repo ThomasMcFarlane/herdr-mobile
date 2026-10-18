@@ -10,19 +10,15 @@ import '../../../data/acp/subagents/subagent_run.dart' show SubagentOrigin;
 import '../../../data/decision/permission_evidence.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/command_risk.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/hold_confirm.dart';
-import '../../core/motion.dart';
-import '../../core/tap_guard.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../support/tap_guard.dart';
 import 'agent_md_scope.dart';
 import 'permission_evidence_view.dart';
 import 'permission_subject.dart';
 import 'question_form.dart';
 import 'session_select.dart';
 import 'tool_rows.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// The agent's request that waits for the person, docked above the composer:
 /// the first permission (they come before questions), else the first

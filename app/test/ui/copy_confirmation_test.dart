@@ -4,8 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/services/system_clipboard.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
-import 'package:herdr_mobile/ui/core/toast.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/files/file_widgets.dart';
 
 Future<void> pump(WidgetTester tester, String done) async {

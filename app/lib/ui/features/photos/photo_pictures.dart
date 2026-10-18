@@ -3,8 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
-import '../../core/controls.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import '../files/file_format.dart';
 import 'photo_math.dart';
 import 'photo_viewer_view_model.dart';

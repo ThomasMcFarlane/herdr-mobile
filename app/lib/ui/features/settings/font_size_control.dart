@@ -6,9 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/repositories/terminal_settings.dart';
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// The terminal font size: a stepper (smaller, the size, larger) over a sample
 /// line drawn in the terminal font at that size.

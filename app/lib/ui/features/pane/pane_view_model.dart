@@ -7,7 +7,7 @@ import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/terminal_prompt.dart';
 import '../../../data/services/herdr_api.dart' show ReadSource;
 import '../../../data/services/herdr_transport.dart';
-import '../../core/terminal_view.dart' show TerminalTop;
+import '../../render/terminal/terminal_view.dart' show TerminalTop;
 import 'scrollback_history.dart';
 
 /// Rows requested by the live tail: cheap enough to read every 120 ms.

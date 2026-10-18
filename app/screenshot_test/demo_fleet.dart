@@ -101,7 +101,7 @@ FakeFs _studioFs(Uint8List chart) {
     modified: now.subtract(const Duration(hours: 2)),
   );
   file('$projectDir/services/ledger/repository_test.go', 4100, const Duration(hours: 2));
-  file('$studioHome/code/mobile-app/lib/ui/core/chrome.dart', 9100, const Duration(minutes: 20));
+  file('$studioHome/code/mobile-app/lib/ui/core/bottom_stack.dart', 9100, const Duration(minutes: 20));
   return fs;
 }
 

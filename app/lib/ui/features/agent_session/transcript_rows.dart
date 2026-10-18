@@ -4,13 +4,12 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/acp/acp_models.dart';
 import '../../../data/acp/session_state.dart';
 import '../../../data/acp/turns/plain_text.dart' show safeEnd;
-import '../../core/controls.dart';
-import '../../core/markdown/markdown.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../render/markdown/markdown.dart';
 import 'code_panel.dart';
 import 'content_blocks.dart';
 import 'content_copy.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// Called with the row key each time a transcript row's `build` runs. Tests
 /// use it to prove a streaming answer rebuilds only the rows that changed.

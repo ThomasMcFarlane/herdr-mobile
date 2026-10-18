@@ -3,10 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../core/controls.dart';
-import '../../core/glyphs.dart';
-import '../../core/rows.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'file_format.dart';
 import 'file_kind.dart';
 import 'file_viewer_view_model.dart';

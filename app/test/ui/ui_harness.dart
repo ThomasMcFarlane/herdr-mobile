@@ -13,7 +13,7 @@ import 'package:herdr_mobile/data/repositories/notification_settings.dart';
 import 'package:herdr_mobile/data/repositories/pane_previews.dart';
 import 'package:herdr_mobile/data/services/herdr_api.dart';
 import 'package:herdr_mobile/data/services/notifier.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/machines/machine_form_view_model.dart' show TransportFactory;
 import 'package:herdr_mobile/ui/shell/home_shell.dart';
 import 'package:provider/provider.dart';

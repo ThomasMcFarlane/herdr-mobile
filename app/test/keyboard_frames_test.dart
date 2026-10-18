@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:herdr_mobile/ui/core/keyboard_frames.dart';
+import 'package:herdr_mobile/ui/support/keyboard_frames.dart';
 
 void main() {
   testWidgets(

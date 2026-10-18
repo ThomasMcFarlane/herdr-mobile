@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/remote_file.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/files/file_browser_screen.dart';
 import 'package:herdr_mobile/ui/features/files/file_viewer_screen.dart';
 import 'package:herdr_mobile/ui/features/files/files_navigation.dart';

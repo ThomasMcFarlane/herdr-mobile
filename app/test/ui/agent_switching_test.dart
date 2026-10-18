@@ -12,7 +12,7 @@ import 'package:herdr_mobile/data/repositories/agent_screens.dart';
 import 'package:herdr_mobile/data/repositories/agent_session.dart';
 import 'package:herdr_mobile/data/repositories/observed_sessions.dart';
 import 'package:herdr_mobile/data/repositories/pane_previews.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
 import 'package:herdr_mobile/ui/features/agent_session/transcript_view.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_navigation.dart';

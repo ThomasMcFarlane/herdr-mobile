@@ -1,4 +1,4 @@
-import 'package:herdr_mobile/ui/core/markdown/highlight/highlight.dart';
+import 'package:herdr_mobile/ui/render/markdown/highlight/highlight.dart';
 
 /// A (kind, source text) pair of a token.
 typedef Tok = (TokenKind, String);

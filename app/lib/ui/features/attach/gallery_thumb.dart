@@ -5,8 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../../data/services/phone_gallery.dart';
 import '../../../data/services/thumb_cache.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// Thumbnails are decoded at their own size (MediaStore made them <= 240 px).
 /// The grid tile and the attachment chip build the SAME provider from the same

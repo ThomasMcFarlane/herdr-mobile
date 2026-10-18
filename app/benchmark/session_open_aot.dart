@@ -32,7 +32,7 @@ import 'package:herdr_mobile/data/acp/acp_models.dart';
 import 'package:herdr_mobile/data/acp/json_rpc.dart' show splitLines;
 import 'package:herdr_mobile/data/acp/session_state.dart';
 import 'package:herdr_mobile/data/repositories/agent_session.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
 
 import '../test/support/fake_agent_session.dart';

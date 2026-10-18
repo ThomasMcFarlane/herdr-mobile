@@ -8,7 +8,7 @@ import '../../../data/acp/prompt_queue.dart' show SendDelivery;
 import '../../../data/acp/session_state.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/attach_target.dart' show AttachMode;
-import '../../core/tap_guard.dart';
+import '../../support/tap_guard.dart';
 import '../composer/composer_frame.dart';
 import '../dictation/dictation_language_sheet.dart';
 import '../dictation/dictation_session.dart';

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:herdr_mobile/ui/core/draw_check.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 Widget _app({bool reduced = false}) => MaterialApp(
       builder: (context, child) => MediaQuery(

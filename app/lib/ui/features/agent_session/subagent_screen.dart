@@ -5,19 +5,16 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/acp/subagents/subagent_run.dart';
 import '../../../data/acp/turns/plain_text.dart' show safeEnd;
 import '../../../data/repositories/agent_session.dart';
-import '../../core/controls.dart';
-import '../../core/markdown/markdown.dart';
-import '../../core/rows.dart' show EmptyState;
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../render/markdown/markdown.dart';
 import 'agent_md_scope.dart';
-import 'log_atoms.dart';
 import 'permission_dock.dart';
 import 'session_select.dart';
 import 'subagent_card.dart';
 import 'subagent_format.dart';
 import 'subagent_run_session.dart';
 import 'transcript_view.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// A subagent opened from the roster or its card: a pushed, read-only screen.
 ///

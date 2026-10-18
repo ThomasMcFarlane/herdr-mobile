@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'controls.dart';
+import 'press.dart';
+import 'buttons.dart';
 import 'motion.dart';
 import 'theme.dart';
 

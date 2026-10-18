@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/observed_session.dart';
 import '../../../data/repositories/observed_sessions.dart';
-import '../../core/toast.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'agent_session_screen.dart';
 import 'subagent_run_session.dart';
 import 'subagent_screen.dart';

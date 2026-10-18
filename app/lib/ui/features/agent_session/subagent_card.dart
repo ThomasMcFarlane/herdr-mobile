@@ -8,20 +8,16 @@ import '../../../data/acp/session_state.dart';
 import '../../../data/acp/subagents/subagent_run.dart';
 import '../../../data/models/herdr_models.dart' show AgentStatus;
 import '../../../data/repositories/agent_session.dart';
-import '../../core/controls.dart';
-import '../../core/glyphs.dart';
-import '../../core/markdown/markdown.dart';
-import '../../core/motion.dart';
-import '../../core/step_clock.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../render/markdown/markdown.dart';
+import '../../support/step_clock.dart';
 import 'agent_session_navigation.dart';
-import 'log_atoms.dart';
 import 'session_select.dart';
 import 'status_line.dart' show secondsClock, statusNow;
 import 'subagent_format.dart';
 import 'tool_rows.dart';
 import 'transcript_rows.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// Which subagent cards are open. Kept per session, not per widget, so a card
 /// that scrolls out of the transcript and back is still open (the toggles of

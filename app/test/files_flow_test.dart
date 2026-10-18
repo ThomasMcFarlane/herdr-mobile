@@ -4,8 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/remote_file.dart';
-import 'package:herdr_mobile/ui/core/controls.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/files/code_view.dart';
 import 'package:herdr_mobile/ui/features/files/file_browser_screen.dart';
 import 'package:herdr_mobile/ui/features/files/file_browser_view_model.dart';
@@ -299,16 +298,16 @@ void main() {
       expect(find.byType(FileBrowserScreen), findsOneWidget, reason: 'on screen before the host answered a thing');
       expect(routes.pushes, before + 1, reason: 'the second tap was ignored');
       expect(find.text('AGENTS.md'), findsNothing, reason: 'the host has not answered yet');
-      expect(find.byType(FileSkeleton), findsNothing, reason: 'no placeholder inside the first 120 ms');
+      expect(find.byType(Skeleton), findsNothing, reason: 'no placeholder inside the first 120 ms');
 
       await tester.pump(const Duration(milliseconds: 60));
-      expect(find.byType(FileSkeleton), findsNothing);
+      expect(find.byType(Skeleton), findsNothing);
       await tester.pump(const Duration(milliseconds: 100));
-      expect(find.byType(FileSkeleton), findsOneWidget, reason: 'a slow link shows its placeholder');
+      expect(find.byType(Skeleton), findsOneWidget, reason: 'a slow link shows its placeholder');
 
       fs.gate!.complete();
       await _settle(tester);
-      expect(find.byType(FileSkeleton), findsNothing);
+      expect(find.byType(Skeleton), findsNothing);
       expect(find.text('AGENTS.md'), findsOneWidget);
       expect(routes.pushes, before + 1);
     });
@@ -321,7 +320,7 @@ void main() {
       var skeleton = false;
       for (var i = 0; i < 40; i++) {
         await tester.pump(const Duration(milliseconds: 16));
-        skeleton |= find.byType(FileSkeleton).evaluate().isNotEmpty;
+        skeleton |= find.byType(Skeleton).evaluate().isNotEmpty;
       }
 
       expect(skeleton, isFalse);
@@ -921,7 +920,7 @@ void main() {
       expect(find.text('Changed on disk'), findsNothing);
       expect(find.textContaining('rewritten'), findsWidgets);
       expect(find.textContaining('line 1 ok'), findsNothing);
-      expect(find.byType(FileSkeleton), findsNothing, reason: 'no flash back to a skeleton');
+      expect(find.byType(Skeleton), findsNothing, reason: 'no flash back to a skeleton');
       expect(scroll.position.pixels, before, reason: 'the reader stayed on the same line');
     });
 

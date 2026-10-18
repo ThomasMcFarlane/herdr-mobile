@@ -1,9 +1,8 @@
 import 'dart:ui' show Color;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:herdr_mobile/ui/core/ansi.dart';
-import 'package:herdr_mobile/ui/core/cell_width.dart';
-import 'package:herdr_mobile/ui/core/line_wrap.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import 'package:herdr_mobile/ui/render/terminal/line_wrap.dart';
 
 const _red = Color(0xFFE06C75);
 const _blue = Color(0xFF204060);

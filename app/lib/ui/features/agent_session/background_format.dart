@@ -1,5 +1,5 @@
 import '../../../data/acp/background/background_work.dart';
-import 'visible_text.dart';
+import '../../render/visible_text.dart';
 
 /// Words for background work. Pure: every sentence the strip, the bar, the
 /// status line, the toast and the sheet say comes from here, so the words for

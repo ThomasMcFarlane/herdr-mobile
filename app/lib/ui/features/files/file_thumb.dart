@@ -10,9 +10,7 @@ import '../../../data/services/image_decode.dart';
 import '../../../data/services/image_sniff.dart';
 import '../../../data/services/disk_cache.dart';
 import '../../../data/services/remote_files.dart';
-import '../../core/glyphs.dart';
-import '../../core/motion.dart';
-import '../../core/tokens.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'file_kind.dart';
 
 /// Images over this are never fetched for a thumbnail (a phone photo is

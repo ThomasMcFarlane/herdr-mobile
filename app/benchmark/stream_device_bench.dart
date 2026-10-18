@@ -60,8 +60,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:herdr_mobile/boot.dart' show configureSystemUi;
 import 'package:herdr_mobile/data/repositories/app_settings.dart';
-import 'package:herdr_mobile/ui/core/frame_flush.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/support/frame_flush.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
 import 'package:provider/provider.dart';
 

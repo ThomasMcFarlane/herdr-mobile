@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../data/repositories/machine_connection.dart';
 import '../../../data/services/herdr_api.dart' show HerdrUnsupportedException;
 import '../../../data/services/herdr_transport.dart' show HerdrApiException, HerdrTransportException;
-import '../../core/chrome.dart';
-import '../../core/toast.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// What the person reads for an agent that reports its session to herdr
 /// through [target] (`claude`, `codex`, `omp`).

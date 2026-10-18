@@ -7,7 +7,7 @@ import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/attention_set.dart';
 import '../../../data/repositories/fleet_repository.dart';
 import '../../../data/repositories/machine_connection.dart';
-import '../../core/rows.dart' show cwdTail;
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// The board's sections, top to bottom: what needs the person first, then
 /// what finished and awaits a look, then what is still running. A rank of its

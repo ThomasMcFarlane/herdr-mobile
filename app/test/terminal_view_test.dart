@@ -3,13 +3,10 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/herdr_models.dart';
-import 'package:herdr_mobile/ui/core/ansi.dart';
-import 'package:herdr_mobile/ui/core/glyphs.dart';
-import 'package:herdr_mobile/ui/core/motion.dart';
-import 'package:herdr_mobile/ui/core/terminal_cells.dart';
-import 'package:herdr_mobile/ui/core/terminal_jump.dart';
-import 'package:herdr_mobile/ui/core/terminal_view.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import 'package:herdr_mobile/ui/render/terminal/terminal_cells.dart';
+import 'package:herdr_mobile/ui/render/terminal/terminal_jump.dart';
+import 'package:herdr_mobile/ui/render/terminal/terminal_view.dart';
 import 'support/terminal_rows.dart';
 
 String _lines(int from, int to) =>

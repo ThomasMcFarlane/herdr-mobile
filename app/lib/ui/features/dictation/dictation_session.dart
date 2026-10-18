@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 
 import '../../../data/services/dictation.dart';
-import '../../core/motion.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// One message box's dictation: what is heard goes into the box as it is heard,
 /// at the cursor, and nothing is ever sent (the person reads it and presses

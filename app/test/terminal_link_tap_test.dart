@@ -3,10 +3,10 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:herdr_mobile/ui/core/terminal_cells.dart';
-import 'package:herdr_mobile/ui/core/terminal_links.dart';
-import 'package:herdr_mobile/ui/core/terminal_view.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/render/terminal/terminal_cells.dart';
+import 'package:herdr_mobile/ui/render/terminal/terminal_links.dart';
+import 'package:herdr_mobile/ui/render/terminal/terminal_view.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// The pane is drawn in the dark palette here (the harness theme is dark).
 final terminalLinkColor = TerminalPalette.dark.link;

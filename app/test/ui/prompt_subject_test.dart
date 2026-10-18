@@ -5,9 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/machine_profile.dart';
 import 'package:herdr_mobile/data/models/pane_preview.dart';
 import 'package:herdr_mobile/data/repositories/prompt_detector.dart';
-import 'package:herdr_mobile/ui/core/controls.dart';
-import 'package:herdr_mobile/ui/core/hold_confirm.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_card.dart';
 import 'package:herdr_mobile/ui/features/agents/reply_sheet.dart';
 

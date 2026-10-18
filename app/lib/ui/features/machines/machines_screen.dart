@@ -8,14 +8,8 @@ import '../../../data/repositories/attention_set.dart';
 import '../../../data/repositories/fleet_repository.dart';
 import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/machine_repository.dart';
-import '../../core/approval_button.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/glyphs.dart';
-import '../../core/motion.dart';
-import '../../core/rows.dart';
-import '../../core/tokens.dart';
-import '../../core/status_panel.dart';
+import 'approval_button.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'machine_form_screen.dart';
 import 'machine_screen.dart';
 

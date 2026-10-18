@@ -21,7 +21,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/remote_file.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/files/file_browser_screen.dart';
 import 'package:herdr_mobile/ui/features/files/file_listing.dart';
 import 'package:herdr_mobile/ui/features/files/file_thumb.dart';

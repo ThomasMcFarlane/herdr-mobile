@@ -10,16 +10,11 @@ import 'package:herdr_mobile/data/models/machine_profile.dart';
 import 'package:herdr_mobile/data/repositories/agent_session.dart';
 import 'package:herdr_mobile/data/repositories/app_settings.dart';
 import 'package:herdr_mobile/data/services/herdr_transport.dart';
-import 'package:herdr_mobile/ui/core/chrome.dart';
-import 'package:herdr_mobile/ui/core/controls.dart';
-import 'package:herdr_mobile/ui/core/rows.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
-import 'package:herdr_mobile/ui/core/toast.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_card.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_session_rows.dart';
 import 'package:herdr_mobile/ui/features/agents/batch_actions_sheet.dart';
 import 'package:herdr_mobile/ui/features/agents/triage_pill.dart';
-import 'package:herdr_mobile/ui/features/settings/app_switch.dart';
 import 'package:herdr_mobile/ui/shell/home_shell.dart';
 import 'package:provider/provider.dart';
 

@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/acp/acp_models.dart';
 import 'package:herdr_mobile/data/acp/session_state.dart';
-import 'package:herdr_mobile/ui/core/markdown/markdown.dart';
+import 'package:herdr_mobile/ui/render/markdown/markdown.dart';
 import 'package:herdr_mobile/ui/features/agent_session/transcript_plan.dart';
 
 import '../support/fake_agent_session.dart';

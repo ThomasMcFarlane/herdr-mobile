@@ -8,11 +8,9 @@ import 'package:herdr_mobile/data/repositories/machine_connection.dart' show Lin
 import 'package:herdr_mobile/data/repositories/pane_previews.dart';
 import 'package:herdr_mobile/data/services/herdr_transport.dart';
 import 'package:herdr_mobile/data/repositories/attention_notifier.dart' show agentsBoardLink;
-import 'package:herdr_mobile/ui/core/controls.dart';
-import 'package:herdr_mobile/ui/core/deep_link.dart';
-import 'package:herdr_mobile/ui/core/home_tabs.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
-import 'package:herdr_mobile/ui/core/toast.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import 'package:herdr_mobile/ui/support/deep_link.dart';
+import 'package:herdr_mobile/ui/support/home_tabs.dart';
 import 'package:herdr_mobile/ui/features/agents/agents_screen.dart';
 import 'package:herdr_mobile/ui/features/machines/machine_form_screen.dart';
 import 'package:herdr_mobile/ui/features/machines/machine_form_view_model.dart' show TransportFactory;

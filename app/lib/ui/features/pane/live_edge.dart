@@ -2,8 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// How long the output has been stale, as the label says it: whole seconds up
 /// to a minute, then minutes, then hours. `stale · 12s`.

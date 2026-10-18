@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/repositories/path_finder.dart';
-import '../../core/chrome.dart';
-import '../../core/rows.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'file_format.dart';
 import 'file_widgets.dart';
 

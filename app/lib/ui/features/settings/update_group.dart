@@ -6,12 +6,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/app_info.dart';
 import '../../../data/models/release_info.dart';
 import '../../../data/repositories/app_update.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/markdown/markdown.dart';
-import '../../core/open_link.dart';
-import '../../core/toast.dart';
-import '../../core/tokens.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../render/markdown/markdown.dart';
+import '../../support/open_link.dart';
 import 'settings_group.dart';
 
 /// The top of Settings while a newer version exists: one row that says what

@@ -9,7 +9,7 @@ import 'package:herdr_mobile/data/models/machine_profile.dart';
 import 'package:herdr_mobile/data/repositories/agent_session.dart';
 import 'package:herdr_mobile/data/repositories/agent_session_settings.dart';
 import 'package:herdr_mobile/data/repositories/machine_connection.dart';
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/history/past_sessions_screen.dart';
 import 'package:provider/provider.dart';
 

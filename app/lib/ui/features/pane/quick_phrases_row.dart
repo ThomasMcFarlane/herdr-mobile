@@ -6,8 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../../data/repositories/quick_phrases.dart';
 import '../../../data/repositories/sent_phrases.dart';
-import '../../core/controls.dart';
-import '../../core/tokens.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// The person's quick phrases as one row of chips above a composer, for the
 /// agent session and the pane alike.

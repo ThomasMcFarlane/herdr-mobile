@@ -6,16 +6,8 @@ import 'package:provider/provider.dart';
 import '../../../data/models/machine_profile.dart';
 import '../../../data/repositories/machine_repository.dart';
 import '../../../data/services/key_generator.dart';
-import '../../core/approval_button.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/rows.dart';
-import '../../core/form_sections.dart';
-import '../../core/draw_check.dart';
-import '../../core/status_panel.dart';
-import '../../core/theme.dart';
-import '../../core/toast.dart';
+import 'approval_button.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'machine_form_view_model.dart';
 
 final _sessionName = RegExp(r'^[A-Za-z0-9._-]+$');

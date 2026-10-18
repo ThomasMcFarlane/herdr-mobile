@@ -9,14 +9,9 @@ import '../../../data/repositories/agent_screens.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/agent_session_settings.dart';
 import '../../../data/repositories/fleet_repository.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/rows.dart';
-import '../../core/toast.dart';
-import '../../core/tokens.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import '../agents/agent_navigation.dart';
-import '../agent_session/visible_text.dart';
+import '../../render/visible_text.dart';
 import 'past_session_row.dart';
 import 'past_sessions_view_model.dart';
 

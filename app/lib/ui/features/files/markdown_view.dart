@@ -4,10 +4,8 @@ import 'dart:isolate';
 import 'package:flutter/material.dart';
 
 import '../../../data/repositories/machine_connection.dart';
-import '../../core/controls.dart';
-import '../../core/markdown/markdown.dart';
-import '../../core/motion.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../render/markdown/markdown.dart';
 import '../pane/link_sheet.dart';
 import 'files_navigation.dart';
 import 'text_document.dart';
@@ -17,7 +15,7 @@ import 'text_document.dart';
 const _parseOffThreadFrom = 50000;
 
 /// Rendered Markdown in the app's type: the shared Markdown renderer
-/// (`ui/core/markdown/`) over a lazy list of blocks, with CommonMark's line
+/// (`ui/render/markdown/`) over a lazy list of blocks, with CommonMark's line
 /// breaks (a single newline is a space: a README is wrapped by its author).
 ///
 /// A link shows the whole address in the link sheet first; a path (in text, in

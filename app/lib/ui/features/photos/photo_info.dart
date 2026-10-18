@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/rows.dart';
-import '../../core/theme.dart';
-import '../../core/tokens.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import '../files/file_format.dart';
 import '../files/file_widgets.dart';
 import 'photo_viewer_view_model.dart';

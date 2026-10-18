@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/tokens.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// Asks for a new name in a sheet. Returns the trimmed text, or null when
 /// dismissed. With [allowEmpty] an empty name is a valid answer (it clears the

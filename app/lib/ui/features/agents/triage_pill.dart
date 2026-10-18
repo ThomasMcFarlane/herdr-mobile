@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../core/controls.dart';
-import '../../core/glyphs.dart';
-import '../../core/motion.dart';
-import '../../core/pop.dart';
-import '../../core/tokens.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import '../../../data/models/herdr_models.dart';
 
 /// "1 needs you · 2 to review": floats above the tab bar while any reachable

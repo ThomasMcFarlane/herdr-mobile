@@ -3,11 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/models/remote_file.dart';
 import '../../../data/services/remote_files.dart';
-import '../../core/controls.dart';
-import '../../core/glyphs.dart';
-import '../../core/motion.dart';
-import '../../core/rows.dart';
-import '../../core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'file_format.dart';
 import 'file_thumb.dart';
 import 'file_widgets.dart';

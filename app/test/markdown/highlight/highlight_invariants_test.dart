@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:herdr_mobile/ui/core/markdown/highlight/highlight.dart';
+import 'package:herdr_mobile/ui/render/markdown/highlight/highlight.dart';
 
 import 'samples.dart';
 import 'support.dart';

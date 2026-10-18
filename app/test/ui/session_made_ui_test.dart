@@ -15,9 +15,7 @@ import 'package:herdr_mobile/data/observed/observed_contracts.dart' show Subagen
 import 'package:herdr_mobile/data/repositories/agent_session.dart' show AgentLink, SubagentEntry, SubagentState;
 import 'package:herdr_mobile/data/repositories/machine_connection.dart';
 import 'package:herdr_mobile/data/services/herdr_api.dart';
-import 'package:herdr_mobile/ui/core/controls.dart' show AppChip, Segmented;
-import 'package:herdr_mobile/ui/core/glyphs.dart' show LinkDot;
-import 'package:herdr_mobile/ui/core/theme.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/session_bar.dart';
 import 'package:herdr_mobile/ui/features/files/file_viewer_screen.dart';
 import 'package:herdr_mobile/ui/features/files/photo_thumbs.dart';

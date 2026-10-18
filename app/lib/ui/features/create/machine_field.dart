@@ -2,10 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/repositories/machine_connection.dart';
-import '../../core/chrome.dart';
-import '../../core/controls.dart';
-import '../../core/motion.dart';
-import '../../core/tokens.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// The machine, as a field that opens a sheet of the online ones. With one
 /// machine it only says where. Painted like a [LabeledField]: same label,

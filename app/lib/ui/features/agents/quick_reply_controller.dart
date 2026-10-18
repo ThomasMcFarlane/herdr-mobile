@@ -8,7 +8,7 @@ import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/pane_answerer.dart' show promptDigest;
 import '../../../data/repositories/pane_previews.dart';
 import '../../../data/services/herdr_transport.dart';
-import '../../core/motion.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 enum ReplyPhase {
   /// Nothing in flight; chips are tappable.
