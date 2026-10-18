@@ -71,9 +71,11 @@ these already means it.
   doing now and for how long → what changed since they last looked → jump to the
   latest when they want it → swipe to the next agent, or back.
 - **Switching.** One agent per screen; the board is the only list of agents.
-  A quick sideways swipe inside the screen goes to the next (or previous) agent
-  in the board's order, needs-you first, replacing the screen, so Back always
-  lands on the board. An agent with both views has `Show terminal` in the
+  A sideways swipe inside the screen shows the next (or previous) agent in
+  the board's order, needs-you first, coming in with the finger; letting go
+  far enough (or with a flick) goes there, replacing the screen, so Back
+  always lands on the board; letting go short takes the card back. An agent
+  with both views has `Show terminal` in the
   chat's options and `Show chat` in the terminal's options; it swaps the view
   in place, and the view chosen and an unsent draft stay with the agent for
   the app run. Launch reopens the agent screen that was in front.

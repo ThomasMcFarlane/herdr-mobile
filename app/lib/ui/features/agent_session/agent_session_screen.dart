@@ -595,11 +595,7 @@ class _AgentSessionScreenState extends State<AgentSessionScreen> with WidgetsBin
                   // A code block or a table that scrolls sideways keeps its
                   // swipe: it is not a step to the next agent.
                   child: switch (widget.agent) {
-                    final agent? => AgentSwipeDetector(
-                      enabled: true,
-                      onSwipe: (delta) => swipeToAgent(context, agent, delta),
-                      child: _transcript,
-                    ),
+                    final agent? => AgentSwipe(agent: agent, child: _transcript),
                     null => _transcript,
                   },
                 ),

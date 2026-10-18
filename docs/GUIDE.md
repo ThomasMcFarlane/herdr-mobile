@@ -288,12 +288,16 @@ checks the question before sending.
 Tap an agent on the board to open it. A terminal agent opens as its live
 terminal; an agent session opens as a chat. Back always returns to the board.
 
-**Swiping between agents.** On an agent's screen, a quick sideways swipe goes
-to the next agent in board order (left for next, right for previous). Swipes
-that start at the screen's edges are left to Android's back gesture, and
-anything that scrolls sideways (a wide table, a terminal with wrap off) keeps
-its swipe. At either end of the list nothing moves. When the app is
-restarted, it reopens the agent screen that was in front.
+**Swiping between agents.** On an agent's screen, swipe sideways to go to the
+next agent in board order (left for next, right for previous). As your finger
+moves, a card slides in showing which agent is there; let go once it has
+come far enough (it tints and ticks) to go, or bring it back to stay where
+you are. A quick flick goes at once. Swipes that start at the screen's edges
+are left to Android's back gesture, and anything that scrolls sideways (a
+wide table, a terminal with wrap off) keeps its swipe. At either end of the
+list the card says `No next agent` or `No previous agent`. With TalkBack,
+the screen's actions include `Next agent` and `Previous agent`. When the app
+is restarted, it reopens the agent screen that was in front.
 
 ### The terminal pane
 

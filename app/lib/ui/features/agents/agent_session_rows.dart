@@ -142,7 +142,7 @@ class AgentSessionRow extends StatelessWidget {
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _StateTime(session: session),
+                  SessionStateTime(session: session),
                   if (sel.active) ...[
                     const SizedBox(width: Gap.sm),
                     SelectMark(selected: sel.selected, size: IconSize.bar),
@@ -176,8 +176,10 @@ class AgentSessionRow extends StatelessWidget {
   }
 }
 
-class _StateTime extends StatelessWidget {
-  const _StateTime({required this.session});
+/// A session's [sessionStateLabel] as the board's rows show it: the time
+/// only, in the blocked colour and weight when the person is needed.
+class SessionStateTime extends StatelessWidget {
+  const SessionStateTime({super.key, required this.session});
 
   final AgentSessionView session;
 

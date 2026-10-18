@@ -3,8 +3,10 @@
 // same agent, a screen whose machine is gone says so, and launch puts the
 // agent screen that was in front back.
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/machine_profile.dart';
 import 'package:herdr_mobile/data/observed/omp_kind.dart';
@@ -16,6 +18,7 @@ import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
 import 'package:herdr_mobile/ui/features/agent_session/transcript_view.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_navigation.dart';
+import 'package:herdr_mobile/ui/features/agents/agent_peek.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_swipe.dart';
 import 'package:herdr_mobile/ui/features/pane/pane_screen.dart';
 import 'package:provider/provider.dart';
@@ -136,13 +139,51 @@ String _onScreen(WidgetTester tester) {
 
 const _middle = Offset(206, 400);
 
-Future<void> _swipe(
+/// A peek card (an agent's or the end's) is on screen.
+bool _peeking() => find.byType(PeekFrame).evaluate().isNotEmpty;
+
+/// The peek shows [title].
+Finder _peekOf(String title) => find.descendant(of: find.byType(PeekFrame), matching: find.text(title));
+
+/// Drags [by] from [from] over [over], a move per frame, and lets go while
+/// still moving. Whether a peek showed at any point.
+Future<bool> _swipe(
   WidgetTester tester, {
   Offset from = _middle,
   required Offset by,
   Duration over = const Duration(milliseconds: 200),
 }) async {
-  await tester.timedDragFrom(from, by, over);
+  final (g, at, peeked) = await _drag(tester, from: from, by: by, over: over);
+  await g.up(timeStamp: at);
+  await settle(tester);
+  return peeked;
+}
+
+/// The finger goes down at [from] and moves [by] over [over], a move per
+/// frame, and stays down: the gesture, when it was last moved, and whether a
+/// peek showed on the way.
+Future<(TestGesture, Duration, bool)> _drag(
+  WidgetTester tester, {
+  Offset from = _middle,
+  required Offset by,
+  Duration over = const Duration(milliseconds: 160),
+}) async {
+  final steps = math.max(1, over.inMilliseconds ~/ 16);
+  final g = await tester.startGesture(from);
+  var peeked = false;
+  for (var i = 1; i <= steps; i++) {
+    await g.moveBy(by / steps.toDouble(), timeStamp: over * i ~/ steps);
+    await tester.pump(over ~/ steps);
+    peeked |= _peeking();
+  }
+  return (g, over, peeked);
+}
+
+/// Lets go of [g] after holding still: no momentum.
+Future<void> _letGoStill(WidgetTester tester, TestGesture g, Duration at) async {
+  const still = Duration(milliseconds: 150);
+  await tester.pump(still);
+  await g.up(timeStamp: at + still);
   await settle(tester);
 }
 
@@ -203,20 +244,79 @@ void main() {
       await teardownUi(tester, h);
     });
 
-    testWidgets('at either end nothing changes', (tester) async {
+    testWidgets('while the finger moves, the next agent shows; let go short, and nothing changes', (tester) async {
+      final h = await _harness();
+      await _pump(tester, h);
+      await _waitInOrder(tester, h);
+      await _open(tester, _id(4));
+
+      final (g, at, _) = await _drag(tester, by: const Offset(-40, 0));
+      expect(_peekOf('task 2'), findsOneWidget, reason: 'who is next, before letting go');
+      expect(_onScreen(tester), _id(4));
+
+      await _letGoStill(tester, g, at);
+      expect(_onScreen(tester), _id(4));
+      expect(_peeking(), isFalse, reason: 'the card went back');
+      expect(tester.binding.hasScheduledFrame, isFalse, reason: 'nothing runs at rest');
+      await teardownUi(tester, h);
+    });
+
+    testWidgets('let go past the commit distance, or flicked, it goes there', (tester) async {
+      final h = await _harness();
+      await _pump(tester, h);
+      await _waitInOrder(tester, h);
+      await _open(tester, _id(4));
+
+      final (g, at, _) = await _drag(tester, by: const Offset(-110, 0), over: const Duration(milliseconds: 400));
+      await _letGoStill(tester, g, at);
+      expect(_onScreen(tester), _id(2), reason: 'held still past the distance');
+
+      // A short, fast flick: 36 dp in 48 ms.
+      await _swipe(tester, by: const Offset(-36, 0), over: const Duration(milliseconds: 48));
+      expect(_onScreen(tester), _id(3), reason: 'the flick carries it');
+      await teardownUi(tester, h);
+    });
+
+    testWidgets('it goes to the agent the card showed, even if the order changed meanwhile', (tester) async {
+      final h = await _harness();
+      await _pump(tester, h);
+      await _waitInOrder(tester, h);
+      await _open(tester, _id(4));
+
+      final (g, at, _) = await _drag(tester, by: const Offset(-60, 0));
+      expect(_peekOf('task 2'), findsOneWidget);
+      // p3 starts needing the person and p2 goes back to work: p3 is next now.
+      final t = h.transports[_machine]!;
+      t.snapshot = _snapshot([_pane(1, 'idle'), _pane(2, 'working'), _pane(3, 'blocked'), _pane(4, 'blocked')]);
+      t.emit(const {'event': 'pane.agent_status_changed'});
+      await settle(tester);
+      expect(neighbourOf(tester.element(find.byType(PaneScreen)), _agent(4), 1)?.agent, _agent(3));
+
+      await g.moveBy(const Offset(-60, 0), timeStamp: at + const Duration(milliseconds: 16));
+      await _letGoStill(tester, g, at + const Duration(milliseconds: 16));
+      expect(_onScreen(tester), _id(2));
+      await teardownUi(tester, h);
+    });
+
+    testWidgets('at either end the card says so, and nothing changes', (tester) async {
       final h = await _harness();
       await _pump(tester, h);
       await _waitInOrder(tester, h);
 
       await _open(tester, _id(4));
-      await _swipeRight(tester);
+      final (g, at, _) = await _drag(tester, by: const Offset(120, 0));
+      expect(find.textContaining('previous agent'), findsOneWidget, reason: 'the card says there is none');
+      await _letGoStill(tester, g, at);
       expect(_onScreen(tester), _id(4), reason: 'the first one has nothing before it');
+      await _swipeRight(tester);
+      expect(_onScreen(tester), _id(4), reason: 'not even flicked');
       await _back(tester);
       _expectHome();
 
       await _open(tester, _id(1));
       await _swipeLeft(tester);
       expect(_onScreen(tester), _id(1), reason: 'the last one has nothing after it');
+      expect(_peeking(), isFalse);
       await _back(tester);
       _expectHome();
       await teardownUi(tester, h);
@@ -263,7 +363,11 @@ void main() {
       expect(find.byType(AgentSessionScreen), findsNothing);
       expect(_onScreen(tester), _id(1));
 
-      await _swipeLeft(tester);
+      final (g, at, _) = await _drag(tester, by: const Offset(-60, 0));
+      expect(_peekOf('payments'), findsOneWidget, reason: 'a session shows as the board shows it');
+      await g.moveBy(const Offset(-100, 0), timeStamp: at + const Duration(milliseconds: 16));
+      await g.up(timeStamp: at + const Duration(milliseconds: 16));
+      await settle(tester);
       expect(find.byType(PaneScreen), findsNothing);
       expect(find.byType(AgentSessionScreen), findsOneWidget);
 
@@ -290,10 +394,26 @@ void main() {
     testWidgets('a vertical scroll, even a slanted one', (tester) async {
       final h = await inTheMiddle(tester);
 
-      await _swipe(tester, by: const Offset(0, -240));
-      await _swipe(tester, by: const Offset(-70, -200));
-      await _swipe(tester, by: const Offset(-40, 300));
+      expect(await _swipe(tester, by: const Offset(0, -240)), isFalse);
+      expect(await _swipe(tester, by: const Offset(-70, -200)), isFalse);
+      expect(await _swipe(tester, by: const Offset(-40, 300)), isFalse);
 
+      expect(_onScreen(tester), _id(2));
+      await teardownUi(tester, h);
+    });
+
+    testWidgets('a sideways drag that turns into a scroll takes the card back', (tester) async {
+      final h = await inTheMiddle(tester);
+
+      final (g, at, peeked) = await _drag(tester, by: const Offset(-50, 0));
+      expect(peeked, isTrue);
+      await g.moveBy(const Offset(-30, -120), timeStamp: at + const Duration(milliseconds: 16));
+      await tester.pump(const Duration(milliseconds: 16));
+      await g.moveBy(const Offset(-60, 0), timeStamp: at + const Duration(milliseconds: 32));
+      await g.up(timeStamp: at + const Duration(milliseconds: 32));
+      await settle(tester);
+
+      expect(_peeking(), isFalse);
       expect(_onScreen(tester), _id(2));
       await teardownUi(tester, h);
     });
@@ -303,20 +423,24 @@ void main() {
 
       final g = await tester.startGesture(_middle);
       await tester.pump(const Duration(milliseconds: 600));
+      var peeked = false;
       for (var i = 1; i <= 8; i++) {
         await g.moveBy(const Offset(-20, 0), timeStamp: Duration(milliseconds: 600 + i * 16));
+        await tester.pump();
+        peeked |= _peeking();
       }
-      await g.up();
+      await g.up(timeStamp: const Duration(milliseconds: 600 + 8 * 16));
       await settle(tester);
 
+      expect(peeked, isFalse);
       expect(_onScreen(tester), _id(2));
       await teardownUi(tester, h);
     });
 
-    testWidgets('a slow crawl', (tester) async {
+    testWidgets('a crawl too slow to be a swipe', (tester) async {
       final h = await inTheMiddle(tester);
 
-      await _swipe(tester, by: const Offset(-120, 0), over: const Duration(milliseconds: 1500));
+      expect(await _swipe(tester, by: const Offset(-40, 0), over: const Duration(milliseconds: 1500)), isFalse);
 
       expect(_onScreen(tester), _id(2));
       await teardownUi(tester, h);
@@ -327,7 +451,9 @@ void main() {
 
       await tester.tapAt(_middle);
       await settle(tester);
-      await _swipe(tester, by: const Offset(-30, 0));
+      expect(await _swipe(tester, by: const Offset(-12, 0)), isFalse);
+      final (g, at, _) = await _drag(tester, by: const Offset(-30, 0));
+      await _letGoStill(tester, g, at);
 
       expect(_onScreen(tester), _id(2));
       await teardownUi(tester, h);
@@ -338,15 +464,34 @@ void main() {
 
       final a = await tester.startGesture(const Offset(150, 400));
       final b = await tester.startGesture(const Offset(300, 400));
+      var peeked = false;
       for (var i = 0; i < 6; i++) {
         await a.moveBy(const Offset(-25, 0));
         await b.moveBy(const Offset(-25, 0));
         await tester.pump(const Duration(milliseconds: 20));
+        peeked |= _peeking();
       }
       await a.up();
       await b.up();
       await settle(tester);
 
+      expect(peeked, isFalse);
+      expect(_onScreen(tester), _id(2));
+      await teardownUi(tester, h);
+    });
+
+    testWidgets('a second finger after the card showed takes it back', (tester) async {
+      final h = await inTheMiddle(tester);
+
+      final (g, at, peeked) = await _drag(tester, by: const Offset(-50, 0));
+      expect(peeked, isTrue);
+      final b = await tester.startGesture(const Offset(100, 300));
+      await g.moveBy(const Offset(-100, 0), timeStamp: at + const Duration(milliseconds: 16));
+      await g.up(timeStamp: at + const Duration(milliseconds: 16));
+      await b.up();
+      await settle(tester);
+
+      expect(_peeking(), isFalse);
       expect(_onScreen(tester), _id(2));
       await teardownUi(tester, h);
     });
@@ -354,8 +499,8 @@ void main() {
     testWidgets('a swipe that starts at the screen edge (the system back gesture)', (tester) async {
       final h = await inTheMiddle(tester);
 
-      await _swipe(tester, from: const Offset(20, 400), by: const Offset(160, 0));
-      await _swipe(tester, from: const Offset(392, 400), by: const Offset(-160, 0));
+      expect(await _swipe(tester, from: const Offset(20, 400), by: const Offset(160, 0)), isFalse);
+      expect(await _swipe(tester, from: const Offset(392, 400), by: const Offset(-160, 0)), isFalse);
 
       expect(_onScreen(tester), _id(2));
       await teardownUi(tester, h);
@@ -364,7 +509,7 @@ void main() {
     testWidgets('a swipe over the composer', (tester) async {
       final h = await inTheMiddle(tester);
 
-      await _swipe(tester, from: tester.getCenter(find.byType(TextField)), by: const Offset(-160, 0));
+      expect(await _swipe(tester, from: tester.getCenter(find.byType(TextField)), by: const Offset(-160, 0)), isFalse);
 
       expect(_onScreen(tester), _id(2));
       await teardownUi(tester, h);
@@ -380,7 +525,7 @@ void main() {
       await _waitInOrder(tester, h);
       await _open(tester, _id(4));
 
-      await _swipeLeft(tester);
+      expect(await _swipe(tester, by: const Offset(-160, 0)), isFalse);
 
       expect(_onScreen(tester), _id(4));
       await teardownUi(tester, h);
@@ -399,29 +544,106 @@ void main() {
     });
   });
 
+  group('without a gesture', () {
+    testWidgets('the screen offers Next agent and Previous agent to accessibility services', (tester) async {
+      final semantics = tester.ensureSemantics();
+      final h = await _harness();
+      await _pump(tester, h);
+      await _waitInOrder(tester, h);
+      await _open(tester, _id(2));
+
+      Future<void> perform(String label) async {
+        final node = tester.getSemantics(find.byType(AgentSwipe));
+        final action = CustomSemanticsAction.getIdentifier(CustomSemanticsAction(label: label));
+        tester.binding.performSemanticsAction(
+          SemanticsActionEvent(
+            type: SemanticsAction.customAction,
+            viewId: tester.view.viewId,
+            nodeId: node.id,
+            arguments: action,
+          ),
+        );
+        await settle(tester);
+      }
+
+      await perform('Next agent');
+      expect(_onScreen(tester), _id(3));
+      await perform('Previous agent');
+      expect(_onScreen(tester), _id(2));
+      semantics.dispose();
+      await teardownUi(tester, h);
+    });
+
+    testWidgets('at either end the action says so out loud, as the card does', (tester) async {
+      final semantics = tester.ensureSemantics();
+      final h = await _harness();
+      await _pump(tester, h);
+      await _waitInOrder(tester, h);
+      await _open(tester, _id(1));
+      tester.takeAnnouncements();
+
+      final node = tester.getSemantics(find.byType(AgentSwipe));
+      tester.binding.performSemanticsAction(
+        SemanticsActionEvent(
+          type: SemanticsAction.customAction,
+          viewId: tester.view.viewId,
+          nodeId: node.id,
+          arguments: CustomSemanticsAction.getIdentifier(const CustomSemanticsAction(label: 'Next agent')),
+        ),
+      );
+      await settle(tester);
+
+      expect(_onScreen(tester), _id(1), reason: 'the last one has nothing after it');
+      final said = tester.takeAnnouncements();
+      expect(said, hasLength(1));
+      expect(said.single.message, contains('next agent'));
+      semantics.dispose();
+      await teardownUi(tester, h);
+    });
+  });
+
   group('the detector alone', () {
+    /// Whether a step opens the agent; given the steps asked so far.
+    bool Function(List<int> steps) opens = (_) => true;
+
+    /// The steps let go far enough to go; [ends]: nothing either way.
     Future<List<int>> run(
       WidgetTester tester,
-      Future<void> Function(WidgetTester, List<int> swipes) gesture, {
-      bool enabled = true,
+      Future<void> Function(WidgetTester, List<int> steps) gesture, {
+      bool ends = false,
+      bool reduced = false,
       Widget child = const ColoredBox(color: Color(0xFF000000)),
     }) async {
-      final swipes = <int>[];
+      final steps = <int>[];
       await tester.pumpWidget(
-        Directionality(
-          textDirection: TextDirection.ltr,
-          child: Center(
-            child: SizedBox(
-              width: 300,
-              height: 300,
-              child: AgentSwipeDetector(enabled: enabled, onSwipe: swipes.add, child: child),
+        Theme(
+          data: AppTheme.dark(),
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: Builder(
+              builder: (context) => MediaQuery(
+                data: MediaQuery.of(context).copyWith(disableAnimations: reduced),
+                child: Center(
+                  child: SizedBox(
+                    width: 300,
+                    height: 300,
+                    child: AgentSwipeDetector(
+                      peek: (step) => SwipePeek(
+                        card: Text(ends ? 'nothing $step' : 'peek $step'),
+                        go: ends ? null : () => opens(steps..add(step)),
+                      ),
+                      child: child,
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
         ),
       );
-      await gesture(tester, swipes);
-      await tester.pump();
-      return swipes;
+      await gesture(tester, steps);
+      await tester.pumpAndSettle();
+      return steps;
     }
 
     const centre = Offset(400, 300);
@@ -429,58 +651,100 @@ void main() {
     Future<void> quickLeft(WidgetTester t, List<int> _) =>
         t.timedDragFrom(centre, const Offset(-150, 0), const Duration(milliseconds: 150));
 
-    testWidgets('fires once per swipe, as soon as it is clear', (tester) async {
-      final swipes = await run(tester, (t, swipes) async {
-        final g = await t.startGesture(centre);
-        await g.moveBy(const Offset(-40, 0));
-        await g.moveBy(const Offset(-40, 2));
-        await t.pump();
-        expect(swipes, [1], reason: 'before the finger lifts');
-        await g.moveBy(const Offset(-40, 2));
-        await g.moveBy(const Offset(-40, 2));
-        await g.up();
+    /// Moves [by] in four moves 16 ms apart and holds.
+    Future<TestGesture> hold(WidgetTester t, Offset by) async {
+      final g = await t.startGesture(centre);
+      for (var i = 1; i <= 4; i++) {
+        await g.moveBy(by / 4, timeStamp: Duration(milliseconds: 16 * i));
+        await t.pump(const Duration(milliseconds: 16));
+      }
+      return g;
+    }
+
+    testWidgets('shows the card once the swipe is clear, and steps once, on letting go', (tester) async {
+      final steps = await run(tester, (t, steps) async {
+        final g = await hold(t, const Offset(-40, 2));
+        expect(find.text('peek 1'), findsOneWidget, reason: 'before the finger lifts');
+        expect(steps, isEmpty, reason: 'nothing is decided while the finger is down');
+        await g.moveBy(const Offset(-80, 2), timeStamp: const Duration(milliseconds: 80));
+        await g.up(timeStamp: const Duration(milliseconds: 80));
       });
 
-      expect(swipes, [1]);
+      expect(steps, [1]);
+      expect(find.text('peek 1'), findsNothing, reason: 'the card fades as the next screen comes');
     });
 
     testWidgets('a swipe to the right is the previous one', (tester) async {
-      final swipes = await run(
+      final steps = await run(
         tester,
         (t, _) => t.timedDragFrom(centre, const Offset(150, 0), const Duration(milliseconds: 150)),
       );
 
-      expect(swipes, [-1]);
+      expect(steps, [-1]);
     });
 
-    testWidgets('disabled does nothing', (tester) async {
-      final swipes = await run(tester, quickLeft, enabled: false);
+    testWidgets('let go still, short of the distance: the card goes back and nothing happens', (tester) async {
+      final steps = await run(tester, (t, _) async {
+        final g = await hold(t, const Offset(-50, 0));
+        await t.pump(const Duration(milliseconds: 150));
+        await g.up(timeStamp: const Duration(milliseconds: 214));
+      });
 
-      expect(swipes, isEmpty);
+      expect(steps, isEmpty);
+      expect(find.text('peek 1'), findsNothing);
+    });
+
+    testWidgets('dragged past the distance and back again before letting go: nothing', (tester) async {
+      final steps = await run(tester, (t, _) async {
+        final g = await hold(t, const Offset(-100, 0));
+        for (var i = 1; i <= 4; i++) {
+          await g.moveBy(const Offset(15, 0), timeStamp: Duration(milliseconds: 64 + 40 * i));
+          await t.pump(const Duration(milliseconds: 40));
+        }
+        await t.pump(const Duration(milliseconds: 150));
+        await g.up(timeStamp: const Duration(milliseconds: 400));
+      });
+
+      expect(steps, isEmpty);
+    });
+
+    testWidgets('with nothing that way the card says so and letting go goes nowhere', (tester) async {
+      final steps = await run(tester, ends: true, (t, _) async {
+        final g = await hold(t, const Offset(-120, 0));
+        expect(find.text('nothing 1'), findsOneWidget);
+        await g.up(timeStamp: const Duration(milliseconds: 64));
+      });
+
+      expect(steps, isEmpty);
+      expect(find.text('nothing 1'), findsNothing);
     });
 
     testWidgets('going vertical first spoils the touch', (tester) async {
-      final swipes = await run(tester, (t, _) async {
+      final steps = await run(tester, (t, _) async {
         final g = await t.startGesture(centre);
         await g.moveBy(const Offset(0, -40));
         await g.moveBy(const Offset(-200, 0));
+        await t.pump();
+        expect(find.text('peek 1'), findsNothing);
         await g.up();
       });
 
-      expect(swipes, isEmpty);
+      expect(steps, isEmpty);
     });
 
     testWidgets('a second finger spoils the touch, even after the first lifts', (tester) async {
-      final swipes = await run(tester, (t, _) async {
+      final steps = await run(tester, (t, _) async {
         final a = await t.startGesture(centre);
         final b = await t.startGesture(centre + const Offset(30, 0));
         await a.moveBy(const Offset(-200, 0));
+        await t.pump();
+        expect(find.text('peek 1'), findsNothing);
         await a.up();
         await b.moveBy(const Offset(-200, 0));
         await b.up();
       });
 
-      expect(swipes, isEmpty);
+      expect(steps, isEmpty);
     });
 
     testWidgets('does not take a tap from what is under it', (tester) async {
@@ -497,9 +761,15 @@ void main() {
     testWidgets('content under the finger that scrolls sideways takes the swipe', (tester) async {
       final controller = ScrollController();
       addTearDown(controller.dispose);
-      final swipes = await run(
+      var peeked = false;
+      final steps = await run(
         tester,
-        quickLeft,
+        (t, _) async {
+          final g = await hold(t, const Offset(-80, 0));
+          peeked = find.text('peek 1').evaluate().isNotEmpty;
+          await g.moveBy(const Offset(-70, 0), timeStamp: const Duration(milliseconds: 80));
+          await g.up(timeStamp: const Duration(milliseconds: 80));
+        },
         child: SingleChildScrollView(
           controller: controller,
           scrollDirection: Axis.horizontal,
@@ -507,12 +777,13 @@ void main() {
         ),
       );
 
-      expect(swipes, isEmpty);
+      expect(peeked, isFalse);
+      expect(steps, isEmpty);
       expect(controller.offset, greaterThan(0), reason: 'it scrolled instead');
     });
 
     testWidgets('a sideways scroller with nothing to scroll does not stop the step', (tester) async {
-      final swipes = await run(
+      final steps = await run(
         tester,
         quickLeft,
         child: const SingleChildScrollView(
@@ -521,7 +792,66 @@ void main() {
         ),
       );
 
-      expect(swipes, [1]);
+      expect(steps, [1]);
+    });
+
+    testWidgets('a slanted swipe that scrolls the list under it is a scroll: the card goes, nothing steps', (
+      tester,
+    ) async {
+      final controller = ScrollController();
+      addTearDown(controller.dispose);
+      var peekedAtEnd = true;
+      final steps = await run(
+        tester,
+        (t, _) async {
+          // dx -120, dy -42: a slant of 0.35, under the 0.4 a swipe allows.
+          final g = await t.startGesture(centre);
+          for (var i = 1; i <= 6; i++) {
+            await g.moveBy(const Offset(-20, -7), timeStamp: Duration(milliseconds: 16 * i));
+            await t.pump(const Duration(milliseconds: 16));
+          }
+          await t.pump();
+          peekedAtEnd = find.text('peek 1').evaluate().isNotEmpty;
+          await g.up(timeStamp: const Duration(milliseconds: 96));
+        },
+        child: ListView(controller: controller, children: const [SizedBox(height: 2000)]),
+      );
+
+      expect(controller.offset, greaterThan(0), reason: 'the list scrolled');
+      expect(peekedAtEnd, isFalse, reason: 'once the list scrolls the card is taken back');
+      expect(steps, isEmpty);
+    });
+
+    testWidgets('a step that opens nothing takes the card back, as a short swipe does', (tester) async {
+      opens = (_) => false;
+      addTearDown(() => opens = (_) => true);
+      late double before;
+      late double after;
+      final steps = await run(tester, (t, _) async {
+        final g = await hold(t, const Offset(-120, 0));
+        before = t.getTopLeft(find.byType(PeekFrame)).dx;
+        await g.up(timeStamp: const Duration(milliseconds: 64));
+        await t.pump();
+        await t.pump(const Duration(milliseconds: 60));
+        after = t.getTopLeft(find.byType(PeekFrame)).dx;
+      });
+
+      expect(steps, [1], reason: 'it was asked');
+      expect(after, greaterThan(before), reason: 'the card slides back out instead of fading in place');
+      expect(find.text('peek 1'), findsNothing);
+    });
+
+    testWidgets('under reduced motion the card does not slide: it fades in where it rests', (tester) async {
+      final steps = await run(reduced: true, tester, (t, _) async {
+        final g = await hold(t, const Offset(-40, 0));
+        final at = t.getTopLeft(find.byType(PeekFrame));
+        await g.moveBy(const Offset(-40, 0), timeStamp: const Duration(milliseconds: 80));
+        await t.pump();
+        expect(t.getTopLeft(find.byType(PeekFrame)), at, reason: 'it does not move with the finger');
+        await g.up(timeStamp: const Duration(milliseconds: 80));
+      });
+
+      expect(steps, [1]);
     });
   });
 

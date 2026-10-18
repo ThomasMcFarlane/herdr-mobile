@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
@@ -14,6 +15,7 @@ import '../../../data/repositories/observed_sessions.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../agent_session/agent_session_screen.dart';
 import '../pane/pane_screen.dart';
+import 'agent_peek.dart';
 import 'agents_grouping.dart';
 
 /// The one way to show an agent: the board, notifications and links, the
@@ -23,9 +25,10 @@ import 'agents_grouping.dart';
 /// One agent per screen. A terminal pane shows its terminal ([PaneScreen]) or,
 /// when the app can follow its log, its chat ([AgentSessionScreen] over an
 /// observed session); an agent session shows its chat. Inside an agent screen
-/// a swipe goes to the next agent in the board's order ([swipeToAgent]) and
-/// the menu's view row switches the view ([showAgentView]); both replace the
-/// screen, so Back always goes where the person came from (the board).
+/// a swipe goes to the next agent in the board's order ([neighbourOf],
+/// [stepToAgent]) and the menu's view row switches the view
+/// ([showAgentView]); both replace the screen, so Back always goes where the
+/// person came from (the board).
 
 /// Opens [agent] in [view]; without one, in the view chosen for it in this
 /// app run, else as Settings says ("Open agents as"). A pane whose agent has
@@ -62,27 +65,53 @@ Future<void> showAgentView(BuildContext context, AgentRef agent, AgentView view)
   return _open(context, agent, view: view, replace: true, entrance: _Entrance.fade);
 }
 
-/// A swipe inside an agent screen: shows the agent [delta] places from
-/// [agent] in the board's order (+1 the next one, for a swipe to the left)
-/// in place of this screen, sliding in from the side the finger came from.
-/// At either end, or for an agent the board does not list, nothing moves and
-/// a tick says so.
-void swipeToAgent(BuildContext context, AgentRef agent, int delta) {
-  final order = agentsInBoardOrder(context);
-  final at = order.indexOf(agent);
+/// The agent [delta] places from [agent] in the board's order (+1 the next
+/// one), as the board lists it. Null at either end, or for an agent the board
+/// does not list: the order does not wrap round.
+BoardItem? neighbourOf(BuildContext context, AgentRef agent, int delta) {
+  final items = _boardItems(context);
+  final at = items.indexWhere((item) => item.agent == agent);
   final to = at + delta;
-  if (at < 0 || to < 0 || to >= order.length) {
+  if (at < 0 || to < 0 || to >= items.length) return null;
+  return items[to];
+}
+
+/// A swipe's step: shows [to], [delta] places from the agent in front (+1
+/// the next one, for a swipe to the left), in place of this screen, sliding
+/// in from the side the finger came from. [to] is the agent the swipe showed
+/// while the finger moved, not one looked up again: the order may have
+/// changed meanwhile. One the board no longer lists is not opened; a tick
+/// says so. True if a screen for [to] is on its way.
+bool stepToAgent(BuildContext context, AgentRef to, int delta) {
+  if (!agentsInBoardOrder(context).contains(to)) {
     Haptics.tick();
-    return;
+    return false;
   }
+  final opens = _screenFor(context, to, _defaultView(context, to)) != null;
   unawaited(
     _open(
       context,
-      order[to],
+      to,
       replace: true,
       entrance: delta > 0 ? _Entrance.fromRight : _Entrance.fromLeft,
     ),
   );
+  return opens;
+}
+
+/// The step without a gesture (the screen's `Next agent` and `Previous
+/// agent` accessibility actions): the agent [delta] places from [agent], or
+/// at either end a tick, the end card's words said out loud, and nothing
+/// moves.
+void swipeToAgent(BuildContext context, AgentRef agent, int delta) {
+  final to = neighbourOf(context, agent, delta);
+  if (to == null) {
+    Haptics.tick();
+    final words = peekEndWords(next: delta > 0, listed: agentsInBoardOrder(context).contains(agent));
+    unawaited(SemanticsService.sendAnnouncement(View.of(context), words, Directionality.of(context)));
+    return;
+  }
+  stepToAgent(context, to.agent, delta);
 }
 
 /// Every agent the board lists, in the board's order: its sections in turn
@@ -90,7 +119,10 @@ void swipeToAgent(BuildContext context, AgentRef agent, int delta) {
 /// longest waiting first), terminal panes and sessions as the board mixes
 /// them. The board's filter and collapsed sections are a way of looking, not
 /// an order, and are not applied.
-List<AgentRef> agentsInBoardOrder(BuildContext context) {
+List<AgentRef> agentsInBoardOrder(BuildContext context) => [for (final item in _boardItems(context)) item.agent];
+
+/// [agentsInBoardOrder] as the board's rows, with what each row shows.
+List<BoardItem> _boardItems(BuildContext context) {
   final attention = context.read<AttentionSet?>();
   if (attention == null) return const [];
   final sections = boardSections(
@@ -99,13 +131,16 @@ List<AgentRef> agentsInBoardOrder(BuildContext context) {
     attention,
   );
   return [
-    for (final section in sections)
-      for (final item in section.items)
-        switch (item) {
-          PaneItem(:final row) => PaneAgent(row.machine.profile.id, row.paneId),
-          SessionItem(:final session) => SessionAgent(session.key),
-        },
+    for (final section in sections) ...section.items,
   ];
+}
+
+/// The agent a board row stands for.
+extension BoardItemAgent on BoardItem {
+  AgentRef get agent => switch (this) {
+        PaneItem(:final row) => PaneAgent(row.machine.profile.id, row.paneId),
+        SessionItem(:final session) => SessionAgent(session.key),
+      };
 }
 
 /// Puts the agent screen the app was left on back in front at launch: at once
