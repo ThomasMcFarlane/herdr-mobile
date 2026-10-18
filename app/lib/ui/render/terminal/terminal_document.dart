@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
-import 'package:herdr_mobile/ui/core/kit.dart';
+import 'ansi.dart';
+import 'cell_width.dart';
 import 'line_wrap.dart';
 import 'rows_snapshot.dart';
 import 'table_lines.dart';

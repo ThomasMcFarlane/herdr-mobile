@@ -80,14 +80,20 @@ app/lib/
                     batch_actions.dart, host_inbox.dart, session_launcher.dart,
                     attention_notifier.dart, ...
   ui/
-    core/           design system (tokens, theme, motion, controls, rows,
-                    glyphs, chrome, status_panel), the terminal view (ansi.dart,
-                    terminal_document.dart, a cell grid with backgrounds and box
-                    drawing painted per row, snapped to device pixels:
-                    terminal_cells.dart, box_drawing.dart; line_wrap.dart,
-                    table_lines.dart, terminal_links.dart, pinch to zoom),
-                    markdown/ (the chat's Markdown), keyboard_frames.dart,
-                    deep_link.dart
+    core/           the kit, and only the kit: tokens, theme, motion and every
+                    shared component (bars, sheets, rows, chips, toast,
+                    answer chips), exported by kit.dart; imports nothing
+                    above it
+    render/         renderers built on the kit: terminal/ (ansi.dart and
+                    cell_width.dart, terminal_document.dart, a cell grid with
+                    backgrounds and box drawing painted per row, snapped to
+                    device pixels: terminal_cells.dart, box_drawing.dart;
+                    line_wrap.dart, table_lines.dart, terminal_links.dart,
+                    pinch to zoom), markdown/ (the chat's Markdown),
+                    visible_text.dart
+    support/        app plumbing without pixels of its own: deep_link.dart,
+                    keyboard_frames.dart, open_link.dart, tap_guard.dart,
+                    home_tabs.dart, error_view.dart, ...
     features/       views + view models, one folder per screen family:
                     agents/          the board, batch actions, opening an
                                      agent and switching between agents

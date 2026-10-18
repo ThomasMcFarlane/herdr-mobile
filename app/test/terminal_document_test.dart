@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
+import 'package:herdr_mobile/ui/render/terminal/ansi.dart';
 import 'package:herdr_mobile/ui/render/terminal/line_wrap.dart';
 import 'package:herdr_mobile/ui/render/terminal/terminal_document.dart';
 import 'package:herdr_mobile/ui/features/pane/scrollback_history.dart';

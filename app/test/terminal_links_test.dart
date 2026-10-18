@@ -2,7 +2,7 @@ import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/ui/render/terminal/box_drawing.dart';
-import 'package:herdr_mobile/ui/core/kit.dart';
+import 'package:herdr_mobile/ui/render/terminal/cell_width.dart';
 import 'package:herdr_mobile/ui/render/terminal/terminal_links.dart';
 
 /// A URL link whose displayed text is its target, starting at cell [start].

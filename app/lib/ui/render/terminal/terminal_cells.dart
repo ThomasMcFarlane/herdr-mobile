@@ -7,6 +7,8 @@ import 'package:flutter/rendering.dart'
 import 'package:flutter/widgets.dart';
 
 import 'package:herdr_mobile/ui/core/kit.dart';
+import 'ansi.dart';
+import 'cell_width.dart';
 import 'box_drawing.dart';
 import 'terminal_document.dart';
 import 'terminal_links.dart';

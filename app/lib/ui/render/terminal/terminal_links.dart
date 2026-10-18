@@ -9,7 +9,7 @@
 library;
 
 import 'box_drawing.dart' show isBoxGlyph;
-import 'package:herdr_mobile/ui/core/kit.dart';
+import 'cell_width.dart';
 
 /// What a [TerminalLink] opens.
 enum TerminalLinkKind { url, path }

@@ -1,4 +1,5 @@
-import 'package:herdr_mobile/ui/core/kit.dart';
+import 'ansi.dart';
+import 'cell_width.dart';
 
 /// Splits one terminal line into rows of at most [columns] cells.
 ///

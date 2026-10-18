@@ -1,7 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 
-import 'package:herdr_mobile/ui/core/kit.dart';
+import 'package:herdr_mobile/ui/render/terminal/cell_width.dart';
 import '../terminal/terminal_links.dart';
 import '../visible_text.dart';
 import 'md_actions.dart';

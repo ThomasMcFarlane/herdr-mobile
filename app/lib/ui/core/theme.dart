@@ -4,7 +4,6 @@ import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder, Cu
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'ansi.dart' show AnsiRun;
 import 'motion.dart';
 import 'tokens.dart';
 
@@ -123,30 +122,13 @@ class TerminalPalette extends ThemeExtension<TerminalPalette> {
     for (var i = 0; i < 16; i++) TerminalColors.ansi[i]: ansi[i],
   };
 
-  /// [run] as this palette draws it. The parser's [TerminalColors] become
-  /// this palette's; text that has a background of its own and no colour takes
-  /// whichever default reads on it; any text below [minContrast] against its
-  /// background is darkened. The dark palette returns [run] itself.
-  AnsiRun recolor(AnsiRun run) {
-    if (isDark) return run;
-    final bg = run.bg == null ? null : (_fromDark[run.bg] ?? run.bg);
-    var fg = run.fg == null ? null : (_fromDark[run.fg] ?? run.fg);
-    if (bg != null && fg == null) {
-      fg = bg.computeLuminance() < 0.35 ? TerminalColors.foreground : foreground;
-    }
-    if (fg != null) fg = _readable(fg, bg ?? background);
-    if (fg == run.fg && bg == run.bg) return run;
-    return AnsiRun(
-      run.text,
-      fg: fg,
-      bg: bg,
-      bold: run.bold,
-      dim: run.dim,
-      italic: run.italic,
-      underline: run.underline,
-      strike: run.strike,
-    );
-  }
+  /// [dark], one of the parser's [TerminalColors], as this palette draws it;
+  /// any other colour is returned as is. The terminal renderer's `recolor`
+  /// applies it to a run.
+  Color mapped(Color dark) => _fromDark[dark] ?? dark;
+
+  /// [fg], darkened until it reaches [minContrast] on [on].
+  static Color readable(Color fg, Color on) => _readable(fg, on);
 
   static double _contrast(Color a, Color b) {
     final la = a.computeLuminance();

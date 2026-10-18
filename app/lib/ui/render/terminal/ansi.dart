@@ -1,8 +1,9 @@
 import 'dart:math' as math;
 import 'dart:ui' show Color;
 
+import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'cell_width.dart';
-import 'theme.dart';
 
 /// A stretch of text in one style. Reverse video is already resolved: [fg] and
 /// [bg] are what to paint, `null` meaning the terminal default.
@@ -496,3 +497,31 @@ Color _xterm256(int n) {
 }
 
 int _cube(int level) => level == 0 ? 0 : 55 + level * 40;
+
+/// The kit's [TerminalPalette] applied to the parser's runs.
+extension AnsiRecolor on TerminalPalette {
+  /// [run] as this palette draws it. The parser's [TerminalColors] become
+  /// this palette's; text that has a background of its own and no colour takes
+  /// whichever default reads on it; any text below
+  /// [TerminalPalette.minContrast] against its background is darkened. The dark palette returns [run] itself.
+  AnsiRun recolor(AnsiRun run) {
+    if (isDark) return run;
+    final bg = run.bg == null ? null : mapped(run.bg!);
+    var fg = run.fg == null ? null : mapped(run.fg!);
+    if (bg != null && fg == null) {
+      fg = bg.computeLuminance() < 0.35 ? TerminalColors.foreground : foreground;
+    }
+    if (fg != null) fg = TerminalPalette.readable(fg, bg ?? background);
+    if (fg == run.fg && bg == run.bg) return run;
+    return AnsiRun(
+      run.text,
+      fg: fg,
+      bg: bg,
+      bold: run.bold,
+      dim: run.dim,
+      italic: run.italic,
+      underline: run.underline,
+      strike: run.strike,
+    );
+  }
+}

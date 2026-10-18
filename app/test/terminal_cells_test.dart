@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/repositories/terminal_settings.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
+import 'package:herdr_mobile/ui/render/terminal/ansi.dart';
 import 'package:herdr_mobile/ui/render/terminal/terminal_cells.dart';
 import 'package:herdr_mobile/ui/render/terminal/terminal_view.dart';
 

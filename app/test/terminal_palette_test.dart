@@ -3,6 +3,7 @@ import 'dart:ui' show Color;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
+import 'package:herdr_mobile/ui/render/terminal/ansi.dart';
 import 'package:herdr_mobile/ui/render/terminal/terminal_cells.dart';
 
 double contrast(Color a, Color b) {
