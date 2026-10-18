@@ -25,7 +25,7 @@ import '../agents/agent_navigation.dart' show agentViewAction;
 import 'permission_dock.dart' show confirmWindow;
 import 'session_select.dart';
 import 'session_overview.dart' show showSessionOverview;
-import 'session_web.dart' show WebChip;
+import 'session_made.dart' show MadeChip;
 import 'session_overview_model.dart' show contextWarning;
 import 'background_strip.dart' show BackgroundChip;
 import 'subagent_roster.dart' show SubagentsChip;
@@ -180,14 +180,14 @@ class SessionBar extends StatelessWidget {
           padding: const EdgeInsets.only(left: Gap.md + 44),
           // The chips wrap rather than shrink: the subagents chip carries "1
           // waiting for you" and must not end in an ellipsis to make room for
-          // the Web chip (it did at 320 wide). The background chip only shows in
+          // the Made chip (it did at 320 wide). The background chip only shows in
           // the compact layout, which is wide.
           child: Wrap(
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               SubagentsChip(session: session),
               BackgroundChip(session: session),
-              WebChip(session: session),
+              MadeChip(session: session),
             ],
           ),
         ),

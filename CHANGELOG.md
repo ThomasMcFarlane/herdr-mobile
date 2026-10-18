@@ -17,9 +17,11 @@ release.
   your SSH connection. Sign-in and passkeys work as in any link. An `https`
   address on the machine stays copy-only and says why.
 - A machine that does not allow port forwarding says so; Copy link stays.
-- A Web chip under the session's title lists every dev server and HTML or SVG
-  page the agent has put up, newest first, so a link from an hour ago is not
-  lost in the chat. A tap opens it. A server says Running only while a
+- A Made chip under the session's title lists what the agent has made: dev
+  servers, HTML and SVG pages, pictures and documents, newest first, so a link
+  or a file from an hour ago is not lost in the chat. Servers stay pinned on
+  top; pages, pictures (a grid of thumbnails) and documents switch with the
+  same chips as the board once there is more than one kind. A tap opens it. A server says Running only while a
   background task for its port is active.
 
 ### Pictures are downloaded once

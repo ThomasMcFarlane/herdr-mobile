@@ -66,7 +66,7 @@ class PhotoGrid extends StatelessWidget {
   }
 }
 
-class _PhotoTile extends StatefulWidget {
+class _PhotoTile extends StatelessWidget {
   const _PhotoTile({
     super.key,
     required this.files,
@@ -81,10 +81,47 @@ class _PhotoTile extends StatefulWidget {
   final VoidCallback onTap;
 
   @override
-  State<_PhotoTile> createState() => _PhotoTileState();
+  Widget build(BuildContext context) {
+    final e = entry;
+    final size = formatBytes(e.size);
+    return PressBuilder(
+      onTap: onTap,
+      haptic: true,
+      // The name is only ever read out, never drawn: it can be any length.
+      semanticLabel: '${e.name}, $size',
+      builder: (context, pressed) => PhotoThumbFace(files: files, entry: e, thumbs: thumbs, pressed: pressed),
+    );
+  }
 }
 
-class _PhotoTileState extends State<_PhotoTile> with SingleTickerProviderStateMixin {
+/// What a picture's tile draws: its thumbnail centre-cropped to the space it
+/// is given (which it fills), on a quiet fill with a glyph while the picture
+/// is on its way, and again for one too big to fetch or that could not be
+/// read. It holds the picture's entry in [thumbs] while it is built and lets
+/// go when it goes, so a tile nobody builds reads nothing and one that leaves
+/// the screen gives its read up. Used by the folder grid and by the session's
+/// Made sheet.
+class PhotoThumbFace extends StatefulWidget {
+  const PhotoThumbFace({
+    super.key,
+    required this.files,
+    required this.entry,
+    required this.thumbs,
+    this.pressed = false,
+  });
+
+  final RemoteFiles files;
+  final RemoteEntry entry;
+  final PhotoThumbs thumbs;
+
+  /// A soft wash over the picture while a finger is on it.
+  final bool pressed;
+
+  @override
+  State<PhotoThumbFace> createState() => _PhotoThumbFaceState();
+}
+
+class _PhotoThumbFaceState extends State<PhotoThumbFace> with SingleTickerProviderStateMixin {
   late ThumbEntry _held;
   late ThumbPhase _seen;
 
@@ -109,7 +146,7 @@ class _PhotoTileState extends State<_PhotoTile> with SingleTickerProviderStateMi
   }
 
   @override
-  void didUpdateWidget(_PhotoTile old) {
+  void didUpdateWidget(PhotoThumbFace old) {
     super.didUpdateWidget(old);
     if (!identical(old.thumbs, widget.thumbs) || !_held.matches(widget.entry) || !identical(old.files, widget.files)) {
       // The listing changed under this tile (a refresh found a new size or
@@ -158,29 +195,23 @@ class _PhotoTileState extends State<_PhotoTile> with SingleTickerProviderStateMi
     final size = formatBytes(e.size);
     final phase = _held.phase;
     final image = phase == ThumbPhase.ready ? _held.image : null;
-    return PressBuilder(
-      onTap: widget.onTap,
-      haptic: true,
-      // The name is only ever read out, never drawn: it can be any length.
-      semanticLabel: '${e.name}, $size',
-      builder: (context, pressed) => Stack(
-        fit: StackFit.expand,
-        children: [
-          ColoredBox(
-            color: ds.fill,
-            child: switch (phase) {
-              ThumbPhase.tooBig => _Note(icon: LucideIcons.image, text: e.size == null ? null : size),
-              ThumbPhase.failed => const _Note(icon: LucideIcons.imageOff),
-              _ => image == null ? const _Note(icon: LucideIcons.image, faint: true) : null,
-            },
-          ),
-          if (image != null)
-            _fade == null
-                ? _Picture(image)
-                : FadeTransition(opacity: CurvedAnimation(parent: _fade!, curve: Motion.easeOut), child: _Picture(image)),
-          if (pressed) ColoredBox(color: ds.text.withValues(alpha: 0.12)),
-        ],
-      ),
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ColoredBox(
+          color: ds.fill,
+          child: switch (phase) {
+            ThumbPhase.tooBig => _Note(icon: LucideIcons.image, text: e.size == null ? null : size),
+            ThumbPhase.failed => const _Note(icon: LucideIcons.imageOff),
+            _ => image == null ? const _Note(icon: LucideIcons.image, faint: true) : null,
+          },
+        ),
+        if (image != null)
+          _fade == null
+              ? _Picture(image)
+              : FadeTransition(opacity: CurvedAnimation(parent: _fade!, curve: Motion.easeOut), child: _Picture(image)),
+        if (widget.pressed) ColoredBox(color: ds.text.withValues(alpha: 0.12)),
+      ],
     );
   }
 }

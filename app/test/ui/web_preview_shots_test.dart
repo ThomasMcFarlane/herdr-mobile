@@ -13,6 +13,7 @@
 library;
 
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -29,6 +30,7 @@ import 'package:herdr_mobile/ui/core/theme.dart';
 import 'package:herdr_mobile/ui/features/agent_session/session_bar.dart';
 import 'package:herdr_mobile/ui/features/files/file_viewer_screen.dart';
 import 'package:herdr_mobile/ui/features/pane/link_sheet.dart';
+import 'package:image/image.dart' as img;
 
 import '../support/fake_agent_session.dart';
 import '../support/fake_fs.dart';
@@ -205,11 +207,153 @@ void main() {
           b,
           scale: scale,
           then: () async {
-            await tester.tap(find.text('Web'));
+            await tester.tap(find.text('Made'));
             await tester.pump(const Duration(milliseconds: 300));
           },
         );
       });
     }
+  }
+
+  // The Made sheet with a lot in it: 17 pages, 13 pictures (one gone from the
+  // machine, one too big to fetch), 8 documents, 2 servers, long and
+  // Vietnamese names.
+  Uint8List png(int hue) {
+    final image = img.Image(width: 160, height: 90);
+    for (final p in image) {
+      final t = p.x / image.width;
+      p.setRgb((60 + 160 * t + hue).round() % 256, (200 - 120 * t + hue ~/ 2).round() % 256, (90 + 100 * (p.y / image.height) + hue).round() % 256);
+    }
+    return Uint8List.fromList(img.encodePng(image));
+  }
+
+  FakeAgentSession madeSession(String key) {
+    const base = '/home/dev/payments-api';
+    final now = DateTime.now();
+    final fs = FakeFs();
+    final items = <TranscriptItem>[];
+    // 40 items, oldest first, five minutes apart: the newest was a few minutes ago.
+    DateTime ago() => now.subtract(Duration(minutes: 3 + (40 - items.length) * 5));
+    TranscriptItem say(String text) => TranscriptMessage(key: 'm${items.length}', role: MessageRole.agent, blocks: [TextBlock(text)], at: ago());
+    TranscriptItem wrote(String path) => TranscriptTool(
+          ToolCall(toolCallId: 't$path', kind: ToolKind.edit, status: ToolStatus.completed, content: [ToolDiff(path: path, newText: '<h1>x</h1>')]),
+          at: ago(),
+        );
+    // Oldest first: the list shows the newest on top.
+    items.add(say('Serving http://localhost:8000/docs'));
+    items.add(say('Dashboard on http://localhost:5173/'));
+    final docs = [
+      'docs/design.md',
+      'docs/Báo cáo đối soát Q3 — bản cuối cùng cho ban điều hành.md',
+      'exports/reconciliation-2026-q3-all-regions-final-v2-reviewed.pdf',
+      'exports/ledger.csv',
+      'exports/Bảng tổng hợp thanh toán.xlsx',
+      'docs/plan.md',
+      'slides/q3-review.pptx',
+      'docs/CHANGELOG-draft.md',
+    ];
+    final pictures = [
+      'screenshots/checkout-error-after-retry-timeout-on-slow-3g-network.png',
+      'screenshots/dashboard-empty.png',
+      'screenshots/ảnh-chụp-màn-hình-trang-thanh-toán.png',
+      'screenshots/a.png',
+      'screenshots/diff-before.png',
+      'screenshots/diff-after.png',
+      'screenshots/flamegraph.png',
+      'screenshots/mobile-320.png',
+      'screenshots/mobile-412.png',
+      'screenshots/desktop-1440.png',
+      'screenshots/logo-dark.png',
+      'screenshots/gone-from-the-machine.png',
+      'screenshots/huge-photo.png',
+    ];
+    final pages = [
+      'reports/Báo cáo đối soát Q3 — bản cuối cùng.html',
+      'htmlcov/index.html',
+      'diagrams/architecture.svg',
+      'diagrams/ledger_flow.svg',
+      'htmlcov/z_1a2b_ledger_py.html',
+      'htmlcov/z_3c4d_reconcile_py.html',
+      'talk/slides.html',
+      'design/Thiết kế giao diện thanh toán.html',
+      'dist/index.html',
+      'benchmarks/report.html',
+      'talk/notebook-export-with-a-very-long-name-for-the-quarterly-review.html',
+      'htmlcov/z_5e6f_models_py.html',
+      'htmlcov/z_7a8b_api_py.html',
+      'site/about.html',
+      'site/pricing.html',
+      'site/contact.html',
+      'reports/summary.html',
+    ];
+    // Interleaved, so the kinds are mixed in time: pages are the newest.
+    for (var i = 0; i < 17; i++) {
+      if (i < docs.length) items.add(wrote('$base/${docs[i]}'));
+      if (i < pictures.length) items.add(say('I saved ${pictures[i]}'));
+      items.add(wrote('$base/${pages[i]}'));
+    }
+    for (final p in pictures) {
+      if (p.contains('gone-from')) continue;
+      fs.addFile('$base/$p', p.contains('huge') ? Uint8List(3 * 1024 * 1024) : png(p.length * 7));
+    }
+    for (final p in [...docs, ...pages]) {
+      fs.addFile('$base/$p', 'x');
+    }
+    final session = FakeAgentSession(machine: _machine(fs), key: key, state: AgentSessionState('s', items: items));
+    session.setBackground(
+      BackgroundWork(
+        tasks: const [
+          BackgroundTask(id: 'bg1', kind: BackgroundKind.shell, status: BackgroundStatus.running, title: 'vite --port 5173'),
+          BackgroundTask(id: 'bg2', kind: BackgroundKind.shell, status: BackgroundStatus.finished, title: 'uvicorn app:app --port 8000'),
+        ],
+      ),
+    );
+    return session;
+  }
+
+  Future<void> openMade(WidgetTester tester, String tab) async {
+    await tester.tap(find.text('Made'));
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    final screen = tester.view.physicalSize / tester.view.devicePixelRatio;
+    final at = tester.getRect(find.text(tab));
+    if (at.right > screen.width) {
+      // A row that does not fit is swiped sideways, as a person would.
+      await tester.drag(find.text('Pages'), const Offset(-300, 0));
+      await tester.pump(const Duration(milliseconds: 400));
+    }
+    await tester.tap(find.text(tab));
+    await tester.pump(const Duration(milliseconds: 400));
+    // Thumbnails are read on the fake clock and decoded on the engine's real
+    // one: take turns.
+    for (var i = 0; i < 12; i++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 80)));
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    await tester.pump(const Duration(milliseconds: 400));
+  }
+
+  final madeCases = <(String, Size, double, Brightness)>[
+    for (final t in ['pages', 'pictures', 'docs']) ...[
+      (t, const Size(412, 892), 1, Brightness.light),
+      (t, const Size(412, 892), 1, Brightness.dark),
+      (t, const Size(320, 640), 1.6, Brightness.light),
+    ],
+    ('pictures', const Size(320, 640), 1.6, Brightness.dark),
+  ];
+  for (final (tab, size, scale, b) in madeCases) {
+    testWidgets('made-$tab ${b.name} ${size.width.toInt()} x$scale', (tester) async {
+      final session = madeSession('m/shot-$tab-${b.name}-${size.width}');
+      await shoot(
+        tester,
+        'made-$tab',
+        Scaffold(body: SessionBar(session: session)),
+        size,
+        b,
+        scale: scale,
+        then: () => openMade(tester, '${tab[0].toUpperCase()}${tab.substring(1)}'),
+      );
+    });
   }
 }

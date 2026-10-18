@@ -1,14 +1,16 @@
+import '../models/made_files.dart';
 import '../models/remote_file.dart';
-import '../models/web_bridge.dart' show isPreviewHost, isWebPageName;
+import '../models/web_bridge.dart' show isPreviewHost;
 import 'acp_models.dart';
 import 'background/background_work.dart' show BackgroundStatus, BackgroundTask;
 import 'session_state.dart';
 import 'turns/tool_summary.dart' show commandOf, outputTextOf;
 import 'turns/turns.dart' show pathOfCall;
 
-/// What a session put on the web for the person to look at: a dev server on the
-/// machine, or an HTML or SVG file. Found in the transcript, so it is not lost
-/// when the chat scrolls: a link an agent printed an hour ago is here.
+/// What a session made for the person to look at: a dev server on the machine,
+/// an HTML or SVG page, a picture, a document (`made_files.dart`). Found in the
+/// transcript, so it is not lost when the chat scrolls: a link an agent printed
+/// an hour ago is here.
 ///
 /// What counts is deliberately narrow. Run over 6,000 recorded sessions, a
 /// scanner that took every `localhost` URL and every `.html` name from commands
@@ -16,18 +18,23 @@ import 'turns/turns.dart' show pathOfCall;
 /// `curl` probed, the pages a `curl -o` downloaded, the files a `grep` named.
 /// So a row needs the agent to have MADE or ANNOUNCED the thing:
 /// - a page: a completed edit, a file a command writes (`>`, `tee`, `-o`,
-///   `cp`/`mv` target, `open`), or a path in the agent's own words;
+///   `cp`/`mv` target, `open`), a "Saved to ..." line a tool printed, or a path
+///   in the agent's own words;
+/// - a picture or a document: the same, except that a document must be a NEW
+///   file (not an edit of a README) and that naming one in words needs a word of
+///   making right before it ("saved screenshots/a.png"), because the chat names
+///   existing files all day;
 /// - a server: a link in the agent's own words, or a banner line a launched
 ///   command printed (`Local: http://localhost:5173/`).
-enum WebKind { server, page }
+enum MadeKind { server, page, picture, doc }
 
 /// A server's state as far as the phone can tell. [seen] is the honest default:
 /// a link in the output says the server existed, not that it still runs.
 enum ServerState { running, stopped, seen }
 
 /// One server or page, with the last place the transcript mentioned it.
-class WebAsset {
-  const WebAsset({
+class MadeAsset {
+  const MadeAsset({
     required this.kind,
     required this.key,
     required this.title,
@@ -38,7 +45,7 @@ class WebAsset {
     required this.order,
   });
 
-  final WebKind kind;
+  final MadeKind kind;
 
   /// One row per key: the server's `localhost:5173`, a page's absolute path.
   final String key;
@@ -69,12 +76,12 @@ class WebAsset {
 }
 
 /// The most rows a session shows: a transcript can mention hundreds of ports.
-const webAssetsCap = 150;
+const madeAssetsCap = 150;
 
 /// Whether [a] and [b] show the same rows. A tool call that streams replaces
 /// the transcript list on every chunk and with it the list this returns; the
 /// screens rebuild on a change of what they SHOW, not of the list.
-bool sameWebAssets(List<WebAsset> a, List<WebAsset> b) {
+bool sameMadeAssets(List<MadeAsset> a, List<MadeAsset> b) {
   if (identical(a, b)) return true;
   if (a.length != b.length) return false;
   for (var i = 0; i < a.length; i++) {
@@ -87,7 +94,7 @@ bool sameWebAssets(List<WebAsset> a, List<WebAsset> b) {
 /// The servers and pages of [items], newest mention first, one row each.
 /// Memoized by list identity and [cwd] (the folder a relative path is taken
 /// against; empty counts as unknown), and the scan of each item by the item.
-List<WebAsset> webAssetsOf(List<TranscriptItem> items, {String? cwd}) {
+List<MadeAsset> madeAssetsOf(List<TranscriptItem> items, {String? cwd}) {
   final base = cwd == null || cwd.isEmpty ? null : cwd;
   final byCwd = _lists[items] ??= {};
   return byCwd[base] ??= _build(items, base);
@@ -97,7 +104,7 @@ List<WebAsset> webAssetsOf(List<TranscriptItem> items, {String? cwd}) {
 /// task that names its port is running, stopped when only ended ones do, else
 /// just seen. [live] is false for a saved copy or a link that is not up: then
 /// nothing here is known to run.
-ServerState serverStateOf(WebAsset server, Iterable<BackgroundTask> tasks, {bool live = true}) {
+ServerState serverStateOf(MadeAsset server, Iterable<BackgroundTask> tasks, {bool live = true}) {
   final port = server.port;
   if (port == null || !live) return ServerState.seen;
   final pattern = RegExp('(?<!\\d)$port(?!\\d)');
@@ -110,16 +117,16 @@ ServerState serverStateOf(WebAsset server, Iterable<BackgroundTask> tasks, {bool
   return named ? ServerState.stopped : ServerState.seen;
 }
 
-final _lists = Expando<Map<String?, List<WebAsset>>>('session web list');
-final _mentions = Expando<List<_Mention>>('session web mentions');
-final _commandScans = Expando<List<_Mention>>('session web command');
+final _lists = Expando<Map<String?, List<MadeAsset>>>('session made list');
+final _mentions = Expando<List<_Mention>>('session made mentions');
+final _commandScans = Expando<List<_Mention>>('session made command');
 
-enum _Act { server, page, drop }
+enum _Act { server, file, drop }
 
 /// One thing a transcript item said. [cd] is a `cd` the command made first.
 class _Mention {
   const _Mention.server(this.url, this.at) : act = _Act.server, path = null, cwd = null, cd = null;
-  const _Mention.page(this.path, this.cwd, this.cd, this.at) : act = _Act.page, url = null;
+  const _Mention.file(this.path, this.cwd, this.cd, this.at) : act = _Act.file, url = null;
   const _Mention.drop(this.path, this.cwd, this.cd, this.at) : act = _Act.drop, url = null;
 
   final _Act act;
@@ -130,8 +137,8 @@ class _Mention {
   final DateTime? at;
 }
 
-List<WebAsset> _build(List<TranscriptItem> items, String? sessionCwd) {
-  final byKey = <String, WebAsset>{};
+List<MadeAsset> _build(List<TranscriptItem> items, String? sessionCwd) {
+  final byKey = <String, MadeAsset>{};
   for (final (index, item) in items.indexed) {
     var seq = 0;
     for (final m in _mentionsOf(item)) {
@@ -144,8 +151,8 @@ List<WebAsset> _build(List<TranscriptItem> items, String? sessionCwd) {
           final prev = byKey[asset.key];
           if (prev != null && prev.order ~/ 1000 == index && prev.url?.path != '/' && asset.url?.path == '/') break;
           byKey[asset.key] = asset;
-        case _Act.page:
-          final asset = _pageOf(m, sessionCwd, order);
+        case _Act.file:
+          final asset = _fileOf(m, sessionCwd, order);
           if (asset != null) byKey[asset.key] = asset;
         case _Act.drop:
           final key = _placed(m, sessionCwd);
@@ -154,7 +161,7 @@ List<WebAsset> _build(List<TranscriptItem> items, String? sessionCwd) {
     }
   }
   final out = byKey.values.toList()..sort((a, b) => b.order.compareTo(a.order));
-  return List.unmodifiable(out.length > webAssetsCap ? out.sublist(0, webAssetsCap) : out);
+  return List.unmodifiable(out.length > madeAssetsCap ? out.sublist(0, madeAssetsCap) : out);
 }
 
 List<_Mention> _mentionsOf(TranscriptItem item) {
@@ -174,17 +181,27 @@ List<_Mention> _scan(TranscriptItem item) {
       _say(text.length > _textCap ? text.substring(0, _textCap) : text, at, out);
     case TranscriptTool(:final call, :final at):
       for (final c in call.content) {
-        if (c is ToolDiff && call.status == ToolStatus.completed && _isPage(c.path)) {
-          final p = _cleanPath(c.path);
-          if (p != null) out.add(_Mention.page(p, call.cwd, null, at));
+        if (c is ToolDiff && call.status == ToolStatus.completed) {
+          // A page counts whenever it was written; a document only when the
+          // agent CREATED it (an edit of a README is not something it made).
+          final kind = _kindOf(c.path);
+          final p = kind == null ? null : _cleanPath(c.path);
+          if (p != null && (kind == MadeFileKind.page || kind == MadeFileKind.doc && c.oldText == null)) {
+            out.add(_Mention.file(p, call.cwd, null, at));
+          }
         }
       }
       if (call.status == ToolStatus.completed && (call.kind == ToolKind.edit || call.kind == ToolKind.delete)) {
         final p = pathOfCall(call);
-        if (p != null && _isPage(p)) {
+        final kind = p == null ? null : _kindOf(p);
+        if (p != null && kind != null) {
           final clean = _cleanPath(p);
           if (clean != null) {
-            out.add(call.kind == ToolKind.delete ? _Mention.drop(clean, call.cwd, null, at) : _Mention.page(clean, call.cwd, null, at));
+            if (call.kind == ToolKind.delete) {
+              out.add(_Mention.drop(clean, call.cwd, null, at));
+            } else if (kind == MadeFileKind.page) {
+              out.add(_Mention.file(clean, call.cwd, null, at));
+            }
           }
         }
       }
@@ -197,7 +214,10 @@ List<_Mention> _scan(TranscriptItem item) {
           out.addAll(scanned.map((m) => _withTime(m, at)));
           // What a launched command printed names the server. Not what a probe printed.
           final printed = outputTextOf(call);
-          if (printed != null && !_isProbe(command)) _banners(printed, at, out);
+          if (printed != null && !_isProbe(command)) {
+            _banners(printed, at, out);
+            _saved(printed, call.cwd, at, out);
+          }
         }
       }
     default:
@@ -207,7 +227,7 @@ List<_Mention> _scan(TranscriptItem item) {
 
 _Mention _withTime(_Mention m, DateTime? at) => switch (m.act) {
   _Act.server => _Mention.server(m.url, at),
-  _Act.page => _Mention.page(m.path, m.cwd, m.cd, at),
+  _Act.file => _Mention.file(m.path, m.cwd, m.cd, at),
   _Act.drop => _Mention.drop(m.path, m.cwd, m.cd, at),
 };
 
@@ -243,16 +263,18 @@ void _say(String text, DateTime? at, List<_Mention> out) {
     final raw = m.group(0)!;
     if (raw.length > 400) continue;
     // Nearly every token is a plain word: reject it before the costlier clean-up.
-    final lower = raw.toLowerCase();
-    if (!lower.contains('.htm') && !lower.contains('.xhtml') && !lower.contains('.svg')) continue;
+    if (!raw.contains('.')) continue;
     final p = _cleanPath(raw);
-    if (p == null || !_isPage(p)) continue;
-    final bare = !p.contains('/');
-    if (bare) {
+    final kind = p == null ? null : _kindOf(p);
+    if (p == null || kind == null) continue;
+    // A page with a folder in it counts; a bare name, and any picture or
+    // document (the chat names existing README.md files and screenshots all day),
+    // only right after a word of making.
+    if (!p.contains('/') || kind != MadeFileKind.page) {
       final from = m.start - 60 < 0 ? 0 : m.start - 60;
       if (!_madeVerb.hasMatch(prose.substring(from, m.start))) continue;
     }
-    out.add(_Mention.page(p, null, null, at));
+    out.add(_Mention.file(p, null, null, at));
   }
 }
 
@@ -326,12 +348,12 @@ List<_Mention> _scanCommand(String command, String? callCwd) {
   String? cd;
   void page(String raw) {
     final p = _cleanPath(raw);
-    if (p != null && _isPage(p)) out.add(_Mention.page(p, callCwd, cd, null));
+    if (p != null && _kindOf(p) != null) out.add(_Mention.file(p, callCwd, cd, null));
   }
 
   void drop(String raw) {
     final p = _cleanPath(raw);
-    if (p != null && _isPage(p)) out.add(_Mention.drop(p, callCwd, cd, null));
+    if (p != null && _kindOf(p) != null) out.add(_Mention.drop(p, callCwd, cd, null));
   }
 
   for (final seg in _commandHead(command).split(_segments)) {
@@ -417,6 +439,26 @@ void _banners(String printed, DateTime? at, List<_Mention> out) {
   }
 }
 
+final _savedVerb = RegExp(r'\b(?:saved|wrote|written|generated|exported|created|screenshot)\b', caseSensitive: false);
+
+/// A tool that makes a file says so on a line of its own ("Saved screenshot to
+/// out/a.png", "Wrote reports/q3.html"): the first 8 KB, a line with a word of
+/// making and a path with a folder in it. A listing or a log names files
+/// without the word.
+void _saved(String printed, String? cwd, DateTime? at, List<_Mention> out) {
+  final head = printed.length > 8192 ? printed.substring(0, 8192) : printed;
+  for (final line in head.split('\n')) {
+    final l = line.length > 300 ? line.substring(0, 300) : line;
+    if (!_savedVerb.hasMatch(l)) continue;
+    for (final m in _token.allMatches(l.replaceAll(_url, ' '))) {
+      final raw = m.group(0)!;
+      if (raw.length > 400) continue;
+      final p = _cleanPath(raw);
+      if (p != null && p.contains('/') && _kindOf(p) != null) out.add(_Mention.file(p, cwd, null, at));
+    }
+  }
+}
+
 // ----- servers -----
 
 Uri? _serverUri(String raw, {required bool keepPath}) {
@@ -437,11 +479,11 @@ Uri? _serverUri(String raw, {required bool keepPath}) {
   );
 }
 
-WebAsset _serverOf(Uri url, DateTime? at, int order) {
+MadeAsset _serverOf(Uri url, DateTime? at, int order) {
   final port = url.hasPort ? url.port : 80;
   final path = url.path == '/' ? '' : _display(url.path);
-  return WebAsset(
-    kind: WebKind.server,
+  return MadeAsset(
+    kind: MadeKind.server,
     key: 'localhost:$port',
     title: 'localhost${url.hasPort ? ':$port' : ''}$path',
     where: '',
@@ -464,7 +506,7 @@ String _display(String encoded) {
 final _noise = RegExp(r'(?:^|/)(?:node_modules|site-packages|\.git|\.dart_tool)/|^/(?:usr|proc|sys|lib|opt)/');
 final _drive = RegExp(r'^[A-Za-z]:[\\/]');
 
-bool _isPage(String path) => !_noise.hasMatch(path) && isWebPageName(path);
+MadeFileKind? _kindOf(String path) => _noise.hasMatch(path) ? null : madeFileKindOf(path);
 
 /// A path as the scanner will keep it, or null when it is not a usable path of
 /// the machine: a shell variable, a URL, a Windows drive, `~user`.
@@ -491,11 +533,17 @@ String? _placed(_Mention m, String? sessionCwd) {
   return RemotePath.resolve(path, cwd: base);
 }
 
-WebAsset? _pageOf(_Mention m, String? sessionCwd, int order) {
+MadeAsset? _fileOf(_Mention m, String? sessionCwd, int order) {
   final key = _placed(m, sessionCwd);
-  if (key == null || !_isPage(key)) return null;
+  final fileKind = key == null ? null : _kindOf(key);
+  if (key == null || fileKind == null) return null;
   final name = RemotePath.basename(key);
   final parent = RemotePath.parent(key);
   final folder = parent == '/' || parent == '.' ? '' : '${RemotePath.basename(parent)}/';
-  return WebAsset(kind: WebKind.page, key: key, title: name, where: folder, path: key, at: m.at, order: order);
+  final kind = switch (fileKind) {
+    MadeFileKind.page => MadeKind.page,
+    MadeFileKind.picture => MadeKind.picture,
+    MadeFileKind.doc => MadeKind.doc,
+  };
+  return MadeAsset(kind: kind, key: key, title: name, where: folder, path: key, at: m.at, order: order);
 }

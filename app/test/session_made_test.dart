@@ -2,7 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/acp/acp_models.dart';
 import 'package:herdr_mobile/data/acp/background/background_work.dart';
 import 'package:herdr_mobile/data/acp/session_state.dart';
-import 'package:herdr_mobile/data/acp/session_web.dart';
+import 'package:herdr_mobile/data/acp/session_made.dart';
+import 'package:herdr_mobile/data/models/made_files.dart';
 
 var _n = 0;
 
@@ -38,7 +39,17 @@ TranscriptItem _delete(String path) => TranscriptTool(
       ToolCall(toolCallId: 't${_n++}', kind: ToolKind.delete, status: ToolStatus.completed, locations: [ToolLocation(path: path)]),
     );
 
-List<String> _keys(List<TranscriptItem> items, {String? cwd}) => [for (final a in webAssetsOf(items, cwd: cwd)) a.key];
+List<String> _keys(List<TranscriptItem> items, {String? cwd}) => [for (final a in madeAssetsOf(items, cwd: cwd)) a.key];
+
+List<MadeKind> webAssetsKinds(List<String> names) => [
+      for (final n in names)
+        if (madeFileKindOf(n) case final k?)
+          switch (k) {
+            MadeFileKind.page => MadeKind.page,
+            MadeFileKind.picture => MadeKind.picture,
+            MadeFileKind.doc => MadeKind.doc,
+          },
+    ];
 
 const _vite = '  VITE v5.2.0  ready in 312 ms\n\n  ➜  Local:   http://localhost:5173/\n  ➜  Network: http://192.168.1.20:5173/\n';
 
@@ -49,7 +60,7 @@ void main() {
         _run('npm run dev', output: _vite),
         _say('Also on http://127.0.0.1:5173/ and http://0.0.0.0:5173.'),
       ];
-      final assets = webAssetsOf(items);
+      final assets = madeAssetsOf(items);
       expect(assets.map((a) => a.key), ['localhost:5173']);
       expect(assets.single.title, 'localhost:5173');
     });
@@ -91,7 +102,7 @@ void main() {
         _say('Open http://localhost:8000/docs for the API, and the app is on localhost:5173.'),
         _run('npm start', output: 'Local: http://localhost:4000/internal/debug/x\n'),
       ];
-      final byKey = {for (final a in webAssetsOf(items)) a.key: a};
+      final byKey = {for (final a in madeAssetsOf(items)) a.key: a};
       expect(byKey['localhost:8000']!.title, 'localhost:8000/docs');
       expect(byKey['localhost:5173'], isNotNull);
       expect(byKey['localhost:4000']!.url!.path, '/');
@@ -110,7 +121,7 @@ void main() {
     });
 
     test('credentials in a link are not kept', () {
-      final s = webAssetsOf([_say('http://user:secret@localhost:3000/x')]).single;
+      final s = madeAssetsOf([_say('http://user:secret@localhost:3000/x')]).single;
       expect(s.url.toString(), 'http://localhost:3000/x');
     });
 
@@ -120,7 +131,7 @@ void main() {
         _say('Report at http://localhost:4000/'),
         _say('Try http://localhost:3000/health'),
       ];
-      expect(webAssetsOf(items).map((a) => a.title), ['localhost:3000/health', 'localhost:4000']);
+      expect(madeAssetsOf(items).map((a) => a.title), ['localhost:3000/health', 'localhost:4000']);
     });
 
     test('a user message is not something the session made', () {
@@ -128,7 +139,7 @@ void main() {
     });
 
     test('state: running only while a running task names the port; stopped when only ended ones do; else just seen', () {
-      final server = webAssetsOf([_say('http://localhost:5173/')]).single;
+      final server = madeAssetsOf([_say('http://localhost:5173/')]).single;
       BackgroundTask task(String title, BackgroundStatus s) =>
           BackgroundTask(id: title, kind: BackgroundKind.shell, status: s, title: title);
       expect(serverStateOf(server, const []), ServerState.seen);
@@ -269,13 +280,13 @@ void main() {
   });
 
   group('bounds', () {
-    test('a session lists at most webAssetsCap rows and one item at most 40 mentions', () {
+    test('a session lists at most madeAssetsCap rows and one item at most 40 mentions', () {
       final many = [for (var i = 0; i < 400; i++) _say('http://localhost:${3000 + i}/')];
-      final assets = webAssetsOf(many);
-      expect(assets, hasLength(webAssetsCap));
+      final assets = madeAssetsOf(many);
+      expect(assets, hasLength(madeAssetsCap));
       expect(assets.first.key, 'localhost:3399', reason: 'the newest are kept');
       final oneMessage = _say([for (var i = 0; i < 200; i++) 'http://localhost:${4000 + i}/'].join(' '));
-      expect(webAssetsOf([oneMessage]).length, lessThanOrEqualTo(40));
+      expect(madeAssetsOf([oneMessage]).length, lessThanOrEqualTo(40));
     });
 
     test('text with no break in it is read in linear time', () {
@@ -284,7 +295,7 @@ void main() {
       final dots = 'a.' * 30000;
       final b64 = 'data:image/png;base64,${'QUJD' * 15000}';
       final watch = Stopwatch()..start();
-      webAssetsOf([_say(blob), _say(dots), _say(b64), _run('echo ${'x' * 30000} > out.html', cwd: '/w')]);
+      madeAssetsOf([_say(blob), _say(dots), _say(b64), _run('echo ${'x' * 30000} > out.html', cwd: '/w')]);
       expect(watch.elapsedMilliseconds, lessThan(1500));
     });
   });
@@ -292,9 +303,9 @@ void main() {
   group('the list', () {
     test('the same list answers from memory, per folder', () {
       final items = [_say('http://localhost:3000/'), _write('/a/one.html')];
-      expect(identical(webAssetsOf(items, cwd: '/a'), webAssetsOf(items, cwd: '/a')), isTrue);
-      final other = webAssetsOf(items, cwd: '/b');
-      expect(identical(webAssetsOf(items, cwd: '/a'), webAssetsOf(items, cwd: '/a')), isTrue, reason: 'another folder does not evict');
+      expect(identical(madeAssetsOf(items, cwd: '/a'), madeAssetsOf(items, cwd: '/a')), isTrue);
+      final other = madeAssetsOf(items, cwd: '/b');
+      expect(identical(madeAssetsOf(items, cwd: '/a'), madeAssetsOf(items, cwd: '/a')), isTrue, reason: 'another folder does not evict');
       expect(other, isNotNull);
     });
 
@@ -312,12 +323,89 @@ void main() {
       expect(_keys([at('$_vite${'GET / 200\n' * 500}')]), ['localhost:5173']);
     });
 
-    test('sameWebAssets compares what the rows show, not the list that holds them', () {
-      final a = webAssetsOf([_say('http://localhost:3000/'), _run('ls', output: 'a\n')]);
-      final b = webAssetsOf([_say('http://localhost:3000/'), _run('ls', output: 'a\nb\n')]);
+    test('sameMadeAssets compares what the rows show, not the list that holds them', () {
+      final a = madeAssetsOf([_say('http://localhost:3000/'), _run('ls', output: 'a\n')]);
+      final b = madeAssetsOf([_say('http://localhost:3000/'), _run('ls', output: 'a\nb\n')]);
       expect(identical(a, b), isFalse);
-      expect(sameWebAssets(a, b), isTrue);
-      expect(sameWebAssets(a, webAssetsOf([_say('http://localhost:3000/health')])), isFalse);
+      expect(sameMadeAssets(a, b), isTrue);
+      expect(sameMadeAssets(a, madeAssetsOf([_say('http://localhost:3000/health')])), isFalse);
+    });
+  });
+
+  group('pictures and documents', () {
+    TranscriptItem create(String path) => TranscriptTool(
+          ToolCall(
+            toolCallId: 't${_n++}',
+            kind: ToolKind.edit,
+            status: ToolStatus.completed,
+            content: [ToolDiff(path: path, newText: '# x')],
+          ),
+        );
+
+    TranscriptItem edit(String path) => TranscriptTool(
+          ToolCall(
+            toolCallId: 't${_n++}',
+            kind: ToolKind.edit,
+            status: ToolStatus.completed,
+            content: [ToolDiff(path: path, oldText: 'a', newText: 'b')],
+          ),
+        );
+
+    test('the kind comes from the name; svg is a page, source and data are nothing', () {
+      expect(webAssetsKinds(['/a/x.png', '/a/x.JPG', '/a/x.svg', '/a/x.html', '/a/x.md', '/a/x.pdf', '/a/x.csv', '/a/x.dart', '/a/x.json', '/a/x.txt', '/a/x.log']), [
+        MadeKind.picture,
+        MadeKind.picture,
+        MadeKind.page,
+        MadeKind.page,
+        MadeKind.doc,
+        MadeKind.doc,
+        MadeKind.doc,
+      ]);
+    });
+
+    test('a document counts when the agent created it, not when it edited one', () {
+      final items = [create('/w/docs/design.md'), edit('/w/README.md'), edit('/w/docs/old.pdf')];
+      expect(_keys(items), ['/w/docs/design.md']);
+    });
+
+    test('a picture or document a command writes counts; one it only reads or downloads does not', () {
+      final items = [
+        _run('python plot.py --output out/chart.png', cwd: '/w'),
+        _run('pandoc notes.md -o out/report.pdf', cwd: '/w'),
+        _run('cat > docs/plan.md <<EOF\n# Plan\nEOF', cwd: '/w'),
+        _run('grep -n x docs/old.md', cwd: '/w'),
+        _run('curl -o logo.png https://example.com/logo.png', cwd: '/w'),
+        _run('cp shots/a.png /tmp/keep/a.png', cwd: '/w'),
+      ];
+      expect(_keys(items), ['/tmp/keep/a.png', '/w/docs/plan.md', '/w/out/report.pdf', '/w/out/chart.png']);
+    });
+
+    test('a tool that says it saved a file is believed; a listing is not', () {
+      final items = [
+        _run('python shot.py', output: 'Saved screenshot to screenshots/checkout.png\nDone\n', cwd: '/w'),
+        _run('ls screenshots', output: 'checkout.png\nother.png\n', cwd: '/w'),
+        _run('git status', output: 'new file: docs/a.md\nwrote nothing\n', cwd: '/w'),
+      ];
+      expect(_keys(items), ['/w/screenshots/checkout.png']);
+    });
+
+    test('in the agent\'s words a picture or document needs a word of making; a page with a folder does not', () {
+      final items = [
+        _say('Please update docs/guide.md and look at screenshots/old.png.'),
+        _say('I saved screenshots/new.png and created docs/summary.md.'),
+        _say('Open reports/q3.html'),
+      ];
+      expect(_keys(items, cwd: '/w'), ['/w/reports/q3.html', '/w/docs/summary.md', '/w/screenshots/new.png']);
+    });
+
+    test('a removed picture or document leaves the list', () {
+      final items = [create('/w/docs/a.md'), _run('rm /w/docs/a.md'), _run('python p.py -o /w/out.png'), _delete('/w/out.png')];
+      expect(_keys(items), isEmpty);
+    });
+
+    test('the kinds are told apart on the rows', () {
+      final items = [create('/w/a.md'), _write('/w/p.html'), _run('python p.py -o /w/c.png'), _say('http://localhost:3000/')];
+      expect([for (final a in madeAssetsOf(items, cwd: '/w')) a.kind], [MadeKind.server, MadeKind.picture, MadeKind.page, MadeKind.doc]);
     });
   });
 }

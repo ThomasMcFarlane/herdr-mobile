@@ -267,9 +267,9 @@ Tailscale.
     closing short of the announced Content-Length destroys the socket.
   - Never return a map's `remove` from `whenComplete` on the future stored in
     that map: it waits for itself.
-- **Web in this session** (`session_web.dart` in `data/acp`, the `Web` chip and
-  sheet in `ui/features/agent_session`): the servers and pages a session put
-  on the web, found by scanning the transcript, so a link printed an hour ago
+- **Made in this session** (`session_made.dart` in `data/acp`, the `Made` chip and
+  sheet in `ui/features/agent_session`): the servers, pages, pictures and
+  documents a session made, found by scanning the transcript, so a link printed an hour ago
   is not lost with the chat. Nothing is stored; the scan is memoized per
   transcript item, per list and per folder. The rules are narrow because a wide
   scan was wrong: run over 6,000 recorded sessions, "every `localhost` URL and
@@ -277,11 +277,19 @@ Tailscale.
   (a `curl` probe of Milvus, the pages a `curl -o` downloaded, the files a
   `grep` named, a heredoc's own links). So a row needs the agent to have MADE
   or ANNOUNCED the thing:
-  - Pages (`.html`, `.htm`, `.xhtml`, `.svg`): a completed edit's diff or path;
+  - Files, by extension (`made_files.dart`): pages (`.html`, `.htm`, `.xhtml`,
+    `.svg`), pictures (`png jpg jpeg gif webp bmp`) and documents (`md markdown
+    pdf docx xlsx pptx csv`; NOT `txt`, `json`, `log`, `yaml`, which a build
+    prints and a project is configured with). A page: a completed edit's diff or path;
     a file a command writes (`>`, `>>`, `tee`, `-o`/`--output`, a `cp`/`mv`
     target, `open`), with a leading `cd X` honoured; a path with a folder in
     the agent's own words, or a bare name right after a word of making
-    ("created report.html"). A deleted or moved page leaves the list. NOT a
+    ("created report.html"); a line a tool printed that says it saved a file
+    ("Saved screenshot to out/a.png": the first 8 KB, a word of making and a
+    path with a folder). A picture or document is the same, except that a
+    document must be a NEW file (an edit of a README is not something the agent
+    made), a diff never makes a picture, and naming one in words needs a word of
+    making right before it (the chat names existing files all day). A deleted or moved page leaves the list. NOT a
     file only read, grepped, listed or downloaded; NOT command output; NOT the
     body of a heredoc; NOT a fenced code block; NOT a path with `$`, a drive
     letter or a URL; NOT `node_modules`, `.git` or system folders; NOT a
@@ -309,7 +317,7 @@ Tailscale.
     lazy regex with a lookahead took 30 s on a 64 KB unbroken run), at most 40
     mentions per item and 150 rows per session; a command's scan is memoized by
     its input, which a streaming patch keeps. The chip and sheet compare what
-    the rows SHOW (`sameWebAssets`), not the list, because a streaming tool
+    the rows SHOW (`sameMadeAssets`), not the list, because a streaming tool
     replaces the transcript list on every chunk.
   - A message that is still streaming is read once it has settled. UNVERIFIED:
     after a `session/load` replay the last message may stay live until the next
@@ -318,8 +326,19 @@ Tailscale.
     a row added anywhere moves the others); a tap says `Opening X…`, one open
     per row at a time, and the browser is only launched while the screen the
     sheet came from is still there.
-  - Pictures and documents are left out on purpose: they have viewers in the
-    chat, and their paths come from free text, the least reliable part.
+  - The sheet: servers pinned above (few, and what is alive), then a row of
+    filter chips (`Pages 17`, `Pictures 13`, `Docs 8`) only when two or more
+    kinds are present, one always selected, the choice remembered per session;
+    pictures are a grid of real thumbnails (`PhotoThumbs`, the folder grid's
+    cache; a file over 2 MB shows its size), the rest rows; at most 60 rows / 24
+    tiles built, `N more` for the rest. Why chips: it is the idiom the board
+    already uses for "show only this" (`AppChip`, a count, `selected`, scrolls
+    sideways when it must). A `Segmented` control (a value picker, for settings)
+    and underline tabs (a style the app does not have) both read as foreign in
+    the same sheet (owner: "not polished"); the floating tab bar's capsule is
+    for the three root screens. Measured on a 40-item stand-in before building:
+    one list buries the pictures below the first screen; chips with 3 short
+    labels fit 412 dp (a row with "All" and "Servers" too did not).
 - **Keys are not a send.** `PaneViewModel.sendKeys` never sets `sending` (a
   tapped hotkey must not disable the key row) and keeps calls in order; only
   `sendLine` is a tracked send.
