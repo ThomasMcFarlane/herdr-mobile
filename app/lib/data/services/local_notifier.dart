@@ -132,7 +132,7 @@ class LocalNotifier implements Notifier {
   void Function(String link)? _handler;
   AnswerHandler? _answerHandler;
   String? _pendingLink;
-  ({int count, int blocked, bool page}) _watching = (count: 0, blocked: 0, page: false);
+  ({int count, int blocked, String? page}) _watching = (count: 0, blocked: 0, page: null);
 
   /// The notifier for this platform, ready to use: a [LocalNotifier] on
   /// Android, a [NullNotifier] anywhere else or when the plugin cannot start.
@@ -242,10 +242,10 @@ class LocalNotifier implements Notifier {
   }
 
   @override
-  Future<bool> setWatching(int count, {int blocked = 0, bool page = false}) async {
+  Future<bool> setWatching(int count, {int blocked = 0, String? page}) async {
     try {
-      if (count <= 0 && !page) {
-        _watching = (count: 0, blocked: 0, page: false);
+      if (count <= 0 && page == null) {
+        _watching = (count: 0, blocked: 0, page: null);
         await _android.stopForegroundService();
         return false;
       }
@@ -254,7 +254,7 @@ class LocalNotifier implements Notifier {
       if (glance == _watching) return true;
       await _android.startForegroundService(
         id: watchingNotificationId,
-        title: watchingTitle(n),
+        title: watchingTitle(n, page: page),
         body: watchingSummary(n, blocked, page: page),
         notificationDetails: AndroidNotificationDetails(
           _watchingChannel.id,
@@ -283,7 +283,7 @@ class LocalNotifier implements Notifier {
       // Android refuses to start a foreground service from the background in
       // some states; the connections then simply suspend as before.
       debugPrint('Watching notice not started: $error');
-      _watching = (count: 0, blocked: 0, page: false);
+      _watching = (count: 0, blocked: 0, page: null);
       return false;
     }
   }
@@ -348,23 +348,25 @@ class LocalNotifier implements Notifier {
   }
 }
 
-/// "Watching 1 agent", "Watching 3 agents"; with none, a page from a machine
-/// is what the notice is up for: "Keeping a page open".
+/// "Watching 1 agent", "Watching 3 agents"; with none, the page from a
+/// machine the notice is up for, named so the person knows what to close:
+/// "Keeping localhost:8790 on devbox open", "Keeping 2 pages open".
 @visibleForTesting
-String watchingTitle(int count) => count > 0 ? 'Watching ${countOf(count, 'agent')}' : 'Keeping a page open';
+String watchingTitle(int count, {String? page}) =>
+    count > 0 || page == null ? 'Watching ${countOf(count, 'agent')}' : 'Keeping $page open';
 
 /// "2 need you · 3 working": [blocked] agents wait for the person, the rest
-/// of [count] work. Parts that are zero are left out. With [page], a page
-/// from a machine is open too: "1 working · a page open", or, with no agent,
-/// why the connection stays up.
+/// of [count] work. Parts that are zero are left out. With [page], pages from
+/// a machine are open too: "1 working · localhost:8790 on devbox open", or,
+/// with no agent, how the notice ends.
 @visibleForTesting
-String watchingSummary(int count, int blocked, {bool page = false}) {
-  if (count <= 0) return page ? 'herdr stays connected while the page is open' : '';
+String watchingSummary(int count, int blocked, {String? page}) {
+  if (count <= 0) return page != null ? 'Close it in herdr to let the connection go' : '';
   final waiting = blocked.clamp(0, count);
   final working = count - waiting;
   return [
     if (waiting > 0) needYou(waiting),
     if (working > 0) '$working working',
-    if (page) 'a page open',
+    if (page != null) '$page open',
   ].join(' · ');
 }

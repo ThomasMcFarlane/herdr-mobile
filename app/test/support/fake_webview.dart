@@ -34,6 +34,10 @@ class FakeWebView extends WebViewPlatform {
   /// Loads of these URLs fail as the main frame's ([WebResourceErrorType.connect]).
   final Set<String> failing = {};
 
+  /// Loads of these URLs fail with this Chromium description and no type.
+  final Map<String, String> _otherFailures = {};
+  void failWith(String url, String description) => _otherFailures[url] = description;
+
   final List<String> history = [];
   int _at = -1;
 
@@ -51,6 +55,31 @@ class FakeWebView extends WebViewPlatform {
 
   FakeNavigationDelegate? _delegate;
 
+  /// Addresses that answer with a file: like the Android plugin, a load of
+  /// one asks the delegate again for the same address (`onDownloadStart`)
+  /// instead of starting a page. Capped, so a test that loops ends.
+  final Set<String> downloads = {};
+
+  /// Every address the delegate was asked about, in order.
+  final List<String> asked = [];
+
+  /// How many times each kind of stored state was cleared.
+  int cookiesCleared = 0;
+  int storageCleared = 0;
+  int cacheCleared = 0;
+
+  /// A navigation Android does not ask about (a form POST): it loads.
+  void land(String url) => _load(Uri.parse(url));
+
+  /// A single-page app's route: the address changes, no page loads.
+  void pushState(String url) {
+    history
+      ..removeRange(_at + 1, history.length)
+      ..add(url);
+    _at = history.length - 1;
+    _delegate?.onUrlChange?.call(UrlChange(url: url));
+  }
+
   /// A load of [url] that has started and reached [progress] of 100, and
   /// goes no further: the page shown so far stays.
   void startLoading(String url, int progress) {
@@ -67,18 +96,28 @@ class FakeWebView extends WebViewPlatform {
       FakeNavigationDelegate(params);
 
   @override
+  PlatformWebViewCookieManager createPlatformCookieManager(PlatformWebViewCookieManagerCreationParams params) =>
+      _FakeCookies(params, this);
+
+  @override
   PlatformWebViewWidget createPlatformWebViewWidget(PlatformWebViewWidgetCreationParams params) =>
       _FakeWidget(params, this);
 
   /// The page asks for [url] (a link tapped, a script's `location`): what
   /// the delegate decides happens. Returns whether it was loaded.
   Future<bool> navigate(String url, {bool mainFrame = true}) async {
+    asked.add(url);
     final decide = _delegate?.onNavigationRequest;
     final decision = decide == null
         ? NavigationDecision.navigate
         : await decide(NavigationRequest(url: url, isMainFrame: mainFrame));
     if (decision != NavigationDecision.navigate) return false;
-    if (mainFrame) _load(Uri.parse(url));
+    if (!mainFrame) return true;
+    if (downloads.contains(url)) {
+      if (asked.where((a) => a == url).length < 5) scheduleMicrotask(() => unawaited(navigate(url)));
+      return true;
+    }
+    _load(Uri.parse(url));
     return true;
   }
 
@@ -104,12 +143,13 @@ class FakeWebView extends WebViewPlatform {
     final d = _delegate;
     d?.onPageStarted?.call(s);
     d?.onUrlChange?.call(UrlChange(url: s));
-    if (failing.contains(s)) {
+    final other = _otherFailures[s];
+    if (failing.contains(s) || other != null) {
       d?.onWebResourceError?.call(
         WebResourceError(
           errorCode: -6,
-          description: 'net::ERR_CONNECTION_REFUSED',
-          errorType: WebResourceErrorType.connect,
+          description: other ?? 'net::ERR_CONNECTION_REFUSED',
+          errorType: other == null ? WebResourceErrorType.connect : WebResourceErrorType.unknown,
           isForMainFrame: true,
           url: s,
         ),
@@ -122,8 +162,12 @@ class FakeWebView extends WebViewPlatform {
     final url = Uri.parse(s);
     if (url.path == '/__herdr/open') {
       final to = url.queryParameters['to'] ?? '/';
-      // The listener's refresh, a navigation the page starts itself.
-      scheduleMicrotask(() => unawaited(navigate('http://localhost:$pagePort$to')));
+      // The listener's refresh, a navigation the page starts itself; a page
+      // the view has left meanwhile (Back went on past it) refreshes nothing.
+      final at = _at;
+      scheduleMicrotask(() {
+        if (_at == at && current == s) unawaited(navigate('http://localhost:$pagePort$to'));
+      });
     }
   }
 
@@ -201,6 +245,24 @@ class _FakeController extends PlatformWebViewController {
   Future<void> reload() async {
     final s = view.current;
     if (s != null) view._show(s);
+  }
+
+  @override
+  Future<void> clearLocalStorage() async => view.storageCleared++;
+
+  @override
+  Future<void> clearCache() async => view.cacheCleared++;
+}
+
+class _FakeCookies extends PlatformWebViewCookieManager {
+  _FakeCookies(super.params, this.view) : super.implementation();
+
+  final FakeWebView view;
+
+  @override
+  Future<bool> clearCookies() async {
+    view.cookiesCleared++;
+    return true;
   }
 }
 

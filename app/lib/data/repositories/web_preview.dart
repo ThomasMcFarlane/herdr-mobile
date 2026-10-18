@@ -9,6 +9,15 @@ class WebPreviewException implements Exception {
 
   final String message;
 
+  /// The reason alone, as a sentence: `Cannot open a local port: no free
+  /// port.`, for a place that already says what could not be opened.
+  String get reason {
+    const prefix = "Couldn't open on this phone: ";
+    if (!message.startsWith(prefix)) return message;
+    final r = message.substring(prefix.length);
+    return r.isEmpty ? message : r[0].toUpperCase() + r.substring(1);
+  }
+
   @override
   String toString() => message;
 }
@@ -58,14 +67,15 @@ class WebPreview {
   final String machineName;
 
   /// What each listener opened for this machine shows, by its port on the
-  /// phone (the newest wins when a port is used again), and the ports that
-  /// answer entry URLs: the pages of this machine an in-app page may go to.
+  /// phone (a listener that came back on another port drops its old one),
+  /// and the port of the entry listener that answers forwards' entry URLs:
+  /// the pages of this machine an in-app page may go to.
   final _specs = <int, WebBridgeSpec>{};
-  final _entryPorts = <int>{};
+  int? _forwardEntry;
 
-  /// The phone's ports of every listener opened for this machine, entry
-  /// listeners included.
-  Set<int> get ports => {..._specs.keys, ..._entryPorts};
+  /// The phone's ports of every listener opened for this machine, the entry
+  /// listener included.
+  Set<int> get ports => {..._specs.keys, ?_forwardEntry};
 
   /// Whether a link can be opened on the phone through [forwardUrl]: plain
   /// `http` to the machine itself, spelled `localhost`, `127.0.0.1`, `[::1]`,
@@ -158,8 +168,9 @@ class WebPreview {
 
   static const _entryPath = '/__herdr/open';
 
-  /// The names a listener answers to (it checks the Host header).
-  static bool _isListenerHost(String host) => host == 'localhost' || host == '127.0.0.1';
+  /// The name a listener's cookie is set for (it also answers `127.0.0.1`,
+  /// where a browser sends no cookie).
+  static bool _isListenerHost(String host) => host == 'localhost';
 
   Future<WebBridgeInfo> _open(WebBridgeSpec spec) async {
     final WebBridgeInfo info;
@@ -170,8 +181,10 @@ class WebPreview {
     } on RemoteFileException catch (e) {
       throw WebPreviewException(_sentence(e.message));
     }
-    _specs[info.port] = spec;
-    _entryPorts.add(info.entryPort);
+    _specs
+      ..removeWhere((_, s) => s.key == spec.key)
+      ..[info.port] = spec;
+    if (info.entryPort != info.port) _forwardEntry = info.entryPort;
     return info;
   }
 

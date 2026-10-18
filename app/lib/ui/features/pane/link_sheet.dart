@@ -16,7 +16,7 @@ import '../web/web_preview_screen.dart';
 /// An address on the machine itself (`localhost`, a loopback address, a
 /// `.local` name) is not reachable from the phone as it is. A plain `http` one
 /// on a known [machine] is shown in herdr through the SSH connection
-/// (`Open on phone`, [WebPreviewScreen]); any other only offers copy and says why. A plain `http`
+/// (`Open page`, [WebPreviewScreen]); any other only offers copy and says why. A plain `http`
 /// link is opened only from here, after being shown.
 Future<void> showLinkSheet(BuildContext context, String url, {MachineConnection? machine}) {
   final toaster = Toaster.of(context);
@@ -79,7 +79,7 @@ Future<void> showLinkSheet(BuildContext context, String url, {MachineConnection?
             )
           else if (previewable)
             AppButton(
-              label: 'Open on phone',
+              label: 'Open page',
               icon: LucideIcons.smartphone,
               expand: true,
               onPressed: openOnPhone,
@@ -103,7 +103,7 @@ Future<void> showLinkSheet(BuildContext context, String url, {MachineConnection?
             if (previewable)
               note(
                 HerdrIcons.machines,
-                'This address is on ${machine.profile.label}. Open on phone reaches it over your SSH connection.',
+                'This address is on ${machine.profile.label}. Open page shows it in herdr, over your SSH connection.',
               )
             else if (local && https)
               note(HerdrIcons.machines, 'HTTPS on the machine can’t be opened on the phone yet.')

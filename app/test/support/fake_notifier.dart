@@ -31,8 +31,8 @@ class FakeNotifier implements Notifier {
   /// them are blocked.
   final List<({int count, int blocked})> glances = [];
 
-  /// Whether a page held the notice, per [setWatching] call, in order.
-  final List<bool> pages = [];
+  /// The page the notice named, per [setWatching] call, in order (null: none).
+  final List<String?> pages = [];
 
   int cancelAllCount = 0;
   int permissionReads = 0;
@@ -87,13 +87,13 @@ class FakeNotifier implements Notifier {
   }
 
   @override
-  Future<bool> setWatching(int count, {int blocked = 0, bool page = false}) async {
-    log.add('watching:$count${page ? '+page' : ''}');
+  Future<bool> setWatching(int count, {int blocked = 0, String? page}) async {
+    log.add('watching:$count${page != null ? '+page' : ''}');
     if (failing) throw StateError('cannot start');
     watching.add(count);
     glances.add((count: count, blocked: blocked));
     pages.add(page);
-    return (count > 0 || page) && watchingWorks;
+    return (count > 0 || page != null) && watchingWorks;
   }
 
   @override

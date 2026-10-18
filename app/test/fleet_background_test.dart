@@ -277,9 +277,12 @@ void main() {
   });
 
   group('a hold (a page from a machine is open)', () {
-    test('keeps the connections past the 90 s while it is on, whatever the notifier wants', () {
+    void Function() hold(_Harness h, [String id = 'a']) => h.fleet.holdAlive(id, page: 'localhost:8790 on $id');
+
+    test('with its notice up, keeps its machine past the 90 s, whatever the notifier wants for agents', () {
       run((h) {
-        final release = h.fleet.holdAlive();
+        final release = hold(h);
+        h.fleet.pageNotice = true;
         expect(h.fleet.keepAliveInBackground, isTrue);
         expect(h.fleet.watchingAgents, isFalse, reason: 'the notifier did not ask');
         h.life(away);
@@ -293,10 +296,46 @@ void main() {
       });
     });
 
-    test('holds count: the connections go only when the last one is released', () {
+    test('without its notice (refused, or no notices at all), the 90 s rule and the reconnect on return apply', () {
       run((h) {
-        final first = h.fleet.holdAlive();
-        final second = h.fleet.holdAlive();
+        final release = hold(h);
+        expect(h.fleet.keepAliveInBackground, isFalse, reason: 'Android would freeze the process: nothing is kept');
+        h.life(away);
+        h.advance(grace);
+        expect(h.connection.isLive, isFalse);
+        h.life(back);
+        h.advance(const Duration(seconds: 1));
+        expect(h.connection.isLive, isTrue, reason: 'reconnected on return');
+        release();
+      });
+    });
+
+    test('keeps only its own machine: another one follows the usual rule', () {
+      run((h) {
+        h.machines.save(
+          const MachineProfile(id: 'b', label: 'Bravo', host: 'b.local', username: 'u'),
+          secrets: const MachineSecrets(password: 'x'),
+        );
+        h.async.flushMicrotasks();
+        h.advance(const Duration(seconds: 1));
+        final release = hold(h, 'b');
+        h.fleet.pageNotice = true;
+        h.life(away);
+        expect(h.transports['b']!.backgroundCalls, [true]);
+        expect(h.transport.backgroundCalls, isEmpty, reason: 'machine a is not kept');
+        h.advance(grace);
+        expect(h.fleet.connection('b')!.isLive, isTrue);
+        expect(h.connection.isLive, isFalse);
+        release();
+      });
+    });
+
+    test('holds count: the connection goes only when the last one is released', () {
+      run((h) {
+        final first = hold(h);
+        final second = hold(h);
+        h.fleet.pageNotice = true;
+        expect(h.fleet.heldPages, ['localhost:8790 on a', 'localhost:8790 on a']);
         h.life(away);
         h.advance(grace);
         first();
@@ -312,7 +351,8 @@ void main() {
     test('released, the notifier\'s choice applies again', () {
       run((h) {
         h.fleet.keepAliveInBackground = true;
-        final release = h.fleet.holdAlive();
+        final release = hold(h);
+        h.fleet.pageNotice = true;
         h.life(away);
         h.advance(grace);
         release();
@@ -323,7 +363,8 @@ void main() {
 
     test('a hold released inside the grace period suspends at 90 s, not before', () {
       run((h) {
-        final release = h.fleet.holdAlive();
+        final release = hold(h);
+        h.fleet.pageNotice = true;
         h.life(away);
         h.advance(const Duration(seconds: 30));
         release();
@@ -334,9 +375,10 @@ void main() {
       });
     });
 
-    test('back after a long time away with a hold, a refresh is enough: the process was kept', () {
+    test('back after a long time away with a hold and its notice, a refresh is enough: the process was kept', () {
       run((h) {
-        final release = h.fleet.holdAlive();
+        final release = hold(h);
+        h.fleet.pageNotice = true;
         h.life(away);
         h.advance(const Duration(minutes: 10));
         h.life(back);

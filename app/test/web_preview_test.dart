@@ -232,5 +232,26 @@ void main() {
       expect(entry.queryParameters['to'], '/page2.html?q=1#b');
       await expectLater(web.reopen(Uri.parse('http://localhost:4000/')), throwsA(isA<WebPreviewException>()));
     });
+
+    test('a listener that comes back on another port takes its old port with it', () async {
+      transport.webInfo = const WebBridgeInfo(port: 51111, token: '0123456789abcdef0123456789abcdef', entryPort: 51999);
+      await web.forwardUrl(Uri.parse('http://localhost:3000/'));
+      transport.webInfo = const WebBridgeInfo(port: 52222, token: 'fedcba9876543210fedcba9876543210', entryPort: 53333);
+      await web.forwardUrl(Uri.parse('http://localhost:3000/'));
+      expect(web.ports, {52222, 53333}, reason: 'another app may hold 51111 now');
+      expect(web.machinePage(Uri.parse('http://localhost:51111/')), isNull);
+    });
+
+    test('127.0.0.1 is no page of the machine: the listener\'s cookie is for localhost', () async {
+      transport.webInfo = const WebBridgeInfo(port: 51111, token: '0123456789abcdef0123456789abcdef', entryPort: 51999);
+      await web.forwardUrl(Uri.parse('http://localhost:3000/'));
+      expect(web.machinePage(Uri.parse('http://127.0.0.1:51111/')), isNull);
+    });
+
+    test('a failure keeps its reason alone for a place that says what failed', () {
+      expect(const WebPreviewException("Couldn't open on this phone: the machine does not allow port forwarding.").reason,
+          'The machine does not allow port forwarding.');
+      expect(const WebPreviewException('Files are not available on this machine.').reason, 'Files are not available on this machine.');
+    });
   });
 }

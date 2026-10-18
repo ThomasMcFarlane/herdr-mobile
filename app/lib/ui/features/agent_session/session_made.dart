@@ -35,12 +35,12 @@ _Snap _snap(AgentSessionView s) =>
 bool _same(_Snap a, _Snap b) => sameMadeAssets(a.$1, b.$1) && identical(a.$2, b.$2) && a.$3 == b.$3;
 
 /// The servers and pages a session put on the web, newest first, one tap from
-/// the session bar. Each row opens in the phone's browser: a server through the
-/// SSH connection, a page from its folder on the machine.
+/// the session bar. Each row opens as a page in herdr (`WebPreviewScreen`): a
+/// server through the SSH connection, a page from its folder on the machine.
 ///
-/// [opener] is the screen the sheet was opened from: a browser is only
-/// launched while it is still there (a person who tapped a row and pressed
-/// Back is not sent to a page over the board seconds later).
+/// [opener] is the screen the sheet was opened from: a viewer is only pushed
+/// while it is still there (a person who tapped a row and pressed Back is not
+/// sent to a page over the board seconds later).
 Future<void> showSessionMade(BuildContext opener, AgentSessionView session) =>
     showAppSheet<void>(opener, builder: (ctx) => SessionMadeSheet(session: session, opener: opener));
 

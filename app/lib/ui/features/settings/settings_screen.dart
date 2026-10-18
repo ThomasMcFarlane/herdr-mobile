@@ -410,8 +410,9 @@ class _NotificationsGroupState extends State<_NotificationsGroup> {
         ),
         const NoteRow(
           id: 'watching',
-          text: 'While agents work, herdr keeps a quiet \u201cWatching\u201d notice so '
-              'Android keeps the connection alive. Notifications clear when you open the app.',
+          text: 'While agents work, or a page from a machine is open, herdr keeps a quiet '
+              '\u201cWatching\u201d notice so Android keeps the connection alive. '
+              'Notifications clear when you open the app.',
         ),
       ],
     );

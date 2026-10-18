@@ -6,7 +6,10 @@
          page's `prefers-color-scheme` (Android 13+ ties it to the theme's
          isLightTheme): a page from a machine shown in herdr
          (WebPreviewScreen) is dark when the phone is, as it was in the
-         phone's browser. Not yet seen on a phone. -->
+         phone's browser. It follows the phone's night mode, not herdr's own
+         Light/Dark choice: herdr set to Light on a dark phone shows a dark
+         page in a light screen (the browser did the same). Not yet seen on a
+         phone. -->
     <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
         <item name="android:windowBackground">@color/herdr_bg</item>
         <item name="android:isLightTheme">false</item>

@@ -269,14 +269,14 @@ void main() {
       expect(android.called('startForegroundService'), hasLength(2));
     });
 
-    test('a page open runs the notice on its own, and joins an agents\' one', () async {
+    test('a page open runs the notice on its own, named, and joins an agents\' one', () async {
       final notifier = await start();
-      expect(await notifier.setWatching(0, page: true), isTrue);
-      expect(data()['title'], 'Keeping a page open');
-      expect(data()['body'], 'herdr stays connected while the page is open');
-      await notifier.setWatching(3, blocked: 1, page: true);
+      expect(await notifier.setWatching(0, page: 'localhost:8790 on devbox'), isTrue);
+      expect(data()['title'], 'Keeping localhost:8790 on devbox open');
+      expect(data()['body'], 'Close it in herdr to let the connection go');
+      await notifier.setWatching(3, blocked: 1, page: '2 pages');
       expect(data()['title'], 'Watching 3 agents');
-      expect(data()['body'], '1 needs you · 2 working · a page open');
+      expect(data()['body'], '1 needs you · 2 working · 2 pages open');
       expect(await notifier.setWatching(0), isFalse);
       expect(android.called('stopForegroundService'), hasLength(1), reason: 'no agent and no page');
     });

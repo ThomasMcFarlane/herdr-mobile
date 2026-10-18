@@ -79,7 +79,7 @@ void main() {
     await tester.tap(find.byTooltip('Show as page'));
     await _settle(tester);
 
-    expect(find.text("Couldn't open on this phone: cannot open a local port: no free port."), findsOneWidget);
+    expect(find.text('Cannot open a local port: no free port.'), findsOneWidget);
     expect(web.loaded, isEmpty);
 
     transport.webFailure = null;

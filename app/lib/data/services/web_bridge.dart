@@ -37,12 +37,15 @@ const webBridgeMaxConnections = 64;
 /// The most one open-ended `Range: bytes=N-` request is answered with.
 const webBridgeOpenRange = 2 * 1024 * 1024;
 
-/// The loopback listeners that let the phone's own browser show what an agent
-/// made on a machine: a folder read over SFTP ([StaticSite]) or a port reached
-/// over the SSH connection ([PortForward]). Lives in the transport isolate.
+/// The loopback listeners that show what an agent made on a machine on the
+/// phone: a folder read over SFTP ([StaticSite]) or a port reached over the
+/// SSH connection ([PortForward]). Lives in the transport isolate. Their pages
+/// are shown in herdr's own WebView (`WebPreviewScreen`) or, on request, in
+/// the phone's browser (`openPreviewUrl`); both are browsers to a listener.
 ///
-/// Why a listener and not a WebView: see `openInBrowser`. Sign-in and passkeys
-/// keep working because the page is shown by the phone's browser.
+/// Why a listener and not the page's bytes handed to the view: the page's
+/// own relative and root-absolute links, its scripts' `fetch` and its
+/// sibling ports all need an origin that answers, as a dev server does.
 ///
 /// Everything a listener answers needs its token, sent once in the entry URL
 /// (`/__herdr/open?t=<token>&to=<path>`) and kept by the browser as a cookie

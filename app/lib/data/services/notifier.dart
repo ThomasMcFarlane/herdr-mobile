@@ -132,15 +132,15 @@ abstract interface class Notifier {
   /// Cancels every agent notification (not the watching notice).
   Future<void> cancelAll();
 
-  /// Runs (when [count] > 0 or [page]) or stops a quiet foreground notice,
-  /// "Watching N agents" over "2 need you · 3 working" ([blocked] of the
-  /// [count] wait for the person, the rest work), so Android keeps the
-  /// connection alive while the app is in the background. [page]: a page from
-  /// a machine is open in the app, which needs the connection too; with no
-  /// agent watched the notice says that alone. False when Android refused to
-  /// start it, or when it was stopped. Asked again with the same values it
-  /// does nothing.
-  Future<bool> setWatching(int count, {int blocked = 0, bool page = false});
+  /// Runs (when [count] > 0 or with a [page]) or stops a quiet foreground
+  /// notice, "Watching N agents" over "2 need you · 3 working" ([blocked] of
+  /// the [count] wait for the person, the rest work), so Android keeps the
+  /// connection alive while the app is in the background. [page] names the
+  /// pages from a machine open in the app (`localhost:8790 on devbox`, or
+  /// `2 pages`), which need the connection too; with no agent watched the
+  /// notice is about them alone. False when Android refused to start it, or
+  /// when it was stopped. Asked again with the same values it does nothing.
+  Future<bool> setWatching(int count, {int blocked = 0, String? page});
 
   /// Registers who handles a tap: the link of the tapped notification, also
   /// for a tap that launched the app (delivered once the handler is set).
@@ -170,7 +170,7 @@ class NullNotifier implements Notifier {
   Future<void> cancelAll() async {}
 
   @override
-  Future<bool> setWatching(int count, {int blocked = 0, bool page = false}) async => false;
+  Future<bool> setWatching(int count, {int blocked = 0, String? page}) async => false;
 
   @override
   void onOpen(void Function(String link) handler) {}
