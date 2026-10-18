@@ -73,12 +73,12 @@ class FileRow extends StatelessWidget {
       children: [
         PressRow(
           onTap: onTap,
-          minHeight: 64,
+          minHeight: _rowHeight,
           padding: const EdgeInsets.symmetric(horizontal: Gap.gutter - PressRow.inset, vertical: Gap.md),
               child: Row(
                 children: [
                   SizedBox(
-                    width: 32,
+                    width: RowMetrics.leadingExtent,
                     child: e.isDirectory
                         ? IconTile(icon: iconForEntry(e), color: ds.textSecondary)
                         : FileThumb(files: files, entry: e, icon: iconForEntry(e), loader: thumbs),
@@ -119,3 +119,6 @@ class FileRow extends StatelessWidget {
     return Semantics(hint: e.isDirectory ? 'Folder' : null, selected: selected, child: row);
   }
 }
+
+/// A file row: a thumbnail-sized leading column and two lines.
+const _rowHeight = 64.0;

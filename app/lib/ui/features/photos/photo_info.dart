@@ -119,7 +119,7 @@ class _Row extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(
-                width: 96,
+                width: _labelWidth,
                 child: Padding(
                   padding: const EdgeInsets.only(top: Gap.sm),
                   child: Text(row.label, style: Type.secondary.copyWith(color: ds.textSecondary)),
@@ -149,3 +149,6 @@ class _Row extends StatelessWidget {
     );
   }
 }
+
+/// The label column of the details table: the longest label fits at 1.0.
+const _labelWidth = 96.0;

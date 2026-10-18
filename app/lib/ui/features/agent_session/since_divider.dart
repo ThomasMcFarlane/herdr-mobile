@@ -24,7 +24,7 @@ class SinceDivider extends StatelessWidget {
         label: label,
         excludeSemantics: true,
         child: SizedBox(
-          height: 24,
+          height: _height,
           child: Row(
             children: [
               line,
@@ -40,3 +40,6 @@ class SinceDivider extends StatelessWidget {
     );
   }
 }
+
+/// The divider's band: the label's line with room above and below.
+const _height = 24.0;

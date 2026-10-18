@@ -474,7 +474,7 @@ class _FailureView extends StatelessWidget {
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: Gap.gutter, vertical: Gap.xxl),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 360),
+            constraints: const BoxConstraints(maxWidth: _messageMaxWidth),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -534,3 +534,6 @@ class _FailureView extends StatelessWidget {
     );
   }
 }
+
+/// A message over the stage keeps a readable measure on a tablet.
+const _messageMaxWidth = 360.0;

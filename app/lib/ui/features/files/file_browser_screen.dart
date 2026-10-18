@@ -570,7 +570,7 @@ class _SortRow extends StatelessWidget {
         onTap();
       },
       selected: selected,
-      minHeight: 52,
+      minHeight: _rowHeight,
       padding: const EdgeInsets.symmetric(horizontal: Gap.lg - PressRow.inset, vertical: Gap.xs + Gap.hair),
         child: Row(
           children: [
@@ -722,8 +722,8 @@ class _FileBreadcrumbsState extends State<FileBreadcrumbs> {
                     onTap: i == crumbs.length - 1 ? null : () => widget.onTap(c.path),
                     minTapSize: kMinTap,
                     builder: (context, pressed) => Container(
-                      height: 32,
-                      constraints: const BoxConstraints(minWidth: 32),
+                      height: _crumbHeight,
+                      constraints: const BoxConstraints(minWidth: _crumbHeight),
                       alignment: Alignment.center,
                       padding: const EdgeInsets.symmetric(horizontal: Gap.sm),
                       decoration: BoxDecoration(
@@ -790,3 +790,9 @@ class _PickBar extends StatelessWidget {
     );
   }
 }
+
+/// A browser row: one line of name and one of detail.
+const _rowHeight = 52.0;
+
+/// A path crumb's pill (its touch box is 44); a short crumb is at least square.
+const _crumbHeight = 32.0;

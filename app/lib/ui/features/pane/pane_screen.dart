@@ -1098,7 +1098,7 @@ class _Composer extends StatelessWidget {
             return ComposerRoundButton(
               label: dictate.listening ? 'Stop dictating' : 'Dictate',
               icon: LucideIcons.mic,
-              iconSize: 18,
+              iconSize: IconSize.bar,
               ready: true,
               quiet: !dictate.listening,
               onPressed: () => unawaited(dictate.toggle()),
@@ -1110,7 +1110,7 @@ class _Composer extends StatelessWidget {
           return ComposerRoundButton(
             label: 'Send',
             icon: LucideIcons.arrowUp,
-            iconSize: 18,
+            iconSize: IconSize.bar,
             ready: enabled && !sending && hasContent && attachments.canSend,
             busy: sending,
             onPressed: onSubmit,

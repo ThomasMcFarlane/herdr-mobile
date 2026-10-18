@@ -266,7 +266,7 @@ class InfoRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(
-                width: 96,
+                width: _labelWidth,
                 child: Text(label, style: Type.secondary.copyWith(color: ds.textSecondary)),
               ),
               Expanded(
@@ -285,3 +285,6 @@ class InfoRow extends StatelessWidget {
     );
   }
 }
+
+/// The label column of a details table: the longest label fits at 1.0.
+const _labelWidth = 96.0;

@@ -127,7 +127,7 @@ class _SelectPill extends StatelessWidget {
         selected: picked,
         semanticLabel: picked ? 'Selected, number $number. Tap to deselect' : 'Select this photo',
         builder: (context, pressed) => Container(
-          height: 40,
+          height: _pickHeight,
           padding: const EdgeInsets.only(left: Gap.sm, right: Gap.lg),
           decoration: BoxDecoration(
             color: picked ? ds.accent : ds.photoScrim,
@@ -153,3 +153,6 @@ class _SelectPill extends StatelessWidget {
     },
   );
 }
+
+/// The pick button's pill, inside its 44 touch box.
+const _pickHeight = 40.0;

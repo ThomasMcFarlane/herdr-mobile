@@ -175,7 +175,7 @@ class RunStateStrip extends StatelessWidget {
         final tone = toneOf(run, blocked: snap.blocked, live: snap.live);
         return Container(
           width: double.infinity,
-          constraints: const BoxConstraints(minHeight: 36),
+          constraints: const BoxConstraints(minHeight: _blockMinHeight),
           padding: const EdgeInsets.symmetric(horizontal: Gap.lg, vertical: Gap.sm),
           decoration: BoxDecoration(border: Border(bottom: BorderSide(color: ds.hairline))),
           child: RunClock(
@@ -532,3 +532,6 @@ class SubagentSummaryBody extends StatelessWidget {
 
   static String _clip(String s, int max) => s.length <= max ? s : '${s.substring(0, safeEnd(s, max - 1))}…';
 }
+
+/// A one-line block is this high, so an empty one still reads as a block.
+const _blockMinHeight = 36.0;

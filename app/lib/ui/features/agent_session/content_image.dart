@@ -250,8 +250,8 @@ class _InlineImageState extends State<_InlineImage> {
       return Align(
         alignment: Alignment.centerLeft,
         child: _Frame(
-          width: 120,
-          height: 96,
+          width: _placeholder.width,
+          height: _placeholder.height,
           child: ColoredBox(
             color: ds.fill,
             // A fetch the person started is a wait they can see: the one spinner.
@@ -336,3 +336,6 @@ String imageSemanticLabel(ImageBlock block, String name) => [
   if (block.mimeType.isNotEmpty) block.mimeType,
   if (name.isNotEmpty) visibleText(name),
 ].join(', ');
+
+/// The frame an image that has not loaded (or cannot) holds.
+const _placeholder = Size(120, 96);

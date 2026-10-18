@@ -131,7 +131,7 @@ class _Chip extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.sm)),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: kMinTap, maxWidth: 280),
+          constraints: const BoxConstraints(minHeight: kMinTap, maxWidth: _chipMaxWidth),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -285,3 +285,6 @@ class _RingPainter extends CustomPainter {
   @override
   bool shouldRepaint(_RingPainter old) => old.progress != progress || old.color != color;
 }
+
+/// A long file name is cut here rather than pushing the other chips off the row.
+const _chipMaxWidth = 280.0;

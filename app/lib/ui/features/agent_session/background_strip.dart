@@ -78,7 +78,7 @@ class _StripRow extends StatelessWidget {
           onTap();
         },
         semanticLabel: semantics,
-        minHeight: 48 - 2 * Gap.xs,
+        minHeight: _stripHeight - 2 * Gap.xs,
         padding: const EdgeInsets.symmetric(horizontal: Gap.md - PressRow.inset, vertical: Gap.xs),
         child: Row(
           children: [
@@ -149,3 +149,6 @@ class BackgroundChip extends StatelessWidget {
     child: const SizedBox.shrink(),
   );
 }
+
+/// The strip's height, its panel padding included.
+const _stripHeight = 48.0;

@@ -424,11 +424,14 @@ follows:
 `tool/design_lint.dart` runs in `tool/check.sh` and CI. Rules: `raw-color`,
 `raw-type`, `raw-alpha`, `raw-radius`, `raw-duration`, `raw-curve`,
 `raw-spring`, `raw-size` (screens), `raw-haptic`, `clipboard`, `material`,
-`modal-sheet`, `loop`, `kit-import` (features import `kit.dart` only) and
-`layer` (the kit imports nothing above it; renderers import no feature;
-`data/words` is pure Dart). A line that must keep a raw value says why:
-`// design-lint: allow(<rule>) <reason>`. `--report` counts findings per rule
-and folder.
+`modal-sheet`, `spinner` (`BusySpinner` only), `loop`, `kit-import` (features
+import `kit.dart` only) and `layer` (the kit imports nothing above it;
+renderers import no feature; `data/words` is pure Dart). Rules match across
+lines, so a wrapped argument list is checked whole. A size used once in a
+screen is a named constant with a one-line reason, not a literal. A line that
+must keep a raw value says why: `// design-lint: allow(<rule>) <reason>` on
+that line or the one above. `--report` counts findings per rule and folder;
+`app/test/design_lint_test.dart` proves the rules on planted violations.
 
 ## Catalog and checking a screen
 

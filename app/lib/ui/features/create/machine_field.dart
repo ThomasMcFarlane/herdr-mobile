@@ -65,7 +65,7 @@ class MachineField extends StatelessWidget {
           builder: (context, pressed) => AnimatedContainer(
             duration: Motion.pressing(pressed),
             curve: Motion.easeOut,
-            constraints: const BoxConstraints(minHeight: 46),
+            constraints: const BoxConstraints(minHeight: _fieldMinHeight),
             padding: const EdgeInsets.symmetric(horizontal: _textInset),
             alignment: Alignment.centerLeft,
             decoration: BoxDecoration(
@@ -156,3 +156,6 @@ String shortPath(String path, {int max = 26}) {
   if (tail.length <= max) return tail;
   return '…${tail.substring(tail.length - (max - 1))}';
 }
+
+/// The field's height at one line of input, matching the kit's text fields.
+const _fieldMinHeight = 46.0;

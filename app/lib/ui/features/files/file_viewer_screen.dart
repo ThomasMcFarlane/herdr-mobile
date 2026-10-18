@@ -454,7 +454,7 @@ class _TextBody extends StatelessWidget {
               padding: EdgeInsets.fromLTRB(
                 Gap.gutter,
                 Gap.sm,
-                Gap.sm + 4,
+                Gap.md,
                 Gap.sm + MediaQuery.paddingOf(context).bottom,
               ),
               child: Row(

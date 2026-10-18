@@ -8,6 +8,7 @@ import '../../../data/acp/prompt_queue.dart' show SendDelivery;
 import '../../../data/acp/session_state.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/attach_target.dart' show AttachMode;
+import '../../core/kit.dart' show IconSize;
 import '../../support/tap_guard.dart';
 import '../composer/composer_frame.dart';
 import '../dictation/dictation_language_sheet.dart';
@@ -175,7 +176,7 @@ class Composer extends StatelessWidget {
                       key: const ValueKey('mic'),
                       label: dictate.listening ? 'Stop dictating' : 'Dictate',
                       icon: LucideIcons.mic,
-                      iconSize: 18,
+                      iconSize: IconSize.bar,
                       ready: true,
                       quiet: !dictate.listening,
                       onPressed: () => unawaited(dictate.toggle()),
@@ -188,7 +189,7 @@ class Composer extends StatelessWidget {
                       key: const ValueKey('send'),
                       label: sendLabel,
                       icon: sendIcon,
-                      iconSize: 18,
+                      iconSize: IconSize.bar,
                       ready: typing && hasContent && attachments.canSend,
                       onPressed: onSubmit,
                       onLongPress: delivery == SendDelivery.steered ? onSubmitAfter : null,
@@ -317,7 +318,7 @@ class _StopButtonState extends State<_StopButton> with TapGuardState<_StopButton
   Widget build(BuildContext context) => ComposerRoundButton(
         label: 'Stop',
         icon: LucideIcons.square,
-        iconSize: 14,
+        iconSize: IconSize.inline,
         busy: widget.stopping,
         ready: settled && !widget.stopping,
         quiet: widget.quiet,

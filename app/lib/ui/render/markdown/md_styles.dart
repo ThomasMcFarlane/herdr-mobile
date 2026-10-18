@@ -39,7 +39,7 @@ final class MdStyles {
     final body = switch (t) {
       MdTone.reading => Type.body.copyWith(color: ds.text),
       MdTone.quote => Type.body.copyWith(color: ds.textSecondary),
-      MdTone.quiet => Type.secondary.copyWith(color: ds.textSecondary, height: 1.45),
+      MdTone.quiet => Type.secondary.copyWith(color: ds.textSecondary, height: Type.body.height),
     };
     return MdStyles._(t, ds, body, _codeBlock(ds));
   }

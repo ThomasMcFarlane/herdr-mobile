@@ -8,6 +8,8 @@
 //
 //   // design-lint: allow(raw-type) markdown inline bold is the author's emphasis
 //
+// A rule matches across lines (a whole argument list, `SizedBox(\n  width: 12`),
+// and an allow on any line the match spans, or the line above it, covers it.
 // An allow without a reason is itself a finding. Rules and their reasons live
 // in docs/DESIGN.md ("Enforcement"); the kit's own token files are exempt from
 // the rules they define.
@@ -33,13 +35,20 @@ final class Rule {
 final _rules = <Rule>[
   Rule(
     'raw-color',
-    [RegExp(r'\bColor\(0x'), RegExp(r'\bColors\.(?!transparent\b)')],
+    [RegExp(r'\bColor\(\s*0x'), RegExp(r'\bColor\.from(?:ARGB|RGBO)\('), RegExp(r'\bColors\.(?!transparent\b)')],
     'use a Ds role (context.ds.*) or add one to tokens.dart',
     exempt: ['lib/ui/core/tokens.dart', 'lib/ui/core/theme.dart', 'lib/ui/render/terminal/'],
   ),
   Rule(
     'raw-type',
-    [RegExp(r'\bfontSize:'), RegExp(r'\bfontWeight:'), RegExp(r'\bTextStyle\(')],
+    [
+      RegExp(r'\bfontSize:'),
+      RegExp(r'\bfontWeight:'),
+      RegExp(r'\bTextStyle\('),
+      RegExp(r'\bletterSpacing:\s*-?[\d.]'),
+      // A line height read off a token or a measured metric is fine; a typed one is not.
+      RegExp(r'\.copyWith\([^)]*\bheight:\s*[\d.]'),
+    ],
     'use a Type.* or Mono.* token (Strong variants carry the weight)',
     exempt: ['lib/ui/core/tokens.dart', 'lib/ui/render/terminal/'],
   ),
@@ -75,8 +84,10 @@ final _rules = <Rule>[
   Rule(
     'raw-size',
     [
-      RegExp(r'\bsize:\s*[\d.]'),
-      RegExp(r'\bSizedBox\([^)]*\b(?:height|width):\s*[\d.]'),
+      RegExp(r'\b(?:size|iconSize):\s*[\d.]'),
+      // A layout size; a stroke's width (BorderSide, Border.all), a line
+      // height (copyWith, raw-type's) and a zero floor are not sizes.
+      RegExp(r'(?<!(?:BorderSide|Border\.all|copyWith)\([^)]*)\b(?:height|width|minWidth|minHeight|maxWidth|maxHeight):\s*(?!0\b)[\d.]'),
       RegExp(r'\bEdgeInsets\.\w+\([^)]*(?<![\w.])\d'),
     ],
     'use IconSize.*, Gap.* or a component size',
@@ -111,6 +122,12 @@ final _rules = <Rule>[
     [RegExp(r'\bshowModalBottomSheet\b')],
     'use showAppSheet + SheetScaffold',
     exempt: ['lib/ui/core/sheets.dart'],
+  ),
+  Rule(
+    'spinner',
+    [RegExp(r'\b(?:CircularProgressIndicator|LinearProgressIndicator)\b')],
+    'use BusySpinner (it waits before it shows, and stops under reduced motion)',
+    exempt: ['lib/ui/core/spinner.dart'],
   ),
   Rule('loop', [RegExp(r'\.repeat\(')], 'nothing loops at rest (BusySpinner is the one exception)',
       exempt: ['lib/ui/core/spinner.dart']),
@@ -160,7 +177,8 @@ Set<String> _allowed(List<String> lines, int i, void Function(String) bad) {
     if (m == null) continue;
     if (j == i - 1 && !lines[j].trimLeft().startsWith('//')) continue;
     if (m[2]!.trim().isEmpty) {
-      bad('design-lint allow(${m[1]}) needs a reason after it');
+      // Said once, on its own line; the line below just gets no allow.
+      if (j == i) bad('design-lint allow(${m[1]}) needs a reason after it');
       continue;
     }
     ids.addAll(m[1]!.split(',').map((s) => s.trim()));
@@ -174,26 +192,65 @@ List<Finding> lint(Directory app) {
   final files = lib.listSync(recursive: true).whereType<File>().where((f) => f.path.endsWith('.dart')).toList()
     ..sort((a, b) => a.path.compareTo(b.path));
   for (final file in files) {
-    final path = file.path.substring(app.path.length + 1);
-    final rules = _rules.where((r) => r.appliesTo(path)).toList();
-    if (rules.isEmpty) continue;
-    final lines = file.readAsLinesSync();
-    for (var i = 0; i < lines.length; i++) {
-      final raw = lines[i];
-      final code = raw.trimLeft();
-      if (code.startsWith('//')) continue;
-      // Drop a trailing comment so prose never trips a rule.
-      final cut = code.indexOf(RegExp(r'\s//'));
-      final text = cut < 0 ? code : code.substring(0, cut);
-      final allowed = _allowed(lines, i, (m) => findings.add(Finding(path, i + 1, 'allow', m)));
-      for (final rule in rules) {
-        if (allowed.contains(rule.id)) continue;
-        if (rule.patterns.any((p) => p.hasMatch(text))) {
-          findings.add(Finding(path, i + 1, rule.id, rule.message));
+    findings.addAll(lintSource(file.path.substring(app.path.length + 1), file.readAsStringSync()));
+  }
+  return findings;
+}
+
+/// The findings in one file's [source], [path] relative to app/ (`lib/...`).
+List<Finding> lintSource(String path, String source) {
+  final rules = _rules.where((r) => r.appliesTo(path)).toList();
+  if (rules.isEmpty) return const [];
+  final findings = <Finding>[];
+  final lines = source.split('\n');
+  // The code with comments blanked, one string, so a rule sees a whole
+  // argument list however it is wrapped. Comment lines and trailing comments
+  // become spaces, so offsets still map to lines and prose trips nothing.
+  final code = StringBuffer();
+  final starts = <int>[];
+  for (final raw in lines) {
+    starts.add(code.length);
+    final lead = raw.length - raw.trimLeft().length;
+    final cut = raw.trimLeft().startsWith('//') ? lead : raw.indexOf(RegExp(r'\s//'));
+    code
+      ..write(cut < 0 ? raw : raw.substring(0, cut).padRight(raw.length))
+      ..write('\n');
+  }
+  final text = code.toString();
+  int lineOf(int offset) {
+    var lo = 0, hi = starts.length - 1;
+    while (lo < hi) {
+      final mid = (lo + hi + 1) >> 1;
+      if (starts[mid] <= offset) {
+        lo = mid;
+      } else {
+        hi = mid - 1;
+      }
+    }
+    return lo;
+  }
+
+  final allowed = <int, Set<String>>{};
+  for (var i = 0; i < lines.length; i++) {
+    allowed[i] = _allowed(lines, i, (m) => findings.add(Finding(path, i + 1, 'allow', m)));
+  }
+  final seen = <String>{};
+  for (final rule in rules) {
+    for (final pattern in rule.patterns) {
+      final multi = RegExp(pattern.pattern, multiLine: true);
+      for (final m in multi.allMatches(text)) {
+        final first = lineOf(m.start);
+        final last = lineOf(m.end > m.start ? m.end - 1 : m.start);
+        var ok = false;
+        for (var i = first; i <= last && !ok; i++) {
+          ok = allowed[i]!.contains(rule.id);
         }
+        // The finding names the line the raw value is on.
+        if (!ok && seen.add('$last:${rule.id}')) findings.add(Finding(path, last + 1, rule.id, rule.message));
       }
     }
   }
+  findings.sort((a, b) => a.line.compareTo(b.line));
   return findings;
 }
 

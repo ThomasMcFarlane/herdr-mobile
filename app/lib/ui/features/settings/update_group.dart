@@ -131,7 +131,7 @@ class _ProgressBar extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(Radii.pill),
         child: SizedBox(
-          height: 4,
+          height: _progressHeight,
           child: Stack(
             children: [
               Positioned.fill(child: ColoredBox(color: ds.fill)),
@@ -229,3 +229,6 @@ Future<void> showReleaseNotes(BuildContext context, ReleaseInfo release) async {
     ),
   );
 }
+
+/// The download bar's thickness.
+const _progressHeight = 4.0;

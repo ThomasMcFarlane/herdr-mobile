@@ -159,6 +159,7 @@ typedef Thumbnailer = Future<Uint8List?> Function(Uint8List original);
 
 /// Shrinks [original] to 240 px and encodes it (see [encodeThumbnail]).
 Future<Uint8List?> makeThumbnail(Uint8List original) async {
+  // design-lint: allow(raw-size) image pixels for the thumbnail file, not a layout size
   final decoded = await decodeImageFit(original, maxWidth: 240, maxHeight: 240);
   try {
     return await encodeThumbnail(decoded.image, png: mayHaveTransparency(original));

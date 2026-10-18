@@ -122,7 +122,7 @@ class _StepButton extends StatelessWidget {
       builder: (context, pressed) => AnimatedContainer(
         duration: Motion.pressing(pressed),
         curve: Motion.easeOut,
-        width: 64,
+        width: _stepWidth,
         height: kMinTap,
         decoration: BoxDecoration(
           color: pressed ? ds.fillPressed : Colors.transparent,
@@ -188,3 +188,6 @@ class _Sample extends StatelessWidget {
     );
   }
 }
+
+/// A step button: wide enough for a thumb on either side of the value.
+const _stepWidth = 64.0;

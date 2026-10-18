@@ -319,7 +319,7 @@ class _Filters extends StatelessWidget {
     );
   }
 
-  static Widget _capped(Widget chip) => ConstrainedBox(constraints: const BoxConstraints(maxWidth: 240), child: chip);
+  static Widget _capped(Widget chip) => ConstrainedBox(constraints: const BoxConstraints(maxWidth: _chipMaxWidth), child: chip);
 }
 
 class _ChipRow extends StatelessWidget {
@@ -345,3 +345,6 @@ class _ChipRow extends StatelessWidget {
     ),
   );
 }
+
+/// A filter chip with a long name is cut here, so two still fit a row.
+const _chipMaxWidth = 240.0;

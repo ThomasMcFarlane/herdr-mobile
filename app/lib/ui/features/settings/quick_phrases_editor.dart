@@ -118,7 +118,7 @@ class _PhraseRow extends StatelessWidget {
             Haptics.tick();
             onTap();
           },
-          minHeight: 48,
+          minHeight: _rowHeight,
           padding: const EdgeInsets.symmetric(vertical: Gap.sm),
             child: Row(
               children: [
@@ -229,3 +229,6 @@ class _QuickPhraseEditorState extends State<QuickPhraseEditor> {
     );
   }
 }
+
+/// A phrase row: one line of text with room for its handle.
+const _rowHeight = 48.0;
