@@ -22,10 +22,11 @@ import '../support/shot.dart' show loadAppFonts;
 import 'support/render_corpus.dart';
 
 class _Page extends StatefulWidget {
-  const _Page({required this.markdown, this.controller});
+  const _Page({required this.markdown, this.controller, this.tone = MdTone.reading});
 
   final String markdown;
   final ScrollController? controller;
+  final MdTone tone;
 
   @override
   State<_Page> createState() => _PageState();
@@ -44,7 +45,9 @@ class _PageState extends State<_Page> {
       child: MdActions(
         onLink: (context, url) {},
         onPath: (context, path, line) {},
-        child: SelectionArea(
+        child: MdToneScope(
+          tone: widget.tone,
+          child: SelectionArea(
           child: ListView.builder(
             controller: widget.controller,
             padding: EdgeInsets.fromLTRB(Gap.lg, MediaQuery.paddingOf(context).top + Gap.md, Gap.lg, Gap.xl),
@@ -58,11 +61,25 @@ class _PageState extends State<_Page> {
               ),
             ),
           ),
+          ),
         ),
       ),
     );
   }
 }
+
+/// The quiet tone (a subagent's answer, a work-log note) with what drifts in
+/// it: a heading, inline code and a table, each a notch under reading text.
+const _quiet = '''
+## Findings
+
+The flush runs in `FrameFlush.schedule` before build, once per frame.
+
+| File | Lines | Status |
+| --- | ---: | --- |
+| `md_styles.dart` | 120 | changed |
+| `md_table_view.dart` | 300 | unchanged |
+''';
 
 void main() {
   if (Platform.environment['MD_SHOTS'] == null) {
@@ -82,6 +99,7 @@ void main() {
     for (final m in corpusMessages()) m.name: m.text,
     for (final m in realAnswers()) m.name.replaceAll('/', '_').replaceAll('.jsonl', ''): m.text,
     'big200k': bigMessage(200 * 1024),
+    'quiet': _quiet,
   };
 
   Future<void> shoot(WidgetTester tester, String name, String markdown, Size size, double scale, Brightness brightness, {double offset = 0, String suffix = ''}) async {
@@ -104,7 +122,7 @@ void main() {
           data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale)),
           child: RepaintBoundary(key: key, child: child!),
         ),
-        home: _Page(markdown: markdown, controller: controller),
+        home: _Page(markdown: markdown, controller: controller, tone: name == 'quiet' ? MdTone.quiet : MdTone.reading),
       ),
     );
     await tester.pump(const Duration(milliseconds: 100));

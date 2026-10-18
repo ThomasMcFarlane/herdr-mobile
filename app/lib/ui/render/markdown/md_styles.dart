@@ -60,7 +60,9 @@ final class MdStyles {
 
   /// A heading of [level] (1 to 6).
   TextStyle heading(int level) {
-    if (quiet) return Type.secondaryStrong.copyWith(height: body.height, color: ds.text);
+    // Quiet text is 13.5 w400: its heading is the same size at w600 (the table
+    // header's role), so the step is weight, not a size jump in a small panel.
+    if (quiet) return Type.buttonCompact.copyWith(height: body.height, color: ds.text);
     return switch (level) {
       1 => Type.h1.copyWith(color: ds.text),
       2 => Type.h2.copyWith(color: ds.text),
@@ -70,8 +72,15 @@ final class MdStyles {
     };
   }
 
-  /// Inline code: [Mono.base] on the quiet fill, whatever text it sits in.
-  TextStyle get inlineCode => Mono.base.copyWith(backgroundColor: ds.fill);
+  /// Inline code inside text of style [base]: mono, a notch (1.5) smaller than
+  /// the text around it, on the quiet fill. Relative, not [Mono.base]: a fixed
+  /// 12.5 is tiny in a heading and the same size as quiet 13.5 text.
+  TextStyle inlineCode(TextStyle base) => Mono.base.copyWith(
+    // design-lint: allow(raw-type) inline code follows the size of the text it sits in
+    fontSize: (base.fontSize ?? Type.body.fontSize!) - 1.5,
+    height: base.height,
+    backgroundColor: ds.fill,
+  );
 
   /// Links and tappable paths: the accent, underlined faintly.
   // design-lint: allow(raw-type) colour-only overlay merged onto the text it sits in

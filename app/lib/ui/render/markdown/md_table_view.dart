@@ -142,11 +142,12 @@ class _MdTableViewState extends State<MdTableView> {
     final ds = styles.ds;
     final t = widget.table;
     final scaler = MediaQuery.textScalerOf(context);
-    final cellStyle = Type.secondary.copyWith(
+    // A notch under the text around it: 13.5 in reading text, 12 in quiet.
+    final cellStyle = (styles.quiet ? Type.caption : Type.secondary).copyWith(
       fontFeatures: Type.tabular,
       color: styles.quiet ? ds.textSecondary : ds.text,
     );
-    final headStyle = Type.buttonCompact.copyWith(height: cellStyle.height, fontFeatures: Type.tabular, color: ds.text);
+    final headStyle = (styles.quiet ? Type.captionStrong : Type.buttonCompact).copyWith(height: cellStyle.height, fontFeatures: Type.tabular, color: ds.text);
     final widths = _columnWidths(t, cellStyle, headStyle, scaler);
     final total = widths.fold<double>(0, (a, b) => a + b);
 

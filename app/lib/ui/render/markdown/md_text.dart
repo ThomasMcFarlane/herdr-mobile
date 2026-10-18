@@ -232,9 +232,10 @@ class _MdInlineTextState extends State<MdInlineText> {
     final onPath = actions?.onPath;
     final out = <InlineSpan>[];
 
+    final base = widget.style;
     TextStyle compose(MdStyle bits, {required bool link}) {
       // design-lint: allow(raw-type) an empty overlay: the span inherits the paragraph's style
-      var t = bits.has(MdStyle.code) ? styles.inlineCode : const TextStyle();
+      var t = bits.has(MdStyle.code) ? styles.inlineCode(base) : const TextStyle();
       // design-lint: allow(raw-type) markdown **bold** is the author's emphasis, not a role
       if (bits.has(MdStyle.bold)) t = t.copyWith(fontWeight: FontWeight.w700);
       if (bits.has(MdStyle.italic)) t = t.copyWith(fontStyle: FontStyle.italic);
