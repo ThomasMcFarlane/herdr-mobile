@@ -305,7 +305,7 @@ void main() {
 
       await _open(tester, _id(4));
       final (g, at, _) = await _drag(tester, by: const Offset(120, 0));
-      expect(find.text('No previous agent'), findsOneWidget);
+      expect(find.textContaining('previous agent'), findsOneWidget, reason: 'the card says there is none');
       await _letGoStill(tester, g, at);
       expect(_onScreen(tester), _id(4), reason: 'the first one has nothing before it');
       await _swipeRight(tester);
@@ -573,9 +573,39 @@ void main() {
       semantics.dispose();
       await teardownUi(tester, h);
     });
+
+    testWidgets('at either end the action says so out loud, as the card does', (tester) async {
+      final semantics = tester.ensureSemantics();
+      final h = await _harness();
+      await _pump(tester, h);
+      await _waitInOrder(tester, h);
+      await _open(tester, _id(1));
+      tester.takeAnnouncements();
+
+      final node = tester.getSemantics(find.byType(AgentSwipe));
+      tester.binding.performSemanticsAction(
+        SemanticsActionEvent(
+          type: SemanticsAction.customAction,
+          viewId: tester.view.viewId,
+          nodeId: node.id,
+          arguments: CustomSemanticsAction.getIdentifier(const CustomSemanticsAction(label: 'Next agent')),
+        ),
+      );
+      await settle(tester);
+
+      expect(_onScreen(tester), _id(1), reason: 'the last one has nothing after it');
+      final said = tester.takeAnnouncements();
+      expect(said, hasLength(1));
+      expect(said.single.message, contains('next agent'));
+      semantics.dispose();
+      await teardownUi(tester, h);
+    });
   });
 
   group('the detector alone', () {
+    /// Whether a step opens the agent; given the steps asked so far.
+    bool Function(List<int> steps) opens = (_) => true;
+
     /// The steps let go far enough to go; [ends]: nothing either way.
     Future<List<int>> run(
       WidgetTester tester,
@@ -600,7 +630,7 @@ void main() {
                     child: AgentSwipeDetector(
                       peek: (step) => SwipePeek(
                         card: Text(ends ? 'nothing $step' : 'peek $step'),
-                        go: ends ? null : () => steps.add(step),
+                        go: ends ? null : () => opens(steps..add(step)),
                       ),
                       child: child,
                     ),
@@ -763,6 +793,52 @@ void main() {
       );
 
       expect(steps, [1]);
+    });
+
+    testWidgets('a slanted swipe that scrolls the list under it is a scroll: the card goes, nothing steps', (
+      tester,
+    ) async {
+      final controller = ScrollController();
+      addTearDown(controller.dispose);
+      var peekedAtEnd = true;
+      final steps = await run(
+        tester,
+        (t, _) async {
+          // dx -120, dy -42: a slant of 0.35, under the 0.4 a swipe allows.
+          final g = await t.startGesture(centre);
+          for (var i = 1; i <= 6; i++) {
+            await g.moveBy(const Offset(-20, -7), timeStamp: Duration(milliseconds: 16 * i));
+            await t.pump(const Duration(milliseconds: 16));
+          }
+          await t.pump();
+          peekedAtEnd = find.text('peek 1').evaluate().isNotEmpty;
+          await g.up(timeStamp: const Duration(milliseconds: 96));
+        },
+        child: ListView(controller: controller, children: const [SizedBox(height: 2000)]),
+      );
+
+      expect(controller.offset, greaterThan(0), reason: 'the list scrolled');
+      expect(peekedAtEnd, isFalse, reason: 'once the list scrolls the card is taken back');
+      expect(steps, isEmpty);
+    });
+
+    testWidgets('a step that opens nothing takes the card back, as a short swipe does', (tester) async {
+      opens = (_) => false;
+      addTearDown(() => opens = (_) => true);
+      late double before;
+      late double after;
+      final steps = await run(tester, (t, _) async {
+        final g = await hold(t, const Offset(-120, 0));
+        before = t.getTopLeft(find.byType(PeekFrame)).dx;
+        await g.up(timeStamp: const Duration(milliseconds: 64));
+        await t.pump();
+        await t.pump(const Duration(milliseconds: 60));
+        after = t.getTopLeft(find.byType(PeekFrame)).dx;
+      });
+
+      expect(steps, [1], reason: 'it was asked');
+      expect(after, greaterThan(before), reason: 'the card slides back out instead of fading in place');
+      expect(find.text('peek 1'), findsNothing);
     });
 
     testWidgets('under reduced motion the card does not slide: it fades in where it rests', (tester) async {

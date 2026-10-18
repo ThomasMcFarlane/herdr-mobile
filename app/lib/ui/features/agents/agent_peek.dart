@@ -71,18 +71,29 @@ class AgentPeekCard extends StatelessWidget {
 /// What a swipe past either end of the board's order shows: that there is
 /// nothing there. Quiet: it is not news, only where the list ends.
 class AgentPeekEnd extends StatelessWidget {
-  const AgentPeekEnd({super.key, required this.next});
+  const AgentPeekEnd({super.key, required this.next, this.listed = true});
 
   /// The swipe asked for the next agent (else the previous one).
   final bool next;
 
+  /// The agent in front is in the board's order (else it has no neighbours).
+  final bool listed;
+
   @override
   Widget build(BuildContext context) => Text(
-        next ? 'No next agent' : 'No previous agent',
+        peekEndWords(next: next, listed: listed),
         maxLines: 1,
         style: Type.label.copyWith(color: context.ds.textMuted),
       );
 }
+
+/// What the end card says; the `Next agent` / `Previous agent` actions
+/// announce the same at either end.
+String peekEndWords({required bool next, required bool listed}) => !listed
+    ? 'Not on the board'
+    : next
+        ? 'No next agent'
+        : 'No previous agent';
 
 /// The card a peek sits on: the floating lanes' look (surface, hairline, the
 /// one float shadow), so it reads as something over the screen, not part of
@@ -98,7 +109,7 @@ class PeekFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     final ds = context.ds;
     return AnimatedContainer(
-      duration: Motion.fade,
+      duration: Motion.of(context, Motion.fade),
       curve: Motion.easeOut,
       padding: const EdgeInsets.all(Gap.md),
       decoration: BoxDecoration(

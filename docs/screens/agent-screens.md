@@ -52,7 +52,8 @@ one scan surface; an agent screen is for one agent.
   vertical travel, and not a finger that first went more than 24 dp
   vertically (a scroll, for the rest of the touch). From then on there is no
   time limit: the finger drives the card. Turning vertical, a second finger
-  or anything scrolling sideways takes the card back and nothing happens.
+  or anything under the finger scrolling takes the card back and nothing
+  happens.
   Why the numbers: a long-press selection starts at 500 ms, so a selection
   drag is never a swipe, and a scroll that drifts is not either.
 - **What never triggers it.** A touch that starts within 24 dp of the
@@ -60,13 +61,16 @@ one scan surface; an agent screen is for one agent.
   finger that scrolled sideways during the touch (a code block, a table, a
   terminal wider than the screen with wrap off): that swipe is theirs, and a
   scrollable claims the drag at the touch slop, before the swipe is
-  recognised. The detector listens to raw pointers and never joins the
+  recognised. A slanted drag that the transcript or the terminal scrolls
+  with is a scroll: the card goes back, or never shows. The detector listens to raw pointers and never joins the
   gesture arena, so scrolling, link taps, selection and pinch zoom behave
   exactly as without it.
 - **The ends.** At either end of the order, or for an agent the board does
-  not list, a quiet card says `No next agent` / `No previous agent`; it
+  not list, a quiet card says `No next agent` / `No previous agent` (`Not on
+  the board` for an agent the board does not list); it
   comes in against resistance and never arms, and letting go springs it
-  back with a `tick`. Why: the order does not wrap round, so the person
+  back with a `tick`. The `Next agent` / `Previous agent` accessibility
+  actions tick and say the same words out loud. Why: the order does not wrap round, so the person
   feels where the list ends instead of landing back on the first agent
   without noticing.
 - **Chat and Terminal are one agent's two views, switched from its menu.** An

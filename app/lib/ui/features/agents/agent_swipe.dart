@@ -38,7 +38,9 @@ class AgentSwipe extends StatelessWidget {
   /// agent the card showed, even if the order changed while the finger moved.
   SwipePeek _peek(BuildContext context, int step) {
     final to = neighbourOf(context, agent, step);
-    if (to == null) return SwipePeek(card: AgentPeekEnd(next: step > 0));
+    if (to == null) {
+      return SwipePeek(card: AgentPeekEnd(next: step > 0, listed: agentsInBoardOrder(context).contains(agent)));
+    }
     return SwipePeek(
       card: AgentPeekCard(item: to, fromLeft: step < 0),
       go: () => stepToAgent(context, to.agent, step),
@@ -50,13 +52,13 @@ class AgentSwipe extends StatelessWidget {
 }
 
 /// What a recognised swipe shows ([card]), and what letting go past the
-/// commit distance does ([go]). No [go]: there is nothing that way (either
-/// end of the order), and [card] says so.
+/// commit distance does ([go], true if it opens something). No [go]: there is
+/// nothing that way (either end of the order), and [card] says so.
 class SwipePeek {
   const SwipePeek({required this.card, this.go});
 
   final Widget card;
-  final VoidCallback? go;
+  final bool Function()? go;
 }
 
 /// Turns a clearly horizontal one-finger drag into a peek at the neighbouring
@@ -75,19 +77,22 @@ class SwipePeek {
 ///   the touch slop, so that anything under the finger that scrolls has
 ///   claimed the drag first;
 /// * vertical travel under 40% of the horizontal one; a finger that has gone
-///   clearly vertical first is a scroll for the rest of the touch;
+///   clearly vertical ([_vertical]) first is a scroll for the rest of the touch;
 /// * not starting within [edge] of the screen's sides (the back gestures);
-/// * nothing under the finger scrolled sideways during the touch (a code
-///   block, a table, a terminal wider than the screen): that swipe is theirs.
+/// * nothing under the finger scrolled during the touch: sideways (a code
+///   block, a table, a terminal wider than the screen), that swipe is theirs;
+///   vertically (a slanted drag the transcript or the terminal took as a
+///   scroll), it is a scroll, not a swipe.
 ///   The peek waits for the end of the pointer event that recognised it, so a
 ///   scroll claimed by that same event still wins.
 ///
 /// Once recognised there is no time limit: the finger drives the card, which
 /// is fully in by 1.5x [commit] (an end card, with nothing that way, comes
-/// with resistance). Turning vertical, a
-/// second finger or a sideways scroll takes it back and nothing happens.
+/// with resistance). Turning vertical, a second finger or anything under the
+/// finger scrolling takes it back and nothing happens.
 /// Letting go steps if the travel, with the fling's momentum projected
-/// ([Springs.projectSheet]), reaches [commit]; else the card springs back.
+/// ([Springs.projectSheet]), reaches [commit]; else, or if the step opens
+/// nothing, the card springs back.
 /// Crossing [commit] while dragging ticks, either way.
 class AgentSwipeDetector extends StatefulWidget {
   const AgentSwipeDetector({
@@ -96,7 +101,7 @@ class AgentSwipeDetector extends StatefulWidget {
     required this.child,
     this.commit = 64,
     this.intent = kTouchSlop + Gap.xs,
-    this.window = Dwell.edgeSwipe,
+    this.window = Dwell.swipeIntent,
     this.edge = 24,
   });
 
@@ -126,8 +131,8 @@ class _AgentSwipeDetectorState extends State<AgentSwipeDetector> with TickerProv
   /// too slow, started at an edge, something scrolled sideways, let go).
   bool _dead = true;
 
-  /// Something under the finger scrolled sideways during this touch.
-  bool _sideways = false;
+  /// Something under the finger scrolled during this touch.
+  bool _scrolled = false;
 
   /// Recognised on this event; shown once the event is through.
   bool _pending = false;
@@ -147,15 +152,18 @@ class _AgentSwipeDetectorState extends State<AgentSwipeDetector> with TickerProv
 
   /// How far the card has come in, in dp (its offset from just outside the
   /// edge). The finger drives it; a spring only after the finger is gone.
-  late final AnimationController _travel = AnimationController.unbounded(vsync: this);
+  /// Made on the first swipe: most agent screens are left without one.
+  AnimationController? _travelController;
+  AnimationController get _travel => _travelController ??= AnimationController.unbounded(vsync: this);
 
   /// 1 while the card is there; to 0 as the next agent's screen comes in.
-  late final AnimationController _fade = AnimationController(vsync: this, value: 1);
+  AnimationController? _fadeController;
+  AnimationController get _fade => _fadeController ??= AnimationController(vsync: this, value: 1);
 
   @override
   void dispose() {
-    _travel.dispose();
-    _fade.dispose();
+    _travelController?.dispose();
+    _fadeController?.dispose();
     super.dispose();
   }
 
@@ -169,7 +177,7 @@ class _AgentSwipeDetectorState extends State<AgentSwipeDetector> with TickerProv
     _start = e.position;
     _startedAt = e.timeStamp;
     _dx = 0;
-    _sideways = false;
+    _scrolled = false;
     _recognised = false;
     _tracker = VelocityTracker.withKind(e.kind)..addPosition(e.timeStamp, e.position);
     final width = MediaQuery.sizeOf(context).width;
@@ -187,7 +195,7 @@ class _AgentSwipeDetectorState extends State<AgentSwipeDetector> with TickerProv
         _dead = true;
         return;
       }
-      if (dy.abs() > widget.edge && dy.abs() > dx.abs()) {
+      if (dy.abs() > _vertical && dy.abs() > dx.abs()) {
         _dead = true;
         return;
       }
@@ -198,7 +206,7 @@ class _AgentSwipeDetectorState extends State<AgentSwipeDetector> with TickerProv
         // that claims the drag on it says so before the microtask runs.
         scheduleMicrotask(() {
           _pending = false;
-          if (mounted && !_dead && !_sideways && _pointer != null) _recognise(step);
+          if (mounted && !_dead && !_scrolled && _pointer != null) _recognise(step);
         });
       }
       return;
@@ -217,6 +225,7 @@ class _AgentSwipeDetectorState extends State<AgentSwipeDetector> with TickerProv
       return;
     }
     _tracker?.addPosition(e.timeStamp, e.position);
+    _dx = e.position.dx - _start.dx;
     final live = !_dead && _recognised;
     final velocity = _tracker?.getVelocity().pixelsPerSecond.dx ?? 0;
     _pointer = null;
@@ -234,9 +243,19 @@ class _AgentSwipeDetectorState extends State<AgentSwipeDetector> with TickerProv
     _retract(0);
   }
 
+  /// A sideways scroll at any point of the touch, or a vertical one the
+  /// finger drags, means the content took this touch: no swipe.
   bool _onScroll(ScrollNotification n) {
-    if (_pointer != null && n.metrics.axis == Axis.horizontal && n is! ScrollEndNotification) {
-      _sideways = true;
+    if (_pointer == null || _scrolled) return false;
+    final taken = switch (n) {
+      ScrollEndNotification() => false,
+      _ when n.metrics.axis == Axis.horizontal => true,
+      ScrollStartNotification(:final dragDetails) => dragDetails != null,
+      ScrollUpdateNotification(:final dragDetails) => dragDetails != null,
+      _ => false,
+    };
+    if (taken) {
+      _scrolled = true;
       _dead = true;
       _retract(0);
     }
@@ -292,9 +311,12 @@ class _AgentSwipeDetectorState extends State<AgentSwipeDetector> with TickerProv
     final go = _target?.go;
     if (go != null && along + speed * Springs.projectSheet >= widget.commit) {
       _armed = true;
-      go();
+      if (!go()) {
+        _retract(0);
+        return;
+      }
       final generation = _generation;
-      _fade.animateTo(0, duration: Motion.standard, curve: Motion.easeOut).whenCompleteOrCancel(() {
+      _fade.animateTo(0, duration: Motion.of(context, Motion.standard), curve: Motion.easeOut).whenCompleteOrCancel(() {
         if (mounted && generation == _generation) _clear();
       });
       return;
@@ -366,6 +388,10 @@ class _AgentSwipeDetectorState extends State<AgentSwipeDetector> with TickerProv
 
   /// Vertical travel allowed per horizontal dp.
   static const _slant = 0.4;
+
+  /// Vertical travel (dp) past which a finger that has gone more vertical
+  /// than sideways is a scroll for the rest of the touch.
+  static const _vertical = 24.0;
 
   /// The card's share of the screen's width (at most [FloatingBar.maxWidth]).
   static const _cardShare = 0.72;

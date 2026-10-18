@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
@@ -14,6 +15,7 @@ import '../../../data/repositories/observed_sessions.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../agent_session/agent_session_screen.dart';
 import '../pane/pane_screen.dart';
+import 'agent_peek.dart';
 import 'agents_grouping.dart';
 
 /// The one way to show an agent: the board, notifications and links, the
@@ -79,12 +81,13 @@ BoardItem? neighbourOf(BuildContext context, AgentRef agent, int delta) {
 /// in from the side the finger came from. [to] is the agent the swipe showed
 /// while the finger moved, not one looked up again: the order may have
 /// changed meanwhile. One the board no longer lists is not opened; a tick
-/// says so.
-void stepToAgent(BuildContext context, AgentRef to, int delta) {
+/// says so. True if a screen for [to] is on its way.
+bool stepToAgent(BuildContext context, AgentRef to, int delta) {
   if (!agentsInBoardOrder(context).contains(to)) {
     Haptics.tick();
-    return;
+    return false;
   }
+  final opens = _screenFor(context, to, _defaultView(context, to)) != null;
   unawaited(
     _open(
       context,
@@ -93,15 +96,19 @@ void stepToAgent(BuildContext context, AgentRef to, int delta) {
       entrance: delta > 0 ? _Entrance.fromRight : _Entrance.fromLeft,
     ),
   );
+  return opens;
 }
 
 /// The step without a gesture (the screen's `Next agent` and `Previous
 /// agent` accessibility actions): the agent [delta] places from [agent], or
-/// at either end a tick and nothing moves.
+/// at either end a tick, the end card's words said out loud, and nothing
+/// moves.
 void swipeToAgent(BuildContext context, AgentRef agent, int delta) {
   final to = neighbourOf(context, agent, delta);
   if (to == null) {
     Haptics.tick();
+    final words = peekEndWords(next: delta > 0, listed: agentsInBoardOrder(context).contains(agent));
+    unawaited(SemanticsService.sendAnnouncement(View.of(context), words, Directionality.of(context)));
     return;
   }
   stepToAgent(context, to.agent, delta);
