@@ -45,8 +45,12 @@ class AttachTabBar extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Flexible: on a narrow screen at the bar's largest text the labels
+            // give way (ellipsis) instead of overflowing the pill.
             for (final tab in AttachTab.values)
-              _TabItem(key: tabKey(tab), tab: tab, selected: tab == selected, onTap: () => onChanged(tab)),
+              Flexible(
+                child: _TabItem(key: tabKey(tab), tab: tab, selected: tab == selected, onTap: () => onChanged(tab)),
+              ),
           ],
         ),
       ),
@@ -85,10 +89,13 @@ class _TabItem extends StatelessWidget {
           children: [
             Icon(tab.icon, size: IconSize.lead, color: selected ? ds.accentText : ds.textSecondary),
             const SizedBox(width: Gap.sm),
-            Text(
-              tab.label,
-              maxLines: 1,
-              style: Type.label.copyWith(color: selected ? ds.accentText : ds.textSecondary),
+            Flexible(
+              child: Text(
+                tab.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Type.label.copyWith(color: selected ? ds.accentText : ds.textSecondary),
+              ),
             ),
           ],
         ),
