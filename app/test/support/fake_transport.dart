@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:herdr_mobile/data/models/remote_file.dart';
+import 'package:herdr_mobile/data/models/web_bridge.dart';
 import 'package:herdr_mobile/data/services/herdr_transport.dart';
 
 import 'fake_fs.dart';
@@ -203,6 +204,26 @@ class FakeTransport implements HerdrTransport {
     final handler = onUpload;
     if (handler != null) return handler(localPath, remotePath, onProgress);
     return CopyUpload(_fs, localPath, remotePath, onProgress);
+  }
+
+  /// Pages asked for through [openWebBridge], in call order.
+  final List<WebBridgeSpec> webBridges = [];
+
+  /// What [openWebBridge] answers.
+  WebBridgeInfo webInfo = const WebBridgeInfo(port: 41234, token: '0123456789abcdef0123456789abcdef');
+
+  /// When set, [openWebBridge] throws this.
+  Object? webFailure;
+
+  /// While set, [openWebBridge] waits for it (a connection being made).
+  Completer<void>? webGate;
+
+  @override
+  Future<WebBridgeInfo> openWebBridge(WebBridgeSpec spec) async {
+    webBridges.add(spec);
+    await webGate?.future;
+    if (webFailure != null) throw webFailure!;
+    return webInfo;
   }
 
   @override

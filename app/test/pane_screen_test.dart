@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/machine_profile.dart';
+import 'package:herdr_mobile/data/models/web_bridge.dart';
 import 'package:herdr_mobile/data/repositories/agent_screens.dart';
 import 'package:herdr_mobile/data/repositories/fleet_repository.dart';
 import 'package:herdr_mobile/data/repositories/machine_connection.dart';
@@ -28,6 +29,8 @@ import 'package:herdr_mobile/ui/features/pane/pane_bar.dart';
 import 'package:herdr_mobile/ui/features/pane/pane_screen.dart';
 import 'package:herdr_mobile/ui/features/pane/quick_keys.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:url_launcher_platform_interface/link.dart';
+import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 import 'package:provider/provider.dart';
 
 import 'support/fake_dictation.dart';
@@ -41,6 +44,20 @@ import 'support/memory_terminal_settings_store.dart';
 import 'support/terminal_rows.dart';
 
 const _pane = 'w1:p1';
+
+/// Records what the app asked the phone to open.
+class _Launcher extends UrlLauncherPlatform {
+  final opened = <String>[];
+
+  @override
+  LinkDelegate? get linkDelegate => null;
+
+  @override
+  Future<bool> launchUrl(String url, LaunchOptions options) async {
+    opened.add(url);
+    return true;
+  }
+}
 
 /// Answers `pane.read` with text that depends on the requested source.
 class _PaneTransport extends FakeTransport {
@@ -1138,23 +1155,91 @@ void main() {
       for (final local in [
         'http://localhost:3000/app',
         'http://127.0.0.1:8080',
-        'https://0.0.0.0:9000/x',
         'http://[::1]:5173/',
-        'http://devbox.local:4000/ui',
       ]) {
-        testWidgets('on the machine itself ($local) can only be copied',
-            (tester) async {
+        testWidgets('on the machine itself ($local) is opened on the phone, or copied', (tester) async {
           transport.readText = 'listening on $local now';
           await pumpPane(tester);
 
           await tapText(tester, 'listening on', column: 16);
 
-          expect(find.textContaining('on the machine, not your phone'), findsOneWidget);
+          expect(find.textContaining('This address is on box. Open on phone reaches it over your SSH connection.'), findsOneWidget);
+          expect(find.text('Open on phone'), findsOneWidget);
+          expect(find.text('Open in browser'), findsNothing, reason: 'the phone cannot reach the machine\'s localhost itself');
+          expect(find.text('Copy link'), findsOneWidget);
+          await teardown(tester);
+        });
+      }
+
+      // A forward dials the host from the machine: a `.local` name would reach
+      // other devices on its network, another 127.x is not what `localhost` reads as.
+      for (final local in [
+        'http://devbox.local:4000/ui',
+        'http://127.1.2.3:3000',
+      ]) {
+        testWidgets('a name on the machine that is not the machine itself ($local) can only be copied', (tester) async {
+          transport.readText = 'listening on $local now';
+          await pumpPane(tester);
+
+          await tapText(tester, 'listening on', column: 16);
+
+          expect(find.textContaining('This address is on the machine, not your phone.'), findsOneWidget);
+          expect(find.text('Open on phone'), findsNothing);
           expect(find.text('Open in browser'), findsNothing);
           expect(find.text('Copy link'), findsOneWidget);
           await teardown(tester);
         });
       }
+
+      testWidgets('https on the machine can only be copied, and says why', (tester) async {
+        transport.readText = 'listening on https://0.0.0.0:9000/x now';
+        await pumpPane(tester);
+
+        await tapText(tester, 'listening on', column: 16);
+
+        expect(find.textContaining("HTTPS on the machine can't be opened on the phone yet."), findsOneWidget);
+        expect(find.text('Open on phone'), findsNothing);
+        expect(find.text('Open in browser'), findsNothing);
+        expect(find.text('Copy link'), findsOneWidget);
+        await teardown(tester);
+      });
+
+      testWidgets('Open on phone starts the listener and opens its entry URL in the browser', (tester) async {
+        final launcher = _Launcher();
+        UrlLauncherPlatform.instance = launcher;
+        transport.readText = 'listening on http://localhost:3000/app?x=1 now';
+        await pumpPane(tester);
+        await tapText(tester, 'listening on', column: 16);
+
+        await tester.tap(find.text('Open on phone'));
+        await _settle(tester);
+
+        final spec = transport.webBridges.single as PortForward;
+        expect((spec.host, spec.port, spec.machineName), ('localhost', 3000, 'box'));
+        final opened = Uri.parse(launcher.opened.single);
+        expect((opened.host, opened.port, opened.path), ('localhost', transport.webInfo.port, '/__herdr/open'));
+        expect(opened.queryParameters['to'], '/app?x=1');
+        expect(find.text('Open on phone'), findsNothing, reason: 'the sheet closed');
+        await teardown(tester);
+      });
+
+      testWidgets('a machine that does not forward ports is said so, and the link can still be copied', (tester) async {
+        final launcher = _Launcher();
+        UrlLauncherPlatform.instance = launcher;
+        transport.webFailure = const HerdrTransportException('the machine does not allow port forwarding', fatal: true);
+        transport.readText = 'listening on http://localhost:3000 now';
+        await pumpPane(tester);
+        await tapText(tester, 'listening on', column: 16);
+
+        await tester.tap(find.text('Open on phone'));
+        await _settle(tester);
+
+        expect(find.text("Couldn't open on this phone: the machine does not allow port forwarding."), findsOneWidget);
+        expect(launcher.opened, isEmpty);
+        await tapText(tester, 'listening on', column: 16);
+        expect(find.text('Copy link'), findsOneWidget);
+        await teardown(tester);
+      });
 
       testWidgets('plain http is shown, with a warning, before it can be opened',
           (tester) async {

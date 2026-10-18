@@ -228,7 +228,8 @@ abstract final class Radii {
   /// Pressed highlight of a list row or sheet action.
   static const row = 10.0;
 
-  /// Segmented track (its thumb is [control]).
+  /// The font-size stepper's track and its buttons (`font_size_control.dart`).
+  /// The switch (`Segmented`) is a full pill and uses neither this nor [control].
   static const segmented = 11.0;
 
   /// Empty-state icon tile.
@@ -240,7 +241,7 @@ abstract final class Radii {
   /// Tooltips.
   static const tooltip = 7.0;
 
-  /// Buttons, inputs, segmented control.
+  /// Buttons, inputs, quiet tiles and thumbnails.
   static const control = 9.0;
 
   /// Panels (the terminal, banners).

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import '../models/remote_file.dart';
+import '../models/web_bridge.dart';
 
 /// Connection-level failure: unreachable host, auth failure, dropped channel,
 /// missing bridge. Retryable by reconnecting.
@@ -158,6 +159,17 @@ abstract interface class HerdrTransport {
     required String remotePath,
     void Function(int sent, int total)? onProgress,
   });
+
+  /// Starts (or finds) the loopback listener for [spec] on the phone and
+  /// returns its port and token. Idempotent per [WebBridgeSpec.key]: the same
+  /// spec gives the same port and token, also after the listener stopped for
+  /// idleness, so a browser tab that is reloaded later still works. Each call
+  /// restarts the idle timer.
+  ///
+  /// Throws [HerdrTransportException] when no port can be bound, or when the
+  /// host forbids port forwarding (a [PortForward]). A [StaticSite] on a host
+  /// without SFTP opens; its pages then answer with the reason.
+  Future<WebBridgeInfo> openWebBridge(WebBridgeSpec spec);
 
   Future<void> close();
 }

@@ -4,6 +4,29 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [Unreleased]
+
+### Open what an agent made, on your phone
+
+- An HTML or SVG file in the file viewer has an Open in browser button. The
+  page opens in the phone's browser tab with its own styles, scripts and
+  images, read from the file's folder on the machine. An SVG, which the viewer
+  could not draw at all, now shows.
+- A `localhost` link in terminal output or a chat (a dev server on the
+  machine) now offers Open on phone: the page opens in the browser through
+  your SSH connection. Sign-in and passkeys work as in any link. An `https`
+  address on the machine stays copy-only and says why.
+- A machine that does not allow port forwarding says so; Copy link stays.
+- A Made chip under the session's title lists what the agent has made, newest
+  first, so a link or a file from an hour ago is not lost in the chat: dev
+  servers (Running while one is up), HTML and SVG pages, pictures (a grid of
+  thumbnails) and documents. When there is more than one kind a switch on top
+  (Servers, Pages, Pictures, Docs, with a count each) changes the list; it never
+  moves while you switch. A tap opens the item. A file shows up only when the
+  agent made or announced it, never because a command merely read it.
+- The switches in Settings (theme, agent list) and the machine form look like
+  the tab bar's capsule now: a soft pill, no border.
+
 ## [0.1.15] - 2026-10-17
 
 ### Pictures are downloaded once, and steering can say "after"

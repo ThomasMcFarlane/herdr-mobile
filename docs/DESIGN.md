@@ -63,7 +63,7 @@ hairlines, status as shape, one accent used sparingly).
 | `blockedText` / `dangerText` | `#AD4C14` / `#B5342F` | `#F2994A` / `#F26B6B` |
 
 Spacing is a 4pt grid; page gutter is 20. Radii (`Radii`): tile 7, control 9,
-row 10, answer chip and question wash 10 (`chip`), segmented track 11, panel 12,
+row 10, answer chip and question wash 10 (`chip`), font-size stepper 11, panel 12,
 empty-state tile 14, sheet 18, pills fully round. Rows are at least 56 high. A
 blocked agent's question sits on `ds.blockedWash` everywhere (card, dock, sheet),
 never a hand-mixed alpha.
@@ -1505,12 +1505,44 @@ browser is built to be reached fast, scanned and not lost in.
   place (the line at the top is kept) until the new text replaces it, and stays
   with a `Couldn't refresh · Retry` strip if the read fails.
 
+## The switch (`Segmented`)
+
+One control for "this or that": a slim tinted pill (44 dp, `ds.fill`, NO border)
+in equal cells with ONE capsule under the chosen one, lighter than the pill
+(`ds.surface` in light, `ds.fillPressed` on ink): the tab bar's capsule, so the
+app has one switch look. No border, no shadow: the tint and the lighter capsule
+already say "a control, and this one is on" (owner: borders are noise; a
+hairline pill, tried first, was). It picks the value of a setting (Look: theme, agent list;
+the machine form's sign-in) and switches what a sheet shows (the kinds in the
+chat's Made sheet: Servers / Pages / Pictures / Docs, each with a count; a live
+dot before Servers while one runs). Same motion rule as the tab bar: the
+capsule slides (`Motion.standard`, a jump under reduced motion) and one number,
+its place, drives it and every label's colour, so a label warms as the capsule
+arrives and cools as it leaves; the weight never changes. No press scale, a
+selection haptic only on a real change. Cells are equal when every label fits
+with its icon; else equal with the words alone; else the row scrolls sideways
+with cells as wide as their labels and keeps the chosen one in view (icons go
+first, so a label is never cut or squeezed). With the real font four kinds
+already scroll on phones under about 400 dp, so the scroll is the ordinary case
+there, not a corner. A rebuild (a new asset arrives) leaves the row where the
+person dragged it; it only brings the chosen cell into view when the choice or
+the width changes. A value that is none of the options shows no capsule and no
+selected cell, no options draws nothing, and in a parent with no width to share
+the pill is as wide as its content. The chosen count is `textSecondary`, not
+`textMuted`: on the capsule on ink `textMuted` is 4.3:1. Text stops at 1.2x.
+Why this and not what it replaced:
+the old control was a tinted track with a white thumb, a third look beside the
+tab bar's capsule and the board's chips; and a chip row for the Made sheet read
+as a filter, not as the sheet's switch (owner); underline tabs were a style the
+app does not have. Chips (`AppChip`) stay for "show only this" on a list
+(the board), where nothing is always selected.
+
 ## Touch targets
 
 44 x 44 minimum, always. `PressBuilder(minTapSize: kMinTap)` enlarges the hit
 box around a smaller painted shape: `CircleButton` (40), compact `AppButton`
 (36), `AppChip` (32, `AppChip.height` = 44 for a chip row; pass it as
-`SliverLargeTitle.bottomHeight`) and each `Segmented` option (the track is 44
+`SliverLargeTitle.bottomHeight`) and each `Segmented` option (the pill is 44
 high). The layout box grows with the hit box, so lay these out at 44.
 
 ## Semantics

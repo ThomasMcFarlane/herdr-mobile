@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/remote_file.dart';
+import 'package:herdr_mobile/data/models/web_bridge.dart';
 import 'package:herdr_mobile/data/services/herdr_transport.dart';
 import 'package:herdr_mobile/data/services/isolate_transport.dart';
 
@@ -138,6 +139,9 @@ class _ExecProbe implements HerdrTransport {
     required String remotePath,
     void Function(int sent, int total)? onProgress,
   }) => throw UnsupportedError('files');
+
+  @override
+  Future<WebBridgeInfo> openWebBridge(WebBridgeSpec spec) => throw UnimplementedError();
 }
 
 HerdrTransport _build(

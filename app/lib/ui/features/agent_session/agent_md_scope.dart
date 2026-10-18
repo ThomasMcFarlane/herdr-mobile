@@ -34,7 +34,8 @@ class AgentMdScope extends StatefulWidget {
 }
 
 class _AgentMdScopeState extends State<AgentMdScope> {
-  void _link(BuildContext context, String url) => unawaited(showLinkSheet(context, url));
+  void _link(BuildContext context, String url) =>
+      unawaited(showLinkSheet(context, url, machine: widget.session.machine));
 
   void _path(BuildContext context, String path, int? line) {
     Haptics.tick();

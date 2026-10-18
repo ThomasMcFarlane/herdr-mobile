@@ -12,6 +12,7 @@ import '../services/herdr_transport.dart';
 import '../services/remote_files.dart';
 import '../services/snapshot_cache.dart';
 import 'reviewed_state.dart';
+import 'web_preview.dart';
 
 enum LinkState {
   /// First connection attempt in flight.
@@ -178,6 +179,11 @@ class MachineConnection extends ChangeNotifier {
 
   /// Browse and read this machine's files (SFTP over the same connection).
   RemoteFiles get files => _api.files;
+
+  /// Open pages from this machine on the phone: an HTML file from its folder,
+  /// or a dev server link on the machine (see [WebPreview]).
+  late final WebPreview web = WebPreview(_api.transport, machineName: profile.label);
+
   LinkState get state => _state;
   String? get error => _error;
 
