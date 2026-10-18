@@ -39,7 +39,7 @@ saved copy and the pre-connect"). A finger going down on a board row starts the
 attach (`preconnect_tap.dart`, raw pointer events, nothing claimed; sliding
 past the touch slop or a cancel lets go). The screen paints the saved
 transcript at once (the last window of the keeper's lines, folded again by the
-same reducer) under the link strip's `Updating…` / `Showing the copy saved at
+same reducer) under the link strip's `Updating…` / `Showing the copy saved today at
 14:02. Nothing here can be answered.` instead of `Connecting…` and a blank
 list; the keeper's replay then replaces it without a flicker. The copy is
 named in every state but live (`Reconnecting…`, `Couldn’t connect`,

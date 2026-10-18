@@ -716,7 +716,7 @@ neither changes the protocol.
   that arrives after the replay began is dropped; a copy of another ACP session
   (the keeper started over) is not shown. `AgentSessionView.cachedAsOf` is the
   time the copy was last right, non-null until the live replay replaced it; the
-  link strip says `Showing the copy saved at 14:02. Nothing here can be
+  link strip says `Showing the copy saved today at 14:02. Nothing here can be
   answered.` for it in every state but live (under `Updating…` while connecting).
   **A saved copy is not a live request**: requests are not in a log, they come
   from the keeper with a live attach, so a copy has none; `PromptDock` shows
