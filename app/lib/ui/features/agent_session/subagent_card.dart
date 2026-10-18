@@ -299,7 +299,7 @@ class _SubagentCardState extends State<SubagentCard> {
     final ds = context.ds;
     final run = widget.run;
     return DecoratedBox(
-      decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.panel)),
+      decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.md)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -331,8 +331,8 @@ class _SubagentCardState extends State<SubagentCard> {
           decoration: BoxDecoration(
             color: pressed ? ds.fillPressed : Colors.transparent,
             borderRadius: BorderRadius.vertical(
-              top: const Radius.circular(Radii.panel),
-              bottom: Radius.circular(open ? 0 : Radii.panel),
+              top: const Radius.circular(Radii.md),
+              bottom: Radius.circular(open ? 0 : Radii.md),
             ),
           ),
           child: Row(
@@ -487,7 +487,7 @@ class _ActionRow extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: kMinTap),
           decoration: BoxDecoration(
             color: pressed ? ds.fillPressed : Colors.transparent,
-            borderRadius: BorderRadius.circular(Radii.row),
+            borderRadius: BorderRadius.circular(Radii.sm),
           ),
           child: Row(
             children: [

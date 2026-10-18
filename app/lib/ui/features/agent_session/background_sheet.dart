@@ -554,7 +554,7 @@ class _TaskRow extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(Gap.md, Gap.sm, Gap.xs, Gap.sm),
               decoration: BoxDecoration(
                 color: pressed ? ds.fill : Colors.transparent,
-                borderRadius: BorderRadius.circular(Radii.row),
+                borderRadius: BorderRadius.circular(Radii.sm),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -716,7 +716,7 @@ class _HoldChip extends StatelessWidget {
             constraints: const BoxConstraints(minWidth: _chipMinWidth, minHeight: _chipHeight),
             decoration: BoxDecoration(
               color: hold.holding ? pressedBg : bg,
-              borderRadius: BorderRadius.circular(Radii.chip),
+              borderRadius: BorderRadius.circular(Radii.sm),
             ),
             child: Stack(
               fit: StackFit.passthrough,
@@ -764,7 +764,7 @@ class _StopStatus extends StatelessWidget {
         Container(
           constraints: const BoxConstraints(minWidth: _chipMinWidth, minHeight: _chipHeight),
           padding: const EdgeInsets.symmetric(horizontal: Gap.md),
-          decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.chip)),
+          decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.sm)),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
@@ -805,7 +805,7 @@ class _TapChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: Gap.md),
         decoration: BoxDecoration(
           color: pressed ? ds.fillPressed : ds.fill,
-          borderRadius: BorderRadius.circular(Radii.chip),
+          borderRadius: BorderRadius.circular(Radii.sm),
         ),
         child: Text(label, maxLines: 1, style: Type.label.copyWith(color: ds.text, fontWeight: FontWeight.w600)),
       ),
@@ -837,7 +837,7 @@ class _StopAllButton extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 46),
         decoration: BoxDecoration(
           color: ds.danger.withValues(alpha: hold.holding || primed ? 0.2 : 0.12),
-          borderRadius: BorderRadius.circular(Radii.chip),
+          borderRadius: BorderRadius.circular(Radii.sm),
         ),
         child: Stack(
           fit: StackFit.passthrough,

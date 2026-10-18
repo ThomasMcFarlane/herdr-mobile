@@ -488,7 +488,7 @@ class SubagentSummaryBody extends StatelessWidget {
     return [
       (c) => Container(
         padding: const EdgeInsets.all(Gap.md),
-        decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.chip)),
+        decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.sm)),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -565,7 +565,7 @@ class SubagentSummaryBody extends StatelessWidget {
         (c) => Container(
           width: double.infinity,
           padding: const EdgeInsets.all(Gap.md),
-          decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.chip)),
+          decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.sm)),
           child: Text(
             output.join('\n'),
             style: TextStyle(fontFamily: monoFamily, fontSize: 11.5, height: 1.4, color: ds.textSecondary),

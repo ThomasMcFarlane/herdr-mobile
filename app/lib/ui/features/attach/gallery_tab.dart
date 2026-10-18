@@ -249,7 +249,7 @@ Future<void> _chooseAlbum(BuildContext context, GalleryModel model) async {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   decoration: BoxDecoration(
                     color: pressed ? ds.fill : Colors.transparent,
-                    borderRadius: BorderRadius.circular(Radii.row),
+                    borderRadius: BorderRadius.circular(Radii.sm),
                   ),
                   child: Row(
                     children: [
@@ -649,7 +649,7 @@ class _PhotoTileState extends State<PhotoTile> {
     final reduced = Motion.reduced(context);
     final label = 'Photo ${widget.index + 1}, taken ${describeTaken(widget.asset.createdAt, widget.now())}';
     Widget picture = GalleryThumb(asset: widget.asset, cache: widget.cache);
-    if (picked) picture = ClipRRect(borderRadius: BorderRadius.circular(Radii.tile), child: picture);
+    if (picked) picture = ClipRRect(borderRadius: BorderRadius.circular(Radii.xs), child: picture);
     return Semantics(
       container: true,
       label: '$label, ${picked ? 'selected, number $n' : 'not selected'}',

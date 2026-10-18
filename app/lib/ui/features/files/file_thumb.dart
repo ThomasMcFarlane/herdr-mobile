@@ -261,7 +261,7 @@ class _FileThumbState extends State<FileThumb> {
         width: size,
         height: size,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(Radii.tile),
+          borderRadius: BorderRadius.circular(Radii.xs),
           border: Border.all(color: ds.hairline, width: 1),
         ),
         clipBehavior: Clip.antiAlias,

@@ -177,10 +177,6 @@ extension TerminalPaletteContext on BuildContext {
   TerminalPalette get terminal => Theme.of(this).extension<TerminalPalette>() ?? TerminalPalette.dark;
 }
 
-/// Bundled monospace face (JetBrains Mono): the same on every phone, with
-/// proper box-drawing and symbol coverage for agent UIs.
-const monoFamily = 'JetBrainsMono';
-
 /// The Cupertino slide (parallax, edge-swipe back) at [Motion.page] instead of
 /// the SDK's 500 ms: opening a pane is the app's most frequent action.
 ///
@@ -293,7 +289,7 @@ abstract final class AppTheme {
     );
 
     OutlineInputBorder border(Color c, [double w = 1]) => OutlineInputBorder(
-          borderRadius: BorderRadius.circular(Radii.control),
+          borderRadius: BorderRadius.circular(Radii.sm),
           borderSide: BorderSide(color: c, width: w),
         );
 
@@ -349,10 +345,10 @@ abstract final class AppTheme {
       ),
       tooltipTheme: TooltipThemeData(
         decoration: BoxDecoration(
-          color: ds.isDark ? ds.fillPressed : const Color(0xFF2B2A27),
-          borderRadius: BorderRadius.circular(Radii.tooltip),
+          color: ds.inverseSurface,
+          borderRadius: BorderRadius.circular(Radii.xs),
         ),
-        textStyle: Type.caption.copyWith(color: const Color(0xFFF1F1EF)),
+        textStyle: Type.caption.copyWith(color: ds.onInverse),
       ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: ds.surface,
@@ -362,7 +358,7 @@ abstract final class AppTheme {
         elevation: 0,
         showDragHandle: false,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.lg)),
         ),
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(color: ds.textSecondary),

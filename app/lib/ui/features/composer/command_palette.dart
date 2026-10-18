@@ -39,11 +39,11 @@ class CommandPalette extends StatelessWidget {
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: ds.surface,
-            borderRadius: BorderRadius.circular(Radii.panel),
+            borderRadius: BorderRadius.circular(Radii.md),
             border: Border.all(color: ds.hairline),
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(Radii.panel),
+            borderRadius: BorderRadius.circular(Radii.md),
             child: SizedBox(
               height: rows * rowHeight,
               child: ListView.builder(

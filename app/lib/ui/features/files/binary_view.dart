@@ -164,7 +164,7 @@ class _HexDump extends StatelessWidget {
       padding: const EdgeInsets.all(Gap.md),
       decoration: BoxDecoration(
         color: ds.fill,
-        borderRadius: BorderRadius.circular(Radii.panel),
+        borderRadius: BorderRadius.circular(Radii.md),
         border: Border.all(color: ds.hairline),
       ),
       child: SingleChildScrollView(

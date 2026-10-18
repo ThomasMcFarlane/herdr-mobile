@@ -16,8 +16,8 @@ import '../../render/visible_text.dart';
 /// The card is absent when no file changed.
 
 BorderRadius _corners({required bool first, required bool last}) => BorderRadius.vertical(
-  top: first ? const Radius.circular(Radii.panel) : Radius.zero,
-  bottom: last ? const Radius.circular(Radii.panel) : Radius.zero,
+  top: first ? const Radius.circular(Radii.md) : Radius.zero,
+  bottom: last ? const Radius.circular(Radii.md) : Radius.zero,
 );
 
 /// `Changed · 3 files` and the totals.

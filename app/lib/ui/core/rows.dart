@@ -153,7 +153,7 @@ class ListRow extends StatelessWidget {
               alignment: Alignment.centerLeft,
               decoration: BoxDecoration(
                 color: pressed ? ds.fill : Colors.transparent,
-                borderRadius: BorderRadius.circular(Radii.row),
+                borderRadius: BorderRadius.circular(Radii.sm),
               ),
               padding: const EdgeInsets.symmetric(horizontal: Gap.gutter - _inset).add(padding),
               child: Row(
@@ -460,7 +460,7 @@ class EmptyState extends StatelessWidget {
                     height: 52,
                     decoration: BoxDecoration(
                       color: ds.fill,
-                      borderRadius: BorderRadius.circular(Radii.emptyTile),
+                      borderRadius: BorderRadius.circular(Radii.md),
                     ),
                     child: Icon(icon, size: 24, color: ds.textSecondary),
                   ),

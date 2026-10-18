@@ -69,7 +69,7 @@ class MachineField extends StatelessWidget {
             alignment: Alignment.centerLeft,
             decoration: BoxDecoration(
               color: pressed ? ds.fill : ds.surface,
-              borderRadius: BorderRadius.circular(Radii.control),
+              borderRadius: BorderRadius.circular(Radii.sm),
               border: Border.all(color: lost ? ds.danger : ds.border),
             ),
             child: Row(

@@ -374,7 +374,7 @@ class _NotificationsGroupState extends State<_NotificationsGroup> {
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: ds.blockedWash,
-                  borderRadius: BorderRadius.circular(Radii.chip),
+                  borderRadius: BorderRadius.circular(Radii.sm),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(Gap.md),

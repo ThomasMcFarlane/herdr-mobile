@@ -55,7 +55,7 @@ class FoldRow extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: Gap.xs, vertical: 6),
             decoration: BoxDecoration(
               color: pressed ? ds.fill : Colors.transparent,
-              borderRadius: BorderRadius.circular(Radii.row),
+              borderRadius: BorderRadius.circular(Radii.sm),
             ),
             child: Row(
               children: [
@@ -164,7 +164,7 @@ class ThinkingRow extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: Gap.xs),
                 decoration: BoxDecoration(
                   color: pressed ? ds.fill : Colors.transparent,
-                  borderRadius: BorderRadius.circular(Radii.row),
+                  borderRadius: BorderRadius.circular(Radii.sm),
                 ),
                 child: Row(
                   children: [
@@ -225,7 +225,7 @@ class GroupRow extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: Gap.xs, vertical: 6),
             decoration: BoxDecoration(
               color: pressed ? ds.fill : Colors.transparent,
-              borderRadius: BorderRadius.circular(Radii.row),
+              borderRadius: BorderRadius.circular(Radii.sm),
             ),
             child: Row(
               children: [

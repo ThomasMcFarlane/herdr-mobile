@@ -173,9 +173,9 @@ class _BrandMarkPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final t = progress.value;
-    // The tile has the empty-state tile's shape, scaled (Radii.emptyTile on 52).
+    // The tile has the empty-state tile's shape, scaled (Radii.md on 52).
     canvas.drawRRect(
-      RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(Radii.emptyTile * size.width / 52)),
+      RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(Radii.md * size.width / 52)),
       Paint()..color = BrandGeometry.tile,
     );
     const crop = (BrandGeometry.canvas - BrandGeometry.visible) / 2;

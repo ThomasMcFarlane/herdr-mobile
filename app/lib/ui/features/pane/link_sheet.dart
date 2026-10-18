@@ -94,7 +94,7 @@ Future<void> showLinkSheet(BuildContext context, String url, {MachineConnection?
               padding: const EdgeInsets.all(Gap.md),
               decoration: BoxDecoration(
                 color: ds.fill,
-                borderRadius: BorderRadius.circular(Radii.row),
+                borderRadius: BorderRadius.circular(Radii.sm),
               ),
               child: SelectableText(
                 url,

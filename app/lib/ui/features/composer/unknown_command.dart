@@ -99,7 +99,7 @@ class UnknownCommandNote extends StatelessWidget {
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: ds.surface,
-              borderRadius: BorderRadius.circular(Radii.panel),
+              borderRadius: BorderRadius.circular(Radii.md),
               border: Border.all(color: ds.hairline),
             ),
             child: Padding(

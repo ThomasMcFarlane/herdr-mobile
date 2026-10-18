@@ -702,7 +702,7 @@ class _PictureTileState extends State<_PictureTile> {
           AspectRatio(
             aspectRatio: 4 / 3,
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(Radii.control),
+              borderRadius: BorderRadius.circular(Radii.sm),
               child: entry == null
                   ? _QuietTile(
                       icon: switch (_face) {
@@ -784,7 +784,7 @@ class _MoreTile extends StatelessWidget {
         builder: (context, pressed) => AspectRatio(
           aspectRatio: 4 / 3,
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(Radii.control),
+            borderRadius: BorderRadius.circular(Radii.sm),
             child: _QuietTile(icon: LucideIcons.chevronDown, pressed: pressed, text: '$count more'),
           ),
         ),

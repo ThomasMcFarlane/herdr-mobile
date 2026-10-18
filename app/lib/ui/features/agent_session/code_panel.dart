@@ -176,11 +176,11 @@ class CodePanel extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: background,
-        borderRadius: BorderRadius.circular(Radii.row),
+        borderRadius: BorderRadius.circular(Radii.sm),
         border: Border.all(color: border),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(Radii.row),
+        borderRadius: BorderRadius.circular(Radii.sm),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

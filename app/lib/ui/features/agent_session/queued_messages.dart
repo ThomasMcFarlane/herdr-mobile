@@ -136,7 +136,7 @@ class _QueuedRow extends StatelessWidget {
       ?reason,
     ].join(' · ');
     return DecoratedBox(
-      decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.chip)),
+      decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.sm)),
       child: Row(
         children: [
           Expanded(
@@ -149,7 +149,7 @@ class _QueuedRow extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(Gap.md, Gap.sm, 0, Gap.sm),
                 decoration: BoxDecoration(
                   color: pressed ? ds.fillPressed : Colors.transparent,
-                  borderRadius: const BorderRadius.horizontal(left: Radius.circular(Radii.chip)),
+                  borderRadius: const BorderRadius.horizontal(left: Radius.circular(Radii.sm)),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,

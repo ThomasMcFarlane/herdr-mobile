@@ -233,7 +233,7 @@ class _HoldToConfirmState extends State<HoldToConfirm> with SingleTickerProvider
           child: IgnorePointer(
             child: CustomPaint(
               key: holdFillKey,
-              painter: HoldFillPainter(progress: _fill, color: holdFillColor(ds), radius: Radii.chip),
+              painter: HoldFillPainter(progress: _fill, color: holdFillColor(ds), radius: Radii.sm),
             ),
           ),
         ),

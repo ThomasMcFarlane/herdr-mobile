@@ -523,7 +523,7 @@ class _QuestionBlock extends StatelessWidget {
       alignment: Alignment.centerLeft,
       decoration: BoxDecoration(
         color: ds.blockedWash,
-        borderRadius: BorderRadius.circular(Radii.chip),
+        borderRadius: BorderRadius.circular(Radii.sm),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

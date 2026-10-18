@@ -317,7 +317,7 @@ class _Frame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
-    final radius = BorderRadius.circular(Radii.panel);
+    final radius = BorderRadius.circular(Radii.md);
     return SizedBox(
       width: width,
       height: height,

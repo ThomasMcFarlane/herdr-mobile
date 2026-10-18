@@ -109,7 +109,7 @@ class _LocationRow extends StatelessWidget {
         alignment: Alignment.centerLeft,
         decoration: BoxDecoration(
           color: pressed ? ds.fillPressed : const Color(0x00000000),
-          borderRadius: BorderRadius.circular(Radii.row),
+          borderRadius: BorderRadius.circular(Radii.sm),
         ),
         child: row,
       ),

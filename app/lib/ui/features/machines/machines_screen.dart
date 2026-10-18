@@ -192,7 +192,7 @@ class _MachineRow extends StatelessWidget {
               curve: Motion.easeOut,
               decoration: BoxDecoration(
                 color: pressed ? ds.fill : Colors.transparent,
-                borderRadius: BorderRadius.circular(Radii.row),
+                borderRadius: BorderRadius.circular(Radii.sm),
               ),
               padding: const EdgeInsets.fromLTRB(Gap.gutter - _inset, 12, Gap.gutter - _inset - 8, 12),
               child: Row(

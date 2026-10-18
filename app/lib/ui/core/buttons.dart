@@ -68,7 +68,7 @@ class AppButton extends StatelessWidget {
             padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 18),
             decoration: BoxDecoration(
               color: dim(pressed ? pressedBg : bg),
-              borderRadius: BorderRadius.circular(Radii.control),
+              borderRadius: BorderRadius.circular(Radii.sm),
             ),
             child: Row(
               mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,

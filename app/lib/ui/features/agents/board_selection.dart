@@ -154,7 +154,7 @@ class SelectableRowFrame extends StatelessWidget {
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: state.selected ? ds.accent.withValues(alpha: ds.isDark ? 0.16 : 0.09) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(Radii.row),
+                  borderRadius: BorderRadius.circular(Radii.sm),
                 ),
               ),
             ),

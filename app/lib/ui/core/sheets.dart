@@ -105,7 +105,7 @@ class SheetActionRow extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: 16, vertical: inert ? 6 : 0),
         decoration: BoxDecoration(
           color: pressed ? ds.fill : Colors.transparent,
-          borderRadius: BorderRadius.circular(Radii.row),
+          borderRadius: BorderRadius.circular(Radii.sm),
         ),
         child: Row(
           children: [

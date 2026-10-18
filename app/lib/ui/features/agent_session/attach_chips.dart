@@ -129,7 +129,7 @@ class _Chip extends StatelessWidget {
       container: true,
       label: '${a.kind == AttachmentKind.image ? 'Picture' : 'File'} $label, ${_status(progress?.value)}',
       child: DecoratedBox(
-        decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.chip)),
+        decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.sm)),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: kMinTap, maxWidth: 280),
           child: Row(
@@ -239,7 +239,7 @@ class _Thumb extends StatelessWidget {
       child = Icon(a.kind == AttachmentKind.image ? LucideIcons.image : LucideIcons.fileText, size: 18, color: ds.textSecondary);
     }
     final tile = ClipRRect(
-      borderRadius: BorderRadius.circular(Radii.tile),
+      borderRadius: BorderRadius.circular(Radii.xs),
       child: SizedBox.square(
         dimension: _thumb,
         child: ColoredBox(color: ds.fillPressed, child: child),

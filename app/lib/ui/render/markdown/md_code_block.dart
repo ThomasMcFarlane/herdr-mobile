@@ -188,11 +188,11 @@ class _MdCodeBlockState extends State<MdCodeBlock> {
     final block = DecoratedBox(
       decoration: BoxDecoration(
         color: colors.background,
-        borderRadius: BorderRadius.circular(Radii.row),
+        borderRadius: BorderRadius.circular(Radii.sm),
         border: Border.all(color: colors.border),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(Radii.row),
+        borderRadius: BorderRadius.circular(Radii.sm),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

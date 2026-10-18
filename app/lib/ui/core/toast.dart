@@ -432,7 +432,7 @@ class _ToastViewState extends State<_ToastView> with SingleTickerProviderStateMi
       key: toastKey,
       decoration: BoxDecoration(
         color: ds.surface,
-        borderRadius: BorderRadius.circular(Radii.toast),
+        borderRadius: BorderRadius.circular(Radii.md),
         border: Border.all(color: ds.border),
         boxShadow: ds.floatShadow,
       ),

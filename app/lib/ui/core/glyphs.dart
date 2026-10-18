@@ -312,7 +312,7 @@ class IconTile extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         color: tint.withValues(alpha: ds.isDark ? 0.16 : 0.12),
-        borderRadius: BorderRadius.circular(Radii.tile),
+        borderRadius: BorderRadius.circular(Radii.xs),
       ),
       alignment: Alignment.center,
       child: Icon(icon, size: size * 0.56, color: tint),

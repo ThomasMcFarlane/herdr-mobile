@@ -130,7 +130,7 @@ class _PhraseRow extends StatelessWidget {
             alignment: Alignment.centerLeft,
             decoration: BoxDecoration(
               color: pressed ? ds.fill : Colors.transparent,
-              borderRadius: BorderRadius.circular(Radii.row),
+              borderRadius: BorderRadius.circular(Radii.sm),
             ),
             child: Row(
               children: [

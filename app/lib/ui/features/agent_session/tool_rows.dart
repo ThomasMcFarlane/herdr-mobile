@@ -152,7 +152,7 @@ class ToolRow extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: Gap.xs, vertical: 6),
                 decoration: BoxDecoration(
                   color: pressed ? ds.fill : Colors.transparent,
-                  borderRadius: BorderRadius.circular(Radii.row),
+                  borderRadius: BorderRadius.circular(Radii.sm),
                 ),
                 child: Row(
                   children: [
@@ -238,7 +238,7 @@ class FoldRail extends StatelessWidget {
           curve: Motion.easeOut,
           decoration: BoxDecoration(
             color: pressed ? ds.fill : Colors.transparent,
-            borderRadius: BorderRadius.circular(Radii.row),
+            borderRadius: BorderRadius.circular(Radii.sm),
           ),
           alignment: Alignment.topCenter,
           child: AnimatedContainer(

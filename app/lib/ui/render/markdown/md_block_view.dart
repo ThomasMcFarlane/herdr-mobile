@@ -278,7 +278,7 @@ class _Alert extends StatelessWidget {
       MdAlertKind.caution => (LucideIcons.octagonAlert, 'Caution', ds.dangerText),
     };
     return DecoratedBox(
-      decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.row)),
+      decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.sm)),
       child: Padding(
         padding: const EdgeInsets.all(Gap.md),
         child: Column(

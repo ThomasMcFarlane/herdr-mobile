@@ -207,7 +207,7 @@ class _Dock extends StatelessWidget {
           DecoratedBox(
             decoration: BoxDecoration(
               color: ds.blockedWash,
-              borderRadius: BorderRadius.circular(Radii.chip),
+              borderRadius: BorderRadius.circular(Radii.sm),
             ),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

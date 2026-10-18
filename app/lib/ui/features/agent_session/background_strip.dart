@@ -81,7 +81,7 @@ class _StripRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: Gap.md, vertical: Gap.sm),
         decoration: BoxDecoration(
           color: pressed ? ds.fillPressed : ds.fill,
-          borderRadius: BorderRadius.circular(Radii.chip),
+          borderRadius: BorderRadius.circular(Radii.sm),
         ),
         child: Row(
           children: [

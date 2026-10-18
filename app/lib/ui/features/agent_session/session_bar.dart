@@ -90,7 +90,7 @@ class SessionBar extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: Gap.sm),
                       decoration: BoxDecoration(
                         color: pressed ? ds.fill : Colors.transparent,
-                        borderRadius: BorderRadius.circular(Radii.row),
+                        borderRadius: BorderRadius.circular(Radii.sm),
                       ),
                       child: Row(
                         children: [
@@ -442,7 +442,7 @@ class _SettingRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: pressed ? ds.fill : Colors.transparent,
-          borderRadius: BorderRadius.circular(Radii.row),
+          borderRadius: BorderRadius.circular(Radii.sm),
         ),
         child: Row(
           children: [
@@ -722,7 +722,7 @@ class _ChoiceRow extends StatelessWidget {
             : pressed
             ? ds.fill
             : Colors.transparent,
-        borderRadius: BorderRadius.circular(Radii.row),
+        borderRadius: BorderRadius.circular(Radii.sm),
       ),
       child: hold == null ? content : Stack(fit: StackFit.passthrough, children: [hold.fill, content]),
     );

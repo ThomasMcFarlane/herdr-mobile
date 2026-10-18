@@ -69,7 +69,7 @@ class UserRow extends StatelessWidget {
       MessageCopyTarget(
         message: message,
         child: DecoratedBox(
-          decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.panel)),
+          decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.md)),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(Gap.md, Gap.sm + 2, Gap.md, Gap.sm + 2),
             child: Column(

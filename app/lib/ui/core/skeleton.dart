@@ -43,7 +43,7 @@ class Skeleton extends StatelessWidget {
                         Container(
                           width: 32,
                           height: 32,
-                          decoration: BoxDecoration(color: fill, borderRadius: BorderRadius.circular(Radii.tile)),
+                          decoration: BoxDecoration(color: fill, borderRadius: BorderRadius.circular(Radii.xs)),
                         ),
                         const SizedBox(width: Gap.md),
                         Expanded(

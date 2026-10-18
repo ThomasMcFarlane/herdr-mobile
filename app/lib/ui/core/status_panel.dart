@@ -5,20 +5,15 @@ import 'buttons.dart';
 import 'motion.dart';
 import 'theme.dart';
 
-/// Shared look of [StatusPanel] and [StatusStrip]: a 12% tint of the state's
-/// colour with a faint outline in the same colour. Tint instead of elevation;
-/// the colour is the state's colour, never decoration.
+/// Shared look of [StatusPanel] and [StatusStrip]: the state's [Ds.wash].
+/// Tint, not outline and not elevation; the colour is the state's colour,
+/// never decoration.
 abstract final class StatusTint {
-  /// Fill opacity. `blockedText` / `dangerText` reach 4.5:1 on it in both themes.
-  static const fillAlpha = 0.12;
-  static const borderAlpha = 0.22;
-
   static const pad = Gap.md;
 
-  static BoxDecoration decoration(Color color, {bool pressed = false}) => BoxDecoration(
-        color: color.withValues(alpha: pressed ? fillAlpha + 0.06 : fillAlpha),
-        borderRadius: BorderRadius.circular(Radii.panel),
-        border: Border.all(color: color.withValues(alpha: borderAlpha)),
+  static BoxDecoration decoration(Ds ds, Color color, {bool pressed = false}) => BoxDecoration(
+        color: pressed ? ds.washPressed(color) : ds.wash(color),
+        borderRadius: BorderRadius.circular(Radii.md),
       );
 }
 
@@ -62,7 +57,7 @@ class StatusPanel extends StatelessWidget {
       child: Container(
         width: double.infinity,
         padding: EdgeInsets.fromLTRB(StatusTint.pad, vertical, trailing == null ? StatusTint.pad : Gap.sm, vertical),
-        decoration: StatusTint.decoration(color),
+        decoration: StatusTint.decoration(ds, color),
         child: Row(
           // A titled panel reads top-down (icon beside the title); a one-line
           // message with an action centres on the action.
@@ -158,7 +153,7 @@ class StatusStrip extends StatelessWidget {
           width: double.infinity,
           constraints: const BoxConstraints(minHeight: height),
           padding: EdgeInsets.fromLTRB(StatusTint.pad, 0, action == null ? StatusTint.pad : Gap.xs, 0),
-          decoration: StatusTint.decoration(color, pressed: pressed && onTap != null),
+          decoration: StatusTint.decoration(ds, color, pressed: pressed && onTap != null),
           child: Row(
             children: [
               if (leading != null) ...[

@@ -32,7 +32,7 @@ class LiveOutput extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.sm),
         child: DecoratedBox(
-          decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.chip)),
+          decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.sm)),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Semantics(
@@ -208,7 +208,7 @@ class _SubagentRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: pressed ? ds.fill : Colors.transparent,
-          borderRadius: BorderRadius.circular(Radii.row),
+          borderRadius: BorderRadius.circular(Radii.sm),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

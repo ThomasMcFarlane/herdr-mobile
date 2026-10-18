@@ -810,7 +810,7 @@ class _ConnectedPanel extends StatelessWidget {
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(StatusTint.pad),
-        decoration: StatusTint.decoration(color),
+        decoration: StatusTint.decoration(ds, color),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -918,7 +918,7 @@ class _PublicKeyPanel extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: ds.fill,
-        borderRadius: BorderRadius.circular(Radii.control),
+        borderRadius: BorderRadius.circular(Radii.sm),
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(Gap.md, Gap.md, Gap.md, Gap.sm),

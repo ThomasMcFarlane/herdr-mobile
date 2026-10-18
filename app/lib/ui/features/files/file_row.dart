@@ -83,7 +83,7 @@ class FileRow extends StatelessWidget {
               alignment: Alignment.centerLeft,
               decoration: BoxDecoration(
                 color: pressed ? ds.fill : Colors.transparent,
-                borderRadius: BorderRadius.circular(Radii.row),
+                borderRadius: BorderRadius.circular(Radii.sm),
               ),
               padding: const EdgeInsets.symmetric(horizontal: Gap.gutter - _inset, vertical: 12),
               child: Row(

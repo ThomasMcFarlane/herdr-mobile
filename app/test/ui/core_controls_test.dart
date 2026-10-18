@@ -61,11 +61,40 @@ void main() {
         expect(contrast(ds.textSecondary, capsule), greaterThanOrEqualTo(4.5));
       });
 
-      test('$name status text holds on its own tint', () {
+      test('$name status text holds on its own wash, pressed too', () {
         for (final base in [ds.bg, ds.surface]) {
           for (final (text, hue) in [(ds.blockedText, ds.blocked), (ds.dangerText, ds.danger)]) {
-            final tint = Color.alphaBlend(hue.withValues(alpha: StatusTint.fillAlpha), base);
-            expect(contrast(text, tint), greaterThanOrEqualTo(4.5), reason: '$text on tint of $hue');
+            for (final wash in [ds.wash(hue), ds.washPressed(hue)]) {
+              final tint = Color.alphaBlend(wash, base);
+              expect(contrast(text, tint), greaterThanOrEqualTo(4.5), reason: '$text on wash of $hue');
+            }
+          }
+        }
+      });
+
+      test('$name a toast reads on the inverse surface', () {
+        expect(contrast(ds.onInverse, ds.inverseSurface), greaterThanOrEqualTo(4.5));
+        expect(contrast(ds.inverseAccent, ds.inverseSurface), greaterThanOrEqualTo(4.5));
+        // A toast's kind mark sits on it as a shape.
+        for (final c in [ds.done, ds.danger]) {
+          expect(contrast(c, ds.inverseSurface), greaterThanOrEqualTo(3), reason: '$c on the toast');
+        }
+      });
+
+      test('$name a selected tab or chip reads on the accent wash', () {
+        for (final base in [ds.surface, ds.bg]) {
+          for (final wash in [ds.accentWash, ds.accentWashPressed]) {
+            final tint = Color.alphaBlend(wash, base);
+            expect(contrast(ds.accentText, tint), greaterThanOrEqualTo(4.5), reason: 'accent text on $wash over $base');
+          }
+        }
+      });
+
+      test('$name text holds on a pressed row', () {
+        for (final base in [ds.bg, ds.surface]) {
+          final pressed = Color.alphaBlend(ds.pressTint, base);
+          for (final c in [ds.text, ds.textSecondary, ds.textMuted]) {
+            expect(contrast(c, pressed), greaterThanOrEqualTo(4.5), reason: '$c on pressed $base');
           }
         }
       });

@@ -72,7 +72,7 @@ class _Stepper extends StatelessWidget {
         height: kMinTap,
         decoration: BoxDecoration(
           color: ds.fill,
-          borderRadius: BorderRadius.circular(Radii.segmented),
+          borderRadius: BorderRadius.circular(Radii.sm),
         ),
         child: Row(
           children: [
@@ -130,7 +130,7 @@ class _StepButton extends StatelessWidget {
         height: kMinTap,
         decoration: BoxDecoration(
           color: pressed ? ds.fillPressed : Colors.transparent,
-          borderRadius: BorderRadius.circular(Radii.segmented),
+          borderRadius: BorderRadius.circular(Radii.sm),
         ),
         child: Icon(icon, size: 18, color: onTap == null ? ds.textTertiary : ds.text),
       ),
@@ -163,7 +163,7 @@ class _Sample extends StatelessWidget {
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: palette.background,
-            borderRadius: BorderRadius.circular(Radii.control),
+            borderRadius: BorderRadius.circular(Radii.sm),
             border: Border.all(color: palette.border),
           ),
           child: Padding(

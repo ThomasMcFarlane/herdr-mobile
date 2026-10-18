@@ -387,7 +387,7 @@ class _Body extends StatelessWidget {
     final surface = DecoratedBox(
       decoration: BoxDecoration(
         color: ds.bg,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(Radii.sheet)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(Radii.lg)),
         border: Border(top: BorderSide(color: ds.hairline)),
       ),
       child: Column(

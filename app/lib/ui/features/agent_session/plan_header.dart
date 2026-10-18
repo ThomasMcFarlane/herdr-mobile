@@ -118,7 +118,7 @@ class _PlanState extends State<_Plan> {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: ds.fill,
-          borderRadius: BorderRadius.circular(Radii.panel),
+          borderRadius: BorderRadius.circular(Radii.md),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -134,7 +134,7 @@ class _PlanState extends State<_Plan> {
                   padding: const EdgeInsets.symmetric(horizontal: Gap.md),
                   decoration: BoxDecoration(
                     color: pressed ? ds.fillPressed : Colors.transparent,
-                    borderRadius: BorderRadius.circular(Radii.panel),
+                    borderRadius: BorderRadius.circular(Radii.md),
                   ),
                   child: Row(
                     children: [

@@ -622,7 +622,7 @@ class _SortRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         decoration: BoxDecoration(
           color: pressed ? ds.fill : Colors.transparent,
-          borderRadius: BorderRadius.circular(Radii.row),
+          borderRadius: BorderRadius.circular(Radii.sm),
         ),
         child: Row(
           children: [
@@ -781,7 +781,7 @@ class _FileBreadcrumbsState extends State<FileBreadcrumbs> {
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       decoration: BoxDecoration(
                         color: pressed ? ds.fill : Colors.transparent,
-                        borderRadius: BorderRadius.circular(Radii.control),
+                        borderRadius: BorderRadius.circular(Radii.sm),
                       ),
                       child: Text(
                         c.label,

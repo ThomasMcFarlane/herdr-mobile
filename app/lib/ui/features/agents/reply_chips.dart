@@ -282,7 +282,7 @@ class _ReplyChip extends StatelessWidget {
       constraints: const BoxConstraints(minHeight: kMinTap),
       decoration: BoxDecoration(
         color: pressed && enabled ? pressedBg : bg,
-        borderRadius: BorderRadius.circular(Radii.chip),
+        borderRadius: BorderRadius.circular(Radii.sm),
         border: border == null ? null : Border.all(color: border),
       ),
       child: hold == null ? content : Stack(fit: StackFit.passthrough, children: [hold.fill, content]),

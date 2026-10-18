@@ -442,7 +442,7 @@ class _PermissionPanelState extends State<PermissionPanel> with TapGuardState<Pe
             DecoratedBox(
               decoration: BoxDecoration(
                 color: ds.blockedWash,
-                borderRadius: BorderRadius.circular(Radii.chip),
+                borderRadius: BorderRadius.circular(Radii.sm),
               ),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -767,7 +767,7 @@ class _OptionChip extends StatelessWidget {
       constraints: const BoxConstraints(minHeight: kMinTap),
       decoration: BoxDecoration(
         color: pressed && enabled ? pressedBg : bg,
-        borderRadius: BorderRadius.circular(Radii.chip),
+        borderRadius: BorderRadius.circular(Radii.sm),
         border: border == null ? null : Border.all(color: border),
       ),
       child: hold == null ? content : Stack(fit: StackFit.passthrough, children: [hold.fill, content]),

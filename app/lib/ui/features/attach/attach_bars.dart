@@ -166,7 +166,7 @@ class _AttachActionBarState extends State<AttachActionBar> with SingleTickerProv
                 color: ds.surface,
                 // Not the pill's stadium: the compact buttons sit 10 dp inside
                 // it, and a 28 dp radius would cut their corners.
-                borderRadius: BorderRadius.circular(Radii.panel + 4),
+                borderRadius: BorderRadius.circular(Radii.md + 4),
                 border: Border.all(color: ds.hairline),
                 boxShadow: ds.floatShadow,
               ),

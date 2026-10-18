@@ -254,7 +254,7 @@ class _KeyButtonState extends State<_KeyButton> {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: fill ?? (pressed ? ds.fillPressed : ds.fill),
-              borderRadius: BorderRadius.circular(Radii.control),
+              borderRadius: BorderRadius.circular(Radii.sm),
             ),
             child: data.icon != null
                 ? Icon(data.icon, size: 16, color: color)

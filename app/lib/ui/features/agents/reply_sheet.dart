@@ -672,7 +672,7 @@ class _SheetQuestion extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: ds.blockedWash,
-        borderRadius: BorderRadius.circular(Radii.chip),
+        borderRadius: BorderRadius.circular(Radii.sm),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -888,7 +888,7 @@ class _KeyButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: Gap.md),
         decoration: BoxDecoration(
           color: pressed ? ds.fillPressed : ds.fill,
-          borderRadius: BorderRadius.circular(Radii.control),
+          borderRadius: BorderRadius.circular(Radii.sm),
         ),
         // widthFactor: shrink-wrap, so a Wrap gives it its own width, not all.
         child: Center(

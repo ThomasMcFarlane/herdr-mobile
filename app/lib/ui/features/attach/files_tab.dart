@@ -250,7 +250,7 @@ class _ChooseTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: Gap.gutter - _rowInset, vertical: Gap.md),
           decoration: BoxDecoration(
             color: pressed ? ds.fill : Colors.transparent,
-            borderRadius: BorderRadius.circular(Radii.row),
+            borderRadius: BorderRadius.circular(Radii.sm),
           ),
           child: Row(
             children: [
@@ -339,7 +339,7 @@ class _FileRow extends StatelessWidget {
                   padding: EdgeInsets.fromLTRB(Gap.gutter - _rowInset, Gap.md, trailing + Gap.xs, Gap.md),
                   decoration: BoxDecoration(
                     color: pressed ? ds.fill : Colors.transparent,
-                    borderRadius: BorderRadius.circular(Radii.row),
+                    borderRadius: BorderRadius.circular(Radii.sm),
                   ),
                   child: Row(
                     children: [

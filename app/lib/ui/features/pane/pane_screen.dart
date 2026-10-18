@@ -805,7 +805,7 @@ class _TerminalPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(Radii.panel);
+    final radius = BorderRadius.circular(Radii.md);
     final palette = context.terminal;
     return DecoratedBox(
       position: DecorationPosition.foreground,

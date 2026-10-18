@@ -232,7 +232,7 @@ class _QuestionPanelState extends State<QuestionPanel> with TapGuardState<Questi
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: ds.blockedWash,
-          borderRadius: BorderRadius.circular(Radii.chip),
+          borderRadius: BorderRadius.circular(Radii.sm),
         ),
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -628,7 +628,7 @@ class _ChoiceRow extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: kMinTap),
         decoration: BoxDecoration(
           color: pressed ? ds.fill : Colors.transparent,
-          borderRadius: BorderRadius.circular(Radii.row),
+          borderRadius: BorderRadius.circular(Radii.sm),
         ),
         child: Row(
           children: [

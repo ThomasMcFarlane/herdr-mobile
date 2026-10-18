@@ -98,7 +98,7 @@ class SwitchRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: Gap.sm),
           decoration: BoxDecoration(
             color: pressed ? ds.fill : Colors.transparent,
-            borderRadius: BorderRadius.circular(Radii.row),
+            borderRadius: BorderRadius.circular(Radii.sm),
           ),
           child: Row(
             children: [

@@ -166,7 +166,7 @@ class _SessionOverviewState extends State<SessionOverview> {
         trailing: DiffStats(added: model.added, removed: model.removed),
       ),
       ClipRRect(
-        borderRadius: BorderRadius.circular(Radii.panel),
+        borderRadius: BorderRadius.circular(Radii.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -248,7 +248,7 @@ class _SessionOverviewState extends State<SessionOverview> {
           padding: const EdgeInsets.symmetric(horizontal: Gap.xs),
           decoration: BoxDecoration(
             color: pressed ? ds.fill : Colors.transparent,
-            borderRadius: BorderRadius.circular(Radii.row),
+            borderRadius: BorderRadius.circular(Radii.sm),
           ),
           child: Row(
             children: [
@@ -357,7 +357,7 @@ class _SessionOverviewState extends State<SessionOverview> {
             padding: const EdgeInsets.symmetric(horizontal: Gap.xs, vertical: 6),
             decoration: BoxDecoration(
               color: pressed ? ds.fill : Colors.transparent,
-              borderRadius: BorderRadius.circular(Radii.row),
+              borderRadius: BorderRadius.circular(Radii.sm),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -578,7 +578,7 @@ class _CommandRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: Gap.xs, vertical: 6),
           decoration: BoxDecoration(
             color: pressed ? ds.fill : Colors.transparent,
-            borderRadius: BorderRadius.circular(Radii.row),
+            borderRadius: BorderRadius.circular(Radii.sm),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,

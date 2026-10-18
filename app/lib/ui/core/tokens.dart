@@ -3,7 +3,12 @@ import 'package:flutter/material.dart';
 const _floatLight = [BoxShadow(color: Color(0x14000000), blurRadius: 20, offset: Offset(0, 4))];
 const _floatDark = [BoxShadow(color: Color(0x73000000), blurRadius: 20, offset: Offset(0, 4))];
 
-/// Design tokens.
+/// Design tokens, in three tiers: a private palette (the hex values below),
+/// the roles a screen reads ([Ds], [Type], [Mono], [Gap], [Radii],
+/// [IconSize]), and component metrics, which exist only where two or more
+/// components share a value (`FloatingBar`, `RowMetrics`). A new token needs
+/// two call sites and a one-line reason; `tool/design_lint.dart` keeps raw
+/// values out of screens.
 ///
 /// The look is deliberately not Material: flat rows instead of cards, one
 /// accent, hairlines instead of elevation, status by shape as well as colour,
@@ -33,6 +38,10 @@ class Ds extends ThemeExtension<Ds> {
     required this.danger,
     required this.blockedText,
     required this.dangerText,
+    required this.pressTint,
+    required this.inverseSurface,
+    required this.onInverse,
+    required this.inverseAccent,
   });
 
   final Brightness brightness;
@@ -40,10 +49,10 @@ class Ds extends ThemeExtension<Ds> {
   /// Page background.
   final Color bg;
 
-  /// Raised surface: sheets, inputs, the floating tab bar.
+  /// Raised surface: sheets, inputs, the floating bars, the agent card.
   final Color surface;
 
-  /// Quiet fill for chips, tiles and the selected segment.
+  /// Quiet fill for controls, chips, tiles and panels inside content.
   final Color fill;
   final Color fillPressed;
 
@@ -85,6 +94,18 @@ class Ds extends ThemeExtension<Ds> {
   final Color blockedText;
   final Color dangerText;
 
+  /// A pressed row or area on any surface: a translucent veil, so it works on
+  /// [bg], [surface] and a wash alike (an opaque [fill] did not).
+  final Color pressTint;
+
+  /// Transient messages floating over everything (toasts, tooltips): the one
+  /// inverse surface, so a message never reads as page content or a field.
+  final Color inverseSurface;
+  final Color onInverse;
+
+  /// An action on [inverseSurface] (a toast's Undo).
+  final Color inverseAccent;
+
   /// Colour of the mark (check, "!") drawn on a filled status glyph or badge:
   /// dark on the bright ink fills, white on the deeper paper fills.
   Color get onStatus => isDark ? bg : const Color(0xFFFFFFFF);
@@ -93,8 +114,42 @@ class Ds extends ThemeExtension<Ds> {
   /// blocked card, dock or sheet is tinted).
   Color get blockedWash => blocked.withValues(alpha: isDark ? 0.12 : 0.09);
 
-  /// The one shadow: a surface floating over content (the bottom bars, the
-  /// pills over them, toasts). Soft and wide, never a band.
+  /// A state's tint behind a panel, a strip or a primed chip.
+  /// `blockedText` / `dangerText` reach 4.5:1 on it.
+  Color wash(Color c) => c.withValues(alpha: isDark ? 0.16 : 0.12);
+
+  /// [wash], pressed.
+  Color washPressed(Color c) => c.withValues(alpha: isDark ? 0.22 : 0.16);
+
+  /// The edge of a chip that is primed and waits for its confirmation: the
+  /// one place a state is outlined, because a risky answer must not be missed.
+  Color armedEdge(Color c) => c.withValues(alpha: 0.55);
+
+  /// The accent as a tint: the selected tab's capsule, a selected chip, an
+  /// active toggle, a selected row.
+  Color get accentWash => accent.withValues(alpha: isDark ? 0.16 : 0.09);
+  Color get accentWashPressed => accent.withValues(alpha: isDark ? 0.22 : 0.15);
+
+  /// A primary (accent-filled) control, pressed.
+  Color get accentPressed => Color.alphaBlend(const Color(0x1F000000), accent);
+
+  /// Grabbers, scrollbars, faint marks.
+  Color get faint => textTertiary.withValues(alpha: 0.6);
+
+  /// Skeleton bars while something loads.
+  Color get skeleton => textTertiary.withValues(alpha: 0.2);
+
+  /// A dark veil over a photo (its bars, a selection), and the marks on it.
+  Color get photoScrim => const Color(0x99000000);
+  Color get onPhoto => const Color(0xFFFFFFFF);
+
+  /// Added lines as text: a deeper green on paper (`done` is a shape colour
+  /// there, 4.2:1); ink reuses `done` (6.7:1 or better). Removed lines use
+  /// [dangerText].
+  Color get addedText => isDark ? done : const Color(0xFF1B7343);
+
+  /// The one shadow: a surface floating over content (the bottom bars and the
+  /// pill over them). Soft and wide, never a band.
   List<BoxShadow> get floatShadow => isDark ? _floatDark : _floatLight;
 
   bool get isDark => brightness == Brightness.dark;
@@ -120,8 +175,12 @@ class Ds extends ThemeExtension<Ds> {
     working: Color(0xFFB07F00),
     done: Color(0xFF258A53),
     danger: Color(0xFFD44C47),
-    blockedText: Color(0xFFAD4C14),
+    blockedText: Color(0xFFA84A13),
     dangerText: Color(0xFFB5342F),
+    pressTint: Color(0x0B000000),
+    inverseSurface: Color(0xFF2B2A27),
+    onInverse: Color(0xFFF1F1EF),
+    inverseAccent: Color(0xFFAAB2F5),
   );
 
   /// Ink: cool near-black with a surface ladder.
@@ -147,6 +206,10 @@ class Ds extends ThemeExtension<Ds> {
     danger: Color(0xFFEB5757),
     blockedText: Color(0xFFF2994A),
     dangerText: Color(0xFFF26B6B),
+    pressTint: Color(0x0BFFFFFF),
+    inverseSurface: Color(0xFF2A2B30),
+    onInverse: Color(0xFFF1F1EF),
+    inverseAccent: Color(0xFFAAB2F5),
   );
 
   @override
@@ -172,6 +235,10 @@ class Ds extends ThemeExtension<Ds> {
         danger: danger,
         blockedText: blockedText,
         dangerText: dangerText,
+        pressTint: pressTint,
+        inverseSurface: inverseSurface,
+        onInverse: onInverse,
+        inverseAccent: inverseAccent,
       );
 
   @override
@@ -200,6 +267,10 @@ class Ds extends ThemeExtension<Ds> {
       danger: l(danger, other.danger),
       blockedText: l(blockedText, other.blockedText),
       dangerText: l(dangerText, other.dangerText),
+      pressTint: l(pressTint, other.pressTint),
+      inverseSurface: l(inverseSurface, other.inverseSurface),
+      onInverse: l(onInverse, other.onInverse),
+      inverseAccent: l(inverseAccent, other.inverseAccent),
     );
   }
 }
@@ -208,8 +279,11 @@ extension DsContext on BuildContext {
   Ds get ds => Theme.of(this).extension<Ds>()!;
 }
 
-/// Spacing scale (4pt grid) and page gutters.
+/// Spacing scale (4pt grid) and page gutters. Off-grid values are snapped to
+/// it; [hair] is the one step below the grid, for optical nudges and the gap
+/// between two stacked lines of text.
 abstract final class Gap {
+  static const hair = 2.0;
   static const xs = 4.0;
   static const sm = 8.0;
   static const md = 12.0;
@@ -221,45 +295,101 @@ abstract final class Gap {
   static const gutter = 20.0;
 }
 
+/// Corner radii: four steps and a pill. One-dp steps (7, 9, 10, 11, 12) were
+/// invisible and drifted, so they collapsed. A shape nested inside another
+/// takes the outer radius minus the inset between them.
 abstract final class Radii {
-  /// Icon tiles.
-  static const tile = 7.0;
+  /// Small tiles and marks: icon tiles, thumbnails, tooltips, checkboxes.
+  static const xs = 6.0;
 
-  /// Pressed highlight of a list row or sheet action.
-  static const row = 10.0;
+  /// Controls: buttons, inputs, chips, pressed rows, question washes.
+  static const sm = 10.0;
 
-  /// The font-size stepper's track and its buttons (`font_size_control.dart`).
-  /// The switch (`Segmented`) is a full pill and uses neither this nor [control].
-  static const segmented = 11.0;
+  /// Panels and floating messages: panels, cards, toasts, empty-state tiles.
+  static const md = 14.0;
 
-  /// Empty-state icon tile.
-  static const emptyTile = 14.0;
+  /// Sheets.
+  static const lg = 20.0;
 
-  /// Toasts.
-  static const toast = 12.0;
+  /// Fully round ends (pills, badges, bars, grabbers): any height.
+  static const pill = 999.0;
+}
 
-  /// Tooltips.
-  static const tooltip = 7.0;
+/// Icon sizes by role.
+abstract final class IconSize {
+  /// Inside a line of text: chip leading, inline warnings, marks.
+  static const inline = 14.0;
 
-  /// Buttons, inputs, quiet tiles and thumbnails.
-  static const control = 9.0;
+  /// A row's leading or trailing icon, every chevron, a search prefix.
+  static const row = 16.0;
 
-  /// Panels (the terminal, banners).
-  static const panel = 12.0;
+  /// Fields, panels, toasts, sheet actions.
+  static const bar = 18.0;
 
-  /// Bottom sheets.
-  static const sheet = 18.0;
+  /// A status glyph in a row's 32 dp leading column.
+  static const lead = 20.0;
 
-  /// Answer chips, question washes and code boxes inside a panel.
-  static const chip = 10.0;
+  /// The tab bar and the batch bar.
+  static const nav = 24.0;
 
-  /// Checkboxes and small inline marks.
-  static const mark = 5.0;
+  /// An empty state's tile.
+  static const empty = 28.0;
+
+  /// A screen-filling mark (a file that cannot be shown).
+  static const hero = 48.0;
+}
+
+/// Terminal and code text (JetBrains Mono): proper box-drawing and symbol
+/// coverage for agent UIs.
+const monoFamily = 'JetBrainsMono';
+
+/// Mono text by role. Ligatures are off: code is read character by character
+/// (`!=` must not become one glyph). The terminal keeps its own, user-sized
+/// style.
+abstract final class Mono {
+  static const noLigatures = [FontFeature.disable('liga'), FontFeature.disable('calt')];
+
+  /// Dense meta: a log tail, a hex id.
+  static const small = TextStyle(
+    fontFamily: monoFamily,
+    fontSize: 11.5,
+    height: 1.4,
+    letterSpacing: 0,
+    fontFeatures: noLigatures,
+  );
+
+  /// Commands, paths, code blocks, the subject of a question.
+  static const base = TextStyle(
+    fontFamily: monoFamily,
+    fontSize: 12.5,
+    height: 1.4,
+    letterSpacing: 0,
+    fontFeatures: noLigatures,
+  );
+
+  /// Typed shell text and key caps.
+  static const input = TextStyle(
+    fontFamily: monoFamily,
+    fontSize: 13.5,
+    height: 1.45,
+    letterSpacing: 0,
+    fontFeatures: noLigatures,
+  );
+
+  /// The terminal preview on a board card.
+  static const preview = TextStyle(
+    fontFamily: monoFamily,
+    fontSize: 11,
+    height: 1.38,
+    letterSpacing: 0,
+    fontFeatures: noLigatures,
+  );
 }
 
 /// Type scale (Inter). Sizes are for the default text scale; they grow with the
 /// system setting. Tracking is size-specific: tight on large text, neutral on
-/// body, never one value for all sizes.
+/// body, never one value for all sizes. Weight comes with the role: a screen
+/// never sets `fontWeight`, it picks the `Strong` variant.
 abstract final class Type {
   static const family = 'Inter';
 
@@ -287,7 +417,7 @@ abstract final class Type {
     letterSpacing: -0.2,
   );
 
-  /// Row title.
+  /// The name of a thing in a list: an agent, a machine, a file.
   static const row = TextStyle(
     fontFamily: family,
     fontSize: 16,
@@ -295,6 +425,26 @@ abstract final class Type {
     fontWeight: FontWeight.w500,
     letterSpacing: -0.15,
   );
+
+  /// The title of an action or setting row: regular, so names (w500) stand
+  /// out from the actions around them.
+  static const cell = TextStyle(
+    fontFamily: family,
+    fontSize: 16,
+    height: 1.3,
+    fontWeight: FontWeight.w400,
+    letterSpacing: -0.15,
+  );
+
+  /// Text the person types into a field.
+  static const input = TextStyle(
+    fontFamily: family,
+    fontSize: 16,
+    height: 1.3,
+    fontWeight: FontWeight.w400,
+    letterSpacing: -0.15,
+  );
+
   static const body = TextStyle(
     fontFamily: family,
     fontSize: 15,
@@ -312,6 +462,15 @@ abstract final class Type {
     letterSpacing: 0,
   );
 
+  /// [secondary] with weight: a log row's line, an emphasised meta.
+  static const secondaryStrong = TextStyle(
+    fontFamily: family,
+    fontSize: 13.5,
+    height: 1.35,
+    fontWeight: FontWeight.w500,
+    letterSpacing: 0,
+  );
+
   /// Section labels and chips: Notion-style sentence case, not letterspaced caps.
   static const label = TextStyle(
     fontFamily: family,
@@ -320,6 +479,16 @@ abstract final class Type {
     fontWeight: FontWeight.w500,
     letterSpacing: 0.05,
   );
+
+  /// [label] with weight: section headers, a group's title, a text action.
+  static const labelStrong = TextStyle(
+    fontFamily: family,
+    fontSize: 13,
+    height: 1.3,
+    fontWeight: FontWeight.w600,
+    letterSpacing: 0.05,
+  );
+
   static const button = TextStyle(
     fontFamily: family,
     fontSize: 15,
@@ -327,12 +496,51 @@ abstract final class Type {
     fontWeight: FontWeight.w600,
     letterSpacing: -0.1,
   );
+
+  /// A compact button, a segment of a switch.
+  static const buttonCompact = TextStyle(
+    fontFamily: family,
+    fontSize: 13.5,
+    height: 1.2,
+    fontWeight: FontWeight.w600,
+    letterSpacing: -0.1,
+  );
+
   static const caption = TextStyle(
     fontFamily: family,
     fontSize: 12,
     height: 1.3,
     fontWeight: FontWeight.w500,
     letterSpacing: 0.1,
+  );
+
+  /// [caption] with weight: a diff mark, a small state word.
+  static const captionStrong = TextStyle(
+    fontFamily: family,
+    fontSize: 12,
+    height: 1.3,
+    fontWeight: FontWeight.w600,
+    letterSpacing: 0.1,
+  );
+
+  /// A count beside a label (`Needs you 1`, a section's total): tabular.
+  static const count = TextStyle(
+    fontFamily: family,
+    fontSize: 12,
+    height: 1.2,
+    fontWeight: FontWeight.w600,
+    letterSpacing: 0,
+    fontFeatures: tabular,
+  );
+
+  /// The number in a count badge (the tab bar's, a machine's).
+  static const badge = TextStyle(
+    fontFamily: family,
+    fontSize: 11,
+    height: 1.0,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 0,
+    fontFeatures: tabular,
   );
 
   /// Secondary reading text in sheets, forms and notices (a notch under
@@ -354,13 +562,30 @@ abstract final class Type {
     letterSpacing: -0.05,
   );
 
-  /// A one-tap answer or a button label inside a panel.
+  /// A one-tap answer, a button label inside a panel, a panel's title.
   static const answer = TextStyle(
     fontFamily: family,
     fontSize: 14.5,
     height: 1.25,
     fontWeight: FontWeight.w600,
     letterSpacing: -0.05,
+  );
+
+  /// Markdown headings, levels 1 and 2 (3 and 4 are [row] and [body] with
+  /// weight, see `md_styles.dart`).
+  static const h1 = TextStyle(
+    fontFamily: family,
+    fontSize: 22,
+    height: 1.25,
+    fontWeight: FontWeight.w700,
+    letterSpacing: -0.5,
+  );
+  static const h2 = TextStyle(
+    fontFamily: family,
+    fontSize: 18.5,
+    height: 1.3,
+    fontWeight: FontWeight.w600,
+    letterSpacing: -0.3,
   );
 
   static const tabular = [FontFeature.tabularFigures()];

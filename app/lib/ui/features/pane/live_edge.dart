@@ -136,7 +136,7 @@ class _LiveEdgeState extends State<LiveEdge> {
                   decoration: BoxDecoration(
                     // Opaque: it floats over text.
                     color: ds.bg,
-                    borderRadius: BorderRadius.circular(Radii.tile),
+                    borderRadius: BorderRadius.circular(Radii.xs),
                   ),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: Gap.sm, vertical: 2),

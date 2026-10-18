@@ -192,7 +192,7 @@ class _Loading extends StatelessWidget {
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: ds.surface.withValues(alpha: holder == null ? 0 : 0.86),
-                  borderRadius: BorderRadius.circular(Radii.panel),
+                  borderRadius: BorderRadius.circular(Radii.md),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
