@@ -654,9 +654,8 @@ class _PaneViewState extends State<_PaneView> {
         // A table wider than the view, or a terminal wider than the phone
         // with wrap off, scrolls sideways: that swipe is theirs, not a step
         // to the next agent.
-        terminal: AgentSwipeDetector(
-          enabled: true,
-          onSwipe: (delta) => swipeToAgent(context, widget.agent, delta),
+        terminal: AgentSwipe(
+          agent: widget.agent,
           child: _TerminalPanel(paneId: _paneId, onLinkTap: _openLink),
         ),
         palette: Column(

@@ -18,30 +18,57 @@ the board, with its own count and order. The board is the
 one scan surface; an agent screen is for one agent.
 
 - **A swipe goes to the next agent.** Inside an agent screen (over the
-  terminal panel, or the chat's transcript) a quick sideways swipe shows the
+  terminal panel, or the chat's transcript) a sideways swipe goes to the
   next agent in the board's order (swipe left; right for the previous one):
   its sections in turn, Needs you and Done longest waiting first, panes and
   sessions mixed as the board mixes them. The board's filter and collapsed
   sections are a way of looking, not an order, and are not applied. Why: fast
   switching without a second list, in the order that answers "does anything
-  need me" first.
+  need me" first. The same steps are the screen's `Next agent` and `Previous
+  agent` accessibility actions.
+- **The swipe shows who is next before it goes** (`AgentPeekCard`,
+  `agent_peek.dart`). While the finger moves, a card with the agent as the
+  board's row shows it (status glyph, title, `agent · machine · folder`, time
+  in state) comes in from the side the finger moves toward, driven by the
+  finger and fully in by 96 dp (1.5x the commit distance: it is a reveal at
+  the edge, not an object under the finger, so at 64 dp two thirds of it
+  already show), centred on the content's height. It leads with the glyph and the
+  title on the side it enters from (the previous agent's card is laid out
+  right to left). The screen under it does not move. Past 64 dp the card
+  takes a faint accent tint and a `tick` says letting go will go there;
+  coming back under it ticks again. Letting go goes if the travel, with the
+  fling's speed projected (`Springs.projectSheet`), passes 64 dp, so a quick
+  flick is still instant; otherwise the card springs back
+  (`Springs.settle`, from where it is, with the finger's speed) and nothing
+  happens. It goes to the agent the card showed, even if the order changed
+  while the finger moved; one the board no longer lists is not opened (a
+  `tick`). The card fades as the next screen slides in. Under reduced motion
+  the card does not slide: it sits in its place and fades in with the
+  finger's travel. Why: an instant switch felt great, but nobody knew what
+  came next, and there was no way to back out.
 - **What counts as the swipe** (`AgentSwipeDetector`, `agent_swipe.dart`):
-  one finger the whole time (a second one is a pinch), 64 dp sideways within
-  450 ms of touching down, with under 40% as much vertical travel, and not a
-  finger that first went more than 24 dp vertically (a scroll, for the rest
-  of the touch). Why the numbers: a long-press selection starts at 500 ms, so
-  a selection drag is never a swipe, and a scroll that drifts is not either.
+  one finger the whole time (a second one is a pinch), 22 dp sideways (past
+  the touch slop) within 450 ms of touching down, with under 40% as much
+  vertical travel, and not a finger that first went more than 24 dp
+  vertically (a scroll, for the rest of the touch). From then on there is no
+  time limit: the finger drives the card. Turning vertical, a second finger
+  or anything scrolling sideways takes the card back and nothing happens.
+  Why the numbers: a long-press selection starts at 500 ms, so a selection
+  drag is never a swipe, and a scroll that drifts is not either.
 - **What never triggers it.** A touch that starts within 24 dp of the
   screen's sides: the system back gestures live there. Anything under the
   finger that scrolled sideways during the touch (a code block, a table, a
   terminal wider than the screen with wrap off): that swipe is theirs, and a
-  scrollable claims the drag before 64 dp. The detector listens to raw
-  pointers and never joins the gesture arena, so scrolling, link taps,
-  selection and pinch zoom behave exactly as without it.
+  scrollable claims the drag at the touch slop, before the swipe is
+  recognised. The detector listens to raw pointers and never joins the
+  gesture arena, so scrolling, link taps, selection and pinch zoom behave
+  exactly as without it.
 - **The ends.** At either end of the order, or for an agent the board does
-  not list, nothing moves and a `tick` says so. Why: the order does not wrap
-  round, so the person feels where the list ends instead of landing back on
-  the first agent without noticing.
+  not list, a quiet card says `No next agent` / `No previous agent`; it
+  comes in against resistance and never arms, and letting go springs it
+  back with a `tick`. Why: the order does not wrap round, so the person
+  feels where the list ends instead of landing back on the first agent
+  without noticing.
 - **Chat and Terminal are one agent's two views, switched from its menu.** An
   agent with both (a pane the app can follow through its log) has `Show terminal` in the
   chat's `Session options` and `Show chat` in the terminal's `Pane options`.

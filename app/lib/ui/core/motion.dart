@@ -188,7 +188,8 @@ abstract final class Dwell {
   /// A preconnect outlives a finger that lifted without opening by this much.
   static const preconnectLinger = Duration(milliseconds: 400);
 
-  /// An edge swipe between agents must finish within this long.
+  /// A swipe between agents must be recognised within this long of touching
+  /// down (a selection drag starts at 500 ms); after that the finger drives it.
   static const edgeSwipe = Duration(milliseconds: 450);
 
   /// A board answer's `Sent` and `Changed` states stay this long.
