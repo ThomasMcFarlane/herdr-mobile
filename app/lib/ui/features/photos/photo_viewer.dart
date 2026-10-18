@@ -375,8 +375,9 @@ class _Caption extends StatelessWidget {
     final detail = image != null
         ? '${groupDigits(image.width)} × ${groupDigits(image.height)}'
         : (item.size != null ? formatBytes(item.size) : '');
-    final nameStyle = Type.compact.copyWith(color: ds.text);
-    final detailStyle = Type.compact.copyWith(color: ds.textSecondary);
+    // The name is the entity, the size is about it: weight says which.
+    final nameStyle = Type.secondaryStrong.copyWith(color: ds.text);
+    final detailStyle = Type.secondary.copyWith(color: ds.textSecondary);
     final bottom = MediaQuery.paddingOf(context).bottom;
     return DecoratedBox(
       decoration: BoxDecoration(
