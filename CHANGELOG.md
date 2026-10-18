@@ -17,13 +17,15 @@ release.
   your SSH connection. Sign-in and passkeys work as in any link. An `https`
   address on the machine stays copy-only and says why.
 - A machine that does not allow port forwarding says so; Copy link stays.
-- A Made chip under the session's title lists what the agent has made: dev
-  servers, HTML and SVG pages, pictures and documents, newest first, so a link
-  or a file from an hour ago is not lost in the chat. Servers stay pinned on
-  top; pages, pictures (a grid of thumbnails) and documents switch with the
-  app's pill switch once there is more than one kind. The switch in Settings
-  (theme, agent list) and the machine form now looks like the tab bar's capsule. A tap opens it. A server says Running only while a
-  background task for its port is active.
+- A Made chip under the session's title lists what the agent has made, newest
+  first, so a link or a file from an hour ago is not lost in the chat: dev
+  servers (Running while one is up), HTML and SVG pages, pictures (a grid of
+  thumbnails) and documents. When there is more than one kind a switch on top
+  (Servers, Pages, Pictures, Docs, with a count each) changes the list; it never
+  moves while you switch. A tap opens the item. A file shows up only when the
+  agent made or announced it, never because a command merely read it.
+- The switches in Settings (theme, agent list) and the machine form look like
+  the tab bar's capsule now: a soft pill, no border.
 
 ### Pictures are downloaded once
 

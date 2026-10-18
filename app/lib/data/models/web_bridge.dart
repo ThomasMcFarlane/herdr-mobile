@@ -42,7 +42,9 @@ final class PortForward extends WebBridgeSpec {
 
 /// Where a listener answers and the secret that opens it.
 class WebBridgeInfo {
-  const WebBridgeInfo({required this.port, required this.token});
+  /// [entryPort] defaults to [port]: a static site answers its own entry URL.
+  const WebBridgeInfo({required this.port, required this.token, int? entryPort})
+      : entryPort = entryPort ?? port;
 
   /// The loopback port on the phone.
   final int port;
@@ -51,12 +53,22 @@ class WebBridgeInfo {
   /// URL (`/__herdr/open?t=`), which answers with a cookie.
   final String token;
 
-  @override
-  bool operator ==(Object other) =>
-      other is WebBridgeInfo && other.port == port && other.token == token;
+  /// The loopback port that answers the entry URL. For a forwarded dev server
+  /// it is a different port from [port]: the browser keeps connections to
+  /// [port] open and reuses them, and what goes down such a connection is
+  /// the dev server's, so the entry URL (which holds the token) must never be
+  /// sent there.
+  final int entryPort;
 
   @override
-  int get hashCode => Object.hash(port, token);
+  bool operator ==(Object other) =>
+      other is WebBridgeInfo &&
+      other.port == port &&
+      other.token == token &&
+      other.entryPort == entryPort;
+
+  @override
+  int get hashCode => Object.hash(port, token, entryPort);
 }
 
 /// Whether [url] points at the machine the output came from rather than at

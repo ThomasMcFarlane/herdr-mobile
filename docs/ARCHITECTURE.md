@@ -462,11 +462,21 @@ Other ways traffic can leave the phone:
   being a hole:
   - Every answer needs the listener's token (16 random bytes, 32 hex). It is
     sent once, in the entry URL (`/__herdr/open?t=…`), which answers with a
-    `HttpOnly; SameSite=Strict` cookie named for the port. Why a cookie and not
-    a path prefix: a built site refers to `/assets/x.js`, which a prefix breaks
-    (measured, scenario S2).
+    `HttpOnly; SameSite=Strict` cookie named for the listener's port. Why a
+    cookie and not a path prefix: a built site refers to `/assets/x.js`, which
+    a prefix breaks (measured, scenario S2). A static listener answers its own
+    entry URL. A forward's entry URL is answered by one separate *entry
+    listener* of the host (up while any forward is), which sets the cookie and
+    redirects to `http://localhost:<forward port>/…`; cookies ignore ports, so
+    the browser sends it to the forward. Why: a forward reads only the first
+    request of a connection and then passes bytes, and the browser reuses its
+    connections to that port, so an entry URL on the forward's own port went
+    down a kept connection to the dev server, token in its log (seen with
+    Chrome). On its own port it cannot meet such a connection; the forward
+    also answers a hand-made `/__herdr/open` with 404 and never dials.
   - The Host header must be `localhost:<port>` or `127.0.0.1:<port>` (DNS
-    rebinding). Without the token, with the entry URL, or with a foreign Host
+    rebinding), once: a repeated Host, Cookie or Range header is read as a
+    normal request, never an error. Without the token, or with a foreign Host,
     the forward listener answers itself and never dials the machine.
   - A static path is percent-decoded once and refused (404) if it holds NUL, a
     backslash, a `..` segment or a segment that starts with a dot (`.env`,
@@ -478,7 +488,9 @@ Other ways traffic can leave the phone:
     request head it passes on (the dev server on the machine has no business
     with them, and with two machines on one port the browser sends one's to the
     other). A keep-alive connection's later requests are not rewritten (that
-    needs HTTP framing).
+    needs HTTP framing). What the browser sends is read only as fast as the
+    machine takes it (the browser's socket is paused while the channel is
+    backed up): without that a 400 MiB upload held ~450 MiB in the isolate.
   - A forward only takes `localhost`, `127.0.0.1`, `::1`, `0.0.0.0`, `::`: a
     `*.local` name would reach other devices on the machine's network. When the
     listener cannot take the target's own port number, the person is told once,

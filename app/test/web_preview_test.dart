@@ -88,12 +88,19 @@ void main() {
       final url = await web.forwardUrl(Uri.parse('http://localhost:3000/app/x%20y?tab=a%26b&n=1#top'));
       expect(url.scheme, 'http');
       expect(url.host, 'localhost');
-      expect(url.port, transport.webInfo.port);
+      expect(url.port, transport.webInfo.entryPort);
       expect(url.path, '/__herdr/open');
       expect(url.queryParameters['t'], transport.webInfo.token);
       expect(url.queryParameters['to'], '/app/x%20y?tab=a%26b&n=1');
       expect(url.fragment, 'top');
       expect(transport.webBridges.single, isA<PortForward>().having((s) => s.port, 'port', 3000));
+    });
+
+    test('the entry URL goes to the entry listener, not to the port the dev server is reached on', () async {
+      transport.webInfo = const WebBridgeInfo(port: 3000, token: '0123456789abcdef0123456789abcdef', entryPort: 51999);
+      final url = await web.forwardUrl(Uri.parse('http://localhost:3000/app'));
+      expect(url.port, 51999, reason: 'a connection the browser keeps to port 3000 is the dev server\'s, the token must not ride on it');
+      expect(url.queryParameters['to'], '/app');
     });
 
     test('an encoded fragment is not encoded twice', () async {

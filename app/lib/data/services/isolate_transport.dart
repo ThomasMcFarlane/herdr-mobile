@@ -127,7 +127,11 @@ class IsolateTransport implements HerdrTransport {
       StaticSite() => ['static', spec.machineName, spec.root],
       PortForward() => ['forward', spec.machineName, spec.host, spec.port],
     }) as List;
-    return WebBridgeInfo(port: out[0]! as int, token: out[1]! as String);
+    return WebBridgeInfo(
+      port: out[0]! as int,
+      token: out[1]! as String,
+      entryPort: out[2]! as int,
+    );
   }
 
   @override
@@ -879,7 +883,7 @@ Future<List<Object?>> _openWeb(HerdrTransport transport, List<Object?> args) asy
     final other => throw HerdrTransportException('Unknown web source $other'),
   };
   final info = await transport.openWebBridge(spec);
-  return [info.port, info.token];
+  return [info.port, info.token, info.entryPort];
 }
 
 /// `[kind, a, b]` for [Object]s that cannot cross the isolate boundary.

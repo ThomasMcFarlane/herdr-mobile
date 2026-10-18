@@ -113,13 +113,14 @@ class WebPreview {
     return "Couldn't open on this phone: $r.";
   }
 
-  /// `http://localhost:<port>/__herdr/open?t=<token>&to=<where>`: the one URL
-  /// that carries the token. The listener answers it with a cookie and sends
-  /// the browser on to [to].
+  /// `http://localhost:<entryPort>/__herdr/open?t=<token>&to=<where>`: the one
+  /// URL that carries the token. The listener on [WebBridgeInfo.entryPort]
+  /// answers it with a cookie and sends the browser on to [to] on
+  /// [WebBridgeInfo.port].
   static Uri _entry(WebBridgeInfo info, String to, String? fragment) => Uri(
         scheme: 'http',
         host: 'localhost',
-        port: info.port,
+        port: info.entryPort,
         path: '/__herdr/open',
         queryParameters: {'t': info.token, 'to': to},
         fragment: fragment == null || fragment.isEmpty ? null : fragment,

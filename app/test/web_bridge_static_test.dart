@@ -407,6 +407,27 @@ void main() {
       expect(utf8.decode(r.body), '<h1>home</h1>');
     });
   });
+
+  group('a request that repeats a header', () {
+    // A header name can only be in a Map once, so a second line is written
+    // into the value, as it goes out on the wire.
+    test('is answered like any other request, not with a 502', () async {
+      final site = await _open();
+      final cookie = await site.signIn();
+
+      // Cookie lines are one list: the cookie on the second line opens it, none at all is a 403.
+      final ok = await rawRequest(site.info.port, target: '/style.css', headers: {'Cookie': 'theme=dark\r\nCookie: $cookie'});
+      expect(ok.status, 200);
+      expect(ok.text, 'body{}');
+      final none = await rawRequest(site.info.port, target: '/style.css', headers: {'Cookie': 'theme=dark\r\nCookie: a=b'});
+      expect(none.status, 403);
+
+      // Two ranges say nothing clear: the whole file is sent.
+      final ranges = await site.get('/style.css', headers: {'Range': 'bytes=0-1\r\nRange: bytes=2-3'});
+      expect(ranges.status, 200);
+      expect(ranges.text, 'body{}');
+    });
+  });
 }
 
 const _longAgo = 'Thu, 01 Jan 2004 00:00:00 GMT';

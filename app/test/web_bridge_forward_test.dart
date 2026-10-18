@@ -29,6 +29,51 @@ class _Echo {
   int get port => server.port;
 }
 
+/// The machine end of a forward that takes bytes only when told to, like an
+/// SSH channel whose window is full: the sink is a plain controller, so a
+/// source added to it is paused while the reader is.
+class _SlowMachine implements SSHSocket {
+  _SlowMachine() {
+    _reader = _inbound.stream.listen(
+      (d) => received += d.length,
+      onDone: _ended.complete,
+    );
+    _reader.pause();
+  }
+
+  final _inbound = StreamController<List<int>>();
+  final _outbound = StreamController<Uint8List>();
+  final _ended = Completer<void>();
+  final _gone = Completer<void>();
+  late final StreamSubscription<List<int>> _reader;
+  var received = 0;
+
+  /// The browser's end of the request reached the machine.
+  Future<void> get ended => _ended.future;
+
+  void drain() => _reader.resume();
+
+  @override
+  Stream<Uint8List> get stream => _outbound.stream;
+
+  @override
+  StreamSink<List<int>> get sink => _inbound.sink;
+
+  @override
+  Future<void> get done => _gone.future;
+
+  @override
+  Future<void> close() async {}
+
+  @override
+  void destroy() {
+    if (!_gone.isCompleted) _gone.complete();
+  }
+
+  @override
+  Future<void> flush() async {}
+}
+
 class _Rig {
   _Rig(this.host, this.dials);
 
@@ -65,7 +110,7 @@ _Rig _rig({
 }
 
 Future<String> _signIn(WebBridgeInfo info) async => cookieFrom(
-      await rawRequest(info.port, target: '/__herdr/open?t=${info.token}&to=%2F'),
+      await rawRequest(info.entryPort, target: '/__herdr/open?t=${info.token}&to=%2F'),
     );
 
 /// A browser connection to the listener that keeps what comes back.
@@ -133,12 +178,24 @@ void main() {
       final bare = await rawRequest(info.port, target: '/api');
       expect(bare.status, 403);
 
-      final entry = await rawRequest(info.port, target: '/__herdr/open?t=${info.token}&to=%2Fapp%3Fa%3D1');
+      // The entry URL is answered on its own port, and hands the cookie the
+      // forward's port checks (cookies ignore ports) before sending the browser there.
+      final entry = await rawRequest(info.entryPort, target: '/__herdr/open?t=${info.token}&to=%2Fapp%3Fa%3D1');
       expect(entry.status, 302);
-      expect(entry.headers['location'], '/app?a=1');
+      expect(entry.headers['location'], 'http://localhost:${info.port}/app?a=1');
       expect(entry.headers['set-cookie'], contains('herdr_${info.port}=${info.token}'));
-      expect((await rawRequest(info.port, target: '/__herdr/open?t=bad&to=%2F')).status, 403);
-      expect((await rawRequest(info.port, target: '/__herdr/open?t=${info.token}&to=%2F%2Fevil.example')).headers['location'], '/');
+      expect((await rawRequest(info.entryPort, target: '/__herdr/open?t=bad&to=%2F')).status, 403);
+      expect(
+        (await rawRequest(info.entryPort, target: '/__herdr/open?t=${info.token}&to=%2F%2Fevil.example')).headers['location'],
+        'http://localhost:${info.port}/',
+      );
+      final foreignEntry = await rawRequest(
+        info.entryPort,
+        target: '/__herdr/open?t=${info.token}&to=%2F',
+        host: 'evil.example:${info.entryPort}',
+      );
+      expect(foreignEntry.status, 403);
+      expect(foreignEntry.headers.containsKey('set-cookie'), isFalse);
 
       final cookie = cookieFrom(entry);
       final rebound = await rawRequest(
@@ -216,14 +273,14 @@ void main() {
       rig.dials.clear();
 
       for (final t in ['%ff', '%', '%zz', '%c0%af']) {
-        final r = await rawRequest(info.port, target: '/__herdr/open?t=$t&to=%2F');
+        final r = await rawRequest(info.entryPort, target: '/__herdr/open?t=$t&to=%2F');
         expect(r.status, 403, reason: t);
         expect(r.timedOut, isFalse, reason: t);
       }
       for (final to in ['%ff', '%', '%zz']) {
-        final r = await rawRequest(info.port, target: '/__herdr/open?t=${info.token}&to=$to');
+        final r = await rawRequest(info.entryPort, target: '/__herdr/open?t=${info.token}&to=$to');
         expect(r.status, 302, reason: to);
-        expect(r.headers['location'], '/', reason: to);
+        expect(r.headers['location'], 'http://localhost:${info.port}/', reason: to);
       }
       expect((await rawRequest(info.port, target: '/%ff/x')).status, 403, reason: 'no cookie');
       expect(rig.dials, isEmpty, reason: 'none of these is let through');
@@ -237,7 +294,7 @@ void main() {
       await conn.socket.close();
 
       // And the listener answers a good request afterwards.
-      expect((await rawRequest(info.port, target: '/__herdr/open?t=${info.token}&to=%2Fok')).headers['location'], '/ok');
+      expect((await rawRequest(info.entryPort, target: '/__herdr/open?t=${info.token}&to=%2Fok')).headers['location'], 'http://localhost:${info.port}/ok');
     });
   });
 
@@ -412,7 +469,7 @@ void main() {
       await expectLater(Socket.connect(InternetAddress.loopbackIPv4, info.port), throwsA(isA<SocketException>()));
       expect(rig.host.livePorts, isEmpty);
       final back = await rig.host.open(const PortForward('localhost', 4999, machineName: 'm'));
-      expect(back, info);
+      expect((back.port, back.token), (info.port, info.token));
     });
 
     test('a browser that leaves while the machine is still being dialed does not hold the listener up', () async {
@@ -449,6 +506,162 @@ void main() {
       conn.socket.add(latin1.encode('later'));
       expect(latin1.decode((await conn.waitFor(arrived + 5)).sublist(arrived)), 'later');
       await conn.socket.close();
+    });
+  });
+
+  group('the entry URL is answered on its own port', () {
+    test('it never goes down a connection that belongs to the dev server', () async {
+      final echo = _Echo();
+      await echo.start();
+      final rig = _rig(targetPort: () => echo.port);
+      final info = await rig.host.open(PortForward('127.0.0.1', echo.port, machineName: 'build-box'));
+      expect(info.entryPort, isNot(info.port));
+      final cookie = await _signIn(info);
+
+      // A tab already holds a kept connection to the dev server's port.
+      final kept = await _Conn.open(info.port);
+      final head = _head(info.port, cookie);
+      kept.socket.add(latin1.encode(head));
+      await kept.waitFor(_arrives(head, cookie).length);
+
+      // The person opens a link again. The entry URL names the entry port, so
+      // the browser cannot put it on that connection; on its own connection
+      // the entry listener answers two in a row, as a browser keeping it alive does.
+      final entry = await _Conn.open(info.entryPort);
+      final ask = 'GET /__herdr/open?t=${info.token}&to=%2Fagain HTTP/1.1\r\nHost: localhost:${info.entryPort}\r\n\r\n';
+      entry.socket.add(latin1.encode(ask));
+      entry.socket.add(latin1.encode(ask));
+      for (var i = 0; i < 100 && '302 Found'.allMatches(latin1.decode(entry.got.toBytes())).length < 2; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
+      final answers = latin1.decode(entry.got.toBytes());
+      final lower = answers.toLowerCase();
+      expect('location: http://localhost:${info.port}/again'.allMatches(lower).length, 2);
+      expect('herdr_${info.port}=${info.token}'.allMatches(answers).length, 2);
+
+      // Asked for by hand on the dev server's own port, it is refused here.
+      final direct = await rawRequest(info.port, target: '/__herdr/open?t=${info.token}&to=%2F', headers: {'Cookie': cookie});
+      expect(direct.status, 404);
+
+      final seen = latin1.decode(echo.received.toBytes());
+      expect(seen, isNot(contains('__herdr/open')));
+      expect(seen, isNot(contains(info.token)));
+      await kept.socket.close();
+      await entry.socket.close();
+    });
+
+    test('the token names the forward it opens, a static site is not one, and the listener goes with the last forward', () async {
+      final echo = _Echo();
+      await echo.start();
+      final rig = _rig(targetPort: () => echo.port, idle: const Duration(milliseconds: 400));
+      final site = await rig.host.open(const StaticSite('/site', machineName: 'm'));
+      expect(site.entryPort, site.port, reason: 'a static site answers its own entry URL');
+      final a = await rig.host.open(const PortForward('localhost', 4998, machineName: 'm'));
+      final b = await rig.host.open(const PortForward('localhost', 4999, machineName: 'm'));
+      expect(b.entryPort, a.entryPort, reason: 'one entry listener serves every forward');
+
+      Future<RawReply> entry(String token) =>
+          rawRequest(a.entryPort, target: '/__herdr/open?t=$token&to=%2Fx');
+      final forB = await entry(b.token);
+      expect(forB.headers['location'], 'http://localhost:${b.port}/x');
+      expect(forB.headers['set-cookie'], contains('herdr_${b.port}=${b.token}'));
+      expect((await entry(site.token)).status, 403, reason: 'the static site opens at its own port');
+      expect((await entry('0' * 32)).status, 403);
+
+      await Future<void>.delayed(const Duration(milliseconds: 900));
+      expect(rig.host.livePorts, isEmpty);
+      await expectLater(Socket.connect(InternetAddress.loopbackIPv4, a.entryPort), throwsA(isA<SocketException>()));
+
+      final back = await rig.host.open(const PortForward('localhost', 4998, machineName: 'm'));
+      expect((back.port, back.token), (a.port, a.token), reason: 'a tab left open still works');
+      expect((await rawRequest(back.entryPort, target: '/__herdr/open?t=${back.token}&to=%2F')).status, 302);
+    });
+  });
+
+  group('a browser that sends faster than the machine takes', () {
+    test('is not read faster than the machine takes, and all of it arrives once the machine drains', () async {
+      final machines = <_SlowMachine>[];
+      final host = WebBridgeHost(
+        stat: FakeFs().stat,
+        read: FakeFs().read,
+        dial: (h, p) async {
+          final machine = _SlowMachine();
+          machines.add(machine);
+          return machine;
+        },
+      );
+      addTearDown(host.close);
+      final info = await host.open(const PortForward('localhost', 3000, machineName: 'm'));
+      final cookie = await _signIn(info);
+
+      const total = 32 * 1024 * 1024;
+      final head = latin1.encode(
+        'POST /up HTTP/1.1\r\nHost: localhost:${info.port}\r\nCookie: $cookie\r\nContent-Length: $total\r\n\r\n',
+      );
+      final socket = await Socket.connect(InternetAddress.loopbackIPv4, info.port);
+      socket.listen((_) {}, onError: (Object _) {});
+      addTearDown(socket.destroy);
+      final chunk = Uint8List.fromList(List.generate(64 * 1024, (i) => (i * 31) % 256));
+      var written = 0;
+      final upload = () async {
+        socket.add(head);
+        while (written < total) {
+          socket.add(chunk);
+          await socket.flush();
+          written += chunk.length;
+        }
+      }();
+
+      // The machine takes nothing: the browser's writes must stall well short
+      // of everything instead of being swallowed into memory.
+      await Future<void>.delayed(const Duration(seconds: 1));
+      final stalledAt = written;
+      var done = false;
+      unawaited(upload.then((_) => done = true));
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      expect(done, isFalse);
+      expect(stalledAt, lessThan(total * 3 ~/ 4), reason: 'the kernel holds a few MiB, not everything');
+      expect(written, stalledAt, reason: 'still stalled');
+      expect(machines[1].received, 0);
+
+      machines[1].drain();
+      await upload.timeout(const Duration(seconds: 30));
+      // The listener's own cookie is dropped from the head the machine gets.
+      final dropped = head.length - 'Cookie: $cookie\r\n'.length;
+      for (var i = 0; i < 200 && machines[1].received < dropped + total; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
+      expect(machines[1].received, dropped + total);
+
+      // The browser closing its side still reaches the machine as the end of the request.
+      await socket.close();
+      await machines[1].ended.timeout(const Duration(seconds: 5));
+    });
+  });
+
+  group('a request that repeats a header', () {
+    test('Cookie lines are one list, and two Host lines are not a name the listener knows', () async {
+      final echo = _Echo();
+      await echo.start();
+      final rig = _rig(targetPort: () => echo.port);
+      final info = await rig.host.open(PortForward('127.0.0.1', echo.port, machineName: 'build-box'));
+      final cookie = await _signIn(info);
+      rig.dials.clear();
+
+      // The listener's cookie on the second line must still open the gate.
+      final conn = await _Conn.open(info.port);
+      conn.socket.add(latin1.encode('GET /x HTTP/1.1\r\nHost: localhost:${info.port}\r\nCookie: theme=dark\r\nCookie: $cookie\r\n\r\n'));
+      final arrived = 'GET /x HTTP/1.1\r\nHost: localhost:${info.port}\r\nCookie: theme=dark\r\n\r\n';
+      expect(latin1.decode(await conn.waitFor(arrived.length)), arrived);
+      await conn.socket.close();
+
+      // A second Host line is no way around the allowlist, in either order.
+      for (final host in ['evil.example\r\nHost: localhost:${info.port}', 'localhost:${info.port}\r\nHost: evil.example']) {
+        rig.dials.clear();
+        final r = await rawRequest(info.port, target: '/x', host: host, headers: {'Cookie': cookie});
+        expect(r.status, 403, reason: host);
+        expect(rig.dials, isEmpty, reason: host);
+      }
     });
   });
 }
