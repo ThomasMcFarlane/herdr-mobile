@@ -8,15 +8,15 @@ import '../files/file_widgets.dart';
 import 'photo_viewer_view_model.dart';
 
 /// One line of the info sheet. [copy] is what the copy button puts on the
-/// clipboard (the full path), null for a line with no button.
+/// clipboard (the full path), null for a line with no button; the
+/// confirmation names the line (`Path copied`).
 class PhotoInfoRow {
-  const PhotoInfoRow(this.label, this.value, {this.mono = false, this.copy, this.copied});
+  const PhotoInfoRow(this.label, this.value, {this.mono = false, this.copy});
 
   final String label;
   final String value;
   final bool mono;
   final String? copy;
-  final String? copied;
 
   @override
   String toString() => '$label: $value';
@@ -39,7 +39,7 @@ List<PhotoInfoRow> photoInfoRows(PhotoEntry entry) {
   final size = item.size ?? entry.bytes?.length;
   final rows = <PhotoInfoRow>[PhotoInfoRow('Name', item.name)];
   if (item.path != null) {
-    rows.add(PhotoInfoRow('Path', item.path!, mono: true, copy: item.path, copied: 'Path copied'));
+    rows.add(PhotoInfoRow('Path', item.path!, mono: true, copy: item.path));
   }
   if (item.origin != null) rows.add(PhotoInfoRow('From', item.origin!));
   if (image != null) {
@@ -139,7 +139,7 @@ class _Row extends StatelessWidget {
                 icon: LucideIcons.copy,
                 tooltip: 'Copy ${row.label.toLowerCase()}',
                 size: CircleButton.compact,
-                onPressed: () => copyText(context, copy, what: row.copied ?? 'Copied'),
+                onPressed: () => copyText(context, copy, what: '${row.label} copied'),
               ),
             ],
           ),

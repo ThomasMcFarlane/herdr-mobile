@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -16,18 +14,17 @@ import 'toast.dart';
 /// [caveat] is news the system cannot give (`Only the first 1 MB was copied`)
 /// and is always shown. A clipboard that refuses says so, always.
 ///
+/// Completes true when the text is on the clipboard, so a caller that marks
+/// success in place (the code block's check) marks only a real copy.
+///
 /// The one way the app copies (`tool/design_lint.dart` rule `clipboard`).
-void copyText(BuildContext context, String text, {required String what, String? caveat}) {
+Future<bool> copyText(BuildContext context, String text, {required String what, String? caveat}) async {
   final toaster = Toaster.maybeOf(context);
-  unawaited(_copy(toaster, text, what, caveat));
-}
-
-Future<void> _copy(Toaster? toaster, String text, String what, String? caveat) async {
   try {
     await Clipboard.setData(ClipboardData(text: text));
   } on PlatformException {
     toaster?.show('Couldn’t copy: the clipboard refused it.', kind: ToastKind.failed);
-    return;
+    return false;
   }
   Haptics.tick();
   if (caveat != null) {
@@ -35,4 +32,5 @@ Future<void> _copy(Toaster? toaster, String text, String what, String? caveat) a
   } else if (!SystemClipboard.confirms) {
     toaster?.show(what);
   }
+  return true;
 }

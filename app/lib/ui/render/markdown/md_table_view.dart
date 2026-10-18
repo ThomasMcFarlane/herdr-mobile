@@ -122,8 +122,6 @@ class _MdTableViewState extends State<MdTableView> {
     return _widths = out;
   }
 
-  void _copy(BuildContext context, String text, String done) => copyText(context, text, what: done);
-
   void _actions(BuildContext context) {
     final t = widget.table;
     unawaited(
@@ -131,8 +129,8 @@ class _MdTableViewState extends State<MdTableView> {
         context,
         title: 'Table',
         actions: [
-          SheetAction(label: 'Copy as Markdown', icon: LucideIcons.copy, onTap: () => _copy(context, mdTableMarkdown(t), 'Table copied')),
-          SheetAction(label: 'Copy as TSV', icon: LucideIcons.table, onTap: () => _copy(context, t.plainText, 'Table copied as TSV')),
+          SheetAction(label: 'Copy as Markdown', icon: LucideIcons.copy, onTap: () => copyText(context, mdTableMarkdown(t), what: 'Table copied')),
+          SheetAction(label: 'Copy as TSV', icon: LucideIcons.table, onTap: () => copyText(context, t.plainText, what: 'Table copied as TSV')),
         ],
       ),
     );

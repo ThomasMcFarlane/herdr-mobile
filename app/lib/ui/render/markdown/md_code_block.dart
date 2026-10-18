@@ -96,8 +96,9 @@ class _MdCodeBlockState extends State<MdCodeBlock> {
   /// The button turns into a check for a moment: the feedback stays on the
   /// button, where the eye is. The words are [copyText]'s, said only where
   /// the system does not say them itself.
-  void _copy() {
-    copyText(context, widget.code.text, what: 'Code copied');
+  Future<void> _copy() async {
+    if (!await copyText(context, widget.code.text, what: 'Code copied')) return;
+    if (!mounted) return;
     setState(() => _copied = true);
     _reset?.cancel();
     _reset = Timer(Dwell.copied, () {

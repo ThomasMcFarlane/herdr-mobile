@@ -376,6 +376,20 @@ void main() {
       await tester.pump(const Duration(seconds: 4)); // the toast's clock
     });
 
+    testWidgets('a clipboard that refuses leaves the copy button as it was', (tester) async {
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        if (call.method == 'Clipboard.setData') throw PlatformException(code: 'refused');
+        return null;
+      });
+      addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
+      await tester.pumpWidget(_app(_doc('```dart\nfinal a = 1;\n```')));
+      await tester.tap(find.byIcon(LucideIcons.copy));
+      await tester.pump();
+      expect(find.byIcon(LucideIcons.check), findsNothing, reason: 'no success mark for a failed copy');
+      expect(find.byIcon(LucideIcons.copy), findsOneWidget);
+      await tester.pump(const Duration(seconds: 6));
+    });
+
     testWidgets('bidi overrides and control characters are visible in code', (tester) async {
       await tester.pumpWidget(_app(_doc('```sh\necho hi\u202E\nrm \u001B[31m\n```')));
       final text = _spans(tester, find.byType(RichText)).map((s) => s.$1).join();
