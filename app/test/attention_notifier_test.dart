@@ -1157,6 +1157,137 @@ void main() {
     });
   });
 
+  group('a page held open', () {
+    const page = 'localhost:8790 on Alpha';
+    void Function() hold(_Rig r) => r.fleet.holdAlive('a', page: page);
+
+    test('with alerts off, runs the notice at once, named, and keeps its connection; released, both go', () {
+      fakeAsync((async) {
+        final r = _Rig(async, {'a': {'w1:p1': 'idle'}}, enabled: false);
+        final release = hold(r);
+        r.async.flushMicrotasks();
+        expect(r.notifier.log, ['watching:0+page'], reason: 'started while the app is in front, not debounced');
+        expect(r.notifier.pages.last, page, reason: 'the person knows what to close');
+        expect(r.fleet.pageNotice, isTrue);
+        expect(r.fleet.keepAliveInBackground, isTrue);
+
+        r.life(away);
+        r.advance(const Duration(minutes: 3));
+        expect(r.connection('a').isLive, isTrue, reason: 'the page needs the connection');
+
+        r.life(back);
+        release();
+        r.async.flushMicrotasks();
+        expect(r.notifier.log.last, 'watching:0');
+        expect(r.notifier.pages.last, isNull);
+        expect(r.fleet.pageNotice, isFalse);
+        expect(r.fleet.keepAliveInBackground, isFalse);
+        r.dispose();
+      });
+    });
+
+    test('a notice Android refuses keeps nothing: the 90 s rule applies, as on a phone with no notices', () {
+      fakeAsync((async) {
+        final r = _Rig(async, {'a': {'w1:p1': 'idle'}}, enabled: false);
+        r.notifier.watchingWorks = false;
+        hold(r);
+        r.async.flushMicrotasks();
+        expect(r.fleet.pageNotice, isFalse);
+        expect(r.fleet.keepAliveInBackground, isFalse);
+        r.life(away);
+        r.advance(const Duration(seconds: 91));
+        expect(r.connection('a').isLive, isFalse);
+        r.dispose();
+      });
+    });
+
+    test('a page that opens after a refused start tries the notice again', () {
+      fakeAsync((async) {
+        final r = _Rig(async, {'a': {'w1:p1': 'working'}});
+        r.notifier.watchingWorks = false;
+        r.advance(const Duration(seconds: 3));
+        r.change('a', 'w1:p1', 'blocked');
+        r.advance(const Duration(seconds: 3));
+        final calls = r.notifier.watching.length;
+        r.notifier.watchingWorks = true;
+        hold(r);
+        r.async.flushMicrotasks();
+        expect(r.notifier.watching.length, calls + 1, reason: 'not left refused until the next lifecycle change');
+        expect(r.notifier.pages.last, page);
+        expect(r.fleet.pageNotice, isTrue);
+        r.dispose();
+      });
+    });
+
+    test('without the notification permission, still runs the notice: Android runs it unseen', () {
+      fakeAsync((async) {
+        final r = _Rig(async, {'a': {'w1:p1': 'working'}}, granted: false);
+        hold(r);
+        r.async.flushMicrotasks();
+        expect(r.notifier.glances.last, (count: 0, blocked: 0), reason: 'no agents without the permission');
+        expect(r.notifier.pages.last, page);
+        r.dispose();
+      });
+    });
+
+    test('two pages are counted, not listed', () {
+      fakeAsync((async) {
+        final r = _Rig(async, {'a': {'w1:p1': 'idle'}}, enabled: false);
+        hold(r);
+        r.fleet.holdAlive('a', page: 'report.html on Alpha');
+        r.advance(const Duration(seconds: 3));
+        expect(r.notifier.pages.last, '2 pages');
+        r.dispose();
+      });
+    });
+
+    test('beside watched agents, joins their notice; released, the agents\' notice and keep-alive stay', () {
+      fakeAsync((async) {
+        final r = _Rig(async, {'a': {'w1:p1': 'working', 'w1:p2': 'blocked'}});
+        expect(r.notifier.glances, [(count: 2, blocked: 1)]);
+        final release = hold(r);
+        r.async.flushMicrotasks();
+        expect(r.notifier.glances.last, (count: 2, blocked: 1));
+        expect(r.notifier.pages.last, page);
+
+        release();
+        r.async.flushMicrotasks();
+        expect(r.notifier.pages.last, isNull);
+        expect(r.notifier.watching.last, 2, reason: 'the agents are still watched');
+        expect(r.fleet.keepAliveInBackground, isTrue);
+        expect(r.fleet.watchingAgents, isTrue);
+        r.dispose();
+      });
+    });
+
+    test('a page keeps the connection, never the agent sessions', () {
+      fakeAsync((async) {
+        final r = _Rig(async, {'a': {'w1:p1': 'idle'}}, enabled: false);
+        hold(r);
+        r.async.flushMicrotasks();
+        expect(r.fleet.keepAliveInBackground, isTrue);
+        expect(r.fleet.watchingAgents, isFalse);
+        expect(r.sessions.keepAlive, isFalse);
+        r.dispose();
+      });
+    });
+
+    test('turning alerts off while a page is open keeps the notice for the page', () {
+      fakeAsync((async) {
+        final r = _Rig(async, {'a': {'w1:p1': 'working'}});
+        hold(r);
+        r.async.flushMicrotasks();
+        r.settings.setEnabled(false);
+        r.async.flushMicrotasks();
+        expect(r.notifier.watching.last, 0);
+        expect(r.notifier.pages.last, page, reason: 'the page still needs the connection');
+        expect(r.fleet.keepAliveInBackground, isTrue);
+        expect(r.fleet.watchingAgents, isFalse);
+        r.dispose();
+      });
+    });
+  });
+
   group('the glance', () {
     test('says how many agents are watched and how many of them need you', () {
       fakeAsync((async) {

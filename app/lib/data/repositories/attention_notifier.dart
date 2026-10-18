@@ -50,11 +50,16 @@ const notifyShownSubjectLength = 640;
 /// An answer button's text is cut to this many characters.
 const notifyButtonLength = 22;
 
-/// What the quiet "Watching" notice says: agents watched, and how many of them
-/// wait for the person.
-typedef _Glance = ({int count, int blocked});
+/// What the quiet "Watching" notice says: agents watched, how many of them
+/// wait for the person, and the pages from a machine held open
+/// ([FleetRepository.heldPages]), named: `localhost:8790 on devbox`, or
+/// `2 pages`.
+typedef _Glance = ({int count, int blocked, String? page});
 
-const _Glance _noGlance = (count: 0, blocked: 0);
+const _Glance _noGlance = (count: 0, blocked: 0, page: null);
+
+/// Whether the notice runs for [g].
+bool _on(_Glance g) => g.count > 0 || g.page != null;
 
 final _summaryIds = {
   NotifyKind.needsYou: notificationIdFor('summary'),
@@ -92,6 +97,16 @@ final _summaryIds = {
 /// line ("Watching 5 agents", "2 need you · 3 working"); the numbers reach the
 /// notifier at most once per [watchingDebounce], and only when they changed. A
 /// refused start is not retried until the next lifecycle change.
+///
+/// A page from a machine held open ([FleetRepository.holdAlive]) runs the
+/// notice too, at once and whether or not alerts are on or permitted (Android
+/// runs a foreground service without the notification permission, and the
+/// page needs the connection whatever the alert setting). The notice names
+/// the page, so the person knows what to close. Only once it is up does the
+/// hold keep its machine's connection ([FleetRepository.pageNotice]):
+/// without it Android would freeze the process anyway. A page opening is
+/// worth one more try of a start Android refused. The notice stops when the
+/// last hold goes, unless agents are still watched.
 ///
 /// While the app is in front only those numbers are kept up to date (it must
 /// be running before the app leaves: Android does not start such a notice from
@@ -217,7 +232,8 @@ class AttentionNotifier {
     _flapTimer?.cancel();
     _watchTimer?.cancel();
     _keepAlive(false);
-    if (_applied.count > 0 || _calling) await _safe(() => _notifier.setWatching(0));
+    _fleet.pageNotice = false;
+    if (_on(_applied) || _calling) await _safe(() => _notifier.setWatching(0));
   }
 
   // -- settings and permission --------------------------------------------------
@@ -233,7 +249,7 @@ class AttentionNotifier {
     if (wasEnabled && !enabled) {
       _clear();
       unawaited(_safe(_notifier.cancelAll));
-      _desired = _noGlance;
+      _want(0, 0);
       _syncWatching(immediate: true);
       return;
     }
@@ -262,14 +278,33 @@ class AttentionNotifier {
 
   // -- what is going on ------------------------------------------------------------
 
-  /// Runs on every change of the fleet or the sessions. Off, it does nothing
-  /// at all; in front it only counts what is watched (cheap, no allocation
-  /// per agent); away it also follows the agents' episodes.
+  /// Runs on every change of the fleet or the sessions. Off, it only follows
+  /// the pages held open; in front it only counts what is watched (cheap, no
+  /// allocation per agent); away it also follows the agents' episodes.
   void _evaluate() {
-    if (_disposed || !_enabled) return;
-    _desired = _granted ? _countWatching() : _noGlance;
+    if (_disposed) return;
+    if (!_enabled) {
+      _want(0, 0);
+      _syncWatching();
+      return;
+    }
+    final agents = _granted ? _countWatching() : _noGlance;
+    _want(agents.count, agents.blocked);
     if (_away) _follow(_collect());
     _syncWatching();
+  }
+
+  void _want(int count, int blocked) {
+    final pages = _fleet.heldPages;
+    final page = switch (pages.length) {
+      0 => null,
+      1 => pages.single,
+      final n => '$n pages',
+    };
+    // A page that opens is worth one more try of a start Android refused:
+    // without the notice its connection is not kept.
+    if (page != null && _desired.page == null) _refused = false;
+    _desired = (count: count, blocked: blocked, page: page);
   }
 
   /// A machine whose link is up, or is being brought back by itself (a
@@ -299,7 +334,7 @@ class AttentionNotifier {
     for (final s in _sessions?.sessions ?? const <AgentSessionView>[]) {
       if (_recoverable(s.machine) && s.phase != AgentPhase.idle) n++;
     }
-    return (count: n, blocked: _attention.needsYou.length);
+    return (count: n, blocked: _attention.needsYou.length, page: null);
   }
 
   /// The agents in a state worth telling about, and the keys of those whose
@@ -645,6 +680,7 @@ class AttentionNotifier {
 
   void _syncWatching({bool immediate = false}) {
     if (_desired.count == 0) _keepAlive(false);
+    if (_desired.page == null) _fleet.pageNotice = false;
     _pushWatching(immediate: immediate);
   }
 
@@ -652,18 +688,22 @@ class AttentionNotifier {
     if (_calling) return; // asks again when the call is done
     if (_desired == _applied) {
       _keepAlive(_applied.count > 0);
+      _fleet.pageNotice = _applied.page != null;
       return;
     }
     if (_refused) {
-      if (_desired.count == 0) {
+      if (!_on(_desired)) {
         // Nothing was started, so there is nothing to stop.
         _refused = false;
         _applied = _noGlance;
       }
       return;
     }
+    // A page opened or closed is applied at once: the notice must be up
+    // before the person leaves the app (Android does not start it from the
+    // background), and the numbers' debounce is for agents that flap.
     final last = _lastWatchCall;
-    if (!immediate && last != null) {
+    if (!immediate && last != null && (_desired.page == null) == (_applied.page == null)) {
       final wait = watchingDebounce - _clock().difference(last);
       if (wait > Duration.zero) {
         _watchTimer ??= Timer(wait, () {
@@ -683,13 +723,13 @@ class AttentionNotifier {
     _lastWatchCall = _clock();
     var ok = false;
     try {
-      ok = await _notifier.setWatching(glance.count, blocked: glance.blocked);
+      ok = await _notifier.setWatching(glance.count, blocked: glance.blocked, page: glance.page);
     } on Object {
       ok = false;
     }
     _calling = false;
     if (_disposed) return;
-    if (glance.count == 0) {
+    if (!_on(glance)) {
       _applied = _noGlance; // a stop returns false by contract: it is not a refusal
     } else if (ok) {
       _applied = glance;
@@ -699,6 +739,7 @@ class AttentionNotifier {
       _refused = true;
     }
     _keepAlive(_desired.count > 0 && _applied.count > 0);
+    _fleet.pageNotice = _desired.page != null && _applied.page != null;
     _pushWatching();
   }
 

@@ -19,7 +19,7 @@ class BinaryView extends StatelessWidget {
     required this.model,
     required this.onCopyPath,
     this.onViewAsText,
-    this.onOpenInBrowser,
+    this.onShowAsPage,
   });
 
   final FileViewerViewModel model;
@@ -28,8 +28,9 @@ class BinaryView extends StatelessWidget {
   /// Offered for SVG: its source is text.
   final VoidCallback? onViewAsText;
 
-  /// Offered for SVG, which has no drawn view here at all: the browser shows it.
-  final VoidCallback? onOpenInBrowser;
+  /// Offered for SVG, which has no drawn view here at all: shown as a page
+  /// (`WebPreviewScreen`).
+  final VoidCallback? onShowAsPage;
 
   @override
   Widget build(BuildContext context) {
@@ -86,8 +87,8 @@ class BinaryView extends StatelessWidget {
         if (perms.isNotEmpty) InfoRow(label: 'Permissions', value: perms, mono: true),
         InfoRow(label: 'Path', value: stat.path, mono: true, divider: false),
         const SizedBox(height: Gap.lg),
-        if (onOpenInBrowser != null) ...[
-          AppButton(label: 'Open in browser', icon: LucideIcons.globe, expand: true, onPressed: onOpenInBrowser),
+        if (onShowAsPage != null) ...[
+          AppButton(label: 'Show as page', icon: LucideIcons.globe, expand: true, onPressed: onShowAsPage),
           const SizedBox(height: Gap.sm),
         ],
         Row(
@@ -108,7 +109,7 @@ class BinaryView extends StatelessWidget {
                   label: 'Show as text',
                   icon: LucideIcons.fileText,
                   expand: true,
-                  kind: onOpenInBrowser == null ? AppButtonKind.primary : AppButtonKind.secondary,
+                  kind: onShowAsPage == null ? AppButtonKind.primary : AppButtonKind.secondary,
                   onPressed: onViewAsText,
                 ),
               ),

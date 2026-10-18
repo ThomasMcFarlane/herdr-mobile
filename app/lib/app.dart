@@ -263,8 +263,9 @@ class _HerdrMobileAppState extends State<HerdrMobileApp>
   }
 
   /// Observed sessions stay attached in the background exactly when the
-  /// connections do (the person asked to be told about agents).
-  void _syncObserved() => widget.observedSessions?.keepAliveInBackground = _fleet.keepAliveInBackground;
+  /// notifier keeps the connections for agents (the person asked to be told
+  /// about them). A page held open keeps the connections, not the sessions.
+  void _syncObserved() => widget.observedSessions?.keepAliveInBackground = _fleet.watchingAgents;
 
   @override
   void dispose() {

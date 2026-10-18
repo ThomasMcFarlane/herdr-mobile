@@ -32,10 +32,12 @@ import 'package:url_launcher_platform_interface/link.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 import 'package:provider/provider.dart';
 
+import 'package:herdr_mobile/ui/features/web/web_preview_screen.dart';
 import 'support/fake_dictation.dart';
 import 'support/fake_fs.dart';
 import 'support/fake_network.dart';
 import 'support/fake_transport.dart';
+import 'support/fake_webview.dart';
 import 'support/memory_quick_phrases_store.dart';
 import 'support/attach_fakes.dart';
 import 'support/memory_stores.dart';
@@ -1167,8 +1169,8 @@ void main() {
 
           await tapText(tester, 'listening on', column: 16);
 
-          expect(find.textContaining('This address is on box. Open on phone reaches it over your SSH connection.'), findsOneWidget);
-          expect(find.text('Open on phone'), findsOneWidget);
+          expect(find.textContaining('This address is on box. Open page shows it in herdr, over your SSH connection.'), findsOneWidget);
+          expect(find.text('Open page'), findsOneWidget);
           expect(find.text('Open in browser'), findsNothing, reason: 'the phone cannot reach the machine\'s localhost itself');
           expect(find.text('Copy link'), findsOneWidget);
           await teardown(tester);
@@ -1188,7 +1190,7 @@ void main() {
           await tapText(tester, 'listening on', column: 16);
 
           expect(find.textContaining('This address is on the machine, not your phone.'), findsOneWidget);
-          expect(find.text('Open on phone'), findsNothing);
+          expect(find.text('Open page'), findsNothing);
           expect(find.text('Open in browser'), findsNothing);
           expect(find.text('Copy link'), findsOneWidget);
           await teardown(tester);
@@ -1202,44 +1204,51 @@ void main() {
         await tapText(tester, 'listening on', column: 16);
 
         expect(find.textContaining('HTTPS on the machine can’t be opened on the phone yet.'), findsOneWidget);
-        expect(find.text('Open on phone'), findsNothing);
+        expect(find.text('Open page'), findsNothing);
         expect(find.text('Open in browser'), findsNothing);
         expect(find.text('Copy link'), findsOneWidget);
         await teardown(tester);
       });
 
-      testWidgets('Open on phone starts the listener and opens its entry URL in the browser', (tester) async {
+      testWidgets('Open page starts the listener and shows the page in herdr, not the browser', (tester) async {
         final launcher = _Launcher();
         UrlLauncherPlatform.instance = launcher;
+        final web = FakeWebView.install();
         transport.readText = 'listening on http://localhost:3000/app?x=1 now';
         await pumpPane(tester);
         await tapText(tester, 'listening on', column: 16);
 
-        await tester.tap(find.text('Open on phone'));
+        await tester.tap(find.text('Open page'));
         await _settle(tester);
 
         final spec = transport.webBridges.single as PortForward;
         expect((spec.host, spec.port, spec.machineName), ('localhost', 3000, 'box'));
-        final opened = Uri.parse(launcher.opened.single);
-        expect((opened.host, opened.port, opened.path), ('localhost', transport.webInfo.port, '/__herdr/open'));
-        expect(opened.queryParameters['to'], '/app?x=1');
-        expect(find.text('Open on phone'), findsNothing, reason: 'the sheet closed');
+        expect(find.byType(WebPreviewScreen), findsOneWidget);
+        final entry = web.loaded.first;
+        expect((entry.host, entry.port, entry.path), ('localhost', transport.webInfo.entryPort, '/__herdr/open'));
+        expect(entry.queryParameters['to'], '/app?x=1');
+        expect(launcher.opened, isEmpty);
+        expect(find.text('Open page'), findsNothing, reason: 'the sheet closed');
         await teardown(tester);
       });
 
       testWidgets('a machine that does not forward ports is said so, and the link can still be copied', (tester) async {
         final launcher = _Launcher();
         UrlLauncherPlatform.instance = launcher;
+        final web = FakeWebView.install();
         transport.webFailure = const HerdrTransportException('the machine does not allow port forwarding', fatal: true);
         transport.readText = 'listening on http://localhost:3000 now';
         await pumpPane(tester);
         await tapText(tester, 'listening on', column: 16);
 
-        await tester.tap(find.text('Open on phone'));
+        await tester.tap(find.text('Open page'));
         await _settle(tester);
 
-        expect(find.text("Couldn't open on this phone: the machine does not allow port forwarding."), findsOneWidget);
+        expect(find.text('The machine does not allow port forwarding.'), findsOneWidget);
+        expect(web.loaded, isEmpty);
         expect(launcher.opened, isEmpty);
+        await tester.tap(find.byTooltip('Back'));
+        await _settle(tester);
         await tapText(tester, 'listening on', column: 16);
         expect(find.text('Copy link'), findsOneWidget);
         await teardown(tester);

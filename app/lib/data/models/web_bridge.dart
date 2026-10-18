@@ -1,7 +1,8 @@
-/// What a loopback listener on the phone serves to the phone's own browser.
+/// What a loopback listener on the phone serves to a browser on the phone
+/// (herdr's own page view, or the phone's browser).
 ///
 /// [machineName] is only for the pages the listener shows when something goes
-/// ("Couldn't reach MACHINE"): a page in a browser tab has no app
+/// ("Couldn't reach MACHINE"): a page in the phone's browser has no app
 /// around it to say which machine it was about.
 sealed class WebBridgeSpec {
   const WebBridgeSpec({required this.machineName});
@@ -73,15 +74,96 @@ class WebBridgeInfo {
 
 /// Whether [url] points at the machine the output came from rather than at
 /// somewhere the phone can reach: `localhost`, a loopback or unspecified
-/// address, or a `.local` name. Opening it on the phone would reach the phone
-/// (or nothing).
+/// address in any spelling a browser accepts ([isLoopbackAddress]), or a
+/// `.local` name. Opening it on the phone would reach the phone (or nothing).
 bool isMachineLocalUrl(String url) {
-  final host = Uri.tryParse(url)?.host.toLowerCase();
-  if (host == null || host.isEmpty) return false;
+  final raw = Uri.tryParse(url)?.host;
+  if (raw == null) return false;
+  final host = normalHost(raw);
+  if (host.isEmpty) return false;
   if (host == 'localhost' || host.endsWith('.localhost')) return true;
-  if (host == '::1' || host == '::' || host == '0.0.0.0') return true;
   if (host.endsWith('.local')) return true;
-  return RegExp(r'^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$').hasMatch(host);
+  return isLoopbackAddress(host);
+}
+
+/// [host] as a browser compares names: lower case, without the trailing dot
+/// a DNS name may end in (`localhost.` is `localhost` to the resolver).
+String normalHost(String host) {
+  var h = host.toLowerCase();
+  while (h.endsWith('.')) {
+    h = h.substring(0, h.length - 1);
+  }
+  return h;
+}
+
+/// Whether [host] is an address of the phone itself, in any spelling a
+/// browser accepts: loopback (`127/8`, `::1`, `::ffff:127.x.x.x`) or
+/// unspecified (`0.0.0.0`, `::`). IPv4 is read the way a browser reads it
+/// (WHATWG URL): one to four parts, each decimal, `0x` hex or `0`-led
+/// octal, the last part filling the bytes left, so `2130706433`, `0x7f.1`
+/// and `0177.0.0.1` are all 127.0.0.1. Why: a page shown in herdr that sends
+/// the view to `http://0x7f.1:5432` must not be treated as the web and
+/// offered to the phone's browser, where it would reach the phone's own
+/// services.
+bool isLoopbackAddress(String host) {
+  var h = normalHost(host);
+  if (h.startsWith('[') && h.endsWith(']')) h = h.substring(1, h.length - 1);
+  if (h.contains(':')) {
+    final List<int> b;
+    try {
+      b = Uri.parseIPv6Address(h);
+    } on FormatException {
+      return false;
+    }
+    for (var i = 0; i < 10; i++) {
+      if (b[i] != 0) return false;
+    }
+    if (b[10] == 0 && b[11] == 0) {
+      // `::` or `::1`.
+      return b[12] == 0 && b[13] == 0 && b[14] == 0 && b[15] <= 1;
+    }
+    if (b[10] == 0xff && b[11] == 0xff) return b[12] == 127 || b[12] == 0; // IPv4-mapped
+    return false;
+  }
+  final v4 = _ipv4(h);
+  return v4 != null && (v4 >> 24 == 127 || v4 >> 24 == 0);
+}
+
+int? _ipv4(String host) {
+  final parts = host.split('.');
+  if (parts.length > 4) return null;
+  final numbers = <int>[];
+  for (final p in parts) {
+    final n = _ipv4Part(p);
+    if (n == null) return null;
+    numbers.add(n);
+  }
+  final last = numbers.removeLast();
+  if (numbers.any((n) => n > 255) || last >= 1 << (8 * (4 - numbers.length))) return null;
+  var value = last;
+  for (var i = 0; i < numbers.length; i++) {
+    value += numbers[i] << (8 * (3 - i));
+  }
+  return value;
+}
+
+int? _ipv4Part(String part) {
+  var digits = part;
+  var radix = 10;
+  if (digits.length > 1 && (digits.startsWith('0x') || digits.startsWith('0X'))) {
+    radix = 16;
+    digits = digits.substring(2);
+    if (digits.isEmpty) return 0;
+  } else if (digits.length > 1 && digits.startsWith('0')) {
+    radix = 8;
+    digits = digits.substring(1);
+  }
+  final valid = switch (radix) {
+    16 => RegExp(r'^[0-9a-fA-F]{1,8}$'),
+    8 => RegExp(r'^[0-7]{1,11}$'),
+    _ => RegExp(r'^[0-9]{1,10}$'),
+  };
+  return valid.hasMatch(digits) ? int.parse(digits, radix: radix) : null;
 }
 
 /// The names a loopback link may carry to be opened on the phone: the machine

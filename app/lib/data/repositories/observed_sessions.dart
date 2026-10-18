@@ -205,7 +205,9 @@ class ObservedSessions extends ChangeNotifier {
   }
 
   /// Keep following in the background (the person asked to be told about
-  /// agents), see `AttentionNotifier`.
+  /// agents), see `AttentionNotifier`. A page from a machine held open does
+  /// not keep these: it needs the connection, not the agents' logs.
+  bool get keepAliveInBackground => _keepAlive;
   set keepAliveInBackground(bool value) {
     if (_disposed || _keepAlive == value) return;
     _keepAlive = value;

@@ -430,14 +430,58 @@ Stale data is labelled as stale:
 
 The only socket the app opens to the network is the SSH connection
 (`SSHSocket.connect`, `ssh_transport.dart:160`). It also listens on the phone's
-loopback address for the pages it opens in the browser (below). Checked in the
+loopback address for the pages from a machine it shows (below). Checked in the
 code:
 
 - `app/pubspec.yaml` has no HTTP client, analytics, crash-reporting or
   telemetry dependency.
-- Nothing under `app/lib` makes HTTP requests or loads network images. The
-  loopback listeners below only answer; they never call out.
-- The app has no WebView.
+- Nothing in the app's own code under `app/lib` makes HTTP requests or loads
+  network images. The loopback listeners below only answer; they never call
+  out.
+- One WebView (`webview_flutter`, `WebPreviewScreen`), for pages from a
+  machine's own loopback listeners. Why one at all: a page in a Custom Tab
+  put herdr in the background, Android dropped the SSH connection the page is
+  carried over, and the page sat on "Opening…" forever (seen on a Samsung,
+  Android 14). In the app, the screen holds its machine's connection up while
+  it is open (section 6). Plain `http` is allowed to `localhost` and
+  `127.0.0.1` only (`res/xml/network_security_config.xml`; from Android 9 an
+  app refuses cleartext by default, which the Custom Tab, in Chrome, never
+  met). What the WebView is asked about and what it does
+  (`web_navigation.dart`):
+  - It loads `http` to `localhost` (the name the listeners' cookie is for) on
+    a port the bridge opened for that machine (the listeners and the entry
+    listener), and `about:blank`.
+  - A navigation to the web (`http`/`https` to a host that is not the phone)
+    opens nowhere by itself: a page's script can navigate without a tap, and
+    must not push herdr behind the browser. A toast names the host (`<host>
+    isn't from <machine>`) with `Open`, the person's tap, which opens an
+    `https` one in the Custom Tab (`openInBrowser`) and shows a plain `http`
+    one in the link sheet first. Sign-in redirects (Google, Tailscale)
+    therefore never run inside herdr.
+  - Another loopback port or name, in any spelling a browser reads as the
+    phone (`localhost.`, `[::ffff:7f00:1]`, `2130706433`, `0x7f.1`:
+    `isLoopbackAddress`), opens nowhere: in the browser it would reach the
+    phone's own services. Another port of the machine's `localhost` is offered
+    with `Open`, which forwards it as `Open page` would. `data:`, `intent:`,
+    `file:` and other schemes open nowhere.
+  - `window.open` cannot be switched off through the plugin; its new window is
+    asked about like any navigation (the plugin's `onCreateWindow`) and goes
+    nowhere the rule refuses.
+  - What it is never asked about, and so cannot be stopped: a form POST (it
+    loads in the view, and the address pill then shows that site's host with
+    `not from <machine>` in the warning tone), and anything an `<iframe>`
+    loads (Android's plugin asks about the top frame only; the frame rule in
+    `webNavigation` runs on iOS). A page's own scripts, images, frames and
+    `fetch` calls to the internet load as in any browser.
+  - JavaScript runs, with no JavaScript channel or other bridge to the app,
+    no file or content access, no geolocation, mixed content never allowed
+    and third-party cookies off.
+  - Cookies, web storage (local storage, IndexedDB) and the cache are shared
+    by every page view and kept per origin, and an origin is the phone's
+    `localhost:<port>`, which two machines can hold one after the other. So
+    they are cleared when the last page screen closes, and before the first
+    one loads (a process killed with a page open). Service workers are not
+    cleared (the plugin has no call for them).
 
 Other ways traffic can leave the phone:
 
@@ -450,12 +494,14 @@ Other ways traffic can leave the phone:
   be `http` or `https`, and the sheet shows the whole address first.
   Addresses that point at the host itself (`localhost`, loopback addresses,
   `.local` names) cannot be opened as they are; a plain `http` one can be
-  opened through the SSH connection (`Open on phone`, next point), an `https`
+  opened through the SSH connection (`Open page`, next point), an `https`
   one is copy-only (`docs/ENGINEERING.md` "Links in terminal output").
 - **Pages from a machine** (`app/lib/data/services/web_bridge.dart`, the
-  transport isolate). `Open in browser` on an HTML or SVG file and `Open on
-  phone` on a `localhost` link start a listener on `127.0.0.1` of the phone and
-  open it in the same Custom Tab. A *static* listener serves the file's own
+  transport isolate). `Show as page` on an HTML or SVG file, a page or server
+  row of `Made`, and `Open page` on a `localhost` link start a listener on
+  `127.0.0.1` of the phone and show it in the app's WebView (above);
+  `Open in browser` in the page's `⋯` hands it to the Custom Tab with an
+  entry URL of its own. A *static* listener serves the file's own
   folder, read-only, over the machine's SFTP session; a *forward* listener
   carries raw bytes to a port on the machine over a `direct-tcpip` channel of
   the existing connection (never a connection of its own). What keeps it from
@@ -484,6 +530,14 @@ Other ways traffic can leave the phone:
     listener (a site has no port), and at no delay it replaces the entry page
     in the tab's history. A fragment rides inside `to`: the browser keeps the
     entry URL's own fragment across a redirect, not across a page.
+  - In the app's WebView the entry URL is loaded the same way. The Android
+    plugin cancels every navigation a page starts and loads it again with
+    `loadUrl` once the app allows it (`webview_flutter_android`), so the
+    refresh adds a history entry instead of replacing the entry page. The
+    screen counts the pages behind the one shown and leaves on Back when
+    there is none, so the view never goes back onto an entry page; when it
+    does land on one (Back across a second listener), the page is covered,
+    its refresh is refused and Back goes on past it (`_skipEntry`).
   - The Host header must be `localhost:<port>` or `127.0.0.1:<port>` (DNS
     rebinding), once: a repeated Host, Cookie or Range header is read as a
     normal request, never an error. Without the token, or with a foreign Host,
@@ -515,14 +569,17 @@ Other ways traffic can leave the phone:
     `fetch` never sends cookies cross-origin). Another app on the phone that
     forges those headers and finds a live port reaches only the ports the
     person opened. Agent-written HTML in a static listener is as trusted as the
-    machine itself. A host that forbids port forwarding
-    (`AllowTcpForwarding no`) says so when the link is opened.
-  - Not verified on a phone: Chrome's secure-connections mode on loopback,
-    and whether Android freezes the listener in the background. Cookie
-    handling in a Custom Tab is read from Chromium's code and modelled in
-    `test/support/custom_tab.dart`, not yet seen working on a phone.
-    The lab that settled the design is described in
-    `docs/ENGINEERING.md` "Web pages on the phone".
+    machine itself. While page screens are open, their views share one cookie
+    jar: a page from one machine sends that jar's `herdr_<port>` cookies to
+    any listener it calls, another machine's included, if one is open at the
+    same time (cleared when the last page screen closes). A host that forbids
+    port forwarding (`AllowTcpForwarding no`) says so when the link is opened.
+  - Not verified on a phone: Chrome's secure-connections mode on loopback, the
+    WebView's handling of the entry page (refresh, cookie, history) and of
+    `prefers-color-scheme` in night mode. Cookie handling in a Custom Tab is
+    read from Chromium's code and modelled in `test/support/custom_tab.dart`;
+    the WebView's in `test/support/fake_webview.dart`. The lab that settled
+    the design is described in `docs/ENGINEERING.md` "Web pages on the phone".
 - **`connectivity_plus`** only reads the state of the phone's network
   interfaces (`network_monitor.dart`).
 - **Notifications** are local, through `flutter_local_notifications`
@@ -657,12 +714,24 @@ setting decides whether that text appears there.
   about, but it cannot check that the agent's description is true. If you use
   password authentication, the host's sshd receives the password. A host can
   also read anything you upload to its inbox.
-- *Cannot:* run code on the phone. The app renders text, Markdown and images,
-  with no WebView (a page opened in the browser runs in the browser). It cannot open a link without your tap, and a link from a
-  login banner must be `https`.
-- *Cannot:* reach other machines through the app. Each machine has its own
-  connection and isolate, and the app does not forward agents; it forwards a
-  port only to show its page on the phone.
+- *Can:* run JavaScript inside herdr's process, in a page from its own
+  loopback listener that you opened (a dev server or an HTML file an agent
+  wrote). It runs in the WebView's sandbox with no channel to the app: no
+  JavaScript bridge, no file access; it cannot read the listeners' cookies
+  (they are `HttpOnly`). It can call the listeners you opened (above) and the
+  internet, as in any browser, post a form to any site (which then shows in
+  the view, marked `not from <machine>`), and load any site in a frame. It
+  cannot open the phone's browser: a page of the web it navigates to is only
+  offered, and opens on your tap.
+- *Cannot:* run code on the phone outside that sandbox. The app renders
+  text, Markdown and images natively. A link from a login banner must be
+  `https` and opens only on your tap.
+- *Cannot:* reach other machines through the app's connections: each machine
+  has its own connection and isolate, and the app does not forward agents; it
+  forwards a port only to show its page on the phone. One exception, while
+  pages of two machines are open at once: their views share a cookie jar,
+  and a page of one can call the other's open listener with its cookie
+  (cleared when the last page closes; see "Known limits" above).
 - *Cannot:* read phone files you did not attach, or answer a prompt for you.
 - *Limits on what it can send:* reads are capped (8 MB per SFTP read), and the
   keeper's log has byte bounds.
@@ -707,6 +776,24 @@ manifest, `MainActivity.onDestroy`). At the root screen, Back moves the app to
 the background instead of closing it while watching
 (`app/lib/data/services/task_mover.dart`). The battery cost of watching has
 not been measured (`docs/ALERTS.md` "Limits, plainly").
+
+**While a page from a machine is open** (`WebPreviewScreen`, whatever the
+notification setting). The screen takes a hold on its machine
+(`FleetRepository.holdAlive(machineId, page:)`, released when it closes),
+and the notifier runs the same foreground service, started at once while the
+app is in front and naming the page: "Keeping localhost:8790 on devbox
+open", or "· localhost:8790 on devbox open" after the agents' line ("2
+pages" for more). It needs no notification permission (Android runs it unseen
+without one). Only once that notice is up (`FleetRepository.pageNotice`) is
+the page's machine kept in the background as above; other machines, agent
+sessions and observed sessions follow their usual rule. Without the notice
+(Android refused it, or iOS, which has none) Android freezes the process
+anyway, so the 90 s rule and the reconnect on return apply as before, and
+the page says the connection dropped and opens again by itself when it is
+back. Why: in a Custom Tab, herdr went to the background and Android dropped
+the connection the page is carried over. There is no idle limit: a page left
+open keeps its machine up until it is closed, and the notice says which.
+Not yet measured on a phone.
 
 ## 7. Code layout
 

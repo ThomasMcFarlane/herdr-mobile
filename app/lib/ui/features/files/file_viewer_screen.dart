@@ -7,9 +7,8 @@ import 'package:provider/provider.dart';
 
 import '../../../data/models/remote_file.dart';
 import '../../../data/repositories/machine_connection.dart';
-import '../../../data/repositories/web_preview.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
-import '../../support/open_link.dart';
+import '../web/web_preview_screen.dart';
 import 'binary_view.dart';
 import 'code_view.dart';
 import '../../../data/words/elapsed.dart';
@@ -151,11 +150,11 @@ class _ViewerPageState extends State<_ViewerPage> {
             title: stat.name,
             subtitleLine: _TailText(_folderOf(stat.path)),
             actions: [
-              if (ready && canPreviewInBrowser(stat.name))
+              if (ready && canShowAsPage(stat.name))
                 CircleButton(
                   icon: LucideIcons.globe,
-                  tooltip: 'Open in browser',
-                  onPressed: () => unawaited(_openInBrowser(context, stat)),
+                  tooltip: 'Show as page',
+                  onPressed: () => unawaited(_showAsPage(context, stat)),
                 ),
               CircleButton(
                 icon: LucideIcons.ellipsis,
@@ -371,35 +370,17 @@ class _Body extends StatelessWidget {
               model: vm,
               onCopyPath: () => copyText(context, vm.stat.path, what: 'Path copied'),
               onViewAsText: vm.canViewAsText ? vm.viewAsText : null,
-              onOpenInBrowser: canPreviewInBrowser(vm.name) ? () => unawaited(_openInBrowser(context, vm.stat)) : null,
+              onShowAsPage: canShowAsPage(vm.name) ? () => unawaited(_showAsPage(context, vm.stat)) : null,
             ),
         };
     }
   }
 }
 
-/// Shows [stat] (an HTML or SVG file) in the phone's browser, served from its
-/// own folder on the machine. A failure says why in a toast.
-Future<void> _openInBrowser(BuildContext context, RemoteStat stat) async {
-  final machine = context.read<_ViewerMachine>().machine;
-  // One open per page at a time: a second tap while the connection is made
-  // would open a second browser tab.
-  final id = '${machine.profile.id}\u0000${stat.path}';
-  if (!_openingPages.add(id)) return;
-  try {
-    final url = await machine.web.staticUrl(stat);
-    if (await openPreviewUrl(url)) return;
-    if (context.mounted) {
-      showToast(context, 'Couldn’t open on this phone: no browser could open it.', kind: ToastKind.failed);
-    }
-  } on WebPreviewException catch (e) {
-    if (context.mounted) showToast(context, e.message, kind: ToastKind.failed);
-  } finally {
-    _openingPages.remove(id);
-  }
-}
-
-final _openingPages = <String>{};
+/// Shows [stat] (an HTML or SVG file) as a page in herdr, served from its own
+/// folder on the machine ([WebPreviewScreen]: it says there if that fails).
+Future<void> _showAsPage(BuildContext context, RemoteStat stat) =>
+    openWebPreview(context, context.read<_ViewerMachine>().machine, FilePage.stat(stat));
 
 class _TextBody extends StatelessWidget {
   const _TextBody({required this.vm, required this.doc, this.rendered = false});

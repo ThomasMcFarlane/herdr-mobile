@@ -41,7 +41,7 @@ class FleetRepository extends ChangeNotifier {
     this.names = names ??
         PaneSessionNames(
           agents: () => agents,
-          canRead: () => _backgroundedAt == null && !_suspended,
+          canRead: () => _backgroundedAt == null && _suspended.isEmpty,
         );
     this.names.addListener(notifyListeners);
     _machines.addListener(_onMachinesChanged);
@@ -75,28 +75,100 @@ class FleetRepository extends ChangeNotifier {
   late final StreamSubscription<NetworkState> _networkSub;
   DateTime? _backgroundedAt;
   Timer? _suspendTimer;
-  bool _suspended = false;
+
+  /// Machines whose connection was torn down after the grace period, until
+  /// the next foreground.
+  final Set<String> _suspended = {};
   final Map<String, MachineConnection> _connections = {};
   final Map<String, String> _keys = {};
   Future<void> _reconciling = Future.value();
   bool _disposed = false;
   bool _keepAlive = false;
+  final List<_Hold> _holds = [];
+  bool _pageNotice = false;
   bool _graceElapsed = false;
-  bool _background = false;
 
-  /// Keep the connections up while the app is in the background, instead of
-  /// suspending them [backgroundSuspendAfter] after it left. The notifier turns
-  /// it on while it has agents to watch (and a quiet foreground notice keeps
-  /// Android from freezing the process). Off, the usual rule applies at once:
-  /// when the grace period has already run out by the time it goes off,
-  /// the connections are suspended right then.
-  bool get keepAliveInBackground => _keepAlive;
+  /// Machines in the background profile.
+  final Set<String> _background = {};
+
+  /// Whether any connection is kept up in the background (see [keeps]).
+  /// Set by the notifier while it has agents to watch (and a quiet
+  /// foreground notice keeps Android from freezing the process): every
+  /// connection is then kept instead of suspended [backgroundSuspendAfter]
+  /// after the app left. Off, the usual rule applies at once: when the grace
+  /// period has already run out by the time it goes off, the connections
+  /// nothing keeps are suspended right then.
+  bool get keepAliveInBackground => _keepAlive || (_pageNotice && _holds.isNotEmpty);
   set keepAliveInBackground(bool value) {
     if (_disposed || _keepAlive == value) return;
     _keepAlive = value;
+    _keepChanged();
+  }
+
+  /// What the notifier asked for, without the pages: the agents it watches.
+  bool get watchingAgents => _keepAlive;
+
+  /// Whether a page is held open ([holdAlive]): the notifier runs its
+  /// foreground notice for it, whether or not alerts are on.
+  bool get held => _holds.isNotEmpty;
+
+  /// The pages held open, as the Watching notice names them
+  /// (`localhost:8790 on devbox`), oldest first.
+  List<String> get heldPages => [for (final h in _holds) h.page];
+
+  /// The notifier's foreground notice is up for the pages held open. Only
+  /// then does a hold keep its machine's connection: without the notice
+  /// (refused by Android, or no notices at all, as on iOS) Android freezes
+  /// the process anyway, its sockets die, and the old rule (suspend after
+  /// [backgroundSuspendAfter], reconnect on return) is the honest one.
+  bool get pageNotice => _pageNotice;
+  set pageNotice(bool value) {
+    if (_disposed || _pageNotice == value) return;
+    _pageNotice = value;
+    _keepChanged();
+  }
+
+  /// Whether [machineId]'s connection is kept up in the background: every
+  /// machine while agents are watched, else the machines of the pages held
+  /// open while their notice is up.
+  bool keeps(String machineId) => _keepAlive || (_pageNotice && _holds.any((h) => h.machineId == machineId));
+
+  /// Holds [machineId]'s connection up in the background, for the page
+  /// named [page] (`localhost:8790 on devbox`, said by the Watching notice),
+  /// until the returned callback runs (once; a second call does nothing).
+  /// Holds count, and hold only their own machine: another machine follows
+  /// the usual rule.
+  ///
+  /// Why: a page from a machine (`WebPreviewScreen`) talks to it over the
+  /// connection, and in a Custom Tab the app went to the background, Android
+  /// dropped the SSH connection and the page waited forever. While the page
+  /// is open, switching apps or turning the screen off must not end it.
+  VoidCallback holdAlive(String machineId, {required String page}) {
+    if (_disposed) return () {};
+    final hold = _Hold(machineId, page);
+    _holds.add(hold);
+    _keepChanged();
+    var released = false;
+    return () {
+      if (released || _disposed) return;
+      released = true;
+      _holds.remove(hold);
+      _keepChanged();
+    };
+  }
+
+  void _keepChanged() {
     _syncBackground();
-    notifyListeners(); // the screens that offer "keep watching" read it
-    if (!value && _backgroundedAt != null && _graceElapsed && !_suspended) onBackgroundTimeout();
+    notifyListeners(); // the notifier and the screens that offer "keep watching" read it
+    if (_backgroundedAt != null && _graceElapsed) _letGo();
+  }
+
+  /// Past the grace period: tears down every connection nothing keeps.
+  void _letGo() {
+    for (final MapEntry(key: id, value: c) in _connections.entries) {
+      if (keeps(id) || !_suspended.add(id)) continue;
+      c.suspend();
+    }
   }
 
   /// Connections in saved-machine order.
@@ -206,6 +278,8 @@ class FleetRepository extends ChangeNotifier {
       if (!wanted.containsKey(id) || _keys[id] != _keyOf(wanted[id]!)) {
         final gone = _connections.remove(id)!..removeListener(_onConnectionChanged);
         _keys.remove(id);
+        _background.remove(id);
+        _suspended.remove(id);
         changed = true;
         try {
           if (!wanted.containsKey(id)) gone.forget();
@@ -229,7 +303,10 @@ class FleetRepository extends ChangeNotifier {
         } else {
           c.goOffline();
         }
-        if (_background) c.setBackground(true);
+        if (_backgroundedAt != null && keeps(p.id)) {
+          _background.add(p.id);
+          c.setBackground(true);
+        }
       } on Object catch (e, s) {
         debugPrint('herdr: could not set up the connection to ${p.id}: $e\n$s');
       }
@@ -239,10 +316,12 @@ class FleetRepository extends ChangeNotifier {
 
   /// Reconnect machines that are down and refresh the ones that are up.
   /// Used for pull-to-refresh; does nothing while the device has no network.
-  Future<void> retryAll() async {
+  Future<void> retryAll() => _refresh(connections);
+
+  Future<void> _refresh(Iterable<MachineConnection> which) async {
     if (!_network.current.online) return;
     await Future.wait([
-      for (final c in connections)
+      for (final c in which)
         if (c.state == LinkState.online)
           c.refresh().catchError((Object _) {})
         else
@@ -278,50 +357,60 @@ class FleetRepository extends ChangeNotifier {
 
   /// The app is back after [away]. A long absence (or a suspension) means
   /// the sockets are dead, so reset and reconnect now; a short one only
-  /// needs a refresh. With [keepAliveInBackground] on, the process was kept
-  /// running and the connections never suspended, so a refresh is enough
-  /// whatever the absence: a link that died meanwhile is found by that.
+  /// needs a refresh. A connection that was kept ([keeps]: the process ran
+  /// behind a foreground notice and it never suspended) only needs a
+  /// refresh whatever the absence: a link that died meanwhile is found by
+  /// that.
   Future<void> onForeground({required Duration away}) async {
     if (_disposed) return;
-    final wasSuspended = _suspended;
-    _suspended = false;
+    final wasSuspended = {..._suspended};
+    _suspended.clear();
     if (!_network.current.online) {
       for (final c in connections) {
         c.goOffline();
       }
-    } else if (wasSuspended || (away > longAway && !_keepAlive)) {
-      for (final c in connections) {
-        c.reconnect();
-      }
-    } else {
-      await retryAll();
+      return;
     }
+    final refresh = <MachineConnection>[];
+    for (final c in connections) {
+      final id = c.profile.id;
+      if (wasSuspended.contains(id) || (away > longAway && !keeps(id))) {
+        c.reconnect();
+      } else {
+        refresh.add(c);
+      }
+    }
+    await _refresh(refresh);
   }
 
   /// Continuously backgrounded for too long: stop every connection until the
   /// next foreground.
   void onBackgroundTimeout() {
     if (_disposed) return;
-    _suspended = true;
     for (final c in connections) {
+      _suspended.add(c.profile.id);
       c.suspend();
     }
   }
 
   void _graceEnded() {
     _graceElapsed = true;
-    if (!_keepAlive) onBackgroundTimeout();
+    _letGo();
   }
 
   /// The background profile (relaxed heartbeats and poll, see
-  /// [MachineConnection.setBackground]) holds while the app is in the
-  /// background AND the connections are kept alive for watching.
+  /// [MachineConnection.setBackground]) holds for a connection while the app
+  /// is in the background AND that connection is kept ([keeps]).
   void _syncBackground() {
-    final background = _backgroundedAt != null && _keepAlive;
-    if (background == _background) return;
-    _background = background;
-    for (final c in connections) {
-      c.setBackground(background);
+    for (final MapEntry(key: id, value: c) in _connections.entries) {
+      final on = _backgroundedAt != null && keeps(id);
+      if (on == _background.contains(id)) continue;
+      if (on) {
+        _background.add(id);
+      } else {
+        _background.remove(id);
+      }
+      c.setBackground(on);
     }
   }
 
@@ -330,7 +419,7 @@ class FleetRepository extends ChangeNotifier {
     for (final c in connections) {
       if (!state.online) {
         c.goOffline();
-      } else if (!_suspended) {
+      } else if (!_suspended.contains(c.profile.id)) {
         c.reconnect();
       }
     }
@@ -357,4 +446,12 @@ class FleetRepository extends ChangeNotifier {
     if (_ownsReviewed) reviewed.dispose();
     super.dispose();
   }
+}
+
+/// One page held open ([FleetRepository.holdAlive]).
+class _Hold {
+  _Hold(this.machineId, this.page);
+
+  final String machineId;
+  final String page;
 }

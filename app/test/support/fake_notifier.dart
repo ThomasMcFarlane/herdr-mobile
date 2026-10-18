@@ -13,7 +13,8 @@ class FakeNotifier implements Notifier {
   /// While set, [show], [cancel], [cancelAll] and [setWatching] throw.
   bool failing = false;
 
-  /// Every call, in order: `show:<id>`, `cancel:<id>`, `cancelAll`, `watching:<n>`.
+  /// Every call, in order: `show:<id>`, `cancel:<id>`, `cancelAll`,
+  /// `watching:<n>` (`watching:<n>+page` while a page holds the notice).
   final List<String> log = [];
 
   /// Every notification passed to [show], oldest first.
@@ -29,6 +30,9 @@ class FakeNotifier implements Notifier {
   /// What [setWatching] was told, in order: agents watched and how many of
   /// them are blocked.
   final List<({int count, int blocked})> glances = [];
+
+  /// The page the notice named, per [setWatching] call, in order (null: none).
+  final List<String?> pages = [];
 
   int cancelAllCount = 0;
   int permissionReads = 0;
@@ -83,12 +87,13 @@ class FakeNotifier implements Notifier {
   }
 
   @override
-  Future<bool> setWatching(int count, {int blocked = 0}) async {
-    log.add('watching:$count');
+  Future<bool> setWatching(int count, {int blocked = 0, String? page}) async {
+    log.add('watching:$count${page != null ? '+page' : ''}');
     if (failing) throw StateError('cannot start');
     watching.add(count);
     glances.add((count: count, blocked: blocked));
-    return count > 0 && watchingWorks;
+    pages.add(page);
+    return (count > 0 || page != null) && watchingWorks;
   }
 
   @override

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -6,14 +8,15 @@ import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/web_preview.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../../support/open_link.dart';
+import '../web/web_preview_screen.dart';
 
 /// What a tapped web link offers: the whole address (selectable, so nothing
 /// is hidden behind a shortened label), then open or copy.
 ///
 /// An address on the machine itself (`localhost`, a loopback address, a
 /// `.local` name) is not reachable from the phone as it is. A plain `http` one
-/// on a known [machine] is opened on the phone through the SSH connection
-/// (`Open on phone`); any other only offers copy and says why. A plain `http`
+/// on a known [machine] is shown in herdr through the SSH connection
+/// (`Open page`, [WebPreviewScreen]); any other only offers copy and says why. A plain `http`
 /// link is opened only from here, after being shown.
 Future<void> showLinkSheet(BuildContext context, String url, {MachineConnection? machine}) {
   final toaster = Toaster.of(context);
@@ -39,19 +42,11 @@ Future<void> showLinkSheet(BuildContext context, String url, {MachineConnection?
         if (!await openTappedLink(url)) toast('Couldn’t open on this phone: no browser could open it.', kind: ToastKind.failed);
       }
 
-      // The sheet goes first: the connection is asked after the screen has
-      // answered the tap. A failure says why, and Copy link is one tap away
-      // again from the same link.
-      Future<void> openOnPhone() async {
+      // The sheet goes first, then the page's screen, which asks the
+      // connection itself and says there if it fails.
+      void openOnPhone() {
         Navigator.of(ctx).pop();
-        try {
-          final entry = await machine!.web.forwardUrl(Uri.parse(url), onNote: toast);
-          if (!await openPreviewUrl(entry)) {
-            toast('Couldn’t open on this phone: no browser could open it.', kind: ToastKind.failed);
-          }
-        } on WebPreviewException catch (e) {
-          toast(e.message, kind: ToastKind.failed);
-        }
+        unawaited(openWebPreview(context, machine!, ServerPage(Uri.parse(url))));
       }
 
       Widget note(IconData icon, String text) => Padding(
@@ -84,7 +79,7 @@ Future<void> showLinkSheet(BuildContext context, String url, {MachineConnection?
             )
           else if (previewable)
             AppButton(
-              label: 'Open on phone',
+              label: 'Open page',
               icon: LucideIcons.smartphone,
               expand: true,
               onPressed: openOnPhone,
@@ -108,7 +103,7 @@ Future<void> showLinkSheet(BuildContext context, String url, {MachineConnection?
             if (previewable)
               note(
                 HerdrIcons.machines,
-                'This address is on ${machine.profile.label}. Open on phone reaches it over your SSH connection.',
+                'This address is on ${machine.profile.label}. Open page shows it in herdr, over your SSH connection.',
               )
             else if (local && https)
               note(HerdrIcons.machines, 'HTTPS on the machine can’t be opened on the phone yet.')

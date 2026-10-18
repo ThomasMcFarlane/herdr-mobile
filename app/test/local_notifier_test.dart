@@ -268,6 +268,18 @@ void main() {
       expect(await notifier.setWatching(2), isTrue, reason: 'a refusal is not remembered as success');
       expect(android.called('startForegroundService'), hasLength(2));
     });
+
+    test('a page open runs the notice on its own, named, and joins an agents\' one', () async {
+      final notifier = await start();
+      expect(await notifier.setWatching(0, page: 'localhost:8790 on devbox'), isTrue);
+      expect(data()['title'], 'Keeping localhost:8790 on devbox open');
+      expect(data()['body'], 'Close it in herdr to let the connection go');
+      await notifier.setWatching(3, blocked: 1, page: '2 pages');
+      expect(data()['title'], 'Watching 3 agents');
+      expect(data()['body'], '1 needs you · 2 working · 2 pages open');
+      expect(await notifier.setWatching(0), isFalse);
+      expect(android.called('stopForegroundService'), hasLength(1), reason: 'no agent and no page');
+    });
   });
 
   group('permission', () {

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Plain http is allowed to the phone's own loopback listeners and nowhere
+     else. A page from a machine is shown in herdr's WebView through
+     http://localhost:<port> (WebPreviewScreen, web_bridge.dart): from
+     Android 9 the app's default refuses cleartext, which would show every such
+     page as ERR_CLEARTEXT_NOT_PERMITTED (the Custom Tab it replaced ran in
+     Chrome and never hit this). Flutter's own HTTP client reads the same
+     policy; everything it fetches is https. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
+    </domain-config>
+</network-security-config>
