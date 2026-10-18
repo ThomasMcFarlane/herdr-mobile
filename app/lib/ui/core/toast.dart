@@ -492,18 +492,20 @@ class _ToastViewState extends State<_ToastView> with TickerProviderStateMixin {
     return ValueListenableBuilder<({double lift, bool aboveKeyboard})?>(
       valueListenable: ToastShelf.showing,
       builder: (context, shelf, _) {
-        final bottom = shelf == null
-            ? math.max(media.viewInsets.bottom, media.padding.bottom) + Gap.sm
-            : shelf.lift + (shelf.aboveKeyboard ? media.viewInsets.bottom : 0);
+        // Two parts: where it rests (the shelf it stands on, or the system
+        // inset) eases when a bar appears or grows under it, so it moves up
+        // rather than through the bar; the keyboard's share follows the
+        // keyboard frame by frame, so it never trails behind it.
+        final rest = shelf == null ? media.padding.bottom + Gap.sm : shelf.lift;
+        final keyboard = shelf == null
+            ? math.max(media.viewInsets.bottom - media.padding.bottom, 0.0)
+            : (shelf.aboveKeyboard ? media.viewInsets.bottom : 0.0);
         final width = math.min(_maxWidth, media.size.width - 2 * _side);
-        return AnimatedPositioned(
-          // A bar that appears or grows under a showing toast moves it up
-          // rather than through it.
+        return TweenAnimationBuilder<double>(
+          tween: Tween(end: rest),
           duration: Motion.of(context, Motion.standard),
           curve: Motion.easeOut,
-          left: 0,
-          right: 0,
-          bottom: bottom,
+          builder: (context, lift, child) => Positioned(left: 0, right: 0, bottom: lift + keyboard, child: child!),
           child: Align(
             heightFactor: 1,
             child: SizedBox(

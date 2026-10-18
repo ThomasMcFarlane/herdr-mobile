@@ -645,6 +645,28 @@ void main() {
     });
   });
 
+  group('keyboard', () {
+    testWidgets('the toast follows a rising keyboard frame by frame', (tester) async {
+      tester.view
+        ..physicalSize = const Size(800, 1200) // 400 x 600 dp
+        ..devicePixelRatio = 2
+        ..padding = FakeViewPadding.zero
+        ..viewInsets = FakeViewPadding.zero;
+      addTearDown(tester.view.reset);
+      await _pump(tester);
+      _toaster.show('Copied', duration: const Duration(seconds: 30));
+      await tester.pumpAndSettle(const Duration(milliseconds: 50));
+      expect(tester.getRect(_toast).bottom, 600 - 8);
+
+      for (final inset in [40.0, 120.0, 210.0, 300.0]) {
+        tester.view.viewInsets = FakeViewPadding(bottom: inset * 2);
+        await tester.pump(const Duration(milliseconds: 16));
+        expect(tester.getRect(_toast).bottom, 600 - inset - 8, reason: 'on the keyboard at $inset, not trailing it');
+      }
+      await _end(tester);
+    });
+  });
+
   group('look and access', () {
     testWidgets('the text is a live region and the action a 44 dp button', (tester) async {
       final handle = tester.ensureSemantics();
