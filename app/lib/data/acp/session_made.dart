@@ -75,7 +75,9 @@ class MadeAsset {
   int? get port => url == null ? null : (url!.hasPort ? url!.port : 80);
 }
 
-/// The most rows a session shows: a transcript can mention hundreds of ports.
+/// The most rows of each kind a session shows (servers, pages, pictures, docs
+/// each keep their newest this many): a transcript can mention hundreds of
+/// ports or screenshots, and a flood of one kind must not push another out.
 const madeAssetsCap = 150;
 
 /// Whether [a] and [b] show the same rows. A tool call that streams replaces
@@ -161,7 +163,13 @@ List<MadeAsset> _build(List<TranscriptItem> items, String? sessionCwd) {
     }
   }
   final out = byKey.values.toList()..sort((a, b) => b.order.compareTo(a.order));
-  return List.unmodifiable(out.length > madeAssetsCap ? out.sublist(0, madeAssetsCap) : out);
+  // Newest first, so the first `madeAssetsCap` met of a kind are its newest.
+  final seen = <MadeKind, int>{};
+  final kept = [
+    for (final a in out)
+      if ((seen[a.kind] = (seen[a.kind] ?? 0) + 1) <= madeAssetsCap) a,
+  ];
+  return List.unmodifiable(kept);
 }
 
 List<_Mention> _mentionsOf(TranscriptItem item) {
@@ -180,18 +188,31 @@ List<_Mention> _scan(TranscriptItem item) {
     case TranscriptMessage(role: MessageRole.agent, :final text, :final at):
       _say(text.length > _textCap ? text.substring(0, _textCap) : text, at, out);
     case TranscriptTool(:final call, :final at):
+      final done = call.status == ToolStatus.completed;
+      // A command that did not run (denied, failed, cancelled, still waiting)
+      // wrote and removed nothing. Only a server banner is read before the end:
+      // a server never finishes, and its address is printed while it runs.
+      final printing = done || call.status == ToolStatus.inProgress;
+      // Paths a delete diff of this call removes: the edit below must not list them again.
+      final deleted = <String>{};
       for (final c in call.content) {
-        if (c is ToolDiff && call.status == ToolStatus.completed) {
+        if (c is ToolDiff && done) {
           // A page counts whenever it was written; a document only when the
-          // agent CREATED it (an edit of a README is not something it made).
+          // agent CREATED it (an edit of a README is not something it made). A
+          // patch that leaves nothing behind (Codex deletes a file this way: old
+          // text, no new text) is a removal, and an empty "new" file is not a document.
           final kind = _kindOf(c.path);
           final p = kind == null ? null : _cleanPath(c.path);
-          if (p != null && (kind == MadeFileKind.page || kind == MadeFileKind.doc && c.oldText == null)) {
+          if (p == null) continue;
+          if (c.newText.isEmpty && c.oldText != null) {
+            out.add(_Mention.drop(p, call.cwd, null, at));
+            deleted.add(p);
+          } else if (kind == MadeFileKind.page || kind == MadeFileKind.doc && c.oldText == null && c.newText.isNotEmpty) {
             out.add(_Mention.file(p, call.cwd, null, at));
           }
         }
       }
-      if (call.status == ToolStatus.completed && (call.kind == ToolKind.edit || call.kind == ToolKind.delete)) {
+      if (done && (call.kind == ToolKind.edit || call.kind == ToolKind.delete)) {
         final p = pathOfCall(call);
         final kind = p == null ? null : _kindOf(p);
         if (p != null && kind != null) {
@@ -199,7 +220,7 @@ List<_Mention> _scan(TranscriptItem item) {
           if (clean != null) {
             if (call.kind == ToolKind.delete) {
               out.add(_Mention.drop(clean, call.cwd, null, at));
-            } else if (kind == MadeFileKind.page) {
+            } else if (kind == MadeFileKind.page && !deleted.contains(clean)) {
               out.add(_Mention.file(clean, call.cwd, null, at));
             }
           }
@@ -208,15 +229,17 @@ List<_Mention> _scan(TranscriptItem item) {
       if (call.kind == ToolKind.execute) {
         final command = commandOf(call);
         if (command != null) {
-          // The patches of a streaming call replace the call but keep its input.
-          final key = call.rawInput;
-          final scanned = key is Map ? (_commandScans[key] ??= _scanCommand(command, call.cwd)) : _scanCommand(command, call.cwd);
-          out.addAll(scanned.map((m) => _withTime(m, at)));
+          if (done) {
+            // The patches of a streaming call replace the call but keep its input.
+            final key = call.rawInput;
+            final scanned = key is Map ? (_commandScans[key] ??= _scanCommand(command, call.cwd)) : _scanCommand(command, call.cwd);
+            out.addAll(scanned.map((m) => _withTime(m, at)));
+          }
           // What a launched command printed names the server. Not what a probe printed.
           final printed = outputTextOf(call);
-          if (printed != null && !_isProbe(command)) {
-            _banners(printed, at, out);
-            _saved(printed, call.cwd, at, out);
+          if (printed != null && printing && !_isProbe(command)) {
+            _banners(printed, command, at, out);
+            if (done) _saved(printed, call.cwd, at, out);
           }
         }
       }
@@ -242,10 +265,38 @@ final _url = RegExp(
 final _bareLocalhost = RegExp(r'(?<![\w/.\-])localhost:(\d{2,5})(?![\w])', caseSensitive: false);
 final _fence = RegExp(r'```[\s\S]*?```');
 final _token = RegExp(r'''[^\s"'`()<>\[\]{}|;,=*?]+''');
+// A word of making. `built` is apart: it also says what a build step did to the
+// app ("I built the app"), so it counts only when the path follows it directly
+// ("built dist/index.html"). `opened` and `output` are not here: the chat opens
+// and outputs existing files all day.
 final _madeVerb = RegExp(
-  r'\b(?:created?|wrote|written|writing|saved?|generated?|exported?|built|produced?|made|output|report at|opened?|tạo|lưu|xuất|mở|ghi)\b',
+  r'\b(?:created?|wrote|written|writing|saved?|generated?|exported?|produced?|made|report at|tạo|lưu|xuất|ghi)\b',
   caseSensitive: false,
 );
+final _builtVerb = RegExp(r'^built$', caseSensitive: false);
+final _clauseBreak = RegExp(r'[,;:!?\n]|\.(?:\s|$)|\s(?=(?:and|then|but)\s)', caseSensitive: false);
+final _wordEdge = RegExp(r'''^[`*_"'(\[]+|[`*_"')\]]+$''');
+
+/// Whether a word of making stands right before the path at [start] in [prose]:
+/// only the clause the path is in is read (after the last `.`, `,`, `;`, `:`,
+/// `!`, `?`, line break, `and`, `then` or `but`), and the verb must be within
+/// its last 4 words ("saved the chart to charts/x.png", "created docs/spec.md").
+/// Further back it is another thing the agent did ("I created the handler and
+/// then updated the README.md"), or a path in a sentence about something else.
+bool _madeBefore(String prose, int start) {
+  final before = prose.substring(start - 80 < 0 ? 0 : start - 80, start);
+  var tail = before;
+  for (final b in _clauseBreak.allMatches(before)) {
+    tail = before.substring(b.end);
+  }
+  final words = [
+    for (final w in tail.split(RegExp(r'\s+')))
+      if (w.replaceAll(_wordEdge, '').isNotEmpty) w.replaceAll(_wordEdge, ''),
+  ];
+  if (words.isEmpty) return false;
+  if (_builtVerb.hasMatch(words.last)) return true;
+  return _madeVerb.hasMatch(words.skip(words.length > 4 ? words.length - 4 : 0).join(' '));
+}
 
 void _say(String text, DateTime? at, List<_Mention> out) {
   for (final m in _url.allMatches(text)) {
@@ -271,8 +322,7 @@ void _say(String text, DateTime? at, List<_Mention> out) {
     // document (the chat names existing README.md files and screenshots all day),
     // only right after a word of making.
     if (!p.contains('/') || kind != MadeFileKind.page) {
-      final from = m.start - 60 < 0 ? 0 : m.start - 60;
-      if (!_madeVerb.hasMatch(prose.substring(from, m.start))) continue;
+      if (!_madeBefore(prose, m.start)) continue;
     }
     out.add(_Mention.file(p, null, null, at));
   }
@@ -416,9 +466,31 @@ List<_Mention> _scanCommand(String command, String? callCwd) {
 
 // ----- what a launched command printed -----
 
+// A labelled address ("Local:   http://localhost:5173/", "Network: http://...",
+// "Local URL: http://localhost:8501"): the label opens the line and the URL
+// follows it. The bare words `local` and `network` were too wide ("Network
+// request to http://localhost:8000/api failed", "using local proxy
+// http://127.0.0.1:7890").
+final _labelled = RegExp(r'^[^\w]*(?:local|network)(?:\s+url)?\s*:\s*https?://', caseSensitive: false);
 final _banner = RegExp(
-  r'\blocal\b|\bnetwork\b|running (?:on|at)|serving http|listening (?:on|at)|ready (?:on|at|in)|started server|available at|'
-  r'server (?:is )?(?:running|started|listening)|development server|dev server|web server|app running|open .{0,20} at|view it at|you can now view',
+  r'running (?:on|at)|serving http|ready (?:on|at|in)|started server|available at|'
+  r'server (?:is )?(?:running|started)|development server|dev server|web server|app running|open .{0,20} at|view it at|you can now view',
+  caseSensitive: false,
+);
+// "Listening on" is also what a fixture server inside a test, a proxy or a
+// client library prints, so it counts only from a command that looks like a
+// launch: it names one of these words. The list is short on purpose: a command
+// outside it (`make check`) can still print a labelled or "running on" banner.
+final _listening = RegExp(r'listening (?:on|at)|server (?:is )?listening', caseSensitive: false);
+final _launchLike = RegExp(
+  r'dev|serve|start|run|uvicorn|gunicorn|http\.server|flask|vite|next|npm|yarn|pnpm|bun|node|deno|python|php|ruby|rails',
+  caseSensitive: false,
+);
+// A test run starts servers of its own and prints their addresses; none of it
+// is something the person can open.
+final _testRun = RegExp(
+  r'(?:^|[\s;&|(])(?:pytest|py\.test|jest|mocha|tox|vitest\s+run|go\s+test|cargo\s+test|flutter\s+test|dart\s+test|make\s+test|'
+  r'(?:npm|yarn|pnpm|bun)(?:\s+run)?\s+test(?::[\w-]+)?)(?![\w-])',
   caseSensitive: false,
 );
 
@@ -426,12 +498,15 @@ final _banner = RegExp(
 /// "Uvicorn running on http://...", "Serving HTTP on 0.0.0.0 port 8000
 /// (http://0.0.0.0:8000/)"), near the top. Only those lines of the first 8 KB
 /// are read, and only for the origin: a log that names the server on every
-/// line, or an API response with a path, makes no row.
-void _banners(String printed, DateTime? at, List<_Mention> out) {
-  final head = printed.length > 8192 ? printed.substring(0, 8192) : printed;
-  for (final line in head.split('\n')) {
+/// line, or an API response with a path, makes no row. Never from a test run.
+void _banners(String printed, String command, DateTime? at, List<_Mention> out) {
+  final head = _commandHead(command);
+  if (_testRun.hasMatch(head)) return;
+  final launch = _launchLike.hasMatch(head);
+  final text = printed.length > 8192 ? printed.substring(0, 8192) : printed;
+  for (final line in text.split('\n')) {
     final l = line.length > 300 ? line.substring(0, 300) : line;
-    if (!_banner.hasMatch(l)) continue;
+    if (!_labelled.hasMatch(l) && !_banner.hasMatch(l) && !(launch && _listening.hasMatch(l))) continue;
     for (final m in _url.allMatches(l)) {
       final s = _serverUri(m.group(0)!, keepPath: false);
       if (s != null) out.add(_Mention.server(s, at));

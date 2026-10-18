@@ -10,14 +10,24 @@ var _n = 0;
 TranscriptItem _say(String text, {MessageRole role = MessageRole.agent}) =>
     TranscriptMessage(key: 'm${_n++}', role: role, blocks: [TextBlock(text)]);
 
-TranscriptItem _run(String command, {String? output, String? cwd}) => TranscriptTool(
+TranscriptItem _run(String command, {String? output, String? cwd, ToolStatus status = ToolStatus.completed}) => TranscriptTool(
       ToolCall(
         toolCallId: 't${_n++}',
         kind: ToolKind.execute,
-        status: ToolStatus.completed,
+        status: status,
         rawInput: {'command': command},
         output: output == null ? null : ToolOutput(text: output, exited: true, exitCode: 0),
         meta: cwd == null ? null : {'terminal_info': {'cwd': cwd}},
+      ),
+    );
+
+TranscriptItem _patch(String path, {String? oldText, required String newText}) => TranscriptTool(
+      ToolCall(
+        toolCallId: 't${_n++}',
+        kind: ToolKind.edit,
+        status: ToolStatus.completed,
+        content: [ToolDiff(path: path, oldText: oldText, newText: newText)],
+        locations: [ToolLocation(path: path)],
       ),
     );
 
@@ -91,6 +101,34 @@ void main() {
         _run('git diff', output: '+  url: http://localhost:3000\n'),
       ];
       expect(_keys(items), isEmpty);
+    });
+
+    test('"local" and "network" in a log line are not an address the agent launched', () {
+      final items = [
+        _run('npm run dev', output: 'Network request to http://localhost:8000/api failed\n'),
+        _run('python app.py', output: 'using local proxy http://127.0.0.1:7890\n'),
+        _run('npm test', output: 'Server listening on http://127.0.0.1:38211\n'),
+        _run('go test ./...', output: 'Server listening on http://127.0.0.1:38212\nLocal: http://localhost:38213/\n'),
+        _run('pytest -q', output: 'Uvicorn running on http://127.0.0.1:38214\n'),
+        _run('npx vitest run', output: 'Local: http://localhost:38215/\n'),
+        _run('cd app && flutter test', output: 'Serving HTTP on 0.0.0.0 port 38216 (http://0.0.0.0:38216/)\n'),
+        _run('make check', output: 'Server listening on http://127.0.0.1:38217\n'),
+      ];
+      expect(_keys(items), isEmpty);
+    });
+
+    test('a launch that says "listening on" is still a server, from a command that starts something', () {
+      expect(_keys([_run('node server.js', output: 'Server listening on http://127.0.0.1:3001\n')]), ['localhost:3001']);
+      expect(_keys([_run('npm run dev', output: _vite)]), ['localhost:5173']);
+      expect(_keys([_run('uvicorn app:app', output: 'INFO:     Uvicorn running on http://127.0.0.1:8000\n')]), ['localhost:8000']);
+      expect(_keys([_run('python -m http.server 8000', output: 'Serving HTTP on 0.0.0.0 port 8000 (http://0.0.0.0:8000/) ...\n')]), ['localhost:8000']);
+    });
+
+    test('a command that failed or was cancelled names no server; one still running does', () {
+      for (final s in [ToolStatus.failed, ToolStatus.cancelled, ToolStatus.pending]) {
+        expect(_keys([_run('npm run dev', output: _vite, status: s)]), isEmpty, reason: '$s');
+      }
+      expect(_keys([_run('npm run dev', output: _vite, status: ToolStatus.inProgress)]), ['localhost:5173']);
     });
 
     test('a command\'s own text names no server', () {
@@ -209,6 +247,14 @@ void main() {
       ]);
     });
 
+    test('a command that did not run wrote and removed nothing', () {
+      for (final s in [ToolStatus.pending, ToolStatus.inProgress, ToolStatus.failed, ToolStatus.cancelled]) {
+        expect(_keys([_run('echo x > a.html', cwd: '/w', status: s)]), isEmpty, reason: '$s writes nothing');
+        expect(_keys([_run('echo x > a.html', cwd: '/w'), _run('rm a.html', cwd: '/w', status: s)]), ['/w/a.html'], reason: '$s removes nothing');
+        expect(_keys([_run('python shot.py', output: 'Saved screenshot to screenshots/a.png\n', cwd: '/w', status: s)]), isEmpty, reason: '$s');
+      }
+    });
+
     test('a leading cd moves where a relative name is taken from', () {
       final items = [_run('cd /tmp/scratch/report && python gen.py > out.html', cwd: '/home/dev/app'), _run('cd sub && cd deep; echo x > y.html', cwd: '/w')];
       expect(_keys(items), ['/w/sub/deep/y.html', '/tmp/scratch/report/out.html']);
@@ -264,6 +310,29 @@ void main() {
       expect(_keys([_say('Đã tạo report.html cho bạn.')], cwd: '/w'), ['/w/report.html']);
     });
 
+    test('the word of making must be right before the path, in the same clause', () {
+      for (final said in [
+        'I created the new handler and then updated the README.md accordingly',
+        'I opened README.md and read it',
+        'I built the app, and the usage is documented in docs/usage.md',
+        'Wrote the script. The file docs/old-spec.pdf was left unchanged.',
+        'I created the handler and then updated the README.md',
+        'Output: README.md',
+      ]) {
+        expect(_keys([_say(said)], cwd: '/w'), isEmpty, reason: said);
+      }
+      for (final (said, key) in [
+        ('I saved the chart to charts/x.png', '/w/charts/x.png'),
+        ('I created docs/spec.md', '/w/docs/spec.md'),
+        ('Wrote report.pdf', '/w/report.pdf'),
+        ('I built dist/index.html', '/w/dist/index.html'),
+        ('I created a new report.html', '/w/report.html'),
+        ('I fixed the bug and then created summary.md', '/w/summary.md'),
+      ]) {
+        expect(_keys([_say(said)], cwd: '/w'), [key], reason: said);
+      }
+    });
+
     test('a line number, an anchor, a full stop and file:// are not part of the path', () {
       final items = [_say('Wrote /tmp/out/final.html. Then /tmp/out/a.html:12 and /tmp/out/b.html#top and file:///tmp/out/c.html.')];
       expect(_keys(items), ['/tmp/out/c.html', '/tmp/out/b.html', '/tmp/out/a.html', '/tmp/out/final.html']);
@@ -287,6 +356,17 @@ void main() {
       expect(assets.first.key, 'localhost:3399', reason: 'the newest are kept');
       final oneMessage = _say([for (var i = 0; i < 200; i++) 'http://localhost:${4000 + i}/'].join(' '));
       expect(madeAssetsOf([oneMessage]).length, lessThanOrEqualTo(40));
+    });
+
+    test('a flood of one kind never pushes another kind out', () {
+      final items = [_say('http://localhost:3000/'), for (var i = 0; i < madeAssetsCap + 50; i++) _say('I saved shots/$i.png')];
+      final assets = madeAssetsOf(items, cwd: '/w');
+      expect(assets.where((a) => a.kind == MadeKind.server), hasLength(1));
+      final pictures = assets.where((a) => a.kind == MadeKind.picture).toList();
+      expect(pictures, hasLength(madeAssetsCap));
+      expect(pictures.first.key, '/w/shots/${madeAssetsCap + 49}.png');
+      expect(pictures.last.key, '/w/shots/50.png', reason: 'each kind keeps its newest');
+      expect(assets.last.key, 'localhost:3000', reason: 'still newest first overall');
     });
 
     test('text with no break in it is read in linear time', () {
@@ -401,6 +481,18 @@ void main() {
     test('a removed picture or document leaves the list', () {
       final items = [create('/w/docs/a.md'), _run('rm /w/docs/a.md'), _run('python p.py -o /w/out.png'), _delete('/w/out.png')];
       expect(_keys(items), isEmpty);
+    });
+
+    test('a patch that leaves nothing behind removes the file, as Codex deletes one; an empty new file is no document', () {
+      final items = [
+        _patch('/w/a.html', newText: '<p>x</p>'),
+        _patch('/w/docs/b.md', newText: '# b'),
+        _patch('/w/a.html', oldText: '<p>x</p>', newText: ''),
+        _patch('/w/docs/b.md', oldText: '# b', newText: ''),
+        _patch('/w/docs/empty.md', newText: ''),
+      ];
+      expect(_keys(items), isEmpty);
+      expect(_keys([_patch('/w/a.html', newText: '<p>x</p>'), _patch('/w/a.html', oldText: '<p>x</p>', newText: '<p>y</p>')]), ['/w/a.html']);
     });
 
     test('the kinds are told apart on the rows', () {
