@@ -336,8 +336,8 @@ Tailscale.
     of 40 items showed one list buries the pictures below the first screen; a
     Segmented control with a white thumb, underline tabs and board chips were
     each tried in the sheet and rejected (a third look, a style the app does not
-    have, and "reads as a filter, in the middle"); the tab bar's capsule anatomy
-    in the sheet read as tabs and as the app, so `Segmented` was rebuilt on it.
+    have, and "reads as a filter, in the middle"); the tab bar's capsule
+    on a borderless tinted pill read as tabs and as the app, so `Segmented` was rebuilt on it.
 - **Keys are not a send.** `PaneViewModel.sendKeys` never sets `sending` (a
   tapped hotkey must not disable the key row) and keeps calls in order; only
   `sendLine` is a tracked send.

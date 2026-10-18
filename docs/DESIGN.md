@@ -1507,10 +1507,12 @@ browser is built to be reached fast, scanned and not lost in.
 
 ## The switch (`Segmented`)
 
-One control for "this or that": a slim pill (44 dp, `ds.surface`, a hairline) in
-equal cells with ONE soft capsule (`ds.fillPressed`) under the chosen one: the
-anatomy of the floating tab bar and of the attach sheet's tabs, so the app has
-one switch look. It picks the value of a setting (Look: theme, agent list;
+One control for "this or that": a slim tinted pill (44 dp, `ds.fill`, NO border)
+in equal cells with ONE capsule under the chosen one, lighter than the pill
+(`ds.surface` in light, `ds.fillPressed` on ink): the tab bar's capsule, so the
+app has one switch look. No border, no shadow: the tint and the lighter capsule
+already say "a control, and this one is on" (owner: borders are noise; a
+hairline pill, tried first, was). It picks the value of a setting (Look: theme, agent list;
 the machine form's sign-in) and switches what a sheet shows (the kinds in the
 chat's Made sheet: Servers / Pages / Pictures / Docs, each with a count; a live
 dot before Servers while one runs). Same motion rule as the tab bar: the

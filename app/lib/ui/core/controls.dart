@@ -430,9 +430,9 @@ class SegmentOption<T> {
   final Widget? leading;
 }
 
-/// The app's one switch: a slim pill with a hairline and ONE soft capsule
-/// (`ds.fillPressed`) under the chosen cell, the anatomy of the floating tab
-/// bar and of the attach sheet's tabs. It picks the value of a setting (theme,
+/// The app's one switch: a slim tinted pill (`ds.fill`, no border) and ONE
+/// capsule under the chosen cell, lighter than the pill (white on the tint,
+/// `ds.fillPressed` on ink): the tab bar's capsule, without its outline. It picks the value of a setting (theme,
 /// density) and switches what a sheet shows (the kinds of what a session made);
 /// the job differs, the look does not.
 ///
@@ -462,7 +462,7 @@ class Segmented<T> extends StatefulWidget {
 }
 
 class _SegmentedState<T> extends State<Segmented<T>> {
-  /// The capsule's air inside the pill (the pill's own hairline is 1 more).
+  /// The capsule's air inside the pill.
   static const _inset = 2.0;
   /// Air at each side of a label: [_pad] when the row scrolls, at least [_padMin] when the cells are equal.
   static const _pad = 14.0;
@@ -512,7 +512,7 @@ class _SegmentedState<T> extends State<Segmented<T>> {
       child: Builder(
         builder: (context) => LayoutBuilder(
           builder: (context, box) {
-            final inner = box.maxWidth - 2; // inside the hairline
+            final inner = box.maxWidth;
             // Equal cells with the icons; else equal cells with the words alone (an icon
             // is decoration, a word is the option); else a scrolling row, icons kept.
             bool equal(bool icons) => options.every((o) => _contentWidth(context, o, icons: icons) + 2 * _padMin <= inner / n);
@@ -532,9 +532,8 @@ class _SegmentedState<T> extends State<Segmented<T>> {
             return Container(
               height: kMinTap,
               decoration: BoxDecoration(
-                color: ds.surface,
+                color: ds.fill,
                 borderRadius: BorderRadius.circular(kMinTap / 2),
-                border: Border.all(color: ds.hairline),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(kMinTap / 2),
@@ -556,7 +555,7 @@ class _SegmentedState<T> extends State<Segmented<T>> {
                         final capWidth = widths[lo] + (widths[hi] - widths[lo]) * t;
                         return SizedBox(
                           width: total,
-                          height: kMinTap - 2,
+                          height: kMinTap,
                           child: Stack(
                             children: [
                               Positioned(
@@ -566,7 +565,8 @@ class _SegmentedState<T> extends State<Segmented<T>> {
                                 bottom: _inset,
                                 child: DecoratedBox(
                                   decoration: BoxDecoration(
-                                    color: ds.fillPressed,
+                                    // Lighter than the track in both themes: white on the tint, the next rung up on ink.
+                                    color: ds.brightness == Brightness.dark ? ds.fillPressed : ds.surface,
                                     borderRadius: BorderRadius.circular(kMinTap / 2),
                                   ),
                                 ),
