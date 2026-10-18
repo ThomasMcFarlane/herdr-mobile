@@ -13,7 +13,10 @@ library;
 
 import 'dart:io';
 
-import 'package:herdr_mobile/ui/core/markdown/markdown.dart';
+// The pure-Dart files only: the barrel also exports the widgets, and
+// dart:ui does not exist in a CLI build.
+import 'package:herdr_mobile/ui/render/markdown/md_parser.dart';
+import 'package:herdr_mobile/ui/render/markdown/md_stream.dart';
 
 import '../lib/engine_b.dart';
 import '../lib/engine_c.dart';

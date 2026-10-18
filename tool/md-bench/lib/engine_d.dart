@@ -1,8 +1,8 @@
-/// Our layer: `parseMd` of `app/lib/ui/core/markdown/` (engine C plus the
+/// Our layer: `parseMd` of `app/lib/ui/render/markdown/` (engine C plus the
 /// repairs of `md_parser.dart`, chunked as `StreamingMd` freezes it).
 library;
 
-import 'package:herdr_mobile/ui/core/markdown/md_parser.dart';
+import 'package:herdr_mobile/ui/render/markdown/md_parser.dart';
 
 import '../../../app/test/markdown/support/md_dump.dart';
 
