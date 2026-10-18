@@ -135,7 +135,7 @@ Future<void> attach(WidgetTester tester, String item) async {
   await settle(tester);
 }
 
-/// Picks a file of the machine in the sheet's Host tab: opens the sheet, the
+/// Picks a file of the machine in the sheet's Machine tab: opens the sheet, the
 /// tab, lifts the sheet to full height, shows every file and walks [path].
 Future<void> attachHostFile(WidgetTester tester, List<String> path) async {
   await tester.tap(attachButton);
@@ -263,13 +263,14 @@ void main() {
   });
 
   group('the attach button', () {
-    testWidgets('opens a sheet with Gallery, Files and Host tabs and the camera tile', (tester) async {
+    testWidgets('opens a sheet with Gallery, Files and Machine tabs and the camera tile', (tester) async {
       await pump(tester, FakeAgentSession(machine: machineWithFiles(projectFs())), kit: FakeKit().kit);
       await tester.tap(attachButton);
       await settle(tester);
       expect(find.byKey(AttachTabBar.tabKey(AttachTab.gallery)), findsOneWidget);
       expect(find.byKey(AttachTabBar.tabKey(AttachTab.files)), findsOneWidget);
       expect(find.byKey(AttachTabBar.tabKey(AttachTab.host)), findsOneWidget);
+      expect(find.text('Machine'), findsOneWidget, reason: 'the vocabulary says machine, not host');
       expect(find.text('Camera'), findsOneWidget);
       expect(find.text('This agent does not take images. Photos go up as files.'), findsNothing);
     });
@@ -283,7 +284,7 @@ void main() {
       expect(find.text('Camera'), findsOneWidget, reason: 'the tab is not taken away');
     });
 
-    testWidgets('a host with no file access says so in the Host tab', (tester) async {
+    testWidgets('a machine with no file access says so in the Machine tab', (tester) async {
       await pump(tester, FakeAgentSession());
       await tester.tap(attachButton);
       await settle(tester);

@@ -211,7 +211,7 @@ void main() {
       expect(scroll.position.pixels, 0);
     });
 
-    testWidgets('focusing the search field on the Host tab lifts the sheet to full height for the keyboard', (tester) async {
+    testWidgets('focusing the search field on the Machine tab lifts the sheet to full height for the keyboard', (tester) async {
       await openSheet(tester);
       await tester.tap(find.byKey(AttachTabBar.tabKey(AttachTab.host)));
       await tester.pump();

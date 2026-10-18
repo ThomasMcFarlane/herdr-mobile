@@ -436,7 +436,9 @@ class _OpenPathScreenState extends State<_OpenPathScreen> {
     return ColoredBox(
       color: context.ds.bg,
       child: AnimatedSwitcher(
-        duration: Motion.reduced(context) ? Duration.zero : Motion.fade,
+        duration: Motion.of(context, Motion.fade),
+        switchInCurve: Motion.easeOut,
+        switchOutCurve: Motion.easeOutExit,
         child: page,
       ),
     );

@@ -17,7 +17,7 @@ import 'selection_circle.dart';
 import 'sheet_frame.dart';
 import 'tray.dart';
 
-/// The attach sheet's Host tab: files on the machine the agent runs on, in
+/// The attach sheet's Machine tab: files on the machine the agent runs on, in
 /// the sheet itself (no pushed screen), starting at the session's folder and
 /// showing what changed in the last hour first, because "what did it just
 /// touch?" is the usual reason to attach a host file.
@@ -224,7 +224,6 @@ class _HostTabState extends State<HostTab> {
   );
 
   Widget _browser(double clearance) {
-    final ds = context.ds;
     return ListenableBuilder(
       listenable: _vm,
       builder: (context, _) {
@@ -253,14 +252,14 @@ class _HostTabState extends State<HostTab> {
                   children: [
                     AppChip(
                       label: 'Changed recently',
-                      leading: Icon(LucideIcons.clock, size: IconSize.inline, color: _options.recentOnly ? ds.text : ds.textSecondary),
+                      icon: LucideIcons.clock,
                       selected: _options.recentOnly,
                       onTap: () => _options.setRecentOnly(!_options.recentOnly),
                     ),
                     const SizedBox(width: Gap.sm),
                     AppChip(
                       label: 'Browse all…',
-                      leading: Icon(LucideIcons.folderTree, size: IconSize.inline, color: ds.textSecondary),
+                      icon: LucideIcons.folderTree,
                       onTap: () => unawaited(_browseAll()),
                     ),
                   ],

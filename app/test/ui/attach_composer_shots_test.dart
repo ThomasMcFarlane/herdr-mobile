@@ -175,7 +175,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
   }
 
-  /// Picks AGENTS.md in the sheet's Host tab and attaches it.
+  /// Picks AGENTS.md in the sheet's Machine tab and attaches it.
   Future<void> attachHostFile(WidgetTester tester, Size size) async {
     await tester.tap(find.byIcon(LucideIcons.paperclip).first);
     await tester.pump();
@@ -303,7 +303,7 @@ void main() {
         then: () async {
           await tapAttach(tester, 'Photo library');
           await tapAttach(tester, 'Photo library');
-          // The Host tab's list at 1.6x text on a 320 px screen is the sheet
+          // The Machine tab's list at 1.6x text on a 320 px screen is the sheet
           // shots' business; here the chips are what is looked at.
           if (scale == 1) await attachHostFile(tester, size);
           await tester.enterText(find.byType(TextField).last, 'What do these have in common?');

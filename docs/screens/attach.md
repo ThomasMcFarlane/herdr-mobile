@@ -31,8 +31,10 @@ tabs draw what they have (the bars, the camera tile) while the library answers.
   below the screen plus the bars) and are top-aligned, never centred, for the
   same reason.
 - **Tabs** (`attach_bars.dart`, `attach_sheet_view.dart`): Gallery | Files |
-  Host, each an icon and a label, the selected one on a `ds.fillPressed` capsule,
-  in the tab bar's pill (`FloatingBarPill`).
+  Machine, each an icon and a label, the selected one in `ds.accentText` on a
+  `ds.accentWash` capsule, as in the app's tab bar, in the tab bar's pill
+  (`FloatingBarPill`). The third tab is `Machine` (the vocabulary's word for
+  the computer the agent runs on), never `Host`.
   Built the first time they are shown, kept alive and out of layout while
   hidden (scroll position and state survive), cross-faded over `Motion.fade`
   (120 ms; nothing is wrapped in an opacity layer at rest). The last tab is
@@ -108,7 +110,7 @@ tabs draw what they have (the bars, the camera tile) while the library answers.
   phone path); a recent whose host copy still exists is attached again without
   sending it again. Over 25 MB: attached with a warning; over 200 MB: refused
   with `name is 312 MB. Files up to 200 MB can be attached.`
-- **Host** (`host_tab.dart`). The file browser's own pieces inline:
+- **Machine** (`host_tab.dart`). The file browser's own pieces inline:
   `FileBrowserViewModel` per folder (one stack, shared `FileBrowserOptions`),
   `FileRow` with a `SelectionCircle` in its trailing slot, `FileBreadcrumbs`,
   `EmptyFolderState`; opens on `Changed recently` in the session's folder, a

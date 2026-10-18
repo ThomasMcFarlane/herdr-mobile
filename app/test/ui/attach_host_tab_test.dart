@@ -1,4 +1,4 @@
-// The attach sheet's Host tab: the session folder with what changed recently,
+// The attach sheet's Machine tab: the session folder with what changed recently,
 // inline folders, search, picks in the shared tray, the states, and PNGs of the
 // tab for review (ATTACH_SHOTS=1).
 @TestOn('vm')

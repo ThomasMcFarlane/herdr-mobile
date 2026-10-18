@@ -9,7 +9,7 @@ extension AttachTabLook on AttachTab {
   String get label => switch (this) {
     AttachTab.gallery => 'Gallery',
     AttachTab.files => 'Files',
-    AttachTab.host => 'Host',
+    AttachTab.host => 'Machine',
   };
 
   IconData get icon => switch (this) {
@@ -26,7 +26,7 @@ extension AttachTabLook on AttachTab {
   };
 }
 
-/// The pill at the bottom of the sheet: Gallery | Files | Host, each an icon
+/// The pill at the bottom of the sheet: Gallery | Files | Machine, each an icon
 /// and a label, the selected one on a soft capsule. Floats over the content
 /// in the main tab bar's pill ([FloatingBarPill]), sized to its tabs.
 class AttachTabBar extends StatelessWidget {

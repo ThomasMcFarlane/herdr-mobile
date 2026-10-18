@@ -1,6 +1,6 @@
 // Renders the attach sheet to PNGs for review: the Gallery grid with picks
 // (half and full height), the permission reason, a refused permission, the
-// Files and Host tabs, the chips strip with an upload in flight, and the
+// Files and Machine tabs, the chips strip with an upload in flight, and the
 // worst cases (no photos, one photo, 500 photos, long and Vietnamese names).
 // Light and dark at 412x892 and 320x640. Off by default; it writes files:
 //

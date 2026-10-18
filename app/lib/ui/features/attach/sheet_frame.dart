@@ -75,8 +75,11 @@ class SheetPosition {
     _dragging = true;
     final next = offset.value + dy;
     // A little give past full height, none past the screen's edge.
-    offset.value = next < 0 ? next * 0.25 : math.min(next, dismissAt);
+    offset.value = next < 0 ? next * _overpull : math.min(next, dismissAt);
   }
+
+  /// How much of a drag past full height the sheet follows: it gives, a quarter.
+  static const _overpull = 0.25;
 
   /// The finger lifted at [velocity] dp/s (positive = downwards).
   ///
@@ -140,7 +143,7 @@ class SheetPosition {
 
   /// Apple's projection of a fling: where it would stop with the usual
   /// deceleration.
-  static double _project(double velocity) => velocity * 0.25;
+  static double _project(double velocity) => velocity * Springs.projectSheet;
 
   void dispose() {
     _controller.dispose();

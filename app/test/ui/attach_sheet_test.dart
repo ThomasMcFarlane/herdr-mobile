@@ -1,5 +1,5 @@
 // The unified attach sheet in the agent session: it opens on the tap's frame,
-// one tray shared by the Gallery, Files and Host tabs, the permission flow, the
+// one tray shared by the Gallery, Files and Machine tabs, the permission flow, the
 // camera tile, the grid with 5,000 pictures, and the chips that follow
 // (uploads with progress, cancel and retry, size caps, Send held while a file
 // is on its way).
@@ -216,7 +216,7 @@ void main() {
       expect(find.byType(AttachTabBar), findsNothing);
       await _tapClip(tester);
       expect(fake.kit.tab, AttachTab.host);
-      expect(find.textContaining('Find in'), findsOneWidget, reason: 'it opened on the Host tab');
+      expect(find.textContaining('Find in'), findsOneWidget, reason: 'it opened on the Machine tab');
     });
 
     testWidgets('a screenshot taken while the app was open is on the grid the next time the sheet opens', (tester) async {
