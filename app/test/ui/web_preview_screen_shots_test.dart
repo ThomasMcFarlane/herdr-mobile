@@ -1,9 +1,11 @@
 // Renders the page screen (WebPreviewScreen) to PNGs for review, with the fake
 // web view painting a real screenshot of a page where the WebView would be:
 // the page shown, a load in progress (the hairline under the bar), a load that
-// failed (panel with Retry), the ⋯ sheet, and the toast for another port of
-// the machine; light and dark at 412x892, and the page shown at 320x640 with
-// text at 1.6. Off by default; it writes files:
+// failed (panel with Retry), the ⋯ sheet, the toast for another port of the
+// machine, the toast for a link to the web, a page that is not from the
+// machine (posted elsewhere), and a dropped connection; light and dark at
+// 412x892, and the page shown at 320x640 with text at 1.6. Off by default; it
+// writes files:
 //
 //   WEB_PREVIEW_SHOTS=1 flutter test test/ui/web_preview_screen_shots_test.dart
 //
@@ -157,6 +159,50 @@ void main() {
           for (var i = 0; i < 6; i++) {
             await tester.pump(const Duration(milliseconds: 100));
           }
+        },
+      );
+    });
+
+    testWidgets('a link to the web, $mode', (tester) async {
+      await render(
+        tester,
+        'web-link',
+        brightness: brightness,
+        then: (tester, web) async {
+          await web.navigate('https://github.com/tuan3w/herdr-mobile');
+          for (var i = 0; i < 6; i++) {
+            await tester.pump(const Duration(milliseconds: 100));
+          }
+        },
+      );
+    });
+
+    testWidgets('a page not from the machine, $mode', (tester) async {
+      await render(
+        tester,
+        'not-from',
+        brightness: brightness,
+        then: (tester, web) async {
+          web.titles['https://login.example.com/session'] = 'Sign in';
+          web.land('https://login.example.com/session');
+          await tester.pump(const Duration(milliseconds: 300));
+        },
+      );
+    });
+
+    testWidgets('a dropped connection, $mode', (tester) async {
+      await render(
+        tester,
+        'lost',
+        brightness: brightness,
+        then: (tester, web) async {
+          final machine = tester.widget<WebPreviewScreen>(find.byType(WebPreviewScreen)).machine;
+          machine.start();
+          for (var i = 0; i < 6; i++) {
+            await tester.pump(const Duration(milliseconds: 100));
+          }
+          machine.suspend();
+          await tester.pump(const Duration(milliseconds: 300));
         },
       );
     });
