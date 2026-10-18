@@ -592,7 +592,7 @@ class AttentionNotifier {
   }
 
   /// One summary per kind for the agents the burst limit held back ("N agents
-  /// need you", "N agents finished"): how many there are now (those with a
+  /// need you", "N agents done"): how many there are now (those with a
   /// notification of their own too), replaced as that changes, gone when none
   /// of the held-back ones is left. No episode is dropped silently.
   void _updateSummaries() {
@@ -616,7 +616,7 @@ class AttentionNotifier {
         id: id,
         kind: kind,
         title: switch (kind) {
-          NotifyKind.needsYou => needYou(want),
+          NotifyKind.needsYou => needYou(want, noun: 'agent'),
           NotifyKind.finished => '${countOf(want, 'agent')} done',
         },
         body: 'Open herdr to see which',

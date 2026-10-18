@@ -491,7 +491,7 @@ void main() {
         final firstThree = [for (final a in r.fleet.agents.take(3)) _id('a', a.pane.id)];
         expect(r.notifier.shown.where((n) => n.id != _summaryId).map((n) => n.id), firstThree);
         final summary = r.notifier.shown.where((n) => n.id == _summaryId).single;
-        expect(summary.title, '10 need you');
+        expect(summary.title, '10 agents need you');
         expect(summary.kind, NotifyKind.needsYou);
         expect(summary.link, agentsBoardLink);
         expect(r.notifier.visible, hasLength(4));
@@ -511,7 +511,7 @@ void main() {
         }
 
         expect(r.notifier.shown.where((n) => n.id != _summaryId), hasLength(3));
-        expect(r.notifier.active[_summaryId]!.title, '30 need you');
+        expect(r.notifier.active[_summaryId]!.title, '30 agents need you');
         expect(r.notifier.visible, hasLength(4));
         r.dispose();
       });
@@ -526,12 +526,12 @@ void main() {
           r.change('a', p, 'blocked');
           r.advance(const Duration(seconds: 1));
         }
-        expect(r.notifier.active[_summaryId]!.title, '4 need you');
+        expect(r.notifier.active[_summaryId]!.title, '4 agents need you');
         r.change('a', all[4], 'blocked');
-        expect(r.notifier.active[_summaryId]!.title, '5 need you');
+        expect(r.notifier.active[_summaryId]!.title, '5 agents need you');
 
         r.change('a', all[0], 'working'); // one of the three shown is answered
-        expect(r.notifier.active[_summaryId]!.title, '4 need you');
+        expect(r.notifier.active[_summaryId]!.title, '4 agents need you');
 
         // The held-back ones go: nothing left to summarise.
         for (final p in all.skip(3).take(2)) {
@@ -550,7 +550,7 @@ void main() {
         r.life(away);
         r.set('a', {for (final (i, p) in all.indexed) p: i < 4 ? 'blocked' : 'working'});
         expect(r.notifier.shown.where((n) => n.id != _summaryId), hasLength(3));
-        expect(r.notifier.active[_summaryId]!.title, '4 need you');
+        expect(r.notifier.active[_summaryId]!.title, '4 agents need you');
 
         r.advance(const Duration(seconds: 6));
         r.set('a', {for (final p in all) p: 'blocked'});
@@ -559,7 +559,7 @@ void main() {
         final individual = r.notifier.shown.where((n) => n.id != _summaryId).toList();
         expect(individual, hasLength(6));
         expect({for (final n in individual) n.id}, hasLength(6), reason: 'each agent once');
-        expect(r.notifier.active[_summaryId]!.title, '8 need you');
+        expect(r.notifier.active[_summaryId]!.title, '8 agents need you');
         r.dispose();
       });
     });
@@ -646,7 +646,7 @@ void main() {
         r.life(away);
         r.set('a', {for (final (i, p) in all.indexed) p: i < 5 ? 'blocked' : 'done'});
 
-        expect(r.notifier.active[_summaryId]!.title, '5 need you');
+        expect(r.notifier.active[_summaryId]!.title, '5 agents need you');
         expect(r.notifier.active[_finishedSummaryId]!.title, '5 agents done');
         expect(r.notifier.shown.where((n) => n.id != _summaryId && n.id != _finishedSummaryId), hasLength(3),
             reason: 'one burst: three in all, blocked first');
@@ -903,7 +903,7 @@ void main() {
         sessions.forEach(_blockSession);
 
         expect(r.notifier.shown.where((n) => n.id != _summaryId), hasLength(3));
-        expect(r.notifier.active[_summaryId]!.title, '4 need you');
+        expect(r.notifier.active[_summaryId]!.title, '4 agents need you');
         r.dispose();
       });
     });

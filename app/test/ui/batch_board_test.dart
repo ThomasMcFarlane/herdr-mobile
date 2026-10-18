@@ -248,6 +248,51 @@ void main() {
       await teardownBoard(tester, h);
     });
 
+    testWidgets('a screen pushed over the board (a notification, a deep link) keeps the picked set', (tester) async {
+      final h = await _studio([_pane(1, 'working'), _pane(2, 'blocked')]);
+      await _pump(tester, h);
+      await _pick(tester, ['task 1', 'task 2']);
+      expect(_selected(2), findsOneWidget);
+
+      unawaited(tester.state<NavigatorState>(find.byType(Navigator).first).push(
+            MaterialPageRoute<void>(builder: (_) => const Scaffold(body: Text('pushed'))),
+          ));
+      await _settle(tester);
+      expect(find.text('pushed'), findsOneWidget);
+
+      await tester.binding.handlePopRoute();
+      await _settle(tester);
+      expect(_selected(2), findsOneWidget, reason: 'the person comes back to the set they picked');
+      expect(find.byType(FloatingTabBar), findsNothing, reason: 'the action bar is still up');
+      await teardownBoard(tester, h);
+    });
+
+    testWidgets('a running batch, then another tab: the set and its bar are kept', (tester) async {
+      final tabs = HomeTabs();
+      final h = await _studio([_pane(1, 'idle')]);
+      final slow = _SlowEnd(key: 'a/k1', title: 'agent one', machine: h.fleet.connection('a'));
+      final sessions = _Sessions([slow]);
+      await _pump(tester, h, sessions: sessions, tabs: tabs);
+      await _pick(tester, ['agent one']);
+      await _tap(tester, find.text('Close'));
+      await _tap(tester, find.text('Close 1 agent'));
+      expect(find.text('Closing 1 agent…'), findsOneWidget);
+
+      tabs.select(HomeTab.machines);
+      await _settle(tester);
+      expect(find.byType(FloatingTabBar), findsOneWidget, reason: 'Machines has its tab bar');
+      tabs.select(HomeTab.agents);
+      await _settle(tester);
+      expect(_selected(1), findsOneWidget, reason: 'a running batch is not cancelled by a tab switch');
+      expect(find.text('Closing 1 agent…'), findsOneWidget);
+      expect(find.byType(FloatingTabBar), findsNothing);
+
+      slow.gate.complete();
+      await _settle(tester);
+      sessions.dispose();
+      await teardownBoard(tester, h);
+    });
+
     testWidgets('a toast stands above the triage pill, never over it', (tester) async {
       final h = await _studio([_pane(1, 'working'), _pane(2, 'blocked')]);
       await _pump(tester, h, width: 412, height: 892);

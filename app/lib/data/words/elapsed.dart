@@ -40,9 +40,10 @@ String _clock(DateTime t) => '${_two(t.hour)}:${_two(t.minute)}';
 String _date(DateTime t, DateTime now) =>
     t.year == now.year ? '${t.day} ${_months[t.month - 1]}' : '${t.day} ${_months[t.month - 1]} ${t.year}';
 
-/// Whole calendar days from [t] to [now], both local.
+/// Whole calendar days from [t] to [now], both local. Counted on UTC dates so
+/// a 23 h or 25 h day around a clock change still counts as one.
 int _daysBefore(DateTime t, DateTime now) =>
-    DateTime(now.year, now.month, now.day).difference(DateTime(t.year, t.month, t.day)).inDays;
+    DateTime.utc(now.year, now.month, now.day).difference(DateTime.utc(t.year, t.month, t.day)).inDays;
 
 /// How long ago [time] was: `Just now`, `4m ago`, `3h ago`, `Yesterday`,
 /// `4d ago`, then the date (`3 Oct`, with the year once it is not this year).
@@ -62,14 +63,14 @@ String formatAgo(DateTime time, DateTime now) {
 
 /// The moment itself: `Today 14:02`, `Yesterday 14:02`, `3 Oct, 14:02`,
 /// `3 Oct 2025, 14:02`. With [sentence], the words that follow a verb:
-/// `at 14:02`, `yesterday at 14:02`, `on 3 Oct at 14:02`.
+/// `today at 14:02`, `yesterday at 14:02`, `on 3 Oct at 14:02`.
 String formatWhen(DateTime time, DateTime now, {bool sentence = false}) {
   final t = time.toLocal();
   final current = now.toLocal();
   final days = _daysBefore(t, current);
   final clock = _clock(t);
   if (sentence) {
-    if (days <= 0) return 'at $clock';
+    if (days <= 0) return 'today at $clock';
     if (days == 1) return 'yesterday at $clock';
     return 'on ${_date(t, current)} at $clock';
   }

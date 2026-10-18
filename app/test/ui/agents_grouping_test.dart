@@ -1,5 +1,4 @@
 // What the agents tab lists, derived from the fleet without any widgets.
-import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/words/elapsed.dart';
 import 'package:herdr_mobile/data/models/herdr_models.dart' show AgentStatus;
@@ -8,6 +7,9 @@ import 'package:herdr_mobile/data/models/status_time.dart';
 import 'package:herdr_mobile/data/repositories/attention_set.dart';
 import 'package:herdr_mobile/data/repositories/machine_connection.dart';
 import 'package:herdr_mobile/data/services/herdr_transport.dart';
+import 'package:flutter/material.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
+import 'package:herdr_mobile/ui/features/agents/agent_card.dart' show StateTime;
 import 'package:herdr_mobile/ui/features/agents/agents_grouping.dart';
 
 import '../support/fake_agent_session.dart';
@@ -375,5 +377,22 @@ void main() {
         expect(folds(agentEntries([section(s, 12)])), isEmpty, reason: s.name);
       }
     });
+  });
+
+  // The working glyph does not say quiet, so the row must: a bare `14m` would
+  // look like an agent that started 14 minutes ago.
+  testWidgets('a quiet working agent says quiet on the row, not only to a screen reader', (tester) async {
+    final h = (await tester.runAsync(() => _fleet({'a': const []})))!;
+    addTearDown(h.dispose);
+    final row = _row('1', AgentStatus.working, h.fleet.connections.single);
+    await tester.pumpWidget(MaterialApp(
+      theme: AppTheme.light(),
+      home: Scaffold(body: StateTime(agent: (
+        key: row.key, machine: row.machine, paneId: row.paneId, status: row.status, title: row.title,
+        subtitle: row.subtitle, stale: false, since: null, quietMinutes: 14,
+      ))),
+    ));
+    expect(find.textContaining('quiet'), findsOneWidget);
+    expect(find.textContaining('14m'), findsOneWidget);
   });
 }

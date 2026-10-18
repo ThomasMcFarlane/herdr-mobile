@@ -415,8 +415,8 @@ class _Header extends StatelessWidget {
 /// the glyph already says the state (DESIGN.md Hierarchy 5). Blocked reads in
 /// the blocked colour and weight, every other state muted. After a gap the
 /// start of a state is only a bound, and says so: "≤ 25m". A working agent
-/// quiet for the connection's `quietAfter` shows how long it has been quiet
-/// instead, since that is the news; the number is the one the row was sorted
+/// quiet for the connection's `quietAfter` shows `quiet 14m` instead: the
+/// glyph says working, not quiet, so the word stays visible; the number is the one the row was sorted
 /// by (worked out at the machine's last refresh, never per event), so label
 /// and order agree. Offline agents say so; an agent whose start is not known
 /// at all claims nothing. Screen readers hear the words ("needs you, 4
@@ -446,7 +446,7 @@ class StateTime extends StatelessWidget {
     if (agent.quietMinutes > 0) {
       // design-lint: allow(raw-duration) a count of minutes the machine measured, not a timer
       final quiet = Duration(minutes: agent.quietMinutes);
-      return label(Elapsed.compact(quiet, seconds: false), 'working, quiet for ${Elapsed.words(quiet)}');
+      return label('quiet ${Elapsed.compact(quiet, seconds: false)}', 'working, quiet for ${Elapsed.words(quiet)}');
     }
     final time = agent.since;
     if (time == null) return const SizedBox.shrink();

@@ -68,7 +68,9 @@ element has the same weight" is a fail.
 5. **Say it once.** A row says its status with the glyph. Its trailing time is
    the time alone (`4m`), weighted and coloured by the status (`blockedText`
    w600 when it needs you, `textMuted` otherwise); a screen reader still hears
-   the words. The section header and the filter chips are the summary.
+   the words. The rule covers only what the glyph already says: a quiet
+   working agent reads `quiet 14m`, because the working glyph does not say
+   quiet. The section header and the filter chips are the summary.
 6. **Header budget.** A top bar holds at most two trailing actions, ⋯
    included (`AppTopBar` asserts it): a third truncated the title, which is
    what the person is answering for.
@@ -239,7 +241,7 @@ change. Status: **stable** = a catalog entry, a semantics test and this row.
 | --- | --- | --- | --- |
 | `PressBuilder` | `press.dart` | every tappable: press feedback, 44 dp hit, one semantics node | `InkWell`, raw `GestureDetector` taps |
 | `AppButton`, `CircleButton` | `buttons.dart` | buttons; round icon buttons | Material buttons |
-| `TextAction` | `text_action.dart` | a word to tap (`Read all`, `Mark all reviewed`) | six text-link styles |
+| `TextAction` | `text_action.dart` | a word to tap (`Read all`, `Mark all reviewed`) | six text-link styles; one exception, the board's `N more…` under its answer chips (`reply_chips.dart`): it is a row of that stack, with the chips' height and fill, and it greys out while an answer is in flight, which a `TextAction` cannot |
 | `AppChip` | `chips.dart` | filter, tag, pick-one; selected = accent wash; `enabled: false` keeps an unavailable choice, at half strength, untappable | outlined chips, an `Opacity` over a chip |
 | `Segmented` | `segmented.dart` | "this or that": one capsule that travels | two chips used as a switch |
 | `AppSwitch`, `SwitchRow` | `switch.dart` | on/off | |

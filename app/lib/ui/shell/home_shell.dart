@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../data/repositories/app_update.dart';
 import '../../data/repositories/attention_set.dart';
 import '../../data/repositories/fleet_repository.dart';
+import '../../data/words/plural.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../support/home_tabs.dart';
 import 'arrival_cue.dart';
@@ -175,6 +176,7 @@ class _HomeShellState extends State<HomeShell> with RestorationMixin, SingleTick
                     child: AgentsScreen(
                       onShowMachines: () => _select(_machines),
                       onSelectingChanged: (selecting) => _selecting.value = selecting,
+                      current: index == _agents,
                     ),
                   ),
                 ),
@@ -242,7 +244,7 @@ class _HomeShellState extends State<HomeShell> with RestorationMixin, SingleTick
                       icon: HerdrIcons.agents,
                       label: 'Agents',
                       badge: needsYou,
-                      badgeLabel: needsYou == 1 ? 'needs you' : 'need you',
+                      badgeLabel: needYouVerb(needsYou),
                     ),
                     const TabSpec(icon: HerdrIcons.machines, label: 'Machines'),
                     // A newer version is a quiet dot, never a count: it is not
@@ -273,9 +275,9 @@ class _HomeShellState extends State<HomeShell> with RestorationMixin, SingleTick
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
         if (index != _agents) {
-          // Selection mode lives on the Agents board; if it is still up
-          // (picking, then Machines from the connection strip), its own scope
-          // clears it on this same Back.
+          // Leaving the board cancels picking, so a selection is still up
+          // here only while a batch action runs; the board's own scope then
+          // takes this same Back.
           _select(_agents);
           return;
         }

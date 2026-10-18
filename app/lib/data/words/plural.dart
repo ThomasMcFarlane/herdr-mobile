@@ -7,4 +7,11 @@ String countOf(int n, String one, [String? many]) => '$n ${plural(n, one, many)}
 String plural(int n, String one, [String? many]) => n == 1 ? one : (many ?? '${one}s');
 
 /// `1 needs you`, `3 need you`: the one phrase for agents waiting on the person.
-String needYou(int n) => '$n ${n == 1 ? 'needs' : 'need'} you';
+/// With [noun] the count names its subject (`10 agents need you`), for text
+/// read away from the board, such as a notification title.
+String needYou(int n, {String? noun}) =>
+    '${noun == null ? '$n' : countOf(n, noun)} ${needYouVerb(n)}';
+
+/// `needs you` or `need you`, agreeing with [n]: the phrase without its count,
+/// for a label that sits beside the number.
+String needYouVerb(int n) => n == 1 ? 'needs you' : 'need you';

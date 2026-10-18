@@ -13,6 +13,8 @@ void main() {
       expect(countOf(3, 'match', 'matches'), '3 matches');
       expect(needYou(1), '1 needs you');
       expect(needYou(4), '4 need you');
+      expect(needYou(10, noun: 'agent'), '10 agents need you');
+      expect(needYou(1, noun: 'agent'), '1 agent needs you');
     });
   });
 
@@ -56,9 +58,17 @@ void main() {
       expect(formatWhen(DateTime(2026, 3, 9, 14, 2), noon), 'Yesterday 14:02');
       expect(formatWhen(DateTime(2026, 2, 3, 14, 2), noon), '3 Feb, 14:02');
       expect(formatWhen(DateTime(2025, 2, 3, 14, 2), noon), '3 Feb 2025, 14:02');
-      expect(formatWhen(DateTime(2026, 3, 10, 9, 5), noon, sentence: true), 'at 09:05');
+      expect(formatWhen(DateTime(2026, 3, 10, 9, 5), noon, sentence: true), 'today at 09:05');
       expect(formatWhen(DateTime(2026, 3, 9, 14, 2), noon, sentence: true), 'yesterday at 14:02');
       expect(formatWhen(DateTime(2026, 2, 3, 14, 2), noon, sentence: true), 'on 3 Feb at 14:02');
+    });
+
+    // Only bites where the clock changes; run with TZ=Europe/London.
+    test('the day after a clock change is still yesterday', () {
+      final now = DateTime(2026, 3, 30, 1);
+      final before = DateTime(2026, 3, 29, 14, 2);
+      expect(formatWhen(before, now), 'Yesterday 14:02');
+      expect(formatAgo(before, now), 'Yesterday');
     });
   });
 

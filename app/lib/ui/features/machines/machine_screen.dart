@@ -9,6 +9,7 @@ import '../../../data/repositories/agent_screens.dart';
 import '../../../data/repositories/machine_connection.dart';
 import 'approval_button.dart';
 import '../../../data/words/agent_names.dart';
+import '../../../data/words/where_line.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../agents/agent_navigation.dart';
 import '../create/management_sheets.dart';
@@ -322,11 +323,14 @@ class _PaneRow extends StatelessWidget {
     final agent = pane.agent;
     final name = agentName(agent);
     final title = pane.title.isNotEmpty ? pane.title : name;
+    // whereLine's drop rules for the agent and the folder; the tab sits
+    // between them, since a workspace with several tabs needs it as well as
+    // the folder.
     final subtitle = [
-      if (agent != null && name != title) name,
+      whereLine(agent: agent != null ? name : null, title: title),
       ?tabLabel,
-      if (cwdTail(pane.cwd).isNotEmpty) cwdTail(pane.cwd),
-    ].join(' · ');
+      whereLine(folder: cwdTail(pane.cwd), title: title),
+    ].where((s) => s.isNotEmpty).join(' · ');
 
     return ListRow(
       leading: agent != null

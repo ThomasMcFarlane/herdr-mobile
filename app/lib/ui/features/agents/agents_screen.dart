@@ -36,7 +36,14 @@ import 'triage_pill.dart';
 /// under the thumb). Needs you and Done count and order what [AttentionSet]
 /// says, the same as the badge, the pill and the triage sheet.
 class AgentsScreen extends StatefulWidget {
-  const AgentsScreen({super.key, this.onShowMachines, this.onSelectingChanged});
+  const AgentsScreen({super.key, this.onShowMachines, this.onSelectingChanged, this.current = true});
+
+  /// Whether the Agents tab is the shell's chosen tab. Picking ends when it
+  /// stops being (unless a batch is running), so the tab bar is never left
+  /// hidden over another tab. A route pushed over the shell (a notification,
+  /// a deep link) leaves the tab chosen, and the picked set waits for the
+  /// person's return.
+  final bool current;
 
   /// Takes the person to the Machines tab, where connection problems are
   /// explained and fixed.
@@ -106,6 +113,17 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
 
   /// Tells the shell when picking starts and ends, so it can put its tab bar
   /// away.
+  @override
+  void didUpdateWidget(AgentsScreen old) {
+    super.didUpdateWidget(old);
+    if (old.current && !widget.current && _selection.active && _selection.busy == null) {
+      // After this frame: cancelling notifies the shell, which is building.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !widget.current && _selection.busy == null) _selection.cancel();
+      });
+    }
+  }
+
   void _onSelection() {
     final active = _selection.active;
     if (active == _wasSelecting) return;
@@ -144,16 +162,12 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
 
   /// Tells the sessions when the tab is on screen: they list their hosts
   /// every minute only then.
-  ///
-  /// Picking belongs to the board: leaving the tab ends it (unless a batch is
-  /// running), so the tab bar is never left hidden over another tab.
   void _reportVisible(bool visible) {
     if (_reportedVisible == visible) return;
     _reportedVisible = visible;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _sessions?.setBoardVisible(_reportedVisible ?? false);
-      if (_reportedVisible == false && _selection.active && _selection.busy == null) _selection.cancel();
     });
   }
 
@@ -656,11 +670,10 @@ class _BackLeavesSelection extends StatelessWidget {
 }
 
 String _summary(AgentsOverview o, int agentSessions) {
-  String count(int n, String noun) => '$n $noun${n == 1 ? '' : 's'}';
   return [
-    count(o.machineCount, 'machine'),
-    o.agents.isEmpty ? 'no agents' : count(o.agents.length, 'agent'),
-    if (agentSessions > 0) count(agentSessions, 'agent session'),
+    countOf(o.machineCount, 'machine'),
+    o.agents.isEmpty ? 'no agents' : countOf(o.agents.length, 'agent'),
+    if (agentSessions > 0) countOf(agentSessions, 'agent session'),
     if (o.troubled.isNotEmpty) '${o.troubled.length} not connected',
   ].join(' · ');
 }
