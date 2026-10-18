@@ -491,7 +491,14 @@ class _WebPreviewScreenState extends State<WebPreviewScreen> {
           children: [
             AppTopBar(
               title: visibleText(_title ?? page?.label ?? widget.page.label),
-              subtitle: '${visibleText(place)} · ${widget.machine.profile.label}',
+              // The address in a pill, as a browser shows it: the screen reads as
+              // a web page and not as one of herdr's own (an owner's check found
+              // title-over-host alone looked like any other screen). The hairline
+              // under the bar marks where the page starts.
+              bottom: _AddressPill(
+                address: visibleText(page?.label ?? place),
+                machine: widget.machine.profile.label,
+              ),
               actions: [
                 CircleButton(
                   icon: LucideIcons.rotateCw,
@@ -547,6 +554,50 @@ class _WebPreviewScreenState extends State<WebPreviewScreen> {
 /// A hairline under the bar that fills with the page's load ([progress] of
 /// 100), then goes; nothing while no page loads. It moves only with real
 /// progress: no loop.
+/// `🌐 localhost:8790/page2.html · tuannd12`: where the page comes from, in a
+/// quiet pill under the title, one line, the address cut at its end.
+class _AddressPill extends StatelessWidget {
+  const _AddressPill({required this.address, required this.machine});
+
+  final String address;
+  final String machine;
+
+  @override
+  Widget build(BuildContext context) {
+    final ds = context.ds;
+    return Padding(
+      padding: const EdgeInsets.only(top: Gap.xs),
+      child: Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: DecoratedBox(
+          decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.pill)),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Gap.sm, vertical: Gap.xs),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(LucideIcons.globe, size: IconSize.inline, color: ds.textSecondary),
+                const SizedBox(width: Gap.xs),
+                Flexible(
+                  child: Text.rich(
+                    TextSpan(children: [
+                      TextSpan(text: address, style: Type.caption.copyWith(color: ds.text)),
+                      TextSpan(text: ' · $machine'),
+                    ]),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Type.caption.copyWith(color: ds.textSecondary),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _LoadBar extends StatelessWidget {
   const _LoadBar({required this.progress});
 
@@ -556,9 +607,13 @@ class _LoadBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final ds = context.ds;
     final p = progress;
+    // Always a hairline: the edge between herdr and the page. Loading fills
+    // it with the accent from the left.
     return SizedBox(
       height: Gap.hair,
-      child: p == null
+      child: ColoredBox(
+        color: ds.hairline,
+        child: p == null
           ? null
           : Align(
               alignment: Alignment.centerLeft,
@@ -570,6 +625,7 @@ class _LoadBar extends StatelessWidget {
                 child: ColoredBox(color: ds.accent),
               ),
             ),
+      ),
     );
   }
 }
