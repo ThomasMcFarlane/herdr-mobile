@@ -167,6 +167,7 @@ void main() {
         );
     const base = '/home/dev/payments-api';
     final session = FakeAgentSession(
+      machine: _machine(FakeFs()),
       state: AgentSessionState(
         's',
         items: [
