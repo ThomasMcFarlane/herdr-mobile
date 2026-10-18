@@ -37,10 +37,10 @@ void main() {
     await tester.tap(fold);
     await settle(tester);
     expect(find.text('Task 27'), findsOneWidget, reason: 'every row shows');
-    expect(find.text('Show fewer'), findsOneWidget);
+    expect(find.text('Show less'), findsOneWidget);
     expect(find.textContaining('more idle'), findsNothing);
 
-    await tester.tap(find.text('Show fewer'));
+    await tester.tap(find.text('Show less'));
     await settle(tester);
     expect(find.text('Task 06'), findsNothing);
     expect(find.text('${27 - idleShown} more idle'), findsOneWidget);

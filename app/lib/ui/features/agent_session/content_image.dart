@@ -257,8 +257,8 @@ class _InlineImageState extends State<_InlineImage> {
             // A fetch the person started is a wait they can see: the one spinner.
             child: Center(
               child: logPicture && (widget.waited || _retried)
-                  ? const BusySpinner(size: 20)
-                  : Icon(LucideIcons.image, size: 20, color: ds.textTertiary),
+                  ? const BusySpinner(size: IconSize.lead)
+                  : Icon(LucideIcons.image, size: IconSize.lead, color: ds.textTertiary),
             ),
           ),
         ),

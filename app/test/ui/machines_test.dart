@@ -154,8 +154,8 @@ void main() {
         await _approve(tester, h);
 
         expect(find.text('workstation'), findsOneWidget);
-        expect(find.textContaining('workspace'), findsWidgets, reason: 'online meta line');
-        expect(find.text('No network'), findsOneWidget);
+        expect(find.textContaining('agent'), findsWidgets, reason: 'online meta line');
+        expect(find.text('Offline'), findsOneWidget);
         expect(find.text('Needs attention'), findsOneWidget);
         expect(find.text('Permission denied (publickey).'), findsOneWidget, reason: 'the reason, not just the state');
         expect(find.textContaining('Reconnecting'), findsOneWidget);
@@ -185,9 +185,23 @@ void main() {
         expect(find.text('99+'), findsOneWidget, reason: 'attention count is never cut: past 99 the badge says 99+');
         expect(find.text('Tuấn Nguyễn'), findsOneWidget);
         expect(find.text('x'), findsOneWidget);
-        // A machine with no workspaces says so rather than "0 workspaces · 0 agents".
-        if (scale == 1) expect(find.textContaining('No workspaces'), findsOneWidget);
+        // A machine with no agents says so rather than "0 agents".
+        if (scale == 1) expect(find.text('No agents'), findsOneWidget);
       }
+      await _tearDown(tester, h);
+    });
+
+    testWidgets('a long address is cut in its middle, so the host\'s end stays readable', (tester) async {
+      final h = await UiHarness.create([
+        (profile: _m('d', 'staging', host: 'ip-10-0-143-201.eu-west-2.compute.internal'), snapshot: snapshotWith(_agents(2))),
+      ]);
+      // The test font draws every glyph a full em wide, so the row needs a
+      // wide screen for the address to show at all.
+      await _pump(tester, const MachinesScreen(), fleet: h, width: 700);
+
+      expect(find.text('2 agents'), findsOneWidget, reason: 'the count is never cut');
+      expect(find.text('ute.internal'), findsOneWidget, reason: 'the last characters of the address');
+      expect(tester.takeException(), isNull);
       await _tearDown(tester, h);
     });
 
@@ -208,7 +222,8 @@ void main() {
       await _pump(tester, const MachinesScreen(), fleet: h);
 
       expect(find.text('1 machine'), findsOneWidget);
-      expect(find.textContaining('1 workspace · 1 agent'), findsOneWidget);
+      expect(find.text('1 agent'), findsOneWidget);
+      expect(find.textContaining('herdr '), findsNothing, reason: 'the version is on the machine screen, not the row');
       await _tearDown(tester, h);
     });
 
@@ -265,7 +280,7 @@ void main() {
       await h.fleet.connection('b')!.refresh();
       await tester.pump();
 
-      expect(find.textContaining('1 workspace · 2 agents'), findsOneWidget, reason: 'the row did update');
+      expect(find.text('2 agents'), findsOneWidget, reason: 'the row did update');
       expect(dotsRebuilt, 1, reason: 'only the machine that changed');
       await _tearDown(tester, h);
     });
@@ -515,7 +530,7 @@ void main() {
       h.fleet.connection('a')!.goOffline();
       await _pump(tester, MachineScreen(machine: h.fleet.connection('a')!), fleet: h);
 
-      expect(find.textContaining('No network'), findsOneWidget);
+      expect(find.textContaining('Offline'), findsOneWidget);
       expect(find.text('title w1:p0'), findsOneWidget);
       expect(find.text('No workspaces'), findsNothing);
       await _tearDown(tester, h);

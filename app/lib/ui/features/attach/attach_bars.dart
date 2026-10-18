@@ -67,28 +67,28 @@ class _TabItem extends StatelessWidget {
     return PressBuilder(
       onTap: onTap,
       haptic: !selected,
-      scale: 0.95,
+      scale: PressScale.chip,
       selected: selected,
       semanticLabel: '${tab.label}, ${tab.hint}',
       builder: (context, pressed) => AnimatedContainer(
         duration: Motion.pressing(pressed),
         curve: Motion.easeOut,
         height: FloatingBar.cell,
-        padding: const EdgeInsets.symmetric(horizontal: 13),
+        padding: const EdgeInsets.symmetric(horizontal: Gap.md),
         decoration: BoxDecoration(
-          // `fill` on the pill's surface is about 1.1:1 and vanishes in dark.
-          color: selected ? ds.fillPressed : Colors.transparent,
+          // Selection is a hue, as on the app's tab bar: an accent wash under accent text.
+          color: selected ? ds.accentWash : Colors.transparent,
           borderRadius: BorderRadius.circular(FloatingBar.cell / 2),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(tab.icon, size: 20, color: selected ? ds.text : ds.textSecondary),
-            const SizedBox(width: 6),
+            Icon(tab.icon, size: IconSize.lead, color: selected ? ds.accentText : ds.textSecondary),
+            const SizedBox(width: Gap.sm),
             Text(
               tab.label,
               maxLines: 1,
-              style: Type.label.copyWith(color: selected ? ds.text : ds.textSecondary, fontWeight: selected ? FontWeight.w600 : FontWeight.w500),
+              style: Type.label.copyWith(color: selected ? ds.accentText : ds.textSecondary),
             ),
           ],
         ),

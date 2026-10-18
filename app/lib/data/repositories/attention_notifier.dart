@@ -11,6 +11,9 @@ import 'attention_set.dart';
 import 'fleet_repository.dart';
 import 'machine_connection.dart' show LinkState, MachineConnection;
 import 'notification_settings.dart';
+import '../words/agent_names.dart';
+import '../words/plural.dart';
+import '../words/where_line.dart';
 
 /// `herdr://agent/<machine>/<pane>`, both parts percent-encoded (a pane id
 /// like `w1:p2` travels as `w1%3Ap2`); `DeepLinks` reads it back.
@@ -314,8 +317,8 @@ class AttentionNotifier {
           NotifyKind.needsYou,
           reachable: !a.stale,
           id: () => notificationIdFor(key),
-          title: () => _title(a.betterTitle ?? pane.title, _folder(pane.cwd), pane.agent ?? 'terminal'),
-          body: () => 'needs you · ${pane.agent ?? 'terminal'} · ${machine.label}',
+          title: () => _title(a.betterTitle ?? pane.title, _folder(pane.cwd), agentName(pane.agent)),
+          body: () => 'needs you · ${whereLine(agent: agentName(pane.agent), machine: machine.label)}',
           link: () => agentLinkFor(machine.id, pane.id),
           pane: (machineId: machine.id, paneId: pane.id),
         ));
@@ -325,8 +328,8 @@ class AttentionNotifier {
           NotifyKind.finished,
           reachable: !a.stale,
           id: () => notificationIdFor(key),
-          title: () => _title(a.betterTitle ?? pane.title, _folder(pane.cwd), pane.agent ?? 'terminal'),
-          body: () => 'done · ${pane.agent ?? 'terminal'} · ${machine.label}',
+          title: () => _title(a.betterTitle ?? pane.title, _folder(pane.cwd), agentName(pane.agent)),
+          body: () => 'done · ${whereLine(agent: agentName(pane.agent), machine: machine.label)}',
           link: () => agentLinkFor(machine.id, pane.id),
         ));
       }
@@ -342,7 +345,7 @@ class AttentionNotifier {
           reachable: reachable,
           id: () => notificationIdFor(key),
           title: () => _title(s.title, '', s.agentLabel),
-          body: () => 'needs you · ${s.agentLabel} · ${machine.label}',
+          body: () => 'needs you · ${whereLine(agent: s.agentLabel, machine: machine.label)}',
           link: () => _sessionLink(s),
         ));
       } else if (s.link == AgentLink.connecting || s.link == AgentLink.reconnecting) {
@@ -357,7 +360,7 @@ class AttentionNotifier {
           reachable: reachable,
           id: () => notificationIdFor(key),
           title: () => _title(s.title, '', s.agentLabel),
-          body: () => 'done · ${s.agentLabel} · ${machine.label}',
+          body: () => 'done · ${whereLine(agent: s.agentLabel, machine: machine.label)}',
           link: () => _sessionLink(s),
         ));
       }
@@ -613,8 +616,8 @@ class AttentionNotifier {
         id: id,
         kind: kind,
         title: switch (kind) {
-          NotifyKind.needsYou => '$want agents need you',
-          NotifyKind.finished => '$want agents finished',
+          NotifyKind.needsYou => needYou(want),
+          NotifyKind.finished => '${countOf(want, 'agent')} done',
         },
         body: 'Open herdr to see which',
         link: agentsBoardLink,

@@ -139,6 +139,16 @@ class Ds extends ThemeExtension<Ds> {
   /// Skeleton bars while something loads.
   Color get skeleton => textTertiary.withValues(alpha: 0.2);
 
+  /// Selected text in a field or a selectable block.
+  Color get selection => accent.withValues(alpha: 0.28);
+
+  /// The underline under a markdown link: present, quieter than its text.
+  Color get linkUnderline => accentText.withValues(alpha: 0.4);
+
+  /// [c] at [t] of its own opacity: an animated fade drawn in paint, where
+  /// an `Opacity` layer would cost a layer per frame.
+  static Color fade(Color c, double t) => t >= 1 ? c : c.withValues(alpha: c.a * t.clamp(0, 1));
+
   /// A dark veil over a photo (its bars, a selection), and the marks on it.
   Color get photoScrim => const Color(0x99000000);
   Color get onPhoto => const Color(0xFFFFFFFF);
@@ -571,8 +581,7 @@ abstract final class Type {
     letterSpacing: -0.05,
   );
 
-  /// Markdown headings, levels 1 and 2 (3 and 4 are [row] and [body] with
-  /// weight, see `md_styles.dart`).
+  /// Markdown headings, levels 1 to 3 (4 and below are [bodyStrong]).
   static const h1 = TextStyle(
     fontFamily: family,
     fontSize: 22,
@@ -586,6 +595,22 @@ abstract final class Type {
     height: 1.3,
     fontWeight: FontWeight.w600,
     letterSpacing: -0.3,
+  );
+  static const h3 = TextStyle(
+    fontFamily: family,
+    fontSize: 16,
+    height: 1.3,
+    fontWeight: FontWeight.w600,
+    letterSpacing: -0.15,
+  );
+
+  /// [body] with weight: markdown h4, a quiet heading, a table header.
+  static const bodyStrong = TextStyle(
+    fontFamily: family,
+    fontSize: 15,
+    height: 1.45,
+    fontWeight: FontWeight.w600,
+    letterSpacing: -0.05,
   );
 
   static const tabular = [FontFeature.tabularFigures()];

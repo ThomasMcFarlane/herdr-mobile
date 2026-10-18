@@ -88,7 +88,7 @@ class StatusPanel extends StatelessWidget {
                         header: true,
                         child: Text(
                           title!,
-                          style: Type.label.copyWith(color: ds.text, fontWeight: FontWeight.w600, fontSize: 14),
+                          style: Type.answer.copyWith(color: ds.text),
                         ),
                       ),
                     if (message != null && message!.isNotEmpty)
@@ -98,7 +98,7 @@ class StatusPanel extends StatelessWidget {
                           message!,
                           maxLines: messageMaxLines,
                           overflow: messageMaxLines == null ? null : TextOverflow.ellipsis,
-                          style: (mono ? const TextStyle(fontFamily: monoFamily, fontSize: 12, height: 1.45) : Type.secondary)
+                          style: (mono ? Mono.base : Type.secondary)
                               .copyWith(color: ds.textSecondary),
                         ),
                       ),
@@ -171,7 +171,7 @@ class StatusStrip extends StatelessWidget {
                   child: Text.rich(
                     TextSpan(
                       text: title,
-                      style: Type.label.copyWith(color: ds.text, fontWeight: FontWeight.w600, fontSize: 14),
+                      style: Type.answer.copyWith(color: ds.text),
                       children: [
                         if (detail != null && detail!.isNotEmpty)
                           TextSpan(

@@ -594,12 +594,12 @@ void main() {
       expect(find.byType(StatusPanel), findsNothing);
     });
 
-    testWidgets('a connection that failed for the login offers Try again', (tester) async {
+    testWidgets('a connection that failed for the login offers Retry', (tester) async {
       final session = FakeAgentSession(link: AgentLink.failed, error: 'Claude Code needs you to sign in on the host.')
         ..auth = need();
       await pump(tester, session);
       expect(find.text('Sign in on the host'), findsOneWidget);
-      await tester.tap(find.text('Try again'));
+      await tester.tap(find.text('Retry'));
       await settle(tester);
       expect(session.reattachCount, 1);
     });

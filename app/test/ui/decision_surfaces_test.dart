@@ -8,7 +8,6 @@ import 'package:herdr_mobile/data/acp/session_state.dart';
 import 'package:herdr_mobile/data/repositories/agent_session.dart';
 import 'package:herdr_mobile/data/repositories/last_seen.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
-import 'package:herdr_mobile/ui/support/tap_guard.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
 import 'package:herdr_mobile/ui/features/agent_session/danger_announce.dart';
 import 'package:herdr_mobile/ui/features/agent_session/permission_evidence_view.dart';
@@ -45,7 +44,7 @@ Future<void> pumpScreen(
   if (lastSeen != null) app = Provider<LastSeen>.value(value: lastSeen, child: app);
   await tester.pumpWidget(app);
   await tester.pump(const Duration(milliseconds: 100));
-  await tester.pump(tapGuard);
+  await tester.pump(Dwell.tapGuard);
 }
 
 FakeAgentSession asking(PermissionRequest request, {List<TranscriptItem> items = const []}) =>

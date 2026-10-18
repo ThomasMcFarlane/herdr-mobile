@@ -13,6 +13,7 @@ import 'package:herdr_mobile/data/acp/acp_models.dart';
 import 'package:herdr_mobile/data/acp/session_state.dart';
 import 'package:herdr_mobile/data/acp/turns/plain_text.dart';
 import 'package:herdr_mobile/data/acp/turns/turns.dart';
+import 'package:herdr_mobile/data/words/elapsed.dart';
 
 import 'support/trace_state.dart';
 
@@ -748,7 +749,7 @@ void main() {
       expect(turn.commands.single.command, 'echo hello-from-scratch');
       expect(turn.commands.single.exitCode, isNull, reason: 'Claude sends none');
       expect(turn.commands.single.failed, isFalse);
-      expect(workSummaryLine(turn), 'Worked ${formatDuration(turn.duration!)} · 1 command');
+      expect(workSummaryLine(turn), 'Worked ${Elapsed.compact(turn.duration!)} · 1 command');
       expect(groupTools(turn.tools).map((g) => g.isGroup), [false, false], reason: 'one read and one command');
     });
 
@@ -770,7 +771,7 @@ void main() {
         ('cat notes.txt', 0, false),
         ('echo hello-from-scratch', 0, false),
       ]);
-      expect(workSummaryLine(turn), 'Worked ${formatDuration(turn.duration!)} · 2 commands');
+      expect(workSummaryLine(turn), 'Worked ${Elapsed.compact(turn.duration!)} · 2 commands');
     });
 
     test('omp/tools: a read and a command, no narration', () {
@@ -778,7 +779,7 @@ void main() {
       expect(turn.toolCounts, {ToolKind.read: 1, ToolKind.execute: 1});
       expect(turn.narration, isEmpty);
       expect(turn.commands.single.command, 'echo hello-from-scratch');
-      expect(workSummaryLine(turn), 'Worked ${formatDuration(turn.duration!)} · 1 command');
+      expect(workSummaryLine(turn), 'Worked ${Elapsed.compact(turn.duration!)} · 1 command');
     });
 
     test('a subagent\'s call waiting on a permission is not in the turn: the dock names the subagent, the status line says it waits', () {
@@ -826,7 +827,7 @@ void main() {
         ..add(_tool('c1', 'cancelled'), after: 70)
         ..add(_tool('c2', 'cancelled'))
         ..end(StopReason.cancelled);
-      expect(workSummaryLine(cancelled.turn), 'Worked 1m 11s \u00b7 2 commands \u00b7 2 cancelled');
+      expect(workSummaryLine(cancelled.turn), 'Worked 1m \u00b7 2 commands \u00b7 2 cancelled');
       final reads = _Run()
         ..add(_tool('r', 'completed', kind: 'read'))
         ..end();
@@ -840,18 +841,6 @@ void main() {
       s = s.apply(_u(_tool('c', 'completed')), at: _t0.add(const Duration(milliseconds: 400)));
       s = s.withTurnEnded(StopReason.endTurn, at: _t0.add(const Duration(milliseconds: 600)));
       expect(workSummaryLine(turnsOf(s.items).single), 'Worked \u00b7 1 command');
-    });
-
-    test('formatDuration', () {
-      expect(formatDuration(Duration.zero), '0s');
-      expect(formatDuration(const Duration(milliseconds: 499)), '0s');
-      expect(formatDuration(const Duration(milliseconds: 1500)), '2s');
-      expect(formatDuration(const Duration(seconds: 42)), '42s');
-      expect(formatDuration(const Duration(seconds: 60)), '1m');
-      expect(formatDuration(const Duration(seconds: 65)), '1m 5s');
-      expect(formatDuration(const Duration(minutes: 59, seconds: 59)), '59m 59s');
-      expect(formatDuration(const Duration(hours: 1)), '1h');
-      expect(formatDuration(const Duration(hours: 1, minutes: 5, seconds: 30)), '1h 5m');
     });
   });
 

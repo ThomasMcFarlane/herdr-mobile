@@ -203,6 +203,7 @@ final class MdCodeLines {
         final e = t.end.clamp(s, text.length);
         if (s > at) children.add(TextSpan(text: text.substring(at, s)));
         if (e > s) {
+          // design-lint: allow(raw-type) colour-only overlay: a token keeps the code block's style
           children.add(TextSpan(text: text.substring(s, e), style: t.kind == TokenKind.plain ? null : TextStyle(color: colors.of(t.kind))));
         }
         at = e;

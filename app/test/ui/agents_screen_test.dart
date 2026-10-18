@@ -190,8 +190,8 @@ void main() {
       ]);
       await pumpUi(tester, h, height: _tall);
 
-      expect(_row('claude'), findsOneWidget);
-      expect(_row('codex'), findsOneWidget);
+      expect(_row('Claude Code'), findsOneWidget);
+      expect(_row('Codex'), findsOneWidget);
       await teardownUi(tester, h);
     });
 
@@ -231,8 +231,8 @@ void main() {
         await teardownUi(tester, h);
       }
 
-      await expectLine(['a'], 'claude · main');
-      await expectLine(['a', 'b'], 'claude · box-a · main');
+      await expectLine(['a'], 'Claude Code · main');
+      await expectLine(['a', 'b'], 'Claude Code · box-a · main');
     });
 
     testWidgets('120 agents in one section: counted in full, last row clears the tab bar',
@@ -406,7 +406,7 @@ void main() {
       h.network.goOffline();
       await settle(tester);
 
-      expect(find.textContaining('No network'), findsOneWidget);
+      expect(find.textContaining('Offline'), findsOneWidget);
       expect(_row('Needs a decision'), findsOneWidget);
       // The row's own Opacity and no second one on the glyph: dimmed twice,
       // the status shape is all but invisible.
@@ -646,7 +646,7 @@ void main() {
       await pumpUi(tester, h, height: _tall);
 
       final label = tester.getSemantics(_body('Pick a strategy')).label;
-      for (final part in ['Pick a strategy', 'Needs you', 'claude']) {
+      for (final part in ['Pick a strategy', 'Needs you', 'Claude Code']) {
         expect(RegExp(RegExp.escape(part)).allMatches(label), hasLength(1),
             reason: '"$part" in: $label');
       }

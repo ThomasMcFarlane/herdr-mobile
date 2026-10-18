@@ -10,6 +10,9 @@ import '../../../data/decision/session_chips.dart';
 import '../../../data/models/herdr_models.dart' show AgentStatus;
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/agent_screens.dart' show AgentView, PaneAgent;
+import '../../../data/words/agent_names.dart';
+import '../../../data/words/plural.dart';
+import '../../../data/words/where_line.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../create/new_agent_session_screen.dart' show openNewAgentSession;
 import '../create/session_prefill.dart' show SessionPrefill;
@@ -31,15 +34,16 @@ AgentStatus sessionStatus(AgentPhase phase, {required bool unseenDone}) => switc
   AgentPhase.idle => unseenDone ? AgentStatus.done : AgentStatus.idle,
 };
 
-/// `claude · devbox · payments-api`: agent, machine, folder. The folder is
-/// left out when it is the title (a session is named for its folder at
-/// first): said once. [title] defaults to the session's own.
-String sessionWhere(AgentSessionView session, {String? title}) {
-  final folder = cwdTail(session.cwd);
-  final named = (title ?? session.title).trim();
-  final same = folder.isNotEmpty && folder.toLowerCase() == named.toLowerCase();
-  return [session.agentLabel, session.machine.profile.label, if (!same) folder].where((s) => s.isNotEmpty).join(' · ');
-}
+/// `Claude Code · devbox · payments-api`: agent, machine, folder
+/// ([whereLine]). The folder is left out when it is the title (a session is
+/// named for its folder at first): said once. [title] defaults to the
+/// session's own.
+String sessionWhere(AgentSessionView session, {String? title}) => whereLine(
+  agent: agentName(session.agent),
+  machine: session.machine.profile.label,
+  folder: cwdTail(session.cwd),
+  title: title ?? session.title,
+);
 
 /// The one slim bar ([AppTopBar]): back, the status glyph beside the title over where the
 /// session lives, and the button for its modes and options (which hold the
@@ -457,10 +461,10 @@ class _PickerState extends State<_Picker> {
             ),
             if (setting.choices.length > _Picker.searchFrom)
               Padding(
-                padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.sm),
+                padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.sm),
                 child: SearchField(
                   controller: _query,
-                  hint: 'Search ${setting.choices.length} choices',
+                  hint: 'Search ${countOf(setting.choices.length, 'choice')}',
                   onChanged: (_) => setState(() {}),
                 ),
               ),
@@ -478,13 +482,13 @@ class _PickerState extends State<_Picker> {
       return const Center(child: EmptyState.inline('Nothing matches.'));
     }
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
+      padding: const EdgeInsets.only(left: Gap.xs, right: Gap.xs, bottom: Gap.md),
       itemCount: entries.length,
       itemBuilder: (context, i) {
         final e = entries[i];
         if (e is String) {
           return Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            padding: const EdgeInsets.fromLTRB(Gap.lg, Gap.md, Gap.lg, Gap.xs),
             child: Semantics(header: true, child: Text(e, style: Type.caption.copyWith(color: ds.textSecondary))),
           );
         }
@@ -562,10 +566,8 @@ class _ChoiceRow extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: Type.row.copyWith(
-                    color: danger ? ds.dangerText : ds.text,
-                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                  ),
+                  // The check says which one is chosen; the weight stays.
+                  style: Type.row.copyWith(color: danger ? ds.dangerText : ds.text),
                 ),
                 if (reason != null)
                   Text(reason, style: Type.secondary.copyWith(color: danger ? ds.dangerText : ds.textSecondary)),

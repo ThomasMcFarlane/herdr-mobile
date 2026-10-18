@@ -4,9 +4,6 @@ import 'package:flutter/material.dart';
 
 import 'motion.dart';
 
-/// How long a [DrawCheck] takes to draw itself.
-const drawCheckDuration = Duration(milliseconds: 320);
-
 /// A circle and a check that stroke themselves in once, like Lucide's
 /// `circleCheck` being written by hand, then stay. For a rare moment worth a
 /// little ceremony (a connection test that passed); lists and frequent states
@@ -32,7 +29,7 @@ class DrawCheck extends StatefulWidget {
 }
 
 class _DrawCheckState extends State<DrawCheck> with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(vsync: this, duration: drawCheckDuration);
+  late final AnimationController _controller = AnimationController(vsync: this, duration: Motion.draw);
   // Linear; each stroke applies its own curve (see the painter).
   bool _started = false;
 

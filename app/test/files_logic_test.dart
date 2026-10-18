@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:herdr_mobile/data/words/elapsed.dart';
 import 'package:herdr_mobile/ui/features/files/file_format.dart';
 import 'package:herdr_mobile/ui/features/files/file_kind.dart';
 import 'package:herdr_mobile/ui/features/files/text_document.dart';
@@ -171,15 +172,14 @@ void main() {
 
     test('relative time', () {
       final now = DateTime(2026, 5, 20, 12, 0);
-      expect(formatModified(now.subtract(const Duration(seconds: 20)), now: now), 'Just now');
-      expect(formatModified(now.add(const Duration(hours: 1)), now: now), 'Just now', reason: 'clock skew');
-      expect(formatModified(now.subtract(const Duration(minutes: 5)), now: now), '5 min ago');
-      expect(formatModified(now.subtract(const Duration(hours: 3)), now: now), '3 h ago');
-      expect(formatModified(DateTime(2026, 5, 19, 23, 30), now: now), 'Yesterday');
-      expect(formatModified(DateTime(2026, 5, 16), now: now), '4 d ago');
-      expect(formatModified(DateTime(2026, 4, 2), now: now), 'Apr 2');
-      expect(formatModified(DateTime(2025, 12, 31), now: now), 'Dec 31, 2025');
-      expect(formatModified(null), '');
+      expect(formatAgo(now.subtract(const Duration(seconds: 20)), now), 'Just now');
+      expect(formatAgo(now.add(const Duration(hours: 1)), now), 'Just now', reason: 'clock skew');
+      expect(formatAgo(now.subtract(const Duration(minutes: 5)), now), '5m ago');
+      expect(formatAgo(now.subtract(const Duration(hours: 3)), now), '3h ago');
+      expect(formatAgo(DateTime(2026, 5, 19, 23, 30), now), 'Yesterday');
+      expect(formatAgo(DateTime(2026, 5, 16), now), '4d ago');
+      expect(formatAgo(DateTime(2026, 4, 2), now), '2 Apr');
+      expect(formatAgo(DateTime(2025, 12, 31), now), '31 Dec 2025');
     });
 
     test('permissions and digit grouping', () {

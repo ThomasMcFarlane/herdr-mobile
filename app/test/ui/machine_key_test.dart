@@ -591,7 +591,7 @@ void main() {
       return _keyText(tester);
     }
 
-    const warning = 'This replaces the key this machine uses now. Run the command on the host first, '
+    const warning = 'This replaces the key this machine uses now. Run the command on the machine first, '
         'then Test connection, then Save.';
 
     testWidgets('the generated-key panel says to install it first, but only when it replaces a saved key', (tester) async {

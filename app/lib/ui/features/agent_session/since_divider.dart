@@ -17,9 +17,9 @@ class SinceDivider extends StatelessWidget {
   Widget build(BuildContext context) {
     notifyRowBuilt(rowKey);
     final ds = context.ds;
-    final line = Expanded(child: SizedBox(height: 1, child: ColoredBox(color: ds.border)));
+    const line = Expanded(child: Hairline());
     return Padding(
-      padding: EdgeInsets.only(top: gap, bottom: 4),
+      padding: EdgeInsets.only(top: gap, bottom: Gap.xs),
       child: Semantics(
         label: label,
         excludeSemantics: true,

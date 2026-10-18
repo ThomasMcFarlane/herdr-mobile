@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/acp/acp_models.dart';
 import 'package:herdr_mobile/data/acp/session_state.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
-import 'package:herdr_mobile/ui/support/tap_guard.dart';
 import 'package:herdr_mobile/ui/features/agent_session/permission_dock.dart';
 
 import '../support/fake_agent_session.dart';
@@ -30,7 +29,7 @@ Future<void> _pump(WidgetTester tester, FakeAgentSession session) async {
       home: Scaffold(body: Align(alignment: Alignment.bottomCenter, child: PromptDock(session: session))),
     ),
   );
-  await tester.pump(tapGuard);
+  await tester.pump(Dwell.tapGuard);
 }
 
 void main() {
@@ -46,7 +45,7 @@ void main() {
       // The terminal did not take the answer: the same question, a new request.
       session.push(stateWith(turnActive: true, pending: [PendingQuestion('ask:t:1', _form(), draftKey: 'ask:t')]));
       await tester.pump();
-      await tester.pump(tapGuard);
+      await tester.pump(Dwell.tapGuard);
 
       expect(find.text('use the safe one'), findsOneWidget);
     });
@@ -63,7 +62,7 @@ void main() {
       await tester.pump();
       session.push(stateWith(turnActive: true, pending: [PendingQuestion('ask:t:2', _form(), draftKey: 'ask:t')]));
       await tester.pump();
-      await tester.pump(tapGuard);
+      await tester.pump(Dwell.tapGuard);
 
       expect(find.text('use the safe one'), findsNothing);
     });
@@ -76,7 +75,7 @@ void main() {
 
       session.push(stateWith(turnActive: true, pending: [PendingQuestion(2, _form())]));
       await tester.pump();
-      await tester.pump(tapGuard);
+      await tester.pump(Dwell.tapGuard);
 
       expect(find.text('first'), findsNothing);
     });

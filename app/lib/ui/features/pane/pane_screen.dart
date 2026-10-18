@@ -315,7 +315,7 @@ class _MissingMachine extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(LucideIcons.serverOff, size: 28, color: ds.textTertiary),
+            Icon(LucideIcons.serverOff, size: IconSize.empty, color: ds.textTertiary),
             const SizedBox(height: Gap.md),
             Text(
               'This machine is no longer saved',
@@ -504,6 +504,7 @@ class _PaneViewState extends State<_PaneView> {
   /// Enter still go through: those are deliberate moves in the agent's menu.
   bool _refusesEnter(List<String> keys) {
     if (!_dockAsking.value || keys.length != 1 || keys.single != 'enter') return false;
+    Haptics.failed();
     showToast(context, 'Pick an answer above');
     return true;
   }
@@ -545,10 +546,7 @@ class _PaneViewState extends State<_PaneView> {
     final text = _input.text;
     final chips = _attachments.items;
     if (text.trim().isEmpty && chips.isEmpty) {
-      if (_refusesEnter(const ['enter'])) {
-        Haptics.tick();
-        return;
-      }
+      if (_refusesEnter(const ['enter'])) return;
       _input.clear();
       // The haptic follows the outcome: a heavy one for a failure, so it
       // cannot be mistaken for the click of a send that went out.
@@ -770,7 +768,7 @@ class _PaneLayout extends StatelessWidget {
           SafeArea(
             top: false,
             child: Padding(
-              padding: EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, compact ? Gap.xs : Gap.sm),
+              padding: EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: compact ? Gap.xs : Gap.sm),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -866,6 +864,7 @@ class _TerminalPanel extends StatelessWidget {
                       nearTop: s.nearTop,
                       following: s.following,
                     ),
+                    // design-lint: allow(raw-type) the terminal's own font size, which the person sets
                     fontSize: fontSize,
                     wrap: wrap,
                     onFontSizeChanged: settings.previewFontSize,
@@ -874,11 +873,13 @@ class _TerminalPanel extends StatelessWidget {
                   if (closed || stale)
                     IgnorePointer(
                       child: ColoredBox(
+                        // design-lint: allow(raw-alpha) a veil of the terminal's own background (no Ds role: the terminal palette is the person's)
                         color: palette.background.withValues(alpha: 0.6),
                       ),
                     ),
                   // Inside the 1 px outline, which is drawn over the content.
                   Padding(
+                    // design-lint: allow(raw-size) the terminal's 1 px outline, not a spacing step
                     padding: const EdgeInsets.fromLTRB(1, 0, 1, 1),
                     child: LiveEdge(
                       stale: stale,
@@ -984,7 +985,7 @@ class _BannerState extends State<_Banner> {
               padding: const EdgeInsets.fromLTRB(Gap.lg, Gap.xs, Gap.lg, Gap.xs),
               child: StatusStrip(
                 color: shown.color,
-                leading: Icon(shown.icon, size: 18, color: shown.color),
+                leading: Icon(shown.icon, size: IconSize.bar, color: shown.color),
                 title: shown.title,
                 detail: shown.detail,
                 action: shown.retry
@@ -1048,8 +1049,8 @@ class _Composer extends StatelessWidget {
         LinkState.online => open ? null : 'Pane closed',
         LinkState.connecting => 'Connecting…',
         LinkState.approval => 'Waiting for sign-in approval',
-        LinkState.reconnecting || LinkState.offline => 'Offline — reconnecting',
-        LinkState.attention => 'Needs attention — see above',
+        LinkState.reconnecting || LinkState.offline => 'Offline · reconnecting',
+        LinkState.attention => 'Needs attention · see above',
         LinkState.disabled => 'Machine disabled',
       },
     );

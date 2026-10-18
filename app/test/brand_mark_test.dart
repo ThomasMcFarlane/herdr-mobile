@@ -24,7 +24,7 @@ void main() {
     expect(_paint, isNot(paints..rrect()..path()..path()), reason: 'the shoulder waits for the crook');
     expect(_paint, isNot(paints..circle()), reason: 'the dot lands last');
 
-    await tester.pump(brandMarkDuration);
+    await tester.pump(Motion.brand);
     expect(_paint, paints..rrect()..path()..path()..circle());
     expect(tester.binding.transientCallbackCount, 0, reason: 'no loop: the ticker is done');
   });

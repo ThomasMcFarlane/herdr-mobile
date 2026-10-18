@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../data/acp/turns/turns.dart';
+import '../../../data/words/plural.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import 'log_atoms.dart';
 import 'tool_rows.dart' show DiffPanel;
@@ -43,7 +44,7 @@ class ChangedHeadRow extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(color: ds.fill, borderRadius: _corners(first: true, last: false)),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(Gap.md, 10, Gap.md, 4),
+          padding: const EdgeInsets.fromLTRB(Gap.md, Gap.md, Gap.md, Gap.xs),
           child: Row(
             children: [
               Expanded(
@@ -52,10 +53,10 @@ class ChangedHeadRow extends StatelessWidget {
                   child: Text.rich(
                     TextSpan(
                       text: 'Changed',
-                      style: Type.label.copyWith(color: ds.text, fontWeight: FontWeight.w600),
+                      style: Type.labelStrong.copyWith(color: ds.text),
                       children: [
                         TextSpan(
-                          text: '  ${files.length} ${files.length == 1 ? 'file' : 'files'}',
+                          text: '  ${countOf(files.length, 'file')}',
                           style: Type.caption.copyWith(color: ds.textMuted),
                         ),
                       ],
@@ -142,7 +143,7 @@ class ChangedFileRow extends StatelessWidget {
                     const SizedBox(width: Gap.sm),
                     Text(
                       mark,
-                      style: Type.captionStrong.copyWith(color: file.isDelete ? removedText(ds) : addedText(ds)),
+                      style: Type.captionStrong.copyWith(color: file.isDelete ? removedText(ds) : ds.addedText),
                     ),
                   ],
                   if (stats) ...[
@@ -157,7 +158,7 @@ class ChangedFileRow extends StatelessWidget {
           if (last && !open) const SizedBox(height: Gap.xs),
           if (open)
             Padding(
-              padding: const EdgeInsets.fromLTRB(Gap.md, 0, Gap.md, Gap.md),
+              padding: const EdgeInsets.only(left: Gap.md, right: Gap.md, bottom: Gap.md),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -180,7 +181,7 @@ class ChangedFileRow extends StatelessWidget {
 }
 
 /// The last line of a card that lists only some of its files: `12 more`, and
-/// `Show fewer` once all are listed.
+/// `Show less` once all are listed.
 class ChangedMoreRow extends StatelessWidget {
   const ChangedMoreRow({super.key, required this.rowKey, required this.count, required this.all, required this.onToggle});
 
@@ -193,7 +194,7 @@ class ChangedMoreRow extends StatelessWidget {
   Widget build(BuildContext context) {
     notifyRowBuilt(rowKey);
     final ds = context.ds;
-    final label = all ? 'Show fewer' : '$count more';
+    final label = all ? 'Show less' : '$count more';
     return DecoratedBox(
       decoration: BoxDecoration(color: ds.fill, borderRadius: _corners(first: false, last: true)),
       child: Padding(
@@ -201,7 +202,7 @@ class ChangedMoreRow extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: Gap.xs),
         child: PressRow(
           onTap: () => onToggle(rowKey),
-          semanticLabel: all ? 'Show fewer files' : '$count more ${count == 1 ? 'file' : 'files'}',
+          semanticLabel: all ? 'Show less' : countOf(count, 'more file'),
           minHeight: kMinTap,
           padding: const EdgeInsets.symmetric(horizontal: Gap.md - PressRow.inset),
           child: Text(label, style: Type.labelStrong.copyWith(color: ds.accentText)),

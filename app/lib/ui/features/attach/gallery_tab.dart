@@ -5,6 +5,8 @@ import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/repositories/attach_target.dart';
+import '../../../data/words/elapsed.dart';
+import '../../../data/words/plural.dart';
 import '../../../data/services/phone_gallery.dart';
 import '../../../data/services/thumb_cache.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
@@ -28,20 +30,6 @@ int galleryColumnsFor(double width) => (width / 130).round().clamp(3, 8);
 /// A scroll faster than this (dp/s) holds the thumbnail queue: the tiles
 /// flying past are not worth decoding.
 const galleryFlingPause = 2400.0;
-
-/// `today 14:02`, `yesterday 09:10`, `May 20, 14:02`, `May 20, 2025`.
-String describeTaken(DateTime when, DateTime now) {
-  final t = when.toLocal();
-  String two(int n) => n.toString().padLeft(2, '0');
-  final clock = '${two(t.hour)}:${two(t.minute)}';
-  final today = DateTime(now.year, now.month, now.day);
-  final days = today.difference(DateTime(t.year, t.month, t.day)).inDays;
-  if (days == 0) return 'today $clock';
-  if (days == 1) return 'yesterday $clock';
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  final date = '${months[t.month - 1]} ${t.day}';
-  return t.year == now.year ? '$date, $clock' : '$date, ${t.year}';
-}
 
 /// The Gallery tab: the phone's recent pictures as a 3-column grid, newest
 /// first, the camera as the first tile, a round mark on every picture.
@@ -177,7 +165,7 @@ class _Header extends StatelessWidget {
             AppChip(
               label: album?.name ?? 'Recent',
               semanticLabel: 'Album: ${album?.name ?? 'Recent'}',
-              leading: Icon(LucideIcons.chevronsUpDown, size: 14, color: ds.textSecondary),
+              leading: Icon(LucideIcons.chevronsUpDown, size: IconSize.inline, color: ds.textSecondary),
               onTap: () => unawaited(_chooseAlbum(context, model)),
             ),
             if (limited) ...[
@@ -185,14 +173,14 @@ class _Header extends StatelessWidget {
               AppChip(
                 label: 'Manage',
                 semanticLabel: 'Manage which photos herdr can see',
-                leading: Icon(LucideIcons.slidersHorizontal, size: 14, color: ds.textSecondary),
+                leading: Icon(LucideIcons.slidersHorizontal, size: IconSize.inline, color: ds.textSecondary),
                 onTap: () => unawaited(model.manage()),
               ),
             ],
             const Spacer(),
             if (album != null && album.count > 0)
               Text(
-                '${groupDigits(album.count)} ${album.count == 1 ? 'photo' : 'photos'}',
+                '${groupDigits(album.count)} ${plural(album.count, 'photo')}',
                 style: Type.caption.copyWith(color: ds.textMuted, fontFeatures: Type.tabular),
               ),
           ],
@@ -211,7 +199,7 @@ class _NoImagesNote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(Gap.gutter, 0, Gap.gutter, Gap.sm),
+    padding: const EdgeInsets.only(left: Gap.gutter, right: Gap.gutter, bottom: Gap.sm),
     child: Align(
       alignment: Alignment.centerLeft,
       child: Text(text, style: Type.caption.copyWith(color: context.ds.textSecondary)),
@@ -446,6 +434,8 @@ class _GridState extends State<_Grid> {
         _tile = (box.maxWidth - galleryGap * (_columns + 1)) / _columns;
         final count = model.count;
         final empty = model.checked && model.access.canRead && !model.loading && model.album != null && count == 0;
+        // An empty library shows its note right under the grid, not above the bars.
+        final tail = empty ? 0.0 : clearance;
         return SheetScroll(
           controller: _scroll,
           builder: (context, controller, physics) => NotificationListener<ScrollNotification>(
@@ -458,7 +448,7 @@ class _GridState extends State<_Grid> {
               scrollCacheExtent: ScrollCacheExtent.pixels(_tile * 2),
               slivers: [
                 SliverPadding(
-                  padding: EdgeInsets.fromLTRB(galleryGap, 0, galleryGap, empty ? 0 : clearance),
+                  padding: EdgeInsets.only(left: galleryGap, right: galleryGap, bottom: tail),
                   sliver: SliverGrid(
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: _columns,
@@ -573,7 +563,7 @@ class _CameraTile extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(LucideIcons.camera, size: 30, color: ds.textSecondary),
+              Icon(LucideIcons.camera, size: IconSize.empty, color: ds.textSecondary),
               const SizedBox(height: Gap.xs),
               Text('Camera', style: Type.caption.copyWith(color: ds.textSecondary)),
             ],
@@ -646,8 +636,7 @@ class _PhotoTileState extends State<PhotoTile> {
     final ds = context.ds;
     final n = _number;
     final picked = n != null;
-    final reduced = Motion.reduced(context);
-    final label = 'Photo ${widget.index + 1}, taken ${describeTaken(widget.asset.createdAt, widget.now())}';
+    final label = 'Photo ${widget.index + 1}, taken ${formatWhen(widget.asset.createdAt, widget.now(), sentence: true)}';
     Widget picture = GalleryThumb(asset: widget.asset, cache: widget.cache);
     if (picked) picture = ClipRRect(borderRadius: BorderRadius.circular(Radii.xs), child: picture);
     return Semantics(
@@ -669,8 +658,8 @@ class _PhotoTileState extends State<PhotoTile> {
           children: [
             ColoredBox(color: ds.fill),
             AnimatedScale(
-              scale: picked ? 0.88 : 1,
-              duration: reduced ? Duration.zero : Motion.press,
+              scale: picked ? PressScale.icon : 1,
+              duration: Motion.of(context, Motion.press),
               curve: Motion.easeOut,
               child: picture,
             ),

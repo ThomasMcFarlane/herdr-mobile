@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../../../data/repositories/quick_phrases.dart';
 import '../../../data/repositories/sent_phrases.dart';
+import '../../../data/words/plural.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// Settings > Agents > Quick phrases: its own page, because the list grows
@@ -89,7 +90,7 @@ class QuickPhrasesSection extends StatelessWidget {
           ),
           if (sent.tracked > 0)
             AppButton(
-              label: 'Forget ${sent.tracked} remembered ${sent.tracked == 1 ? 'message' : 'messages'}',
+              label: 'Forget ${sent.tracked} remembered ${plural(sent.tracked, 'message')}',
               kind: AppButtonKind.secondary,
               expand: true,
               onPressed: () => unawaited(sent.forget()),

@@ -87,10 +87,7 @@ class LabeledField extends StatelessWidget {
             inputFormatters: inputFormatters,
             autocorrect: false,
             enableSuggestions: false,
-            style: (mono
-                    ? const TextStyle(fontFamily: monoFamily, fontSize: 13, height: 1.5)
-                    : Type.body.copyWith(fontSize: 16))
-                .copyWith(color: ds.text),
+            style: (mono ? Mono.input : Type.input).copyWith(color: ds.text),
             cursorColor: ds.accent,
             decoration: InputDecoration(
               hintText: hint,

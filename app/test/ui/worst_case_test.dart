@@ -155,14 +155,14 @@ void main() {
         ),
       ]);
       await pumpUi(tester, h);
-      expect(find.textContaining('No network'), findsNothing);
+      expect(find.textContaining('Offline'), findsNothing);
       expect(
           tester.widgetList<AgentCard>(find.byType(AgentCard)).any((c) => c.agent.stale), isFalse);
 
       h.network.goOffline();
       await settle(tester);
 
-      expect(find.textContaining('No network'), findsWidgets);
+      expect(find.textContaining('Offline'), findsWidgets);
       expect(
           tester.widgetList<AgentCard>(find.byType(AgentCard)).every((c) => c.agent.stale), isTrue,
           reason: 'rows keep their data but are marked stale');

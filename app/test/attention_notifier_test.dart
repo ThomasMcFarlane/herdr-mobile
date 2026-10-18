@@ -247,7 +247,7 @@ void main() {
         expect(n.id, _id('a', 'w1:p1'));
         expect(n.kind, NotifyKind.needsYou);
         expect(n.title, 'title w1:p1');
-        expect(n.body, 'needs you · claude · Alpha');
+        expect(n.body, 'needs you · Claude Code · Alpha');
         expect(n.link, 'herdr://agent/a/w1%3Ap1');
 
         // Events about the same agent are not news.
@@ -344,7 +344,7 @@ void main() {
         r.set('a', {'w1:p1': 'working', 'w1:p2': 'done', 'w1:p3': 'blocked', 'w1:p4': 'working'});
         // The same id now says "done": replaced, not duplicated.
         expect(r.notifier.active[_id('a', 'w1:p2')]!.kind, NotifyKind.finished);
-        expect(r.notifier.active[_id('a', 'w1:p2')]!.body, 'done · claude · Alpha');
+        expect(r.notifier.active[_id('a', 'w1:p2')]!.body, 'done · Claude Code · Alpha');
 
         r.set('a', {'w1:p1': 'working', 'w1:p2': 'done', 'w1:p4': 'working'}); // pane closed
         expect(r.notifier.active.keys, [_id('a', 'w1:p2')]);
@@ -456,7 +456,7 @@ void main() {
 
         String title(String pane) => r.notifier.active[_id('a', pane)]!.title;
         expect(title('w1:p1'), 'payments-api');
-        expect(title('w1:p2'), 'claude');
+        expect(title('w1:p2'), 'Claude Code');
         expect(title('w1:p3'), '${'x' * 59}…');
         r.dispose();
       });
@@ -470,7 +470,7 @@ void main() {
         final n = r.notifier.shown.single;
         expect(n.link, 'herdr://agent/box%2F1%20%C3%A9/w1%3Ap1');
         expect(parseAgentLink(n.link), const AgentLink('box/1 é', 'w1:p1'));
-        expect(n.body, 'needs you · claude · Máy Việt');
+        expect(n.body, 'needs you · Claude Code · Máy Việt');
         expect(n.id, notificationIdFor('box/1 é/w1:p1'));
         r.dispose();
       });
@@ -491,7 +491,7 @@ void main() {
         final firstThree = [for (final a in r.fleet.agents.take(3)) _id('a', a.pane.id)];
         expect(r.notifier.shown.where((n) => n.id != _summaryId).map((n) => n.id), firstThree);
         final summary = r.notifier.shown.where((n) => n.id == _summaryId).single;
-        expect(summary.title, '10 agents need you');
+        expect(summary.title, '10 need you');
         expect(summary.kind, NotifyKind.needsYou);
         expect(summary.link, agentsBoardLink);
         expect(r.notifier.visible, hasLength(4));
@@ -511,7 +511,7 @@ void main() {
         }
 
         expect(r.notifier.shown.where((n) => n.id != _summaryId), hasLength(3));
-        expect(r.notifier.active[_summaryId]!.title, '30 agents need you');
+        expect(r.notifier.active[_summaryId]!.title, '30 need you');
         expect(r.notifier.visible, hasLength(4));
         r.dispose();
       });
@@ -526,12 +526,12 @@ void main() {
           r.change('a', p, 'blocked');
           r.advance(const Duration(seconds: 1));
         }
-        expect(r.notifier.active[_summaryId]!.title, '4 agents need you');
+        expect(r.notifier.active[_summaryId]!.title, '4 need you');
         r.change('a', all[4], 'blocked');
-        expect(r.notifier.active[_summaryId]!.title, '5 agents need you');
+        expect(r.notifier.active[_summaryId]!.title, '5 need you');
 
         r.change('a', all[0], 'working'); // one of the three shown is answered
-        expect(r.notifier.active[_summaryId]!.title, '4 agents need you');
+        expect(r.notifier.active[_summaryId]!.title, '4 need you');
 
         // The held-back ones go: nothing left to summarise.
         for (final p in all.skip(3).take(2)) {
@@ -550,7 +550,7 @@ void main() {
         r.life(away);
         r.set('a', {for (final (i, p) in all.indexed) p: i < 4 ? 'blocked' : 'working'});
         expect(r.notifier.shown.where((n) => n.id != _summaryId), hasLength(3));
-        expect(r.notifier.active[_summaryId]!.title, '4 agents need you');
+        expect(r.notifier.active[_summaryId]!.title, '4 need you');
 
         r.advance(const Duration(seconds: 6));
         r.set('a', {for (final p in all) p: 'blocked'});
@@ -559,7 +559,7 @@ void main() {
         final individual = r.notifier.shown.where((n) => n.id != _summaryId).toList();
         expect(individual, hasLength(6));
         expect({for (final n in individual) n.id}, hasLength(6), reason: 'each agent once');
-        expect(r.notifier.active[_summaryId]!.title, '8 agents need you');
+        expect(r.notifier.active[_summaryId]!.title, '8 need you');
         r.dispose();
       });
     });
@@ -624,7 +624,7 @@ void main() {
         final own = r.notifier.shown.where((n) => n.id != _summaryId && n.id != _finishedSummaryId);
         expect(own, hasLength(3));
         final summary = r.notifier.active[_finishedSummaryId]!;
-        expect(summary.title, '9 agents finished');
+        expect(summary.title, '9 agents done');
         expect(summary.kind, NotifyKind.finished);
         expect(summary.link, agentsBoardLink);
         expect(r.notifier.active.containsKey(_summaryId), isFalse, reason: 'nothing needs the person');
@@ -646,8 +646,8 @@ void main() {
         r.life(away);
         r.set('a', {for (final (i, p) in all.indexed) p: i < 5 ? 'blocked' : 'done'});
 
-        expect(r.notifier.active[_summaryId]!.title, '5 agents need you');
-        expect(r.notifier.active[_finishedSummaryId]!.title, '5 agents finished');
+        expect(r.notifier.active[_summaryId]!.title, '5 need you');
+        expect(r.notifier.active[_finishedSummaryId]!.title, '5 agents done');
         expect(r.notifier.shown.where((n) => n.id != _summaryId && n.id != _finishedSummaryId), hasLength(3),
             reason: 'one burst: three in all, blocked first');
         r.dispose();
@@ -673,7 +673,7 @@ void main() {
         final n = r.notifier.shown.single;
         expect(n.id, _id('a', 'w1:p2'));
         expect(n.kind, NotifyKind.finished);
-        expect(n.body, 'done · claude · Alpha');
+        expect(n.body, 'done · Claude Code · Alpha');
         r.dispose();
       });
     });
@@ -709,7 +709,7 @@ void main() {
         final own = r.notifier.shown.where((n) => n.id != _finishedSummaryId).toList();
         expect(own.map((n) => n.kind), everyElement(NotifyKind.needsYou));
         expect(own, hasLength(3));
-        expect(r.notifier.active[_finishedSummaryId]!.title, '3 agents finished',
+        expect(r.notifier.active[_finishedSummaryId]!.title, '3 agents done',
             reason: 'the done ones are not dropped: they are summarised');
         r.dispose();
       });
@@ -903,7 +903,7 @@ void main() {
         sessions.forEach(_blockSession);
 
         expect(r.notifier.shown.where((n) => n.id != _summaryId), hasLength(3));
-        expect(r.notifier.active[_summaryId]!.title, '4 agents need you');
+        expect(r.notifier.active[_summaryId]!.title, '4 need you');
         r.dispose();
       });
     });
@@ -1249,11 +1249,11 @@ void main() {
       fakeAsync((async) {
         final r = blocked(async, lsPrompt);
         expect(r.notifier.showsOf(id), 2);
-        expect(r.notifier.shown.first.body, 'needs you · claude · Alpha');
+        expect(r.notifier.shown.first.body, 'needs you · Claude Code · Alpha');
         expect(r.notifier.shown.first.answers, isEmpty);
 
         final n = r.notifier.active[id]!;
-        expect(n.body, 'Do you want to proceed?\nls -la\nneeds you · claude · Alpha');
+        expect(n.body, 'Do you want to proceed?\nls -la\nneeds you · Claude Code · Alpha');
         expect(n.collapsed, 'ls -la', reason: 'a heads-up shows the command, not a bare "proceed?"');
         expect(n.link, 'herdr://agent/a/w1%3Ap1');
         r.dispose();

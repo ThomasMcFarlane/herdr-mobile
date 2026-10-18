@@ -529,7 +529,7 @@ void main() {
 
       await goOffline(tester);
 
-      expect(find.text('Offline — reconnecting'), findsOneWidget);
+      expect(find.text('Offline · reconnecting'), findsOneWidget);
       expect(tester.widget<TextField>(composer()).enabled, isFalse);
       await teardown(tester);
     });
@@ -1201,7 +1201,7 @@ void main() {
 
         await tapText(tester, 'listening on', column: 16);
 
-        expect(find.textContaining("HTTPS on the machine can't be opened on the phone yet."), findsOneWidget);
+        expect(find.textContaining('HTTPS on the machine can’t be opened on the phone yet.'), findsOneWidget);
         expect(find.text('Open on phone'), findsNothing);
         expect(find.text('Open in browser'), findsNothing);
         expect(find.text('Copy link'), findsOneWidget);

@@ -98,6 +98,7 @@ class _Picture extends StatelessWidget {
             children: [
               // A pixel in from the edge: the picture's anti-aliased edge
               // must not show a dashed line of squares around it.
+              // design-lint: allow(raw-size) one pixel exactly: the inset hides the edge, any gap token would show a frame.
               if (transparent) const Padding(padding: EdgeInsets.all(1), child: CustomPaint(painter: _Checkerboard())),
               RawImage(
                 image: image,
@@ -121,7 +122,9 @@ class _Checkerboard extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    // design-lint: allow(raw-color) the checkerboard sits on the viewer's fixed black, the same in both themes.
     final dark = Paint()..color = const Color(0xFF262626);
+    // design-lint: allow(raw-color) see above: the light square of the same fixed pair.
     final light = Paint()..color = const Color(0xFF3A3A3A);
     canvas.drawRect(Offset.zero & size, dark);
     final path = Path();
@@ -191,29 +194,29 @@ class _Loading extends StatelessWidget {
             child: ExcludeSemantics(
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: ds.surface.withValues(alpha: holder == null ? 0 : 0.86),
+                  color: holder == null ? Colors.transparent : ds.surface,
                   borderRadius: BorderRadius.circular(Radii.md),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: Gap.lg, vertical: Gap.md),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const BusySpinner(size: 16),
-                          const SizedBox(width: 10),
+                          const BusySpinner(size: IconSize.row),
+                          const SizedBox(width: Gap.md),
                           Text(line, style: Type.compact.copyWith(color: ds.textSecondary)),
                         ],
                       ),
                       if (fraction != null) ...[
-                        const SizedBox(height: 10),
+                        const SizedBox(height: Gap.md),
                         SizedBox(
                           width: math.min(180, viewport.width - 96),
                           height: 3,
                           child: DecoratedBox(
-                            decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(2)),
+                            decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.pill)),
                             child: Align(
                               alignment: Alignment.centerLeft,
                               child: FractionallySizedBox(
@@ -222,7 +225,7 @@ class _Loading extends StatelessWidget {
                                 child: DecoratedBox(
                                   decoration: BoxDecoration(
                                     color: ds.accent,
-                                    borderRadius: BorderRadius.circular(2),
+                                    borderRadius: BorderRadius.circular(Radii.pill),
                                   ),
                                 ),
                               ),

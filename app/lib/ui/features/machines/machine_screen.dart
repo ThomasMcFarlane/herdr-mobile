@@ -61,16 +61,16 @@ class _MachineViewState extends State<_MachineView> {
     final subtitle = Row(
       children: [
         LinkDot(state: state),
-        const SizedBox(width: 7),
+        const SizedBox(width: Gap.sm),
         Expanded(
           child: Text.rich(
             TextSpan(children: [
               TextSpan(
                 text: state.label,
-                style: TextStyle(color: loud ? ds.blockedText : ds.textSecondary),
+                style: Type.secondary.copyWith(color: loud ? ds.blockedText : ds.textSecondary),
               ),
               if (snap.version.isNotEmpty)
-                TextSpan(text: ' · herdr ${snap.version}', style: TextStyle(color: ds.textMuted)),
+                TextSpan(text: ' · herdr ${snap.version}', style: Type.secondary.copyWith(color: ds.textMuted)),
             ]),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -257,7 +257,7 @@ class _WorkspaceSection extends StatelessWidget {
               icon: LucideIcons.ellipsis,
               tooltip: 'Workspace actions',
               filled: false,
-              size: 36,
+              size: CircleButton.compact,
               onPressed: live ? () => showWorkspaceActions(context, machine, workspace) : null,
             ),
           ),

@@ -179,7 +179,7 @@ void main() {
       final g = await pressAndHold(tester, find.textContaining('Hold to send'), const Duration(milliseconds: 300));
       expect(tester.takeException(), isNull, reason: 'the long reason fits the chip while it fills');
       await g.up();
-      await advance(tester, holdHintWindow);
+      await advance(tester, Dwell.holdHint);
       expect(tester.takeException(), isNull);
       await teardownBoard(tester, h);
     });
@@ -261,7 +261,7 @@ void main() {
 
       await quickTap(tester, find.text('1. Yes'));
       expect(find.text('Hold to send'), findsOneWidget);
-      await tester.pump(holdHintWindow);
+      await tester.pump(Dwell.holdHint);
       expect(find.bySemanticsLabel('1. Yes, needs holding or a second activation'), findsOneWidget);
       tester.semantics.tap(find.semantics.byLabel('1. Yes, needs holding or a second activation'));
       await tester.pump();

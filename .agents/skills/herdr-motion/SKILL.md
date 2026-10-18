@@ -14,9 +14,9 @@ is quiet: **nothing moves at rest**, and most changes are simply instant.
 The bar comes from Emil Kowalski's design engineering and Apple's *Designing
 Fluid Interfaces*, translated to Flutter and made stricter by what was measured
 on a Galaxy A51. The source of truth for values is `app/lib/ui/core/motion.dart`
-and `docs/DESIGN.md` (principle 7, "Micro-interactions", "Busy spinner",
-"Working agent glyph"). Phone-specific facts (keyboard, frame budget) are in
-`docs/ENGINEERING.md`.
+(`Motion`, `Springs`, `PressScale`, `Dwell`, `Haptics`) and `docs/DESIGN.md`
+("Motion", "Haptics"); what each screen does is in `docs/screens/`.
+Phone-specific facts (keyboard, frame budget) are in `docs/ENGINEERING.md`.
 
 ## 1. Should it animate at all?
 
@@ -36,7 +36,7 @@ Then name the purpose in one word. If you can't, don't build it:
 - **Continuity**: where something came from or went (sheet from the bottom, the gap a
   departing card leaves closing under the thumb: `AgentFolding`).
 - **State change**: a change the person would otherwise miss (`StatusGlyph` settle, the
-  arrival wash, `PopOnRise` on a rising count).
+  arrival wash, `RollText` rolling a changed count, `CountBadge` arriving).
 - **Preventing a jump**: content would teleport (`AnimatedSize` when a card's question
   appears).
 
@@ -51,11 +51,12 @@ Two rules about what the person is reading or touching:
 ## 2. Pick the cheapest tool that works
 
 1. **No animation.** An instant state change, plus a haptic if the moment matters.
-2. **`PressBuilder(scale:)`** for press feedback (~0.96 on small controls, none on rows).
+2. **`PressBuilder(scale:)`** for press feedback, with a `PressScale` token
+   (`chip` on small controls, `button`, `panel`, `icon`; none on rows or keys).
 3. **Implicit widgets** (`AnimatedScale`, `AnimatedSize`, `AnimatedSwitcher`,
    `AnimatedOpacity` only while dimmed) with `Motion` durations and `Motion.easeOut`.
 4. **One-shot `AnimationController`** for a sequenced or drawn effect. Run it
-   forward once, then let the ticker stop (`StatusGlyph`, `DrawCheck`, `PopOnRise`).
+   forward once, then let the ticker stop (`StatusGlyph`, `DrawCheck`, `RollText`).
 5. **Physics** (`SpringSimulation` via `controller.animateWith`) for anything a
    finger drives or can interrupt.
 
@@ -79,13 +80,21 @@ that the ticker stops.
 ## 4. Curves and durations come from `Motion`
 
 `Motion` (`ui/core/motion.dart`) names each motion by its role: press and
-release, fade, standard, expand, settle, sheet in and out, page, arrival. Read
-the file for the current values. Pick the token by role, not by the number
-you want.
+release, fade, standard, expand, settle, sheet in and out, page, arrival.
+`Springs` holds the springs (`carry`, `settle`, `snap`, `recoil`, `out`) and
+their tolerances, `PressScale` the press scales and `Dwell` the timers (tap
+guard, hold, toast times). Read the file for the current values. Pick the
+token by role, not by the number you want.
 
-The curve is `Motion.easeOut`, a strong ease-out. Never use ease-in on UI: it
-delays the moment the person is watching. A raw `Cubic(...)` or an animation
-`Duration(milliseconds:)` in `lib/ui` is a defect (timers are not animations).
+The curve is `Motion.easeOut`, a strong ease-out. Exits run the same curve
+mirrored: drive a controller through `Motion.curved(parent)`, whose reverse
+curve is `Motion.easeOutExit`, and give an `AnimatedSwitcher`
+`switchOutCurve: Motion.easeOutExit`. Never use ease-in on UI: it delays the
+moment the person is watching (a plain `CurvedAnimation` played in reverse is
+ease-in). Under reduced motion, `Motion.of(context, d)` gives `Duration.zero`.
+A raw `Cubic(...)`, `Curves.*`, `SpringDescription` or an animation
+`Duration(milliseconds:)` in `lib/ui` is a defect, and `tool/design_lint.dart`
+fails on it (timers are not animations: they go in `Dwell`).
 If no token fits the role, add one to `motion.dart` and a line to
 `docs/DESIGN.md`; don't inline a value. `docs/DESIGN.md` changes only for a
 new token or a rule every screen follows, not for one screen's motion.
@@ -113,10 +122,10 @@ Apple's fluid interfaces:
   distance threshold.
 - **Rubber-band at edges.** Resist progressively and never hard-stop
   (`photo_math.dart`, `swipe_review.dart`).
-- **Damping.** Critically damped by default (`ratio: 1` /
-  `withDurationAndBounce(bounce: 0)`). Use a little bounce (ratio ~0.85 to 0.9,
-  bounce ≤ 0.1) only when the gesture itself carried momentum. Snap to the end
-  (`snapToEnd`, a small `Tolerance`) so a still element keeps no sub-pixel offset.
+- **Damping.** Critically damped by default (`Springs.settle`, `Springs.out`).
+  Use a little bounce (`Springs.carry`, `Springs.snap`: ratio ≥ 0.85) only
+  when the gesture itself carried momentum. Snap to the end (`snapToEnd`, a
+  `Springs` tolerance) so a still element keeps no sub-pixel offset.
 - **Disambiguate.** Press feedback waits for the scroll-intent delay
   (`PressBuilder`), so scrolling a list never flashes rows. Ignore a second finger
   once a one-finger drag has started. A horizontal swipe inside a vertical list
@@ -133,16 +142,16 @@ Use the existing code as models: `swipe_review.dart` (swipe to act, with undo),
 Anything can be reversed mid-flight from its current value. Implicit widgets
 retarget by themselves. Controllers use `animateTo` from `controller.value`, and
 springs use the live position and velocity. Never lock input while a transition
-plays. A toast that is leaving slides back in when it is replaced. It does not
-restart.
+plays. A toast that is leaving slides back in when the same message (its
+group) is replaced; a different message takes over while the old one leaves.
 
 ## 7. Reduced motion ships with the animation
 
 `Motion.reduced(context)` is true means: drop the movement and keep the
 opacity and colour changes that help people follow. The page becomes a
 `Motion.fade` cross-fade, sheets open with no animation (drag still works),
-settle, pop and the folding gap are skipped, and scroll-to jumps. Streaming
-reveals whole lines. Test the reduced path as well as the normal one.
+settle, roll, badge scale and the folding gap are skipped, and scroll-to jumps.
+Streaming reveals whole lines. Test the reduced path as well as the normal one.
 
 ## 8. Haptics are words
 
@@ -217,9 +226,9 @@ patterns with this app's exemplars, see `references/recipes.md`.
 | --- | --- |
 | A looping or repeating animation | Still state; `BusySpinner` only while the person waits |
 | Animation at rest or on agent-driven updates | One settle when it changes on screen, or nothing |
-| `Curves.*`, raw `Cubic`, raw animation `Duration` in `lib/ui` | `Motion` tokens (add one if missing) |
-| Ease-in on UI | `Motion.easeOut` |
-| Scale from 0 | 0.92 to 0.97 plus opacity |
+| `Curves.*`, raw `Cubic`, `SpringDescription`, raw animation `Duration` in `lib/ui` | `Motion`, `Springs`, `Dwell` tokens (add one if missing) |
+| Ease-in on UI, or an exit that plays `easeOut` backwards | `Motion.easeOut`; exits through `Motion.curved` / `Motion.easeOutExit` |
+| Scale from 0 | 0.92 to 0.97 plus opacity (`Motion.enterScale`); only `CountBadge` grows from 0 |
 | Opacity widgets at 1, `BackdropFilter` | Wrap only while dimmed; no blur |
 | A gesture that animates only on release, or from the target value | 1:1 tracking, live value, velocity handoff |
 | `HapticFeedback.*` | `Haptics.*` |

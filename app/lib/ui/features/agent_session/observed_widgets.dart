@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../data/repositories/agent_session.dart';
+import '../../../data/words/elapsed.dart';
+import '../../../data/words/plural.dart';
 import '../../../data/repositories/observed_session.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../../support/step_clock.dart';
@@ -30,7 +32,7 @@ class LiveOutput extends StatelessWidget {
       if (rows == null || rows.isEmpty) return const SizedBox.shrink();
       final ds = context.ds;
       return Padding(
-        padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.sm),
+        padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.sm),
         child: Panel(
           padding: const EdgeInsets.symmetric(horizontal: Gap.md, vertical: Gap.sm),
             child: Semantics(
@@ -49,12 +51,7 @@ class LiveOutput extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         softWrap: false,
-                        style: TextStyle(
-                          fontFamily: monoFamily,
-                          fontSize: 11.5,
-                          height: 1.4,
-                          color: ds.textSecondary,
-                        ),
+                        style: Mono.small.copyWith(color: ds.textSecondary),
                       ),
                     ),
                 ],
@@ -66,7 +63,7 @@ class LiveOutput extends StatelessWidget {
   );
 }
 
-/// `Working · 42 s` next to the status glyph while the log is quiet: how long
+/// `Working · 42s` next to the status glyph while the log is quiet: how long
 /// the agent has been in this phase, moving by the minute clock (30 s steps),
 /// never per second.
 class WorkingLabel extends StatelessWidget {
@@ -74,20 +71,13 @@ class WorkingLabel extends StatelessWidget {
 
   final DateTime? since;
 
-  /// `42 s`, `3 min`, `1 h 05 min`.
-  static String elapsed(Duration d) {
-    if (d.inSeconds < 60) return '${d.inSeconds < 0 ? 0 : d.inSeconds} s';
-    if (d.inMinutes < 60) return '${d.inMinutes} min';
-    return '${d.inHours} h ${(d.inMinutes % 60).toString().padLeft(2, '0')} min';
-  }
-
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
     return MinuteBuilder(
       builder: (context, now) {
         final at = since;
-        final text = at == null ? 'Working' : 'Working · ${elapsed(now.difference(at))}';
+        final text = at == null ? 'Working' : 'Working · ${Elapsed.compact(now.difference(at))}';
         return Text(
           text,
           maxLines: 1,
@@ -161,7 +151,7 @@ class _SubagentRow extends StatelessWidget {
   static String _state(SubagentState s) => switch (s) {
     SubagentState.waiting => 'Waiting',
     SubagentState.running => 'Running',
-    SubagentState.finished => 'Finished',
+    SubagentState.finished => 'Done',
     SubagentState.failed => 'Failed',
   };
 
@@ -178,7 +168,7 @@ class _SubagentRow extends StatelessWidget {
     final tools = info.recentTools.isEmpty ? null : info.recentTools.join(' · ');
     final detail = [
       _state(entry.state),
-      if (info.toolCount > 0) '${info.toolCount} ${info.toolCount == 1 ? 'tool' : 'tools'}',
+      if (info.toolCount > 0) countOf(info.toolCount, 'tool'),
     ].join(' · ');
     final parent = session;
     return PressRow(
@@ -220,7 +210,7 @@ class _SubagentRow extends StatelessWidget {
                 tools,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontFamily: monoFamily, fontSize: 11.5, color: ds.textMuted),
+                style: Mono.small.copyWith(color: ds.textMuted),
               ),
           ],
       ),

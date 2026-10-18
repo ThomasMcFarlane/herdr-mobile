@@ -205,8 +205,8 @@ class StopNoteRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Icon(LucideIcons.circleAlert, size: 15, color: ds.textTertiary),
+            padding: const EdgeInsets.only(top: Gap.hair),
+            child: Icon(LucideIcons.circleAlert, size: IconSize.row, color: ds.textTertiary),
           ),
           const SizedBox(width: Gap.sm),
           Expanded(child: Text(stopNoteText(reason), style: Type.secondary.copyWith(color: ds.textSecondary))),
@@ -235,8 +235,8 @@ class TranscriptNoteRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Icon(LucideIcons.info, size: 15, color: ds.textTertiary),
+            padding: const EdgeInsets.only(top: Gap.hair),
+            child: Icon(LucideIcons.info, size: IconSize.row, color: ds.textTertiary),
           ),
           const SizedBox(width: Gap.sm),
           Expanded(child: Text(visibleText(text), style: Type.secondary.copyWith(color: ds.textSecondary))),

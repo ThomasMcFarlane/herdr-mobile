@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/acp/prompt_queue.dart';
 import '../../../data/repositories/agent_session.dart';
+import '../../../data/words/plural.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import 'session_select.dart';
 import '../../render/visible_text.dart';
@@ -61,7 +62,7 @@ class _QueuedMessagesState extends State<QueuedMessages> {
               padding: const EdgeInsets.only(bottom: Gap.xs),
               child: Row(
                 children: [
-                  Icon(LucideIcons.pause, size: 14, color: ds.textSecondary),
+                  Icon(LucideIcons.pause, size: IconSize.inline, color: ds.textSecondary),
                   const SizedBox(width: Gap.sm),
                   Expanded(
                     child: Text(
@@ -131,7 +132,7 @@ class _QueuedRow extends StatelessWidget {
     final ds = context.ds;
     final attachments = message.attachments.length;
     final note = [
-      if (attachments > 0) '+ $attachments attachment${attachments == 1 ? '' : 's'}',
+      if (attachments > 0) '+ ${countOf(attachments, 'attachment')}',
       ?reason,
     ].join(' · ');
     return Panel(
@@ -181,7 +182,7 @@ class _QueuedRow extends StatelessWidget {
           CircleButton(
             icon: LucideIcons.x,
             tooltip: 'Remove queued message',
-            size: 32,
+            size: kMinTap - Gap.md,
             filled: false,
             onPressed: onRemove,
           ),
@@ -268,7 +269,7 @@ class _EditQueuedState extends State<_EditQueued> {
                 helper: gone
                     ? 'Already sent. It can no longer be changed.'
                     : attachments > 0
-                    ? '+ $attachments attachment${attachments == 1 ? '' : 's'} stay with it'
+                    ? '+ ${countOf(attachments, 'attachment')} stay with it'
                     : null,
                 onChanged: (_) => setState(() {}),
               ),

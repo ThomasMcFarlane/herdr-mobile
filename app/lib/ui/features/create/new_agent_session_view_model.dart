@@ -100,7 +100,7 @@ class NewAgentSessionViewModel extends ChangeNotifier {
   String? unavailableReason(AgentRoute route) {
     final m = machine;
     if (m == null || isAvailable(route.id) != false) return null;
-    return '${route.label} is not installed on ${m.profile.label}';
+    return 'Not installed on ${m.profile.label}';
   }
 
   /// The chosen agent can be started (as far as is known).
@@ -160,7 +160,7 @@ class NewAgentSessionViewModel extends ChangeNotifier {
       unawaited(_settings.remember(machineId: m.profile.id, agent: agentId, folder: path));
       return session;
     } on AgentHostException catch (e) {
-      return _fail(NewSessionError("Couldn't start the session", e.message));
+      return _fail(NewSessionError('Couldn’t start the session', e.message));
     } finally {
       _busy = false;
       if (!_disposed) notifyListeners();

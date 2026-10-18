@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../data/acp/turns/plain_text.dart' show safeEnd;
+import '../../../data/words/plural.dart';
 import '../../render/markdown/md_more_row.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../../render/visible_text.dart';
@@ -41,7 +42,7 @@ List<CodeLine> textLines(String text, {bool fromEnd = false, Color? color}) {
   if (source.length > panelTextLimit) {
     final cut = source.length - panelTextLimit;
     source = fromEnd ? source.substring(cut) : source.substring(0, safeEnd(source, panelTextLimit));
-    note = '… $cut characters not shown';
+    note = '${countOf(cut, 'character')} not shown';
   }
   final raw = source.split('\n');
   if (raw.length > 1 && raw.last.isEmpty) raw.removeLast();
@@ -79,7 +80,6 @@ class CodePanel extends StatelessWidget {
     this.fromEnd = false,
     this.wrap = true,
     this.cap = 40,
-    this.size = 12,
     this.onCopy,
     this.copyLabel = 'Copy',
   });
@@ -95,7 +95,6 @@ class CodePanel extends StatelessWidget {
   /// Wrap long lines to the panel; false scrolls the panel sideways.
   final bool wrap;
   final int cap;
-  final double size;
 
   /// Copies the panel's whole text (what the owner holds, not only what shows).
   /// A panel longer than [copyRowFrom] lines then has a foot with the copy
@@ -108,28 +107,22 @@ class CodePanel extends StatelessWidget {
     final total = lines.length;
     final over = total > cap;
     final shown = !over || all ? lines : (fromEnd ? lines.sublist(total - cap) : lines.sublist(0, cap));
-    final style = TextStyle(
-      fontFamily: monoFamily,
-      fontSize: size,
-      height: 1.45,
-      color: foreground,
-      fontFeatures: const [FontFeature.disable('liga'), FontFeature.disable('calt')],
-    );
+    final style = Mono.base.copyWith(color: foreground);
     final hidden = total - cap;
     final more = over
         ? MoreRow(
             label: all
-                ? '$total lines'
+                ? countOf(total, 'line')
                 : fromEnd
-                    ? '$hidden earlier lines'
-                    : '$hidden more lines',
+                    ? countOf(hidden, 'earlier line')
+                    : countOf(hidden, 'more line'),
             action: all ? 'Show less' : 'Show all',
             onTap: onToggleAll,
             onCopy: onCopy,
             copyLabel: copyLabel,
           )
         : (onCopy != null && total > copyRowFrom
-            ? MoreRow(label: '$total lines', onCopy: onCopy, copyLabel: copyLabel)
+            ? MoreRow(label: countOf(total, 'line'), onCopy: onCopy, copyLabel: copyLabel)
             : null);
 
     Widget line(CodeLine l) {
@@ -159,7 +152,7 @@ class CodePanel extends StatelessWidget {
       );
       body = SizedBox(
         height: _boundedHeight,
-        child: wrap ? list : _sideways(lines, size, list),
+        child: wrap ? list : _sideways(lines, style.fontSize!, list),
       );
     } else {
       final column = Column(

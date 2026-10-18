@@ -92,7 +92,7 @@ Future<void> showPaneActions(
       title: 'Rename pane',
       label: 'Name',
       initial: pane.label ?? '',
-      helper: "Leave empty to show the program's own title",
+      helper: 'Leave empty to show the program’s own title',
       allowEmpty: true,
     );
     if (label == null || label == (pane.label ?? '')) return;

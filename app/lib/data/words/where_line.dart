@@ -4,8 +4,8 @@
 ///  * the agent is dropped when it is the title;
 ///  * the machine is dropped when [showMachine] is false (one machine on the
 ///    board: it tells nothing);
-///  * the folder is dropped when it is the title or the workspace; the
-///    workspace is shown only when there is no folder.
+///  * the place is the folder, else the workspace (a folder named like its
+///    workspace is said once); it is dropped when it is the title.
 ///
 /// Empty parts are skipped; the result may be empty.
 String whereLine({
@@ -23,11 +23,9 @@ String whereLine({
   final parts = <String>[];
   if (a != null && !_same(a, title)) parts.add(a);
   if (showMachine && m != null) parts.add(m);
-  if (f != null) {
-    if (!_same(f, title) && !_same(f, w)) parts.add(f);
-  } else if (w != null && !_same(w, title)) {
-    parts.add(w);
-  }
+  // The folder, else the workspace; when the two are the same it is said once.
+  final place = f ?? w;
+  if (place != null && !_same(place, title)) parts.add(place);
   return parts.join(' · ');
 }
 

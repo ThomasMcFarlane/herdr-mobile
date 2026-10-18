@@ -54,7 +54,7 @@ class AuthChoice {
 class AuthNeeded {
   const AuthNeeded({required this.message, this.agentMessage, this.methods = const [], this.keychain = false});
 
-  /// In words for the person ("Claude Code needs you to sign in on the host.").
+  /// In words for the person ("Sign in to Claude Code on the machine to continue.").
   final String message;
 
   /// What the agent said ("Authentication required").
@@ -100,8 +100,8 @@ AuthNeeded authNeededFrom(JsonRpcException e, {required String agentLabel, Objec
   if (methods.isEmpty) methods = parseAuthChoices(advertised);
   return AuthNeeded(
     message: keychain
-        ? '$agentLabel keeps its login in the Mac’s Keychain, which macOS keeps locked for sessions started from the phone.'
-        : '$agentLabel needs you to sign in on the host.',
+        ? 'The Mac’s Keychain holds the $agentLabel login, and macOS keeps it locked for sessions started from the phone.'
+        : 'Sign in to $agentLabel on the machine to continue.',
     agentMessage: e.message,
     methods: methods,
     keychain: keychain,

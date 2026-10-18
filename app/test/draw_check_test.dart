@@ -23,7 +23,7 @@ void main() {
     expect(_paint, paints..path(), reason: 'the circle starts');
     expect(_paint, isNot(paints..path()..path()), reason: 'the check waits for the circle');
 
-    await tester.pump(drawCheckDuration);
+    await tester.pump(Motion.draw);
     expect(_paint, paints..path()..path());
     expect(tester.binding.transientCallbackCount, 0, reason: 'no loop: the ticker is done');
   });

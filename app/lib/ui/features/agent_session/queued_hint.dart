@@ -35,17 +35,17 @@ class DeliveryHint extends StatelessWidget {
       child: text == null
           ? const SizedBox(width: double.infinity)
           : Padding(
-              padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.xs),
+              padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.xs),
               child: Row(
                 children: [
                   ExcludeSemantics(
                     child: Icon(
                       delivery == SendDelivery.steered ? LucideIcons.cornerDownRight : LucideIcons.clock,
-                      size: 12,
+                      size: IconSize.inline,
                       color: ds.textSecondary,
                     ),
                   ),
-                  const SizedBox(width: Gap.xs + 2),
+                  const SizedBox(width: Gap.sm),
                   Expanded(
                     child: Text(
                       text,

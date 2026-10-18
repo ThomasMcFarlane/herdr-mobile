@@ -148,9 +148,9 @@ class BatchActionBar extends StatelessWidget {
     return Row(
       children: [
         _BarAction(
-          label: 'Interrupt',
+          label: 'Stop',
           icon: LucideIcons.circleStop,
-          onTap: can(BatchAction.interrupt) ? () => onAction(BatchAction.interrupt) : null,
+          onTap: can(BatchAction.stop) ? () => onAction(BatchAction.stop) : null,
         ),
         _BarAction(
           label: 'Message',
@@ -201,13 +201,13 @@ class _BarAction extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 22, color: enabled ? fg : ds.textTertiary),
-              const SizedBox(height: 2),
+              Icon(icon, size: IconSize.nav, color: enabled ? fg : ds.textTertiary),
+              const SizedBox(height: Gap.hair),
               Text(
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: Type.label.copyWith(color: fg, fontWeight: FontWeight.w500),
+                style: Type.caption.copyWith(color: fg),
               ),
             ],
           ),

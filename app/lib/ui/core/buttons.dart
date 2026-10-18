@@ -39,10 +39,10 @@ class AppButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final ds = context.ds;
     final (bg, fg, pressedBg) = switch (kind) {
-      AppButtonKind.primary => (ds.accent, ds.onAccent, Color.alphaBlend(Colors.black.withValues(alpha: 0.12), ds.accent)),
+      AppButtonKind.primary => (ds.accent, ds.onAccent, ds.accentPressed),
       AppButtonKind.secondary => (ds.fill, ds.text, ds.fillPressed),
       AppButtonKind.ghost => (Colors.transparent, ds.accentText, ds.fill),
-      AppButtonKind.danger => (ds.danger.withValues(alpha: 0.12), ds.dangerText, ds.danger.withValues(alpha: 0.2)),
+      AppButtonKind.danger => (ds.wash(ds.danger), ds.dangerText, ds.washPressed(ds.danger)),
     };
     final enabled = onPressed != null && !loading;
     final dimmed = onPressed == null && !loading;
@@ -59,7 +59,7 @@ class AppButton extends StatelessWidget {
         tween: Tween(end: dimmed ? 0.4 : 1),
         duration: Motion.standard,
         builder: (context, k, _) {
-          Color dim(Color c) => k == 1 ? c : c.withValues(alpha: c.a * k);
+          Color dim(Color c) => Ds.fade(c, k);
           return AnimatedContainer(
             duration: Motion.pressing(pressed),
             curve: Motion.easeOut,
@@ -77,17 +77,14 @@ class AppButton extends StatelessWidget {
                 if (loading)
                   BusySpinner(color: dim(fg))
                 else if (icon != null)
-                  Icon(icon, size: compact ? 16 : 18, color: dim(fg)),
+                  Icon(icon, size: compact ? IconSize.row : IconSize.bar, color: dim(fg)),
                 if (loading || icon != null) const SizedBox(width: 8),
                 Flexible(
                   child: Text(
                     label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Type.button.copyWith(
-                      color: dim(fg),
-                      fontSize: compact ? 13.5 : 15,
-                    ),
+                    style: (compact ? Type.buttonCompact : Type.button).copyWith(color: dim(fg)),
                   ),
                 ),
               ],
@@ -117,6 +114,9 @@ class CircleButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final String tooltip;
   final double size;
+
+  /// A circle inside a field or a row: 36, in a 44 hit area.
+  static const compact = 36.0;
 
   /// Toggled-on state (accent tint).
   final bool active;

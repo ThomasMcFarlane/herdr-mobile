@@ -122,29 +122,29 @@ class _SelectPill extends StatelessWidget {
       return PressBuilder(
         onTap: toggle,
         haptic: true,
-        scale: 0.97,
+        scale: PressScale.button,
         minTapSize: kMinTap,
         selected: picked,
         semanticLabel: picked ? 'Selected, number $number. Tap to deselect' : 'Select this photo',
         builder: (context, pressed) => Container(
           height: 40,
-          padding: const EdgeInsets.only(left: 8, right: 16),
+          padding: const EdgeInsets.only(left: Gap.sm, right: Gap.lg),
           decoration: BoxDecoration(
-            color: picked ? ds.accent : const Color(0x99000000),
-            borderRadius: BorderRadius.circular(20),
+            color: picked ? ds.accent : ds.photoScrim,
+            borderRadius: BorderRadius.circular(Radii.pill),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               SelectMark(selected: picked, number: number, onPhoto: true, size: SelectMark.photoSize),
-              const SizedBox(width: 8),
+              const SizedBox(width: Gap.sm),
               Text(
                 picked ? 'Selected' : 'Select',
-                style: Type.button.copyWith(fontSize: 14, color: picked ? ds.onAccent : Colors.white),
+                style: Type.buttonCompact.copyWith(color: picked ? ds.onAccent : ds.onPhoto),
               ),
               if (picked) ...[
-                const SizedBox(width: 6),
-                Icon(LucideIcons.check, size: 14, color: ds.onAccent),
+                const SizedBox(width: Gap.sm),
+                Icon(LucideIcons.check, size: IconSize.inline, color: ds.onAccent),
               ],
             ],
           ),

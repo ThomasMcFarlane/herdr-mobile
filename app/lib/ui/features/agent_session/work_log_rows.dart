@@ -40,7 +40,7 @@ class FoldRow extends StatelessWidget {
     notifyRowBuilt(rowKey);
     final ds = context.ds;
     final parts = [...workSummaryParts(turn), ?note];
-    final base = Type.secondary.copyWith(color: ds.textSecondary, fontWeight: FontWeight.w500, fontFeatures: Type.tabular);
+    final base = Type.secondaryStrong.copyWith(color: ds.textSecondary, fontFeatures: Type.tabular);
     return Padding(
       padding: EdgeInsets.only(top: gap),
       child: Semantics(
@@ -157,7 +157,7 @@ class ThinkingRow extends StatelessWidget {
                     const SizedBox(width: Gap.sm),
                     Text(
                       'Thinking',
-                      style: Type.secondary.copyWith(color: ds.textSecondary, fontWeight: FontWeight.w500),
+                      style: Type.secondaryStrong.copyWith(color: ds.textSecondary),
                     ),
                   ],
                 ),
@@ -211,7 +211,7 @@ class GroupRow extends StatelessWidget {
                 Expanded(
                   child: Text(
                     visibleText(label),
-                    style: Type.secondary.copyWith(color: ds.textSecondary, fontWeight: FontWeight.w500),
+                    style: Type.secondaryStrong.copyWith(color: ds.textSecondary),
                   ),
                 ),
                 const SizedBox(width: Gap.sm),

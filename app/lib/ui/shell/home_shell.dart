@@ -243,7 +243,7 @@ class _HomeShellState extends State<HomeShell> with RestorationMixin, SingleTick
                       icon: LucideIcons.bot,
                       label: 'Agents',
                       badge: needsYou,
-                      badgeLabel: 'need you',
+                      badgeLabel: needsYou == 1 ? 'needs you' : 'need you',
                     ),
                     const TabSpec(icon: LucideIcons.server, label: 'Machines'),
                     // A newer version is a quiet dot, never a count: it is not

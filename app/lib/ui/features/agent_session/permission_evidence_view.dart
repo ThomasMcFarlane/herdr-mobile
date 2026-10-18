@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/decision/permission_evidence.dart';
+import '../../../data/words/plural.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../../render/markdown/markdown.dart';
 import 'code_panel.dart' show clipLine;
@@ -15,15 +16,6 @@ import '../../render/visible_text.dart';
 /// data is `permissionEvidence` / `planApprovalEvidence` (bounded, free of
 /// hidden characters); this file only draws it, in the same quiet boxes the
 /// command uses: a few lines, a scrollbar, `More below` and `Read all`.
-
-/// Mono text of a command, a diff or a path in a dock.
-TextStyle dockMono(Ds ds, {double size = 12.5}) => TextStyle(
-  fontFamily: monoFamily,
-  fontSize: size,
-  height: 1.45,
-  color: ds.text,
-  fontFeatures: const [FontFeature.disable('liga'), FontFeature.disable('calt')],
-);
 
 /// How tall an evidence box may be: the dock must leave the answers in reach,
 /// so a short screen gets less.
@@ -60,7 +52,7 @@ class EvidenceIntent extends StatelessWidget {
     final ds = context.ds;
     final said = visibleText(text);
     return Padding(
-      padding: const EdgeInsets.only(top: 4, bottom: 2),
+      padding: const EdgeInsets.only(top: Gap.xs, bottom: Gap.hair),
       child: Semantics(
         label: 'The agent said: $said',
         excludeSemantics: true,
@@ -88,7 +80,7 @@ class EvidenceBox extends StatelessWidget {
     required this.controller,
     required this.overflows,
     required this.maxHeight,
-    this.padding = const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+    this.padding = const EdgeInsets.symmetric(horizontal: Gap.md, vertical: Gap.sm),
   });
 
   final int count;
@@ -131,10 +123,10 @@ class EvidenceBox extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: ds.surface,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(Radii.sm),
         border: Border.all(color: ds.hairline),
       ),
-      child: ClipRRect(borderRadius: BorderRadius.circular(8), child: scroller),
+      child: ClipRRect(borderRadius: BorderRadius.circular(Radii.sm), child: scroller),
     );
   }
 }
@@ -157,7 +149,7 @@ class ReadAllCue extends StatelessWidget {
           child: text == null
               ? const SizedBox.shrink()
               : Padding(
-                  padding: EdgeInsets.symmetric(vertical: onOpen == null ? Gap.xs : 0),
+                  padding: onOpen == null ? const EdgeInsets.symmetric(vertical: Gap.xs) : EdgeInsets.zero,
                   child: Text(text!, style: Type.captionStrong.copyWith(color: ds.blockedText)),
                 ),
         ),
@@ -253,10 +245,13 @@ class _PlanBoxState extends State<PlanBox> {
 }
 
 /// Block [i] of a document as a row.
-Widget planBlock(List<MdBlock> blocks, int i, {bool expanded = false, VoidCallback? onToggle}) => Padding(
-  padding: EdgeInsets.only(top: mdBlockGap(i == 0 ? null : blocks[i - 1], blocks[i])),
-  child: MdBlockView(block: blocks[i], expanded: expanded, onToggleExpanded: onToggle),
-);
+Widget planBlock(List<MdBlock> blocks, int i, {bool expanded = false, VoidCallback? onToggle}) {
+  final previous = i > 0 ? blocks[i - 1] : null;
+  return Padding(
+    padding: EdgeInsets.only(top: mdBlockGap(previous, blocks[i])),
+    child: MdBlockView(block: blocks[i], expanded: expanded, onToggleExpanded: onToggle),
+  );
+}
 
 /// The whole plan in a sheet.
 Future<void> showPlanSheet(BuildContext context, MdDocument document, {bool preview = false}) {
@@ -390,7 +385,7 @@ List<DiffRow> diffRowsOf(PermissionEvidence evidence) {
   }
   if (evidence.hiddenDiffs > 0) {
     final n = evidence.hiddenDiffs;
-    rows.add(DiffNoteRow('+$n more ${n == 1 ? 'file' : 'files'} not shown'));
+    rows.add(DiffNoteRow('${countOf(n, 'more file')} not shown'));
   }
   return rows;
 }
@@ -409,7 +404,7 @@ Widget diffRowView(BuildContext context, DiffRow row) {
     case DiffHeaderRow(:final diff):
       final counts = diffCounts(diff);
       return Padding(
-        padding: const EdgeInsets.only(top: 2, bottom: 2),
+        padding: const EdgeInsets.symmetric(vertical: Gap.hair),
         child: Semantics(
           label: '${visibleText(diff.path)}, $counts',
           excludeSemantics: true,
@@ -417,25 +412,25 @@ Widget diffRowView(BuildContext context, DiffRow row) {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: Icon(LucideIcons.file, size: 13, color: ds.textSecondary),
+                padding: const EdgeInsets.only(top: Gap.hair),
+                child: Icon(LucideIcons.file, size: IconSize.inline, color: ds.textSecondary),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: Gap.sm),
               Expanded(
                 child: Text(
                   visibleText(diff.path),
-                  style: dockMono(ds, size: 12).copyWith(fontWeight: FontWeight.w600),
+                  style: Mono.base.copyWith(color: ds.text),
                 ),
               ),
               const SizedBox(width: Gap.sm),
-              Text(counts, style: dockMono(ds, size: 12).copyWith(color: ds.textSecondary, fontFeatures: Type.tabular)),
+              Text(counts, style: Mono.base.copyWith(color: ds.textSecondary, fontFeatures: [...Mono.noLigatures, ...Type.tabular])),
             ],
           ),
         ),
       );
     case DiffNoteRow(:final text):
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
+        padding: const EdgeInsets.symmetric(vertical: Gap.hair),
         child: Text(text, style: Type.caption.copyWith(color: ds.textSecondary)),
       );
     case DiffTextRow(:final line):
@@ -448,16 +443,16 @@ Widget diffRowView(BuildContext context, DiffRow row) {
         DiffKind.gap => ('\u2026 ', term.dim, null),
       };
       final body = Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(horizontal: Gap.xs),
         child: Text(
           '$prefix${text.isEmpty ? ' ' : text}',
           semanticsLabel: spoken == null ? null : '$spoken: $text',
-          style: dockMono(ds, size: 12).copyWith(color: color ?? ds.text),
+          style: Mono.base.copyWith(color: color ?? ds.text),
         ),
       );
       if (line.kind != DiffKind.add && line.kind != DiffKind.del) return body;
       return DecoratedBox(
-        decoration: BoxDecoration(color: color!.withValues(alpha: 0.14)),
+        decoration: BoxDecoration(color: ds.wash(color!)),
         child: SizedBox(width: double.infinity, child: body),
       );
   }

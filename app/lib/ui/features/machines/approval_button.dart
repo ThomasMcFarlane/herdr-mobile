@@ -24,7 +24,7 @@ class ApprovalButton extends StatelessWidget {
         onPressed: () async {
           final toaster = Toaster.of(context);
           if (!await openInBrowser(url)) {
-            toaster.show('No browser could open the link.', kind: ToastKind.failed);
+            toaster.show('Couldn’t open on this phone: no browser could open it.', kind: ToastKind.failed);
           }
         },
       );

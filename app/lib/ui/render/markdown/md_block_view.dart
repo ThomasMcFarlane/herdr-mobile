@@ -288,9 +288,9 @@ class _Alert extends StatelessWidget {
               header: true,
               child: Row(
                 children: [
-                  Icon(icon, size: 16, color: color),
+                  Icon(icon, size: IconSize.row, color: color),
                   const SizedBox(width: Gap.sm),
-                  Expanded(child: Text(title, style: Type.label.copyWith(color: color, fontWeight: FontWeight.w600))),
+                  Expanded(child: Text(title, style: Type.labelStrong.copyWith(color: color))),
                 ],
               ),
             ),

@@ -26,9 +26,9 @@ List<({String? id, String label, String? missing})> dictationChoices(
   final other = chosen == null || (en?.id == chosen) || (vi?.id == chosen)
       ? null
       : available.where((l) => l.id == chosen).firstOrNull;
-  const missing = 'Not in this phone\'s speech service';
+  const missing = 'Not in this phone’s speech service';
   return [
-    (id: null, label: 'Phone\'s language', missing: null),
+    (id: null, label: 'Phone’s language', missing: null),
     (id: en?.id, label: 'English', missing: en == null ? missing : null),
     (id: vi?.id, label: 'Tiếng Việt', missing: vi == null ? missing : null),
     if (other != null) (id: other.id, label: other.name, missing: null),
@@ -74,7 +74,7 @@ Future<void> showDictationLanguageSheet(BuildContext context, Dictation dictatio
               Padding(
                 padding: const EdgeInsets.only(left: Gap.lg, top: Gap.sm, right: Gap.lg),
                 child: Text(
-                  'One language at a time. The phone\'s speech service may send what you say '
+                  'One language at a time. The phone’s speech service may send what you say '
                   'to Google, unless an offline language is installed in it.',
                   style: Type.caption.copyWith(color: ds.textSecondary),
                 ),

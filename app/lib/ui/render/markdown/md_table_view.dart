@@ -144,13 +144,11 @@ class _MdTableViewState extends State<MdTableView> {
     final ds = styles.ds;
     final t = widget.table;
     final scaler = MediaQuery.textScalerOf(context);
-    final cellStyle = styles.body.copyWith(
-      fontSize: (styles.body.fontSize ?? 15) - 1.5,
-      height: 1.35,
+    final cellStyle = Type.secondary.copyWith(
       fontFeatures: Type.tabular,
       color: styles.quiet ? ds.textSecondary : ds.text,
     );
-    final headStyle = cellStyle.copyWith(fontWeight: FontWeight.w600, color: ds.text);
+    final headStyle = Type.buttonCompact.copyWith(height: cellStyle.height, fontFeatures: Type.tabular, color: ds.text);
     final widths = _columnWidths(t, cellStyle, headStyle, scaler);
     final total = widths.fold<double>(0, (a, b) => a + b);
 
@@ -268,8 +266,9 @@ class _EdgeFade extends StatelessWidget {
         blendMode: BlendMode.dstIn,
         shaderCallback: (rect) {
           final f = math.min(_fade / rect.width, 0.45);
-          const clear = Color(0x00000000);
-          const solid = Color(0xFF000000);
+          // The mask reads alpha only: any opaque colour keeps, transparent fades.
+          final solid = context.ds.text;
+          final clear = solid.withAlpha(0);
           return LinearGradient(
             colors: [left ? clear : solid, solid, solid, right ? clear : solid],
             stops: [0, f, 1 - f, 1],

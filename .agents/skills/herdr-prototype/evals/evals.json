@@ -4,7 +4,7 @@
     {
       "id": 1,
       "prompt": "the machines tab is boring and i cant tell which machine has trouble or what its doing at a glance. prototype some directions so we can talk about it, dont change the app",
-      "expected_output": "A throwaway shots test (nothing in lib/ changed) with a baseline that shows the real Machines row (address and herdr version leading), 2-4 variants each named by an axis, light and dark PNGs that were opened, and a short report with a table, a pick, caveats and the re-render command.",
+      "expected_output": "A throwaway shots test (nothing in lib/ changed) with a baseline that shows the real Machines row (a link dot leading, `N agents · user@host` under the name), 2-4 variants each named by an axis, light and dark PNGs that were opened, and a short report with a table, a pick, caveats and the re-render command.",
       "files": []
     },
     {

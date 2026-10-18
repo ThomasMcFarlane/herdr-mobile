@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/scheduler.dart';
 
 import '../../data/streaming/flush_scheduler.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// A [FlushScheduler] aligned to frames: [nextFrame] runs the flush as a
 /// *transient frame callback*, which the engine calls at the start of the next
@@ -21,7 +22,7 @@ import '../../data/streaming/flush_scheduler.dart';
 /// back to a timer of [hiddenDelay], so state that other parts of the app
 /// listen to (notifications, the board) is not held until the person returns.
 class FrameFlush implements FlushScheduler {
-  FrameFlush({this._binding, this.hiddenDelay = const Duration(milliseconds: 250)});
+  FrameFlush({this._binding, this.hiddenDelay = Dwell.hiddenFlush});
 
   final SchedulerBinding? _binding;
 

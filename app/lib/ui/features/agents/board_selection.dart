@@ -30,7 +30,7 @@ class BoardSelection extends ChangeNotifier {
   /// A copy, in no particular order.
   Set<String> get refs => Set.of(_refs);
 
-  /// What the running batch says ("Interrupting 3 agents"), null when none
+  /// What the running batch says ("Stopping 3 agents"), null when none
   /// runs. While one runs the selection is frozen.
   String? get busy => _busy;
 
@@ -122,10 +122,10 @@ class SelectableRowFrame extends StatelessWidget {
         children: [
           Positioned.fill(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: Gap.sm),
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: state.selected ? ds.accent.withValues(alpha: ds.isDark ? 0.16 : 0.09) : Colors.transparent,
+                  color: state.selected ? ds.accentWash : Colors.transparent,
                   borderRadius: BorderRadius.circular(Radii.sm),
                 ),
               ),

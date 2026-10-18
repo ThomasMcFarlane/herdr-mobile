@@ -26,8 +26,9 @@ class MachineField extends StatelessWidget {
   final bool lost;
   final ValueChanged<String> onSelect;
 
-  /// Text inset of a [LabeledField] (outline 1 + padding 15).
-  static const _textInset = 16.0;
+  /// Padding inside the outline, so the text sits [Gap.lg] in from the field's
+  /// edge like a [LabeledField]'s (the 1 dp outline makes up the rest).
+  static const _textInset = Gap.lg - 1;
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +53,7 @@ class MachineField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(bottom: 6),
+          padding: const EdgeInsets.only(bottom: Gap.sm),
           child: ExcludeSemantics(
             child: Text('Machine', style: Type.label.copyWith(color: ds.textSecondary)),
           ),
@@ -65,7 +66,7 @@ class MachineField extends StatelessWidget {
             duration: Motion.pressing(pressed),
             curve: Motion.easeOut,
             constraints: const BoxConstraints(minHeight: 46),
-            padding: const EdgeInsets.symmetric(horizontal: _textInset - 1),
+            padding: const EdgeInsets.symmetric(horizontal: _textInset),
             alignment: Alignment.centerLeft,
             decoration: BoxDecoration(
               color: pressed ? ds.fill : ds.surface,
@@ -79,22 +80,21 @@ class MachineField extends StatelessWidget {
                     machine?.profile.label ?? 'Choose a machine',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Type.body.copyWith(
-                      fontSize: 16,
-                      color: machine == null ? ds.textMuted : ds.text,
-                    ),
+                    style: Type.input.copyWith(color: machine == null ? ds.textMuted : ds.text),
                   ),
                 ),
                 if (canChoose) ...[
                   const SizedBox(width: Gap.sm),
-                  Icon(LucideIcons.chevronsUpDown, size: 16, color: ds.textTertiary),
+                  Icon(LucideIcons.chevronsUpDown, size: IconSize.row, color: ds.textTertiary),
                 ],
               ],
             ),
           ),
         ),
+        // Helper text starts where the field's text starts, as a
+        // [LabeledField]'s does (its helper line sits under its input text).
         Padding(
-          padding: const EdgeInsets.fromLTRB(_textInset, 8, _textInset, 0),
+          padding: const EdgeInsets.only(left: Gap.lg, top: Gap.sm, right: Gap.lg),
           child: Text(
             lost
                 ? 'That machine went offline. Pick another.'
@@ -126,7 +126,7 @@ class RecentFolders extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(bottom: 2),
+          padding: const EdgeInsets.only(bottom: Gap.hair),
           child: Text(
             'Open on this machine',
             style: Type.label.copyWith(color: context.ds.textSecondary),

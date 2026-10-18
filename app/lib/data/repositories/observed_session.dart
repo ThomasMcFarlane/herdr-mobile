@@ -34,6 +34,7 @@ import 'pane_previews.dart';
 import 'prompt_detector.dart';
 import 'slash_catalog.dart';
 import 'terminal_prompt.dart';
+import '../words/agent_names.dart';
 
 /// Opens the stream of an agent's session log on a machine.
 typedef LogSourceFor = SessionLogSource Function(MachineConnection machine);
@@ -345,7 +346,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
       : 'pane/${machine.profile.id}/$paneId';
 
   @override
-  String get agentLabel => _isSub ? 'Subagent of ${parent!.title}' : kind.label;
+  String get agentLabel => _isSub ? 'Subagent of ${agentName(kind.id)}' : agentName(kind.id);
 
   Pane? get _pane => machine.paneById(paneId);
 

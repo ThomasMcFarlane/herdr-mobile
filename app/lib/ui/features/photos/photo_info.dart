@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../data/words/elapsed.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../files/file_format.dart';
 import '../files/file_widgets.dart';
@@ -51,9 +52,9 @@ List<PhotoInfoRow> photoInfoRows(PhotoEntry entry) {
   if (size != null) rows.add(PhotoInfoRow('Size', formatBytes(size)));
   final format = entry.format ?? (item.mime != null && item.mime!.isNotEmpty ? item.mime! : null);
   if (format != null) rows.add(PhotoInfoRow('Format', format));
-  if (item.modified != null) rows.add(PhotoInfoRow('Modified', formatExactTime(item.modified)));
+  if (item.modified != null) rows.add(PhotoInfoRow('Modified', formatWhen(item.modified!, DateTime.now())));
   if (exif != null) {
-    if (exif.taken != null) rows.add(PhotoInfoRow('Taken', formatExactTime(exif.taken)));
+    if (exif.taken != null) rows.add(PhotoInfoRow('Taken', formatWhen(exif.taken!, DateTime.now())));
     if (exif.camera != null) rows.add(PhotoInfoRow('Camera', exif.camera!));
     if (exif.lens != null) rows.add(PhotoInfoRow('Lens', exif.lens!));
     if (exif.settings != null) rows.add(PhotoInfoRow('Exposure', exif.settings!));
@@ -130,14 +131,14 @@ class _Row extends StatelessWidget {
                   child: Text(
                     row.value,
                     textDirection: TextDirection.ltr,
-                    style: codeStyle(ds, size: 12.5).copyWith(height: 1.4),
+                    style: Mono.base.copyWith(color: ds.text),
                   ),
                 ),
               ),
               CircleButton(
                 icon: LucideIcons.copy,
                 tooltip: 'Copy ${row.label.toLowerCase()}',
-                size: 36,
+                size: CircleButton.compact,
                 onPressed: () => copyText(context, copy, what: row.copied ?? 'Copied'),
               ),
             ],

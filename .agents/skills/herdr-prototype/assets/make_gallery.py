@@ -27,7 +27,7 @@ The spec (see SKILL.md of herdr-prototype for what each field is for):
       "costs": "what it costs",
       "sketch": [                     # a few mock rows that show the idea
         {"k": "row", "st": "idle", "t": "Fix the locale bug",
-         "s": "claude · studio-mac", "time": "idle 12m"},
+         "s": "Claude Code · studio-mac", "time": "12m"},
         {"k": "group", "t": "payments-api", "s": "studio-mac · 3"},
         {"k": "fold", "t": "7 idle for 2h or more", "s": "oldest 3d"}
       ]

@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../../data/models/remote_file.dart';
 import '../../../data/repositories/machine_connection.dart';
+import '../../../data/words/plural.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import 'file_browser_view_model.dart';
 import 'file_format.dart';
@@ -233,7 +234,7 @@ class _FileBrowserScreenState extends State<FileBrowserScreen> implements _Brows
     } else {
       showToast(
         context,
-        e.isBrokenLink ? '${e.name} points to something that no longer exists.' : "${e.name} can't be opened.",
+        e.isBrokenLink ? '${e.name} points to something that no longer exists.' : '${e.name} can’t be opened.',
         kind: ToastKind.failed,
       );
     }
@@ -350,7 +351,7 @@ class _BrowserViewState extends State<_BrowserView> {
           else if (failed != null)
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.sm, Gap.gutter, 0),
+                padding: const EdgeInsets.only(left: Gap.gutter, top: Gap.sm, right: Gap.gutter),
                 child: _failure(vm, failed),
               ),
             )
@@ -430,11 +431,11 @@ class _BrowserViewState extends State<_BrowserView> {
       // Folders are not in the grid: say so, and where they went.
       final photos = vm.photos.length;
       final folders = vm.entries.where((e) => e.isDirectory).length;
-      final counted = '${groupDigits(photos)} ${photos == 1 ? 'photo' : 'photos'}';
-      return folders > 0 ? '$counted · ${groupDigits(folders)} ${folders == 1 ? 'folder' : 'folders'} in list' : counted;
+      final counted = '${groupDigits(photos)} ${plural(photos, 'photo')}';
+      return folders > 0 ? '$counted · ${groupDigits(folders)} ${plural(folders, 'folder')} in list' : counted;
     }
     final shown = vm.entries.length;
-    String noun(int n) => _pick ? (n == 1 ? 'folder' : 'folders') : (n == 1 ? 'item' : 'items');
+    String noun(int n) => plural(n, _pick ? 'folder' : 'item');
     final hidden = vm.hiddenCount;
     if (vm.error != null) return vm.path;
     final base = vm.baseCount;
@@ -646,7 +647,7 @@ class EmptyFolderState extends StatelessWidget {
       icon: LucideIcons.folderOpen,
       title: onlyHidden ? 'Only hidden files' : (onlyFiles ? 'No folders here' : 'Folder is empty'),
       message: onlyHidden
-          ? '${vm.name} has ${vm.hiddenCount} hidden ${vm.hiddenCount == 1 ? 'item' : 'items'}.'
+          ? '${vm.name} has ${countOf(vm.hiddenCount, 'hidden item')}.'
           : (onlyFiles
                 ? 'Choose this folder, or go back.'
                 : 'Nothing in ${vm.name} yet.${pullToRefresh ? ' Pull down to check again.' : ''}'),
@@ -774,7 +775,7 @@ class _PickBar extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textDirection: TextDirection.ltr,
-              style: codeStyle(ds, size: 12, color: ds.textMuted).copyWith(height: 1.3),
+              style: Mono.small.copyWith(color: ds.textMuted),
             ),
             const SizedBox(height: Gap.md),
             AppButton(

@@ -478,70 +478,16 @@ class _ToastViewState extends State<_ToastView> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final ds = context.ds;
     final spec = _spec;
     final reduced = Motion.reduced(context);
     final media = MediaQuery.of(context);
     final action = spec.action;
-    final mark = switch (spec.kind) {
-      ToastKind.info => null,
-      ToastKind.success => (LucideIcons.check, ds.done),
-      ToastKind.failed => (LucideIcons.circleAlert, ds.danger),
-    };
-    // The one inverse surface: a message over the page, never mistaken for a
-    // field or a card in it. No outline, no shadow: dark on paper and a step
-    // lighter on ink is edge enough.
-    final card = DecoratedBox(
+    final card = ToastCard(
       key: toastKey,
-      decoration: BoxDecoration(
-        color: ds.inverseSurface,
-        borderRadius: BorderRadius.circular(Radii.md),
-      ),
-      // The root overlay sits above every route, so no `Scaffold` is above the
-      // text: without a `Material` it takes `MaterialApp`'s fallback style, a
-      // double yellow underline. Transparent: it paints nothing of its own.
-      child: Material(
-        type: MaterialType.transparency,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: _minHeight),
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(Gap.lg, Gap.sm, action == null ? Gap.lg : Gap.xs, Gap.sm),
-            child: Row(
-              children: [
-                if (mark != null) ...[
-                  ExcludeSemantics(child: Icon(mark.$1, size: IconSize.bar, color: mark.$2)),
-                  const SizedBox(width: Gap.md),
-                ],
-                Expanded(
-                  child: Semantics(
-                    liveRegion: true,
-                    child: Text(
-                      spec.message,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Type.body.copyWith(color: ds.onInverse),
-                    ),
-                  ),
-                ),
-                if (action != null)
-                  PressBuilder(
-                    key: toastActionKey,
-                    onTap: _act,
-                    minTapSize: kMinTap,
-                    scale: PressScale.button,
-                    builder: (context, pressed) => Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: Gap.md),
-                      child: Text(
-                        action.label,
-                        style: Type.button.copyWith(color: pressed ? ds.onInverse : ds.inverseAccent),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
+      message: spec.message,
+      kind: spec.kind,
+      actionLabel: action?.label,
+      onAction: action == null ? null : _act,
     );
     return ValueListenableBuilder<({double lift, bool aboveKeyboard})?>(
       valueListenable: ToastShelf.showing,
@@ -606,10 +552,92 @@ class _ToastViewState extends State<_ToastView> with TickerProviderStateMixin {
     );
   }
 
-  /// One line of text and its padding: the toast never shrinks below this.
-  static const _minHeight = 48.0;
-
   /// Side margin: the floating bar's (`FloatingBar.side`), so a toast lines up
   /// with the bar it stands on.
   static const _side = Gap.md;
+}
+
+/// The toast's card: the inverse surface, a mark for [ToastKind.success] /
+/// [ToastKind.failed], the message (two lines at most) and an optional button.
+/// Only the picture: [Toaster] places, times and moves it. Public so the kit
+/// catalog can show every kind side by side, which the one live toast cannot.
+class ToastCard extends StatelessWidget {
+  const ToastCard({super.key, required this.message, this.kind = ToastKind.info, this.actionLabel, this.onAction});
+
+  final String message;
+  final ToastKind kind;
+
+  /// The button's word; drawn only with [onAction].
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  /// One line of text and its padding: the toast never shrinks below this.
+  static const minHeight = 48.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final ds = context.ds;
+    final label = actionLabel;
+    final onAction = this.onAction;
+    final mark = switch (kind) {
+      ToastKind.info => null,
+      ToastKind.success => (LucideIcons.check, ds.done),
+      ToastKind.failed => (LucideIcons.circleAlert, ds.danger),
+    };
+    final hasAction = label != null && onAction != null;
+    // The one inverse surface: a message over the page, never mistaken for a
+    // field or a card in it. No outline, no shadow: dark on paper and a step
+    // lighter on ink is edge enough.
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: ds.inverseSurface,
+        borderRadius: BorderRadius.circular(Radii.md),
+      ),
+      // The root overlay sits above every route, so no `Scaffold` is above the
+      // text: without a `Material` it takes `MaterialApp`'s fallback style, a
+      // double yellow underline. Transparent: it paints nothing of its own.
+      child: Material(
+        type: MaterialType.transparency,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: minHeight),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(Gap.lg, Gap.sm, hasAction ? Gap.xs : Gap.lg, Gap.sm),
+            child: Row(
+              children: [
+                if (mark != null) ...[
+                  ExcludeSemantics(child: Icon(mark.$1, size: IconSize.bar, color: mark.$2)),
+                  const SizedBox(width: Gap.md),
+                ],
+                Expanded(
+                  child: Semantics(
+                    liveRegion: true,
+                    child: Text(
+                      message,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Type.body.copyWith(color: ds.onInverse),
+                    ),
+                  ),
+                ),
+                if (hasAction)
+                  PressBuilder(
+                    key: toastActionKey,
+                    onTap: onAction,
+                    minTapSize: kMinTap,
+                    scale: PressScale.button,
+                    builder: (context, pressed) => Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: Gap.md),
+                      child: Text(
+                        label,
+                        style: Type.button.copyWith(color: pressed ? ds.onInverse : ds.inverseAccent),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

@@ -194,7 +194,7 @@ void main() {
       () => session(play(many()).withPending(PendingPermission(1, askFor('askc')))),
       (s) => Scaffold(body: SafeArea(child: Column(children: [SubagentsChip(session: s), Expanded(child: TranscriptView(session: s))]))),
       (t) async {
-        await t.tap(find.textContaining('waiting for you'));
+        await t.tap(find.textContaining('needs you'));
         await t.pump(const Duration(milliseconds: 400));
       },
     ),

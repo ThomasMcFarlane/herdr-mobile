@@ -36,7 +36,7 @@ const dockChipLimit = 4;
 /// keyboard animation never rebuilds it.
 ///
 /// Its answers come up under a thumb that was typing or pressing keys, so they
-/// take no tap and are dimmed for `tapGuard` each time the dock appears and
+/// take no tap and are dimmed for `Dwell.tapGuard` each time the dock appears and
 /// each time its question changes (`TapGuardState`).
 class AnswerDock extends StatefulWidget {
   const AnswerDock({super.key, required this.paneId, required this.asking});

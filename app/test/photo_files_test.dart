@@ -116,10 +116,10 @@ void main() {
       }));
       // ignore: unawaited_futures
       openRemoteFile(host, machineWithFiles(fs), '/p/error.png');
-      await pumpUntil(tester, () => find.text('View as text').evaluate().isNotEmpty);
-      expect(find.text("Can't show this as a picture"), findsOneWidget);
+      await pumpUntil(tester, () => find.text('Show as text').evaluate().isNotEmpty);
+      expect(find.text('Can’t show this as a picture'), findsOneWidget);
 
-      await tester.tap(find.text('View as text'));
+      await tester.tap(find.text('Show as text'));
       await settleReal(tester);
       await tester.pumpAndSettle();
       expect(find.byType(PhotoViewer), findsNothing);
@@ -177,7 +177,7 @@ void main() {
       final reads = fs.calls.where((c) => c.startsWith('read /p/big.jpg')).toList();
       expect(reads.length, greaterThanOrEqualTo(6), reason: '12 MB in 2 MB pieces');
       expect(reads.every((r) => !r.contains('+8388608')), isTrue, reason: 'no single 8 MB read');
-      await pumpUntil(tester, () => find.textContaining("can't be shown").evaluate().isNotEmpty);
+      await pumpUntil(tester, () => find.textContaining('can’t be shown').evaluate().isNotEmpty);
       expect(find.text('Too large to open here'), findsNothing);
     });
   });

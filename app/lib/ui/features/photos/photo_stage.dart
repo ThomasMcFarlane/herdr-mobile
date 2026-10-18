@@ -12,6 +12,7 @@ import 'photo_viewer_view_model.dart';
 
 /// Black behind the pictures, between them, and the colour the screen fades
 /// from as a photo is dragged away.
+// design-lint: allow(raw-color) photos are viewed on true black in both themes; no Ds role is theme-independent black.
 const photoBackdrop = Color(0xFF000000);
 
 /// Gap between two photos while paging, in logical pixels.
@@ -19,7 +20,7 @@ const photoPageGap = 16.0;
 
 /// How long a picture stays sharpened after the person zooms back out to fit
 /// (zooming in and out again should not decode twice).
-const photoSharpHold = Duration(seconds: 2);
+const photoSharpHold = Dwell.photoSharp;
 
 /// Where the open picture is: its zoom and pan, the drag that dismisses it, and
 /// how far it has been pulled aside while paging.
@@ -108,12 +109,6 @@ class _Track {
 
 /// How far, as a share of the screen, a drag may stretch past an edge.
 const _bandReach = 0.4;
-
-const _scaleTolerance = Tolerance(distance: 0.0005, velocity: 0.002);
-const _pixelTolerance = Tolerance(distance: 0.05, velocity: 1);
-
-SpringDescription _spring(double ratio) =>
-    SpringDescription.withDampingRatio(mass: 1, stiffness: 400, ratio: ratio);
 
 /// The pictures of a [PhotoViewerViewModel], one of them open, and the touch
 /// physics to look at them: pinch (around the fingers), double-tap, pan with
@@ -303,9 +298,9 @@ class PhotoStageState extends State<PhotoStage> with SingleTickerProviderStateMi
   }
 
   _Track _springTrack(double from, double to, double velocity, void Function(double) apply, {
-    double ratio = 1,
-    Tolerance tolerance = _pixelTolerance,
-  }) => _Track(SpringSimulation(_spring(ratio), from, to, velocity, tolerance: tolerance), apply, end: to);
+    SpringDescription? spring,
+    Tolerance tolerance = Springs.pixel,
+  }) => _Track(SpringSimulation(spring ?? Springs.settle, from, to, velocity, tolerance: tolerance), apply, end: to);
 
   // -- input -----------------------------------------------------------------
 
@@ -508,7 +503,7 @@ class PhotoStageState extends State<PhotoStage> with SingleTickerProviderStateMi
     if (scale != pose.scale) {
       tracks.add(_springTrack(pose.scale, scale, scaleVelocity.isFinite ? scaleVelocity : 0,
           (v) => _set(_pose.value.copyWith(scale: v)),
-          tolerance: _scaleTolerance));
+          tolerance: Springs.scale));
     }
     final limit = geo.panLimit(scale);
     final fling = mode == _Mode.pan || mode == _Mode.zoom;
@@ -531,8 +526,8 @@ class PhotoStageState extends State<PhotoStage> with SingleTickerProviderStateMi
             velocity: v,
             leadingExtent: -lim,
             trailingExtent: lim,
-            spring: _spring(0.9),
-            tolerance: _pixelTolerance,
+            spring: Springs.carry,
+            tolerance: Springs.pixel,
           ),
           apply,
         ));
@@ -548,11 +543,11 @@ class PhotoStageState extends State<PhotoStage> with SingleTickerProviderStateMi
         final v = x ? carry.dx : carry.dy;
         tracks.add(_springTrack(from, 0, v, (value) => _set(_pose.value.copyWith(
           drag: x ? Offset(value, _pose.value.drag.dy) : Offset(_pose.value.drag.dx, value),
-        )), ratio: 0.85));
+        )), spring: Springs.carry));
       }
     }
     if (pose.pageDx != 0) {
-      tracks.add(_springTrack(pose.pageDx, 0, velocity.dx, (v) => _set(_pose.value.copyWith(pageDx: v)), ratio: 0.85));
+      tracks.add(_springTrack(pose.pageDx, 0, velocity.dx, (v) => _set(_pose.value.copyWith(pageDx: v)), spring: Springs.carry));
     }
     _set(pose);
     _run(tracks);
@@ -570,7 +565,6 @@ class PhotoStageState extends State<PhotoStage> with SingleTickerProviderStateMi
         pose.drag.dy + away * _viewport.height * 0.35,
         velocity.dy,
         (v) => _set(_pose.value.copyWith(drag: Offset(_pose.value.drag.dx, v))),
-        ratio: 1,
       ),
     ]);
   }
@@ -586,7 +580,7 @@ class PhotoStageState extends State<PhotoStage> with SingleTickerProviderStateMi
     final target = geo.doubleTapTarget(scale: pose.scale, offset: pose.offset, focal: focal);
     _sharpTimer?.cancel();
     final tracks = <_Track>[
-      _springTrack(pose.scale, target.scale, 0, (v) => _set(_pose.value.copyWith(scale: v)), tolerance: _scaleTolerance),
+      _springTrack(pose.scale, target.scale, 0, (v) => _set(_pose.value.copyWith(scale: v)), tolerance: Springs.scale),
       if (pose.offset.dx != target.offset.dx)
         _springTrack(pose.offset.dx, target.offset.dx, 0,
             (v) => _set(_pose.value.copyWith(offset: Offset(v, _pose.value.offset.dy)))),

@@ -350,7 +350,7 @@ class _SheetFrameState extends State<SheetFrame> with SingleTickerProviderStateM
                       behavior: HitTestBehavior.opaque,
                       onTap: _tapScrim,
                       excludeFromSemantics: true,
-                      child: ColoredBox(color: ds.scrim.withValues(alpha: ds.scrim.a * alpha)),
+                      child: ColoredBox(color: Color.lerp(ds.scrim.withAlpha(0), ds.scrim, alpha)!),
                     ),
                   );
                 },

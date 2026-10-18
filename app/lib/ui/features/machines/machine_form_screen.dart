@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../../data/models/machine_profile.dart';
 import '../../../data/repositories/machine_repository.dart';
 import '../../../data/services/key_generator.dart';
+import '../../../data/words/plural.dart';
 import 'approval_button.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import 'machine_form_view_model.dart';
@@ -444,7 +445,7 @@ class _FormState extends State<_Form> with RestorationMixin {
         icon: _obscure ? LucideIcons.eye : LucideIcons.eyeOff,
         tooltip: _obscure ? 'Show' : 'Hide',
         filled: false,
-        size: 36,
+        size: CircleButton.compact,
         onPressed: () => setState(() => _obscure = !_obscure),
       );
 
@@ -549,7 +550,7 @@ class _FormState extends State<_Form> with RestorationMixin {
                                       icon: LucideIcons.clipboardPaste,
                                       tooltip: 'Paste from clipboard',
                                       filled: false,
-                                      size: 36,
+                                      size: CircleButton.compact,
                                       onPressed: _paste,
                                     ),
                                   ),
@@ -744,7 +745,7 @@ class _TestResult extends StatelessWidget {
                 ds.done,
                 LucideIcons.circleCheck,
                 'Connected · herdr ${vm.version}',
-                '${vm.workspaceCount} workspace${vm.workspaceCount == 1 ? '' : 's'}'
+                '${countOf(vm.workspaceCount, 'workspace')}'
                     '${vm.fingerprint == null ? '' : '\nHost key ${vm.fingerprint}'}',
               ),
             TestState.failed => (ds.danger, LucideIcons.circleAlert, 'Could not connect', vm.message),
@@ -802,7 +803,7 @@ class _ConnectedPanel extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.only(right: Gap.md, top: 1),
+              padding: const EdgeInsets.only(right: Gap.md, top: Gap.hair),
               child: DrawCheck(color: color),
             ),
             Expanded(
@@ -814,16 +815,15 @@ class _ConnectedPanel extends StatelessWidget {
                     header: true,
                     child: Text(
                       title,
-                      style: Type.label.copyWith(color: ds.text, fontWeight: FontWeight.w600, fontSize: 14),
+                      style: Type.answer.copyWith(color: ds.text),
                     ),
                   ),
                   if (detail.isNotEmpty)
                     Padding(
-                      padding: const EdgeInsets.only(top: 2),
+                      padding: const EdgeInsets.only(top: Gap.hair),
                       child: Text(
                         detail,
-                        style: const TextStyle(fontFamily: monoFamily, fontSize: 12, height: 1.45)
-                            .copyWith(color: ds.textSecondary),
+                        style: Mono.base.copyWith(color: ds.textSecondary),
                       ),
                     ),
                 ],
@@ -916,7 +916,7 @@ class _PublicKeyPanel extends StatelessWidget {
             const SizedBox(height: Gap.xs),
             Text(
               key,
-              style: TextStyle(fontFamily: monoFamily, fontSize: 12, height: 1.45, color: ds.text),
+              style: Mono.base.copyWith(color: ds.text),
             ),
             const SizedBox(height: Gap.sm),
             _CopyRow(icon: LucideIcons.copy, label: 'Copy public key', onTap: onCopyKey),
@@ -925,7 +925,7 @@ class _PublicKeyPanel extends StatelessWidget {
             const SizedBox(height: Gap.xs),
             if (replacesSaved) ...[
               Text(
-                'This replaces the key this machine uses now. Run the command on the host first, '
+                'This replaces the key this machine uses now. Run the command on the machine first, '
                 'then Test connection, then Save.',
                 style: Type.secondary.copyWith(color: ds.text),
               ),
@@ -963,7 +963,7 @@ class _CopyRow extends StatelessWidget {
         alignment: Alignment.centerLeft,
         child: Row(
           children: [
-            ExcludeSemantics(child: Icon(icon, size: 18, color: pressed ? ds.textSecondary : ds.accentText)),
+            ExcludeSemantics(child: Icon(icon, size: IconSize.bar, color: pressed ? ds.textSecondary : ds.accentText)),
             const SizedBox(width: Gap.md),
             Expanded(child: Text(label, style: Type.row.copyWith(color: pressed ? ds.textSecondary : ds.text))),
           ],

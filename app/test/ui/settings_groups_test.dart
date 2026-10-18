@@ -342,7 +342,7 @@ void main() {
 
       expect(find.text(reason), findsOneWidget, reason: 'said once, whole');
       expect(find.text('Update failed, open to see why'), findsOneWidget);
-      expect(find.text('Try again'), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
     });
 
     testWidgets('a download that finishes or fails is announced with its group closed', (tester) async {

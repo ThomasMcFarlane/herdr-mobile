@@ -78,7 +78,7 @@ class _SegmentedState<T> extends State<Segmented<T>> {
     super.dispose();
   }
 
-  TextStyle get _style => Type.label.copyWith(fontSize: 13.5, fontWeight: FontWeight.w600);
+  TextStyle get _style => Type.buttonCompact;
 
   /// How wide an option's content is, without its padding.
   double _contentWidth(BuildContext context, SegmentOption<T> o, {required bool icons}) {
@@ -96,7 +96,7 @@ class _SegmentedState<T> extends State<Segmented<T>> {
     var w = text(o.label, _style);
     if (icons && o.icon != null) w += 15 + _gap;
     if (o.leading != null) w += 8 + _gap;
-    if (o.count != null) w += 5 + text('${o.count}', _style.copyWith(fontWeight: FontWeight.w500));
+    if (o.count != null) w += 5 + text('${o.count}', Type.secondaryStrong);
     return w;
   }
 
@@ -258,8 +258,7 @@ class _SegmentedState<T> extends State<Segmented<T>> {
               const SizedBox(width: 5),
               Text(
                 '${o.count}',
-                style: _style.copyWith(
-                  fontWeight: FontWeight.w500,
+                style: Type.secondaryStrong.copyWith(
                   // The capsule under the chosen cell is one rung lighter than the pill: on ink
                   // textMuted is 4.3:1 there, so the chosen count steps up to textSecondary.
                   color: selected ? ds.textSecondary : ds.textMuted,

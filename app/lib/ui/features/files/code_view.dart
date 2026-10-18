@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../../../data/acp/turns/plain_text.dart' show safeEnd;
 import 'package:herdr_mobile/ui/core/kit.dart';
-import 'file_widgets.dart';
 import 'text_document.dart';
 
 /// Longest stretch of one line that is drawn. A minified bundle is one line of
@@ -16,7 +15,6 @@ const codeLineCap = 2000;
 /// past, so more of it is kept.
 const codeWrapLineCap = 20000;
 
-const _fontSize = 13.0;
 const _gutterPad = 10.0;
 
 /// A text document as numbered, selectable, virtualized lines.
@@ -138,10 +136,10 @@ class _CodeViewState extends State<CodeView> {
   Widget build(BuildContext context) {
     final ds = context.ds;
     final scaler = MediaQuery.textScalerOf(context);
-    final fontSize = scaler.scale(_fontSize);
+    final fontSize = scaler.scale(Mono.input.fontSize!);
     final lineHeight = (fontSize * 1.5).ceilToDouble();
     _lineHeight = lineHeight;
-    final style = codeStyle(ds, size: _fontSize).copyWith(height: lineHeight / fontSize);
+    final style = Mono.input.copyWith(color: ds.text, height: lineHeight / fontSize);
     final charWidth = _charWidth(style, scaler);
     final doc = widget.document;
     final count = widget.lineCount ?? doc.lineCount;
@@ -165,7 +163,7 @@ class _CodeViewState extends State<CodeView> {
           child: Text(
             '${i + 1}',
             textAlign: TextAlign.right,
-            style: marked ? numberStyle.copyWith(color: ds.accentText, fontWeight: FontWeight.w600) : numberStyle,
+            style: marked ? numberStyle.copyWith(color: ds.accentText) : numberStyle,
           ),
         ),
       );
@@ -177,7 +175,7 @@ class _CodeViewState extends State<CodeView> {
           : Text(text, style: style, maxLines: 1, softWrap: false, overflow: TextOverflow.clip);
       return Container(
         key: marked ? _highlightKey : null,
-        color: marked ? ds.accent.withValues(alpha: ds.isDark ? 0.16 : 0.10) : null,
+        color: marked ? ds.accentWash : null,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -227,8 +225,8 @@ class _CodeViewState extends State<CodeView> {
             controller: _vertical,
             notificationPredicate: (n) => n.metrics.axis == Axis.vertical,
             thickness: 3,
-            radius: const Radius.circular(2),
-            thumbColor: ds.textTertiary.withValues(alpha: 0.6),
+            radius: const Radius.circular(Radii.pill),
+            thumbColor: ds.faint,
             child: list,
           ),
         );

@@ -451,7 +451,7 @@ void main() {
         async.elapse(const Duration(seconds: 1));
 
         final error = resumed.error! as AgentHostException;
-        expect(error.message, 'omp cannot reopen past sessions.');
+        expect(error.message, 'Past sessions can’t be reopened in omp.');
         expect(error.fatal, isTrue);
         expect(r.host.killed, hasLength(1));
         expect(r.host.killed, isNot(contains('old1')));

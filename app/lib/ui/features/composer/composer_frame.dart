@@ -176,7 +176,7 @@ class ComposerField extends StatelessWidget {
         // Not onSubmitted: a send action given only that unfocuses the field
         // and drops the keyboard after every message.
         onEditingComplete: onSubmit,
-        strutStyle: StrutStyle(fontSize: Type.body.fontSize, height: composerLineHeight, forceStrutHeight: true),
+        strutStyle: StrutStyle.fromTextStyle(Type.body, height: composerLineHeight, forceStrutHeight: true),
         style: mono
             ? Mono.input.copyWith(height: m.lineHeightPx / Mono.input.fontSize!, color: color)
             : Type.body.copyWith(height: composerLineHeight, color: color),

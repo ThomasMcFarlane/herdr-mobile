@@ -54,7 +54,7 @@ class UpdateGroup extends StatelessWidget {
             onToggle: onToggle,
             footer: update.stage == UpdateStage.downloading
                 ? Padding(
-                    padding: const EdgeInsets.fromLTRB(Gap.gutter, 0, Gap.gutter, Gap.md),
+                    padding: const EdgeInsets.only(left: Gap.gutter, right: Gap.gutter, bottom: Gap.md),
                     child: _ProgressBar(update.received / release.size),
                   )
                 : null,
@@ -62,7 +62,7 @@ class UpdateGroup extends StatelessWidget {
               CustomRow(
                 id: 'update',
                 child: Padding(
-                padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.xs, Gap.gutter, 0),
+                padding: const EdgeInsets.only(left: Gap.gutter, top: Gap.xs, right: Gap.gutter),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -129,7 +129,7 @@ class _ProgressBar extends StatelessWidget {
       label: 'Download progress',
       value: '${(value * 100).floor()}%',
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(2),
+        borderRadius: BorderRadius.circular(Radii.pill),
         child: SizedBox(
           height: 4,
           child: Stack(
@@ -173,7 +173,7 @@ class _Actions extends StatelessWidget {
           onPressed: () => unawaited(update.install()),
         ),
       _ => AppButton(
-          label: retry ? 'Try again' : 'Download',
+          label: retry ? 'Retry' : 'Download',
           icon: LucideIcons.download,
           expand: true,
           onPressed: () => unawaited(update.download()),
@@ -211,7 +211,7 @@ Future<void> showReleaseNotes(BuildContext context, ReleaseInfo release) async {
   if (release.notes.isEmpty) {
     final toaster = Toaster.of(context);
     if (!await openInBrowser(release.pageUrl)) {
-      toaster.show('No browser could open the link.', kind: ToastKind.failed);
+      toaster.show('Couldn’t open on this phone: no browser could open it.', kind: ToastKind.failed);
     }
     return;
   }

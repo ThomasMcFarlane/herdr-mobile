@@ -117,7 +117,7 @@ List<AgentRef> agentsInBoardOrder(BuildContext context) {
 Future<void> resumeAgent(
   NavigatorState navigator,
   FrontAgent front, {
-  Duration patience = const Duration(seconds: 8),
+  Duration patience = Dwell.resumePatience,
 }) async {
   final context = navigator.context;
   if (_screenFor(context, front.agent, front.view, strict: true) case final screen?) {

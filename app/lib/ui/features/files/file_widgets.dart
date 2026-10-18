@@ -63,7 +63,7 @@ IconData iconForEntry(RemoteEntry e) {
       RemoteFileErrorKind.permission => (
           icon: LucideIcons.lock,
           title: 'No permission',
-          message: "Your login on this machine isn't allowed to read $name.",
+          message: 'Your login on this machine isn’t allowed to read $name.',
           retry: true,
           danger: true,
         ),
@@ -83,7 +83,7 @@ IconData iconForEntry(RemoteEntry e) {
         ),
       RemoteFileErrorKind.notAFile => (
           icon: LucideIcons.fileCog,
-          title: "Can't open this",
+          title: 'Can’t open this',
           message: e.message,
           retry: false,
           danger: false,
@@ -104,7 +104,7 @@ IconData iconForEntry(RemoteEntry e) {
         ),
       RemoteFileErrorKind.failed => (
           icon: LucideIcons.triangleAlert,
-          title: "Couldn't read this",
+          title: 'Couldn’t read this',
           message: e.message,
           retry: true,
           danger: true,
@@ -156,7 +156,7 @@ class FileErrorPanel extends StatelessWidget {
 }
 
 /// A whole page for a path that is still being looked up (or could not be):
-/// Back, what was asked for, and a skeleton after [skeletonDelay]; or the
+/// Back, what was asked for, and a skeleton after [Dwell.spinnerDelay]; or the
 /// reason it failed with what to do. The route is on screen at once, so a tap
 /// answers on the next frame instead of after the host has been asked.
 class FileResolvingPage extends StatelessWidget {
@@ -245,15 +245,6 @@ class FileResolvingPage extends StatelessWidget {
   }
 }
 
-/// Mono-font style shared by every code and hex surface.
-TextStyle codeStyle(Ds ds, {double size = 13, Color? color}) => TextStyle(
-      fontFamily: monoFamily,
-      fontSize: size,
-      height: 1.5,
-      color: color ?? ds.text,
-      fontFeatures: const [FontFeature.disable('liga'), FontFeature.disable('calt')],
-    );
-
 /// One label and value of an info card.
 class InfoRow extends StatelessWidget {
   const InfoRow({super.key, required this.label, required this.value, this.mono = false, this.divider = true});
@@ -282,7 +273,7 @@ class InfoRow extends StatelessWidget {
                 child: Text(
                   value,
                   style: mono
-                      ? codeStyle(ds, size: 12.5).copyWith(height: 1.4)
+                      ? Mono.base.copyWith(color: ds.text)
                       : Type.secondary.copyWith(color: ds.text),
                 ),
               ),

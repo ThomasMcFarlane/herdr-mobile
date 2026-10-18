@@ -17,7 +17,6 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/acp/acp_models.dart';
 import 'package:herdr_mobile/data/acp/session_state.dart';
-import 'package:herdr_mobile/ui/support/tap_guard.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
 
@@ -127,7 +126,7 @@ void main() {
       ),
     );
     await tester.pump(const Duration(milliseconds: 100));
-    await tester.pump(tapGuard);
+    await tester.pump(Dwell.tapGuard);
     await then?.call();
     await tester.pump(const Duration(milliseconds: 600));
     final boundary = key.currentContext!.findRenderObject()! as RenderRepaintBoundary;

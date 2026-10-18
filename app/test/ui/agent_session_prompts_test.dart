@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/acp/acp_models.dart';
 import 'package:herdr_mobile/data/acp/session_state.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
-import 'package:herdr_mobile/ui/support/tap_guard.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
 import 'package:herdr_mobile/ui/features/agent_session/permission_dock.dart';
 import 'package:herdr_mobile/ui/features/agent_session/permission_subject.dart';
@@ -35,7 +34,7 @@ Future<void> pumpScreen(
   );
   await tester.pump(const Duration(milliseconds: 100));
   // A permission panel ignores taps for a moment after it appears.
-  if (settle) await tester.pump(tapGuard);
+  if (settle) await tester.pump(Dwell.tapGuard);
 }
 
 FakeAgentSession withPermission(
@@ -175,7 +174,7 @@ void main() {
       expect(session.permissionAnswers, isEmpty);
       expect(find.textContaining('Hold to send'), findsOneWidget);
 
-      await advance(tester, holdHintWindow);
+      await advance(tester, Dwell.holdHint);
       expect(find.text('Allow once'), findsOneWidget, reason: 'the chip is itself again');
     });
 
@@ -260,7 +259,7 @@ void main() {
 
       await tester.tap(find.text('Allow once'));
       await tester.pump();
-      await tester.pump(tapGuard);
+      await tester.pump(Dwell.tapGuard);
       expect(session.permissionAnswers.single.$1, 1);
       expect(find.text('echo second'), findsOneWidget);
       expect(find.text('echo first'), findsNothing);
@@ -373,7 +372,7 @@ void main() {
       await quickTap(tester, find.text('Allow once'));
       expect(find.textContaining('More below'), findsOneWidget);
       expect(session.permissionAnswers, isEmpty);
-      await tester.pump(holdHintWindow);
+      await tester.pump(Dwell.holdHint);
 
       tester.semantics.tap(find.semantics.byLabel(RegExp('^Allow once, needs holding')));
       await tester.pump();
@@ -483,7 +482,7 @@ void main() {
       await tester.pump();
       expect(session.permissionAnswers.map((a) => a.$1), [1]);
 
-      await tester.pump(tapGuard);
+      await tester.pump(Dwell.tapGuard);
       await tester.tap(find.text('Allow once'));
       await tester.pump();
       expect(session.permissionAnswers.map((a) => a.$1), [1, 2]);
@@ -753,10 +752,10 @@ void main() {
       await tester.pump();
       expect(find.text('A question'), findsNothing);
       expect(find.text('1 more waiting'), findsOneWidget);
-      await tester.pump(tapGuard);
+      await tester.pump(Dwell.tapGuard);
       await tester.tap(find.text('Allow once'));
       await tester.pump();
-      await tester.pump(tapGuard);
+      await tester.pump(Dwell.tapGuard);
 
       // The question is back with what was typed and chosen.
       expect(find.text('A question'), findsOneWidget);
@@ -897,7 +896,7 @@ void main() {
       await tester.pump();
       expect(session.questionAnswers, isEmpty, reason: 'a tap meant for what was there before');
 
-      await tester.pump(tapGuard);
+      await tester.pump(Dwell.tapGuard);
       await tester.tap(accept());
       await tester.pump();
       expect(session.questionAnswers, hasLength(1));

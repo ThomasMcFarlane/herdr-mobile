@@ -483,7 +483,7 @@ void main() {
       await tester.pumpWidget(host(ToolLocationRows(locations: locations), taps: taps));
       expect(rich('parse.dart:42'), findsOneWidget);
       expect(rich('e.dart:2'), findsNothing);
-      expect(find.text('+2 more'), findsOneWidget);
+      expect(find.text('2 more'), findsOneWidget);
       expect(find.byType(PressBuilder), findsNWidgets(4));
       for (final row in find.byType(PressBuilder).evaluate()) {
         expect(tester.getSize(find.byElementPredicate((e) => e == row)).height, greaterThanOrEqualTo(kMinTap));

@@ -12,9 +12,11 @@ import '../../../data/repositories/quick_phrases.dart';
 import '../../../data/repositories/terminal_settings.dart';
 import '../../../data/services/disk_cache.dart';
 import '../../../data/services/notifier.dart';
+import '../../../data/words/plural.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../../support/open_link.dart';
 import '../files/file_format.dart';
+import '../kit/kit_screen.dart';
 import 'font_size_control.dart';
 import 'quick_phrases_editor.dart';
 import 'settings_group.dart';
@@ -265,7 +267,7 @@ class _AgentsGroup extends StatelessWidget {
     return SettingsGroup(
       icon: LucideIcons.messagesSquare,
       title: 'Agents',
-      summary: phrases == null ? opens : '$opens \u00b7 $phrases ${phrases == 1 ? 'phrase' : 'phrases'}',
+      summary: phrases == null ? opens : '$opens \u00b7 ${countOf(phrases, 'phrase')}',
       open: open,
       onToggle: onToggle,
       rows: [
@@ -524,7 +526,7 @@ class _AboutGroup extends StatelessWidget {
   Future<void> _openRepo(BuildContext context) async {
     final toaster = Toaster.of(context);
     if (!await openInBrowser(appRepositoryUrl)) {
-      toaster.show('No browser could open the link.', kind: ToastKind.failed);
+      toaster.show('Couldn’t open on this phone: no browser could open it.', kind: ToastKind.failed);
     }
   }
 
@@ -546,6 +548,10 @@ class _AboutGroup extends StatelessWidget {
       open: open,
       onToggle: onToggle,
       divider: false,
+      // Hidden: holding the version opens the kit catalog, in every build.
+      onLongPress: () => unawaited(Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => const KitScreen()),
+      )),
       rows: [
         if (update != null) CustomRow(id: 'updates', dividerIndent: Gap.gutter, child: _UpdateRows(update: update)),
         EntityRow(
@@ -555,10 +561,10 @@ class _AboutGroup extends StatelessWidget {
           subtitleMaxLines: 8,
           subtitle: update == null
               ? 'Talks to herdr over SSH and sends nothing anywhere else. '
-                  'Dictation uses your phone\'s own speech service.'
+                  'Dictation uses your phone’s own speech service.'
               : 'Talks to herdr over SSH. The only other place it contacts is GitHub, '
                   'to look for a new version and, when you tap Download, to fetch it. '
-                  'Dictation uses your phone\'s own speech service.',
+                  'Dictation uses your phone’s own speech service.',
         ),
         EntityRow(
           id: 'source',
@@ -622,7 +628,7 @@ class _UpdateRows extends StatelessWidget {
                 id: 'auto-check',
                 title: 'Check automatically',
                 subtitle: 'Asks github.com about twice a day while you use the app, with this '
-                    'app\'s name and version. A download comes from GitHub\'s file servers.',
+                    'app’s name and version. A download comes from GitHub’s file servers.',
                 value: update.autoCheck,
                 onChanged: (on) => unawaited(update.setAutoCheck(on)),
               ),

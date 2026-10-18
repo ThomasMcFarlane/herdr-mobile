@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/repositories/path_finder.dart';
+import '../../../data/words/elapsed.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
-import 'file_format.dart';
 import 'file_widgets.dart';
 
 /// Which of several places the tapped path meant: the path below its root, the
@@ -35,7 +35,7 @@ Future<PathCandidate?> showPathChoices(BuildContext context, String name, List<P
                 titleMaxLines: 2,
                 subtitle: [
                   candidates[i].rootName,
-                  if (candidates[i].modified != null) formatModified(candidates[i].modified, now: now),
+                  if (candidates[i].modified case final at?) formatAgo(at, now),
                 ].join(' · '),
                 leading: Icon(
                   candidates[i].stat.isDirectory ? LucideIcons.folder : fileIconForName(candidates[i].stat.name),

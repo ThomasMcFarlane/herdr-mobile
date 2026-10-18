@@ -2,6 +2,7 @@ import 'dart:async';
 
 import '../../../data/acp/acp_models.dart';
 import '../../../data/acp/session_state.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'transcript_plan.dart';
 
 /// Turns planned for the first frame of a long transcript: the screenful the
@@ -40,8 +41,8 @@ class PlanWarmup {
   PlanWarmup({
     required this.open,
     required this.notes,
-    this.budget = const Duration(milliseconds: 4),
-    this.gap = const Duration(milliseconds: 2),
+    this.budget = Dwell.planBudget,
+    this.gap = Dwell.planGap,
   });
 
   final Set<String> open;

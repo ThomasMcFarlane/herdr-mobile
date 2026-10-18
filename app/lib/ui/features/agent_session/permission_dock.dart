@@ -28,7 +28,7 @@ import '../../render/visible_text.dart';
 /// It is built once by the screen and selects `state.pending` itself, so a
 /// streaming answer or the keyboard moving rebuilds nothing here. A panel is
 /// keyed by its request: a new request gets a new panel, which ignores taps
-/// for [tapGuard] (see [PermissionPanel]). What the person has put into a
+/// for [Dwell.tapGuard] (see [PermissionPanel]). What the person has put into a
 /// question is kept outside its panel ([QuestionDraft], per question), so a
 /// permission that takes the dock in the middle of it costs nothing.
 class PromptDock extends StatelessWidget {
@@ -141,17 +141,17 @@ class OriginLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final ds = context.ds;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, 6),
+      padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.sm),
       child: Row(
         children: [
-          Icon(LucideIcons.bot, size: 14, color: ds.textSecondary),
-          const SizedBox(width: 6),
+          Icon(LucideIcons.bot, size: IconSize.inline, color: ds.textSecondary),
+          const SizedBox(width: Gap.sm),
           Expanded(
             child: Text(
               'From subagent: ${visibleText(origin.label)}',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: Type.caption.copyWith(color: ds.textSecondary, fontWeight: FontWeight.w500),
+              style: Type.caption.copyWith(color: ds.textSecondary),
             ),
           ),
         ],
@@ -178,7 +178,7 @@ String? optionGate(PermissionOption option, String? risk) {
 }
 
 /// How long a primed option waits for its second activation (or a hold).
-const confirmWindow = Duration(seconds: 4);
+const confirmWindow = Dwell.confirm;
 
 /// Why an allow waits for a hold while the command box has not been read to
 /// its end.
@@ -215,7 +215,7 @@ String answeredElsewhereText(AnsweredElsewhere a) {
 /// A permission request: what it will run or touch, why to look closely, and
 /// its answers.
 ///
-/// Nothing here answers for the person. An answer is ignored for [tapGuard]
+/// Nothing here answers for the person. An answer is ignored for [Dwell.tapGuard]
 /// after the panel appears. A standing, risky or unread allow is held, not
 /// tapped (a tap only says so): the chip fills while the finger stays down and
 /// sends at the end. Holding an allow on a command longer than its box scrolls
@@ -331,7 +331,7 @@ class _PermissionPanelState extends State<PermissionPanel> with TapGuardState<Pe
 return SheetScaffold(
             title: 'Everything it will run',
             kind: SheetKind.message,
-            child: SelectableText(_info.subject, style: dockMono(ds)),
+            child: SelectableText(_info.subject, style: Mono.base.copyWith(color: ds.text)),
           );
         },
       ),
@@ -421,7 +421,7 @@ return SheetScaffold(
     final lines = '\n'.allMatches(info.subject).length + 1;
     return SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.sm),
+        padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.sm),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -449,7 +449,7 @@ return SheetScaffold(
                             text: info.subject,
                             controller: _scroll,
                             overflows: _overflows,
-                            style: dockMono(ds),
+                            style: Mono.base.copyWith(color: ds.text),
                           ),
                         ),
                       ),
@@ -465,7 +465,7 @@ return SheetScaffold(
                     ],
                     if (_paths.isNotEmpty) ...[
                       const SizedBox(height: Gap.sm),
-                      _Paths(paths: _paths, style: dockMono(ds, size: 12)),
+                      _Paths(paths: _paths, style: Mono.base.copyWith(color: ds.text)),
                     ],
                     if (info.risk != null) ...[
                       const SizedBox(height: Gap.sm),
@@ -565,7 +565,7 @@ class _SubjectBox extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: ds.surface,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(Radii.sm),
         border: Border.all(color: ds.hairline),
       ),
       child: ConstrainedBox(
@@ -575,7 +575,7 @@ class _SubjectBox extends StatelessWidget {
           thumbVisibility: overflows,
           child: SingleChildScrollView(
             controller: controller,
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: Gap.md, vertical: Gap.sm),
             child: SizedBox(
               width: double.infinity,
               child: Text(text, style: style),
@@ -604,21 +604,21 @@ class _Paths extends StatelessWidget {
       children: [
         for (final p in paths.take(_shown))
           Padding(
-            padding: const EdgeInsets.only(bottom: 2),
+            padding: const EdgeInsets.only(bottom: Gap.hair),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Icon(LucideIcons.file, size: 13, color: ds.textSecondary),
+                  padding: const EdgeInsets.only(top: Gap.hair),
+                  child: Icon(LucideIcons.file, size: IconSize.inline, color: ds.textSecondary),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: Gap.sm),
                 Expanded(child: Text(p, style: style)),
               ],
             ),
           ),
         if (paths.length > _shown)
-          Text('+${paths.length - _shown} more files', style: Type.caption.copyWith(color: ds.textSecondary)),
+          Text('${paths.length - _shown} more', style: Type.caption.copyWith(color: ds.textSecondary)),
       ],
     );
   }

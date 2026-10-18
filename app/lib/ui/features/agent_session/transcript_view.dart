@@ -797,12 +797,12 @@ class _TranscriptViewState extends State<TranscriptView> with TickerProviderStat
                     if (earlierRow != null)
                       SliverPadding(
                         key: center == 0 ? _centerKey : null,
-                        padding: const EdgeInsets.fromLTRB(Gap.lg, Gap.sm, Gap.lg, 0),
+                        padding: const EdgeInsets.only(left: Gap.lg, top: Gap.sm, right: Gap.lg),
                         sliver: SliverToBoxAdapter(child: earlierRow),
                       ),
                     if (center > 0)
                       SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(Gap.lg, Gap.sm, Gap.lg, 0),
+                        padding: const EdgeInsets.only(left: Gap.lg, top: Gap.sm, right: Gap.lg),
                         sliver: SliverList(
                           delegate: SliverChildBuilderDelegate(
                             (context, j) => _row(context, center - 1 - j),
@@ -818,7 +818,9 @@ class _TranscriptViewState extends State<TranscriptView> with TickerProviderStat
                       ),
                     SliverPadding(
                       key: center == 0 && earlierRow != null ? null : _centerKey,
-                      padding: EdgeInsets.fromLTRB(Gap.lg, center == 0 && earlierRow == null ? Gap.sm : 0, Gap.lg, 0),
+                      padding: center == 0 && earlierRow == null
+                          ? const EdgeInsets.only(left: Gap.lg, top: Gap.sm, right: Gap.lg)
+                          : const EdgeInsets.symmetric(horizontal: Gap.lg),
                       sliver: SliverList(
                         delegate: SliverChildBuilderDelegate(
                           (context, j) => _row(context, center + j),
@@ -834,7 +836,7 @@ class _TranscriptViewState extends State<TranscriptView> with TickerProviderStat
                     ),
                     // What the agent is doing right now, after the last row.
                     SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.lg),
+                      padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.lg),
                       sliver: SliverToBoxAdapter(child: StatusLine(session: widget.session)),
                     ),
                   ],
@@ -875,38 +877,50 @@ class _Reveal extends StatefulWidget {
 
 class _RevealState extends State<_Reveal> with SingleTickerProviderStateMixin {
   AnimationController? _controller;
-  Animation<double> _fade = const AlwaysStoppedAnimation(1);
-  Animation<Offset> _slide = const AlwaysStoppedAnimation(Offset.zero);
+  CurvedAnimation? _curve;
+
+  /// Keeps the row's state when the reveal's wrappers go at its end.
+  GlobalKey? _childKey;
 
   @override
   void initState() {
     super.initState();
     if (widget.animate && !widget.reduced) {
+      _childKey = GlobalKey();
       final controller = _controller = AnimationController(vsync: this, duration: Motion.expand);
-      final curve = CurvedAnimation(parent: controller, curve: Motion.easeOut);
-      _fade = curve;
-      _slide = Tween(begin: const Offset(0, -0.12), end: Offset.zero).animate(curve);
+      _curve = Motion.curved(controller);
       controller.forward().whenComplete(() {
         if (!mounted) return;
-        _controller?.dispose();
-        _controller = null;
-        setState(() {
-          _fade = const AlwaysStoppedAnimation(1);
-          _slide = const AlwaysStoppedAnimation(Offset.zero);
-        });
+        setState(_release);
       });
     }
   }
 
-  @override
-  void dispose() {
+  void _release() {
+    _curve?.dispose();
+    _curve = null;
     _controller?.dispose();
-    super.dispose();
+    _controller = null;
   }
 
   @override
-  Widget build(BuildContext context) =>
-      FadeTransition(opacity: _fade, child: SlideTransition(position: _slide, child: widget.child));
+  void dispose() {
+    _release();
+    super.dispose();
+  }
+
+  /// A row arrives from just above its place: an eighth of its height.
+  static final _from = Tween(begin: const Offset(0, -0.12), end: Offset.zero);
+
+  @override
+  Widget build(BuildContext context) {
+    final key = _childKey;
+    final child = key == null ? widget.child : KeyedSubtree(key: key, child: widget.child);
+    final curve = _curve;
+    // At rest the row is bare: no fade or slide layer left at 1.
+    if (curve == null) return child;
+    return FadeTransition(opacity: curve, child: SlideTransition(position: _from.animate(curve), child: child));
+  }
 }
 
 /// Above the first row, when the log holds earlier messages: reading them

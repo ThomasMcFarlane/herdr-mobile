@@ -24,7 +24,6 @@ import 'package:herdr_mobile/ui/features/attach/attach_bars.dart';
 import 'package:herdr_mobile/ui/features/attach/attach_kit.dart';
 import 'package:herdr_mobile/data/services/image_prep.dart';
 import 'package:herdr_mobile/data/services/phone_gallery.dart';
-import 'package:herdr_mobile/ui/support/tap_guard.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
 import 'package:herdr_mobile/ui/features/agent_session/attach_picker.dart';
@@ -140,7 +139,7 @@ void main() {
       ),
     );
     await tester.pump(const Duration(milliseconds: 100));
-    await tester.pump(tapGuard);
+    await tester.pump(Dwell.tapGuard);
     await then?.call();
     // Thumbnails decode on the engine's real clock.
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));

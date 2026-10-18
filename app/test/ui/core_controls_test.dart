@@ -90,6 +90,10 @@ void main() {
         }
       });
 
+      test('$name a count badge reads: its number on its fill', () {
+        expect(contrast(ds.onStatus, ds.blockedText), greaterThanOrEqualTo(4.5));
+      });
+
       test('$name text holds on a pressed row', () {
         for (final base in [ds.bg, ds.surface]) {
           final pressed = Color.alphaBlend(ds.pressTint, base);

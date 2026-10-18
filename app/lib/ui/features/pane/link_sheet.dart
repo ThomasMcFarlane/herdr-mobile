@@ -36,7 +36,7 @@ Future<void> showLinkSheet(BuildContext context, String url, {MachineConnection?
 
       Future<void> open() async {
         Navigator.of(ctx).pop();
-        if (!await openTappedLink(url)) toast('No browser could open the link.', kind: ToastKind.failed);
+        if (!await openTappedLink(url)) toast('Couldn’t open on this phone: no browser could open it.', kind: ToastKind.failed);
       }
 
       // The sheet goes first: the connection is asked after the screen has
@@ -47,7 +47,7 @@ Future<void> showLinkSheet(BuildContext context, String url, {MachineConnection?
         try {
           final entry = await machine!.web.forwardUrl(Uri.parse(url), onNote: toast);
           if (!await openPreviewUrl(entry)) {
-            toast("Couldn't open on this phone: no browser could open it.", kind: ToastKind.failed);
+            toast('Couldn’t open on this phone: no browser could open it.', kind: ToastKind.failed);
           }
         } on WebPreviewException catch (e) {
           toast(e.message, kind: ToastKind.failed);
@@ -111,7 +111,7 @@ Future<void> showLinkSheet(BuildContext context, String url, {MachineConnection?
                 'This address is on ${machine.profile.label}. Open on phone reaches it over your SSH connection.',
               )
             else if (local && https)
-              note(LucideIcons.server, "HTTPS on the machine can't be opened on the phone yet.")
+              note(LucideIcons.server, 'HTTPS on the machine can’t be opened on the phone yet.')
             else if (local)
               note(LucideIcons.server, 'This address is on the machine, not your phone.')
             else if (plain)

@@ -7,6 +7,9 @@ import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/attention_set.dart';
 import '../../../data/repositories/fleet_repository.dart';
 import '../../../data/repositories/machine_connection.dart';
+import '../../../data/words/agent_names.dart';
+import '../../../data/words/elapsed.dart';
+import '../../../data/words/where_line.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// The board's sections, top to bottom: what needs the person first, then
@@ -31,38 +34,38 @@ const filterableStatuses = [
   AgentStatus.idle,
 ];
 
-/// "<1m", "12m", "1h 05m", "3d": the time an agent has been in its state,
-/// by the minute. Never seconds, so a label changes at most once a minute.
-String formatElapsed(Duration d) {
-  final minutes = d.inMinutes;
-  if (minutes < 1) return '<1m';
-  if (minutes < 60) return '${minutes}m';
-  if (d.inHours < 24) {
-    final m = minutes % 60;
-    return m == 0 ? '${d.inHours}h' : '${d.inHours}h ${m.toString().padLeft(2, '0')}m';
-  }
-  return '${d.inDays}d';
-}
+/// The state a row is in, as a word for screen readers: the visible label
+/// says it with the glyph and the time's colour. Empty for "unknown".
+String stateWord(AgentStatus status) => switch (status) {
+      AgentStatus.blocked => 'needs you',
+      AgentStatus.working => 'working',
+      AgentStatus.done => 'done',
+      AgentStatus.idle => 'idle',
+      AgentStatus.unknown => '',
+    };
 
-/// "working 12m", "needs you 3m"; with a bound (the change was found after a
-/// gap and its start is not known) "needs you ≤ 25m": at most that long. Empty
-/// for an agent whose state has no useful word ("unknown").
+/// "12m", "<1m"; with a bound (the change was found after a gap and its start
+/// is not known) "≤ 25m": at most that long. The time only: the row's glyph
+/// already says the state (DESIGN.md Hierarchy 5). Empty for an agent whose
+/// state has no useful word ("unknown").
 String timeInState(AgentStatus status, Duration d, {bool exact = true}) {
-  final word = switch (status) {
-    AgentStatus.blocked => 'needs you',
-    AgentStatus.working => 'working',
-    AgentStatus.done => 'done',
-    AgentStatus.idle => 'idle',
-    AgentStatus.unknown => '',
-  };
-  if (word.isEmpty) return '';
+  if (status == AgentStatus.unknown) return '';
+  if (exact) return Elapsed.compact(d, seconds: false);
   // A bound is a gap of at least a minute; never "<1m" for one.
-  const minute = Duration(minutes: 1);
-  return exact ? '$word ${formatElapsed(d)}' : '$word ≤ ${formatElapsed(d < minute ? minute : d)}';
+  return '≤ ${Elapsed.compact(d < _minute ? _minute : d, seconds: false)}';
 }
 
-/// "quiet 14m": a working agent heard from nothing for that long.
-String quietLabel(Duration d) => 'quiet ${formatElapsed(d)}';
+/// What [timeInState] says, in words: "needs you, 4 minutes", "done, at most
+/// 2 hours". Empty for "unknown".
+String timeInStateWords(AgentStatus status, Duration d, {bool exact = true}) {
+  final word = stateWord(status);
+  if (word.isEmpty) return '';
+  if (exact) return d < _minute ? '$word, under a minute' : '$word, ${Elapsed.words(d)}';
+  return '$word, at most ${Elapsed.words(d < _minute ? _minute : d)}';
+}
+
+// design-lint: allow(raw-duration) a unit of the label, not a timer or an animation
+const _minute = Duration(minutes: 1);
 
 /// The board's status of an agent session: the same five shapes the terminal
 /// rows use. A turn that finished and was not looked at is "done".
@@ -160,11 +163,10 @@ class AgentsOverview {
 
 AgentRowData agentRow(FleetAgent a, {required bool showMachine}) {
   final pane = a.pane;
-  final kind = pane.agent ?? 'terminal';
+  final kind = agentName(pane.agent);
   // A pane whose own title says nothing (omp's `π > <folder>`) is named by what
   // its session log says, when that was read (`PaneSessionNames`).
   final named = a.betterTitle;
-  final hasTitle = named != null || pane.title.isNotEmpty;
   final workspace = a.workspace?.label ?? '';
   final path = cwdTail(pane.cwd);
   // herdr gives no status timestamps, so a pane that was already idle when the
@@ -183,12 +185,14 @@ AgentRowData agentRow(FleetAgent a, {required bool showMachine}) {
     status: pane.status,
     // A pane with no title is named after its agent.
     title: named ?? (pane.title.isNotEmpty ? pane.title : kind),
-    subtitle: [
-      if (hasTitle) kind,
-      if (showMachine) a.machine.profile.label,
-      if (workspace.isNotEmpty) workspace,
-      if (path.isNotEmpty && path != workspace) path,
-    ].join(' · '),
+    subtitle: whereLine(
+      agent: kind,
+      machine: a.machine.profile.label,
+      workspace: workspace,
+      folder: path,
+      title: named ?? (pane.title.isNotEmpty ? pane.title : kind),
+      showMachine: showMachine,
+    ),
     stale: a.stale,
     since: since,
     quietMinutes: pane.status == AgentStatus.working ? a.machine.quietMinutes(pane.id) : 0,
@@ -330,7 +334,7 @@ const idleShown = 5;
 /// The line that stands for the rows of a section that are folded away ("22
 /// more idle", with the names of the first two, so what is inside is not a
 /// guess) and opens them in place. Open, it sits after the last row and reads
-/// "Show fewer".
+/// "Show less".
 class AgentMore extends AgentEntry {
   const AgentMore(this.status, this.hidden, this.names, {required this.open});
 
@@ -551,7 +555,7 @@ List<AgentEntry> _lines(
       // Closed, the fold comes right after the rows that show.
       if (folded && sectionOpen && i == idleShown - 1) more(),
     ],
-    // Open, it comes last: "Show fewer" where the list ends.
+    // Open, it comes last: "Show less" where the list ends.
     if (foldable && idleOpen && sectionOpen) more(),
   ];
 }

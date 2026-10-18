@@ -2,6 +2,7 @@ import '../acp_models.dart';
 import '../session_state.dart';
 import 'changes.dart';
 import 'plain_text.dart';
+import '../../words/plural.dart';
 
 /// One line about a tool call, as parts a UI lays out (the kind's icon, a
 /// state shape for a call that did not succeed and the text styles are the
@@ -69,7 +70,7 @@ class ToolSummary {
       if (hint != null && (kind == ToolKind.read || kind == ToolKind.delete)) '$text ($hint)' else text,
       if (kind == ToolKind.edit && fileCount > 1) '+${fileCount - 1} more',
       if (kind == ToolKind.edit && (added ?? 0) + (removed ?? 0) > 0) _counts(added ?? 0, removed ?? 0),
-      if (hits != null) hits == 1 ? '1 match' : '$hits matches',
+      if (hits != null) countOf(hits!, 'match', 'matches'),
       if (signal != null) 'signal $signal' else if (exitCode != null) 'exit $exitCode',
       ?failure,
     ];
@@ -405,7 +406,7 @@ class ToolGroup {
 /// `Read 3 files · searched 2×`; the part that is zero is left out. The words
 /// of the first part start with a capital.
 String groupLabel({required int reads, required int searches}) {
-  final read = reads == 0 ? null : 'read $reads ${reads == 1 ? 'file' : 'files'}';
+  final read = reads == 0 ? null : 'read ${countOf(reads, 'file')}';
   final search = searches == 0 ? null : (searches == 1 ? 'searched once' : 'searched $searches\u00d7');
   final text = [?read, ?search].join(' \u00b7 ');
   return text.isEmpty ? '' : '${text[0].toUpperCase()}${text.substring(1)}';

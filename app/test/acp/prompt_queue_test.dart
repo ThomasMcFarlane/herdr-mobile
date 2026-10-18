@@ -228,7 +228,7 @@ void main() {
           {'id': 'other', 'name': 'Other'},
         ],
       );
-      expect(need.message, 'pi needs you to sign in on the host.');
+      expect(need.message, 'Sign in to pi on the machine to continue.');
       expect(need.agentMessage, 'Configure an API key.');
       expect(need.methods.single.id, 'pi_terminal_login');
       expect(need.methods.single.terminal, isTrue);

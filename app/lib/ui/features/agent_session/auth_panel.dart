@@ -9,7 +9,6 @@ import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/session_launcher.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../create/session_start_support.dart' show describeLaunchFailure;
-import '../files/file_widgets.dart' show codeStyle;
 import '../agents/agent_navigation.dart';
 import '../../../data/repositories/agent_screens.dart';
 import '../../render/visible_text.dart';
@@ -122,7 +121,7 @@ class _AuthPanelState extends State<AuthPanel> {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 textDirection: TextDirection.ltr,
-                style: codeStyle(ds, size: 12, color: ds.textSecondary),
+                style: Mono.base.copyWith(color: ds.textSecondary),
               ),
             ),
           AppButton(
@@ -149,7 +148,7 @@ class _AuthPanelState extends State<AuthPanel> {
             Padding(
               padding: const EdgeInsets.only(top: Gap.sm),
               child: AppButton(
-                label: 'Try again',
+                label: 'Retry',
                 kind: AppButtonKind.secondary,
                 expand: true,
                 onPressed: () => unawaited(_session.reattach()),

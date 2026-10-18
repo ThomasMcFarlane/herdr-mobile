@@ -21,6 +21,7 @@ import '../observed/log_picture.dart' show LogPictureRef, logPictureNotHere;
 import '../services/transcript_cache.dart';
 import '../acp/subagents/subagent_run.dart' show SubagentLogStatus, SubagentRun, SubagentSummary;
 import '../streaming/flush_scheduler.dart';
+import '../words/agent_names.dart';
 import 'agent_session.dart';
 import 'attach_target.dart' show AttachMode;
 import 'machine_connection.dart';
@@ -291,7 +292,7 @@ class AcpAgentSession extends ChangeNotifier implements AgentSessionView {
   String get agent => _info.agent;
 
   @override
-  String get agentLabel => agentRouteById(_info.agent)?.label ?? _info.agent;
+  String get agentLabel => agentName(_info.agent);
 
   @override
   String get cwd => _info.cwd;
@@ -914,7 +915,7 @@ class AcpAgentSession extends ChangeNotifier implements AgentSessionView {
     if (sid == null) return client.newSession(cwd: _info.cwd, meta: meta);
     Future<AgentSessionState> resumeOnly(AcpInitializeResult init) async {
       if (!init.capabilities.canResume) {
-        throw AgentHostException('$agentLabel cannot reopen past sessions.', fatal: true);
+        throw AgentHostException('Past sessions can’t be reopened in $agentLabel.', fatal: true);
       }
       return client.resumeSession(sid, cwd: _info.cwd, meta: meta, merge: merge);
     }
@@ -969,8 +970,8 @@ class AcpAgentSession extends ChangeNotifier implements AgentSessionView {
           reason is String && reason.trim().isNotEmpty
               ? reason.trim()
               : switch (code) {
-                  null || 0 => '$agentLabel exited.',
-                  final c => '$agentLabel exited with code $c.',
+                  null || 0 => 'The $agentLabel agent exited.',
+                  final c => 'The $agentLabel agent exited with code $c.',
                 },
         );
     }
@@ -1558,7 +1559,7 @@ class AcpAgentSession extends ChangeNotifier implements AgentSessionView {
       _state.phase == AgentPhase.idle;
 
   static const _silentTurn = 'The agent ended the turn without an answer. '
-      'If this keeps happening, its login on the host may have expired.';
+      'If this keeps happening, its login on the machine may have expired.';
 
   /// Whether the agent did anything visible since [before]: a message or a
   /// thought of its own, a tool call, a plan. The user's own message (local or
@@ -1880,8 +1881,8 @@ class AcpAgentSession extends ChangeNotifier implements AgentSessionView {
     final said = k.exitReason?.trim();
     if (said != null && said.isNotEmpty) return said;
     return switch (k.exitCode) {
-      null || 0 => '$agentLabel exited.',
-      final code => '$agentLabel exited with code $code.',
+      null || 0 => 'The $agentLabel agent exited.',
+      final code => 'The $agentLabel agent exited with code $code.',
     };
   }
 

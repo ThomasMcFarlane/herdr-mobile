@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/acp/background/background_work.dart';
 import '../../../data/repositories/agent_session.dart';
+import '../../../data/words/elapsed.dart';
 import '../../../data/repositories/observed_session.dart' show ObservedAgentSession;
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../../support/step_clock.dart';
@@ -17,7 +18,7 @@ import '../../render/visible_text.dart';
 
 /// How long `Stopping…` waits for the task to leave the running set before it
 /// says it could not confirm.
-const stopConfirmWindow = Duration(seconds: 12);
+const stopConfirmWindow = Dwell.stopConfirm;
 
 /// Up to this many lines the sheet is as tall as its lines; past it, it is as
 /// tall as a list sheet grows and the list is lazy (like the subagent roster).
@@ -37,10 +38,10 @@ Future<void> showBackgroundWork(BuildContext context, AgentSessionView session) 
     showAppSheet<void>(context, builder: (_) => BackgroundSheet(session: session));
 
 /// One toast after Stop, when the turn ended and work remains (`Turn stopped ·
-/// 1 job still running`), with `View` to open the sheet. Replaces a toast that
+/// 1 job still running`), with `Open` to open the sheet. Replaces a toast that
 /// is showing.
 void showBackgroundToast(BuildContext context, String text, {required VoidCallback onView}) =>
-    showToast(context, text, action: ToastAction('View', onView), duration: const Duration(seconds: 6));
+    showToast(context, text, action: ToastAction('Open', onView), duration: Dwell.toastAction);
 
 enum _StopPhase { stopping, unconfirmed, finished }
 
@@ -191,7 +192,7 @@ class _BackgroundSheetState extends State<BackgroundSheet> {
         for (final t in targets) {
           _setStop(t.key, const _Stop(_StopPhase.finished));
         }
-        setState(() => _summary = 'Already finished');
+        setState(() => _summary = 'Already done');
       case BackgroundNotStoppable():
         for (final t in targets) {
           _setStop(t.key, null);
@@ -240,7 +241,7 @@ class _BackgroundSheetState extends State<BackgroundSheet> {
       for (final t in running) _TaskItem(t),
       if (running.isEmpty && work.unknownRunning)
         const _Note('Details are unavailable: the agent waits on something its log does not list.'),
-      if (finished.isNotEmpty) _Head('Finished', finished.length),
+      if (finished.isNotEmpty) _Head('Done', finished.length),
       for (final t in shown) _TaskItem(t),
       if (finished.length > finishedShown) _More(finished.length - finishedShown, _moreFinished),
     ];
@@ -265,12 +266,12 @@ class _BackgroundSheetState extends State<BackgroundSheet> {
       final pre = [
         if (sentence != null)
           Padding(
-            padding: const EdgeInsets.fromLTRB(Gap.md, Gap.xs, Gap.md, 0),
+            padding: const EdgeInsets.only(left: Gap.md, top: Gap.xs, right: Gap.md),
             child: Text(sentence, style: Type.secondary.copyWith(color: ds.textSecondary)),
           ),
         if (stopAll)
           Padding(
-            padding: const EdgeInsets.fromLTRB(Gap.md, Gap.md, Gap.md, 0),
+            padding: const EdgeInsets.only(left: Gap.md, top: Gap.md, right: Gap.md),
             child: AnswerChip(
               label: 'Stop all',
               tone: AnswerChipTone.danger,
@@ -287,7 +288,7 @@ class _BackgroundSheetState extends State<BackgroundSheet> {
           ),
         if (summary != null)
           Padding(
-            padding: const EdgeInsets.fromLTRB(Gap.md, Gap.sm, Gap.md, 0),
+            padding: const EdgeInsets.only(left: Gap.md, top: Gap.sm, right: Gap.md),
             child: Text(summary, style: Type.secondary.copyWith(color: ds.textSecondary)),
           ),
       ];
@@ -309,7 +310,7 @@ class _BackgroundSheetState extends State<BackgroundSheet> {
               header: true,
               child: Text(
                 '$title · $count',
-                style: Type.label.copyWith(color: ds.textSecondary, fontWeight: FontWeight.w600, fontFeatures: Type.tabular),
+                style: Type.labelStrong.copyWith(color: ds.textSecondary, fontFeatures: Type.tabular),
               ),
             ),
           ),
@@ -450,9 +451,6 @@ class _TaskRow extends StatelessWidget {
   final VoidCallback onHold;
   final VoidCallback onRetry;
 
-  static TextStyle mono(Ds ds, Color color) =>
-      TextStyle(fontFamily: monoFamily, fontSize: 13, height: 1.45, color: color);
-
   Widget _meta(BuildContext context, DateTime? now) {
     final ds = context.ds;
     final base = Type.caption.copyWith(color: ds.textSecondary, fontFeatures: Type.tabular);
@@ -466,7 +464,7 @@ class _TaskRow extends StatelessWidget {
           word = 'ended?';
           tone = ds.textMuted;
         } else if (start != null && now != null) {
-          parts.add(backgroundElapsed(now.difference(start)));
+          parts.add(Elapsed.compact(now.difference(start)));
         }
       case BackgroundStatus.paused:
         word = 'paused';
@@ -474,7 +472,7 @@ class _TaskRow extends StatelessWidget {
       case BackgroundStatus.finished:
         final start = task.startedAt;
         final end = task.endedAt;
-        word = start != null && end != null ? 'finished · ${backgroundElapsed(end.difference(start))}' : 'finished';
+        word = start != null && end != null ? 'done · ${Elapsed.compact(end.difference(start))}' : 'done';
         tone = ds.done;
       case BackgroundStatus.failed:
         word = 'failed';
@@ -490,7 +488,7 @@ class _TaskRow extends StatelessWidget {
           TextSpan(text: parts.join(' · ')),
           if (word != null) ...[
             const TextSpan(text: ' · '),
-            TextSpan(text: word, style: TextStyle(color: tone, fontWeight: FontWeight.w600)),
+            TextSpan(text: word, style: Type.captionStrong.copyWith(color: tone, fontFeatures: Type.tabular)),
           ],
         ],
       ),
@@ -513,8 +511,8 @@ class _TaskRow extends StatelessWidget {
     final canStop = active && live && task.stop != StopRoute.none;
     final phase = stop?.phase;
     final note = switch (phase) {
-      _StopPhase.unconfirmed => ('Could not confirm', ds.dangerText, stop?.reason),
-      _StopPhase.finished => ('Already finished', ds.done, null),
+      _StopPhase.unconfirmed => ('Couldn’t confirm', ds.dangerText, stop?.reason),
+      _StopPhase.finished => ('Already done', ds.done, null),
       _ => null,
     };
     final Widget? noteLine = note == null
@@ -523,10 +521,10 @@ class _TaskRow extends StatelessWidget {
             [note.$1, ?note.$3].join(' \u00b7 '),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: Type.caption.copyWith(color: note.$2, fontWeight: FontWeight.w600),
+            style: Type.captionStrong.copyWith(color: note.$2),
           );
     final Widget? trailing = !canStop && phase != _StopPhase.unconfirmed
-        ? (opensSubagent ? Icon(LucideIcons.chevronRight, size: 14, color: ds.textTertiary) : null)
+        ? (opensSubagent ? Icon(LucideIcons.chevronRight, size: IconSize.row, color: ds.textTertiary) : null)
         : switch (phase) {
             _StopPhase.stopping => _StopStatus(label: 'Stopping…', semantic: 'Stopping ${visibleText(task.id)}'),
             _StopPhase.unconfirmed => AppChip(
@@ -552,17 +550,17 @@ class _TaskRow extends StatelessWidget {
         Expanded(
           child: PressRow(
             onTap: onTap,
-            padding: const EdgeInsets.fromLTRB(Gap.md - PressRow.inset, Gap.sm, 0, Gap.sm),
+            padding: const EdgeInsets.only(left: Gap.md - PressRow.inset, top: Gap.sm, bottom: Gap.sm),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(
-                    width: 32,
+                    width: RowMetrics.leadingExtent,
                     child: Padding(
-                      padding: const EdgeInsets.only(top: 1),
+                      padding: const EdgeInsets.only(top: Gap.hair),
                       child: Align(
                         alignment: Alignment.topLeft,
-                        child: Icon(_icon(task.kind), size: 18, color: live ? ds.textSecondary : ds.textMuted),
+                        child: Icon(_icon(task.kind), size: IconSize.bar, color: live ? ds.textSecondary : ds.textMuted),
                       ),
                     ),
                   ),
@@ -575,7 +573,7 @@ class _TaskRow extends StatelessWidget {
                           // Read all comes last: its touch area stays out of the words.
                           _OpenText(
                             text: full,
-                            style: mono(ds, textColor),
+                            style: Mono.input.copyWith(color: textColor),
                             all: readAll,
                             onReadAll: onReadAll,
                             after: [meta, ?noteLine],
@@ -586,7 +584,7 @@ class _TaskRow extends StatelessWidget {
                             maxLines: 1,
                             softWrap: false,
                             overflow: TextOverflow.ellipsis,
-                            style: mono(ds, textColor),
+                            style: Mono.input.copyWith(color: textColor),
                           ),
                           meta,
                           ?noteLine,
@@ -598,7 +596,7 @@ class _TaskRow extends StatelessWidget {
               ),
           ),
         ),
-        if (trailing != null) Padding(padding: const EdgeInsets.only(top: 6, right: Gap.sm), child: trailing),
+        if (trailing != null) Padding(padding: const EdgeInsets.only(top: Gap.sm, right: Gap.sm), child: trailing),
       ],
     );
   }
@@ -688,7 +686,7 @@ class _StopStatus extends StatelessWidget {
             children: [
               const BusySpinner(),
               const SizedBox(width: Gap.sm),
-              Text(label, maxLines: 1, style: Type.label.copyWith(color: ds.textSecondary, fontWeight: FontWeight.w600)),
+              Text(label, maxLines: 1, style: Type.labelStrong.copyWith(color: ds.textSecondary)),
             ],
           ),
         ),

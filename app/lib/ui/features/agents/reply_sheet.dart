@@ -14,6 +14,7 @@ import '../../../data/repositories/fleet_repository.dart';
 import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/pane_previews.dart';
 import '../../../data/words/agent_names.dart';
+import '../../../data/words/plural.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../../support/tap_guard.dart';
 import '../composer/composer_frame.dart';
@@ -71,7 +72,7 @@ class _ReplySheetState extends State<ReplySheet> {
   Timer? _closeTimer;
 
   /// How long "All clear" shows before the sheet leaves.
-  static const _allClearHold = Duration(milliseconds: 900);
+  static const _allClearHold = Dwell.allClear;
 
   @override
   void initState() {
@@ -152,7 +153,7 @@ class _ReplySheetState extends State<ReplySheet> {
       final agent = row(_key);
       if (agent == null) {
         _close();
-        return const SizedBox(height: 120);
+        return const SizedBox(height: _frameHeight);
       }
       return SheetScaffold(kind: SheetKind.form, child: AgentReply(key: ValueKey(agent.key), agent: agent));
     }
@@ -176,7 +177,7 @@ class _ReplySheetState extends State<ReplySheet> {
       if (fallback == null) {
         if (!_answeredAny) {
           _close();
-          return const SizedBox(height: 120);
+          return const SizedBox(height: _frameHeight);
         }
         _close(after: _allClearHold);
         return const _AllClear();
@@ -199,7 +200,7 @@ class _ReplySheetState extends State<ReplySheet> {
           onAnswered: () => _advance(waiting),
         ),
       // A pane the set lists and the board has not built yet: a frame.
-      _ => const SizedBox(height: 120),
+      _ => const SizedBox(height: _frameHeight),
     };
     return _lastWalk = SheetScaffold(
       kind: SheetKind.form,
@@ -253,10 +254,10 @@ class _SessionAsk extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Padding(
-              padding: EdgeInsets.only(top: 2),
-              child: StatusGlyph(status: AgentStatus.blocked, size: 20, dim: false),
+              padding: EdgeInsets.only(top: Gap.hair),
+              child: StatusGlyph(status: AgentStatus.blocked, size: IconSize.lead, dim: false),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: Gap.md),
             Expanded(
               child: Semantics(
                 header: true,
@@ -272,7 +273,7 @@ class _SessionAsk extends StatelessWidget {
         ),
         if (meta.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(left: 30, top: 2),
+            padding: const EdgeInsets.only(left: IconSize.lead + Gap.md, top: Gap.hair),
             child: Text(
               meta,
               maxLines: 1,
@@ -307,14 +308,14 @@ class _AllClear extends StatelessWidget {
   Widget build(BuildContext context) {
     final ds = context.ds;
     return SizedBox(
-      height: 120,
+      height: _frameHeight,
       child: Semantics(
         liveRegion: true,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            DrawCheck(color: ds.done, size: 22),
-            const SizedBox(width: 10),
+            DrawCheck(color: ds.done, size: IconSize.lead),
+            const SizedBox(width: Gap.md),
             Text('All clear', style: Type.row.copyWith(color: ds.text)),
           ],
         ),
@@ -346,13 +347,9 @@ class _TriageBar extends StatelessWidget {
           child: Semantics(
             liveRegion: true,
             child: Text(
-              '${index + 1} of $total need you',
+              '${index + 1} of ${needYou(total)}',
               textAlign: TextAlign.center,
-              style: Type.label.copyWith(
-                color: ds.blockedText,
-                fontWeight: FontWeight.w600,
-                fontFeatures: Type.tabular,
-              ),
+              style: Type.labelStrong.copyWith(color: ds.blockedText, fontFeatures: Type.tabular),
             ),
           ),
         ),
@@ -424,7 +421,7 @@ class _AgentReplyState extends State<AgentReply> with TapGuardState<AgentReply>,
     widget.onSent?.call();
     _advance?.cancel();
     // Long enough to read "Sent: 1. Yes".
-    _advance = Timer(const Duration(milliseconds: 700), () {
+    _advance = Timer(Dwell.sentRead, () {
       if (mounted) widget.onAnswered!();
     });
   }
@@ -445,7 +442,7 @@ class _AgentReplyState extends State<AgentReply> with TapGuardState<AgentReply>,
     if (text.trim().isEmpty) {
       if (!settled) return;
       if (_asking) {
-        Haptics.tick();
+        Haptics.failed();
         showToast(context, 'Pick an answer above');
         return;
       }
@@ -478,10 +475,10 @@ class _AgentReplyState extends State<AgentReply> with TapGuardState<AgentReply>,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: StatusGlyph(status: a.status, size: 20, dim: false),
+              padding: const EdgeInsets.only(top: Gap.hair),
+              child: StatusGlyph(status: a.status, size: IconSize.lead, dim: false),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: Gap.md),
             Expanded(
               child: Semantics(
                 header: true,
@@ -493,13 +490,13 @@ class _AgentReplyState extends State<AgentReply> with TapGuardState<AgentReply>,
                 ),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: Gap.sm),
             StateTime(agent: a),
           ],
         ),
         if (a.subtitle.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(left: 30, top: 2),
+            padding: const EdgeInsets.only(left: IconSize.lead + Gap.md, top: Gap.hair),
             child: Text(
               a.subtitle,
               maxLines: 1,
@@ -632,7 +629,7 @@ class _AgentReplyState extends State<AgentReply> with TapGuardState<AgentReply>,
                   };
             final failed = _reply.phase == ReplyPhase.failed;
             return AnimatedSize(
-              duration: Motion.reduced(context) ? Duration.zero : Motion.standard,
+              duration: Motion.of(context, Motion.standard),
               curve: Motion.easeOut,
               alignment: Alignment.topCenter,
               child: text == null
@@ -674,9 +671,9 @@ class _SheetPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final ds = context.ds;
     final scaler = MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.15);
-    final line = scaler.scale(previewFontSize) * previewHeightFactor;
+    const style = Mono.small;
+    final line = scaler.scale(style.fontSize!) * style.height!;
     final tail = lines;
-    final style = previewTextStyle.copyWith(fontSize: previewFontSize + 0.5);
     Widget content;
     if (tail == null) {
       content = Align(
@@ -724,3 +721,6 @@ class _SheetPreview extends StatelessWidget {
   }
 }
 
+
+/// A sheet's height while it has nothing to show yet, or `All clear`.
+const _frameHeight = 120.0;

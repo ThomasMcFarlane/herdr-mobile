@@ -5,6 +5,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:herdr_mobile/data/words/elapsed.dart';
 import 'package:herdr_mobile/data/acp/acp_models.dart';
 import 'package:herdr_mobile/data/acp/session_state.dart';
 import 'package:herdr_mobile/data/services/image_prep.dart';
@@ -78,7 +79,7 @@ void main() {
       final blocks = [await _png(tester, 40, 30), await _png(tester, 50, 30), await _png(tester, 60, 30)];
       final photos = threadPhotos(_thread(blocks), agentLabel: 'omp');
       expect(photos.map((p) => p.block), orderedEquals(blocks), reason: 'message, tool result, message; the bare uri is skipped');
-      expect(photos[0].origin, startsWith('You attached it · May 20, 2026 at 09:30'));
+      expect(photos[0].origin, startsWith('You attached it · ${formatWhen(DateTime(2026, 5, 20, 9, 30), DateTime.now())}'));
       expect(photos[1].origin, 'Tool result · Read screenshot.png');
       expect(photos[2].origin, 'Sent by omp');
     });

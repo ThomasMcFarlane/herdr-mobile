@@ -505,7 +505,7 @@ void main() {
       await _settle(tester);
 
       expect(_names(tester).take(3), ['lib', 'docs', 'fresh.dart']);
-      expect(find.text('50 B · 3 min ago'), findsOneWidget, reason: 'times are told from the clock the screen was given');
+      expect(find.text('50 B · 3m ago'), findsOneWidget, reason: 'times are told from the clock the screen was given');
 
       await tester.tap(find.text('Modified').first);
       await _settle(tester);
@@ -526,8 +526,8 @@ void main() {
 
       expect(_names(tester), ['fresh.dart', 'big.log', 'lib', 'edge.dart', 'exact.txt']);
       expect(find.text('5 of 8 items'), findsOneWidget);
-      expect(find.text('50 B · 3 min ago'), findsOneWidget);
-      expect(find.text('100 B · 5 min ago'), findsOneWidget);
+      expect(find.text('50 B · 3m ago'), findsOneWidget);
+      expect(find.text('100 B · 5m ago'), findsOneWidget);
 
       await tester.tap(find.text('Changed in the last hour'));
       await _settle(tester);
@@ -685,8 +685,8 @@ void main() {
       await _pump(tester, _browser(fs, '$_home/w', clock: () => _now));
       await _settle(tester);
 
-      expect(find.text('50 B · 3 min ago'), findsOneWidget);
-      expect(find.text('10 min ago'), findsOneWidget);
+      expect(find.text('50 B · 3m ago'), findsOneWidget);
+      expect(find.text('10m ago'), findsOneWidget);
     });
 
     test('unreadable: no read bit at all, or a folder nobody can enter; a link says nothing', () {
@@ -905,7 +905,7 @@ void main() {
       final scroll = tester.state<ScrollableState>(
         find.descendant(of: find.byType(CodeView), matching: find.byType(Scrollable)).last,
       );
-      scroll.position.jumpTo(100 * 20.0); // line 101 at the top: 13 px mono at 1.5 is 20 px a row
+      scroll.position.jumpTo(100 * 21.0); // line 101 at the top: Mono.input (13.5 px) at 1.5 is 21 px a row
       await tester.pump();
       await tester.pump();
       expect(find.text('110'), findsOneWidget, reason: 'line 110 is in view');
@@ -991,14 +991,14 @@ void main() {
       await _settle(tester);
       await _settle(tester);
 
-      expect(find.textContaining("Couldn't refresh"), findsOneWidget);
+      expect(find.textContaining('Couldn’t refresh'), findsOneWidget);
       expect(find.text('line 0 ok'), findsOneWidget, reason: 'the old text stays');
       fs.fail = null;
       await tester.tap(find.text('Retry'));
       await _settle(tester);
       await _settle(tester);
 
-      expect(find.textContaining("Couldn't refresh"), findsNothing);
+      expect(find.textContaining('Couldn’t refresh'), findsNothing);
       expect(find.text('brand new text'), findsOneWidget);
     });
 

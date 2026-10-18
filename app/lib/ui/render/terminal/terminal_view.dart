@@ -97,7 +97,6 @@ const _Edge _atEnd = (away: false, unseen: 0, needsYou: false);
 
 /// A jump to the newest row shorter than this many viewports is scrolled.
 const _animatedJumpViewports = 3;
-const _jumpDuration = Duration(milliseconds: 220);
 
 /// Read-only, selectable, colour terminal output.
 ///
@@ -477,7 +476,7 @@ class _TerminalViewState extends State<TerminalView> {
       _scroll.jumpTo(0);
     } else {
       unawaited(
-        _scroll.animateTo(0, duration: _jumpDuration, curve: Motion.easeOut),
+        _scroll.animateTo(0, duration: Motion.expand, curve: Motion.easeOut),
       );
     }
   }
@@ -528,6 +527,8 @@ class _TerminalViewState extends State<TerminalView> {
         break;
       case ZoomDetent.step:
         Haptics.tick();
+      // The end of the range is felt as firmer than a step: the pinch goes no
+      // further (docs/screens/agent-screens.md, zoom detents).
       case ZoomDetent.stop:
         Haptics.hold();
     }

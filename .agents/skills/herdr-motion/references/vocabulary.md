@@ -10,9 +10,9 @@ the app deliberately does not use.
 | Term | Meaning | Flutter / here |
 | --- | --- | --- |
 | Fade in / out | Appears or disappears by changing opacity | `AnimatedOpacity`; tab switch, `Motion.fade` |
-| Slide in | Enters from off-screen | page push, toast (16 dp) |
-| Scale in | Grows to full size, usually with a fade | jump pill, 0.92 to 1 |
-| Pop in | Appears with a slight overshoot | `PopOnRise` on a rising count only |
+| Slide in | Enters from off-screen | page push, toast (rises from behind the bar), bottom stack (`Motion.travel`) |
+| Scale in | Grows to full size, usually with a fade | `FloatingPill`, from `Motion.enterScale`; `CountBadge` from 0 |
+| Roll | The changed characters slide out while new ones slide in | `RollText` on a changed count |
 | Reveal | Uncovered gradually by a clip or mask | `ClipRect` + `Align.heightFactor` (`Collapse`) |
 
 ## Sequencing and timing
@@ -31,7 +31,7 @@ the app deliberately does not use.
 | --- | --- | --- |
 | Translate | Move along X or Y | `Transform.translate`, `SlideTransition` |
 | Scale | Bigger or smaller | `AnimatedScale`, `ScaleTransition` |
-| Transform origin | The anchor a scale grows from | `alignment:` (`PopOnRise(alignment:)`) |
+| Transform origin | The anchor a scale grows from | `alignment:` (`ScaleTransition(alignment:)`) |
 | Origin-aware | Grows out of its trigger, not its own centre | menus and popovers; sheets rise from the bottom |
 
 ## Transitions between states

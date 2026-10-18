@@ -156,7 +156,7 @@ class _HostTabState extends State<HostTab> {
       _open(e.path);
     } else if (!e.isFile) {
       Haptics.failed();
-      widget.onProblem(e.isBrokenLink ? '$name points to something that no longer exists.' : "$name can't be attached.");
+      widget.onProblem(e.isBrokenLink ? '$name points to something that no longer exists.' : '$name can’t be attached.');
     } else if (vm.isDenied(e)) {
       Haptics.failed();
       widget.onProblem('No permission to read $name');
@@ -253,14 +253,14 @@ class _HostTabState extends State<HostTab> {
                   children: [
                     AppChip(
                       label: 'Changed recently',
-                      leading: Icon(LucideIcons.clock, size: 14, color: _options.recentOnly ? ds.text : ds.textSecondary),
+                      leading: Icon(LucideIcons.clock, size: IconSize.inline, color: _options.recentOnly ? ds.text : ds.textSecondary),
                       selected: _options.recentOnly,
                       onTap: () => _options.setRecentOnly(!_options.recentOnly),
                     ),
                     const SizedBox(width: Gap.sm),
                     AppChip(
                       label: 'Browse all…',
-                      leading: Icon(LucideIcons.folderTree, size: 14, color: ds.textSecondary),
+                      leading: Icon(LucideIcons.folderTree, size: IconSize.inline, color: ds.textSecondary),
                       onTap: () => unawaited(_browseAll()),
                     ),
                   ],
@@ -291,7 +291,7 @@ class _HostTabState extends State<HostTab> {
     } else if (failed != null) {
       state = SliverToBoxAdapter(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.sm, Gap.gutter, 0),
+          padding: const EdgeInsets.only(left: Gap.gutter, top: Gap.sm, right: Gap.gutter),
           child: _failure(vm, failed),
         ),
       );

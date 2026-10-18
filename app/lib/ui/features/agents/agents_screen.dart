@@ -10,6 +10,7 @@ import '../../../data/models/herdr_models.dart';
 import '../../../data/repositories/app_settings.dart';
 import '../../../data/repositories/fleet_repository.dart';
 import '../../../data/repositories/agent_session.dart';
+import '../../../data/words/plural.dart';
 import '../../../data/repositories/attention_set.dart';
 import '../machines/approval_button.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
@@ -301,7 +302,7 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
                           AppChip(
                             label: s.status.label,
                             count: s.count,
-                            leading: StatusGlyph(status: s.status, size: 14),
+                            leading: StatusGlyph(status: s.status, size: IconSize.inline),
                             selected: filter == s.status,
                             onTap: () => _toggleFilter(s.status),
                           ),
@@ -681,8 +682,8 @@ class _ConnectionStrip extends StatelessWidget {
       return StatusStrip(
         color: state.color(ds),
         leading: LinkDot(state: state),
-        title: '${troubled.length} machines not connected',
-        action: Icon(LucideIcons.chevronRight, size: 16, color: ds.textSecondary),
+        title: '${countOf(troubled.length, 'machine')} not connected',
+        action: Icon(LucideIcons.chevronRight, size: IconSize.row, color: ds.textSecondary),
         onTap: onShowMachines,
       );
     }

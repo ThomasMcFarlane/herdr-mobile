@@ -8,6 +8,7 @@ import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/batch_actions.dart';
 import '../../../data/repositories/fleet_repository.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
+import '../../../data/words/plural.dart';
 import 'agents_grouping.dart' show AgentsOverview;
 import 'board_selection.dart';
 
@@ -20,7 +21,7 @@ class BatchRequest {
 }
 
 /// "3 agents", "1 agent".
-String agentCount(int n) => '$n agent${n == 1 ? '' : 's'}';
+String agentCount(int n) => countOf(n, 'agent');
 
 /// One button of the action bar, start to finish: the confirm sheet, the run
 /// (the bar shows a spinner while it lasts), the result line, and the end of
@@ -33,7 +34,7 @@ Future<void> performBatchAction(BuildContext context, BatchAction action, BoardS
   );
   if (request == null) return;
   final verb = switch (action) {
-    BatchAction.interrupt => 'Interrupting',
+    BatchAction.stop => 'Stopping',
     BatchAction.message => 'Messaging',
     BatchAction.close => 'Closing',
   };
@@ -47,7 +48,7 @@ Future<void> performBatchAction(BuildContext context, BatchAction action, BoardS
   toaster.show(
     result.summary,
     kind: result.failed.isEmpty ? ToastKind.success : ToastKind.failed,
-    duration: const Duration(seconds: 6),
+    duration: Dwell.batchResult,
   );
 }
 
@@ -109,11 +110,11 @@ class _BatchSheetState extends State<BatchSheet> {
     final canConfirm = n > 0 && (!message || _text.text.trim().isNotEmpty);
 
     final (title, about, runHeader, verb) = switch (_action) {
-      BatchAction.interrupt => (
-          'Interrupt agents',
+      BatchAction.stop => (
+          'Stop agents',
           'Sends Esc to each terminal agent and stops the turn of each agent session.',
-          'Will be interrupted',
-          'Interrupt',
+          'Will be stopped',
+          'Stop',
         ),
       BatchAction.message => (
           'Message agents',
@@ -253,13 +254,13 @@ class _TargetRow extends StatelessWidget {
     final status = target.status;
     return MergeSemantics(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: Gap.gutter, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: Gap.gutter, vertical: Gap.sm),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: ExcludeSemantics(child: StatusGlyph(status: status, size: 18)),
+              padding: const EdgeInsets.only(top: Gap.hair),
+              child: ExcludeSemantics(child: StatusGlyph(status: status, size: IconSize.bar)),
             ),
             const SizedBox(width: Gap.md),
             Expanded(
@@ -290,7 +291,7 @@ class _TargetRow extends StatelessWidget {
             ),
             const SizedBox(width: Gap.sm),
             Padding(
-              padding: const EdgeInsets.only(top: 3),
+              padding: const EdgeInsets.only(top: Gap.hair),
               child: Text(
                 status.label,
                 maxLines: 1,

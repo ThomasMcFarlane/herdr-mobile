@@ -1,7 +1,8 @@
 // Renders the photo viewer to PNGs under /tmp/photo_viewer_shots/ (see
 // docs/DESIGN.md "Checking a screen"): fit, zoomed, overlay and info sheet,
 // loading, errors, see-through and tiny pictures, in light and dark, at
-// 412 x 892 and 320 x 640. Run with `flutter test test/ui/photo_viewer_shots_test.dart`.
+// 412 x 892 and 320 x 640. Run with
+// `PHOTO_SHOTS=1 flutter test test/ui/photo_viewer_shots_test.dart`.
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
@@ -167,6 +168,10 @@ Future<void> doubleTapAt(WidgetTester tester, Offset at) async {
 }
 
 void main() {
+  if (Platform.environment['PHOTO_SHOTS'] == null) {
+    test('photo viewer shots are off (set PHOTO_SHOTS=1)', () {}, skip: 'set PHOTO_SHOTS=1 to render PNGs');
+    return;
+  }
   setUpAll(() async {
     await loadAppFonts();
     Directory(_out).createSync(recursive: true);

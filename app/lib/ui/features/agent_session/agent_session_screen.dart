@@ -381,12 +381,10 @@ class _AgentSessionScreenState extends State<AgentSessionScreen> with WidgetsBin
   bool _stopAsked = false;
   Timer? _stopWindow;
 
-  static const _stopExpiry = Duration(seconds: 20);
-
   void _stopTapped() {
     _stopAsked = true;
     _stopWindow?.cancel();
-    _stopWindow = Timer(_stopExpiry, () => _stopAsked = false);
+    _stopWindow = Timer(Dwell.stopAsked, () => _stopAsked = false);
   }
 
   /// After Stop: when the turn is over and background work still runs, say so
@@ -701,7 +699,7 @@ class _Bottom extends StatelessWidget {
       SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.sm),
+          padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.sm),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -737,12 +735,12 @@ class _WaitsUntilLive extends StatelessWidget {
     builder: (context, waits) {
       if (!waits) return const SizedBox.shrink();
       return Padding(
-        padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.sm),
+        padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.sm),
         child: StatusStrip(
           color: context.ds.blocked,
           title: 'Needs you',
           detail: 'Its request shows here once connected.',
-          leading: const StatusGlyph(status: AgentStatus.blocked, size: 16),
+          leading: const StatusGlyph(status: AgentStatus.blocked, size: IconSize.row),
         ),
       );
     },
@@ -803,7 +801,7 @@ class _LinkStrip extends StatelessWidget {
             constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.6),
             child: SingleChildScrollView(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.xs),
+                padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.xs),
                 child: AuthPanel(session: session),
               ),
             ),
@@ -815,7 +813,7 @@ class _LinkStrip extends StatelessWidget {
           return _strip(
             color: ds.blocked,
             state: LinkState.attention,
-            title: 'Waiting for you in the terminal',
+            title: 'Needs you in the terminal',
             detail: 'It asks something the chat cannot show.',
             action: openTerminal,
           );
@@ -824,7 +822,7 @@ class _LinkStrip extends StatelessWidget {
           return _strip(
             color: ds.danger,
             state: LinkState.attention,
-            title: 'Something went wrong',
+            title: 'The agent reported an error',
             detail: error,
             action: openTerminal,
           );
@@ -841,7 +839,7 @@ class _LinkStrip extends StatelessWidget {
           ds.working,
           LinkState.reconnecting,
           'Reconnecting…',
-          observed ? 'The agent keeps running in its terminal.' : 'The agent keeps running on the host.',
+          observed ? 'The agent keeps running in its terminal.' : 'The agent keeps running on the machine.',
         ),
         AgentLink.ended => (
           ds.textTertiary,
@@ -906,7 +904,7 @@ class _LinkStrip extends StatelessWidget {
     Widget? action,
   }) => Builder(
     builder: (context) => Padding(
-      padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.xs),
+      padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.xs),
       child: StatusStrip(
         color: color,
         title: title,

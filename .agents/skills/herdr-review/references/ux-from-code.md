@@ -7,12 +7,17 @@ in a diff without rendering it. Every row you produce from it is "from code, not
 1. **Find the journey step.** Which of the person's five questions does the changed UI serve
    (needs me / alive / what did it do / steer / trust)? Open `herdr-design/references/journeys.md`
    for the surfaces that share the concept. If it serves none, it is a noise candidate.
-2. **Never / Instead sweep, changed files only.** Run these and read the hits. A hit is a
-   candidate, not a finding.
+2. **Never / Instead sweep, changed files only.** Run the design lint first:
+   `dart run ../tool/design_lint.dart` from `app/` prints `path:line rule message` for raw
+   colours, type, alpha, radii, durations, curves, springs, sizes and haptics, direct
+   `Clipboard.setData`, Material widgets, loops and kit-layer imports. Every finding in a changed
+   file is a finding, and so is an `allow(...)` whose reason does not hold. The greps below are
+   fallbacks (the lint does not run, or the code is outside `lib/`). A hit is a candidate, not
+   a finding.
    - `grep -nE "InkWell|ListTile|AlertDialog|SnackBar|AppBar|NavigationBar|PopupMenuButton|SegmentedButton|ExpansionTile|FloatingActionButton|Icons\." <files>`
    - `grep -nE "Color\(0x|Colors\." <files>`
    - `grep -nE "textTertiary" <files>`
-   - `grep -nE "copyWith\(fontSize" <files>`
+   - `grep -nE "copyWith\(fontSize|fontWeight:|circular\([0-9]|Clipboard\.setData" <files>`
    - `grep -nE "GestureDetector" <files>`, then check `minTapSize: kMinTap` or an enclosing
      `PressBuilder`.
    - `grep -nE "HapticFeedback|\.repeat\(|Curves\.|Duration\(milliseconds" <files>`: motion rules

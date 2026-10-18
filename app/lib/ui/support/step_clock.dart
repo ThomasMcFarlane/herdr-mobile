@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
+import 'package:herdr_mobile/ui/core/kit.dart';
+
 /// A shared, low-rate clock. One timer serves every widget that listens, it
 /// only runs while at least one widget holds a lease, and it stops while the
 /// app is in the background.
@@ -16,7 +18,7 @@ class StepClock {
   StepClock(this.period);
 
   /// Elapsed-time labels: minute resolution, polled twice a minute.
-  static final minute = StepClock(const Duration(seconds: 30));
+  static final minute = StepClock(Dwell.minuteStep);
 
   final Duration period;
 

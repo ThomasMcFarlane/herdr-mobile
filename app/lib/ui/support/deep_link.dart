@@ -166,7 +166,7 @@ class DeepLinks with WidgetsBindingObserver {
     this.tabs,
     this.sessions,
     this._initialRoute,
-    this.patience = const Duration(seconds: 8),
+    this.patience = Dwell.linkPatience,
     this.coldStartFrames = 3,
   });
 

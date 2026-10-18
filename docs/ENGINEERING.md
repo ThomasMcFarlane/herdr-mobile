@@ -21,9 +21,11 @@ a subsystem, update its section in the same change.
 
 ## Design system
 
-Not Material. UI is built from `ui/core/` (`tokens`, `controls`, `rows`,
-`glyphs`, `chrome`, `status_panel`); the system is written up in
-`docs/DESIGN.md`.
+Not Material. UI is built from the kit in `ui/core/`, which features import
+through one barrel, `ui/core/kit.dart`; renderers live in `ui/render/`
+(Markdown, terminal) and app plumbing in `ui/support/`. The system is written
+up in `docs/DESIGN.md`, and `tool/design_lint.dart` (run by `tool/check.sh`)
+fails on raw values and on Material widgets.
 
 - Do not use `Card`, `ListTile`, `ExpansionTile`, `NavigationBar`, FAB,
   Material buttons, `SegmentedButton`, `AlertDialog`, `PopupMenuButton`,
@@ -89,13 +91,13 @@ Not Material. UI is built from `ui/core/` (`tokens`, `controls`, `rows`,
 ## Frames, motion and haptics
 
 - Never add a looping animation (they keep the GPU busy forever and cost
-  battery). The only exception is `BusySpinner` (`ui/core/controls.dart`) for
+  battery). The only exception is `BusySpinner` (`ui/core/spinner.dart`) for
   work the user is actively waiting on (a saving/testing button, a send in
   flight; it must stop when the work does).
 - `KeyboardFrames`' ticker is not a loop: it lives only while the keyboard
   moves (test in `keyboard_frames_test.dart`).
 - A `StatusGlyph` is still at rest and settles once (`Motion.settle`, then its
-  ticker stops) when its status changes on screen; `step_clock.dart` only
+  ticker stops) when its status changes on screen; `ui/support/step_clock.dart` only
   drives the minute labels.
 - Haptics go through `Haptics` (`tick/hold/sent/armed/failed` in
   `ui/core/motion.dart`), never `HapticFeedback` directly.
@@ -355,7 +357,7 @@ Tailscale.
     would stand over the viewer for its 3 s), a second tap on a row that is
     opening says `Still opening X…`, one open per row at a time, and the browser
     is only launched while the screen the sheet came from is still there.
-  - The sheet: the app's one switch (`Segmented`, docs/DESIGN.md "The switch")
+  - The sheet: the app's one switch (`Segmented`, docs/DESIGN.md "Components")
     leads it with the kinds present (`Servers`, `Pages 17`, `Pictures 13`,
     `Docs 8`, a live dot before Servers while one runs), only when two or more
     kinds exist, the choice remembered per session; the default is the newest
@@ -475,7 +477,7 @@ inbox and types its path, as a person would.
   of a `push`), one `FileBrowserSession` per walk owns the stack (a breadcrumb
   pops, it never pushes) and the shared options, the viewer polls the file's
   mtime only while it is the screen in front, and thumbnails read at most 3
-  files at a time; see `docs/DESIGN.md` "Files".
+  files at a time; see `docs/screens/files.md`.
 
 ### Upload
 
@@ -489,7 +491,7 @@ time, no resume. The target path always comes from `reserveInboxPath`
 
 ### One photo viewer
 
-`ui/features/photos/`, `docs/DESIGN.md` "Photo viewer". Every picture (file,
+`ui/features/photos/`, `docs/screens/photos.md`. Every picture (file,
 chat, attachment chip, folder grid) opens through
 `openPhotoViewer`/`photoViewerRoute`; never add a second image screen. Its
 gestures are springs that start from the live value and stop when a finger
@@ -523,7 +525,7 @@ a thumbnail is encoded in the isolate.
 
 ### One attach sheet
 
-`ui/features/attach/`, `docs/DESIGN.md` "Attach sheet".
+`ui/features/attach/`, `docs/screens/attach.md`.
 
 - It is NOT a Material bottom sheet: the content is laid out once at full
   height and moved with transforms (`SheetPosition`), so never size a tab from
@@ -575,15 +577,15 @@ a thumbnail is encoded in the isolate.
 - **The only workspace the phone starts is the sign-in terminal** (`SessionLauncher`,
   used by `auth_panel.dart`): a new herdr workspace in the agent's folder, a plain
   shell. The phone has no form for starting bare terminal workspaces any more (see
-  `docs/DESIGN.md` "Starting and duplicating"). Named herdr sessions (separate
+  `docs/screens/board.md` "Starting and duplicating"). Named herdr sessions (separate
   server namespaces) cannot be created through the socket API. It works on every
   herdr version (no `agent.start` dependency); older servers answer unknown
   methods with `HerdrUnsupportedException`.
-- **Deep links.** `DeepLinks` (`ui/core/deep_link.dart`) must be registered
+- **Deep links.** `DeepLinks` (`ui/support/deep_link.dart`) must be registered
   before the `MaterialApp` builds and it handles every pushed route:
   `herdr://agent/<machine>/<pane>`, `herdr://session/<machine>/<keeper>`,
   `herdr://agents`. It turns the home screen to a tab through `HomeTabs`
-  (`ui/core/home_tabs.dart`) and goes back with `maybePop` one route at a
+  (`ui/support/home_tabs.dart`) and goes back with `maybePop` one route at a
   time, never `popUntil`, so a screen's `PopScope` guard is respected.
 
 ## Agent sessions (ACP)
@@ -638,7 +640,7 @@ and SFTP.
 
 ### Streaming transcript
 
-`ui/features/agent_session/`, `docs/DESIGN.md` "Agent session screen (ACP)".
+`ui/features/agent_session/`, `docs/screens/session.md`.
 
 - The message that is arriving is the ONE live row (`LiveMessageRow`): a chunk
   appends to its `LiveText` in place and rebuilds that row alone; the
@@ -660,7 +662,7 @@ and SFTP.
 - The transcript is a list of turns (`TranscriptPlan` plans from the first TURN
   that changed; a finished turn folds its log to one line, the answer, the
   Changed card and the exceptions stay; the turn that runs shows its log open;
-  see `docs/DESIGN.md` "Turns"): the toggles live with the view, the newer
+  see `docs/screens/session.md` "Turns"): the toggles live with the view, the newer
   slivers start at a row found again BY KEY after every plan (an index would
   shift the content when rows come or go above), and a message that was the
   answer and becomes narration changes colour only.

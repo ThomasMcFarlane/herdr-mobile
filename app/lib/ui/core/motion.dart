@@ -153,13 +153,81 @@ abstract final class Dwell {
   /// The keyboard counts as still once its inset has not moved for this long.
   static const keyboardQuiet = Duration(milliseconds: 120);
 
-  /// A spinner shows only for work that takes longer than this.
+  /// A spinner or a skeleton shows only for work that takes longer than this.
   static const spinnerDelay = Duration(milliseconds: 120);
 
   /// A toast stays: short words, longer words, and one with an action.
   static const toastShort = Duration(milliseconds: 1500);
   static const toastLong = Duration(milliseconds: 2750);
   static const toastAction = Duration(milliseconds: 5000);
+
+  /// Clocks that count seconds (a turn's elapsed time, an auto-resolve countdown) step this often.
+  static const second = Duration(seconds: 1);
+
+  /// `Stopping…` waits this long for a stopped job to leave the running set before it says it could not confirm.
+  static const stopConfirm = Duration(seconds: 12);
+
+  /// While the app is hidden no frame comes, so a coalesced flush waits this long instead.
+  static const hiddenFlush = Duration(milliseconds: 250);
+
+  /// Elapsed-time labels at minute resolution are polled this often.
+  static const minuteStep = Duration(seconds: 30);
+
+  /// A deep link waits this long for its machine to connect before giving up.
+  static const linkPatience = Duration(seconds: 8);
+
+  /// A Stop the person tapped counts as theirs this long: a later, unrelated turn end is never taken for it.
+  static const stopAsked = Duration(seconds: 20);
+
+  /// The triage walk's `All clear` stays this long before the sheet leaves.
+  static const allClear = Duration(milliseconds: 900);
+
+  /// A sent answer's `Sent: …` stays this long before the walk moves on.
+  static const sentRead = Duration(milliseconds: 700);
+
+  /// A preconnect outlives a finger that lifted without opening by this much.
+  static const preconnectLinger = Duration(milliseconds: 400);
+
+  /// An edge swipe between agents must finish within this long.
+  static const edgeSwipe = Duration(milliseconds: 450);
+
+  /// A board answer's `Sent` and `Changed` states stay this long.
+  static const answerSent = Duration(seconds: 3);
+  static const answerChanged = Duration(milliseconds: 1500);
+
+  /// A batch action's result toast stays this long: it may list what failed.
+  static const batchResult = Duration(seconds: 6);
+
+  /// A reopened app waits this long for the agent it was showing to be listed.
+  static const resumePatience = Duration(seconds: 8);
+
+  /// `ArrivalCue`: quiet this long after start, then at most one buzz per [arrivalSpacing].
+  static const arrivalCalm = Duration(seconds: 3);
+  static const arrivalSpacing = Duration(seconds: 2);
+
+  /// Warming the transcript's plan does at most [planBudget] of work per [planGap], between frames.
+  static const planBudget = Duration(milliseconds: 4);
+  static const planGap = Duration(milliseconds: 2);
+
+  /// A machine's list refresh after an action gives up after this long; events catch up later.
+  static const refreshTimeout = Duration(seconds: 5);
+
+  /// The pane's screen reads: at most one per [paneRead] while output streams, a
+  /// deeper (scrollback) read at most per [paneDeepRead], back to the short read
+  /// after [paneDeepRevert] of quiet, and a poll every [paneFallback] if events stop.
+  static const paneRead = Duration(milliseconds: 120);
+  static const paneDeepRead = Duration(milliseconds: 1500);
+  static const paneDeepRevert = Duration(seconds: 2);
+  static const paneFallback = Duration(seconds: 4);
+
+  /// Waits one frame or so past an animation, so a measurement sees its end state.
+  static const afterSettle = Duration(milliseconds: 30);
+
+  /// An open file viewer stats its file this often to notice a change on disk.
+  static const diskWatch = Duration(seconds: 15);
+
+  /// A photo zoomed back out to fit keeps its sharp decode this long: zooming in again does not decode twice.
+  static const photoSharp = Duration(seconds: 2);
 }
 
 /// The app's haptic vocabulary, as `Motion` is its motion vocabulary. Five

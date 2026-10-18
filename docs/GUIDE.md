@@ -131,7 +131,8 @@ know why. To accept a new key, remove the machine and add it again.
   `remote-api-bridge`. Set it when herdr's socket is not where the app looks
   by default.
 
-**Managing machines.** On the Machines tab each machine shows its state. Its
+**Managing machines.** On the Machines tab each machine shows its state (the
+dot in front), `N agents · user@host` and, when agents need you, their count. Its
 `More` menu has `Edit`, `Disable` (stop connecting without deleting it) and
 `Remove` (deletes the connection and its credentials from the phone). Tap a
 machine to see its workspaces, tabs and panes; `Browse files` and the `+`
@@ -156,7 +157,7 @@ holds both kinds of agent:
   within the last day, newest first; then those the app has no date for; then
   the older ones, newest first. The first five show; the rest sit behind one
   line (`22 more idle`, with the names of the first two under it) that opens
-  them in place and then reads `Show fewer`. The `Idle` chip shows them all.
+  them in place and then reads `Show less`. The `Idle` chip shows them all.
 
 Tap a section header to fold it. The chips under the title filter the board
 to one status.
@@ -217,7 +218,7 @@ only; herdr's own state is not touched.
 taps then add or remove agents (`All` and `Cancel` are at the top,
 `Select all` on the `Done` header). The bar at the bottom offers:
 
-- `Interrupt`: sends Esc to each terminal agent and stops the turn of each
+- `Stop`: sends Esc to each terminal agent and stops the turn of each
   agent session.
 - `Message`: one message typed into each agent, then Enter.
 - `Close`: closes the terminal panes and ends the agent sessions. This
@@ -242,7 +243,7 @@ path it asks about under the question. Tap an option to send it. When there
 are more than five options, the last chip on the card is `N more…`, which
 opens the reply sheet with all of them. The reply button on a card
 (`Reply to <agent>`) opens the same sheet, with a message box
-(`Message the agent…`) and `Open full` for the agent's screen.
+(`Message Claude Code…`, named after the agent) and `Open full` for the agent's screen.
 
 Agent sessions on the board say what they ask but are answered inside the
 session (open it, or `Answer in the session` from the pill).
@@ -301,8 +302,8 @@ restarted, it reopens the agent screen that was in front.
 The pane shows the agent's terminal in colour, with up to 1,000 rows of
 scrollback (herdr's limit). It is text only: no cursor or mouse.
 
-- **Bar.** `Browse files` (the pane's folder), the wrap button
-  (`Wrap lines to screen` / `Show exact terminal layout`) and `Pane options`:
+- **Bar.** `Browse files` (the pane's folder) and `Pane options`:
+  `Wrap lines` (re-flow to the screen, or the exact terminal layout),
   `Duplicate` (start an agent session with the same machine, folder and
   agent), `Copy title`, `Copy pane id <id>`.
 - **Width.** herdr can't resize a pane to the phone over its API, so a wide
@@ -481,7 +482,7 @@ agent session (`Session options` > `Files`), or by tapping a path in a
 terminal or chat. Files are read over SFTP; nothing is run in a shell.
 
 **Browsing.** Breadcrumbs at the top, Back goes up one folder.
-`Find in this folder` filters the current listing; `Changed in the last hour`
+`Find in <folder>` filters the current listing; `Changed in the last hour`
 shows recent changes in this folder only. Sorting, `Folders first` and
 `Show hidden files` stay set while you browse.
 
@@ -490,9 +491,12 @@ shows recent changes in this folder only. Sorting, `Folders first` and
 - Code and text with line numbers, `Wrap`.
 - Markdown as `Rendered` or `Source`; JSON with `Pretty`.
 - Other files: size, dates, permissions and a hex view of the first bytes,
-  with `View as text`.
+  with `Show as text`.
 - The viewer notices when the file changes on disk (`Changed on disk`); tap
   to reload.
+- The bar has `Open in browser` and `File options` (`⋯`), which holds
+  `Copy contents` and `Copy path`. From Android 13 the phone itself confirms a
+  copy, so the app says nothing more unless only part was copied.
 
 **Photos.** Pictures open in the photo viewer: pinch or double-tap to zoom,
 swipe sideways for the next photo, drag down to close. `Save or share` has
@@ -554,13 +558,13 @@ The app never shows old data as live.
 **What you see.**
 
 - **Board.** A machine that isn't connected shows a strip at the top with its
-  state (`Connecting…`, `Reconnecting…`, `No network`, `Needs attention`,
+  state (`Connecting…`, `Reconnecting…`, `Offline`, `Needs attention`,
   `Waiting for approval`) and `Retry`; several machines are summed up as
   `2 machines not connected`. Its agents stay listed from the last known
   state, dimmed and marked `offline`, and are not counted or answerable.
 - **Terminal pane.** When reads stop, the text dims and the bottom edge says
   `stale · 12s` (time since the last good read). The message box says
-  `Offline — reconnecting`.
+  `Offline · reconnecting`.
 - **Agent session.** Opening one shows the saved transcript at once, labelled
   as a saved copy (`Nothing here can be answered.`), until the live session
   is back. Requests only appear once it is live.

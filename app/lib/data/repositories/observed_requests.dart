@@ -3,6 +3,7 @@ import '../models/pane_preview.dart';
 import '../observed/observed_contracts.dart';
 import 'command_risk.dart' show grantsStandingPermission;
 import 'prompt_detector.dart' show isNegativeReply;
+import '../words/plural.dart';
 
 /// The value of the choice that stands for "something else" in a question's
 /// form (the agent's question tool always offers it).
@@ -55,8 +56,8 @@ ElicitationRequest askRequest(PendingAsk ask, {required String sessionId, requir
   return ElicitationRequest(
     mode: 'form',
     message: many
-        ? '$agentLabel has ${ask.questions.length} questions'
-        : (ask.questions.isEmpty ? '$agentLabel has a question' : ask.questions.first.question),
+        ? '${countOf(ask.questions.length, 'question')} from $agentLabel'
+        : (ask.questions.isEmpty ? 'A question from $agentLabel' : ask.questions.first.question),
     sessionId: sessionId,
     toolCallId: ask.toolCallId,
     schema: ElicitationSchema(fields: fields),

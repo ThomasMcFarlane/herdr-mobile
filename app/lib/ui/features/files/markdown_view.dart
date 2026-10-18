@@ -97,7 +97,7 @@ class _MarkdownViewState extends State<MarkdownView> {
     final bottom = MediaQuery.paddingOf(context).bottom + Gap.xl;
     final blocks = _parsed.blocks;
     if (_parsing && blocks.isEmpty) {
-      return const Center(child: BusySpinner(size: 20));
+      return const Center(child: BusySpinner(size: IconSize.lead));
     }
     return MdActions(
       onLink: _link,
@@ -107,14 +107,17 @@ class _MarkdownViewState extends State<MarkdownView> {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(Gap.gutter, Gap.md, Gap.gutter, bottom),
           itemCount: blocks.length,
-          itemBuilder: (context, i) => Padding(
-            padding: EdgeInsets.only(top: mdBlockGap(i == 0 ? null : blocks[i - 1], blocks[i])),
-            child: MdBlockView(
-              block: blocks[i],
-              expanded: _expanded.contains(i),
-              onToggleExpanded: () => setState(() => _expanded.contains(i) ? _expanded.remove(i) : _expanded.add(i)),
-            ),
-          ),
+          itemBuilder: (context, i) {
+            final gap = mdBlockGap(i == 0 ? null : blocks[i - 1], blocks[i]);
+            return Padding(
+              padding: EdgeInsets.only(top: gap),
+              child: MdBlockView(
+                block: blocks[i],
+                expanded: _expanded.contains(i),
+                onToggleExpanded: () => setState(() => _expanded.contains(i) ? _expanded.remove(i) : _expanded.add(i)),
+              ),
+            );
+          },
         ),
       ),
     );

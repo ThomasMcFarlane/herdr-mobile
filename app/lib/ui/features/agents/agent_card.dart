@@ -9,6 +9,7 @@ import '../../../data/models/pane_preview.dart';
 import '../../../data/repositories/agent_screens.dart';
 import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/pane_previews.dart';
+import '../../../data/words/elapsed.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../../support/step_clock.dart';
 import '../../support/tap_guard.dart';
@@ -29,16 +30,9 @@ int previewRowCount(AgentStatus status) => switch (status) {
       AgentStatus.idle || AgentStatus.unknown => 0,
     };
 
-/// Terminal preview text: small, mono, no ligatures (a `->` stays two glyphs
-/// wide, as in the real terminal).
-const previewFontSize = 11.0;
-const previewHeightFactor = 1.38;
-const previewTextStyle = TextStyle(
-  fontFamily: monoFamily,
-  fontSize: previewFontSize,
-  height: previewHeightFactor,
-  fontFeatures: [FontFeature.disable('liga'), FontFeature.disable('calt')],
-);
+/// Room at a panel's end for the reply circle that floats over it: its 44 hit
+/// box less the panel's own inset.
+const replyGutter = kMinTap - Gap.xs;
 
 /// One agent as a board card: what it is doing (task, where, how long), a calm
 /// live look at the end of its terminal, and, when it is blocked on a prompt
@@ -191,15 +185,12 @@ class _AgentCardState extends State<AgentCard>
   @override
   Widget build(BuildContext context) {
     final handle = answerHandle;
-    return AnimatedBuilder(
-      animation: _arrival ?? kAlwaysDismissedAnimation,
-      builder: (context, _) => handle == null
-          ? _build(context, null)
-          : ValueListenableBuilder<PanePreview?>(
-              valueListenable: handle.preview,
-              builder: (context, preview, _) => _build(context, preview),
-            ),
-    );
+    return handle == null
+        ? _build(context, null)
+        : ValueListenableBuilder<PanePreview?>(
+            valueListenable: handle.preview,
+            builder: (context, preview, _) => _build(context, preview),
+          );
   }
 
   Widget _build(BuildContext context, PanePreview? preview) {
@@ -221,9 +212,9 @@ class _AgentCardState extends State<AgentCard>
     // A blocked card is the same card as any other: the glyph, the section
     // and the orange question wash already say so (a tinted card with an
     // orange outline was the fourth statement of it).
-    final wash = _arrival == null ? 0.0 : 1 - _arrival!.value;
-    final base = wash > 0 ? Color.alphaBlend(ds.accent.withValues(alpha: 0.10 * wash), ds.surface) : ds.surface;
-    final tint = sel.selected ? Color.alphaBlend(ds.accent.withValues(alpha: ds.isDark ? 0.14 : 0.08), base) : base;
+    // The arrival wash is painted under the content by [_ArrivalWash]: the
+    // animation repaints it, never rebuilds the preview and the answers.
+    final tint = sel.selected ? Color.alphaBlend(ds.accentWash, ds.surface) : ds.surface;
     final edge = sel.selected ? ds.accent : ds.hairline;
     // A finished agent on a reachable machine can be marked reviewed without
     // opening it: by a swipe, or by the screen reader's "Mark reviewed".
@@ -233,7 +224,7 @@ class _AgentCardState extends State<AgentCard>
     final body = AnimatedSize(
       // A question arriving or being answered changes what the card holds:
       // it grows or folds instead of snapping.
-      duration: Motion.reduced(context) ? Duration.zero : Motion.expand,
+      duration: Motion.of(context, Motion.expand),
       curve: Motion.easeOut,
       alignment: Alignment.topCenter,
       child: ReviewAction(
@@ -247,23 +238,29 @@ class _AgentCardState extends State<AgentCard>
           builder: (context, pressed) => AnimatedContainer(
             duration: Motion.pressing(pressed),
             curve: Motion.easeOut,
-            padding: const EdgeInsets.fromLTRB(_pad, 12, _pad, _pad),
             decoration: BoxDecoration(
-              color: pressed ? Color.alphaBlend(ds.fill.withValues(alpha: 0.6), tint) : tint,
+              color: pressed ? Color.alphaBlend(ds.pressTint, tint) : tint,
               borderRadius: BorderRadius.circular(_radius),
               border: Border.all(color: edge),
             ),
+            child: CustomPaint(
+              painter: _arrival == null
+                  ? null
+                  : _ArrivalWash(_arrival!, color: ds.accentWash, radius: _radius - 1),
+              child: Padding(
+            padding: const EdgeInsets.fromLTRB(_pad, Gap.md, _pad, _pad),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _Header(agent: a, showTime: !_stackTime(context)),
                 Padding(
-                  padding: EdgeInsets.only(left: _glyphColumn, right: slim && canReply ? 40 : 0),
+                  padding: const EdgeInsets.only(left: _glyphColumn) +
+                      (slim && canReply ? const EdgeInsets.only(right: replyGutter) : EdgeInsets.zero),
                   child: _Subtitle(text: a.subtitle),
                 ),
                 if (_stackTime(context))
                   Padding(padding: const EdgeInsets.only(left: _glyphColumn), child: StateTime(agent: a)),
-                if (!slim) const SizedBox(height: 10),
+                if (!slim) const SizedBox(height: Gap.md),
                 if (prompt != null) ...[
                   QuestionWash(
                     question: prompt.question,
@@ -272,7 +269,7 @@ class _AgentCardState extends State<AgentCard>
                     trailing: const SizedBox(width: _replyRoom),
                     onReadAll: _more,
                   ),
-                  SizedBox(height: 10 + chipsHeight),
+                  SizedBox(height: Gap.md + chipsHeight),
                 ] else if (shown > 0)
                   _PreviewPanel(
                     rows: shown,
@@ -280,6 +277,8 @@ class _AgentCardState extends State<AgentCard>
                     reserveReply: canReply,
                   ),
               ],
+            ),
+              ),
             ),
           ),
         ),
@@ -315,13 +314,13 @@ class _AgentCardState extends State<AgentCard>
             // The 44 hit box of the 32 circle ends at the panel's edge, so
             // the circle is painted 6 inside the panel.
             right: _pad,
-            bottom: (slim ? 6 : _pad) + (prompt != null ? chipsHeight + 10 : 0),
+            bottom: (slim ? _replyInset : _pad) + (prompt != null ? chipsHeight + Gap.md : 0),
             child: IgnorePointer(
               ignoring: sel.active,
               child: CircleButton(
                 icon: LucideIcons.reply,
                 tooltip: 'Reply to ${a.title}',
-                size: 32,
+                size: _replySize,
                 filled: false,
                 onPressed: _openSheet,
               ),
@@ -337,7 +336,7 @@ class _AgentCardState extends State<AgentCard>
       enabled: swipeable,
       onReviewed: review,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: _margin, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: _margin, vertical: Gap.xs),
         child: card,
       ),
     );
@@ -353,12 +352,17 @@ class _AgentCardState extends State<AgentCard>
               '${prompt.subject.isEmpty ? '' : '. ${prompt.subject.replaceAll('\n', ', ')}'}',
       ].join(', ');
 
-  static const _pad = 14.0;
-  static const _margin = 16.0;
-  static const _radius = 14.0;
+  /// The card's inner edge: its corner radius, so content sits concentric.
+  static const _pad = Radii.md;
+  static const _margin = Gap.lg;
+  static const _radius = Radii.md;
 
-  /// Glyph (22) + gap (10): text starts here.
-  static const _glyphColumn = 32.0;
+  /// The reply circle, and how far inside its 44 hit box it is painted.
+  static const _replySize = 32.0;
+  static const _replyInset = (kMinTap - _replySize) / 2;
+
+  /// Glyph + gap: text starts here.
+  static const _glyphColumn = IconSize.lead + Gap.md;
 
   /// The reply circle's 44 hit box ends at the wash's edge: its text stops
   /// this much before the wash's own padding.
@@ -382,11 +386,11 @@ class _Header extends StatelessWidget {
       children: [
         // Centred on the first title line.
         SizedBox(
-          width: 22,
-          height: math.max(titleLine, 22),
-          child: Center(child: StatusGlyph(status: agent.status, size: 22)),
+          width: IconSize.lead,
+          height: math.max(titleLine, IconSize.lead),
+          child: Center(child: StatusGlyph(status: agent.status, size: IconSize.lead)),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: Gap.md),
         Expanded(
           child: Text(
             agent.title,
@@ -396,23 +400,26 @@ class _Header extends StatelessWidget {
           ),
         ),
         if (showTime) ...[
-          const SizedBox(width: 8),
+          const SizedBox(width: Gap.sm),
           StateTime(agent: agent),
         ],
       ],
     );
   }
 
-  static final _titleStyle = Type.row.copyWith(fontSize: 15.5);
+  static const _titleStyle = Type.row;
 }
 
-/// "working 12m": tabular, by the minute, from one shared slow clock. After a
-/// gap the start of a state is only a bound, and says so: "needs you ≤ 25m". A
-/// working agent quiet for the connection's `quietAfter` says "quiet 14m"
+/// "12m": the time only, tabular, by the minute, from one shared slow clock;
+/// the glyph already says the state (DESIGN.md Hierarchy 5). Blocked reads in
+/// the blocked colour and weight, every other state muted. After a gap the
+/// start of a state is only a bound, and says so: "≤ 25m". A working agent
+/// quiet for the connection's `quietAfter` shows how long it has been quiet
 /// instead, since that is the news; the number is the one the row was sorted
 /// by (worked out at the machine's last refresh, never per event), so label
 /// and order agree. Offline agents say so; an agent whose start is not known
-/// at all claims nothing.
+/// at all claims nothing. Screen readers hear the words ("needs you, 4
+/// minutes").
 class StateTime extends StatelessWidget {
   const StateTime({super.key, required this.agent});
 
@@ -422,38 +429,32 @@ class StateTime extends StatelessWidget {
   Widget build(BuildContext context) {
     final ds = context.ds;
     final blocked = agent.status == AgentStatus.blocked;
-    TextStyle style() => Type.caption.copyWith(
-          fontSize: 12.5,
-          color: blocked ? ds.blockedText : ds.textMuted,
-          fontFeatures: Type.tabular,
+    final style = (blocked && !agent.stale ? Type.captionStrong : Type.caption).copyWith(
+      color: blocked && !agent.stale ? ds.blockedText : ds.textMuted,
+      fontFeatures: Type.tabular,
+    );
+    Widget label(String text, String words) => Padding(
+          padding: const EdgeInsets.only(top: Gap.hair),
+          child: Semantics(
+            label: words,
+            excludeSemantics: true,
+            child: Text(text, maxLines: 1, softWrap: false, style: style),
+          ),
         );
-    if (agent.stale) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 2),
-        child: Text('offline', maxLines: 1, style: style()),
-      );
-    }
+    if (agent.stale) return label('offline', 'offline');
     if (agent.quietMinutes > 0) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 2),
-        child: Text(
-          quietLabel(Duration(minutes: agent.quietMinutes)),
-          maxLines: 1,
-          softWrap: false,
-          style: style(),
-        ),
-      );
+      // design-lint: allow(raw-duration) a count of minutes the machine measured, not a timer
+      final quiet = Duration(minutes: agent.quietMinutes);
+      return label(Elapsed.compact(quiet, seconds: false), 'working, quiet for ${Elapsed.words(quiet)}');
     }
     final time = agent.since;
     if (time == null) return const SizedBox.shrink();
     return MinuteBuilder(
       builder: (context, now) {
-        final text = timeInState(agent.status, time.since(now), exact: time.exact);
+        final d = time.since(now);
+        final text = timeInState(agent.status, d, exact: time.exact);
         if (text.isEmpty) return const SizedBox.shrink();
-        return Padding(
-          padding: const EdgeInsets.only(top: 2),
-          child: Text(text, maxLines: 1, softWrap: false, style: style()),
-        );
+        return label(text, timeInStateWords(agent.status, d, exact: time.exact));
       },
     );
   }
@@ -468,7 +469,7 @@ class _Subtitle extends StatelessWidget {
   Widget build(BuildContext context) {
     if (text.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.only(top: 2),
+      padding: const EdgeInsets.only(top: Gap.hair),
       child: Text(
         text,
         maxLines: 1,
@@ -491,14 +492,14 @@ class _PreviewPanel extends StatelessWidget {
   /// Room at the right for the reply button that floats over the panel.
   final bool reserveReply;
 
-  static const _style = previewTextStyle;
+  static const _style = Mono.preview;
 
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
     // Terminal text is a picture of a screen: allow some scaling, not all.
     final scaler = MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.15);
-    final line = scaler.scale(previewFontSize) * previewHeightFactor;
+    final line = scaler.scale(_style.fontSize!) * _style.height!;
     final shown = lines;
     final last = shown == null || shown.isEmpty ? null : shown.length - 1;
     final tail = shown == null || shown.length <= rows ? shown : shown.sublist(shown.length - rows);
@@ -518,10 +519,10 @@ class _PreviewPanel extends StatelessWidget {
                   widthFactor: f,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: ds.textTertiary.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(3),
+                      color: ds.skeleton,
+                      borderRadius: BorderRadius.circular(Radii.pill),
                     ),
-                    child: const SizedBox(height: 7),
+                    child: const SizedBox(height: Gap.sm),
                   ),
                 ),
               ),
@@ -565,7 +566,7 @@ class _PreviewPanel extends StatelessWidget {
               children: [
                 Positioned.fill(
                   child: Padding(
-                    padding: EdgeInsets.fromLTRB(Gap.sm + Gap.hair, Gap.sm, reserveReply ? 40 : Gap.sm + Gap.hair, Gap.sm),
+                    padding: EdgeInsets.fromLTRB(Gap.sm + Gap.hair, Gap.sm, reserveReply ? replyGutter : Gap.sm + Gap.hair, Gap.sm),
                     child: content,
                   ),
                 ),
@@ -574,13 +575,13 @@ class _PreviewPanel extends StatelessWidget {
                 left: 0,
                 right: 0,
                 top: 0,
-                height: 14,
+                height: Gap.lg,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [ds.fill, ds.fill.withValues(alpha: 0)],
+                      colors: [ds.fill, ds.fill.withAlpha(0)],
                     ),
                   ),
                 ),
@@ -624,7 +625,7 @@ class AgentCompactRow extends StatelessWidget {
           onReviewed: review,
           child: ListRow(
             // Staleness dims the whole row once; the glyph is not dimmed again.
-            leading: StatusGlyph(status: agent.status, size: 20),
+            leading: StatusGlyph(status: agent.status, size: IconSize.lead),
             title: agent.title,
             subtitle: agent.subtitle,
             titleMaxLines: 2,
@@ -633,8 +634,8 @@ class AgentCompactRow extends StatelessWidget {
               children: [
                 StateTime(agent: agent),
                 if (sel.active) ...[
-                  const SizedBox(width: 6),
-                  SelectMark(selected: sel.selected, size: 18),
+                  const SizedBox(width: Gap.sm),
+                  SelectMark(selected: sel.selected, size: IconSize.bar),
                 ],
               ],
             ),
@@ -669,3 +670,25 @@ class AgentCompactRow extends StatelessWidget {
 /// word, so it drops under the subtitle.
 bool _stackTime(BuildContext context) =>
     MediaQuery.textScalerOf(context).scale(1) > 1.25 || MediaQuery.sizeOf(context).width < 340;
+
+/// The faint accent that finds a card which just changed section, fading over
+/// [Motion.arrival]. Painted under the card's content and driven by the
+/// animation, so a frame repaints this alone.
+class _ArrivalWash extends CustomPainter {
+  _ArrivalWash(this.animation, {required this.color, required this.radius}) : super(repaint: animation);
+
+  final Animation<double> animation;
+  final Color color;
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final t = 1 - animation.value;
+    if (t <= 0) return;
+    final rect = RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(radius));
+    canvas.drawRRect(rect, Paint()..color = Color.lerp(color.withAlpha(0), color, t)!);
+  }
+
+  @override
+  bool shouldRepaint(_ArrivalWash old) => old.color != color || old.radius != radius || old.animation != animation;
+}

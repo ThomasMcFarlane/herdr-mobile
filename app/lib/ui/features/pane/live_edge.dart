@@ -2,19 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
+import 'package:herdr_mobile/data/words/elapsed.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 
-/// How long the output has been stale, as the label says it: whole seconds up
-/// to a minute, then minutes, then hours. `stale · 12s`.
-String staleLabel(Duration since) {
-  final seconds = since.inSeconds < 0 ? 0 : since.inSeconds;
-  final text = seconds < 60
-      ? '${seconds}s'
-      : seconds < 3600
-          ? '${seconds ~/ 60}m'
-          : '${seconds ~/ 3600}h';
-  return 'stale · $text';
-}
+/// How long the output has been stale, as the label says it. `stale · 12s`.
+String staleLabel(Duration since) => 'stale · ${Elapsed.compact(since)}';
 
 /// The bottom edge of the terminal: a 2 px rule that says whether what is
 /// shown is live.
@@ -86,7 +78,7 @@ class _LiveEdgeState extends State<LiveEdge> {
       _timer?.cancel();
       _timer = null;
     } else {
-      _timer ??= Timer(const Duration(seconds: 1), _tick);
+      _timer ??= Timer(Dwell.second, _tick);
     }
   }
 
@@ -105,7 +97,8 @@ class _LiveEdgeState extends State<LiveEdge> {
     if (stale) {
       rule = widget.failed ? ds.danger : ds.textMuted;
     } else if (widget.streaming) {
-      rule = ds.accent.withValues(alpha: 0.6);
+      // The hairline pulled most of the way to the accent: tinted, not loud.
+      rule = Color.lerp(ds.hairline, ds.accent, 0.6)!;
     } else {
       rule = ds.hairline;
     }
@@ -118,11 +111,8 @@ class _LiveEdgeState extends State<LiveEdge> {
             right: 0,
             bottom: 0,
             height: LiveEdge.ruleHeight,
-            child: AnimatedContainer(
-              duration: Motion.reduced(context) ? Duration.zero : Motion.standard,
-              curve: Motion.easeOut,
-              color: rule,
-            ),
+            // Agent-driven: the colour changes at once, never as a tween.
+            child: ColoredBox(color: rule),
           ),
           if (read != null)
             Positioned(
@@ -139,7 +129,7 @@ class _LiveEdgeState extends State<LiveEdge> {
                     borderRadius: BorderRadius.circular(Radii.xs),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: Gap.sm, vertical: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: Gap.sm, vertical: Gap.hair),
                     child: Text(
                       staleLabel(widget.now().difference(read)),
                       maxLines: 1,

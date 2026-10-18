@@ -2,6 +2,7 @@
 // waiting sentence, the toast, ordering of finished tasks.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/acp/background/background_work.dart';
+import 'package:herdr_mobile/data/words/elapsed.dart';
 import 'package:herdr_mobile/ui/features/agent_session/background_format.dart';
 
 BackgroundTask task(
@@ -30,27 +31,25 @@ void main() {
       expect(nounPhrase([task('bg_1'), task('e', kind: BackgroundKind.eval)]), '2 jobs', reason: 'bash and eval are both jobs');
     });
 
-    test('background terminals', () {
-      expect(nounPhrase([task('t', kind: BackgroundKind.terminal)]), '1 background terminal');
+    test('terminals are jobs too', () {
+      expect(nounPhrase([task('t', kind: BackgroundKind.terminal)]), '1 job');
       expect(
         nounPhrase([task('t', kind: BackgroundKind.terminal), task('u', kind: BackgroundKind.terminal)]),
-        '2 background terminals',
+        '2 jobs',
       );
     });
 
-    test('a mix of kinds is background tasks', () {
-      expect(
-        nounPhrase([task('bg_1'), task('t', kind: BackgroundKind.terminal)]),
-        '2 background tasks',
-      );
-      expect(nounPhrase([task('a', kind: BackgroundKind.agent), task('bg_1')]), '2 background tasks');
+    test('a mix of kinds is jobs', () {
+      expect(nounPhrase([task('bg_1'), task('t', kind: BackgroundKind.terminal)]), '2 jobs');
+      expect(nounPhrase([task('a', kind: BackgroundKind.agent), task('bg_1')]), '2 jobs');
     });
 
-    test('other kinds say their own word', () {
+    test('only subagents are counted as subagents; every other kind is a job', () {
       expect(nounPhrase([task('a', kind: BackgroundKind.agent)]), '1 subagent');
-      expect(nounPhrase([task('w', kind: BackgroundKind.workflow)]), '1 workflow');
-      expect(nounPhrase([task('m', kind: BackgroundKind.monitor), task('n', kind: BackgroundKind.monitor)]), '2 monitors');
-      expect(nounPhrase([task('x', kind: BackgroundKind.other)]), '1 background task');
+      expect(nounPhrase([task('a', kind: BackgroundKind.agent), task('b', kind: BackgroundKind.agent)]), '2 subagents');
+      expect(nounPhrase([task('w', kind: BackgroundKind.workflow)]), '1 job');
+      expect(nounPhrase([task('m', kind: BackgroundKind.monitor), task('n', kind: BackgroundKind.monitor)]), '2 jobs');
+      expect(nounPhrase([task('x', kind: BackgroundKind.other)]), '1 job');
     });
   });
 
@@ -60,18 +59,18 @@ void main() {
       expect(stoppedToast(work([task('bg_6'), task('bg_7')])), 'Turn stopped \u00b7 2 jobs still running');
       expect(
         stoppedToast(work([task('t', kind: BackgroundKind.terminal)])),
-        'Turn stopped \u00b7 1 background terminal still running',
+        'Turn stopped \u00b7 1 job still running',
       );
       expect(
         stoppedToast(work([task('bg_6'), task('t', kind: BackgroundKind.terminal)])),
-        'Turn stopped \u00b7 2 background tasks still running',
+        'Turn stopped \u00b7 2 jobs still running',
       );
     });
 
     test('nothing running says nothing; unknown work says so', () {
       expect(stoppedToast(BackgroundWork.empty), isNull);
       expect(stoppedToast(work([task('bg_6', status: BackgroundStatus.finished)])), isNull);
-      expect(stoppedToast(work(const [], unknown: true)), 'Turn stopped \u00b7 background work still running');
+      expect(stoppedToast(work(const [], unknown: true)), 'Turn stopped \u00b7 jobs still running');
     });
   });
 
@@ -110,10 +109,10 @@ void main() {
       );
     });
 
-    test('idle with a background terminal and no wake', () {
+    test('idle with a terminal job and no wake', () {
       expect(
         stripText(work([task('t', kind: BackgroundKind.terminal)]), waiting: false, turnRunning: false),
-        const StripText('1 background terminal running'),
+        const StripText('1 job running'),
       );
     });
 
@@ -145,7 +144,7 @@ void main() {
     test('one task is named by its id, several by their noun, none by nothing', () {
       expect(waitingSentence(work([task('bg_6')])), 'Waiting for bg_6');
       expect(waitingSentence(work([task('bg_6'), task('bg_7')])), 'Waiting for 2 jobs');
-      expect(waitingSentence(work(const [], unknown: true)), 'Waiting for background work');
+      expect(waitingSentence(work(const [], unknown: true)), 'Waiting for jobs');
       expect(waitingSubject(work([task('bg_6', status: BackgroundStatus.finished)])), isNull);
     });
 
@@ -159,12 +158,12 @@ void main() {
       expect(subject, contains('\u2026'));
     });
 
-    test('elapsed moves by the minute', () {
-      expect(backgroundElapsed(const Duration(seconds: 42)), '42s');
-      expect(backgroundElapsed(const Duration(minutes: 14, seconds: 59)), '14m');
-      expect(backgroundElapsed(const Duration(hours: 4, minutes: 36)), '4h 36m');
-      expect(backgroundElapsed(const Duration(hours: 1, minutes: 2)), '1h 02m');
-      expect(backgroundElapsed(const Duration(seconds: -5)), '0s');
+    test('elapsed is the compact register', () {
+      expect(Elapsed.compact(const Duration(seconds: 42)), '42s');
+      expect(Elapsed.compact(const Duration(minutes: 14, seconds: 59)), '14m');
+      expect(Elapsed.compact(const Duration(hours: 4, minutes: 36)), '4h 36m');
+      expect(Elapsed.compact(const Duration(hours: 1, minutes: 2)), '1h 02m');
+      expect(Elapsed.compact(const Duration(seconds: -5)), '0s');
     });
   });
 

@@ -15,7 +15,8 @@ import '../../../data/repositories/machine_connection.dart' show LinkState;
 import '../../../data/repositories/web_preview.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../../support/open_link.dart';
-import '../files/file_format.dart' show formatModified;
+import '../../../data/words/elapsed.dart';
+import '../../../data/words/plural.dart';
 import '../files/files_navigation.dart' show machineSupportsFiles, openRemoteFile;
 import '../files/photo_files.dart' show photoRoute;
 import '../files/photo_grid.dart' show PhotoThumbFace;
@@ -393,7 +394,7 @@ Future<void> openMadeAsset(BuildContext sheet, BuildContext opener, AgentSession
                 await machine.files.stat(await machine.files.resolve(asset.path!, cwd: session.cwd)),
               );
         if (!opener.mounted) return;
-        if (!await openPreviewUrl(entry)) failed("Couldn't open on this phone: no browser could open it.");
+        if (!await openPreviewUrl(entry)) failed('Couldn’t open on this phone: no browser could open it.');
     }
   } on WebPreviewException catch (e) {
     failed(e.message);
@@ -430,7 +431,8 @@ class _WebRow extends StatelessWidget {
   /// What the row says under its name: the state of a server (said only as far
   /// as the phone knows), the folder and time of a file.
   String? get _subtitle {
-    final when = formatModified(asset.at);
+    final at = asset.at;
+    final when = at == null ? '' : formatAgo(at, DateTime.now());
     final service = asset.kind == MadeKind.server && asset.port != null ? sensitiveServiceOf(asset.port!) : null;
     if (service != null) return '$service, not a web page';
     if (_isFile && !filesAvailable) return _noFiles;
@@ -589,7 +591,7 @@ class _PictureGrid extends StatelessWidget {
       // A row scrolled away lets go of its pictures at once.
       addAutomaticKeepAlives: false,
       itemBuilder: (context, row) => Padding(
-        padding: EdgeInsets.only(top: row == 0 ? 0 : Gap.md),
+        padding: row > 0 ? const EdgeInsets.only(top: Gap.md) : EdgeInsets.zero,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -738,7 +740,7 @@ class _QuietTile extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, size: 24, color: faint ? ds.textTertiary.withValues(alpha: 0.6) : ds.textMuted),
+                Icon(icon, size: IconSize.nav, color: faint ? ds.faint : ds.textMuted),
                 if (text != null) ...[
                   const SizedBox(height: Gap.xs),
                   FittedBox(
@@ -750,7 +752,7 @@ class _QuietTile extends StatelessWidget {
             ),
           ),
         ),
-        if (pressed) ColoredBox(color: ds.text.withValues(alpha: 0.12)),
+        if (pressed) ColoredBox(color: ds.wash(ds.text)),
       ],
     );
   }
@@ -795,12 +797,12 @@ class MadeChip extends StatelessWidget {
           if (assets.isEmpty) return const SizedBox.shrink();
           return Padding(
             // The bar's row places the chips; this one follows the subagents chip.
-            padding: EdgeInsets.only(left: besideSubagents ? Gap.sm : 0, bottom: 2),
+            padding: besideSubagents ? const EdgeInsets.only(left: Gap.sm, bottom: Gap.hair) : const EdgeInsets.only(bottom: Gap.hair),
             child: AppChip(
               label: 'Made',
               count: assets.length,
-              semanticLabel: assets.length == 1 ? '1 item made' : '${assets.length} items made',
-              leading: Icon(LucideIcons.globe, size: 14, color: context.ds.textSecondary),
+              semanticLabel: '${countOf(assets.length, 'item')} made',
+              leading: Icon(LucideIcons.globe, size: IconSize.inline, color: context.ds.textSecondary),
               onTap: () => unawaited(showSessionMade(context, session)),
             ),
           );

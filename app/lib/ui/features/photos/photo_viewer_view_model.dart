@@ -332,7 +332,7 @@ class PhotoViewerViewModel extends ChangeNotifier {
       entry._bytes = null;
       entry._failure = const PhotoFailure(
         PhotoFailureKind.notAnImage,
-        "This file can't be shown as a picture. It may be damaged, or in a format Android does not read.",
+        'This file can’t be shown as a picture. It may be damaged, or in a format Android does not read.',
       );
     }
     entry._changed();
@@ -350,7 +350,7 @@ class PhotoViewerViewModel extends ChangeNotifier {
     ),
     RemoteFileErrorKind.permission => PhotoFailure(
       PhotoFailureKind.unreadable,
-      "Your login on this machine isn't allowed to read this photo.",
+      'Your login on this machine isn’t allowed to read this photo.',
     ),
     _ => PhotoFailure(PhotoFailureKind.unreadable, e.message),
   };

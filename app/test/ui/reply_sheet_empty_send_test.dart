@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/machine_profile.dart';
 import 'package:herdr_mobile/data/models/pane_preview.dart';
-import 'package:herdr_mobile/ui/support/tap_guard.dart';
+import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agents/reply_sheet.dart';
 
 import '../support/shot.dart' show loadAppFonts;
@@ -54,7 +54,7 @@ void main() {
 
   testWidgets('Send on an empty field while a question is shown sends nothing, and says why', (tester) async {
     final h = await _sheet(tester, prompt: _prompt);
-    await tester.pump(tapGuard * 2);
+    await tester.pump(Dwell.tapGuard * 2);
 
     await _imeSend(tester);
 
@@ -66,7 +66,7 @@ void main() {
 
   testWidgets('Send on a whitespace-only field is the same bare Enter, and refused the same', (tester) async {
     final h = await _sheet(tester, prompt: _prompt);
-    await tester.pump(tapGuard * 2);
+    await tester.pump(Dwell.tapGuard * 2);
 
     await tester.enterText(find.descendant(of: find.byType(ReplySheet), matching: find.byType(TextField)), '  ');
     await tester.testTextInput.receiveAction(TextInputAction.send);
@@ -85,7 +85,7 @@ void main() {
     await _imeSend(tester);
     expect(_sentKeys(h), isEmpty, reason: 'a tap meant for what was there before must not land');
 
-    await tester.pump(tapGuard * 2);
+    await tester.pump(Dwell.tapGuard * 2);
     await _imeSend(tester);
     expect(_sentKeys(h), [
       ['enter'],
@@ -96,7 +96,7 @@ void main() {
 
   testWidgets('typed text is still sent while a question is shown', (tester) async {
     final h = await _sheet(tester, prompt: _prompt);
-    await tester.pump(tapGuard * 2);
+    await tester.pump(Dwell.tapGuard * 2);
 
     await tester.enterText(find.descendant(of: find.byType(ReplySheet), matching: find.byType(TextField)), 'use main');
     await tester.testTextInput.receiveAction(TextInputAction.send);

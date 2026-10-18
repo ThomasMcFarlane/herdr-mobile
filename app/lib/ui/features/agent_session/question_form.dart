@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/acp/acp_models.dart';
 import '../../../data/acp/session_state.dart' show TranscriptItem;
 import '../../../data/decision/permission_evidence.dart';
+import '../../../data/words/elapsed.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../../support/step_clock.dart';
 import '../../support/tap_guard.dart';
@@ -54,7 +55,7 @@ class QuestionDraft {
 
 /// The agent's question, docked above the composer as a form: its message,
 /// one control per schema field, and Accept / Decline. Like a permission
-/// request it ignores Accept and Decline for [tapGuard] after it appears, so
+/// request it ignores Accept and Decline for [Dwell.tapGuard] after it appears, so
 /// a tap meant for what was on screen before cannot answer it.
 ///
 /// Only form requests are answered. A URL request (which this app never
@@ -200,7 +201,7 @@ class _QuestionPanelState extends State<QuestionPanel> with TapGuardState<Questi
     if (_sent || !settled) return;
     setState(() => _submitted = true);
     if (_schema!.validate(_content()).isNotEmpty) {
-      Haptics.tick();
+      Haptics.failed();
       return;
     }
     Haptics.sent();
@@ -226,7 +227,7 @@ class _QuestionPanelState extends State<QuestionPanel> with TapGuardState<Questi
         if (_secret.contains(f.name)) f.label,
     ];
     return Padding(
-      padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.sm),
+      padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.sm),
       child: QuestionWash(
         question: _heading,
         size: QuestionWashSize.full,
@@ -337,10 +338,10 @@ class _SecretWarning extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(top: 1),
-          child: Icon(LucideIcons.triangleAlert, size: 14, color: ds.dangerText),
+          padding: const EdgeInsets.only(top: Gap.hair),
+          child: Icon(LucideIcons.triangleAlert, size: IconSize.inline, color: ds.dangerText),
         ),
-        const SizedBox(width: 6),
+        const SizedBox(width: Gap.sm),
         Expanded(
           child: Text(
             'The agent marked ${fields.join(', ')} as secret. What you type here goes to the agent in plain text; it is not hidden. Don’t enter a password or key unless you accept that.',
@@ -389,7 +390,7 @@ class _FieldBlock extends StatelessWidget {
     final hasDetails = f is! BooleanField && f is! UnknownField && ((description != null && description.isNotEmpty) || secret);
     final Widget? details = hasDetails
         ? Padding(
-            padding: const EdgeInsets.only(bottom: 6),
+            padding: const EdgeInsets.only(bottom: Gap.sm),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -466,7 +467,7 @@ class _FieldBlock extends StatelessWidget {
         control,
         if (errorText != null && (isBool || f is EnumField || f is MultiEnumField || f is UnknownField))
           Padding(
-            padding: const EdgeInsets.only(top: 2),
+            padding: const EdgeInsets.only(top: Gap.hair),
             child: Text(errorText, style: Type.caption.copyWith(color: ds.dangerText)),
           ),
       ],
@@ -502,9 +503,9 @@ class _TextControl extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(bottom: 6),
+          padding: const EdgeInsets.only(bottom: Gap.sm),
           child: ExcludeSemantics(
-            child: Text(label, style: Type.label.copyWith(color: ds.textSecondary, fontWeight: FontWeight.w600)),
+            child: Text(label, style: Type.labelStrong.copyWith(color: ds.textSecondary)),
           ),
         ),
         ?details,
@@ -518,7 +519,7 @@ class _TextControl extends StatelessWidget {
             autocorrect: false,
             enableSuggestions: false,
             onChanged: (_) => onChanged(),
-            style: Type.body.copyWith(fontSize: 16, color: ds.text),
+            style: Type.input.copyWith(color: ds.text),
             cursorColor: ds.accent,
             decoration: InputDecoration(hintText: hint, errorText: error, errorMaxLines: 2),
           ),
@@ -557,13 +558,13 @@ class _Choices extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.only(bottom: 2),
-            child: Text(title, style: Type.label.copyWith(color: ds.textSecondary, fontWeight: FontWeight.w600)),
+            padding: const EdgeInsets.only(bottom: Gap.hair),
+            child: Text(title, style: Type.labelStrong.copyWith(color: ds.textSecondary)),
           ),
           ?details,
           if (hint != null)
             Padding(
-              padding: const EdgeInsets.only(bottom: 2),
+              padding: const EdgeInsets.only(bottom: Gap.hair),
               child: Text(hint!, style: Type.caption.copyWith(color: ds.textMuted)),
             ),
           if (options.isEmpty)
@@ -606,7 +607,7 @@ class _ChoiceRow extends StatelessWidget {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: Gap.sm),
-                child: Text(label, style: Type.body.copyWith(fontSize: 14.5, color: ds.text)),
+                child: Text(label, style: Type.compact.copyWith(color: ds.text)),
               ),
             ),
           ],
@@ -625,6 +626,13 @@ class _ChoiceRow extends StatelessWidget {
 /// [StepClockLease] (so it also stops in the background). Nothing animates.
 /// The time is counted from when this app got the request, so "within" is the
 /// honest word: after a re-attach the agent's own timer may be further along.
+/// A countdown said in words is never shorter than the time left: whole
+/// seconds under a minute, whole minutes after (80 s is `2 minutes`, not `1`).
+Duration _roundedUp(Duration left) {
+  final s = (left.inMilliseconds + 999) ~/ 1000;
+  return s < 60 ? Dwell.second * s : Dwell.second * 60 * ((s + 59) ~/ 60);
+}
+
 class AutoResolveLabel extends StatefulWidget {
   const AutoResolveLabel({super.key, required this.deadline, this.now = DateTime.now});
 
@@ -636,7 +644,7 @@ class AutoResolveLabel extends StatefulWidget {
 }
 
 class _AutoResolveLabelState extends State<AutoResolveLabel> with StepClockLease<AutoResolveLabel> {
-  static final _second = StepClock(const Duration(seconds: 1));
+  static final _second = StepClock(Dwell.second);
 
   @override
   StepClock get clock => _second;
@@ -662,19 +670,13 @@ class _AutoResolveLabelState extends State<AutoResolveLabel> with StepClockLease
         });
       }
       return Text(
-        autoResolveWords(left),
+        left <= Duration.zero
+            ? 'The agent is going on without an answer.'
+            // Whole seconds, rounded up, so the last second reads `1 second`, not `0 seconds`.
+            : 'The agent goes on without an answer within ${Elapsed.words(_roundedUp(left))}.',
         style: Type.secondary.copyWith(color: context.ds.textSecondary),
       );
     },
   );
 }
 
-/// The words for [left] time before an agent goes on without an answer.
-String autoResolveWords(Duration left) {
-  if (left <= Duration.zero) return 'The agent is going on without an answer.';
-  final seconds = (left.inMilliseconds + 999) ~/ 1000;
-  final minutes = seconds ~/ 60;
-  final rest = seconds % 60;
-  final span = minutes == 0 ? '$seconds s' : (rest == 0 ? '$minutes min' : '$minutes min $rest s');
-  return 'The agent goes on without an answer within $span.';
-}

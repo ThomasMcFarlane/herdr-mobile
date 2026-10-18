@@ -346,7 +346,7 @@ void main() {
 
       expect(find.byType(FileViewerScreen), findsNothing);
       expect(find.text('Not found'), findsOneWidget);
-      expect(find.text("./lib/main.dart isn't in docs"), findsOneWidget);
+      expect(find.text('./lib/main.dart isn’t in docs'), findsOneWidget);
     });
 
     test('lookupAttempts: the plain place first, then the suffix-less text, git prefix, parents', () {
@@ -402,7 +402,7 @@ void main() {
       await tester.tap(find.text('go'));
       await _settle(tester);
       expect(find.text('Not found'), findsOneWidget);
-      expect(find.text("/home/dev/missing.txt isn't on this machine"), findsOneWidget);
+      expect(find.text('/home/dev/missing.txt isn’t on this machine'), findsOneWidget);
       expect(find.byType(FileViewerScreen), findsNothing);
       expect(find.text('Copy path'), findsOneWidget, reason: 'the page offers what it can');
 
@@ -678,7 +678,7 @@ void main() {
       await _settle(tester);
       expect(find.byType(BinaryView), findsOneWidget);
 
-      await tester.tap(find.text('View as text'));
+      await tester.tap(find.text('Show as text'));
       await _settle(tester);
 
       expect(find.byType(BinaryView), findsNothing);

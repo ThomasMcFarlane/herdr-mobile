@@ -6,23 +6,6 @@ import 'package:flutter/material.dart';
 import 'motion.dart';
 import 'theme.dart';
 
-/// A press must last this long before it counts as a hold: a tap and the start
-/// of a scroll look the same until then, so nothing fills, buzzes or changes
-/// its words before it.
-const holdIntent = Duration(milliseconds: 150);
-
-/// How long the fill takes to reach the end once the press counts as a hold.
-/// Intent plus fill is the ~700 ms the finger stays down: slow where the
-/// person decides, nothing to wait for after they do.
-const holdFill = Duration(milliseconds: 550);
-
-/// How long the fill takes to go back when the finger lets go early.
-const holdSnapBack = Duration(milliseconds: 200);
-
-/// How long "Hold to send · why" stays after a tap or an early release. Shorter
-/// than the confirm window of the two-step (assistive) flow.
-const holdHintWindow = Duration(milliseconds: 2400);
-
 /// What a [HoldToConfirm] child draws.
 class HoldState {
   const HoldState({required this.holding, required this.hint, required this.fill});
@@ -43,14 +26,14 @@ class HoldState {
 }
 
 /// The danger tint the fill is drawn in.
-Color holdFillColor(Ds ds) => ds.danger.withValues(alpha: 0.30);
+Color holdFillColor(Ds ds) => Ds.fade(ds.danger, 0.30);
 
 /// Press-and-hold for an answer that should not go out by accident: the finger
 /// has to stay on it until [builder]'s fill reaches the end ([onConfirmed]).
 ///
 /// - A tap, or letting go early, sends nothing: the fill snaps back
-///   ([holdSnapBack], instantly under reduced motion) and [HoldState.hint]
-///   asks the child to say how to send (for [holdHintWindow]).
+///   ([Motion.holdSnapBack], instantly under reduced motion) and [HoldState.hint]
+///   asks the child to say how to send (for [Dwell.holdHint]).
 /// - Only the first finger counts. The hold is dropped when it leaves the
 ///   chip, drifts further than a touch slop (a scroll), is cancelled, or the
 ///   widget is disabled or replaced mid-hold; after that no confirmation can
@@ -90,14 +73,14 @@ class HoldToConfirm extends StatefulWidget {
 }
 
 class _HoldToConfirmState extends State<HoldToConfirm> with SingleTickerProviderStateMixin {
-  late final AnimationController _fill = AnimationController(vsync: this, duration: holdFill);
+  late final AnimationController _fill = AnimationController(vsync: this, duration: Motion.holdFill);
 
   int? _pointer;
   Offset _origin = Offset.zero;
   Timer? _intent;
   Timer? _hintTimer;
 
-  /// The press counts as a hold (past [holdIntent], finger still down).
+  /// The press counts as a hold (past [Dwell.holdIntent], finger still down).
   bool _holding = false;
   bool _hint = false;
 
@@ -150,7 +133,7 @@ class _HoldToConfirmState extends State<HoldToConfirm> with SingleTickerProvider
     if (Motion.reduced(context)) {
       _fill.value = 0;
     } else {
-      unawaited(_fill.animateBack(0, duration: holdSnapBack, curve: Motion.easeOut));
+      unawaited(_fill.animateBack(0, duration: Motion.holdSnapBack, curve: Motion.easeOut));
     }
   }
 
@@ -171,7 +154,7 @@ class _HoldToConfirmState extends State<HoldToConfirm> with SingleTickerProvider
     _origin = e.position;
     _done = false;
     _intent?.cancel();
-    _intent = Timer(holdIntent, _begin);
+    _intent = Timer(Dwell.holdIntent, _begin);
   }
 
   void _begin() {
@@ -210,7 +193,7 @@ class _HoldToConfirmState extends State<HoldToConfirm> with SingleTickerProvider
       _rewind();
     }
     _hintTimer?.cancel();
-    _hintTimer = Timer(holdHintWindow, () {
+    _hintTimer = Timer(Dwell.holdHint, () {
       if (mounted) setState(() => _hint = false);
     });
     setState(() => _hint = true);
@@ -269,7 +252,7 @@ class _HoldToConfirmState extends State<HoldToConfirm> with SingleTickerProvider
 }
 
 /// The fill layer's paint, found by tests (they read [HoldFillPainter.progress]).
-const holdFillKey = ValueKey<String>('holdFill');
+const holdFillKey = ValueKey<String>('Motion.holdFill');
 
 /// Paints the fill: the left [progress] of the chip, clipped to its corners.
 class HoldFillPainter extends CustomPainter {

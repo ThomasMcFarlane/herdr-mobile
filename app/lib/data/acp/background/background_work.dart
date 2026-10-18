@@ -2,6 +2,8 @@
 /// terminals, subagents. Pure Dart, no Flutter.
 library;
 
+import '../../words/plural.dart';
+
 /// What a background task is. The UI picks an icon and a noun from it.
 enum BackgroundKind {
   /// A shell command the agent started in the background (`bg_6`).
@@ -267,7 +269,7 @@ String? stopMessageForOmp(Iterable<String> ids) {
   final list = ids.toList();
   if (list.isEmpty || list.any((id) => !isSafeBackgroundId(id))) return null;
   final calls = list.map((id) => '$id (write proc://$id/kill)').join(', ');
-  final noun = list.length == 1 ? 'job' : 'jobs';
+  final noun = plural(list.length, 'job');
   return 'Stop these background $noun now: $calls. Do nothing else.';
 }
 
@@ -277,7 +279,7 @@ String? stopMessageForOmp(Iterable<String> ids) {
 String? stopMessageForClaude(Iterable<String> ids) {
   final list = ids.toList();
   if (list.isEmpty || list.any((id) => !isSafeBackgroundId(id))) return null;
-  final noun = list.length == 1 ? 'task' : 'tasks';
+  final noun = plural(list.length, 'task');
   return 'Stop these background $noun now: ${list.join(', ')}. Use TaskStop. Do nothing else.';
 }
 
@@ -288,6 +290,6 @@ String? stopMessageForCodex(Iterable<String> ids) {
   final list = ids.toList();
   if (list.isEmpty || list.any((id) => !isSafeBackgroundId(id))) return null;
   final cells = [for (final id in list) id.startsWith('cell') ? id.substring(4) : id];
-  final noun = cells.length == 1 ? 'cell' : 'cells';
+  final noun = plural(cells.length, 'cell');
   return 'Stop the running $noun now: ${cells.join(', ')}. Call wait with terminate true on each. Do nothing else.';
 }

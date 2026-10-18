@@ -5,6 +5,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/acp/subagents/subagent_run.dart';
 import '../../../data/acp/turns/plain_text.dart' show safeEnd;
 import '../../../data/repositories/agent_session.dart';
+import '../../../data/words/agent_names.dart';
+import '../../../data/words/elapsed.dart';
+import '../../../data/words/plural.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../../render/markdown/markdown.dart';
 import 'agent_md_scope.dart';
@@ -173,7 +176,7 @@ class RunStateStrip extends StatelessWidget {
         return Container(
           width: double.infinity,
           constraints: const BoxConstraints(minHeight: 36),
-          padding: const EdgeInsets.symmetric(horizontal: Gap.lg, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: Gap.lg, vertical: Gap.sm),
           decoration: BoxDecoration(border: Border(bottom: BorderSide(color: ds.hairline))),
           child: RunClock(
             run: run,
@@ -183,7 +186,7 @@ class RunStateStrip extends StatelessWidget {
               return Row(
                 children: [
                   RunGlyph(tone: tone),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: Gap.md),
                   Expanded(
                     child: Semantics(
                       liveRegion: false,
@@ -193,9 +196,8 @@ class RunStateStrip extends StatelessWidget {
                           line,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: Type.secondary.copyWith(
+                          style: Type.secondaryStrong.copyWith(
                             color: runLineColor(ds, tone),
-                            fontWeight: FontWeight.w500,
                             fontFeatures: Type.tabular,
                           ),
                         ),
@@ -290,18 +292,18 @@ class LogOriginNote extends StatelessWidget {
       builder: (context, log) {
         if (log == null) return const SizedBox.shrink();
         final text = [
-          'From ${session.agentLabel}’s log on the host',
+          'From ${agentName(session.agent)}’s log on the machine',
           if (log.earlierNotShown) 'Earlier part not shown',
-          if (log.skippedLines > 0) '${log.skippedLines} oversized ${log.skippedLines == 1 ? 'line' : 'lines'} left out',
+          if (log.skippedLines > 0) '${countOf(log.skippedLines, 'oversized line')} left out',
         ].join(' · ');
         return Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: Gap.lg, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: Gap.lg, vertical: Gap.sm),
           decoration: BoxDecoration(border: Border(bottom: BorderSide(color: ds.hairline))),
           child: Row(
             children: [
-              Icon(LucideIcons.fileText, size: 14, color: ds.textSecondary),
-              const SizedBox(width: 8),
+              Icon(LucideIcons.fileText, size: IconSize.inline, color: ds.textSecondary),
+              const SizedBox(width: Gap.sm),
               Expanded(
                 child: Text(text, style: Type.caption.copyWith(color: ds.textSecondary)),
               ),
@@ -421,11 +423,12 @@ class SubagentSummaryBody extends StatelessWidget {
     final doc = result.isEmpty ? null : (_resultDocs[run] ??= parseMd(result));
     final why = failureText(run);
     final note = run.note?.trim();
+    double gapBefore(int i) => mdBlockGap(i == 0 ? null : doc!.blocks[i - 1], doc!.blocks[i]);
     Widget section(String title) => Padding(
       padding: const EdgeInsets.only(top: Gap.lg, bottom: Gap.xs),
       child: Semantics(
         header: true,
-        child: Text(title, style: Type.label.copyWith(color: ds.textSecondary, fontWeight: FontWeight.w600)),
+        child: Text(title, style: Type.labelStrong.copyWith(color: ds.textSecondary)),
       ),
     );
     return [
@@ -437,7 +440,7 @@ class SubagentSummaryBody extends StatelessWidget {
             const SizedBox(width: Gap.sm),
             Expanded(
               child: Text(
-                'Summary only. ${session.agentLabel} sends a summary of its subagents, not their conversation.',
+                'Summary only. ${agentName(session.agent)} sends a summary of its subagents, not their conversation.',
                 style: Type.secondary.copyWith(color: ds.textSecondary),
               ),
             ),
@@ -473,7 +476,7 @@ class SubagentSummaryBody extends StatelessWidget {
           child: Text(
             [
               retry.maxAttempts == null ? 'Retrying' : 'Retrying, attempt ${retry.attempt} of ${retry.maxAttempts}',
-              if (retry.delay != null) 'in ${elapsedWords(retry.delay!)}',
+              if (retry.delay != null) 'in ${Elapsed.words(retry.delay!)}',
               if (retry.message.trim().isNotEmpty) visibleText(retry.message.trim()),
             ].join(' · '),
             style: Type.secondary.copyWith(color: ds.textSecondary),
@@ -490,7 +493,7 @@ class SubagentSummaryBody extends StatelessWidget {
             _clip(visibleText(run.lastToolLine!.trim()), 300),
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontFamily: monoFamily, fontSize: 12.5, color: ds.text),
+            style: Mono.base.copyWith(color: ds.text),
           ),
         if (run.recentTools.isNotEmpty)
           (c) => Padding(
@@ -520,7 +523,7 @@ class SubagentSummaryBody extends StatelessWidget {
         (c) => section('Result'),
         for (var i = 0; i < doc.blocks.length; i++)
           (c) => Padding(
-            padding: EdgeInsets.only(top: mdBlockGap(i == 0 ? null : doc.blocks[i - 1], doc.blocks[i])),
+            padding: EdgeInsets.only(top: gapBefore(i)),
             child: MdToneScope(tone: MdTone.quiet, child: MdBlockView(block: doc.blocks[i])),
           ),
       ],
@@ -529,6 +532,3 @@ class SubagentSummaryBody extends StatelessWidget {
 
   static String _clip(String s, int max) => s.length <= max ? s : '${s.substring(0, safeEnd(s, max - 1))}…';
 }
-
-/// `30 s`, `2 min`: a duration in words for a sentence.
-String elapsedWords(Duration d) => d.inSeconds < 90 ? '${d.inSeconds} s' : '${d.inMinutes} min';

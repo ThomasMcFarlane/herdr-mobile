@@ -114,7 +114,7 @@ class _PlanState extends State<_Plan> {
     // In whatever room the screen gives it (see the screen's layout): a plan
     // that does not fit scrolls there instead of overflowing.
     return SingleChildScrollView(child: Padding(
-      padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.xs),
+      padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.xs),
       child: FoldPanel(
         expanded: _open,
         onToggle: (open) => setState(() => _open = open),
@@ -168,10 +168,10 @@ class _Step extends StatelessWidget {
   Widget build(BuildContext context) {
     final ds = context.ds;
     final glyph = switch (entry.status) {
-      PlanStatus.pending => const StatusGlyph(status: AgentStatus.idle, size: 14),
-      PlanStatus.inProgress => const StatusGlyph(status: AgentStatus.working, size: 14),
-      PlanStatus.completed => const StatusGlyph(status: AgentStatus.done, size: 14),
-      PlanStatus.cancelled => Icon(LucideIcons.ban, size: 14, color: ds.textTertiary),
+      PlanStatus.pending => const StatusGlyph(status: AgentStatus.idle, size: IconSize.inline),
+      PlanStatus.inProgress => const StatusGlyph(status: AgentStatus.working, size: IconSize.inline),
+      PlanStatus.completed => const StatusGlyph(status: AgentStatus.done, size: IconSize.inline),
+      PlanStatus.cancelled => Icon(LucideIcons.ban, size: IconSize.inline, color: ds.textTertiary),
     };
     final word = switch (entry.status) {
       PlanStatus.pending => 'pending',
@@ -183,19 +183,18 @@ class _Step extends StatelessWidget {
       label: '${entry.content}, $word',
       excludeSemantics: true,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 5),
+        padding: const EdgeInsets.symmetric(vertical: Gap.xs),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(padding: const EdgeInsets.only(top: 2), child: glyph),
-            const SizedBox(width: 10),
+            Padding(padding: const EdgeInsets.only(top: Gap.hair), child: glyph),
+            const SizedBox(width: Gap.md),
             Expanded(
               child: Text(
                 entry.content,
-                style: Type.secondary.copyWith(
-                  color: entry.status == PlanStatus.inProgress ? ds.text : ds.textSecondary,
-                  fontWeight: entry.status == PlanStatus.inProgress ? FontWeight.w600 : FontWeight.w400,
-                ),
+                style: entry.status == PlanStatus.inProgress
+                    ? Type.secondaryStrong.copyWith(color: ds.text)
+                    : Type.secondary.copyWith(color: ds.textSecondary),
               ),
             ),
           ],

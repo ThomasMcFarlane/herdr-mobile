@@ -13,7 +13,7 @@ import 'quick_reply_controller.dart';
 ///
 /// - A different question (arrived, changed, back with the link) arms the
 ///   guard again ([TapGuardState.rearmGuard]): its answers are new under the
-///   thumb, so they are deaf and dimmed for `tapGuard`.
+///   thumb, so they are deaf and dimmed for `Dwell.tapGuard`.
 /// - A new question while "Sent" is showing means the answer did something
 ///   and the agent asked again: the controller is reset so the new chips show
 ///   now instead of after the hold ([resetsOnNewQuestion]).

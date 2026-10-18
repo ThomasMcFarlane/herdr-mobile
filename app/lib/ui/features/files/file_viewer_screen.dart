@@ -12,6 +12,7 @@ import 'package:herdr_mobile/ui/core/kit.dart';
 import '../../support/open_link.dart';
 import 'binary_view.dart';
 import 'code_view.dart';
+import '../../../data/words/elapsed.dart';
 import 'file_format.dart';
 import 'file_kind.dart';
 import 'file_viewer_view_model.dart';
@@ -199,7 +200,7 @@ class _TailText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
-    final style = codeStyle(ds, size: 11.5, color: ds.textMuted).copyWith(height: 1.3);
+    final style = Mono.small.copyWith(color: ds.textMuted);
     final scaler = MediaQuery.textScalerOf(context);
     return LayoutBuilder(
       builder: (context, box) => Text(
@@ -259,7 +260,7 @@ class _Tools extends StatelessWidget {
     final s = vm.stat;
     final parts = <String>[];
     parts.add(formatBytes(s.size));
-    final when = formatModified(s.modified);
+    final when = s.modified == null ? '' : formatAgo(s.modified!, DateTime.now());
     if (when.isNotEmpty) parts.add(when);
     return parts.join(' · ');
   }
@@ -310,7 +311,7 @@ class _Tools extends StatelessWidget {
               for (final (i, c) in chips.indexed) ...[if (i > 0) const SizedBox(width: Gap.sm), c],
               Expanded(
                 child: Padding(
-                  padding: EdgeInsets.only(left: chips.isEmpty ? 0 : Gap.md),
+                  padding: chips.isEmpty ? EdgeInsets.zero : const EdgeInsets.only(left: Gap.md),
                   child: Text(
                     _meta,
                     maxLines: 1,
@@ -389,7 +390,7 @@ Future<void> _openInBrowser(BuildContext context, RemoteStat stat) async {
     final url = await machine.web.staticUrl(stat);
     if (await openPreviewUrl(url)) return;
     if (context.mounted) {
-      showToast(context, "Couldn't open on this phone: no browser could open it.", kind: ToastKind.failed);
+      showToast(context, 'Couldn’t open on this phone: no browser could open it.', kind: ToastKind.failed);
     }
   } on WebPreviewException catch (e) {
     if (context.mounted) showToast(context, e.message, kind: ToastKind.failed);
@@ -461,7 +462,7 @@ class _TextBody extends StatelessWidget {
                   Expanded(
                     child: Text(
                       vm.loadMoreError != null
-                          ? "Couldn't load more: ${vm.loadMoreError!.message}"
+                          ? 'Couldn’t load more: ${vm.loadMoreError!.message}'
                           : vm.truncatedAtLimit
                               ? 'Showing the first $loaded$of. That is as much as the viewer opens.'
                               : 'Showing $loaded$of',
@@ -495,7 +496,7 @@ class _TextBody extends StatelessWidget {
 /// runs while another screen covers the viewer, while the app is in the
 /// background, or after the viewer is gone (the timer is cancelled).
 class _DiskWatch {
-  static const every = Duration(seconds: 15);
+  static const every = Dwell.diskWatch;
 
   Timer? _timer;
   ValueListenable<TickerModeData>? _front;
@@ -584,12 +585,12 @@ class _RefreshStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     final ds = context.ds;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(Gap.gutter, 0, Gap.gutter, Gap.sm),
+      padding: const EdgeInsets.only(left: Gap.gutter, right: Gap.gutter, bottom: Gap.sm),
       child: StatusStrip(
         color: ds.danger,
-        title: "Couldn't refresh",
+        title: 'Couldn’t refresh',
         detail: 'Showing the earlier version',
-        leading: Icon(LucideIcons.triangleAlert, size: 16, color: ds.dangerText),
+        leading: Icon(LucideIcons.triangleAlert, size: IconSize.row, color: ds.dangerText),
         action: AppButton(
           label: 'Retry',
           kind: AppButtonKind.secondary,

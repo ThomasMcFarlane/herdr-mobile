@@ -3,22 +3,15 @@ import 'package:flutter/material.dart';
 import '../../../data/repositories/machine_connection.dart';
 import '../../../data/services/herdr_api.dart' show HerdrUnsupportedException;
 import '../../../data/services/herdr_transport.dart' show HerdrApiException, HerdrTransportException;
+import '../../../data/words/agent_names.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
-
-/// What the person reads for an agent that reports its session to herdr
-/// through [target] (`claude`, `codex`, `omp`).
-String _agentName(String target) => switch (target) {
-  'claude' => 'Claude Code',
-  'codex' => 'Codex',
-  _ => target,
-};
 
 /// Offers to install herdr's hook for [target] on [machine], which makes the
 /// agent report its session so its pane can be read as a chat. Nothing is
 /// installed without the tap on the confirm button: the hook is added to the
 /// agent's own settings on that machine.
 Future<void> showConnectChat(BuildContext context, MachineConnection machine, String paneId, String target) async {
-  final name = _agentName(target);
+  final name = agentName(target);
   final home = switch (target) {
     'claude' => '~/.claude',
     'codex' => '~/.codex',

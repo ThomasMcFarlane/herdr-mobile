@@ -272,18 +272,56 @@ class _FileThumbState extends State<FileThumb> {
           fit: BoxFit.cover,
           filterQuality: FilterQuality.medium,
           gaplessPlayback: true,
-          frameBuilder: (context, child, frame, sync) => sync || Motion.reduced(context)
-              ? child
-              : AnimatedOpacity(
-                  opacity: frame == null ? 0 : 1,
-                  duration: Motion.fade,
-                  curve: Motion.easeOut,
-                  child: child,
-                ),
+          frameBuilder: (context, child, frame, sync) =>
+              sync || Motion.reduced(context) ? child : _FadeIn(shown: frame != null, child: child),
           // Bytes the engine cannot decode: back to the glyph.
           errorBuilder: (context, error, stack) => Icon(LucideIcons.fileImage, size: size * 0.56, color: ds.textSecondary),
         ),
       ),
     );
+  }
+}
+
+/// Fades [child] in once, when [shown] turns true, then draws it with no
+/// opacity layer: a thumbnail at rest is not an animation.
+class _FadeIn extends StatefulWidget {
+  const _FadeIn({required this.shown, required this.child});
+
+  final bool shown;
+  final Widget child;
+
+  @override
+  State<_FadeIn> createState() => _FadeInState();
+}
+
+class _FadeInState extends State<_FadeIn> with SingleTickerProviderStateMixin {
+  AnimationController? _fade;
+
+  @override
+  void didUpdateWidget(_FadeIn old) {
+    super.didUpdateWidget(old);
+    if (widget.shown && !old.shown && _fade == null) {
+      _fade = AnimationController(vsync: this, duration: Motion.fade)
+        ..addStatusListener((s) {
+          if (s != AnimationStatus.completed || !mounted) return;
+          setState(() {
+            _fade?.dispose();
+            _fade = null;
+          });
+        })
+        ..forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _fade?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fade = _fade;
+    return fade == null ? widget.child : FadeTransition(opacity: Motion.curved(fade), child: widget.child);
   }
 }

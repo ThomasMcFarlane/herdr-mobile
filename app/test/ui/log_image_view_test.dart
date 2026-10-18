@@ -97,6 +97,7 @@ void main() {
     await pump(tester);
     await tester.tap(find.text('Tap to load'));
     await tester.pump();
+    await tester.pump(Dwell.spinnerDelay); // a wait shorter than this shows nothing
     expect(find.byType(CircularProgressIndicator), findsOneWidget, reason: 'the wait the person started shows the one spinner');
     expect(find.text('Tap to load'), findsNothing);
     // A second tap lands on the picture frame, not on a line to load again.
@@ -121,6 +122,7 @@ void main() {
     session.logPictureGate = Completer<void>();
     await tester.tap(find.textContaining('Tap to retry.'));
     await tester.pump();
+    await tester.pump(Dwell.spinnerDelay);
     expect(find.byType(CircularProgressIndicator), findsOneWidget, reason: 'trying again is waiting again');
     session.logPictureGate!.complete();
     await settle(tester, () => find.byType(RawImage).evaluate().isNotEmpty);

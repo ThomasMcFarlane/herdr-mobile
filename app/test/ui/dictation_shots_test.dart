@@ -20,7 +20,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/repositories/quick_phrases.dart';
 import 'package:herdr_mobile/data/repositories/sent_phrases.dart';
 import 'package:herdr_mobile/data/services/dictation.dart';
-import 'package:herdr_mobile/ui/support/tap_guard.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -100,7 +99,7 @@ void main() {
       ),
     );
     await tester.pump(const Duration(milliseconds: 100));
-    await tester.pump(tapGuard);
+    await tester.pump(Dwell.tapGuard);
     // Focus the field the way a finger does: the chips show while it is focused.
     await tester.tap(find.byType(TextField).last);
     await tester.pump();

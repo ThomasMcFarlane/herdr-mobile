@@ -136,13 +136,13 @@ void main() {
     });
   });
 
-  group('savedCopyLabel', () {
+  group('savedCopyNotice', () {
     final now = DateTime(2026, 3, 1, 15, 30);
     test('today, yesterday, earlier', () {
-      expect(savedCopyLabel(DateTime(2026, 3, 1, 14, 2), now), 'at 14:02');
-      expect(savedCopyLabel(DateTime(2026, 3, 1, 9, 5), now), 'at 09:05');
-      expect(savedCopyLabel(DateTime(2026, 2, 28, 23, 59), now), 'yesterday at 23:59');
-      expect(savedCopyLabel(DateTime(2026, 2, 3, 8, 0), now), 'on 3 Feb at 08:00');
+      expect(savedCopyNotice(DateTime(2026, 3, 1, 14, 2), now), 'Showing the copy saved at 14:02. Nothing here can be answered.');
+      expect(savedCopyNotice(DateTime(2026, 3, 1, 9, 5), now), contains('saved at 09:05.'));
+      expect(savedCopyNotice(DateTime(2026, 2, 28, 23, 59), now), contains('saved yesterday at 23:59.'));
+      expect(savedCopyNotice(DateTime(2026, 2, 3, 8, 0), now), contains('saved on 3 Feb at 08:00.'));
     });
   });
 

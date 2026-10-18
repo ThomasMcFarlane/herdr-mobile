@@ -368,7 +368,7 @@ void main() {
       await _pump(tester);
 
       var row = tester.getSemantics(find.byType(FileRow).at(1));
-      expect(row.label, allOf(contains('README.md'), contains('6 B'), contains('5 min ago')));
+      expect(row.label, allOf(contains('README.md'), contains('6 B'), contains('5m ago')));
       expect(row.flagsCollection.isSelected, Tristate.isFalse);
       expect(find.bySemanticsLabel('Select README.md'), findsOneWidget);
 

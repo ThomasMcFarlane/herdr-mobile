@@ -56,7 +56,7 @@ class ReplyChips extends StatelessWidget {
   final int limit;
 
   /// The answers just appeared or just moved: they take no taps and are drawn
-  /// dimmed until the person has had time to see them (see `tapGuard`).
+  /// dimmed until the person has had time to see them (see `Dwell.tapGuard`).
   final bool guarded;
 
   /// Chips a card shows (a "more" chip takes the last place when there are

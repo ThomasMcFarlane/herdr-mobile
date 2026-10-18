@@ -24,6 +24,7 @@ class AppChip extends StatelessWidget {
     this.tint,
     this.semanticLabel,
     this.onTap,
+    this.enabled = true,
   });
 
   final String label;
@@ -40,6 +41,10 @@ class AppChip extends StatelessWidget {
   final String? semanticLabel;
   final VoidCallback? onTap;
 
+  /// False for a choice that cannot be made now: it stays, at half strength
+  /// and untappable, and the screen says why beside it (never a dead end).
+  final bool enabled;
+
   /// Layout height including the touch padding above and below the pill.
   static const height = kMinTap;
 
@@ -53,9 +58,9 @@ class AppChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
-    final fg = tint ?? (selected ? ds.accentText : ds.textSecondary);
+    final fg = Ds.fade(tint ?? (selected ? ds.accentText : ds.textSecondary), enabled ? 1 : 0.5);
     return PressBuilder(
-      onTap: onTap,
+      onTap: enabled ? onTap : null,
       scale: PressScale.chip,
       haptic: true,
       semanticLabel: semanticLabel ?? (count == null ? label : '$label, $count'),

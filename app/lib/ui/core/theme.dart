@@ -340,7 +340,7 @@ abstract final class AppTheme {
       ),
       textSelectionTheme: TextSelectionThemeData(
         cursorColor: ds.accent,
-        selectionColor: ds.accent.withValues(alpha: 0.28),
+        selectionColor: ds.selection,
         selectionHandleColor: ds.accent,
       ),
       tooltipTheme: TooltipThemeData(

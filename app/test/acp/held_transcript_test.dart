@@ -93,7 +93,7 @@ void main() {
       expect(plain.items.any((i) => i.key == hostDroppedKey), isFalse);
 
       final dropped = _replay([3, 4], setup: _setup(dropped: 3));
-      expect(_names(dropped).first, 'note:Earlier messages are no longer kept on the host (3 turns).');
+      expect(_names(dropped).first, 'note:Earlier messages are no longer kept on the machine (3 turns).');
       expect(dropped.items.where((i) => i.key == hostDroppedKey), hasLength(1));
       expect(_names(dropped).skip(1), _turnNames([3, 4]));
 
@@ -116,7 +116,7 @@ void main() {
 
       expect(merged.older, 9);
       expect(_names(merged.state), [
-        'note:Earlier messages are no longer kept on the host (3 turns).',
+        'note:Earlier messages are no longer kept on the machine (3 turns).',
         ..._turnNames([0, 1, 2, 3, 4, 5]),
       ]);
       expect(_names(merged.state), isNot(contains(_earlierNote)));
@@ -172,7 +172,7 @@ void main() {
       // The keeper holds one more turn now, and still not the first three.
       final second = _replay([3, 4, 5, 6], setup: _setup(dropped: 3)).withHeld(first).state;
       expect(_names(second), [
-        'note:Earlier messages are no longer kept on the host (3 turns).',
+        'note:Earlier messages are no longer kept on the machine (3 turns).',
         ..._turnNames([0, 1, 2, 3, 4, 5, 6]),
       ]);
       _expectUniqueKeys(second);
@@ -189,7 +189,7 @@ void main() {
       final replay = _replay([10, 11], setup: _setup(dropped: 10));
       final merged = replay.withHeld(held);
       expect(_names(merged.state), [
-        'note:Earlier messages are no longer kept on the host (10 turns).',
+        'note:Earlier messages are no longer kept on the machine (10 turns).',
         ..._turnNames([0, 1, 2]),
         _earlierNote,
         ..._turnNames([10, 11]),

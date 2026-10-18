@@ -7,6 +7,7 @@ import '../../../data/acp/acp_models.dart';
 import '../../../data/decision/mode_danger.dart';
 import '../../../data/decision/session_chips.dart';
 import '../../../data/repositories/agent_session.dart';
+import '../../../data/words/plural.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../composer/composer_frame.dart' show showComposerKeyboard;
 import 'session_bar.dart' show showSessionOptions;
@@ -52,7 +53,7 @@ class SessionChipsRow extends StatelessWidget {
           ? null
           : AppChip(
               label: '+$overflow',
-              semanticLabel: '$overflow more ${overflow == 1 ? 'setting' : 'settings'}',
+              semanticLabel: '$overflow more ${plural(overflow, 'setting')}',
               onTap: live ? () => unawaited(_choose(context, session, focus)) : null,
             );
       final maxWidth = AppChip.maxRowWidth(context);
@@ -109,7 +110,7 @@ class _ChipView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
-    Widget icon(IconData data, Color color) => Icon(data, size: 14, color: color);
+    Widget icon(IconData data, Color color) => Icon(data, size: IconSize.inline, color: color);
     switch (chip.kind) {
       case SessionChipKind.mode:
         return switch (chip.risk) {

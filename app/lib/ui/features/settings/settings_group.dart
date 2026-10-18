@@ -29,6 +29,7 @@ class SettingsGroup extends StatefulWidget {
     this.divider = true,
     this.footer,
     this.announce = false,
+    this.onLongPress,
   });
 
   final IconData icon;
@@ -52,6 +53,9 @@ class SettingsGroup extends StatefulWidget {
   /// The summary is news a screen reader announces when it changes (a download
   /// that finished or failed), even with the group closed.
   final bool announce;
+
+  /// A long press on the group's row (About: the hidden Kit screen).
+  final VoidCallback? onLongPress;
 
   @override
   State<SettingsGroup> createState() => _SettingsGroupState();
@@ -81,7 +85,7 @@ class _SettingsGroupState extends State<SettingsGroup> {
     if (Motion.reduced(context)) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollIntoView(jump: true));
     } else {
-      _reveal = Timer(Motion.expand + const Duration(milliseconds: 30), () => _scrollIntoView(jump: false));
+      _reveal = Timer(Motion.expand + Dwell.afterSettle, () => _scrollIntoView(jump: false));
     }
   }
 
@@ -126,6 +130,7 @@ class _SettingsGroupState extends State<SettingsGroup> {
             subtitle: w.summary,
             subtitleMaxLines: 2,
             onTap: w.onToggle,
+            onLongPress: w.onLongPress,
             trailing: Caret(open: w.open),
           ),
         ),

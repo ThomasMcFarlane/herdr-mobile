@@ -153,12 +153,10 @@ void main() {
       for (final label in ['omp', 'Claude Code', 'Codex', 'pi']) {
         expect(_chip(label), findsOneWidget, reason: label);
       }
-      expect(tester.widget<AppChip>(_chip('omp')).onTap, isNull);
-      expect(tester.widget<AppChip>(_chip('pi')).onTap, isNull);
-      expect(tester.widget<AppChip>(_chip('Codex')).onTap, isNotNull);
-      expect(find.text('omp is not installed on studio-mac'), findsOneWidget);
-      expect(find.text('pi is not installed on studio-mac'), findsOneWidget);
-      expect(find.text('Codex is not installed on studio-mac'), findsNothing);
+      expect(tester.widget<AppChip>(_chip('omp')).enabled, isFalse);
+      expect(tester.widget<AppChip>(_chip('pi')).enabled, isFalse);
+      expect(tester.widget<AppChip>(_chip('Codex')).enabled, isTrue);
+      expect(find.text('Not installed on studio-mac: omp, pi'), findsOneWidget, reason: 'one line names both');
       expect(_selected(tester, 'Claude Code'), isTrue, reason: 'the first agent that can run');
 
       await tester.tap(_chip('omp'));
@@ -209,7 +207,7 @@ void main() {
 
       expect(_folder(tester), '/srv/app');
       expect(_selected(tester, 'Codex'), isTrue, reason: 'omp is not on build-box');
-      expect(find.text('omp is not installed on build-box'), findsOneWidget);
+      expect(find.text('Not installed on build-box: omp, Claude Code, pi'), findsOneWidget);
       await _teardown(tester, e);
     });
 
@@ -315,7 +313,7 @@ void main() {
 
       await _tapStart(tester);
 
-      expect(find.text("Couldn't start the session"), findsOneWidget);
+      expect(find.text('Couldn’t start the session'), findsOneWidget);
       expect(find.text('omp is not installed on studio-mac.'), findsOneWidget);
       expect(find.byType(NewAgentSessionScreen), findsOneWidget);
       expect(e.host('a').startCalls, 0);

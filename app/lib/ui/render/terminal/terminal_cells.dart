@@ -396,9 +396,7 @@ final class TerminalLine {
               y1: metrics.rowPx,
               light: metrics.lightPx,
             )!;
-            final fill = shape.alpha == 1
-                ? color
-                : color.withValues(alpha: color.a * shape.alpha);
+            final fill = Ds.fade(color, shape.alpha);
             for (final rect in shape.rects) {
               glyphs.add(rect, fill);
             }

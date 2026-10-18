@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/acp/subagents/subagent_run.dart';
 import '../../../data/repositories/agent_session.dart';
+import '../../../data/words/plural.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import 'agent_session_navigation.dart';
 import 'observed_widgets.dart' show showObservedSubagents;
@@ -36,7 +37,7 @@ class _ChipSnap {
 }
 
 /// The chip under the bar that opens the roster: `3 subagents`, `1 of 3
-/// running`, `1 waiting for you` (tinted), `1 of 3 failed`. The index of
+/// running`, `1 needs you` (tinted), `1 of 3 failed`. The index of
 /// every subagent of the session, for an agent that talks ACP (their
 /// [SubagentRun]s) and for one followed through its log (the observed
 /// roster). Takes no room without subagents; the bar places it.
@@ -64,7 +65,7 @@ class SubagentsChip extends StatelessWidget {
       Color? tint;
       String label;
       if (!observed && v.live && v.blocked > 0) {
-        label = '${v.blocked} waiting for you';
+        label = needYou(v.blocked);
         tint = ds.blockedText;
       } else if (running > 0 && (observed || v.live)) {
         label = '$running of $total running';
@@ -72,14 +73,14 @@ class SubagentsChip extends StatelessWidget {
         label = '${v.summary.failed} of $total failed';
         tint = ds.dangerText;
       } else {
-        label = total == 1 ? '1 subagent' : '$total subagents';
+        label = countOf(total, 'subagent');
       }
       return Padding(
-        padding: const EdgeInsets.only(bottom: 2),
+        padding: const EdgeInsets.only(bottom: Gap.hair),
         child: AppChip(
           label: label,
           tint: tint,
-          leading: Icon(LucideIcons.bot, size: 14, color: tint ?? ds.textSecondary),
+          leading: Icon(LucideIcons.bot, size: IconSize.inline, color: tint ?? ds.textSecondary),
           onTap: () => showSubagents(context, session),
         ),
       );
@@ -145,7 +146,7 @@ class SubagentRoster extends StatelessWidget {
               header: true,
               child: Text(
                 '${section.title} · $count',
-                style: Type.label.copyWith(color: ds.textSecondary, fontWeight: FontWeight.w600, fontFeatures: Type.tabular),
+                style: Type.labelStrong.copyWith(color: ds.textSecondary, fontFeatures: Type.tabular),
               ),
             ),
           ),

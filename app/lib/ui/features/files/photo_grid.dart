@@ -206,8 +206,8 @@ class _PhotoThumbFaceState extends State<PhotoThumbFace> with SingleTickerProvid
         if (image != null)
           _fade == null
               ? _Picture(image)
-              : FadeTransition(opacity: CurvedAnimation(parent: _fade!, curve: Motion.easeOut), child: _Picture(image)),
-        if (widget.pressed) ColoredBox(color: ds.text.withValues(alpha: 0.12)),
+              : FadeTransition(opacity: Motion.curved(_fade!), child: _Picture(image)),
+        if (widget.pressed) ColoredBox(color: ds.pressTint),
       ],
     );
   }
@@ -246,7 +246,7 @@ class _Note extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 24, color: faint ? ds.textTertiary.withValues(alpha: 0.6) : ds.textMuted),
+            Icon(icon, size: IconSize.empty, color: faint ? ds.faint : ds.textMuted),
             if (text != null) ...[
               const SizedBox(height: Gap.xs),
               FittedBox(

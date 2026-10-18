@@ -3,9 +3,6 @@ import 'package:flutter/material.dart';
 import 'motion.dart';
 import 'tokens.dart';
 
-/// How long a [BrandMark] takes to draw itself.
-const brandMarkDuration = Duration(milliseconds: 420);
-
 /// herdr's mark: a lowercase h whose stem rises into a shepherd's crook, and
 /// in the crook the one agent that needs you (the orange dot). herdr is the
 /// one who herds; the person holding the phone keeps the herd, and the app's
@@ -87,7 +84,7 @@ abstract final class BrandGeometry {
       canvas.drawCircle(
         dot,
         dotRadius,
-        Paint()..color = dotIn >= 1 ? color : color.withValues(alpha: color.a * dotIn),
+        Paint()..color = Ds.fade(color, dotIn),
       );
     }
   }
@@ -123,7 +120,7 @@ class BrandMark extends StatefulWidget {
 
 class _BrandMarkState extends State<BrandMark> with SingleTickerProviderStateMixin {
   // Linear; each part applies its own curve (see the painter).
-  late final AnimationController _controller = AnimationController(vsync: this, duration: brandMarkDuration);
+  late final AnimationController _controller = AnimationController(vsync: this, duration: Motion.brand);
   bool _started = false;
 
   @override

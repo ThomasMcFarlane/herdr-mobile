@@ -68,16 +68,17 @@ Route<T> photoViewerRoute<T>({
     transitionsBuilder: (context, animation, _, child) {
       final reduced = Motion.reduced(context);
       // Faded in and out, a hair of scale: nothing wraps the picture at rest.
+      // The way out plays the exit curve, never the entry curve backwards.
+      final curved = Motion.curved(animation);
       return AnimatedBuilder(
-        animation: animation,
+        animation: curved,
         child: child,
         builder: (context, child) {
           if (animation.value >= 1) return child!;
-          final eased = Motion.easeOut.transform(animation.value);
-          final faded = FadeTransition(opacity: animation, child: child);
+          final faded = FadeTransition(opacity: curved, child: child);
           return reduced
               ? faded
-              : Transform.scale(scale: 0.97 + 0.03 * eased, child: faded);
+              : Transform.scale(scale: Motion.enterScale + (1 - Motion.enterScale) * curved.value, child: faded);
         },
       );
     },
@@ -139,6 +140,7 @@ class PhotoViewerState extends State<PhotoViewer> with SingleTickerProviderState
     duration: Motion.standard,
     value: 1,
   );
+  late final CurvedAnimation _chromeCurve = Motion.curved(_chrome);
   final _chromeKey = GlobalKey();
   late final ThemeData _theme = AppTheme.dark();
 
@@ -161,6 +163,7 @@ class PhotoViewerState extends State<PhotoViewer> with SingleTickerProviderState
 
   @override
   void dispose() {
+    _chromeCurve.dispose();
     _chrome.dispose();
     _dismiss.dispose();
     model.dispose();
@@ -241,7 +244,7 @@ class PhotoViewerState extends State<PhotoViewer> with SingleTickerProviderState
               ValueListenableBuilder<double>(
                 valueListenable: _dismiss,
                 builder: (context, progress, _) =>
-                    ColoredBox(color: photoBackdrop.withValues(alpha: 1 - progress)),
+                    ColoredBox(color: Color.lerp(photoBackdrop, Colors.transparent, progress)!),
               ),
               PhotoStage(
                 model: model,
@@ -253,7 +256,7 @@ class PhotoViewerState extends State<PhotoViewer> with SingleTickerProviderState
               _Chrome(
                 key: _chromeKey,
                 model: model,
-                visible: _chrome,
+                visible: _chromeCurve,
                 dismiss: _dismiss,
                 onBack: _close,
                 onInfo: () {
@@ -320,7 +323,7 @@ class _Chrome extends StatelessWidget {
       builder: (context, child) {
         // The bars go as soon as a drag starts (the picture needs the room):
         // gone by a third of the way to dismissal.
-        final opacity = Motion.easeOut.transform(visible.value) * (1 - (dismiss.value * 3).clamp(0.0, 1.0));
+        final opacity = visible.value * (1 - (dismiss.value * 3).clamp(0.0, 1.0));
         if (opacity <= 0) return ExcludeSemantics(child: IgnorePointer(child: Opacity(opacity: 0, child: child)));
         if (opacity >= 1) return child!;
         return IgnorePointer(ignoring: opacity < 0.5, child: Opacity(opacity: opacity, child: child));
@@ -372,15 +375,15 @@ class _Caption extends StatelessWidget {
     final detail = image != null
         ? '${groupDigits(image.width)} × ${groupDigits(image.height)}'
         : (item.size != null ? formatBytes(item.size) : '');
-    final nameStyle = Type.compact.copyWith(color: ds.text, fontWeight: FontWeight.w600);
+    final nameStyle = Type.compact.copyWith(color: ds.text);
     final detailStyle = Type.compact.copyWith(color: ds.textSecondary);
     final bottom = MediaQuery.paddingOf(context).bottom;
     return DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.bottomCenter,
           end: Alignment.topCenter,
-          colors: [Color(0xB3000000), Color(0x00000000)],
+          colors: [ds.photoScrim, Colors.transparent],
         ),
       ),
       child: Padding(
@@ -460,22 +463,22 @@ class _FailureView extends StatelessWidget {
     final failure = entry.failure!;
     final (icon, title) = switch (failure.kind) {
       PhotoFailureKind.tooLarge => (LucideIcons.fileWarning, 'Too large to open here'),
-      PhotoFailureKind.notAnImage => (LucideIcons.imageOff, "Can't show this as a picture"),
+      PhotoFailureKind.notAnImage => (LucideIcons.imageOff, 'Can’t show this as a picture'),
       PhotoFailureKind.network => (LucideIcons.cloudOff, 'Connection lost'),
-      PhotoFailureKind.unreadable => (LucideIcons.triangleAlert, "Couldn't open this photo"),
+      PhotoFailureKind.unreadable => (LucideIcons.triangleAlert, 'Couldn’t open this photo'),
     };
     final exporting = entry.exporting;
     final large = failure.kind == PhotoFailureKind.tooLarge && model.canShareLarge;
     return SafeArea(
       child: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: Gap.gutter, vertical: 72),
+          padding: const EdgeInsets.symmetric(horizontal: Gap.gutter, vertical: Gap.xxl),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 360),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, size: 32, color: ds.textSecondary),
+                Icon(icon, size: IconSize.empty, color: ds.textSecondary),
                 const SizedBox(height: Gap.md),
                 Semantics(
                   header: true,
@@ -513,7 +516,7 @@ class _FailureView extends StatelessWidget {
                         onPressed: exporting == null ? () => run(context, model.shareLarge) : null,
                       ),
                     if (failure.kind == PhotoFailureKind.notAnImage && onViewAsText != null)
-                      AppButton(label: 'View as text', icon: LucideIcons.fileText, onPressed: onViewAsText),
+                      AppButton(label: 'Show as text', icon: LucideIcons.fileText, onPressed: onViewAsText),
                     if (entry.item.path != null)
                       AppButton(
                         label: 'Copy path',

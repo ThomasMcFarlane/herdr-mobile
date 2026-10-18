@@ -1,6 +1,7 @@
 // What the agents tab lists, derived from the fleet without any widgets.
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:herdr_mobile/data/words/elapsed.dart';
 import 'package:herdr_mobile/data/models/herdr_models.dart' show AgentStatus;
 import 'package:herdr_mobile/data/models/machine_profile.dart';
 import 'package:herdr_mobile/data/models/status_time.dart';
@@ -70,9 +71,9 @@ void main() {
       addTearDown(several.dispose);
 
       final solo = AgentsOverview.of(one.fleet).agents.single;
-      expect(solo.subtitle, 'claude · main · payments-api');
+      expect(solo.subtitle, 'Claude Code · payments-api');
       final multi = AgentsOverview.of(several.fleet).agents.single;
-      expect(multi.subtitle, 'claude · m-a · main · payments-api');
+      expect(multi.subtitle, 'Claude Code · m-a · payments-api');
     });
 
     test('a pane with no title is named after its agent, which the line then omits',
@@ -85,7 +86,7 @@ void main() {
       addTearDown(h.dispose);
 
       final rows = AgentsOverview.of(h.fleet).agents;
-      expect(rows.single.title, 'codex');
+      expect(rows.single.title, 'Codex');
       expect(rows.single.subtitle, 'main', reason: 'workspace and folder are the same name');
     });
 
@@ -197,29 +198,36 @@ void main() {
 
   group('time in state', () {
     test('is minutes, then hours, then days: never seconds', () {
-      expect(formatElapsed(Duration.zero), '<1m');
-      expect(formatElapsed(const Duration(seconds: 59)), '<1m');
-      expect(formatElapsed(const Duration(seconds: 60)), '1m');
-      expect(formatElapsed(const Duration(minutes: 12, seconds: 59)), '12m');
-      expect(formatElapsed(const Duration(minutes: 59, seconds: 59)), '59m');
-      expect(formatElapsed(const Duration(hours: 1)), '1h');
-      expect(formatElapsed(const Duration(hours: 1, minutes: 5)), '1h 05m');
-      expect(formatElapsed(const Duration(hours: 23, minutes: 59)), '23h 59m');
-      expect(formatElapsed(const Duration(hours: 24)), '1d');
-      expect(formatElapsed(const Duration(days: 3, hours: 7)), '3d');
+      expect(Elapsed.compact(Duration.zero, seconds: false), '<1m');
+      expect(Elapsed.compact(const Duration(seconds: 59), seconds: false), '<1m');
+      expect(Elapsed.compact(const Duration(seconds: 60), seconds: false), '1m');
+      expect(Elapsed.compact(const Duration(minutes: 12, seconds: 59), seconds: false), '12m');
+      expect(Elapsed.compact(const Duration(minutes: 59, seconds: 59), seconds: false), '59m');
+      expect(Elapsed.compact(const Duration(hours: 1), seconds: false), '1h');
+      expect(Elapsed.compact(const Duration(hours: 1, minutes: 5), seconds: false), '1h 05m');
+      expect(Elapsed.compact(const Duration(hours: 23, minutes: 59), seconds: false), '23h 59m');
+      expect(Elapsed.compact(const Duration(hours: 24), seconds: false), '1d');
+      expect(Elapsed.compact(const Duration(days: 3, hours: 7), seconds: false), '3d');
     });
 
     test('a clock that stepped back (a set-back device clock) never shows a negative', () {
-      expect(formatElapsed(const Duration(minutes: -5)), '<1m');
+      expect(Elapsed.compact(const Duration(minutes: -5), seconds: false), '<1m');
     });
 
-    test('is a state word and a duration; unknown has no word to say', () {
+    test('is the time only (the glyph says the state); unknown claims nothing', () {
       const d = Duration(minutes: 12);
-      expect(timeInState(AgentStatus.working, d), 'working 12m');
-      expect(timeInState(AgentStatus.blocked, const Duration(minutes: 3)), 'needs you 3m');
-      expect(timeInState(AgentStatus.done, const Duration(hours: 2)), 'done 2h');
-      expect(timeInState(AgentStatus.idle, d), 'idle 12m');
+      expect(timeInState(AgentStatus.working, d), '12m');
+      expect(timeInState(AgentStatus.blocked, const Duration(minutes: 3)), '3m');
+      expect(timeInState(AgentStatus.done, const Duration(hours: 2)), '2h');
+      expect(timeInState(AgentStatus.idle, d), '12m');
       expect(timeInState(AgentStatus.unknown, d), '');
+    });
+
+    test('screen readers hear the state and the time in words', () {
+      expect(timeInStateWords(AgentStatus.blocked, const Duration(minutes: 4)), 'needs you, 4 minutes');
+      expect(timeInStateWords(AgentStatus.done, const Duration(hours: 2), exact: false), 'done, at most 2 hours');
+      expect(timeInStateWords(AgentStatus.working, const Duration(seconds: 20)), 'working, under a minute');
+      expect(timeInStateWords(AgentStatus.unknown, const Duration(minutes: 4)), '');
     });
   });
 
@@ -343,7 +351,7 @@ void main() {
       expect(entries.indexOf(more), 1 + idleShown, reason: 'header, then the rows that show, then the fold');
     });
 
-    test('open, every row shows and the line moves to the end and reads Show fewer', () {
+    test('open, every row shows and the line moves to the end and reads Show less', () {
       final entries = agentEntries([section(AgentStatus.idle, 9)], idleOpen: true);
 
       expect(open(entries), everyElement(isTrue));

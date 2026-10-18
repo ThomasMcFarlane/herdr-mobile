@@ -17,7 +17,7 @@ class AgentMoreRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final ds = context.ds;
     final open = more.open;
-    final title = open ? 'Show fewer' : '${more.hidden} more ${more.status.name}';
+    final title = open ? 'Show less' : '${more.hidden} more ${more.status.name}';
     final detail = open ? null : more.names.map((n) => n.trim()).where((n) => n.isNotEmpty).join(' \u00B7 ');
     return PressRow(
       onTap: () {
@@ -25,7 +25,7 @@ class AgentMoreRow extends StatelessWidget {
         onTap();
       },
       minHeight: kMinTap,
-      semanticLabel: open ? 'Show fewer ${more.status.name} agents' : '$title agents, folded${detail == null || detail.isEmpty ? '' : '. $detail'}',
+      semanticLabel: open ? 'Show less ${more.status.name} agents' : '$title agents, folded${detail == null || detail.isEmpty ? '' : '. $detail'}',
       padding: const EdgeInsets.symmetric(horizontal: Gap.gutter - PressRow.inset, vertical: Gap.sm),
       child: Row(
         children: [

@@ -4,6 +4,8 @@ import '../acp/agent_host.dart' show AgentHostException;
 import '../models/herdr_models.dart';
 import '../services/herdr_api.dart';
 import '../services/herdr_transport.dart';
+import '../words/agent_names.dart';
+import '../words/where_line.dart';
 import 'agent_session.dart';
 import 'machine_connection.dart';
 
@@ -11,7 +13,7 @@ import 'machine_connection.dart';
 enum BatchAction {
   /// A terminal agent gets the `esc` key (what the pane's Esc chip sends), an
   /// agent session its `cancel()`. Working agents only.
-  interrupt('Interrupted'),
+  stop('Stopped'),
 
   /// One text to everyone: `pane.send_input` for a terminal (the way the pane
   /// composer sends a line), a prompt for an agent session.
@@ -22,7 +24,7 @@ enum BatchAction {
 
   const BatchAction(this.past);
 
-  /// "Interrupted", for the result line.
+  /// "Stopped", for the result line.
   final String past;
 }
 
@@ -40,7 +42,7 @@ class BatchTarget {
     required this.title,
     required this.agent,
     required this.status,
-    required this.interrupt,
+    required this.stop,
     required this.message,
     required this.close,
     this.unreachable,
@@ -65,7 +67,7 @@ class BatchTarget {
         agent: agent,
         status: status,
         unreachable: machine.isLive ? null : 'offline',
-        interrupt: () => machine.api.sendKeys(paneId, const ['esc']),
+        stop: () => machine.api.sendKeys(paneId, const ['esc']),
         message: (text) async {
           await machine.api.sendLine(paneId, text);
           machine.markReviewed(paneId);
@@ -108,7 +110,7 @@ class BatchTarget {
               AgentLink.ended => 'ended',
               AgentLink.failed => 'not connected',
             },
-      interrupt: () async => session.cancel(),
+      stop: () async => session.cancel(),
       message: (text) async => unawaited(session.send(text)),
       close: session.end,
     );
@@ -128,10 +130,10 @@ class BatchTarget {
   /// Why nothing can reach it (`offline`, `ended`, ...), null when it can.
   final String? unreachable;
 
-  /// `agent · machine`.
-  String get detail => agent.isEmpty ? machineLabel : '$agent · $machineLabel';
+  /// `Claude Code · machine`; a pane with no agent is a `Shell`.
+  String get detail => whereLine(agent: agentName(agent), machine: machineLabel, title: title);
 
-  final Future<void> Function() interrupt;
+  final Future<void> Function() stop;
   final Future<void> Function(String text) message;
   final Future<void> Function() close;
 
@@ -203,7 +205,7 @@ class BatchPlan {
     if (why != null) return BatchSkip(t, SkipKind.unreachable, why);
     const waiting = 'waiting for an answer';
     switch (action) {
-      case BatchAction.interrupt:
+      case BatchAction.stop:
         return switch (t.status) {
           AgentStatus.working => null,
           AgentStatus.blocked => BatchSkip(t, SkipKind.waiting, waiting),
@@ -257,7 +259,7 @@ class BatchResult {
   final List<BatchFailure> failed;
   final List<BatchSkip> skipped;
 
-  /// `Interrupted 3 · 1 failed: studio-mac: connection lost · 2 skipped`.
+  /// `Stopped 3 · 1 failed: studio-mac: connection lost · 2 skipped`.
   String get summary {
     final parts = ['${action.past} ${done.length}'];
     if (failed.isNotEmpty) {
@@ -291,7 +293,7 @@ Future<BatchResult> runBatch(BatchPlan plan, {String text = ''}) async {
     for (final i in indexes) {
       try {
         await switch (plan.action) {
-          BatchAction.interrupt => run[i].interrupt(),
+          BatchAction.stop => run[i].stop(),
           BatchAction.message => run[i].message(text),
           BatchAction.close => run[i].close(),
         };

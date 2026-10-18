@@ -63,7 +63,7 @@ void main() {
   testWidgets('a transcript whose host dropped turns opens with one quiet line, above everything', (tester) async {
     final items = [TranscriptNote(key: hostDroppedKey, text: hostDroppedText(12)), ..._turns()];
     await _pump(tester, items);
-    final line = find.text('Earlier messages are no longer kept on the host (12 turns).');
+    final line = find.text('Earlier messages are no longer kept on the machine (12 turns).');
     expect(line, findsOneWidget);
     expect(tester.getTopLeft(line).dy, lessThan(tester.getTopLeft(find.text('Sửa lỗi dấu thanh trong trình phân tích')).dy));
     expect(tester.takeException(), isNull);

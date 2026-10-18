@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'motion.dart';
 import 'theme.dart';
 import 'tokens.dart';
 
@@ -23,7 +24,7 @@ class Skeleton extends StatelessWidget {
           alignment: Alignment.centerLeft,
           child: Container(
             height: height,
-            decoration: BoxDecoration(color: fill, borderRadius: BorderRadius.circular(5)),
+            decoration: BoxDecoration(color: fill, borderRadius: BorderRadius.circular(Radii.xs)),
           ),
         );
     return Semantics(
@@ -72,7 +73,7 @@ class Skeleton extends StatelessWidget {
 /// that time shows the real content straight away, with no grey placeholder
 /// flashing in and out. The one timer is cancelled with the widget.
 class DelayedSkeleton extends StatefulWidget {
-  const DelayedSkeleton({super.key, this.rows = false, this.delay = skeletonDelay, this.note});
+  const DelayedSkeleton({super.key, this.rows = false, this.delay = Dwell.spinnerDelay, this.note});
 
   final bool rows;
   final Duration delay;
@@ -84,9 +85,6 @@ class DelayedSkeleton extends StatefulWidget {
   @override
   State<DelayedSkeleton> createState() => _DelayedSkeletonState();
 }
-
-/// How long a loading screen waits before it draws its placeholder.
-const skeletonDelay = Duration(milliseconds: 120);
 
 class _DelayedSkeletonState extends State<DelayedSkeleton> {
   Timer? _timer;

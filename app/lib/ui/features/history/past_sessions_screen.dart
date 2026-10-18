@@ -9,11 +9,19 @@ import '../../../data/repositories/agent_screens.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/agent_session_settings.dart';
 import '../../../data/repositories/fleet_repository.dart';
+import '../../../data/words/agent_names.dart';
+import '../../../data/acp/agent_host.dart' show agentRoutes;
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../agents/agent_navigation.dart';
 import '../../render/visible_text.dart';
 import 'past_session_row.dart';
 import 'past_sessions_view_model.dart';
+
+/// `omp, Claude Code, Codex or pi`: every agent herdr can start.
+String _anyAgent() {
+  final names = [for (final r in agentRoutes) agentName(r.id)];
+  return '${names.take(names.length - 1).join(', ')} or ${names.last}';
+}
 
 /// What the agents remember: every session an agent kept in its own store on a
 /// machine, newest first, whether or not a keeper holds it now. Tap one to
@@ -157,7 +165,7 @@ class _BodyState extends State<_Body> {
             EmptyState(
               icon: LucideIcons.bot,
               title: 'No agent installed',
-              message: 'None of omp, Claude Code, Codex or pi is installed on ${machine?.profile.label ?? 'this machine'}.',
+              message: 'None of ${_anyAgent()} is installed on ${machine?.profile.label ?? 'this machine'}.',
             ),
           ),
         ];
@@ -180,7 +188,7 @@ class _BodyState extends State<_Body> {
           EmptyState(
             icon: LucideIcons.history,
             title: 'Not listed',
-            message: "$label doesn't keep a list the phone can read.",
+            message: '$label doesn’t keep a list the phone can read.',
           ),
         ),
       ];
@@ -218,7 +226,7 @@ class _BodyState extends State<_Body> {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.xs, Gap.gutter, Gap.sm),
             child: Text(
-              "$label can't reopen a past session from the phone.",
+              '$label can’t reopen a past session from the phone.',
               style: Type.secondary.copyWith(color: ds.textSecondary),
             ),
           ),
@@ -241,7 +249,7 @@ class _BodyState extends State<_Body> {
       if (history.more)
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.lg, Gap.gutter, 0),
+            padding: const EdgeInsets.only(left: Gap.gutter, top: Gap.lg, right: Gap.gutter),
             child: Text(
               'Showing the newest ${history.sessions.length}',
               textAlign: TextAlign.center,
@@ -263,7 +271,6 @@ class _Filters extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ds = context.ds;
     final machines = vm.machines;
     final agents = vm.agents;
     final folder = vm.folder;
@@ -278,7 +285,7 @@ class _Filters extends StatelessWidget {
                 _capped(
                   AppChip(
                     label: visibleText(c.profile.label),
-                    leading: Icon(LucideIcons.server, size: 14, color: ds.textSecondary),
+                    icon: LucideIcons.server,
                     selected: c.profile.id == vm.machine?.profile.id,
                     onTap: () => vm.selectMachine(c.profile.id),
                   ),
@@ -290,7 +297,7 @@ class _Filters extends StatelessWidget {
             label: 'Agent',
             chips: [
               for (final r in agents)
-                AppChip(label: r.label, selected: r.id == vm.agent, onTap: () => vm.selectAgent(r.id)),
+                AppChip(label: agentName(r.id), selected: r.id == vm.agent, onTap: () => vm.selectAgent(r.id)),
             ],
           ),
         if (folder != null)
@@ -301,7 +308,7 @@ class _Filters extends StatelessWidget {
                 AppChip(
                   label: 'This folder',
                   semanticLabel: 'This folder, ${visibleText(cwdTail(folder))}',
-                  leading: Icon(LucideIcons.folder, size: 14, color: ds.textSecondary),
+                  icon: LucideIcons.folder,
                   selected: vm.folderOnly,
                   onTap: () => vm.setFolderOnly(!vm.folderOnly),
                 ),

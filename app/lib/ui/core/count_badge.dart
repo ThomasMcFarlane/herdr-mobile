@@ -39,7 +39,9 @@ class CountBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final ds = context.ds;
     final (fill, fg) = switch (tone) {
-      CountTone.blocked => (ds.blocked, ds.onStatus),
+      // The deeper status-text orange: white on the paper shape colour is
+      // 4.2:1, under the 4.5 an 11 pt number needs; on ink they are one colour.
+      CountTone.blocked => (ds.blockedText, ds.onStatus),
       CountTone.neutral => (ds.fill, ds.textMuted),
       CountTone.accent => (ds.accent, ds.onAccent),
     };
@@ -49,7 +51,6 @@ class CountBadge extends StatelessWidget {
         height: height,
         constraints: const BoxConstraints(minWidth: height),
         padding: const EdgeInsets.symmetric(horizontal: Gap.xs),
-        alignment: Alignment.center,
         decoration: BoxDecoration(
           color: fill,
           borderRadius: BorderRadius.circular(Radii.pill),
@@ -58,13 +59,17 @@ class CountBadge extends StatelessWidget {
               : Border.all(color: ring, width: ringWidth, strokeAlign: BorderSide.strokeAlignOutside),
         ),
         // A fixed-height pill: the number grows with the text only as far as
-        // the bars do.
-        child: MediaQuery.withClampedTextScaling(
-          maxScaleFactor: kBarTextScale,
-          child: RollText(
-            text: count > cap ? '$cap+' : '$count',
-            style: Type.badge.copyWith(color: fg),
-            overflow: TextOverflow.visible,
+        // the bars do. Centred at its own width: an `alignment` on the box
+        // made the pill fill any loose width it was given (a Wrap, a row).
+        child: Center(
+          widthFactor: 1,
+          child: MediaQuery.withClampedTextScaling(
+            maxScaleFactor: kBarTextScale,
+            child: RollText(
+              text: count > cap ? '$cap+' : '$count',
+              style: Type.badge.copyWith(color: fg),
+              overflow: TextOverflow.visible,
+            ),
           ),
         ),
       ),

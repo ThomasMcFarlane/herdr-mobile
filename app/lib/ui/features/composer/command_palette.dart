@@ -35,7 +35,7 @@ class CommandPalette extends StatelessWidget {
       final rows = matches.length < _visibleRows ? matches.length.toDouble() : _visibleRows;
       final rowHeight = MediaQuery.textScalerOf(context).scale(_commandRowHeight);
       return Padding(
-        padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.sm),
+        padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.sm),
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: ds.surface,
@@ -128,23 +128,12 @@ class _Row extends StatelessWidget {
                     Text.rich(
                       TextSpan(
                         text: command.text,
-                        style: TextStyle(
-                          fontFamily: monoFamily,
-                          fontSize: 13,
-                          height: 1.25,
-                          fontWeight: FontWeight.w500,
-                          color: ds.text,
-                        ),
+                        style: Mono.input.copyWith(color: ds.text),
                         children: [
                           if (hint != null && hint.isNotEmpty)
                             TextSpan(
                               text: '  $hint',
-                              style: TextStyle(
-                                fontFamily: monoFamily,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w400,
-                                color: ds.textMuted,
-                              ),
+                              style: Mono.base.copyWith(color: ds.textMuted),
                             ),
                         ],
                       ),

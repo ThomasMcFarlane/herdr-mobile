@@ -554,7 +554,7 @@ class _Planner {
       );
     }
     // A card that lists only some of its files ends in `N more`; one that
-    // lists all of a long list ends in `Show fewer`.
+    // lists all of a long list ends in `Show less`.
     if (trailing) {
       add(PlanRow(changedAllKey(t.key), TranscriptRowKind.changedMore, 0, turn: t, last: true, count: files.length - shown, open: all));
     }

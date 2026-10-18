@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/models/remote_file.dart';
 import '../../../data/services/remote_files.dart';
+import '../../../data/words/elapsed.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import 'file_format.dart';
 import 'file_thumb.dart';
@@ -51,7 +52,7 @@ class FileRow extends StatelessWidget {
   String subtitle() {
     final e = entry;
     if (denied) return 'No permission';
-    final when = formatModified(e.modified, now: now);
+    final when = e.modified == null ? '' : formatAgo(e.modified!, now);
     if (e.kind == RemoteEntryKind.link) {
       final to = e.linkTarget == null ? '' : ' → ${e.linkTarget}';
       return e.isBrokenLink ? 'Broken link$to' : 'Link$to';

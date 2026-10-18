@@ -2,7 +2,8 @@ import '../../../data/repositories/agent_session.dart' show AgentSessionView;
 import '../../../data/acp/session_state.dart';
 import '../../../data/acp/subagents/subagent_run.dart';
 import '../../../data/acp/turns/plain_text.dart' show safeEnd;
-import 'status_line.dart' show elapsedLabel;
+import '../../../data/words/elapsed.dart';
+import '../../../data/words/plural.dart';
 import '../../render/visible_text.dart';
 
 /// How a subagent shows itself: one tone per state the person can tell apart.
@@ -56,7 +57,7 @@ Set<String> blockedRunIds(AgentSessionState state) {
 bool runsAreLive(AgentSessionState state, {required bool linkLive}) => linkLive && !state.disconnected;
 
 /// `7 tools`, `1 tool`; null for none.
-String? toolsWord(int count) => count <= 0 ? null : '$count ${count == 1 ? 'tool' : 'tools'}';
+String? toolsWord(int count) => count <= 0 ? null : countOf(count, 'tool');
 
 /// How long [run] has run, as best known. A run that is active and live
 /// counts from when this client first saw it ([now] - `startedAt`), else it
@@ -78,18 +79,18 @@ Duration? runElapsed(SubagentRun run, DateTime now, {required bool live}) {
 ///
 ///  * running: `running 42s · Grep · 7 tools` (omp adds `60%`, a retry says
 ///    `retrying 2 of 5`);
-///  * waiting for a request: `Waiting for you · 7 tools`;
+///  * waiting for a request: `Needs you · 7 tools`;
 ///  * done: `Explore · done · 31s · 12 tools`; failed and cancelled likewise.
 String runLine(SubagentRun run, RunTone tone, {required DateTime now}) {
   final live = tone != RunTone.stale;
   final elapsed = runElapsed(run, now, live: live);
-  final time = elapsed == null ? null : elapsedLabel(elapsed);
+  final time = elapsed == null ? null : Elapsed.compact(elapsed);
   final tools = toolsWord(run.toolCount);
   final last = _lastTool(run);
   final type = _clean(run.agentType);
   final retry = run.retry;
   final parts = switch (tone) {
-    RunTone.waitingForYou => ['Waiting for you', ?tools],
+    RunTone.waitingForYou => ['Needs you', ?tools],
     RunTone.starting => ['starting', ?time],
     RunTone.running => [
       time == null ? 'running' : 'running $time',
@@ -260,9 +261,9 @@ String groupTitle(List<SubagentRun> runs, Set<String> blocked, {bool live = true
     }
   }
   final parts = [
-    '${runs.length} subagents',
+    countOf(runs.length, 'subagent'),
     if (running > 0) '$running running',
-    if (waitingForYou > 0) '$waitingForYou waiting for you',
+    if (waitingForYou > 0) needYou(waitingForYou),
     if (starting > 0) '$starting starting',
     if (stale > 0) '$stale not updating',
     if (failed > 0) '$failed failed',
@@ -278,7 +279,7 @@ enum RosterSection {
   /// Needs the person, or not started.
   waiting('Waiting'),
   running('Running'),
-  finished('Finished');
+  finished('Done');
 
   const RosterSection(this.title);
   final String title;

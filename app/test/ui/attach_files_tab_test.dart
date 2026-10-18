@@ -257,7 +257,7 @@ void main() {
       expect(find.text('Recent'), findsNothing);
       expect(find.text('Files you attach from the phone are listed here.'), findsOneWidget);
       expect(find.text('Choose files…'), findsOneWidget);
-      expect(find.text('Opens the phone\'s file picker'), findsOneWidget);
+      expect(find.text('Opens the phone’s file picker'), findsOneWidget);
     });
 
     testWidgets('a copy on this host says so; any other says to choose it again', (tester) async {
@@ -270,7 +270,7 @@ void main() {
         fs: FakeFs()..addFile('/inbox/here.pdf', 'x'),
       );
       await _pumpTab(tester, rig);
-      expect(find.text('2 MB · already on the host'), findsOneWidget);
+      expect(find.text('2 MB · already on the machine'), findsOneWidget);
       expect(find.text('2 MB · choose it again'), findsNWidgets(2));
     });
 
@@ -321,7 +321,7 @@ void main() {
       await tester.tap(find.text('gone.pdf'));
       await tester.pumpAndSettle();
 
-      expect(rig.problems, ['That copy is gone from the host. Choose the file again.']);
+      expect(rig.problems, ['That copy is gone from the machine. Choose the file again.']);
       expect(rig.tray.isEmpty, isTrue);
       expect(find.text('gone.pdf'), findsNothing);
       expect(find.text('kept.pdf'), findsOneWidget);

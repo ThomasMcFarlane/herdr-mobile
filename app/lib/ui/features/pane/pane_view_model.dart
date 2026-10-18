@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
+import 'package:herdr_mobile/ui/core/kit.dart' show Dwell;
+
 import '../../../data/models/herdr_models.dart';
 import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/terminal_prompt.dart';
@@ -45,10 +47,10 @@ class PaneViewModel extends ChangeNotifier with WidgetsBindingObserver {
     required this._sendLine,
     required this._sendPrompt,
     required this._sendKeys,
-    this.minReadInterval = const Duration(milliseconds: 120),
-    this.deepReadInterval = const Duration(milliseconds: 1500),
-    this.deepRevertDelay = const Duration(seconds: 2),
-    this.fallbackInterval = const Duration(seconds: 4),
+    this.minReadInterval = Dwell.paneRead,
+    this.deepReadInterval = Dwell.paneDeepRead,
+    this.deepRevertDelay = Dwell.paneDeepRevert,
+    this.fallbackInterval = Dwell.paneFallback,
     this._wrap = false,
     this.clock = DateTime.now,
   }) {

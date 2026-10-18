@@ -25,8 +25,8 @@ class ArrivalCue extends StatefulWidget {
     required this.needsYou,
     this.waiting = const {},
     required this.child,
-    this.calm = const Duration(seconds: 3),
-    this.spacing = const Duration(seconds: 2),
+    this.calm = Dwell.arrivalCalm,
+    this.spacing = Dwell.arrivalSpacing,
     this.now = DateTime.now,
   });
 

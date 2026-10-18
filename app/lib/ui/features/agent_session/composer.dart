@@ -27,7 +27,7 @@ import 'session_select.dart';
 String? composerReason(AgentLink link) => switch (link) {
   AgentLink.live => null,
   AgentLink.connecting => 'Connecting…',
-  AgentLink.reconnecting => 'Reconnecting… you can write when it is back',
+  AgentLink.reconnecting => 'Offline · reconnecting',
   AgentLink.ended => 'Session ended · read only',
   AgentLink.failed => 'Not connected',
 };
@@ -41,7 +41,7 @@ String? composerReason(AgentLink link) => switch (link) {
 /// running turn), a quiet line above the field says which ([DeliveryHint]),
 /// and what waits shows above it ([QueuedMessages]). Send never moves: Stop is
 /// its own round button to its left, drawn when a turn runs and deaf for
-/// [tapGuard] after it appears, so the tap that sent a message cannot land on
+/// [Dwell.tapGuard] after it appears, so the tap that sent a message cannot land on
 /// it. An observed session (an agent in a terminal) has no queue: Stop takes
 /// the place of Send.
 ///
@@ -298,7 +298,7 @@ class _HideWhenCompactState extends State<HideWhenCompact> with WidgetsBindingOb
 }
 
 /// Stop is its own button, left of Send (or alone, in Send's place, for an
-/// agent in a terminal). It takes no tap for [tapGuard] after it appears: the
+/// agent in a terminal). It takes no tap for [Dwell.tapGuard] after it appears: the
 /// tap that started the turn, or its second half, must not cancel it. Beside
 /// Send (`quiet`) it is a neutral button; alone it is the primary one.
 class _StopButton extends StatefulWidget {

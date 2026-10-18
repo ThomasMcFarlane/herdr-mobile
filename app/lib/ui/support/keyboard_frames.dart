@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
+import 'package:herdr_mobile/ui/core/kit.dart';
+
 /// Keeps a frame coming at every vsync while the on-screen keyboard moves.
 ///
 /// Android reports the keyboard's position once per vsync during its animation
@@ -14,7 +16,7 @@ import 'package:flutter/widgets.dart';
 /// composer trailed it and for a few frames hid behind it.
 ///
 /// A ticker that is running when an update arrives has the vsync armed
-/// already. It runs only while the inset changes and for [_quiet] after the
+/// already. It runs only while the inset changes and for [Dwell.keyboardQuiet] after the
 /// last change, so it ends with the keyboard's own animation: it is not a
 /// looping animation, and nothing is built or painted for it beyond what the
 /// new inset needs.
@@ -26,11 +28,6 @@ class KeyboardFrames extends StatefulWidget {
   @override
   State<KeyboardFrames> createState() => _KeyboardFramesState();
 }
-
-/// How long the ticker outlives the last change of the inset: a few frames of
-/// the platform's update interval, so it never stops in the middle of the
-/// animation.
-const _quiet = Duration(milliseconds: 120);
 
 class _KeyboardFramesState extends State<KeyboardFrames>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
@@ -68,7 +65,7 @@ class _KeyboardFramesState extends State<KeyboardFrames>
 
   void _tick(Duration elapsed) {
     _now = elapsed;
-    if (elapsed - _movedAt > _quiet) _ticker.stop();
+    if (elapsed - _movedAt > Dwell.keyboardQuiet) _ticker.stop();
   }
 
   @override

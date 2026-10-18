@@ -48,9 +48,9 @@ class QuickReplyController extends ChangeNotifier {
     required this.machine,
     required this.paneId,
     required this.previews,
-    this.sentHold = const Duration(seconds: 3),
-    this.confirmWindow = const Duration(seconds: 4),
-    this.changedHold = const Duration(milliseconds: 1500),
+    this.sentHold = Dwell.answerSent,
+    this.confirmWindow = Dwell.confirm,
+    this.changedHold = Dwell.answerChanged,
     this.haptic = true,
   });
 

@@ -11,7 +11,6 @@ import 'package:herdr_mobile/data/repositories/agent_session.dart';
 import 'package:herdr_mobile/data/repositories/command_source.dart';
 import 'package:herdr_mobile/data/repositories/slash_usage.dart';
 import 'package:herdr_mobile/data/models/slash_command.dart';
-import 'package:herdr_mobile/ui/support/tap_guard.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_navigation.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
@@ -542,7 +541,7 @@ void main() {
       await tester.testTextInput.receiveAction(TextInputAction.send);
       await tester.pump();
       expect(session.sent, isEmpty);
-      await tester.pump(tapGuard);
+      await tester.pump(Dwell.tapGuard);
       await tester.tap(find.byIcon(LucideIcons.square));
       await tester.pump(const Duration(milliseconds: 50));
       expect(session.cancelCount, 1);
@@ -565,7 +564,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
       expect(session.cancelCount, 0, reason: 'the second tap of a double tap on Send');
 
-      await tester.pump(tapGuard);
+      await tester.pump(Dwell.tapGuard);
       await tester.tap(find.byIcon(LucideIcons.square));
       await tester.pump(const Duration(milliseconds: 50));
       expect(session.cancelCount, 1);
@@ -575,7 +574,7 @@ void main() {
       final session = FakeAgentSession(link: AgentLink.reconnecting);
       await pumpScreen(tester, session);
       expect(composerField(tester).enabled, isFalse);
-      expect(find.text('Reconnecting… you can write when it is back'), findsOneWidget);
+      expect(find.text('Offline · reconnecting'), findsOneWidget);
 
       session.setLink(AgentLink.live);
       await tester.pump();

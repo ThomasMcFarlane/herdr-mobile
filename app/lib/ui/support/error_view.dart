@@ -20,17 +20,18 @@ Widget compactErrorView(FlutterErrorDetails details) => Builder(
         margin: const EdgeInsets.symmetric(vertical: Gap.xs),
         padding: const EdgeInsets.symmetric(horizontal: Gap.md, vertical: Gap.sm),
         decoration: BoxDecoration(
+          // design-lint: allow(raw-color) no-theme fallback: draws when the theme itself failed
           color: ds?.fill ?? const Color(0xFFEFEFEF),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(Radii.sm),
         ),
         child: Text(
           'Couldn’t draw this · $message',
           maxLines: 3,
           overflow: TextOverflow.ellipsis,
-          style: (ds == null ? const TextStyle(fontSize: 13) : Type.secondary).copyWith(
+          style: Type.secondary.copyWith(
+            // design-lint: allow(raw-color) no-theme fallback: draws when the theme itself failed
             color: ds?.dangerText ?? const Color(0xFF8A1C1C),
             decoration: TextDecoration.none,
-            fontWeight: FontWeight.w400,
           ),
         ),
       ),

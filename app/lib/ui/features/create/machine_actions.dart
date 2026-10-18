@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:herdr_mobile/ui/core/kit.dart' show Dwell;
+
 import '../../../data/models/herdr_models.dart';
 import '../../../data/repositories/machine_connection.dart';
 import '../../../data/services/herdr_api.dart';
@@ -57,7 +59,7 @@ class MachineActions {
       await call();
     } on HerdrUnsupportedException {
       final v = machine.snapshot.version;
-      problem = "herdr${v.isEmpty ? '' : ' $v'} on ${machine.profile.label} can't do this. "
+      problem = 'herdr${v.isEmpty ? '' : ' $v'} on ${machine.profile.label} can’t do this. '
           'Update herdr on that machine.';
     } on HerdrApiException catch (e) {
       if (e.isNotFound) {
@@ -71,7 +73,7 @@ class MachineActions {
       problem = 'The machine did not answer in time.';
     }
     try {
-      await machine.refresh().timeout(const Duration(seconds: 5));
+      await machine.refresh().timeout(Dwell.refreshTimeout);
     } on Exception {
       // Offline or slow: events bring the lists up to date when it returns.
     }

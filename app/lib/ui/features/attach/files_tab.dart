@@ -54,7 +54,7 @@ class _FilesTabState extends State<FilesTab> {
   /// must not toggle twice.
   final _checking = <RecentPhoneFile>{};
 
-  static const goneMessage = 'That copy is gone from the host. Choose the file again.';
+  static const goneMessage = 'That copy is gone from the machine. Choose the file again.';
 
   @override
   void initState() {
@@ -211,7 +211,7 @@ class _FilesTabState extends State<FilesTab> {
     return _FileRow(
       key: ValueKey('recent:${r.name}:${r.size}:${r.hostPath}'),
       name: r.name,
-      detail: '${formatBytes(r.size)} · ${onHost ? 'already on the host' : 'choose it again'}',
+      detail: '${formatBytes(r.size)} · ${onHost ? 'already on the machine' : 'choose it again'}',
       number: pick == null ? null : widget.tray.numberOf(pick.key),
       onTap: () => unawaited(_openRecent(r)),
       onForget: () => unawaited(widget.kit.recents.remove(r)),
@@ -262,7 +262,7 @@ class _ChooseTile extends StatelessWidget {
                     ),
                     const SizedBox(height: Gap.hair),
                     Text(
-                      'Opens the phone\'s file picker',
+                      'Opens the phone’s file picker',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Type.secondary.copyWith(color: ds.textSecondary),
@@ -363,7 +363,7 @@ class _FileRow extends StatelessWidget {
                     PressBuilder(
                       onTap: onForget,
                       haptic: true,
-                      scale: 0.9,
+                      scale: PressScale.icon,
                       minTapSize: kMinTap,
                       semanticLabel: 'Remove $shown from recent files',
                       builder: (context, pressed) => Icon(LucideIcons.x, size: IconSize.row, color: ds.textSecondary),

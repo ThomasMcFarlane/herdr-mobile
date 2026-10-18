@@ -8,6 +8,7 @@ import '../../../data/acp/session_state.dart';
 import '../../../data/acp/subagents/subagent_run.dart';
 import '../../../data/models/herdr_models.dart' show AgentStatus;
 import '../../../data/repositories/agent_session.dart';
+import '../../../data/words/plural.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../../render/markdown/markdown.dart';
 import '../../support/step_clock.dart';
@@ -122,17 +123,17 @@ class SubagentGroupHeader extends StatelessWidget {
     final ds = context.ds;
     final title = groupTitle(runs, blocked, live: live);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(Gap.xs, 6, Gap.xs, Gap.xs),
+      padding: const EdgeInsets.fromLTRB(Gap.xs, Gap.sm, Gap.xs, Gap.xs),
       child: Row(
         children: [
-          Icon(LucideIcons.bot, size: 14, color: ds.textSecondary),
-          const SizedBox(width: 8),
+          Icon(LucideIcons.bot, size: IconSize.inline, color: ds.textSecondary),
+          const SizedBox(width: Gap.sm),
           Expanded(
             child: Semantics(
               header: true,
               child: Text(
                 title,
-                style: Type.label.copyWith(color: ds.textSecondary, fontWeight: FontWeight.w600),
+                style: Type.labelStrong.copyWith(color: ds.textSecondary),
               ),
             ),
           ),
@@ -221,7 +222,7 @@ class SubagentToolRow extends StatelessWidget {
           children: [
             if (snap.group != null) SubagentGroupHeader(runs: snap.group!, blocked: snap.blocked, live: snap.live),
             for (final (i, run) in snap.runs.indexed) ...[
-              if (i > 0 || snap.group != null) const SizedBox(height: 6),
+              if (i > 0 || snap.group != null) const SizedBox(height: Gap.sm),
               SubagentCard(
                 key: ValueKey(run.id),
                 session: session,
@@ -411,7 +412,7 @@ class _SubagentCardState extends State<SubagentCard> {
                 if (cut > 0)
                   Padding(
                     padding: const EdgeInsets.only(top: Gap.xs),
-                    child: Text('… $cut more characters', style: Type.caption.copyWith(color: ds.textMuted)),
+                    child: Text(countOf(cut, 'more character'), style: Type.caption.copyWith(color: ds.textMuted)),
                   ),
                 const SizedBox(height: Gap.xs),
               ] else if (run.note != null && run.note!.trim().isNotEmpty) ...[
@@ -464,8 +465,8 @@ class _Label extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 2),
-    child: Text(text, style: Type.caption.copyWith(color: context.ds.textMuted, fontWeight: FontWeight.w600)),
+    padding: const EdgeInsets.only(bottom: Gap.hair),
+    child: Text(text, style: Type.captionStrong.copyWith(color: context.ds.textMuted)),
   );
 }
 

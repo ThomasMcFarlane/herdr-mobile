@@ -163,7 +163,7 @@ class FloatingBarScrim extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [ds.bg.withValues(alpha: 0), ds.bg],
+                  colors: [Ds.fade(ds.bg, 0), ds.bg],
                 ),
               ),
             ),
