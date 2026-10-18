@@ -26,8 +26,8 @@ class SegmentOption<T> {
 }
 
 /// The app's one switch: a slim tinted pill (`ds.fill`, no border) and ONE
-/// capsule under the chosen cell, lighter than the pill (white on the tint,
-/// `ds.fillPressed` on ink): the tab bar's capsule, without its outline. It picks the value of a setting (theme,
+/// capsule under the chosen cell in `ds.accentWash`, its label in
+/// `ds.accentText`: the tab bar's selection look. It picks the value of a setting (theme,
 /// density) and switches what a sheet shows (the kinds of what a session made);
 /// the job differs, the look does not.
 ///
