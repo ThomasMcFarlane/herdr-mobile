@@ -27,7 +27,9 @@ release.
 - The switches in Settings (theme, agent list) and the machine form look like
   the tab bar's capsule now: a soft pill, no border.
 
-### Pictures are downloaded once
+## [0.1.15] - 2026-10-17
+
+### Pictures are downloaded once, and steering can say "after"
 
 - A picture you looked at is kept on the phone (at most 192 MB, the oldest go
   first), so opening a photo again, going back to one in the viewer, or
