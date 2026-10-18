@@ -565,7 +565,8 @@ class _LoadBar extends StatelessWidget {
               child: AnimatedFractionallySizedBox(
                 duration: Motion.of(context, Motion.standard),
                 curve: Motion.easeOut,
-                widthFactor: (p.clamp(0, 100)) / 100,
+                widthFactor: p.clamp(0, 100) / 100,
+                heightFactor: 1, // the hairline's own height; Align alone would give none
                 child: ColoredBox(color: ds.accent),
               ),
             ),

@@ -45,7 +45,18 @@ class FakeWebView extends WebViewPlatform {
 
   bool javaScript = false;
 
+  /// What the view draws for the page it shows (for screenshots); nothing
+  /// when unset.
+  Widget Function(BuildContext context, String? url)? paint;
+
   FakeNavigationDelegate? _delegate;
+
+  /// A load of [url] that has started and reached [progress] of 100, and
+  /// goes no further: the page shown so far stays.
+  void startLoading(String url, int progress) {
+    _delegate?.onPageStarted?.call(url);
+    _delegate?.onProgress?.call(progress);
+  }
 
   @override
   PlatformWebViewController createPlatformWebViewController(PlatformWebViewControllerCreationParams params) =>
@@ -56,7 +67,8 @@ class FakeWebView extends WebViewPlatform {
       FakeNavigationDelegate(params);
 
   @override
-  PlatformWebViewWidget createPlatformWebViewWidget(PlatformWebViewWidgetCreationParams params) => _FakeWidget(params);
+  PlatformWebViewWidget createPlatformWebViewWidget(PlatformWebViewWidgetCreationParams params) =>
+      _FakeWidget(params, this);
 
   /// The page asks for [url] (a link tapped, a script's `location`): what
   /// the delegate decides happens. Returns whether it was loaded.
@@ -193,10 +205,12 @@ class _FakeController extends PlatformWebViewController {
 }
 
 class _FakeWidget extends PlatformWebViewWidget {
-  _FakeWidget(super.params) : super.implementation();
+  _FakeWidget(super.params, this.view) : super.implementation();
+
+  final FakeWebView view;
 
   @override
-  Widget build(BuildContext context) => const SizedBox.expand();
+  Widget build(BuildContext context) => view.paint?.call(context, view.current) ?? const SizedBox.expand();
 }
 
 /// A fleet with no machines, for a screen that holds the connections up

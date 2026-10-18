@@ -198,6 +198,23 @@ void main() {
     expect(web.loaded.any((u) => u.path == '/__herdr/open' && u.queryParameters['to'] == '/api'), isTrue);
   });
 
+  testWidgets('a page loading draws a hairline as far as it has got, and it goes when the page is in', (tester) async {
+    await pump(tester, ServerPage(Uri.parse('http://localhost:3000/')));
+    final accent = AppTheme.light().extension<Ds>()!.accent;
+    Finder bar() => find.byWidgetPredicate((w) => w is ColoredBox && w.color == accent);
+
+    web.startLoading('http://localhost:51111/page2.html', 40);
+    await _settle(tester);
+    final width = tester.getSize(find.byType(WebPreviewScreen)).width;
+    final size = tester.getSize(bar());
+    expect(size.height, greaterThan(0));
+    expect(size.width, closeTo(width * 0.4, 1));
+
+    await web.navigate('http://localhost:51111/page2.html');
+    await _settle(tester);
+    expect(bar(), findsNothing);
+  });
+
   testWidgets('the connection is held up while the screen is open, and let go when it closes', (tester) async {
     await pump(tester, ServerPage(Uri.parse('http://localhost:3000/')));
     expect(fleet.held, isTrue);
