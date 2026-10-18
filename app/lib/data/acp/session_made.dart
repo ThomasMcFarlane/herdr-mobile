@@ -262,6 +262,8 @@ final _url = RegExp(
   r'https?://(?:[^\s/@<>"`]+@)?(?:\[[0-9a-fA-F:.]+\]|[A-Za-z0-9.\-]+)(?::\d{1,5})?(?:[/?#][^\s<>"`)\]}]*)?',
   caseSensitive: false,
 );
+final _closingPunct = RegExp(r'''[.,;:!?'"]+$''');
+final _markRun = RegExp(r'[*_~]+$');
 final _bareLocalhost = RegExp(r'(?<![\w/.\-])localhost:(\d{2,5})(?![\w])', caseSensitive: false);
 final _fence = RegExp(r'```[\s\S]*?```');
 final _token = RegExp(r'''[^\s"'`()<>\[\]{}|;,=*?]+''');
@@ -300,7 +302,7 @@ bool _madeBefore(String prose, int start) {
 
 void _say(String text, DateTime? at, List<_Mention> out) {
   for (final m in _url.allMatches(text)) {
-    final s = _serverUri(m.group(0)!, keepPath: true);
+    final s = _serverUri(m.group(0)!, text.substring(0, m.start), keepPath: true);
     if (s != null) out.add(_Mention.server(s, at));
   }
   for (final m in _bareLocalhost.allMatches(text)) {
@@ -508,7 +510,7 @@ void _banners(String printed, String command, DateTime? at, List<_Mention> out) 
     final l = line.length > 300 ? line.substring(0, 300) : line;
     if (!_labelled.hasMatch(l) && !_banner.hasMatch(l) && !(launch && _listening.hasMatch(l))) continue;
     for (final m in _url.allMatches(l)) {
-      final s = _serverUri(m.group(0)!, keepPath: false);
+      final s = _serverUri(m.group(0)!, l.substring(0, m.start), keepPath: false);
       if (s != null) out.add(_Mention.server(s, at));
     }
   }
@@ -536,11 +538,18 @@ void _saved(String printed, String? cwd, DateTime? at, List<_Mention> out) {
 
 // ----- servers -----
 
-Uri? _serverUri(String raw, {required bool keepPath}) {
+/// [before] is the text just before the link.
+Uri? _serverUri(String raw, String before, {required bool keepPath}) {
   // What closes the sentence or the markdown around the link is not the link:
   // `**http://127.0.0.1:8766/**` was read as the path `/**`, a row named
   // `localhost:8766/**` that asked the server for a page that is not there.
-  final trimmed = raw.replaceFirst(RegExp(r'''[.,;:!?'"*_~]+$'''), '');
+  // A run of `*`, `_` or `~` is a mark only when the same run opens the link
+  // (`**url**`, `_url_`, `~~url~~`): `?q=snake_` keeps its `_`.
+  var trimmed = raw.replaceFirst(_closingPunct, '');
+  final opening = _markRun.firstMatch(before)?.group(0);
+  if (opening != null && trimmed.endsWith(opening)) {
+    trimmed = trimmed.substring(0, trimmed.length - opening.length).replaceFirst(_closingPunct, '');
+  }
   final uri = Uri.tryParse(trimmed);
   if (uri == null || uri.scheme.toLowerCase() != 'http' || !isPreviewHost(uri.host)) return null;
   // `:0` parses as no port at all, so the digits are read from the text.

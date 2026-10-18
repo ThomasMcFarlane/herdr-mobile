@@ -183,6 +183,19 @@ void main() {
       expect(madeAssetsOf([_say('**http://localhost:3006/f?x=1**')]).single.url.toString(), 'http://localhost:3006/f?x=1');
     });
 
+    test('a link that ends in a mark of its own keeps it when nothing opened that mark before it', () {
+      final cases = {
+        'Open http://localhost:3000/search?q=snake_': 'http://localhost:3000/search?q=snake_',
+        'Open http://localhost:3000/?access_token=Ab3dEf_.': 'http://localhost:3000/?access_token=Ab3dEf_',
+        'API at http://localhost:3000/api/__': 'http://localhost:3000/api/__',
+        'Home: http://localhost:3000/~': 'http://localhost:3000/~',
+        '*http://localhost:3000/?q=snake_*': 'http://localhost:3000/?q=snake_',
+      };
+      for (final c in cases.entries) {
+        expect(madeAssetsOf([_say(c.key)]).single.url.toString(), c.value, reason: c.key);
+      }
+    });
+
     test('a server mentioned again moves to the top and takes the newest path', () {
       final items = [
         _say('Running http://localhost:3000/'),
