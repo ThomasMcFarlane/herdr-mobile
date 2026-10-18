@@ -167,40 +167,38 @@ class _FilesTabState extends State<FilesTab> {
     final imagesAsFiles = !widget.target.preparesPictures;
     final clearance = SheetScope.of(context).bottomClearance;
 
-    return ColoredBox(
-      color: ds.bg,
-      child: SheetScroll(
-        builder: (context, controller, physics) => ListView(
-          controller: controller,
-          physics: physics,
-          padding: EdgeInsets.only(top: Gap.sm, bottom: clearance),
-          children: [
-            _ChooseTile(onTap: _choose),
-            if (recents.isEmpty && _loaded && picked.isEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.lg, Gap.gutter, Gap.sm),
-                child: Text(
-                  'Files you attach from the phone are listed here.',
-                  style: Type.secondary.copyWith(color: ds.textMuted),
-                ),
+    // No fill of its own: the tab sits on the sheet's surface, like Gallery and Host.
+    return SheetScroll(
+      builder: (context, controller, physics) => ListView(
+        controller: controller,
+        physics: physics,
+        padding: EdgeInsets.only(top: Gap.sm, bottom: clearance),
+        children: [
+          _ChooseTile(onTap: _choose),
+          if (recents.isEmpty && _loaded && picked.isEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.lg, Gap.gutter, Gap.sm),
+              child: Text(
+                'Files you attach from the phone are listed here.',
+                style: Type.secondary.copyWith(color: ds.textMuted),
               ),
-            if (picked.isNotEmpty) ...[
-              SectionLabel(label: 'Picked', count: picked.length),
-              for (final item in picked)
-                _FileRow(
-                  key: ValueKey('picked:${item.key}'),
-                  name: item.name,
-                  detail: _pickedDetail(item, imagesAsFiles),
-                  number: tray.numberOf(item.key),
-                  onTap: () => tray.remove(item.key),
-                ),
-            ],
-            if (recents.isNotEmpty) ...[
-              SectionLabel(label: 'Recent', count: recents.length),
-              for (final r in recents) _recentRow(r),
-            ],
+            ),
+          if (picked.isNotEmpty) ...[
+            SectionLabel(label: 'Picked', count: picked.length),
+            for (final item in picked)
+              _FileRow(
+                key: ValueKey('picked:${item.key}'),
+                name: item.name,
+                detail: _pickedDetail(item, imagesAsFiles),
+                number: tray.numberOf(item.key),
+                onTap: () => tray.remove(item.key),
+              ),
           ],
-        ),
+          if (recents.isNotEmpty) ...[
+            SectionLabel(label: 'Recent', count: recents.length),
+            for (final r in recents) _recentRow(r),
+          ],
+        ],
       ),
     );
   }
