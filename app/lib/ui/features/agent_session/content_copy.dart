@@ -7,7 +7,7 @@ import '../../../data/acp/session_state.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../../render/markdown/markdown.dart';
 
-/// Copying a message (docs/DESIGN.md "Copying").
+/// Copying a message (docs/screens/session.md "Copying").
 ///
 /// A long press on text belongs to `SelectionArea`: it selects the word and
 /// shows the selection toolbar. A long-press handler on the row wins that

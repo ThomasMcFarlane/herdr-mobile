@@ -7,7 +7,7 @@ typedef FlushCancel = void Function();
 ///
 /// A session coalesces: chunks, tool updates and the like only mark it dirty,
 /// and one flush per frame notifies. The data layer cannot know what a frame
-/// is, so the app injects it: `FrameFlush` (`ui/core/frame_flush.dart`) flushes
+/// is, so the app injects it: `FrameFlush` (`ui/support/frame_flush.dart`) flushes
 /// at the start of the next frame, before build; [TimerFlush] (the default, and
 /// what tests use) flushes after a fixed delay and needs no binding.
 abstract interface class FlushScheduler {

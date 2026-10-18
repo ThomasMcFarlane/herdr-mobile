@@ -45,8 +45,10 @@ and colour, a quote in the supporting colour.
   coloured chrome.
 - **Code.** A header 44 dp high with the language label (caption, `textMuted`),
   a wrap toggle (shown when a line is longer than ~34 characters) and a copy
-  button (Lucide `copy`, 44 dp hit); copy gives the raw code and the icon says
-  `Copied` for 1.6 s, with a `tick` haptic. No wrap by default: the block
+  button (Lucide `copy`, 44 dp hit); copy gives the raw code (`copyText`, so
+  the words are said only where the system does not) and the icon turns into a
+  check for `Dwell.copied`, only when the copy took; a refused copy keeps the
+  copy icon and says so. No wrap by default: the block
   scrolls sideways, so a line stays one line; the last toggle is the start
   state of the next block. Colours are the theme's terminal palette
   (`context.terminal`, the same colours as a pane) on the quiet fill, every

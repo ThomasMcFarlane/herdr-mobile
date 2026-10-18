@@ -220,6 +220,22 @@ motion (`Motion.reduced`, `Motion.of`) drops movement and keeps fades. Overshoot
 on release (Telegram's `ButtonBounce`) is not used: bounce only where a gesture
 carried momentum.
 
+### The working glyph is still; the settle
+
+A working agent's `StatusGlyph` is a half-filled ring: it says "working" by
+shape, like every other status. It used to turn in 8 steps at 4 a second; with a
+board of agents that was constant noise to look at and a timer plus a repaint
+per glyph to pay for in battery, so nothing animates at rest. The one motion is
+the **settle**: when the status of a glyph already on screen changes, the old
+shape fades and the new one is drawn in once (`Motion.settle`: a ring sweeps
+round, the check and the bar are stroked, the dot lands) and a needs-you or done
+glyph sends one faint ring outward; then the ticker stops. A glyph built with
+its status never animates, and reduced motion skips it. A card that changed
+section gets an accent wash that fades over `Motion.arrival` (a highlight
+decaying, not a movement), and a card resizes with `AnimatedSize` when its
+question appears or is answered instead of snapping: a height change the person
+did not cause must not jump the rows under their thumb.
+
 ## Haptics (`Haptics`)
 
 | Call | Means | Fired |
@@ -268,6 +284,51 @@ change. Status: **stable** = a catalog entry, a semantics test and this row.
 | `FormSection`, `FormPanel`, `FormActionBar` | `form_sections.dart` | forms | |
 | `DrawCheck`, `BrandMark` | `draw_check.dart`, `brand_mark.dart` | the two rare drawn moments | |
 
+**Rows.** Fold secondary facts into one subtitle line (`whereLine`) rather than
+stacking a third line. A row that simply opens its target has no trailing
+chevron (every agent and pane row would carry one); a chevron stays where it
+tells something: a folder against a file, a drill-in from Settings. Chevrons
+are `IconSize.row`. Status is news, not decoration: a tool call in a session
+shows its glyph only while it waits, runs, fails or was cancelled, never for a
+plain success.
+
+**Segmented.** A slim `ds.fill` pill, no border, no shadow (owner: borders are
+noise; a hairline pill, tried first, was), with one `accentWash` capsule under
+the chosen cell: the tab bar's look, so the app has one switch. The capsule
+slides (`Motion.standard`, a jump under reduced motion) and one number, its
+place, drives it and every label's colour, so a label warms as the capsule
+arrives and cools as it leaves; the weight never changes. No press scale; a
+selection haptic only on a real change. Cells are equal when every label fits
+with its icon; else equal with the words alone (an icon is decoration, a word
+is the option); else the row scrolls sideways with cells as wide as their
+labels and keeps the chosen one in view, so a label is never cut. With the real
+font four kinds already scroll on phones under about 400 dp, so the scroll is
+the ordinary case there. A rebuild (a new count arrives) leaves the row where
+the person dragged it; it brings the chosen cell into view only when the choice
+or the width changes. A value that is none of the options shows no capsule and
+no selected cell; no options draw nothing; a parent with no width to share gets
+a pill as wide as its content. A count is `textMuted` beside an unchosen label
+and takes the chosen label's `accentText` on the capsule. Chips (`AppChip`)
+stay for "show only this" on a list, where nothing is always selected.
+
+**Brand mark** (`brand_mark.dart`). A lowercase h whose stem rises into a
+shepherd's crook, holding one orange dot: herdr is the one who herds, and the
+app's job is the one agent that needs you. It is drawn in ink tokens
+(`Ds.ink.bg` tile, `Ds.ink.text` stroke, `Ds.ink.blocked` dot) in every theme,
+because it is the app icon, not a status. The crook curls outward: over the
+shoulder it read as an R at 56 dp. One geometry (`BrandGeometry`) feeds the
+launcher icon, its Android 13 monochrome layer, the notification icon
+(`ic_stat_herdr.xml`), the iOS and web icons and the first-run screen; the
+files are rendered from it by `screenshot_test/brand_assets_test.dart`, then
+`dart run flutter_launcher_icons`, so they cannot drift. It replaced a teal and
+amber hub-and-spokes mark whose colours were in no token, that had no themed
+layer and that blurred into a blob in the status bar. `BrandMark` (the first-run
+screen) draws itself once over `Motion.brand` the way a hand writes it: the
+stem rises into the crook, the shoulder follows, the dot lands. It is the
+rarest moment in the app, so it gets the ceremony; reduced motion shows it
+finished. On ink the tile meets the page and the bare mark stands alone, which
+is intended.
+
 Renderers live outside the kit: `ui/render/markdown/` (one Markdown renderer,
 `docs/screens/markdown.md`) and `ui/render/terminal/`. Non-visual helpers
 (`TapGuardState`, `SettleGate`, `StepClock`, `DeepLinks`, `HomeTabs`) live in
@@ -292,13 +353,18 @@ first.
   place), `sheetIn` / `sheetOut`, no fade; reduced motion fades.
 - **Time.** `ToastTiming`: 1.5 s under 20 characters, 2.75 s longer, 5 s with an
   action or a failure (Telegram's ladder). The clock starts once it is in place
-  and stops while a finger is on it.
+  and stops while a finger is on it. No caller passes its own `duration`: the
+  ladder already gives a failure and an action 5 s (the old 6 s batch result
+  and 8 s unsent prompt went with it).
 - **Gestures.** A sideways swipe puts it away (a third of its width or a fling);
   without an action a tap does too. A sheet opening puts it away.
 - **Replacing.** The same `groupKey` joins in place (`Marked 3 reviewed`, one
-  Undo for all); any other message takes over while the old one leaves.
+  Undo for all; the clock restarts); a toast that timed out or is leaving is
+  not joined. Any other message takes over while the old one leaves.
+- The text is a live region: a screen reader says it once when it appears.
 - The card carries its own transparent `Material`, or text takes the fallback
-  yellow underline. Nothing builds a `SnackBar`.
+  yellow underline (the root overlay is above every `Scaffold`); any widget put
+  on the root overlay needs the same. Nothing builds a `SnackBar`.
 
 ### Copy
 
@@ -337,12 +403,21 @@ too quietly; Telegram's bar carries the state by hue. The weight never changes.
 A drag along the bar carries the capsule 1:1 (a tick per cell, the bar lifts to
 `FloatingBar.liftScale`), and on release it springs (`Springs.snap`) with the
 finger's speed to the cell a flick would reach. Re-tapping the selected tab
-scrolls that tab to the top, on every tab. The count badge (`CountBadge`, 16
+scrolls that tab to the top, on every tab, with no haptic (nothing changed
+tab). A single tap, not a double: a double tap would hold the single one back
+to wait for a second. Settings too: it keeps its place between visits, and the
+Update row is its first row, so a person who had scrolled down had only a dot
+on the tab to say a newer version was there. The count badge (`CountBadge`, 16
 high, `99+`) rides the icon's corner, arrives and leaves with a scale over
 `settle`, and its number rolls; its ring takes the colour under it. Settings
 carries a quiet accent dot for an update, never a count. No hide-on-scroll and
 no tab long-press: the bar's cost is paid once, and Material 3 and Apple keep
-top-level bars put. No sideways swipe between tabs (it fought swipe-to-review).
+top-level bars put. No sideways swipe between tabs: nothing showed it existed,
+the page did not follow the finger, and on Agents it fought swipe-to-review.
+Tests find a tab with `FloatingTabBar.tabKey(label)` and the capsule with
+`FloatingTabBar.capsuleKey`. The shadow is soft on the phone; `flutter test`
+paints a `BoxShadow` without its blur unless `debugDisableShadows` is off
+(`bottom_bars_shots_test.dart` turns it off), which once read as a hard band.
 
 **Pages.** A push is the Cupertino slide at `Motion.page` with edge-swipe back
 (a `Motion.fade` cross-fade under reduced motion). The tab content fades in over
@@ -413,7 +488,14 @@ follows:
 - `LabeledField` reserves one line below the input for helper or error text: an
   error never moves the field underneath.
 - Restoration (`restorationScopeId: 'herdr'`) is opt-in per field and never for
-  keys or passwords (it is written in the clear).
+  keys or passwords (it is written to disk in the clear). One exception, kept
+  out of it: a key generated in the machine form and not saved yet is held as a
+  draft in the keychain (`MachineRepository.holdKeyDraft`) and only a flag is
+  restorable. The person copies its public half and goes to the machine; if
+  Android reclaims the app meanwhile, the installed key's private half would
+  otherwise be gone. The draft is dropped on Save, Discard, a hand edit of the
+  key field, and when a form opens afresh. A pasted key is not held: it exists
+  where it came from.
 - A form with unsaved input asks before Back discards it; a failure ends its
   spinner, says what happened and keeps the input.
 - Sheets read colours from the theme, so a theme switch restyles one that is

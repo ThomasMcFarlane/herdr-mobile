@@ -31,7 +31,7 @@ sheets are dark too.
   the screen-size bitmap is held.
 - **Gestures** (`photo_stage.dart`, arithmetic in `photo_math.dart`). Scale is
   relative to fit (1 = the whole picture, never smaller at rest); everything is
-  a spring (`SpringDescription.withDampingRatio`, stiffness 400) started from the
+  a spring (`Springs.carry`) started from the
   live value with the finger's release velocity; there are no timed tweens.
   A finger landing stops what is moving the picture (`Listener.onPointerDown`),
   a second finger or a lifted one re-bases the gesture, nothing locks input.

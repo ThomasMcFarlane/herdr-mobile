@@ -115,9 +115,11 @@ the top do not count, nor a redraw in place) it is a pill, `3 new lines`,
 reaching the end. A pane that turns blocked while they are away makes it
 `Needs you` with the blocked glyph (one already blocked when they left is
 not news; the dock shows it); that wins over the count. A tap fires `Haptics.tick`
-and scrolls to the end: `Motion.easeOut` over 220 ms when under 3 viewports
-away, an instant jump otherwise and under reduced motion. It comes and goes
-with opacity and scale (0.92 to 1) and keeps its words while fading out.
+and scrolls to the end: `Motion.easeOut` over `Motion.expand` when under 3
+viewports away, an instant jump otherwise and under reduced motion. It is a
+compact `FloatingPill`: it comes and goes with opacity and scale (from
+`Motion.enterScale`, over `Motion.release`; a fade only under reduced motion)
+and keeps its words while fading out.
 
 **Live edge** (`live_edge.dart`, bottom of the terminal panel, inside the
 outline). A 2 px rule: accent-tinted when the last read brought new output

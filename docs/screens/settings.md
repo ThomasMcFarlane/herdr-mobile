@@ -32,8 +32,8 @@ and only two: notifications Android blocks (orange, the colour that means
 "needs you") and a newer version (the accent, a suggestion). The groups start
 closed; the tab keeps its state, so a later visit shows what was left open.
 The version is `lib/data/app_info.dart`; `test/app_settings_test.dart` fails
-when it differs from `pubspec.yaml`. `AppSwitch` / `SwitchRow` live there
-until another screen needs a switch.
+when it differs from `pubspec.yaml`. `AppSwitch` / `SwitchRow` are the kit's
+(`ui/core/switch.dart`).
 
 **Updates** (`features/settings/update_group.dart`, `AppUpdate`). A newer
 version on GitHub is a suggestion, so it is quiet: a 10 dp accent dot on the

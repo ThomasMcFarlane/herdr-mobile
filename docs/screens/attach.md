@@ -41,8 +41,9 @@ tabs draw what they have (the bars, the camera tile) while the library answers.
   remembered for the app run (`AttachKit.tab`).
 - **One tray** (`tray.dart`). Every tab puts picks in the same `AttachTray`;
   the numbers on the circles are places in it, `Attach (3)` and `3 / 5` count
-  every tab, `Clear` empties it. The action bar slides up (transform + opacity,
-  `Motion.standard`) as soon as one thing is picked. Tiles and rows do not own
+  every tab, `Clear` empties it. The action bar is a bottom-stack lane
+  (`BottomStackTransition`: up from `Motion.travel` with a fade, `sheetIn`)
+  as soon as one thing is picked. Tiles and rows do not own
   notifiers: each listens to the tray and rebuilds only when its own number
   changed (`attach:tile` builds are counted in tests; the grid itself is never
   rebuilt by a selection, a page arriving or a tab switch).

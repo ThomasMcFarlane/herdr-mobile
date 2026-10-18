@@ -135,7 +135,7 @@ autoresearch-keyboard.sh     keyboard bench on a phone (adb)
 autoresearch-stream.sh       streaming bench on a phone (adb)
 docs/GUIDE.md                using the app
 docs/ARCHITECTURE.md         how the app is put together
-docs/DESIGN.md               the design system
+docs/DESIGN.md               the design system; docs/screens/ per screen
 docs/AGENT_SESSIONS.md       terminal sessions and ACP agent sessions, the keeper
 docs/ALERTS.md               local notifications, and the optional ntfy host plugin
 docs/ENGINEERING.md          per-subsystem facts
