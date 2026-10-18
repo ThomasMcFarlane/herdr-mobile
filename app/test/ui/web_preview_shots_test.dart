@@ -318,9 +318,11 @@ void main() {
     }
     final screen = tester.view.physicalSize / tester.view.devicePixelRatio;
     final at = tester.getRect(find.text(tab));
-    if (at.right > screen.width) {
+    if (at.right > screen.width || at.left < 0) {
       // A row that does not fit is swiped sideways, as a person would.
-      await tester.drag(find.text('Pages'), const Offset(-300, 0));
+      final row = find.ancestor(of: find.text(tab), matching: find.byType(SingleChildScrollView)).first;
+      final dx = at.left < 0 ? -at.left + 24 : screen.width - at.right - 24;
+      await tester.drag(row, Offset(dx, 0));
       await tester.pump(const Duration(milliseconds: 400));
     }
     await tester.tap(find.text(tab));
@@ -335,7 +337,7 @@ void main() {
   }
 
   final madeCases = <(String, Size, double, Brightness)>[
-    for (final t in ['pages', 'pictures', 'docs']) ...[
+    for (final t in ['pages', 'pictures', 'docs', 'servers']) ...[
       (t, const Size(412, 892), 1, Brightness.light),
       (t, const Size(412, 892), 1, Brightness.dark),
       (t, const Size(320, 640), 1.6, Brightness.light),

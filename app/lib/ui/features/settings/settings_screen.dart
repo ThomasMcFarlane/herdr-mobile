@@ -179,9 +179,9 @@ class _LookGroup extends StatelessWidget {
           title: 'Theme',
           child: Segmented<ThemeChoice>(
             options: const [
-              SegmentOption(ThemeChoice.light, 'Light', LucideIcons.sun),
-              SegmentOption(ThemeChoice.dark, 'Dark', LucideIcons.moon),
-              SegmentOption(ThemeChoice.system, 'System', LucideIcons.smartphone),
+              SegmentOption(ThemeChoice.light, 'Light', icon: LucideIcons.sun),
+              SegmentOption(ThemeChoice.dark, 'Dark', icon: LucideIcons.moon),
+              SegmentOption(ThemeChoice.system, 'System', icon: LucideIcons.smartphone),
             ],
             value: theme,
             onChanged: (next) => unawaited(settings.setTheme(next)),
@@ -196,9 +196,9 @@ class _LookGroup extends StatelessWidget {
               : null,
           child: Segmented<BoardDensity>(
             options: const [
-              SegmentOption(BoardDensity.auto, 'Auto', LucideIcons.sparkles),
-              SegmentOption(BoardDensity.cards, 'Cards', LucideIcons.layoutGrid),
-              SegmentOption(BoardDensity.compact, 'Compact', LucideIcons.list),
+              SegmentOption(BoardDensity.auto, 'Auto', icon: LucideIcons.sparkles),
+              SegmentOption(BoardDensity.cards, 'Cards', icon: LucideIcons.layoutGrid),
+              SegmentOption(BoardDensity.compact, 'Compact', icon: LucideIcons.list),
             ],
             value: density,
             onChanged: (next) => unawaited(settings.setDensity(next)),
@@ -264,8 +264,8 @@ class _AgentsGroup extends StatelessWidget {
               : 'A running agent opens as its terminal.',
           child: Segmented<OpenAgentsAs>(
             options: const [
-              SegmentOption(OpenAgentsAs.chat, 'Chat', LucideIcons.messageSquare),
-              SegmentOption(OpenAgentsAs.terminal, 'Terminal', LucideIcons.terminal),
+              SegmentOption(OpenAgentsAs.chat, 'Chat', icon: LucideIcons.messageSquare),
+              SegmentOption(OpenAgentsAs.terminal, 'Terminal', icon: LucideIcons.terminal),
             ],
             value: openAs,
             onChanged: (next) => unawaited(settings.setOpenAgentsAs(next)),

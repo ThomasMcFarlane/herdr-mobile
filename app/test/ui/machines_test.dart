@@ -680,7 +680,7 @@ void main() {
     testWidgets('password auth: required when adding, optional when editing', (tester) async {
       final repo = await repoWith();
       await _pump(tester, const MachineFormScreen(), repo: repo);
-      await tester.tap(find.text('Password'));
+      await _tapVisible(tester, find.text('Password'));
       await _flush(tester);
       await fillBasics(tester);
 
@@ -712,7 +712,7 @@ void main() {
     testWidgets('Tailscale needs no secret', (tester) async {
       final repo = await repoWith();
       await _pump(tester, const MachineFormScreen(), repo: repo);
-      await tester.tap(find.text('Tailscale'));
+      await _tapVisible(tester, find.text('Tailscale'));
       await _flush(tester);
 
       expect(find.textContaining('Nothing is stored'), findsOneWidget);

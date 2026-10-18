@@ -21,7 +21,8 @@ release.
   servers, HTML and SVG pages, pictures and documents, newest first, so a link
   or a file from an hour ago is not lost in the chat. Servers stay pinned on
   top; pages, pictures (a grid of thumbnails) and documents switch with the
-  same chips as the board once there is more than one kind. A tap opens it. A server says Running only while a
+  app's pill switch once there is more than one kind. The switch in Settings
+  (theme, agent list) and the machine form now looks like the tab bar's capsule. A tap opens it. A server says Running only while a
   background task for its port is active.
 
 ### Pictures are downloaded once

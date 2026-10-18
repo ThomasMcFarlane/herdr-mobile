@@ -269,6 +269,54 @@ void main() {
       expect(tester.getSemantics(find.text('Password')).flagsCollection.isSelected, Tristate.isFalse);
       handle.dispose();
     });
+
+    group('Segmented as the switch', () {
+      Widget switchOf(int value, void Function(int) onChanged, {int kinds = 4}) => Padding(
+            padding: const EdgeInsets.all(16),
+            child: Segmented<int>(
+              value: value,
+              onChanged: onChanged,
+              options: [
+                for (var i = 0; i < kinds; i++) SegmentOption(i, 'Kind number $i', count: 10 + i),
+              ],
+            ),
+          );
+
+      testWidgets('a tap on another option reports it, a tap on the chosen one does not', (tester) async {
+        final got = <int>[];
+        await pumpCore(tester, switchOf(0, got.add, kinds: 2));
+        await tester.tap(find.text('Kind number 0'));
+        await tester.tap(find.text('Kind number 1'));
+        expect(got, [1]);
+      });
+
+      testWidgets('when the labels do not fit the row scrolls and the chosen option is in view', (tester) async {
+        // The test font is wide: four long labels cannot share the width.
+        await pumpCore(tester, switchOf(3, (_) {}));
+        await tester.pumpAndSettle();
+        final box = tester.getRect(find.byType(Segmented<int>));
+        final chosen = tester.getRect(find.text('Kind number 3'));
+        expect(chosen.left, greaterThanOrEqualTo(box.left));
+        expect(chosen.right, lessThanOrEqualTo(box.right));
+        // The others are still reachable by scrolling, not cut.
+        await tester.ensureVisible(find.text('Kind number 0'));
+        expect(tester.getRect(find.text('Kind number 0')).left, greaterThanOrEqualTo(box.left));
+      });
+
+      testWidgets('labels that fit share the width equally', (tester) async {
+        await pumpCore(
+          tester,
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Segmented<int>(value: 0, onChanged: (_) {}, options: const [SegmentOption(0, 'Ab'), SegmentOption(1, 'Cd')]),
+          ),
+        );
+        final a = tester.getCenter(find.text('Ab')).dx;
+        final b = tester.getCenter(find.text('Cd')).dx;
+        final box = tester.getRect(find.byType(Segmented<int>));
+        expect(b - a, closeTo(box.width / 2, 8));
+      });
+    });
   });
 
   group('SliverLargeTitle', () {

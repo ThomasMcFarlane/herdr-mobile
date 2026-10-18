@@ -326,19 +326,18 @@ Tailscale.
     a row added anywhere moves the others); a tap says `Opening X…`, one open
     per row at a time, and the browser is only launched while the screen the
     sheet came from is still there.
-  - The sheet: servers pinned above (few, and what is alive), then a row of
-    filter chips (`Pages 17`, `Pictures 13`, `Docs 8`) only when two or more
-    kinds are present, one always selected, the choice remembered per session;
-    pictures are a grid of real thumbnails (`PhotoThumbs`, the folder grid's
-    cache; a file over 2 MB shows its size), the rest rows; at most 60 rows / 24
-    tiles built, `N more` for the rest. Why chips: it is the idiom the board
-    already uses for "show only this" (`AppChip`, a count, `selected`, scrolls
-    sideways when it must). A `Segmented` control (a value picker, for settings)
-    and underline tabs (a style the app does not have) both read as foreign in
-    the same sheet (owner: "not polished"); the floating tab bar's capsule is
-    for the three root screens. Measured on a 40-item stand-in before building:
-    one list buries the pictures below the first screen; chips with 3 short
-    labels fit 412 dp (a row with "All" and "Servers" too did not).
+  - The sheet: the app's one switch (`Segmented`, docs/DESIGN.md "The switch")
+    leads it with the kinds present (`Servers`, `Pages 17`, `Pictures 13`,
+    `Docs 8`, a live dot before Servers while one runs), only when two or more
+    kinds exist, the choice remembered per session; the default is the newest
+    non-server kind. Pictures are a grid of real thumbnails (`PhotoThumbs`, the
+    folder grid's cache; a file over 2 MB shows its size), the rest rows; at most
+    60 rows / 24 tiles built, `N more` for the rest. How it got here: a stand-in
+    of 40 items showed one list buries the pictures below the first screen; a
+    Segmented control with a white thumb, underline tabs and board chips were
+    each tried in the sheet and rejected (a third look, a style the app does not
+    have, and "reads as a filter, in the middle"); the tab bar's capsule anatomy
+    in the sheet read as tabs and as the app, so `Segmented` was rebuilt on it.
 - **Keys are not a send.** `PaneViewModel.sendKeys` never sets `sending` (a
   tapped hotkey must not disable the key row) and keeps calls in order; only
   `sendLine` is a tracked send.

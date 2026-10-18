@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:collection';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show RenderAbstractViewport;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/acp/background/background_work.dart' show BackgroundTask;
@@ -54,7 +53,7 @@ Future<void> showSessionMade(BuildContext opener, AgentSessionView session) =>
 final _lastTab = <String, MadeKind>{};
 
 /// The kinds that get a tab, in the order they are laid out.
-const _tabKinds = [MadeKind.page, MadeKind.picture, MadeKind.doc];
+const _tabKinds = [MadeKind.server, MadeKind.page, MadeKind.picture, MadeKind.doc];
 
 /// Rows a list shows before `N more`, and tiles a grid does: what is BUILT, not
 /// what is found.
@@ -147,13 +146,14 @@ class _SessionMadeSheetState extends State<SessionMadeSheet> {
         final shown = _stable(assets);
         final ds = context.ds;
         final files = machineSupportsFiles(session.machine);
-        final servers = [for (final a in shown) if (a.kind == MadeKind.server) a];
-        final made = [for (final a in shown) if (a.kind != MadeKind.server) a];
-        final kinds = [for (final k in _tabKinds) if (made.any((a) => a.kind == k)) k];
-        // The kind the person chose if it is still here, else the newest made.
-        final tab = kinds.isEmpty ? null : (_picked != null && kinds.contains(_picked) ? _picked! : made.first.kind);
+        final kinds = [for (final k in _tabKinds) if (shown.any((a) => a.kind == k)) k];
+        // The kind the person chose if it is still here, else the newest made
+        // (servers only when nothing else exists).
+        final newest = shown.where((a) => a.kind != MadeKind.server).firstOrNull?.kind ?? MadeKind.server;
+        final tab = kinds.isEmpty ? null : (_picked != null && kinds.contains(_picked) ? _picked! : newest);
         final tabbed = kinds.length >= 2;
-        final content = [for (final a in made) if (a.kind == tab) a];
+        final content = [for (final a in shown) if (a.kind == tab) a];
+        final running = shown.any((a) => a.kind == MadeKind.server && serverStateOf(a, tasks, live: live) == ServerState.running);
         return Padding(
           padding: const EdgeInsets.fromLTRB(Gap.lg, 8, Gap.lg, Gap.lg),
           child: Column(
@@ -174,18 +174,12 @@ class _SessionMadeSheetState extends State<SessionMadeSheet> {
                     style: Type.secondary.copyWith(color: ds.textSecondary),
                   ),
                 ),
-              // What is alive stays above the tabs, whichever one is open.
-              ..._rows(
-                servers,
-                MadeKind.server,
-                lastDivider: made.isNotEmpty && !tabbed,
-                tasks: tasks,
-                live: live,
-                files: files,
-              ),
               if (tabbed)
                 _KindTabs(
-                  tabs: [for (final k in kinds) (k, _tabLabel(k), made.where((a) => a.kind == k).length)],
+                  tabs: [
+                    for (final k in kinds)
+                      (k, _tabLabel(k), shown.where((a) => a.kind == k).length, k == MadeKind.server && running),
+                  ],
                   selected: tab!,
                   onChanged: _pick,
                 ),
@@ -215,68 +209,29 @@ String _tabLabel(MadeKind kind) => switch (kind) {
       MadeKind.server => 'Servers',
     };
 
-/// The switch between what was made: the board's filter chips, one per kind
-/// with its count, exactly one selected. A row that does not fit scrolls
-/// sideways (it is never squeezed). The sheet only says which kinds there are
-/// and which one is open; this is the one place that decides how it looks.
-class _KindTabs extends StatefulWidget {
+/// The switch between what was made: the app's one `Segmented`, a cell per kind
+/// with its count, a live dot on Servers while one runs. The sheet only says
+/// which kinds there are and which one is open; this is the one place that
+/// decides how it looks.
+class _KindTabs extends StatelessWidget {
   const _KindTabs({required this.tabs, required this.selected, required this.onChanged});
 
-  final List<(MadeKind, String, int)> tabs;
+  /// Kind, label, count, and whether something of this kind is running now.
+  final List<(MadeKind, String, int, bool)> tabs;
   final MadeKind selected;
   final ValueChanged<MadeKind> onChanged;
 
   @override
-  State<_KindTabs> createState() => _KindTabsState();
-}
-
-class _KindTabsState extends State<_KindTabs> {
-  final _scroll = ScrollController();
-  final _chosen = GlobalKey();
-
-  @override
-  void initState() {
-    super.initState();
-    // A sheet that opens on a tab the row does not show (a small phone, large
-    // text) would hide which one is selected: the row starts with it in view.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final box = _chosen.currentContext?.findRenderObject();
-      if (!mounted || box == null || !_scroll.hasClients) return;
-      final at = RenderAbstractViewport.of(box).getOffsetToReveal(box, 0.5).offset;
-      _scroll.jumpTo(at.clamp(0, _scroll.position.maxScrollExtent));
-    });
-  }
-
-  @override
-  void dispose() {
-    _scroll.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(top: Gap.sm, bottom: Gap.xs),
-        child: SingleChildScrollView(
-          controller: _scroll,
-          scrollDirection: Axis.horizontal,
-          // Chips slide out through the sheet's gutter, not under it.
-          clipBehavior: Clip.none,
-          child: Row(
-            children: [
-              for (final (i, (kind, label, count)) in widget.tabs.indexed) ...[
-                if (i > 0) const SizedBox(width: Gap.sm),
-                AppChip(
-                  key: kind == widget.selected ? _chosen : null,
-                  label: label,
-                  count: count,
-                  selected: kind == widget.selected,
-                  onTap: () {
-                    if (kind != widget.selected) widget.onChanged(kind);
-                  },
-                ),
-              ],
-            ],
-          ),
+        // The title row already leaves Gap.sm above.
+        padding: const EdgeInsets.only(bottom: Gap.xs),
+        child: Segmented<MadeKind>(
+          options: [
+            for (final (kind, label, count, running) in tabs)
+              SegmentOption(kind, label, count: count, leading: running ? const LinkDot(state: LinkState.online) : null),
+          ],
+          value: selected,
+          onChanged: onChanged,
         ),
       );
 }

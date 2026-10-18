@@ -5,6 +5,7 @@ import 'dart:ui' show Tristate;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/acp/acp_models.dart';
+import 'package:herdr_mobile/data/acp/session_made.dart' show MadeKind;
 import 'package:herdr_mobile/data/acp/background/background_work.dart';
 import 'package:herdr_mobile/data/acp/session_state.dart';
 import 'package:herdr_mobile/data/models/machine_profile.dart';
@@ -13,6 +14,8 @@ import 'package:herdr_mobile/data/observed/observed_contracts.dart' show Subagen
 import 'package:herdr_mobile/data/repositories/agent_session.dart' show AgentLink, SubagentEntry, SubagentState;
 import 'package:herdr_mobile/data/repositories/machine_connection.dart';
 import 'package:herdr_mobile/data/services/herdr_api.dart';
+import 'package:herdr_mobile/ui/core/controls.dart' show AppChip, Segmented;
+import 'package:herdr_mobile/ui/core/glyphs.dart' show LinkDot;
 import 'package:herdr_mobile/ui/core/theme.dart';
 import 'package:herdr_mobile/ui/features/agent_session/session_bar.dart';
 import 'package:herdr_mobile/ui/features/files/file_viewer_screen.dart';
@@ -54,6 +57,13 @@ Future<void> _settle(WidgetTester tester) async {
   for (var i = 0; i < 6; i++) {
     await tester.pump(const Duration(milliseconds: 100));
   }
+}
+
+/// Taps a chip as a person would: the row is swiped first when it is past the edge.
+Future<void> tapChip(WidgetTester tester, String label) async {
+  await tester.ensureVisible(find.text(label));
+  await tester.pump(const Duration(milliseconds: 100));
+  await tester.tap(find.text(label));
 }
 
 void main() {
@@ -123,12 +133,14 @@ void main() {
     await _settle(tester);
 
     expect(find.text('Made in this session'), findsOneWidget);
-    final titles = ['localhost:8000/docs', 'localhost:5173', 'q3.html'];
-    final ys = [for (final t in titles) tester.getTopLeft(find.text(t)).dy];
-    expect(ys, orderedEquals([...ys]..sort()), reason: 'servers pinned first, each group newest first');
+    expect(find.text('q3.html'), findsOneWidget, reason: 'opens on the page: the newest kind that is not a server');
+    expect(find.text('reports/'), findsOneWidget);
+    await tapChip(tester, 'Servers');
+    await _settle(tester);
+    final ys = [for (final t in ['localhost:8000/docs', 'localhost:5173']) tester.getTopLeft(find.text(t)).dy];
+    expect(ys, orderedEquals([...ys]..sort()), reason: 'newest first');
     expect(find.text('Running'), findsOneWidget);
     expect(find.textContaining('Stopped'), findsOneWidget);
-    expect(find.text('reports/'), findsOneWidget);
   });
 
   testWidgets('a server opens on the phone through the connection, a page from its own folder', (tester) async {
@@ -136,6 +148,8 @@ void main() {
     await pumpBar(tester, s);
 
     await tester.tap(find.text('Made'));
+    await _settle(tester);
+    await tapChip(tester, 'Servers');
     await _settle(tester);
     await tester.tap(find.text('localhost:5173/app'));
     await _settle(tester);
@@ -145,6 +159,8 @@ void main() {
 
     await tester.pump(const Duration(seconds: 6)); // the toast that stood over the rows is gone
     await tester.tap(find.text('Made'));
+    await _settle(tester);
+    await tapChip(tester, 'Pages');
     await _settle(tester);
     await tester.tap(find.text('q3.html'));
     await _settle(tester);
@@ -406,12 +422,27 @@ void main() {
 
   testWidgets('one kind only: no tabs, just its rows', (tester) async {
     onMachine(['$base/reports/one.html']);
-    await openSheet(tester, session([_say('Serving http://localhost:5173/'), page('one.html'), page('two.html')]));
+    await openSheet(tester, session([page('one.html'), page('two.html')]));
 
+    expect(find.byType(AppChip), findsNWidgets(1), reason: 'only the Made chip behind the sheet');
     expect(find.text('Pages'), findsNothing);
     expect(find.text('one.html'), findsOneWidget);
     expect(find.text('two.html'), findsOneWidget);
+  });
+
+  testWidgets('only servers: no tabs, the servers', (tester) async {
+    await openSheet(tester, session([_say('Serving http://localhost:5173/')]));
+    expect(find.text('Servers'), findsNothing);
     expect(find.text('localhost:5173'), findsOneWidget);
+  });
+
+  testWidgets('servers and one other kind: two chips, opening on the other', (tester) async {
+    onMachine(['$base/reports/one.html']);
+    await openSheet(tester, session([_say('Serving http://localhost:5173/'), page('one.html')]));
+    expect(find.text('Servers'), findsOneWidget);
+    expect(find.text('Pages'), findsOneWidget);
+    expect(find.text('one.html'), findsOneWidget);
+    expect(find.text('localhost:5173'), findsNothing);
   });
 
   testWidgets('it opens on the kind of the newest thing made, with exactly that tab selected', (tester) async {
@@ -432,37 +463,46 @@ void main() {
   testWidgets('a tab shows only its kind, and a tap on the selected one changes nothing', (tester) async {
     await openSheet(tester, session(mixed()));
 
-    await tester.tap(find.text('Docs'));
+    await tapChip(tester, 'Docs');
     await _settle(tester);
     expect(find.text('plan.md'), findsOneWidget);
     expect(find.text('spec.pdf'), findsOneWidget);
     expect(find.text('d.png'), findsNothing);
     expect(find.text('one.html'), findsNothing);
 
-    await tester.tap(find.text('Docs'));
+    await tapChip(tester, 'Docs');
     await _settle(tester);
     expect(find.text('plan.md'), findsOneWidget);
 
-    await tester.tap(find.text('Pages'));
+    await tapChip(tester, 'Pages');
     await _settle(tester);
     expect(find.text('one.html'), findsOneWidget);
     expect(find.text('plan.md'), findsNothing);
   });
 
-  testWidgets('the servers stay above the tabs on every tab', (tester) async {
-    await openSheet(tester, session(mixed()));
-    for (final tab in ['Pictures', 'Pages', 'Docs']) {
-      await tester.tap(find.text(tab));
-      await _settle(tester);
-      expect(find.text('localhost:5173'), findsOneWidget, reason: tab);
-      expect(tester.getTopLeft(find.text('localhost:5173')).dy, lessThan(tester.getTopLeft(find.text(tab)).dy), reason: tab);
-    }
+  testWidgets('Servers is a chip that lists them; its dot shows only while one runs; the sheet never opens on it when something else exists', (tester) async {
+    final s = session(mixed(), key: 'm/servers');
+    await openSheet(tester, s);
+    expect(find.text('Servers'), findsOneWidget);
+    expect(find.text('localhost:5173'), findsNothing, reason: 'opens on the pictures, the newest kind');
+    expect(find.byType(LinkDot), findsNothing, reason: 'nothing runs');
+
+    await tapChip(tester, 'Servers');
+    await _settle(tester);
+    expect(find.text('localhost:5173'), findsOneWidget);
+    expect(find.text('d.png'), findsNothing);
+    expect(tester.getTopLeft(find.text('Servers')).dy, lessThan(tester.getTopLeft(find.text('localhost:5173')).dy), reason: 'chips lead the sheet');
+
+    s.setBackground(runningVite());
+    await _settle(tester);
+    expect(find.byType(LinkDot), findsNWidgets(2), reason: 'the row\'s dot and the chip\'s');
+    expect(find.descendant(of: find.byType(Segmented<MadeKind>), matching: find.byType(LinkDot)), findsOneWidget);
   });
 
   testWidgets('the sheet opens on the tab it was left on; a kind that is gone falls back to the newest', (tester) async {
     final first = session(mixed(), key: 'm/remembered');
     await openSheet(tester, first);
-    await tester.tap(find.text('Docs'));
+    await tapChip(tester, 'Docs');
     await _settle(tester);
     await closeSheet(tester);
 
@@ -527,7 +567,7 @@ void main() {
 
   testWidgets('a tap on a document opens it in the file viewer', (tester) async {
     await openSheet(tester, session(mixed()));
-    await tester.tap(find.text('Docs'));
+    await tapChip(tester, 'Docs');
     await _settle(tester);
     await tester.tap(find.text('plan.md'));
     await _settle(tester);
@@ -539,7 +579,7 @@ void main() {
 
   testWidgets('a page still opens in the browser from its tab', (tester) async {
     await openSheet(tester, session(mixed()));
-    await tester.tap(find.text('Pages'));
+    await tapChip(tester, 'Pages');
     await _settle(tester);
     await tester.tap(find.text('two.html'));
     await _settle(tester);
@@ -551,7 +591,7 @@ void main() {
   testWidgets('a long list shows the first 60 and a row for the rest; tapping it shows the next batch', (tester) async {
     onMachine([for (var i = 0; i < 70; i++) '$base/reports/p$i.html']);
     await openSheet(tester, session([for (var i = 0; i < 70; i++) page('p$i.html'), doc('plan.md')]));
-    await tester.tap(find.text('Pages'));
+    await tapChip(tester, 'Pages');
     await _settle(tester);
 
     expect(find.textContaining('.html', skipOffstage: false), findsNWidgets(60));
@@ -590,7 +630,7 @@ void main() {
     await _settle(tester);
     expect(find.text('Made in this session'), findsOneWidget, reason: 'inert');
 
-    await tester.tap(find.text('Docs'));
+    await tapChip(tester, 'Docs');
     await _settle(tester);
     expect(find.text('Files are not available on this machine'), findsNWidgets(2), reason: 'under each row');
     await tester.tap(find.text('plan.md'));
@@ -609,11 +649,11 @@ void main() {
     expect(find.text('e.png'), findsNothing);
     expect(tester.getTopLeft(find.text('d.png')).dy, pictureY, reason: 'nothing moves');
 
-    await tester.tap(find.text('Pages'));
+    await tapChip(tester, 'Pages');
     await _settle(tester);
     expect(find.text('late.html'), findsNothing);
     expect(find.text('3'), findsOneWidget, reason: 'still the three that were here');
-    await tester.tap(find.text('Docs'));
+    await tapChip(tester, 'Docs');
     await _settle(tester);
     expect(find.text('late.md'), findsNothing);
 
@@ -621,12 +661,12 @@ void main() {
     await tester.tap(find.text('Made'));
     await _settle(tester);
     expect(find.text('late.md'), findsOneWidget, reason: 'Docs is where it was left, and now it holds the new one');
-    await tester.tap(find.text('Pictures'));
+    await tapChip(tester, 'Pictures');
     await _settle(tester);
     expect(find.text('e.png'), findsOneWidget);
   });
 
-  testWidgets('nothing overflows at 320 dp and text 1.6: the chips scroll sideways, the names stay on one line', (tester) async {
+  testWidgets('nothing overflows at 320 dp and text 1.6: the switch scrolls sideways, the names stay on one line', (tester) async {
     final s = session(mixed());
     tester.view.physicalSize = const Size(320, 640) * 2;
     tester.view.devicePixelRatio = 2;
@@ -646,11 +686,11 @@ void main() {
     expect(find.text('Pictures'), findsOneWidget);
     expect(find.text('d.png'), findsOneWidget);
 
-    // Left on Docs, which the row does not show at this size: it opens with
-    // the selected chip in view, not hidden past the edge.
+    // Left on Docs, which the switch may not show at this size: it opens with
+    // the chosen cell in view, not hidden past the edge.
     await tester.drag(find.text('Pictures'), const Offset(-300, 0));
     await _settle(tester);
-    await tester.tap(find.text('Docs'));
+    await tapChip(tester, 'Docs');
     await _settle(tester);
     await closeSheet(tester);
     await tester.tap(find.text('Made'));

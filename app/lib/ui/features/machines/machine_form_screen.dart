@@ -726,15 +726,13 @@ class _AuthPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final roomy = MediaQuery.sizeOf(context).width >= 360 &&
-        MediaQuery.textScalerOf(context).scale(13.5) <= 15;
     return Segmented<SshAuth>(
       value: value,
       onChanged: onChanged,
       options: [
-        SegmentOption(SshAuth.key, 'Private key', roomy ? LucideIcons.keyRound : null),
-        SegmentOption(SshAuth.password, 'Password', roomy ? LucideIcons.lock : null),
-        SegmentOption(SshAuth.none, 'Tailscale', roomy ? LucideIcons.globe : null),
+        SegmentOption(SshAuth.key, 'Private key', icon: LucideIcons.keyRound),
+        SegmentOption(SshAuth.password, 'Password', icon: LucideIcons.lock),
+        SegmentOption(SshAuth.none, 'Tailscale', icon: LucideIcons.globe),
       ],
     );
   }
