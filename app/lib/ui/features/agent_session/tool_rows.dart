@@ -9,7 +9,6 @@ import '../../../data/models/herdr_models.dart' show AgentStatus;
 import '../../../data/acp/turns/turns.dart';
 import '../../../data/acp/turns/plain_text.dart' show safeEnd;
 import 'package:herdr_mobile/ui/core/kit.dart';
-import '../files/file_widgets.dart' show copyToClipboard;
 import 'code_panel.dart';
 import 'content_blocks.dart';
 import 'content_locations.dart';
@@ -142,22 +141,15 @@ class ToolRow extends StatelessWidget {
         children: [
           Semantics(
             expanded: open,
-            child: PressBuilder(
+            child: PressRow(
               onTap: () => onToggle(rowKey),
               semanticLabel: _toolLabel(summary, state, call.detailTrimmed),
-              builder: (context, pressed) => AnimatedContainer(
-                duration: Motion.pressing(pressed),
-                curve: Motion.easeOut,
-                constraints: const BoxConstraints(minHeight: kMinTap),
-                padding: const EdgeInsets.symmetric(horizontal: Gap.xs, vertical: 6),
-                decoration: BoxDecoration(
-                  color: pressed ? ds.fill : Colors.transparent,
-                  borderRadius: BorderRadius.circular(Radii.sm),
-                ),
+              minHeight: kMinTap,
+              padding: const EdgeInsets.symmetric(horizontal: Gap.xs, vertical: Gap.xs),
                 child: Row(
                   children: [
-                    Icon(toolIcon(call.kind), size: 16, color: ds.textSecondary),
-                    const SizedBox(width: 10),
+                    Icon(toolIcon(call.kind), size: IconSize.row, color: ds.textSecondary),
+                    const SizedBox(width: Gap.sm),
                     Expanded(child: _ToolLine(summary: summary, failed: failed, trimmed: call.detailTrimmed)),
                     if (stats) ...[
                       const SizedBox(width: Gap.sm),
@@ -171,7 +163,6 @@ class ToolRow extends StatelessWidget {
                     ],
                   ],
                 ),
-              ),
             ),
           ),
           if (open)
@@ -534,7 +525,7 @@ class _ToolBody extends StatelessWidget {
     final term = context.terminal;
     final parts = _partsOf(call);
 
-    Widget panel(List<CodeLine> lines, {bool fromEnd = false, int cap = 40, String? copyText, String copyLabel = 'Copy output'}) =>
+    Widget panel(List<CodeLine> lines, {bool fromEnd = false, int cap = 40, String? body, String copyLabel = 'Copy output', String copied = 'Output copied'}) =>
         CodePanel(
           lines: lines,
           background: term.background,
@@ -544,7 +535,7 @@ class _ToolBody extends StatelessWidget {
           fromEnd: fromEnd,
           cap: cap,
           onToggleAll: onToggleAll,
-          onCopy: () => copyToClipboard(context, copyText ?? [for (final l in lines) l.text].join('\n'), 'Copied'),
+          onCopy: () => copyText(context, body ?? [for (final l in lines) l.text].join('\n'), what: copied),
           copyLabel: copyLabel,
         );
 
@@ -563,7 +554,7 @@ class _ToolBody extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               label('Command'),
-              panel(textLines('\$ ${visibleText(part.command)}'), cap: 12, copyText: part.command, copyLabel: 'Copy command'),
+              panel(textLines('\$ ${visibleText(part.command)}'), cap: 12, body: part.command, copyLabel: 'Copy command', copied: 'Command copied'),
             ],
           ),
           _TextPart() => Column(
@@ -654,7 +645,7 @@ class DiffPanel extends StatelessWidget {
           fromEnd: false,
           cap: 60,
           onToggleAll: onToggleAll,
-          onCopy: () => copyToClipboard(context, [for (final l in _colourDiff(part, term)) l.text].join('\n'), 'Copied'),
+          onCopy: () => copyText(context, [for (final l in _colourDiff(part, term)) l.text].join('\n'), what: 'Diff copied'),
           copyLabel: 'Copy diff',
         ),
       ],

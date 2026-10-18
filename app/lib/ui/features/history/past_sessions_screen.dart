@@ -99,17 +99,17 @@ class _BodyState extends State<_Body> {
       body: CustomScrollView(
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         slivers: [
-          SliverLargeTitle(
+          SliverLargeTitle.back(
             title: 'Past sessions',
-            leading: CircleButton(
-              icon: LucideIcons.chevronLeft,
-              tooltip: 'Back',
-              onPressed: () => Navigator.of(context).maybePop(),
-            ),
           ),
           if (vm.machines.isNotEmpty) SliverToBoxAdapter(child: _Filters(vm: vm)),
           if (vm.phase == PastPhase.ready && (vm.history?.sessions.length ?? 0) > _searchFrom)
-            SliverToBoxAdapter(child: _SearchField(controller: _search, onChanged: vm.setQuery)),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.xs, Gap.gutter, Gap.xs),
+                child: SearchField(controller: _search, hint: 'Search sessions', onChanged: vm.setQuery),
+              ),
+            ),
           ..._content(context, vm),
         ],
       ),
@@ -167,21 +167,7 @@ class _BodyState extends State<_Body> {
   }
 
   Widget _waiting(String text) => SliverToBoxAdapter(
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: Gap.gutter, vertical: Gap.xl),
-      child: Row(
-        children: [
-          const BusySpinner(),
-          const SizedBox(width: Gap.md),
-          Expanded(
-            child: Text(
-              text,
-              style: Type.secondary.copyWith(color: context.ds.textSecondary),
-            ),
-          ),
-        ],
-      ),
-    ),
+    child: LoadingRow(text, padding: const EdgeInsets.symmetric(horizontal: Gap.gutter, vertical: Gap.xl)),
   );
 
   List<Widget> _ready(BuildContext context, PastSessionsViewModel vm, double inset, Widget Function(Widget) filler) {
@@ -351,55 +337,4 @@ class _ChipRow extends StatelessWidget {
       ),
     ),
   );
-}
-
-class _SearchField extends StatelessWidget {
-  const _SearchField({required this.controller, required this.onChanged});
-
-  final TextEditingController controller;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final ds = context.ds;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.xs, Gap.gutter, Gap.xs),
-      child: Semantics(
-        label: 'Search past sessions',
-        textField: true,
-        child: ListenableBuilder(
-          listenable: controller,
-          builder: (context, _) => TextField(
-            controller: controller,
-            autocorrect: false,
-            enableSuggestions: false,
-            textInputAction: TextInputAction.search,
-            onChanged: onChanged,
-            onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
-            style: Type.body.copyWith(fontSize: 15, color: ds.text),
-            cursorColor: ds.accent,
-            textAlignVertical: TextAlignVertical.center,
-            decoration: InputDecoration(
-              hintText: 'Search sessions',
-              constraints: const BoxConstraints(minHeight: kMinTap, maxHeight: kMinTap),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-              prefixIcon: Icon(LucideIcons.search, size: 16, color: ds.textTertiary),
-              suffixIcon: controller.text.isEmpty
-                  ? null
-                  : PressBuilder(
-                      onTap: () {
-                        controller.clear();
-                        onChanged('');
-                      },
-                      semanticLabel: 'Clear search',
-                      minTapSize: kMinTap,
-                      builder: (context, pressed) =>
-                          Icon(LucideIcons.x, size: 16, color: pressed ? ds.text : ds.textSecondary),
-                    ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }

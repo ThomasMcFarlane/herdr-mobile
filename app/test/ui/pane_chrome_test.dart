@@ -187,7 +187,7 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(tester.getSize(find.byType(PaneTopBar)).height, 52);
       expect(find.byTooltip('Back'), findsOneWidget);
-      expect(find.byTooltip('Wrap lines to screen'), findsOneWidget);
+      expect(find.byTooltip('Pane options'), findsOneWidget);
       await _tearDown(tester, h);
     });
   });

@@ -1,6 +1,6 @@
 // News that another agent needs you: one haptic for an agent that starts
 // waiting (by key, so a handover is not news), quiet at start-up and in a
-// burst, and a count that pops once when it rises.
+// burst, and a count that rolls once when it changes.
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -130,42 +130,44 @@ void main() {
     });
   });
 
-  group('PopOnRise', () {
-    Widget host(int value, {bool reduced = false}) => MediaQuery(
+  group('RollText', () {
+    Widget host(String text, {bool reduced = false}) => MediaQuery(
       data: MediaQueryData(disableAnimations: reduced),
       child: Directionality(
         textDirection: TextDirection.ltr,
-        child: PopOnRise(value: value, child: const SizedBox(key: ValueKey('badge'), width: 20, height: 20)),
+        child: Center(child: RollText(text: text, style: Type.badge)),
       ),
     );
 
-    double scaleOf(WidgetTester tester) {
-      final scale = tester.widgetList<ScaleTransition>(find.byType(ScaleTransition));
-      return scale.isEmpty ? 1.0 : scale.first.scale.value;
-    }
+    testWidgets('rolls once when the count changes, only the changed part; still at rest', (tester) async {
+      await tester.pumpWidget(host('2 need you'));
+      expect(tester.hasRunningAnimations, isFalse, reason: 'nothing at rest, nothing on first show');
+      expect(find.text('2 need you'), findsOneWidget);
 
-    testWidgets('grows and settles once when the count rises; still at rest', (tester) async {
-      await tester.pumpWidget(host(1));
-      expect(find.byType(ScaleTransition), findsNothing, reason: 'nothing at rest, nothing on first show');
-
-      await tester.pumpWidget(host(2));
+      await tester.pumpWidget(host('3 need you'));
       await tester.pump(const Duration(milliseconds: 60));
-      expect(scaleOf(tester), greaterThan(1.05));
+      expect(tester.hasRunningAnimations, isTrue);
+      expect(find.text('2'), findsOneWidget, reason: 'the old number leaves');
+      expect(find.text('3'), findsOneWidget, reason: 'the new number arrives');
+
       await tester.pump(const Duration(milliseconds: 400));
-      expect(scaleOf(tester), 1.0);
       expect(tester.hasRunningAnimations, isFalse, reason: 'it does not loop');
+      expect(find.text('3 need you'), findsOneWidget, reason: 'one plain text again');
+      expect(find.text('2'), findsNothing);
     });
 
-    testWidgets('a count going down does not pop, and reduced motion skips it', (tester) async {
-      await tester.pumpWidget(host(3));
-      await tester.pumpWidget(host(2));
+    testWidgets('a number is replaced whole (9 to 10), and reduced motion swaps at once', (tester) async {
+      await tester.pumpWidget(host('9'));
+      await tester.pumpWidget(host('10'));
       await tester.pump(const Duration(milliseconds: 60));
-      expect(find.byType(ScaleTransition), findsNothing);
+      expect(find.text('9'), findsOneWidget);
+      expect(find.text('10'), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 400));
 
-      await tester.pumpWidget(host(2, reduced: true));
-      await tester.pumpWidget(host(4, reduced: true));
-      await tester.pump(const Duration(milliseconds: 60));
-      expect(find.byType(ScaleTransition), findsNothing);
+      await tester.pumpWidget(host('10', reduced: true));
+      await tester.pumpWidget(host('11', reduced: true));
+      expect(tester.hasRunningAnimations, isFalse);
+      expect(find.text('11'), findsOneWidget);
     });
   });
 }

@@ -260,7 +260,9 @@ void main() {
     await tester.tap(find.text('localhost:5173'));
     await tester.pump(const Duration(milliseconds: 200));
     expect(find.text('Opening localhost:5173…'), findsOneWidget);
-    await tester.pump(const Duration(seconds: 6)); // the toast over the sheet's bottom row is gone
+    // The toast's clock starts once it is in place; then it is gone from over the sheet's bottom row.
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(seconds: 6));
 
     // A second tap on the same row, from a reopened sheet, while it connects.
     await tester.tap(find.text('Made'));

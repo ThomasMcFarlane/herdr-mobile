@@ -41,7 +41,7 @@ void main() {
 
   // Turn keys are `turn:<user key>`; the tests read them without the prefix.
   List<String> keys(TranscriptPlan p) => p.rows.map((r) => r.key.replaceFirst('turn:', '')).toList();
-  List<RowKind> kinds(TranscriptPlan p) => p.rows.map((r) => r.kind).toList();
+  List<TranscriptRowKind> kinds(TranscriptPlan p) => p.rows.map((r) => r.kind).toList();
 
   TranscriptTool edit(String id, String path, {String? old, String text = 'new'}) => toolItem(
     id,
@@ -99,11 +99,11 @@ void main() {
           agentMsg('a', 'Done: the parser normalizes first.'),
         ]);
       expect(kinds(plan), [
-        RowKind.user,
-        RowKind.fold,
-        RowKind.changedHead,
-        RowKind.changedFile,
-        RowKind.text,
+        TranscriptRowKind.user,
+        TranscriptRowKind.fold,
+        TranscriptRowKind.changedHead,
+        TranscriptRowKind.changedFile,
+        TranscriptRowKind.text,
       ]);
       expect(keys(plan), ['u', 'u:log', 'u:changed', 'u:changed:/a/lib/parse.dart', 'a#0']);
       expect(plan.rows.last.quiet, isFalse, reason: 'the answer');
@@ -113,12 +113,12 @@ void main() {
 
     test('a turn with no work and no files is the message and the answer', () {
       final plan = TranscriptPlan()..update([userMsg('u', 'hi'), agentMsg('a', 'Hello.')]);
-      expect(kinds(plan), [RowKind.user, RowKind.text]);
+      expect(kinds(plan), [TranscriptRowKind.user, TranscriptRowKind.text]);
     });
 
     test('a turn with no user message (autonomous, or after a replay) has no user row', () {
       final plan = TranscriptPlan()..update([read('r', '/a/b.dart'), agentMsg('a', 'Found it.')]);
-      expect(kinds(plan), [RowKind.fold, RowKind.text]);
+      expect(kinds(plan), [TranscriptRowKind.fold, TranscriptRowKind.text]);
       expect(plan.rows.first.gap, 0);
     });
 
@@ -129,9 +129,9 @@ void main() {
           edit('e1', '/a/x.dart'),
           toolItem('t2', title: 'dart test', kind: ToolKind.execute, status: ToolStatus.inProgress),
         ], live: true);
-      expect(kinds(plan), [RowKind.user, RowKind.tool, RowKind.tool]);
-      expect(plan.rows.where((r) => r.kind == RowKind.fold), isEmpty);
-      expect(plan.rows.where((r) => r.kind == RowKind.changedHead), isEmpty);
+      expect(kinds(plan), [TranscriptRowKind.user, TranscriptRowKind.tool, TranscriptRowKind.tool]);
+      expect(plan.rows.where((r) => r.kind == TranscriptRowKind.fold), isEmpty);
+      expect(plan.rows.where((r) => r.kind == TranscriptRowKind.changedHead), isEmpty);
     });
 
     test('the log opens and folds with its toggle, and only that turn is planned again', () {
@@ -209,7 +209,7 @@ void main() {
       final plan = TranscriptPlan(open: open)..update(items);
       expect(keys(plan), ['u', 'u:log', 'tool:r1:group', 'tool:bad', 'tool:r3', 'a#0']);
       final group = plan.rows[2];
-      expect(group.kind, RowKind.group);
+      expect(group.kind, TranscriptRowKind.group);
       expect(group.group!.label, 'Read 2 files \u00b7 searched once');
 
       open.add('tool:r1:group');
@@ -247,8 +247,8 @@ void main() {
         agentMsg('a', 'Done.'),
       ];
       final plan = TranscriptPlan(open: open)..update(items);
-      expect(plan.rows.where((r) => r.kind == RowKind.changedFile), hasLength(6));
-      final more = plan.rows.firstWhere((r) => r.kind == RowKind.changedMore);
+      expect(plan.rows.where((r) => r.kind == TranscriptRowKind.changedFile), hasLength(6));
+      final more = plan.rows.firstWhere((r) => r.kind == TranscriptRowKind.changedMore);
       expect(more.count, 4);
       expect(more.last, isTrue);
       expect(plan.rows.where((r) => r.last), hasLength(1), reason: 'one bottom edge');
@@ -256,14 +256,14 @@ void main() {
       open.add('turn:u:changed:all');
       plan.refresh('turn:u:changed:all');
       plan.update(items);
-      expect(plan.rows.where((r) => r.kind == RowKind.changedFile), hasLength(10));
-      expect(plan.rows.firstWhere((r) => r.kind == RowKind.changedMore).open, isTrue, reason: 'Show fewer');
+      expect(plan.rows.where((r) => r.kind == TranscriptRowKind.changedFile), hasLength(10));
+      expect(plan.rows.firstWhere((r) => r.kind == TranscriptRowKind.changedMore).open, isTrue, reason: 'Show fewer');
 
       // Six files fit: no more row, the sixth file ends the card.
       final six = TranscriptPlan()
         ..update([userMsg('u', 'go'), for (var i = 0; i < 6; i++) edit('e$i', '/a/f$i.dart'), agentMsg('a', 'Done.')]);
-      expect(six.rows.where((r) => r.kind == RowKind.changedMore), isEmpty);
-      expect(six.rows.where((r) => r.kind == RowKind.changedFile).last.last, isTrue);
+      expect(six.rows.where((r) => r.kind == TranscriptRowKind.changedMore), isEmpty);
+      expect(six.rows.where((r) => r.kind == TranscriptRowKind.changedFile).last.last, isTrue);
     });
 
     test('a failed edit changes nothing: no card', () {
@@ -273,7 +273,7 @@ void main() {
           toolItem('e', kind: ToolKind.edit, status: ToolStatus.failed, content: const [ToolDiff(path: '/a/x', newText: 'x')]),
           agentMsg('a', 'Failed.'),
         ]);
-      expect(plan.rows.where((r) => r.kind == RowKind.changedHead), isEmpty);
+      expect(plan.rows.where((r) => r.kind == TranscriptRowKind.changedHead), isEmpty);
     });
 
     test('only the turns from the first changed one are planned again', () {

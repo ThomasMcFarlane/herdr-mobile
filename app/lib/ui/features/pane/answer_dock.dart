@@ -9,7 +9,7 @@ import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/pane_previews.dart';
 import '../../support/tap_guard.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
-import '../agents/agent_card.dart' show promptSubjectStyle;
+import '../agents/answer_surface.dart';
 import '../agents/quick_reply_controller.dart';
 import '../agents/reply_chips.dart';
 import '../agents/reply_sheet.dart';
@@ -29,9 +29,9 @@ const dockChipLimit = 4;
 /// with tickers off, see `TickerMode`): the watch is released when another
 /// screen covers it, the pane stops being blocked, or the page goes.
 ///
-/// Its height is the question (one line when there is a subject, else two), the
-/// subject (at most two lines of mono: what the answer approves, always next to
-/// the thumb that approves it) and [ReplyChips.heightFor] the chip count. It
+/// Its height is the question and its subject ([QuestionWash], compact: at
+/// most two lines of each, `Read all` opens the reply sheet when either is
+/// cut) and [ReplyChips.heightFor] the chip count. It
 /// reads nothing from the window insets, and the page builds it once, so the
 /// keyboard animation never rebuilds it.
 ///
@@ -52,17 +52,17 @@ class AnswerDock extends StatefulWidget {
   State<AnswerDock> createState() => _AnswerDockState();
 }
 
-class _AnswerDockState extends State<AnswerDock> with TapGuardState<AnswerDock> {
+class _AnswerDockState extends State<AnswerDock> with TapGuardState<AnswerDock>, AnswerSurfaceMixin<AnswerDock> {
   late final MachineConnection _machine = context.read<MachineConnection>();
   late final PanePreviews _previews = context.read<PanePreviews>();
-  PreviewHandle? _handle;
-  QuickReplyController? _reply;
-  PromptInfo? _sentFor;
-
-  /// The question the dock shows, null while it shows none: a different one
-  /// arms the guard again.
-  PromptInfo? _shown;
   bool _onScreen = true;
+
+  @override
+  MachineConnection get answerMachine => _machine;
+  @override
+  String get answerPaneId => widget.paneId;
+  @override
+  PanePreviews get answerPreviews => _previews;
 
   @override
   void initState() {
@@ -80,8 +80,6 @@ class _AnswerDockState extends State<AnswerDock> with TapGuardState<AnswerDock> 
   @override
   void dispose() {
     _machine.removeListener(_onMachine);
-    _release();
-    _reply?.dispose();
     super.dispose();
   }
 
@@ -92,65 +90,24 @@ class _AnswerDockState extends State<AnswerDock> with TapGuardState<AnswerDock> 
 
   void _onMachine() {
     if (!mounted) return;
-    final before = _handle;
+    final before = answerHandle;
     _sync();
-    if ((before == null) != (_handle == null)) setState(() {});
+    if ((before == null) != (answerHandle == null)) setState(() {});
   }
 
   /// Makes the watch match [_wantsWatch]. Never rebuilds: callers do.
-  void _sync() {
-    if (_wantsWatch) {
-      if (_handle != null) return;
-      final handle = _previews.watch(
-        _machine.profile.id,
-        widget.paneId,
-      );
-      handle.preview.addListener(_onPreview);
-      _handle = handle;
-      _onPreview();
-    } else {
-      _release();
-    }
-  }
+  void _sync() => _wantsWatch ? watchAnswers(notify: true) : releaseAnswers();
 
-  void _release() {
-    final handle = _handle;
-    if (handle == null) return;
-    handle.preview.removeListener(_onPreview);
-    handle.release();
-    _handle = null;
-    _shown = null;
-    widget.asking.value = false;
-  }
-
-  void _onPreview() {
-    final prompt = _handle?.preview.value?.prompt;
-    // The dock appeared, or its question changed under the thumb: the rebuild
-    // this preview brings draws the answers dimmed and deaf.
-    if (prompt != _shown) {
-      _shown = prompt;
-      widget.asking.value = prompt != null;
-      if (prompt != null) rearmGuard();
-    }
-    // A new question while "Sent" is showing: the answer did something and the
-    // agent asked again, so show the new chips now instead of after the hold.
-    final reply = _reply;
-    if (reply == null || reply.phase != ReplyPhase.sent) return;
-    if (prompt != _sentFor) reply.reset();
-  }
-
-  QuickReplyController get _controller => _reply ??= QuickReplyController(
-    machine: _machine,
-    paneId: widget.paneId,
-    previews: _previews,
-  );
+  /// The dock appeared, or its question changed under the thumb: the rebuild
+  /// this preview brings draws the answers dimmed and deaf.
+  @override
+  void onShownChanged(PromptInfo? prompt) => widget.asking.value = prompt != null;
 
   /// The chips are deaf while unsettled; this refuses too, so no path to an
   /// answer skips the guard. [asked] is the question the chips were drawn for.
   Future<void> _choose(PromptInfo asked, QuickReply reply) async {
     if (!settled) return;
-    _sentFor = asked;
-    await _controller.choose(reply, asked: asked);
+    await chooseAnswer(asked, reply);
   }
 
   void _openSheet() {
@@ -160,7 +117,7 @@ class _AnswerDockState extends State<AnswerDock> with TapGuardState<AnswerDock> 
 
   @override
   Widget build(BuildContext context) {
-    final handle = _handle;
+    final handle = answerHandle;
     if (handle == null) return const SizedBox.shrink();
     return ValueListenableBuilder<PanePreview?>(
       valueListenable: handle.preview,
@@ -169,7 +126,7 @@ class _AnswerDockState extends State<AnswerDock> with TapGuardState<AnswerDock> 
         if (prompt == null) return const SizedBox.shrink();
         return _Dock(
           prompt: prompt,
-          controller: _controller,
+          controller: answerController,
           onChoose: (r) => _choose(prompt, r),
           onMore: _openSheet,
           guarded: !settled,
@@ -196,45 +153,15 @@ class _Dock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ds = context.ds;
     final chips = ReplyChips.count(prompt, limit: dockChipLimit);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.sm),
+      padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.sm),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: ds.blockedWash,
-              borderRadius: BorderRadius.circular(Radii.sm),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    prompt.question,
-                    maxLines: prompt.subject.isEmpty ? 2 : 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Type.prompt.copyWith(color: ds.text),
-                  ),
-                  if (prompt.subject.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      prompt.subject,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: promptSubjectStyle.copyWith(color: ds.text),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
+          QuestionWash(question: prompt.question, subject: prompt.subject, onReadAll: onMore),
+          const SizedBox(height: Gap.sm),
           SizedBox(
             height: ReplyChips.heightFor(chips),
             child: ReplyChips(

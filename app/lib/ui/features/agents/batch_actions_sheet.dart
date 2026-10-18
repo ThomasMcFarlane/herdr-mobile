@@ -141,28 +141,37 @@ class _BatchSheetState extends State<BatchSheet> {
     // A message has its own group for the agents that wait for an answer.
     final skipped = message ? plan.others : plan.skipped;
 
-    return Padding(
-      // Lifts the sheet over the keyboard.
-      padding: EdgeInsets.only(top: Gap.xl, bottom: Gap.lg + MediaQuery.viewInsetsOf(context).bottom),
+    return SheetScaffold(
+      title: title,
+      kind: SheetKind.form,
+      // The target rows and their section labels bring their own gutter.
+      bleed: true,
+      actions: [
+        AppButton(
+          label: '$verb ${agentCount(n)}',
+          kind: _action == BatchAction.close ? AppButtonKind.danger : AppButtonKind.primary,
+          expand: true,
+          onPressed: canConfirm ? () => _confirm(plan) : null,
+        ),
+        AppButton(
+          label: 'Cancel',
+          kind: AppButtonKind.secondary,
+          expand: true,
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ],
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: Gap.gutter),
-            child: Semantics(
-              header: true,
-              child: Text(title, style: Type.title.copyWith(color: ds.text)),
-            ),
-          ),
           if (about != null)
             Padding(
-              padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.sm, Gap.gutter, 0),
+              padding: const EdgeInsets.symmetric(horizontal: Gap.gutter),
               child: Text(about, style: Type.compact.copyWith(color: ds.textSecondary)),
             ),
           if (message)
             Padding(
-              padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.lg, Gap.gutter, 0),
+              padding: const EdgeInsets.only(left: Gap.gutter, top: Gap.lg, right: Gap.gutter),
               child: LabeledField(
                 label: 'Message',
                 controller: _text,
@@ -219,24 +228,6 @@ class _BatchSheetState extends State<BatchSheet> {
                   ],
                 ],
               ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.lg, Gap.gutter, 0),
-            child: AppButton(
-              label: '$verb ${agentCount(n)}',
-              kind: _action == BatchAction.close ? AppButtonKind.danger : AppButtonKind.primary,
-              expand: true,
-              onPressed: canConfirm ? () => _confirm(plan) : null,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.sm, Gap.gutter, 0),
-            child: AppButton(
-              label: 'Cancel',
-              kind: AppButtonKind.secondary,
-              expand: true,
-              onPressed: () => Navigator.of(context).pop(),
             ),
           ),
         ],

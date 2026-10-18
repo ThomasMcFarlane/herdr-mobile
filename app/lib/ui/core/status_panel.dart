@@ -33,6 +33,7 @@ class StatusPanel extends StatelessWidget {
     this.messageMaxLines,
     this.footer,
     this.trailing,
+    this.liveRegion = false,
   });
 
   final Color color;
@@ -46,6 +47,9 @@ class StatusPanel extends StatelessWidget {
   final Widget? footer;
   final Widget? trailing;
 
+  /// Announce the panel when it appears (a state that arrives on its own).
+  final bool liveRegion;
+
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
@@ -54,6 +58,7 @@ class StatusPanel extends StatelessWidget {
     final vertical = trailing == null ? StatusTint.pad : Gap.sm;
     return Semantics(
       container: true,
+      liveRegion: liveRegion,
       child: Container(
         width: double.infinity,
         padding: EdgeInsets.fromLTRB(StatusTint.pad, vertical, trailing == null ? StatusTint.pad : Gap.sm, vertical),

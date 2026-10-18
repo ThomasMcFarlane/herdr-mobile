@@ -105,18 +105,15 @@ class _SessionOverviewState extends State<SessionOverview> {
         final usage = state.usage;
         final runs = state.subagents;
         final observed = session.subagents;
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(Gap.lg, 8, Gap.lg, Gap.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(top: Gap.sm),
-                child: Semantics(
-                  header: true,
-                  child: Text('Session overview', style: Type.label.copyWith(color: ds.textSecondary)),
-                ),
-              ),
+        return SheetScaffold(
+          title: 'Session overview',
+          kind: SheetKind.list,
+          child: Padding(
+            // The list kind's inset 4 + 12: the facts sit 16 from the edge.
+            padding: const EdgeInsets.symmetric(horizontal: Gap.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
               _StatusRow(snap: snap),
               if (model.goal != null) ...[
                 _Section('Goal'),
@@ -132,7 +129,7 @@ class _SessionOverviewState extends State<SessionOverview> {
                 _Bar(fraction: progress.done / progress.total, color: ds.done),
                 if (progress.current != null)
                   Padding(
-                    padding: const EdgeInsets.only(top: 6),
+                    padding: const EdgeInsets.only(top: Gap.sm),
                     child: Text(
                       visibleText(progress.current!),
                       maxLines: 2,
@@ -147,7 +144,8 @@ class _SessionOverviewState extends State<SessionOverview> {
               if (chips.isNotEmpty) ..._settings(context, chips),
               if (usage != null || state.turnUsage != null) ..._usage(context, usage, state.turnUsage),
               if (state.pending.isNotEmpty) ..._pending(context, state.pending),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -181,18 +179,11 @@ class _SessionOverviewState extends State<SessionOverview> {
                 onToggle: (id) => _toggle(id.startsWith('overview:') ? id.replaceFirst('overview:', 'file:') : id),
               ),
             if (more > 0)
-              PressBuilder(
+              PressRow(
                 onTap: () => setState(() => _filesShown += 16),
-                builder: (context, pressed) => Container(
-                  constraints: const BoxConstraints(minHeight: kMinTap),
-                  alignment: Alignment.centerLeft,
-                  padding: const EdgeInsets.symmetric(horizontal: Gap.md),
-                  color: pressed ? ds.fillPressed : ds.fill,
-                  child: Text(
-                    '$more more',
-                    style: Type.secondary.copyWith(color: ds.textSecondary, fontWeight: FontWeight.w600),
-                  ),
-                ),
+                minHeight: kMinTap,
+                padding: const EdgeInsets.symmetric(horizontal: Gap.md - PressRow.inset),
+                child: Text('$more more', style: Type.labelStrong.copyWith(color: ds.accentText)),
               ),
           ],
         ),
@@ -239,26 +230,18 @@ class _SessionOverviewState extends State<SessionOverview> {
     }
     return [
       _Section('Subagents'),
-      PressBuilder(
+      PressRow(
         onTap: () => _leave((c) => unawaited(showSubagents(c, widget.session))),
-        builder: (context, pressed) => AnimatedContainer(
-          duration: Motion.pressing(pressed),
-          curve: Motion.easeOut,
-          constraints: const BoxConstraints(minHeight: kMinTap),
-          padding: const EdgeInsets.symmetric(horizontal: Gap.xs),
-          decoration: BoxDecoration(
-            color: pressed ? ds.fill : Colors.transparent,
-            borderRadius: BorderRadius.circular(Radii.sm),
-          ),
+        minHeight: kMinTap,
+        padding: const EdgeInsets.symmetric(horizontal: Gap.xs),
           child: Row(
             children: [
-              Icon(LucideIcons.bot, size: 16, color: ds.textSecondary),
-              const SizedBox(width: 10),
+              Icon(LucideIcons.bot, size: IconSize.row, color: ds.textSecondary),
+              const SizedBox(width: Gap.sm),
               Expanded(child: Text(text, style: Type.secondary.copyWith(color: ds.text, fontWeight: FontWeight.w500))),
-              Icon(LucideIcons.chevronRight, size: 14, color: ds.textTertiary),
+              Icon(LucideIcons.chevronRight, size: IconSize.inline, color: ds.textTertiary),
             ],
           ),
-        ),
       ),
     ];
   }
@@ -348,25 +331,18 @@ class _SessionOverviewState extends State<SessionOverview> {
     return [
       _Section('Waiting for you', detail: '${pending.length}', detailColor: ds.blockedText),
       for (final p in pending.take(3))
-        PressBuilder(
+        PressRow(
           onTap: () => Navigator.of(context).pop(),
-          builder: (context, pressed) => AnimatedContainer(
-            duration: Motion.pressing(pressed),
-            curve: Motion.easeOut,
-            constraints: const BoxConstraints(minHeight: kMinTap),
-            padding: const EdgeInsets.symmetric(horizontal: Gap.xs, vertical: 6),
-            decoration: BoxDecoration(
-              color: pressed ? ds.fill : Colors.transparent,
-              borderRadius: BorderRadius.circular(Radii.sm),
-            ),
+          minHeight: kMinTap,
+          padding: const EdgeInsets.symmetric(horizontal: Gap.xs, vertical: Gap.xs),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: StatusGlyph(status: AgentStatus.blocked, size: 16),
+                  padding: const EdgeInsets.only(top: Gap.hair),
+                  child: StatusGlyph(status: AgentStatus.blocked, size: IconSize.row),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: Gap.sm),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -389,7 +365,6 @@ class _SessionOverviewState extends State<SessionOverview> {
                 ),
               ],
             ),
-          ),
         ),
       if (pending.length > 3)
         Padding(
@@ -568,28 +543,21 @@ class _CommandRow extends StatelessWidget {
     final text = visibleText(command.command);
     return Semantics(
       expanded: open,
-      child: PressBuilder(
+      child: PressRow(
         onTap: onTap,
         semanticLabel: [text, if (command.failed) 'failed', ?code].join(', '),
-        builder: (context, pressed) => AnimatedContainer(
-          duration: Motion.pressing(pressed),
-          curve: Motion.easeOut,
-          constraints: const BoxConstraints(minHeight: kMinTap),
-          padding: const EdgeInsets.symmetric(horizontal: Gap.xs, vertical: 6),
-          decoration: BoxDecoration(
-            color: pressed ? ds.fill : Colors.transparent,
-            borderRadius: BorderRadius.circular(Radii.sm),
-          ),
+        minHeight: kMinTap,
+        padding: const EdgeInsets.symmetric(horizontal: Gap.xs, vertical: Gap.xs),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
                 padding: const EdgeInsets.only(top: 1),
                 child: command.failed
-                    ? Icon(LucideIcons.circleX, size: 16, color: ds.danger)
-                    : Icon(LucideIcons.terminal, size: 16, color: ds.textSecondary),
+                    ? Icon(LucideIcons.circleX, size: IconSize.row, color: ds.danger)
+                    : Icon(LucideIcons.terminal, size: IconSize.row, color: ds.textSecondary),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: Gap.sm),
               Expanded(
                 child: Text(
                   text,
@@ -611,7 +579,6 @@ class _CommandRow extends StatelessWidget {
               ],
             ],
           ),
-        ),
       ),
     );
   }

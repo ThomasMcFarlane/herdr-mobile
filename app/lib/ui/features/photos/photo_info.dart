@@ -82,18 +82,13 @@ class _InfoBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ds = context.ds;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.lg, Gap.gutter, Gap.md),
+    return SheetScaffold(
+      title: 'Photo info',
+      kind: SheetKind.message,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Semantics(
-            header: true,
-            child: Text('Photo info', style: Type.title.copyWith(color: ds.text)),
-          ),
-          const SizedBox(height: Gap.sm),
           for (final (i, row) in rows.indexed) _Row(row: row, divider: i < rows.length - 1),
         ],
       ),
@@ -143,7 +138,7 @@ class _Row extends StatelessWidget {
                 icon: LucideIcons.copy,
                 tooltip: 'Copy ${row.label.toLowerCase()}',
                 size: 36,
-                onPressed: () => copyToClipboard(context, copy, row.copied ?? 'Copied'),
+                onPressed: () => copyText(context, copy, what: row.copied ?? 'Copied'),
               ),
             ],
           ),

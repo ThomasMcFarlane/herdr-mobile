@@ -922,17 +922,10 @@ class _LinkStrip extends StatelessWidget {
     unawaited(
       showAppSheet<void>(
         context,
-        builder: (ctx) => Padding(
-          padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.xl, Gap.gutter, Gap.lg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Semantics(header: true, child: Text(title, style: Type.title.copyWith(color: ctx.ds.text))),
-              const SizedBox(height: Gap.sm),
-              SelectableText(reason, style: Type.compact.copyWith(color: ctx.ds.textSecondary)),
-            ],
-          ),
+        builder: (ctx) => SheetScaffold(
+          title: title,
+          kind: SheetKind.message,
+          child: SelectableText(reason, style: Type.compact.copyWith(color: ctx.ds.textSecondary)),
         ),
       ),
     );

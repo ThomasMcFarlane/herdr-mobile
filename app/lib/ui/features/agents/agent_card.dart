@@ -7,13 +7,14 @@ import 'package:provider/provider.dart';
 import '../../../data/models/herdr_models.dart';
 import '../../../data/models/pane_preview.dart';
 import '../../../data/repositories/agent_screens.dart';
+import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/pane_previews.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../../support/step_clock.dart';
 import '../../support/tap_guard.dart';
 import 'agent_navigation.dart';
+import 'answer_surface.dart';
 import 'agents_grouping.dart';
-import 'quick_reply_controller.dart';
 import 'reply_chips.dart';
 import 'reply_sheet.dart';
 import 'board_selection.dart';
@@ -36,16 +37,6 @@ const previewTextStyle = TextStyle(
   fontFamily: monoFamily,
   fontSize: previewFontSize,
   height: previewHeightFactor,
-  fontFeatures: [FontFeature.disable('liga'), FontFeature.disable('calt')],
-);
-
-/// What a prompt is about (the command, the URL, the path), a notch larger
-/// than [previewTextStyle] because it is what an approval is read from. The
-/// caller adds the colour.
-const promptSubjectStyle = TextStyle(
-  fontFamily: monoFamily,
-  fontSize: 12.5,
-  height: 1.35,
   fontFeatures: [FontFeature.disable('liga'), FontFeature.disable('calt')],
 );
 
@@ -73,18 +64,19 @@ class AgentCard extends StatefulWidget {
   State<AgentCard> createState() => _AgentCardState();
 }
 
-class _AgentCardState extends State<AgentCard> with SingleTickerProviderStateMixin, TapGuardState<AgentCard> {
+class _AgentCardState extends State<AgentCard>
+    with SingleTickerProviderStateMixin, TapGuardState<AgentCard>, AnswerSurfaceMixin<AgentCard> {
   // Created on the first arrival, like the glyph's: a card that never gets
   // news carries one null field.
   AnimationController? _arrival;
   late final PanePreviews _previews;
-  PreviewHandle? _handle;
-  QuickReplyController? _reply;
-  PromptInfo? _sentFor;
 
-  /// The question the chips answer, null while the card shows none: a
-  /// different one arms the guard again.
-  PromptInfo? _shown;
+  @override
+  MachineConnection get answerMachine => _agent.machine;
+  @override
+  String get answerPaneId => _agent.paneId;
+  @override
+  PanePreviews get answerPreviews => _previews;
 
   AgentRowData get _agent => widget.agent;
 
@@ -110,11 +102,11 @@ class _AgentCardState extends State<AgentCard> with SingleTickerProviderStateMix
     _onScreen = TickerMode.valuesOf(context).enabled;
     _syncWatch();
     if (_started) {
-      _syncShown();
+      syncShown();
     } else {
       // The guard is already armed: the card, and its answers, just appeared.
       _started = true;
-      _shown = _promptIn(_handle?.preview.value);
+      shownPrompt = _promptIn(answerHandle?.preview.value);
     }
   }
 
@@ -122,7 +114,7 @@ class _AgentCardState extends State<AgentCard> with SingleTickerProviderStateMix
   void didUpdateWidget(AgentCard old) {
     super.didUpdateWidget(old);
     _syncWatch();
-    _syncShown();
+    syncShown();
     final news = widget.agent.status == AgentStatus.blocked || widget.agent.status == AgentStatus.done;
     if (news && old.agent.status != widget.agent.status && !Motion.reduced(context)) {
       // The card changed section: a faint accent wash that fades finds it.
@@ -131,47 +123,25 @@ class _AgentCardState extends State<AgentCard> with SingleTickerProviderStateMix
   }
 
   void _syncWatch() {
-    if (_wantsPreview && _handle == null) {
-      _handle = _previews.watch(_agent.machine.profile.id, _agent.paneId)..preview.addListener(_onPreview);
-    } else if (!_wantsPreview && _handle != null) {
-      _releaseWatch();
+    if (_wantsPreview && answerHandle == null) {
+      watchAnswers();
+    } else if (!_wantsPreview && answerHandle != null) {
+      releaseAnswers();
     }
-  }
-
-  void _releaseWatch() {
-    _handle?.preview.removeListener(_onPreview);
-    _handle?.release();
-    _handle = null;
   }
 
   /// The question the card shows from [preview]: only a live blocked agent's.
   PromptInfo? _promptIn(PanePreview? preview) =>
       _agent.status == AgentStatus.blocked && !_agent.stale ? preview?.prompt : null;
 
-  /// A question arrived, changed (a new one after `Sent` included) or came
-  /// back with the link: its answers are new under the thumb, so they are
-  /// deaf and dimmed for `tapGuard`. Runs before the rebuild that draws them.
-  void _syncShown() {
-    final prompt = _promptIn(_handle?.preview.value);
-    if (prompt == _shown) return;
-    _shown = prompt;
-    if (prompt != null) rearmGuard();
-  }
-
-  void _onPreview() {
-    _syncShown();
-    // A new question while "Sent" is showing: the answer did something and the
-    // agent asked again, so show the new chips now instead of after the hold.
-    final reply = _reply;
-    if (reply == null || reply.phase != ReplyPhase.sent) return;
-    if (_handle?.preview.value?.prompt != _sentFor) reply.reset();
-  }
+  @override
+  PromptInfo? answerPromptIn(PanePreview? preview) => _promptIn(preview);
 
   /// The card changed height (it grows as a question arrives, a line above
   /// the question wraps): its answers, pinned to its bottom, moved under the
   /// thumb. Called during layout, so the dimmed redraw waits for the frame.
   bool _onResize(SizeChangedLayoutNotification _) {
-    if (_shown == null) return true;
+    if (shownPrompt == null) return true;
     final wasSettled = settled;
     rearmGuard();
     if (wasSettled) {
@@ -182,9 +152,6 @@ class _AgentCardState extends State<AgentCard> with SingleTickerProviderStateMix
     return true;
   }
 
-  QuickReplyController get _controller => _reply ??=
-      QuickReplyController(machine: _agent.machine, paneId: _agent.paneId, previews: _previews);
-
   /// Neither the card's own guard nor the board's (`SettleGate`) is open: the
   /// answers moved or changed a moment ago.
   bool get _unsettled => !settled || (context.read<SettleGate?>()?.closed ?? false);
@@ -193,8 +160,7 @@ class _AgentCardState extends State<AgentCard> with SingleTickerProviderStateMix
   /// answer skips the guard. [asked] is the question the chips were drawn for.
   Future<void> _choose(PromptInfo asked, QuickReply r) async {
     if (_unsettled) return;
-    _sentFor = asked;
-    await _controller.choose(r, asked: asked);
+    await chooseAnswer(asked, r);
   }
 
   void _more() {
@@ -203,8 +169,6 @@ class _AgentCardState extends State<AgentCard> with SingleTickerProviderStateMix
 
   @override
   void dispose() {
-    _releaseWatch();
-    _reply?.dispose();
     _arrival?.dispose();
     super.dispose();
   }
@@ -226,7 +190,7 @@ class _AgentCardState extends State<AgentCard> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
-    final handle = _handle;
+    final handle = answerHandle;
     return AnimatedBuilder(
       animation: _arrival ?? kAlwaysDismissedAnimation,
       builder: (context, _) => handle == null
@@ -301,7 +265,13 @@ class _AgentCardState extends State<AgentCard> with SingleTickerProviderStateMix
                   Padding(padding: const EdgeInsets.only(left: _glyphColumn), child: StateTime(agent: a)),
                 if (!slim) const SizedBox(height: 10),
                 if (prompt != null) ...[
-                  _QuestionBlock(question: prompt.question, subject: prompt.subject),
+                  QuestionWash(
+                    question: prompt.question,
+                    subject: prompt.subject,
+                    // Room for the reply circle that floats over the wash's end.
+                    trailing: const SizedBox(width: _replyRoom),
+                    onReadAll: _more,
+                  ),
                   SizedBox(height: 10 + chipsHeight),
                 ] else if (shown > 0)
                   _PreviewPanel(
@@ -333,7 +303,7 @@ class _AgentCardState extends State<AgentCard> with SingleTickerProviderStateMix
               ignoring: sel.active,
               child: ReplyChips(
                 prompt: prompt,
-                controller: _controller,
+                controller: answerController,
                 onChoose: (r) => _choose(prompt, r),
                 onMore: _more,
                 guarded: guarded,
@@ -389,6 +359,10 @@ class _AgentCardState extends State<AgentCard> with SingleTickerProviderStateMix
 
   /// Glyph (22) + gap (10): text starts here.
   static const _glyphColumn = 32.0;
+
+  /// The reply circle's 44 hit box ends at the wash's edge: its text stops
+  /// this much before the wash's own padding.
+  static const _replyRoom = kMinTap - Gap.md;
 }
 
 class _Header extends StatelessWidget {
@@ -505,51 +479,6 @@ class _Subtitle extends StatelessWidget {
   }
 }
 
-/// The question a blocked agent asks, on a faint orange wash, and under it
-/// what the question is about (the command, the path) in mono: the thing the
-/// answer approves is always in front of the thumb that approves it.
-class _QuestionBlock extends StatelessWidget {
-  const _QuestionBlock({required this.question, required this.subject});
-
-  final String question;
-  final String subject;
-
-  @override
-  Widget build(BuildContext context) {
-    final ds = context.ds;
-    return Container(
-      constraints: const BoxConstraints(minHeight: kMinTap),
-      padding: const EdgeInsets.fromLTRB(12, 8, 44, 8),
-      alignment: Alignment.centerLeft,
-      decoration: BoxDecoration(
-        color: ds.blockedWash,
-        borderRadius: BorderRadius.circular(Radii.sm),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            question,
-            maxLines: subject.isEmpty ? 3 : 2,
-            overflow: TextOverflow.ellipsis,
-            style: Type.prompt.copyWith(color: ds.text),
-          ),
-          if (subject.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              subject,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: promptSubjectStyle.copyWith(color: ds.text),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
 /// The last few rows of a terminal in a calm inset panel. Fixed height for
 /// [rows] lines (no jumping as lines arrive), text bottom-aligned, a soft fade
 /// at the top, nothing wraps. `lines == null` is "still loading".
@@ -625,21 +554,21 @@ class _PreviewPanel extends StatelessWidget {
     }
 
     return ExcludeSemantics(
-      child: Container(
-        height: rows * line + 16,
-        clipBehavior: Clip.hardEdge,
-        decoration: BoxDecoration(
-          color: ds.fill,
-          borderRadius: BorderRadius.circular(9),
-        ),
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(10, 8, reserveReply ? 40 : 10, 8),
-                child: content,
-              ),
-            ),
+      child: SizedBox(
+        height: rows * line + 2 * Gap.sm,
+        // The panel's corners clip the top fade.
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(Radii.md),
+          child: Panel(
+            padding: EdgeInsets.zero,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(Gap.sm + Gap.hair, Gap.sm, reserveReply ? 40 : Gap.sm + Gap.hair, Gap.sm),
+                    child: content,
+                  ),
+                ),
             if (tail != null && tail.length >= rows)
               Positioned(
                 left: 0,
@@ -657,6 +586,8 @@ class _PreviewPanel extends StatelessWidget {
                 ),
               ),
           ],
+            ),
+          ),
         ),
       ),
     );
@@ -682,7 +613,7 @@ class AgentCompactRow extends StatelessWidget {
     final swipeable = agent.status == AgentStatus.done && !agent.stale && !sel.active;
     bool review() => markReviewedWithUndo(context, agent.machine, agent.paneId);
 
-    return SwipeToReview(
+    final row = SwipeToReview(
       enabled: swipeable,
       onReviewed: review,
       inset: Gap.md,
@@ -708,7 +639,6 @@ class AgentCompactRow extends StatelessWidget {
               ],
             ),
             dim: agent.stale,
-            divider: divider,
             // Merged from the glyph and the texts, plus what dimming only implies.
             semanticLabel: agent.stale
                 ? [
@@ -730,6 +660,8 @@ class AgentCompactRow extends StatelessWidget {
         ),
       ),
     );
+    if (!divider) return row;
+    return Column(mainAxisSize: MainAxisSize.min, children: [row, Hairline(indent: ListRow.textIndent())]);
   }
 }
 

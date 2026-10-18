@@ -6,7 +6,6 @@ import '../../../data/acp/acp_models.dart' show MessageRole;
 import '../../../data/acp/session_state.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../../render/markdown/markdown.dart';
-import '../files/file_widgets.dart' show copyToClipboard;
 
 /// Copying a message (docs/DESIGN.md "Copying").
 ///
@@ -117,10 +116,10 @@ class _ContentSelectionAreaState extends State<ContentSelectionArea> {
 }
 
 void copyMessage(BuildContext context, TranscriptMessage message) =>
-    copyToClipboard(context, messagePlainText(message), 'Copied');
+    copyText(context, messagePlainText(message), what: 'Message copied');
 
 void copyMessageMarkdown(BuildContext context, TranscriptMessage message) =>
-    copyToClipboard(context, messageMarkdown(message), 'Copied as Markdown');
+    copyText(context, messageMarkdown(message), what: 'Markdown copied');
 
 /// The choice `Copy message` offers a screen reader: the text, or the Markdown
 /// source for an answer.

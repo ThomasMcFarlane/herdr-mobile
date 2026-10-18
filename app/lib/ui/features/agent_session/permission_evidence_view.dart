@@ -157,23 +157,14 @@ class ReadAllCue extends StatelessWidget {
           child: text == null
               ? const SizedBox.shrink()
               : Padding(
-                  padding: EdgeInsets.symmetric(vertical: onOpen == null ? 4 : 0),
-                  child: Text(text!, style: Type.caption.copyWith(color: ds.blockedText, fontWeight: FontWeight.w600)),
+                  padding: EdgeInsets.symmetric(vertical: onOpen == null ? Gap.xs : 0),
+                  child: Text(text!, style: Type.captionStrong.copyWith(color: ds.blockedText)),
                 ),
         ),
-        if (onOpen != null)
-          PressBuilder(
-            onTap: onOpen,
-            builder: (context, pressed) => Container(
-              constraints: const BoxConstraints(minHeight: kMinTap),
-              padding: const EdgeInsets.only(left: Gap.md),
-              alignment: Alignment.centerRight,
-              child: Text(
-                'Read all',
-                style: Type.label.copyWith(color: pressed ? ds.text : ds.accentText, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ),
+        if (onOpen case final open?) ...[
+          const SizedBox(width: Gap.md),
+          TextAction(label: 'Read all', onTap: open),
+        ],
       ],
     );
   }
@@ -194,31 +185,22 @@ Future<void> showEvidenceSheet(
     context,
     builder: (ctx) {
       final ds = ctx.ds;
-      final height = MediaQuery.sizeOf(ctx).height * 0.62;
+      final lead = note == null ? 0 : 1;
       Widget list = SelectionArea(
         child: ListView.builder(
-          padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.sm, Gap.gutter, Gap.lg),
-          itemCount: count,
-          itemBuilder: itemBuilder,
+          // The list kind's inset 4 + 16: the lines sit on the 20 gutter.
+          padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.lg),
+          itemCount: count + lead,
+          itemBuilder: (context, i) => i < lead
+              ? Padding(
+                  padding: const EdgeInsets.only(bottom: Gap.sm),
+                  child: Text(note!, style: Type.secondary.copyWith(color: ds.textSecondary)),
+                )
+              : itemBuilder(context, i - lead),
         ),
       );
       if (actions != null) list = MdActions(onLink: actions.onLink, onPath: actions.onPath, child: list);
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.xl, Gap.gutter, 0),
-            child: Semantics(header: true, child: Text(title, style: Type.title.copyWith(color: ds.text))),
-          ),
-          if (note != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.xs, Gap.gutter, 0),
-              child: Text(note, style: Type.secondary.copyWith(color: ds.textSecondary)),
-            ),
-          SizedBox(height: height, child: list),
-        ],
-      );
+      return SheetScaffold(title: title, kind: SheetKind.list, scrolls: true, child: list);
     },
   );
 }

@@ -264,6 +264,6 @@ void main() {
     await tester.tap(find.text('2 more queued'));
     await settle(tester, 300);
     expect(find.text('five'), findsOneWidget);
-    expect(find.text('Show fewer'), findsOneWidget);
+    expect(find.text('Show less'), findsOneWidget);
   });
 }

@@ -822,6 +822,9 @@ void main() {
             await _settle(tester);
             expect(tester.takeException(), isNull);
           }
+          // At 2x text on a short phone the sheet scrolls to its buttons.
+          await tester.ensureVisible(_sheetCancel);
+          await _settle(tester);
           await _tap(tester, _sheetCancel);
           expect(find.byType(BatchSheet), findsNothing);
         }

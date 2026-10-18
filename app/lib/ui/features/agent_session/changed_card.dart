@@ -110,57 +110,51 @@ class ChangedFileRow extends StatelessWidget {
         children: [
           Semantics(
             expanded: open,
-            child: PressBuilder(
+            child: PressRow(
               onTap: () => onToggle(rowKey),
               semanticLabel: [
                 visibleText(file.path),
                 ?mark,
                 if (stats) DiffStats.words(file.added, file.removed),
               ].join(', '),
-              builder: (context, pressed) => AnimatedContainer(
-                duration: Motion.pressing(pressed),
-                curve: Motion.easeOut,
-                constraints: const BoxConstraints(minHeight: kMinTap),
-                padding: const EdgeInsets.symmetric(horizontal: Gap.md, vertical: 6),
-                decoration: BoxDecoration(
-                  color: pressed ? ds.fillPressed : Colors.transparent,
-                  borderRadius: _corners(first: false, last: last && !open),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text.rich(
-                        TextSpan(
-                          text: name,
-                          style: Type.secondary.copyWith(color: ds.text, fontWeight: FontWeight.w500),
-                          children: [
-                            if (hint != null && hint.isNotEmpty)
-                              TextSpan(
-                                text: '  ${visibleText(hint)}',
-                                style: Type.secondary.copyWith(color: ds.textMuted),
-                              ),
-                          ],
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+              minHeight: kMinTap,
+              padding: const EdgeInsets.symmetric(horizontal: Gap.md - PressRow.inset, vertical: Gap.xs),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text.rich(
+                      TextSpan(
+                        text: name,
+                        style: Type.secondaryStrong.copyWith(color: ds.text),
+                        children: [
+                          if (hint != null && hint.isNotEmpty)
+                            TextSpan(
+                              text: '  ${visibleText(hint)}',
+                              style: Type.secondary.copyWith(color: ds.textMuted),
+                            ),
+                        ],
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    if (mark != null) ...[
-                      const SizedBox(width: Gap.sm),
-                      Text(
-                        mark,
-                        style: Type.caption.copyWith(color: file.isDelete ? removedText(ds) : addedText(ds), fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                    if (stats) ...[
-                      const SizedBox(width: Gap.sm),
-                      DiffStats(added: file.added, removed: file.removed),
-                    ],
+                  ),
+                  if (mark != null) ...[
+                    const SizedBox(width: Gap.sm),
+                    Text(
+                      mark,
+                      style: Type.captionStrong.copyWith(color: file.isDelete ? removedText(ds) : addedText(ds)),
+                    ),
                   ],
-                ),
+                  if (stats) ...[
+                    const SizedBox(width: Gap.sm),
+                    DiffStats(added: file.added, removed: file.removed),
+                  ],
+                ],
               ),
             ),
           ),
+          // The highlight keeps clear of the panel's bottom corners.
+          if (last && !open) const SizedBox(height: Gap.xs),
           if (open)
             Padding(
               padding: const EdgeInsets.fromLTRB(Gap.md, 0, Gap.md, Gap.md),
@@ -202,20 +196,15 @@ class ChangedMoreRow extends StatelessWidget {
     final label = all ? 'Show fewer' : '$count more';
     return DecoratedBox(
       decoration: BoxDecoration(color: ds.fill, borderRadius: _corners(first: false, last: true)),
-      child: PressBuilder(
-        onTap: () => onToggle(rowKey),
-        semanticLabel: all ? 'Show fewer files' : '$count more ${count == 1 ? 'file' : 'files'}',
-        builder: (context, pressed) => AnimatedContainer(
-          duration: Motion.pressing(pressed),
-          curve: Motion.easeOut,
-          constraints: const BoxConstraints(minHeight: kMinTap),
-          padding: const EdgeInsets.symmetric(horizontal: Gap.md),
-          alignment: Alignment.centerLeft,
-          decoration: BoxDecoration(
-            color: pressed ? ds.fillPressed : Colors.transparent,
-            borderRadius: _corners(first: false, last: true),
-          ),
-          child: Text(label, style: Type.label.copyWith(color: ds.accentText, fontWeight: FontWeight.w600)),
+      child: Padding(
+        // The highlight keeps clear of the panel's bottom corners.
+        padding: const EdgeInsets.only(bottom: Gap.xs),
+        child: PressRow(
+          onTap: () => onToggle(rowKey),
+          semanticLabel: all ? 'Show fewer files' : '$count more ${count == 1 ? 'file' : 'files'}',
+          minHeight: kMinTap,
+          padding: const EdgeInsets.symmetric(horizontal: Gap.md - PressRow.inset),
+          child: Text(label, style: Type.labelStrong.copyWith(color: ds.accentText)),
         ),
       ),
     );

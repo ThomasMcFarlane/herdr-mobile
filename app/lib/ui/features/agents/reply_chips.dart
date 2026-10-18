@@ -63,7 +63,7 @@ class ReplyChips extends StatelessWidget {
   /// more options than this).
   static const cardLimit = 5;
 
-  static const _gap = 6.0;
+  static const _gap = Gap.sm;
   static const _chip = kMinTap;
 
   /// Chips drawn on a card for [prompt] (the "more" chip counts as one).
@@ -92,17 +92,20 @@ class ReplyChips extends StatelessWidget {
       children: [
         for (final (i, r) in shown.indexed) ...[
           if (i > 0) const SizedBox(height: _gap),
-          _ReplyChip(
+          AnswerChip(
             // A hold belongs to the answer under the finger: a new prompt
             // brings new chips, which drops it.
             key: ValueKey((i, r)),
-            reply: r,
+            label: r.label,
+            reason: r.risk,
+            risk: r.needsConfirm ? AnswerRisk.gate : AnswerRisk.none,
             state: _stateOf(c, phase, r),
+            hold: r.needsConfirm,
             error: c.error,
             enabled: !locked,
-            oneLine: fixedHeight,
+            maxLines: fixedHeight ? 1 : 2,
             onTap: () => onChoose(r),
-            onHold: () {
+            onHeld: () {
               controller.confirmByHold(r);
               unawaited(onChoose(r));
             },
@@ -110,182 +113,63 @@ class ReplyChips extends StatelessWidget {
         ],
         if (overflow) ...[
           const SizedBox(height: _gap),
-          _ReplyChip(
-            reply: QuickReply(label: '$hidden more…', keys: const []),
-            state: _ChipState.more,
-            enabled: onMore != null && !locked,
-            oneLine: true,
-            onTap: onMore ?? () {},
-          ),
+          _MoreChip(label: '$hidden more…', onTap: onMore != null && !locked ? onMore : null),
         ],
       ],
     );
   }
 
-  static _ChipState _stateOf(QuickReplyController c, ReplyPhase phase, QuickReply r) {
-    if (c.confirming == r) return _ChipState.confirming;
-    if (c.subject != r) return _ChipState.normal;
+  static AnswerChipState _stateOf(QuickReplyController c, ReplyPhase phase, QuickReply r) {
+    if (c.confirming == r) return AnswerChipState.primed;
+    if (c.subject != r) return AnswerChipState.rest;
     return switch (phase) {
-      ReplyPhase.sending => _ChipState.sending,
-      ReplyPhase.sent => _ChipState.sent,
-      ReplyPhase.failed => _ChipState.failed,
-      ReplyPhase.changed => _ChipState.changed,
-      _ => _ChipState.normal,
+      ReplyPhase.sending => AnswerChipState.sending,
+      ReplyPhase.sent => AnswerChipState.sent,
+      ReplyPhase.failed => AnswerChipState.failed,
+      ReplyPhase.changed => AnswerChipState.changed,
+      _ => AnswerChipState.rest,
     };
   }
 }
 
-enum _ChipState { normal, confirming, sending, sent, failed, changed, more }
+/// `N more…`: opens the sheet, where every option shows.
+class _MoreChip extends StatelessWidget {
+  const _MoreChip({required this.label, required this.onTap});
 
-class _ReplyChip extends StatelessWidget {
-  const _ReplyChip({
-    super.key,
-    required this.reply,
-    required this.state,
-    required this.enabled,
-    required this.oneLine,
-    required this.onTap,
-    this.onHold,
-    this.error,
-  });
-
-  final QuickReply reply;
-  final _ChipState state;
-  final bool enabled;
-  final bool oneLine;
-
-  /// A tap on an ungated chip; for a gated one, the assistive activation (the
-  /// two-step flow).
-  final VoidCallback onTap;
-
-  /// A hold of a gated chip reached its end.
-  final VoidCallback? onHold;
-  final String? error;
-
-  /// Sent and sending chips are answers already given; the rest of a gated
-  /// option's life (resting, primed, failed) is held.
-  bool get _held => onHold != null && reply.needsConfirm && state != _ChipState.sending && state != _ChipState.sent;
-
-  /// The chip that says the question changed hides its option, so it takes no
-  /// tap until it shows it again.
-  bool get _takesTaps => enabled && state != _ChipState.changed;
+  final String label;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    if (!_held) {
-      return PressBuilder(
-        onTap: _takesTaps ? onTap : null,
-        scale: 0.985,
-        button: true,
-        semanticLabel: _semantic(),
-        builder: (context, pressed) => _body(context, pressed: pressed),
-      );
-    }
-    return HoldToConfirm(
-      enabled: _takesTaps,
-      semanticLabel: _semantic(),
-      onActivate: onTap,
-      onConfirmed: onHold!,
-      builder: (context, hold) => _body(context, pressed: hold.holding, hold: hold),
-    );
-  }
-
-  String? _semantic() => switch (state) {
-        _ChipState.confirming => reply.risk == null
-            ? 'Confirm: ${reply.label}'
-            : 'Confirm: ${reply.label}, ${reply.risk}',
-        _ChipState.sent => 'Sent: ${reply.label}',
-        _ChipState.failed => 'Couldn’t send ${reply.label}${error == null ? '' : ': $error'}. Retry',
-        _ChipState.changed => 'The question changed. Nothing was sent',
-        _ChipState.normal when reply.needsConfirm => reply.risk == null
-            ? '${reply.label}, needs holding or a second activation'
-            : '${reply.label}, needs holding or a second activation: ${reply.risk}',
-        _ => null,
-      };
-
-  String get _holdText => reply.risk == null ? 'Hold to send' : 'Hold to send · ${reply.risk}';
-
-  Widget _body(BuildContext context, {required bool pressed, HoldState? hold}) {
     final ds = context.ds;
-    final risky = reply.needsConfirm;
-    final showsHold = hold?.showsHold ?? false;
-    final (bg, pressedBg, fg, border, label) = switch (state) {
-      _ChipState.confirming => (
-          ds.danger.withValues(alpha: 0.14),
-          ds.danger.withValues(alpha: 0.24),
-          ds.dangerText,
-          ds.danger.withValues(alpha: 0.55),
-          showsHold
-              ? _holdText
-              : reply.risk == null
-                  ? 'Hold or tap again to confirm'
-                  : 'Hold or tap again · ${reply.risk}',
+    return PressBuilder(
+      onTap: onTap,
+      scale: PressScale.panel,
+      button: true,
+      minTapSize: kMinTap,
+      builder: (context, pressed) => AnimatedContainer(
+        duration: Motion.pressing(pressed),
+        curve: Motion.easeOut,
+        constraints: const BoxConstraints(minHeight: kMinTap),
+        padding: const EdgeInsets.symmetric(horizontal: Gap.md),
+        decoration: BoxDecoration(
+          color: pressed && onTap != null ? ds.fillPressed : ds.fill,
+          borderRadius: BorderRadius.circular(Radii.sm),
         ),
-      _ChipState.sent => (
-          ds.done.withValues(alpha: 0.14),
-          ds.done.withValues(alpha: 0.14),
-          ds.text,
-          null,
-          'Sent: ${reply.label}',
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Type.answer.copyWith(color: onTap != null ? ds.accentText : ds.textMuted),
+              ),
+            ),
+            Icon(LucideIcons.chevronRight, size: IconSize.row, color: ds.textTertiary),
+          ],
         ),
-      _ChipState.failed => (
-          ds.danger.withValues(alpha: 0.12),
-          ds.danger.withValues(alpha: 0.22),
-          ds.dangerText,
-          null,
-          showsHold ? _holdText : (_held ? 'Couldn’t send · hold to retry' : 'Couldn’t send · tap to retry'),
-        ),
-      _ChipState.changed => (ds.blockedWash, ds.blockedWash, ds.blockedText, null, 'The question changed'),
-      _ChipState.more => (ds.fill, ds.fillPressed, ds.accentText, null, reply.label),
-      _ => (ds.fill, ds.fillPressed, ds.text, null, showsHold ? _holdText : reply.label),
-    };
-    // Chips that are not the subject of a request in flight / sent step back;
-    // the one saying the question changed is read, so it stays clear.
-    final live = enabled || state == _ChipState.sending || state == _ChipState.sent || state == _ChipState.changed;
-    final row = Row(
-      children: [
-        if (state == _ChipState.sending) ...[
-          const BusySpinner(size: 14),
-          const SizedBox(width: 10),
-        ] else if (state == _ChipState.sent) ...[
-          Icon(LucideIcons.check, size: 16, color: ds.done),
-          const SizedBox(width: 8),
-        ] else if (state == _ChipState.confirming || state == _ChipState.failed) ...[
-          Icon(LucideIcons.triangleAlert, size: 16, color: fg),
-          const SizedBox(width: 8),
-        ] else if (state == _ChipState.changed) ...[
-          Icon(LucideIcons.refreshCw, size: 16, color: fg),
-          const SizedBox(width: 8),
-        ],
-        Expanded(
-          child: Text(
-            label,
-            maxLines: oneLine ? 1 : 2,
-            overflow: TextOverflow.ellipsis,
-            style: Type.answer.copyWith(color: live ? fg : ds.textMuted),
-          ),
-        ),
-        if (state == _ChipState.more)
-          Icon(LucideIcons.chevronRight, size: 16, color: ds.textTertiary)
-        else if (risky && state == _ChipState.normal)
-          // A resting hint that a hold is coming; red is for the chip that is
-          // actually primed.
-          Icon(LucideIcons.triangleAlert, size: 15, color: ds.textSecondary),
-      ],
-    );
-    // The padding sits on the content, not the chip: the fill, a layer between
-    // the chip's colour and its words, covers the whole chip.
-    final content = Padding(padding: const EdgeInsets.symmetric(horizontal: 14), child: row);
-    return AnimatedContainer(
-      duration: Motion.pressing(pressed),
-      curve: Motion.easeOut,
-      constraints: const BoxConstraints(minHeight: kMinTap),
-      decoration: BoxDecoration(
-        color: pressed && enabled ? pressedBg : bg,
-        borderRadius: BorderRadius.circular(Radii.sm),
-        border: border == null ? null : Border.all(color: border),
       ),
-      child: hold == null ? content : Stack(fit: StackFit.passthrough, children: [hold.fill, content]),
     );
   }
 }

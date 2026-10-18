@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'press.dart';
-import 'motion.dart';
 import 'rows.dart';
 import 'toast.dart';
 import 'tokens.dart';
@@ -28,60 +26,10 @@ class FormSection extends StatelessWidget {
   Widget build(BuildContext context) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          FormSectionHeader(label: label),
+          SectionLabel(label: label),
           FormPanel(endsWithField: endsWithField, children: children),
         ],
       );
-}
-
-class FormSectionHeader extends StatelessWidget {
-  const FormSectionHeader({super.key, required this.label, this.expanded, this.onTap});
-
-  final String label;
-
-  /// Null = not collapsible (no chevron).
-  final bool? expanded;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ds = context.ds;
-    return Semantics(
-      header: true,
-      expanded: expanded,
-      child: PressBuilder(
-        onTap: onTap,
-        haptic: true,
-        builder: (context, pressed) => Container(
-          constraints: const BoxConstraints(minHeight: 44),
-          padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.md, Gap.gutter, 0),
-          alignment: Alignment.bottomLeft,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Type.barTitle.copyWith(color: pressed ? ds.textSecondary : ds.text),
-                ),
-              ),
-              if (expanded != null) ...[
-                const SizedBox(width: Gap.sm),
-                AnimatedRotation(
-                  turns: expanded! ? 0.25 : 0,
-                  duration: Motion.reduced(context) ? Duration.zero : Motion.standard,
-                  curve: Motion.easeOut,
-                  child: Icon(LucideIcons.chevronRight, size: 16, color: ds.textSecondary),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 /// Fields grouped on a surface with a hairline: the grouping reads as one unit.

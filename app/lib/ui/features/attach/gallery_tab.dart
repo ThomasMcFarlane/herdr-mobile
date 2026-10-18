@@ -219,6 +219,9 @@ class _NoImagesNote extends StatelessWidget {
   );
 }
 
+/// An album row: one line, the height of a [SheetActionRow].
+const _albumRowHeight = 52.0;
+
 Future<void> _chooseAlbum(BuildContext context, GalleryModel model) async {
   await model.loadAlbums();
   if (!context.mounted) return;
@@ -227,16 +230,13 @@ Future<void> _chooseAlbum(BuildContext context, GalleryModel model) async {
     builder: (sheet) {
       final ds = sheet.ds;
       final albums = model.albums;
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(4, 8, 4, 12),
+      return SheetScaffold(
+        title: 'Albums',
+        kind: SheetKind.list,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: Semantics(header: true, child: Text('Albums', style: Type.label.copyWith(color: ds.textSecondary))),
-            ),
             for (final a in albums)
               PressBuilder(
                 onTap: () {
@@ -245,24 +245,24 @@ Future<void> _chooseAlbum(BuildContext context, GalleryModel model) async {
                 },
                 selected: a.id == model.album?.id,
                 builder: (context, pressed) => Container(
-                  constraints: const BoxConstraints(minHeight: 52),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  constraints: const BoxConstraints(minHeight: _albumRowHeight),
+                  padding: const EdgeInsets.symmetric(horizontal: Gap.lg),
                   decoration: BoxDecoration(
-                    color: pressed ? ds.fill : Colors.transparent,
+                    color: pressed ? ds.pressTint : Colors.transparent,
                     borderRadius: BorderRadius.circular(Radii.sm),
                   ),
                   child: Row(
                     children: [
-                      Icon(a.isRecent ? LucideIcons.images : LucideIcons.folder, size: 20, color: ds.textSecondary),
-                      const SizedBox(width: 12),
+                      Icon(a.isRecent ? LucideIcons.images : LucideIcons.folder, size: IconSize.lead, color: ds.textSecondary),
+                      const SizedBox(width: Gap.md),
                       Expanded(
                         child: Text(a.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: Type.row.copyWith(color: ds.text)),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: Gap.md),
                       Text(groupDigits(a.count), style: Type.secondary.copyWith(color: ds.textMuted, fontFeatures: Type.tabular)),
                       if (a.id == model.album?.id) ...[
-                        const SizedBox(width: 12),
-                        Icon(LucideIcons.check, size: 18, color: ds.accentText),
+                        const SizedBox(width: Gap.md),
+                        Icon(LucideIcons.check, size: IconSize.bar, color: ds.accentText),
                       ],
                     ],
                   ),
@@ -315,7 +315,7 @@ class _PanelState extends State<_Panel> {
     if (box is! RenderBox || !box.hasSize) return;
     final position = SheetScope.of(context).position;
     // What shows at half height: its height less the grabber and the bars.
-    final room = position.halfHeight - 20 - sheetBarsReserve;
+    final room = position.halfHeight - sheetGrabberSpace - Gap.sm - sheetBarsReserve;
     if (box.size.height + Gap.lg > room) position.expand();
   }
 

@@ -47,8 +47,6 @@ class FileRow extends StatelessWidget {
   /// has no selection at all.
   final bool? selected;
 
-  static const _inset = 8.0;
-
   /// `12 KB · 3 min ago`, `Link → target`, `No permission`.
   String subtitle() {
     final e = entry;
@@ -68,24 +66,14 @@ class FileRow extends StatelessWidget {
     final ds = context.ds;
     final e = entry;
     final sub = subtitle();
-    final indent = Gap.gutter + 32 + 12;
+    final indent = Gap.gutter + 32 + Gap.md;
     Widget row = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        PressBuilder(
+        PressRow(
           onTap: onTap,
-          builder: (context, pressed) => Padding(
-            padding: const EdgeInsets.symmetric(horizontal: _inset),
-            child: AnimatedContainer(
-              duration: Motion.pressing(pressed),
-              curve: Motion.easeOut,
-              constraints: const BoxConstraints(minHeight: 64),
-              alignment: Alignment.centerLeft,
-              decoration: BoxDecoration(
-                color: pressed ? ds.fill : Colors.transparent,
-                borderRadius: BorderRadius.circular(Radii.sm),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: Gap.gutter - _inset, vertical: 12),
+          minHeight: 64,
+          padding: const EdgeInsets.symmetric(horizontal: Gap.gutter - PressRow.inset, vertical: Gap.md),
               child: Row(
                 children: [
                   SizedBox(
@@ -94,7 +82,7 @@ class FileRow extends StatelessWidget {
                         ? IconTile(icon: iconForEntry(e), color: ds.accentText)
                         : FileThumb(files: files, entry: e, icon: iconForEntry(e), loader: thumbs),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: Gap.md),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -103,7 +91,7 @@ class FileRow extends StatelessWidget {
                         MiddleEllipsisText(e.name, style: Type.row.copyWith(color: ds.text)),
                         if (sub.isNotEmpty)
                           Padding(
-                            padding: const EdgeInsets.only(top: 2),
+                            padding: const EdgeInsets.only(top: Gap.hair),
                             child: Text(
                               sub,
                               maxLines: 1,
@@ -115,14 +103,12 @@ class FileRow extends StatelessWidget {
                       ],
                     ),
                   ),
-                  if (trailing != null) ...[const SizedBox(width: 4), trailing!] else if (e.isDirectory) ...[
-                    const SizedBox(width: 12),
-                    Icon(LucideIcons.chevronRight, size: 16, color: ds.textTertiary),
+                  if (trailing != null) ...[const SizedBox(width: Gap.xs), trailing!] else if (e.isDirectory) ...[
+                    const SizedBox(width: Gap.md),
+                    Icon(LucideIcons.chevronRight, size: IconSize.row, color: ds.textTertiary),
                   ],
                 ],
               ),
-            ),
-          ),
         ),
         Hairline(indent: indent),
       ],

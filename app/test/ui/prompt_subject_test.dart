@@ -75,9 +75,9 @@ void main() {
 
         final text = tester.widget<Text>(subject);
         expect(text.style!.fontFamily, monoFamily);
-        expect(text.style!.fontSize, promptSubjectStyle.fontSize);
+        expect(text.style!.fontSize, Mono.base.fontSize);
         expect(text.style!.color, isNotNull);
-        expect(text.maxLines, 3);
+        expect(text.maxLines, 2);
         expect(text.overflow, TextOverflow.ellipsis);
 
         // Right padding 44 keeps the reply button clear of both texts.
@@ -110,8 +110,8 @@ void main() {
       final h = await _board(tester, edit);
 
       expect(_monoText(), findsNothing);
-      expect(tester.widget<Text>(find.text(edit.question)).maxLines, 3,
-          reason: 'with no subject the question keeps its extra line');
+      expect(tester.widget<Text>(find.text(edit.question)).maxLines, 2,
+          reason: 'a compact wash holds the question to two lines; Read all shows the rest');
       expect(find.bySemanticsLabel(RegExp(r'Asks: Do you want to make this edit to main\.dart\?$')),
           findsOneWidget);
       semantics.dispose();
@@ -164,10 +164,11 @@ void main() {
       expect(tester.takeException(), isNull);
 
       final text = tester.widget<Text>(find.text(subject));
-      expect(text.maxLines, 3);
+      expect(text.maxLines, 2);
       expect(text.overflow, TextOverflow.ellipsis);
-      // Three lines at 12.5 sp x 1.35 x 2 and no more.
-      expect(tester.getSize(find.text(subject)).height, lessThanOrEqualTo(3 * 12.5 * 1.35 * 2 + 1));
+      // Two lines of Mono.base at 2x and no more.
+      expect(tester.getSize(find.text(subject)).height,
+          lessThanOrEqualTo(2 * Mono.base.fontSize! * Mono.base.height! * 2 + 1));
       expect(tester.getSize(find.text(prompt.question)).height, lessThanOrEqualTo(2 * 14 * 1.35 * 2 + 1),
           reason: 'with a subject the question is held to two lines');
 
@@ -264,7 +265,7 @@ void main() {
       expect(find.bySemanticsLabel('1. Yes, needs holding or a second activation'), findsOneWidget);
       tester.semantics.tap(find.semantics.byLabel('1. Yes, needs holding or a second activation'));
       await tester.pump();
-      expect(find.text('Hold or tap again to confirm'), findsOneWidget);
+      expect(find.text('Hold or tap again'), findsOneWidget);
       expect(find.bySemanticsLabel('Confirm: 1. Yes'), findsOneWidget);
       await tester.pump(const Duration(seconds: 4));
       semantics.dispose();
@@ -290,7 +291,7 @@ void main() {
       expect(text.maxLines, isNull, reason: 'the sheet is where the full command is read');
       expect(text.overflow, isNot(TextOverflow.ellipsis));
       expect(text.style!.fontFamily, monoFamily);
-      expect(text.style!.fontSize, promptSubjectStyle.fontSize);
+      expect(text.style!.fontSize, Mono.base.fontSize);
       expect(tester.getSize(inSheet).height, greaterThan(3 * 12.5 * 1.35 * 1.5),
           reason: 'six wrapped rows are taller than the card allows');
       expect(

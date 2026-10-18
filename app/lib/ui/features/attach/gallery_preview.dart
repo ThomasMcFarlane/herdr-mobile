@@ -13,7 +13,6 @@ import '../files/file_format.dart';
 import '../photos/photo_item.dart';
 import '../photos/photo_viewer.dart';
 import 'gallery_model.dart';
-import 'selection_circle.dart';
 import 'tray.dart';
 
 /// A picture of the gallery for the immersive viewer: the original, read from
@@ -137,7 +136,7 @@ class _SelectPill extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              SelectionMark(number: number, onPhoto: true),
+              SelectMark(selected: picked, number: number, onPhoto: true, size: SelectMark.photoSize),
               const SizedBox(width: 8),
               Text(
                 picked ? 'Selected' : 'Select',

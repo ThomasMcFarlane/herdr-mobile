@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -35,17 +36,18 @@ class ToastAction {
   final VoidCallback onPressed;
 }
 
-/// Where toasts stay on screen. One place, so they do not drift apart.
+/// How long toasts stay. One place, so they do not drift apart. The clock
+/// starts once the toast is in place and stops while a finger is on it.
 abstract final class ToastTiming {
-  /// A plain message: read at a glance.
-  static const standard = Duration(seconds: 3);
-
   /// A toast with a button needs time to be reached; a failure needs time to
-  /// be read.
-  static const long = Duration(seconds: 5);
-
-  static Duration of(ToastKind kind, {required bool hasAction}) =>
-      kind == ToastKind.failed || hasAction ? long : standard;
+  /// be read. A short message is read at a glance (Telegram's rule: under 20
+  /// characters is short).
+  static Duration of(ToastKind kind, {required bool hasAction, required String message}) =>
+      kind == ToastKind.failed || hasAction
+          ? Dwell.toastAction
+          : message.length < 20
+          ? Dwell.toastShort
+          : Dwell.toastLong;
 }
 
 /// Shows a toast on the app's root overlay and replaces the one showing: a
@@ -91,11 +93,11 @@ class Toaster {
 
   final OverlayState _overlay;
 
-  /// Shows [message], replacing the toast on screen (it does not slide again:
-  /// the text changes in place). Does nothing once the overlay is gone.
+  /// Shows [message]. A toast of the same [groupKey] still on screen changes
+  /// its text in place; any other message takes over: the toast showing
+  /// leaves while the new one comes in. Does nothing once the overlay is gone.
   ///
-  /// * [duration] defaults to [ToastTiming.of]: 3 s, 5 s with an [action] or
-  ///   for [ToastKind.failed].
+  /// * [duration] defaults to [ToastTiming.of].
   /// * [groupKey] lets repeated actions of one kind share a toast so an
   ///   earlier Undo is not lost: while a toast with the same key is still
   ///   showing, the new call joins it. The count goes up (by [count], for a
@@ -126,17 +128,23 @@ class Toaster {
       message: message,
       kind: kind,
       action: action,
-      duration: duration ?? ToastTiming.of(kind, hasAction: action != null),
+      duration: duration ?? ToastTiming.of(kind, hasAction: action != null, message: message),
       groupKey: groupKey,
       groupMessage: groupMessage,
       count: count,
     );
     final live = _live;
     if (live != null && live.overlay == _overlay && _overlay.mounted) {
-      live.present(next);
-      return;
+      final view = live.view;
+      if (view == null || (live.spec.joins(next) && !view.leaving)) {
+        live.present(next);
+        return;
+      }
+      // Another message: the one showing leaves as this one arrives.
+      view.dismiss();
+    } else {
+      live?.discard();
     }
-    live?.discard();
     final slot = _ToastSlot(_overlay, next);
     _live = slot;
     slot.entry = OverlayEntry(builder: (_) => _ToastView(slot: slot));
@@ -293,7 +301,7 @@ class _ToastShelfState extends State<ToastShelf> {
     if (!mounted) return;
     final box = context.findRenderObject();
     if (box is! RenderBox || !box.hasSize) return;
-    final next = box.size.height + Gap.md;
+    final next = box.size.height + Gap.sm;
     if (next == _measured) return;
     _measured = next;
     ToastShelf._publish();
@@ -345,40 +353,61 @@ class _ToastView extends StatefulWidget {
   State<_ToastView> createState() => _ToastViewState();
 }
 
-class _ToastViewState extends State<_ToastView> with SingleTickerProviderStateMixin {
+class _ToastViewState extends State<_ToastView> with TickerProviderStateMixin {
+  /// In and out: 0 below its place (hidden behind the bar it stands on), 1 in place.
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: Motion.sheetIn,
     reverseDuration: Motion.sheetOut,
   )..addStatusListener(_onStatus);
-  late final Animation<double> _curve = CurvedAnimation(parent: _controller, curve: Motion.easeOut);
+  late final Animation<double> _curve = Motion.curved(_controller);
+
+  /// Sideways, under the finger: a swipe puts it away.
+  late final AnimationController _swipe = AnimationController.unbounded(vsync: this);
+
   Timer? _timer;
   bool leaving = false;
+  bool _touched = false;
 
-  /// Slide distance of the enter/exit, in dp.
-  static const _travel = 16.0;
   static const _maxWidth = 480.0;
+
+  /// A fling faster than this (dp/s) puts it away whatever the distance.
+  static const _flingAway = 800.0;
 
   @override
   void initState() {
     super.initState();
     widget.slot.view = this;
-    _arm();
     _controller.forward();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Under reduced motion it only fades, and quickly.
+    final reduced = Motion.reduced(context);
+    _controller
+      ..duration = reduced ? Motion.fade : Motion.sheetIn
+      ..reverseDuration = reduced ? Motion.fade : Motion.sheetOut;
   }
 
   _ToastSpec get _spec => widget.slot.spec;
 
+  /// Starts the clock, unless the toast is still arriving or a finger holds it.
   void _arm() {
     _timer?.cancel();
+    if (leaving || _touched || _controller.status != AnimationStatus.completed) return;
     _timer = Timer(_spec.duration, dismiss);
   }
 
-  /// A new or joined toast arrived: show it, back in if it was leaving.
+  /// A joined or swapped toast: the new text, a full clock.
   void apply() {
     leaving = false;
-    _arm();
-    if (_controller.status != AnimationStatus.completed) unawaited(_controller.forward());
+    if (_controller.status == AnimationStatus.completed) {
+      _arm();
+    } else {
+      unawaited(_controller.forward());
+    }
     setState(() {});
   }
 
@@ -390,12 +419,19 @@ class _ToastViewState extends State<_ToastView> with SingleTickerProviderStateMi
   }
 
   void _onStatus(AnimationStatus status) {
+    if (status == AnimationStatus.completed) _arm();
     if (status != AnimationStatus.dismissed || !leaving) return;
+    _remove();
+  }
+
+  void _remove() {
     final slot = widget.slot;
     if (_live == slot) _live = null;
-    slot.entry
-      ..remove()
-      ..dispose();
+    if (slot.entry.mounted) {
+      slot.entry
+        ..remove()
+        ..dispose();
+    }
   }
 
   void _act() {
@@ -407,12 +443,36 @@ class _ToastViewState extends State<_ToastView> with SingleTickerProviderStateMi
     }
   }
 
+  void _hold(bool down) {
+    _touched = down;
+    if (down) {
+      _timer?.cancel();
+    } else {
+      _arm();
+    }
+  }
+
+  void _swipeEnd(double velocity, double width) {
+    final dx = _swipe.value;
+    if (dx.abs() > width / 3 || velocity.abs() > _flingAway) {
+      leaving = true;
+      _timer?.cancel();
+      final side = (dx.abs() > 1 ? dx.sign : velocity.sign) * (width + Gap.lg);
+      unawaited(_swipe.animateTo(side, duration: Motion.standard, curve: Motion.easeOut).whenComplete(() {
+        if (mounted) _remove();
+      }));
+    } else {
+      unawaited(_swipe.animateWith(SpringSimulation(Springs.settle, dx, 0, velocity)));
+    }
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
     if (widget.slot.view == this) widget.slot.view = null;
     if (_live == widget.slot) _live = null;
     _controller.dispose();
+    _swipe.dispose();
     super.dispose();
   }
 
@@ -428,13 +488,14 @@ class _ToastViewState extends State<_ToastView> with SingleTickerProviderStateMi
       ToastKind.success => (LucideIcons.check, ds.done),
       ToastKind.failed => (LucideIcons.circleAlert, ds.danger),
     };
+    // The one inverse surface: a message over the page, never mistaken for a
+    // field or a card in it. No outline, no shadow: dark on paper and a step
+    // lighter on ink is edge enough.
     final card = DecoratedBox(
       key: toastKey,
       decoration: BoxDecoration(
-        color: ds.surface,
+        color: ds.inverseSurface,
         borderRadius: BorderRadius.circular(Radii.md),
-        border: Border.all(color: ds.border),
-        boxShadow: ds.floatShadow,
       ),
       // The root overlay sits above every route, so no `Scaffold` is above the
       // text: without a `Material` it takes `MaterialApp`'s fallback style, a
@@ -442,14 +503,14 @@ class _ToastViewState extends State<_ToastView> with SingleTickerProviderStateMi
       child: Material(
         type: MaterialType.transparency,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: kMinTap),
+          constraints: const BoxConstraints(minHeight: _minHeight),
           child: Padding(
             padding: EdgeInsets.fromLTRB(Gap.lg, Gap.sm, action == null ? Gap.lg : Gap.xs, Gap.sm),
             child: Row(
               children: [
                 if (mark != null) ...[
-                  ExcludeSemantics(child: Icon(mark.$1, size: 18, color: mark.$2)),
-                  const SizedBox(width: Gap.sm),
+                  ExcludeSemantics(child: Icon(mark.$1, size: IconSize.bar, color: mark.$2)),
+                  const SizedBox(width: Gap.md),
                 ],
                 Expanded(
                   child: Semantics(
@@ -458,7 +519,7 @@ class _ToastViewState extends State<_ToastView> with SingleTickerProviderStateMi
                       spec.message,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: Type.body.copyWith(color: ds.text),
+                      style: Type.body.copyWith(color: ds.onInverse),
                     ),
                   ),
                 ),
@@ -467,13 +528,12 @@ class _ToastViewState extends State<_ToastView> with SingleTickerProviderStateMi
                     key: toastActionKey,
                     onTap: _act,
                     minTapSize: kMinTap,
+                    scale: PressScale.button,
                     builder: (context, pressed) => Padding(
                       padding: const EdgeInsets.symmetric(horizontal: Gap.md),
                       child: Text(
                         action.label,
-                        style: Type.button.copyWith(
-                          color: ds.accentText.withValues(alpha: pressed ? 0.6 : 1),
-                        ),
+                        style: Type.button.copyWith(color: pressed ? ds.onInverse : ds.inverseAccent),
                       ),
                     ),
                   ),
@@ -487,41 +547,55 @@ class _ToastViewState extends State<_ToastView> with SingleTickerProviderStateMi
       valueListenable: ToastShelf.showing,
       builder: (context, shelf, _) {
         final bottom = shelf == null
-            ? math.max(media.viewInsets.bottom, media.padding.bottom) + Gap.lg
+            ? math.max(media.viewInsets.bottom, media.padding.bottom) + Gap.sm
             : shelf.lift + (shelf.aboveKeyboard ? media.viewInsets.bottom : 0);
-        return Positioned(
+        final width = math.min(_maxWidth, media.size.width - 2 * _side);
+        return AnimatedPositioned(
+          // A bar that appears or grows under a showing toast moves it up
+          // rather than through it.
+          duration: Motion.of(context, Motion.standard),
+          curve: Motion.easeOut,
           left: 0,
           right: 0,
           bottom: bottom,
           child: Align(
             heightFactor: 1,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: Gap.lg),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: _maxWidth),
-                child: MediaQuery.withClampedTextScaling(
-                  maxScaleFactor: 1.3,
-                  child: AnimatedBuilder(
-                    animation: _curve,
-                    // A tap anywhere on it puts it away: it may sit over
-                    // something the person is reaching for.
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      excludeFromSemantics: true,
-                      onTap: dismiss,
+            child: SizedBox(
+              width: width,
+              child: MediaQuery.withClampedTextScaling(
+                maxScaleFactor: kBarTextScale,
+                child: Listener(
+                  // A finger on it holds the clock: nothing leaves while read.
+                  onPointerDown: (_) => _hold(true),
+                  onPointerUp: (_) => _hold(false),
+                  onPointerCancel: (_) => _hold(false),
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    excludeFromSemantics: true,
+                    // Without a button, a tap puts it away: it may sit over
+                    // something the person is reaching for. With one, the tap
+                    // belongs to the button and a swipe puts it away.
+                    onTap: action == null ? dismiss : null,
+                    onHorizontalDragUpdate: (d) => _swipe.value += d.delta.dx,
+                    onHorizontalDragEnd: (d) => _swipeEnd(d.velocity.pixelsPerSecond.dx, width),
+                    onHorizontalDragCancel: () => _swipeEnd(0, width),
+                    child: AnimatedBuilder(
+                      animation: Listenable.merge([_curve, _swipe]),
                       child: card,
+                      builder: (context, child) {
+                        final t = _curve.value;
+                        final dx = _swipe.value;
+                        Widget out = child!;
+                        if (dx != 0) out = Transform.translate(offset: Offset(dx, 0), child: out);
+                        if (t >= 1) return out;
+                        if (reduced) return Opacity(opacity: t, child: out);
+                        // It rises from behind the bar it stands on: the
+                        // clip is its own place, so below that it is hidden.
+                        return ClipRect(
+                          child: FractionalTranslation(translation: Offset(0, 1 - t), child: out),
+                        );
+                      },
                     ),
-                    builder: (context, child) {
-                      final t = _curve.value;
-                      if (t >= 1) return child!;
-                      return Opacity(
-                        opacity: t,
-                        child: Transform.translate(
-                          offset: Offset(0, reduced ? 0 : (1 - t) * _travel),
-                          child: child,
-                        ),
-                      );
-                    },
                   ),
                 ),
               ),
@@ -531,4 +605,11 @@ class _ToastViewState extends State<_ToastView> with SingleTickerProviderStateMi
       },
     );
   }
+
+  /// One line of text and its padding: the toast never shrinks below this.
+  static const _minHeight = 48.0;
+
+  /// Side margin: the floating bar's (`FloatingBar.side`), so a toast lines up
+  /// with the bar it stands on.
+  static const _side = Gap.md;
 }

@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/acp/auth_needed.dart';
@@ -78,10 +77,7 @@ class _AuthPanelState extends State<AuthPanel> {
     }
   }
 
-  Future<void> _copy(String command) async {
-    await Clipboard.setData(ClipboardData(text: command));
-    if (mounted) showToast(context, 'Command copied');
-  }
+  void _copy(String command) => copyText(context, command, what: 'Command copied');
 
   @override
   Widget build(BuildContext context) {
@@ -144,7 +140,7 @@ class _AuthPanelState extends State<AuthPanel> {
                 icon: large ? null : LucideIcons.copy,
                 kind: AppButtonKind.secondary,
                 expand: true,
-                onPressed: () => unawaited(_copy(command)),
+                onPressed: () => _copy(command),
               ),
             ),
           // A connection that failed for the login tries again only when

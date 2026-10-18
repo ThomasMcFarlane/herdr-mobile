@@ -41,20 +41,15 @@ class MoreRow extends StatelessWidget {
               child: Padding(padding: const EdgeInsets.only(left: Gap.md), child: text),
             ),
           )
-        : PressBuilder(
+        : PressRow(
             onTap: onTap,
-            builder: (context, pressed) => AnimatedContainer(
-              duration: Motion.pressing(pressed),
-              curve: Motion.easeOut,
-              constraints: const BoxConstraints(minHeight: kMinTap),
-              padding: const EdgeInsets.symmetric(horizontal: Gap.md),
-              color: pressed ? ds.fillPressed : const Color(0x00000000),
-              child: Row(
-                children: [
-                  Expanded(child: text),
-                  Text(action!, style: Type.label.copyWith(color: ds.accentText, fontWeight: FontWeight.w600)),
-                ],
-              ),
+            minHeight: kMinTap,
+            padding: const EdgeInsets.symmetric(horizontal: Gap.md - PressRow.inset),
+            child: Row(
+              children: [
+                Expanded(child: text),
+                Text(action!, style: Type.labelStrong.copyWith(color: ds.accentText)),
+              ],
             ),
           );
     if (onCopy == null) return more;
@@ -65,7 +60,7 @@ class MoreRow extends StatelessWidget {
           onTap: onCopy,
           semanticLabel: copyLabel,
           minTapSize: kMinTap,
-          builder: (context, pressed) => Icon(LucideIcons.copy, size: 16, color: pressed ? ds.text : ds.textSecondary),
+          builder: (context, pressed) => Icon(LucideIcons.copy, size: IconSize.row, color: pressed ? ds.text : ds.textSecondary),
         ),
       ],
     );

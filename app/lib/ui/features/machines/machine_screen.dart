@@ -94,14 +94,9 @@ class _MachineViewState extends State<_MachineView> {
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
-            SliverLargeTitle(
+            SliverLargeTitle.back(
               title: machine.profile.label,
               subtitle: subtitle,
-              leading: CircleButton(
-                icon: LucideIcons.chevronLeft,
-                tooltip: 'Back',
-                onPressed: () => Navigator.of(context).maybePop(),
-              ),
               actions: [
                 if (machineSupportsFiles(machine))
                   CircleButton(
@@ -218,27 +213,32 @@ class _WorkspaceSection extends StatelessWidget {
     final live = machine.isLive;
 
     // A tab label only matters when there is more than one.
-    // These are widget descriptions only: [Collapse] builds nothing for a
+    // These are row descriptions only: [Collapse] builds nothing for a
     // workspace that is closed.
-    final rows = <Widget>[];
+    final rows = <RowSpec>[];
     var total = 0;
+    var shown = 0;
     for (final tab in tabs) {
       final label = tab.label.isEmpty ? 'Tab ${tab.number}' : tab.label;
       for (final pane in snap.panesOf(tab.id)) {
         total++;
         if (!showAll && total > _paneCap) continue;
-        rows.add(RepaintBoundary(
-          key: ValueKey(pane.id),
-          child: _PaneRow(
-            machine: machine,
-            pane: pane,
-            tabLabel: multiTab ? label : null,
-            dim: !live,
+        shown++;
+        rows.add(CustomRow(
+          id: pane.id,
+          dividerIndent: ListRow.textIndent(leadingExtent: _PaneRow.leadingExtent),
+          child: RepaintBoundary(
+            child: _PaneRow(
+              machine: machine,
+              pane: pane,
+              tabLabel: multiTab ? label : null,
+              dim: !live,
+            ),
           ),
         ));
       }
     }
-    if (total > rows.length) rows.add(_ShowAllRow(total: total, onTap: onShowAll));
+    if (total > shown) rows.add(CustomRow(id: 'show-all', child: _ShowAllRow(total: total, onTap: onShowAll)));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -248,11 +248,11 @@ class _WorkspaceSection extends StatelessWidget {
           count: workspace.paneCount,
           expanded: open,
           onTap: onToggle,
-          leading: StatusGlyph(status: workspace.status, size: 14, dim: !live),
+          leading: StatusGlyph(status: workspace.status, size: IconSize.inline, dim: !live),
           // Nudged right so the dots line up with the chevrons of the rows below;
           // the hit box moves with them.
           trailing: Transform.translate(
-            offset: const Offset(10, 0),
+            offset: const Offset(_dotsNudge, 0),
             child: CircleButton(
               icon: LucideIcons.ellipsis,
               tooltip: 'Workspace actions',
@@ -264,11 +264,14 @@ class _WorkspaceSection extends StatelessWidget {
         ),
         Collapse(
           open: open,
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: rows),
+          child: RowColumn(rows: rows),
         ),
       ],
     );
   }
+
+  /// Moves the workspace's ⋯ right so its dots line up with the row chevrons.
+  static const _dotsNudge = 10.0;
 }
 
 /// "Show all 120 panes": the quiet row that ends a capped workspace.
@@ -279,23 +282,22 @@ class _ShowAllRow extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final ds = context.ds;
-    return PressBuilder(
-      onTap: onTap,
-      builder: (context, pressed) => Container(
-        constraints: const BoxConstraints(minHeight: 48),
-        alignment: Alignment.centerLeft,
-        // Aligned with the pane titles above (gutter + leadingExtent 28 + gap).
-        padding: const EdgeInsets.only(left: Gap.gutter + 28 + Gap.md, right: Gap.gutter),
-        color: pressed ? ds.fill : Colors.transparent,
+  Widget build(BuildContext context) => PressRow(
+        onTap: onTap,
+        minHeight: _minHeight,
+        // Aligned with the pane titles above.
+        padding: EdgeInsetsDirectional.only(
+          start: ListRow.textIndent(leadingExtent: _PaneRow.leadingExtent) - PressRow.inset,
+          end: Gap.gutter - PressRow.inset,
+        ),
         child: Text(
           'Show all $total panes',
-          style: Type.label.copyWith(color: ds.accentText, fontWeight: FontWeight.w600),
+          style: Type.labelStrong.copyWith(color: context.ds.accentText),
         ),
-      ),
-    );
-  }
+      );
+
+  /// A quiet closing row, lower than a pane row.
+  static const _minHeight = 48.0;
 }
 
 class _PaneRow extends StatelessWidget {
@@ -311,6 +313,9 @@ class _PaneRow extends StatelessWidget {
   final String? tabLabel;
   final bool dim;
 
+  /// Leading column: the terminal tile is 28, so the glyphs share that width.
+  static const leadingExtent = 28.0;
+
   @override
   Widget build(BuildContext context) {
     final agent = pane.agent;
@@ -323,9 +328,9 @@ class _PaneRow extends StatelessWidget {
 
     return ListRow(
       leading: agent != null
-          ? StatusGlyph(status: pane.status, size: 20)
-          : const IconTile(icon: LucideIcons.squareTerminal, size: 28),
-      leadingExtent: 28,
+          ? StatusGlyph(status: pane.status, size: IconSize.lead)
+          : const IconTile(icon: LucideIcons.squareTerminal, size: leadingExtent),
+      leadingExtent: leadingExtent,
       title: title,
       titleMaxLines: 2,
       subtitle: subtitle,

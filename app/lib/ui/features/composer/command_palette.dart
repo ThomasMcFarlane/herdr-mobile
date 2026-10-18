@@ -109,16 +109,15 @@ class _Row extends StatelessWidget {
       SlashSource.user => 'user',
       SlashSource.builtIn => null,
     };
-    return PressBuilder(
+    return PressRow(
       onTap: () {
         Haptics.tick();
         onTap(command);
       },
       onLongPress: () => onLongPress(command),
-      builder: (context, pressed) => ColoredBox(
-        color: pressed ? ds.fillPressed : Colors.transparent,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: Gap.lg),
+      // The list's itemExtent sets the height.
+      minHeight: 0,
+      padding: const EdgeInsets.symmetric(horizontal: Gap.lg - PressRow.inset),
           child: Row(
             children: [
               Expanded(
@@ -168,12 +167,10 @@ class _Row extends StatelessWidget {
               ],
               if (pinned) ...[
                 const SizedBox(width: Gap.sm),
-                Icon(LucideIcons.pin, size: 14, color: ds.textTertiary, semanticLabel: 'Pinned'),
+                Icon(LucideIcons.pin, size: IconSize.inline, color: ds.textTertiary, semanticLabel: 'Pinned'),
               ],
             ],
           ),
-        ),
-      ),
     );
   }
 }

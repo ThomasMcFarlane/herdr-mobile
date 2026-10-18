@@ -569,7 +569,7 @@ void main() {
       await tester.drag(find.byType(ListView).last, const Offset(0, -400));
       await tester.pump();
       expect(find.text('finished job 0'), findsOneWidget);
-      expect(find.text('Show fewer'), findsOneWidget);
+      expect(find.text('Show less'), findsOneWidget);
     });
 
     testWidgets('40 tasks: the list is lazy', (tester) async {

@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
@@ -103,15 +102,32 @@ class _ViewerPageState extends State<_ViewerPage> {
       text = text.substring(0, _clipboardLimit);
       complete = false;
     }
-    try {
-      await Clipboard.setData(ClipboardData(text: text));
-    } on PlatformException {
-      if (mounted) showToast(context, "Couldn't copy: the clipboard refused it.", kind: ToastKind.failed);
-      return;
-    }
-    if (!mounted) return;
-    Haptics.tick();
-    showToast(context, complete ? 'Contents copied' : 'Copied the first ${formatBytes(text.length)} only');
+    copyText(
+      context,
+      text,
+      what: 'Contents copied',
+      caveat: complete ? null : 'Only the first ${formatBytes(text.length)} was copied',
+    );
+  }
+
+  /// Copying the file, out of the bar (it holds two actions at most).
+  void _showOptions(FileViewerViewModel vm, bool ready) {
+    final stat = vm.stat;
+    unawaited(
+      showActionSheet(
+        context,
+        title: stat.name,
+        actions: [
+          if (ready && vm.isText && vm.document != null && !vm.document!.isEmpty)
+            SheetAction(label: 'Copy contents', icon: LucideIcons.clipboardCopy, onTap: () => _copyContents(vm)),
+          SheetAction(
+            label: 'Copy path',
+            icon: LucideIcons.link,
+            onTap: () => copyText(context, stat.path, what: 'Path copied'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _togglePretty(FileViewerViewModel vm) async {
@@ -130,9 +146,9 @@ class _ViewerPageState extends State<_ViewerPage> {
       backgroundColor: ds.bg,
       body: Column(
         children: [
-          _Header(
-            name: stat.name,
-            path: stat.path,
+          AppTopBar(
+            title: stat.name,
+            subtitleLine: _TailText(_folderOf(stat.path)),
             actions: [
               if (ready && canPreviewInBrowser(stat.name))
                 CircleButton(
@@ -140,16 +156,10 @@ class _ViewerPageState extends State<_ViewerPage> {
                   tooltip: 'Open in browser',
                   onPressed: () => unawaited(_openInBrowser(context, stat)),
                 ),
-              if (ready && vm.isText && vm.document != null && !vm.document!.isEmpty)
-                CircleButton(
-                  icon: LucideIcons.clipboardCopy,
-                  tooltip: 'Copy contents',
-                  onPressed: () => _copyContents(vm),
-                ),
               CircleButton(
-                icon: LucideIcons.link,
-                tooltip: 'Copy path',
-                onPressed: () => copyToClipboard(context, stat.path, 'Path copied'),
+                icon: LucideIcons.ellipsis,
+                tooltip: 'File options',
+                onPressed: () => _showOptions(vm, ready),
               ),
             ],
           ),
@@ -172,58 +182,10 @@ class _ViewerPageState extends State<_ViewerPage> {
   }
 }
 
-/// Back, the file name, and its folder (scrollable, showing the end first).
-class _Header extends StatelessWidget {
-  const _Header({required this.name, required this.path, required this.actions});
-
-  final String name;
-  final String path;
-  final List<Widget> actions;
-
-  @override
-  Widget build(BuildContext context) {
-    final ds = context.ds;
-    final parent = RemotePath.parent(path);
-    return MediaQuery.withClampedTextScaling(
-      maxScaleFactor: kBarTextScale,
-      child: Container(
-        color: ds.bg,
-        padding: EdgeInsets.fromLTRB(Gap.gutter - 6, MediaQuery.paddingOf(context).top, Gap.gutter - 6, 0),
-        child: SizedBox(
-          height: 60,
-          child: Row(
-            children: [
-              CircleButton(
-                icon: LucideIcons.chevronLeft,
-                tooltip: 'Back',
-                onPressed: () => Navigator.of(context).maybePop(),
-              ),
-              const SizedBox(width: Gap.sm),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Semantics(
-                      header: true,
-                      child: Text(
-                        name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Type.barTitle.copyWith(color: ds.text),
-                      ),
-                    ),
-                    _TailText(parent == '/' ? '/' : '$parent/'),
-                  ],
-                ),
-              ),
-              for (final a in actions) ...[const SizedBox(width: 4), a],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+/// The folder [path] sits in, ending in `/`: the bar's second line.
+String _folderOf(String path) {
+  final parent = RemotePath.parent(path);
+  return parent == '/' ? '/' : '$parent/';
 }
 
 /// A path on one line, ellipsized at the START: the folder a file sits in is
@@ -309,7 +271,7 @@ class _Tools extends StatelessWidget {
     if (vm.phase == ViewerPhase.ready) {
       Widget wrap() => AppChip(
             label: 'Wrap',
-            leading: Icon(LucideIcons.wrapText, size: 14, color: vm.wrap ? ds.text : ds.textSecondary),
+            icon: LucideIcons.wrapText,
             selected: vm.wrap,
             onTap: () => vm.setWrap(!vm.wrap),
           );
@@ -319,14 +281,17 @@ class _Tools extends StatelessWidget {
         case FileKind.json:
           chips.add(AppChip(
             label: 'Pretty',
-            leading: Icon(LucideIcons.braces, size: 14, color: vm.pretty ? ds.text : ds.textSecondary),
+            icon: LucideIcons.braces,
             selected: vm.pretty,
             onTap: onTogglePretty,
           ));
           chips.add(wrap());
         case FileKind.markdown:
-          chips.add(AppChip(label: 'Rendered', selected: !vm.showSource, onTap: () => vm.setShowSource(false)));
-          chips.add(AppChip(label: 'Source', selected: vm.showSource, onTap: () => vm.setShowSource(true)));
+          chips.add(Segmented<bool>(
+            options: const [SegmentOption(false, 'Rendered'), SegmentOption(true, 'Source')],
+            value: vm.showSource,
+            onChanged: vm.setShowSource,
+          ));
           if (vm.showSource) chips.add(wrap());
         case FileKind.image || FileKind.svg || FileKind.pdf || FileKind.binary:
           break;
@@ -390,7 +355,7 @@ class _Body extends StatelessWidget {
                 label: 'Copy path',
                 icon: LucideIcons.copy,
                 kind: AppButtonKind.secondary,
-                onPressed: () => copyToClipboard(context, vm.stat.path, 'Path copied'),
+                onPressed: () => copyText(context, vm.stat.path, what: 'Path copied'),
               ),
             ),
           ],
@@ -403,7 +368,7 @@ class _Body extends StatelessWidget {
           FileKind.image => const Skeleton(),
           FileKind.svg || FileKind.pdf || FileKind.binary => BinaryView(
               model: vm,
-              onCopyPath: () => copyToClipboard(context, vm.stat.path, 'Path copied'),
+              onCopyPath: () => copyText(context, vm.stat.path, what: 'Path copied'),
               onViewAsText: vm.canViewAsText ? vm.viewAsText : null,
               onOpenInBrowser: canPreviewInBrowser(vm.name) ? () => unawaited(_openInBrowser(context, vm.stat)) : null,
             ),
@@ -583,8 +548,9 @@ class _DiskWatch {
   }
 }
 
-/// Where [_ChangedPill] appears and goes: a short slide and fade from under
-/// the tools bar.
+/// "Changed on disk · Reload": a [FloatingPill] over the top of the text,
+/// coming in with a fade and a small scale. A tap reads the file again where
+/// the reader is.
 class _ChangedSlot extends StatelessWidget {
   const _ChangedSlot({required this.vm});
 
@@ -592,77 +558,17 @@ class _ChangedSlot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final show = vm.phase == ViewerPhase.ready && vm.changedOnDisk;
-    final reduced = Motion.reduced(context);
-    return AnimatedSwitcher(
-      duration: reduced ? Duration.zero : Motion.standard,
-      switchInCurve: Motion.easeOut,
-      switchOutCurve: Motion.easeOut,
-      transitionBuilder: (child, animation) => FadeTransition(
-        opacity: animation,
-        child: reduced
-            ? child
-            : SlideTransition(
-                position: Tween(begin: const Offset(0, -0.5), end: Offset.zero).animate(animation),
-                child: child,
-              ),
-      ),
-      child: show ? _ChangedPill(key: const ValueKey('changed'), vm: vm) : const SizedBox.shrink(key: ValueKey('none')),
-    );
-  }
-}
-
-/// "Changed on disk · Reload": a quiet capsule over the top of the text. A tap
-/// reads the file again where the reader is.
-class _ChangedPill extends StatelessWidget {
-  const _ChangedPill({super.key, required this.vm});
-
-  final FileViewerViewModel vm;
-
-  @override
-  Widget build(BuildContext context) {
     final ds = context.ds;
     final busy = vm.refreshing;
-    return MediaQuery.withClampedTextScaling(
-      maxScaleFactor: 1.2,
-      child: Padding(
-        padding: const EdgeInsets.only(top: Gap.xs),
-        child: PressBuilder(
-          onTap: busy ? null : () => unawaited(vm.refresh()),
-          haptic: true,
-          minTapSize: kMinTap,
-          scale: 0.97,
-          button: true,
-          builder: (context, pressed) => AnimatedContainer(
-            duration: Motion.pressing(pressed),
-            curve: Motion.easeOut,
-            height: 32,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: pressed ? ds.fillPressed : ds.surface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: ds.border, width: 1),
-              // Floats over the text: the one float shadow lifts it off the lines.
-              boxShadow: ds.floatShadow,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (busy)
-                  const BusySpinner(size: 14)
-                else
-                  Icon(LucideIcons.refreshCw, size: 14, color: ds.accentText),
-                const SizedBox(width: 8),
-                Text('Changed on disk', style: Type.label.copyWith(color: ds.textSecondary)),
-                const SizedBox(width: 6),
-                Text(
-                  busy ? 'Reloading' : 'Reload',
-                  style: Type.label.copyWith(color: ds.accentText, fontWeight: FontWeight.w600),
-                ),
-              ],
-            ),
-          ),
-        ),
+    return Padding(
+      padding: const EdgeInsets.only(top: Gap.xs),
+      child: FloatingPill(
+        visible: vm.phase == ViewerPhase.ready && vm.changedOnDisk,
+        size: FloatingPillSize.compact,
+        leading: busy ? const BusySpinner() : Icon(LucideIcons.refreshCw, size: IconSize.inline, color: ds.accentText),
+        label: 'Changed on disk',
+        trailing: Text(busy ? 'Reloading' : 'Reload', style: Type.labelStrong.copyWith(color: ds.accentText)),
+        onTap: busy ? null : () => unawaited(vm.refresh()),
       ),
     );
   }

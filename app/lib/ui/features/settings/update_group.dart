@@ -58,8 +58,10 @@ class UpdateGroup extends StatelessWidget {
                     child: _ProgressBar(update.received / release.size),
                   )
                 : null,
-            children: [
-              Padding(
+            rows: [
+              CustomRow(
+                id: 'update',
+                child: Padding(
                 padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.xs, Gap.gutter, 0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -84,6 +86,7 @@ class UpdateGroup extends StatelessWidget {
                     const SizedBox(height: Gap.md),
                     _Actions(update: update, release: release),
                   ],
+                  ),
                 ),
               ),
             ],
@@ -216,21 +219,12 @@ Future<void> showReleaseNotes(BuildContext context, ReleaseInfo release) async {
   if (!context.mounted) return;
   await showAppSheet<void>(
     context,
-    builder: (context) => Padding(
-      padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.lg, Gap.gutter, Gap.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Semantics(
-            header: true,
-            child: Text(
-              'What\u2019s new in ${release.version}',
-              style: Type.title.copyWith(color: context.ds.text),
-            ),
-          ),
-          const SizedBox(height: Gap.md),
-          MdDocumentView(document: document),
-        ],
+    builder: (context) => SheetScaffold(
+      title: 'What\u2019s new in ${release.version}',
+      kind: SheetKind.message,
+      child: Padding(
+        padding: const EdgeInsets.only(top: Gap.xs),
+        child: MdDocumentView(document: document),
       ),
     ),
   );

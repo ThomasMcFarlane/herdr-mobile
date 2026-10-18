@@ -45,10 +45,8 @@ class SelectionHeader extends StatelessWidget {
                     Expanded(
                       child: Semantics(
                         header: true,
-                        child: Text(
-                          '${state.count} selected',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        child: RollText(
+                          text: '${state.count} selected',
                           style: Type.barTitle.copyWith(color: ds.text, fontFeatures: Type.tabular),
                         ),
                       ),
@@ -133,24 +131,9 @@ class BatchActionBar extends StatelessWidget {
           (a == BatchAction.message && plan.waiting.any((s) => s.canSendAnyway));
     }
 
-    final ds = context.ds;
     final busy = selection.busy;
     if (busy != null) {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const BusySpinner(),
-          const SizedBox(width: Gap.md),
-          Flexible(
-            child: Text(
-              '$busy…',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Type.label.copyWith(color: ds.textSecondary),
-            ),
-          ),
-        ],
-      );
+      return LoadingRow('$busy…', padding: EdgeInsets.zero, center: true, maxLines: 1);
     }
     return Row(
       children: [

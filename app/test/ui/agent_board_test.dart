@@ -339,7 +339,7 @@ void main() {
       tester.semantics.tap(find.semantics.byLabel('2. Yes, delete everything, needs holding or a second activation'));
       await tester.pump();
       expect(_keysSent(h, 'a'), isEmpty);
-      expect(find.text('Hold or tap again to confirm'), findsOneWidget);
+      expect(find.text('Hold or tap again'), findsOneWidget);
 
       tester.semantics.tap(find.semantics.byLabel('Confirm: 2. Yes, delete everything'));
       await tester.pump();
@@ -355,7 +355,7 @@ void main() {
 
       tester.semantics.tap(find.semantics.byLabel('2. Yes, delete everything, needs holding or a second activation'));
       await tester.pump();
-      await holdFor(tester, find.text('Hold or tap again to confirm'));
+      await holdFor(tester, find.text('Hold or tap again'));
       expect(_keysSent(h, 'a'), hasLength(1));
       await tester.pump(const Duration(seconds: 4));
       semantics.dispose();

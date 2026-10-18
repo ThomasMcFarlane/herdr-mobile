@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'count_badge.dart';
 import 'press.dart';
 import 'motion.dart';
-import 'pop.dart';
 import 'toast.dart' show ToastShelf;
 import 'tokens.dart';
 
@@ -383,29 +383,9 @@ class _TabItem extends StatelessWidget {
                       Positioned(
                         left: _icon - 8,
                         top: -7,
-                        child: PopOnRise(
-                          value: badge,
-                          child: Container(
-                            constraints: const BoxConstraints(minWidth: 18),
-                            height: 18,
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            decoration: BoxDecoration(
-                              color: ds.blocked,
-                              borderRadius: BorderRadius.circular(9),
-                              border: Border.all(color: ds.surface, width: 1.5),
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              badge > 99 ? '99+' : '$badge',
-                              style: Type.caption.copyWith(
-                                height: 1,
-                                fontWeight: FontWeight.w700,
-                                fontFeatures: Type.tabular,
-                                color: ds.onStatus,
-                              ),
-                            ),
-                          ),
-                        ),
+                        // The ring is the bar's surface: the badge reads as
+                        // cut out of the icon.
+                        child: CountBadge(count: badge, ring: ds.surface),
                       )
                     else if (tab.mark)
                       Positioned(

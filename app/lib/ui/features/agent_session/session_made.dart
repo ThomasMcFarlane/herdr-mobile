@@ -141,11 +141,6 @@ class _SessionMadeSheetState extends State<SessionMadeSheet> {
     ];
   }
 
-  /// The grabber `showAppSheet` draws above whatever is built here (its 8 dp
-  /// gap and 4 dp bar): the room this sheet may take is the screen less the
-  /// status bar, the bottom inset and this.
-  static const _grabber = 12.0;
-
   /// What [_noFiles] takes at [width]: it is a sentence that wraps on a narrow
   /// phone or large text, so it is laid out, not guessed.
   static double _noteHeight(double width, TextScaler scaler) {
@@ -215,28 +210,18 @@ class _SessionMadeSheetState extends State<SessionMadeSheet> {
         final tabbed = kinds.length >= 2;
         final content = [for (final a in shown) if (a.kind == tab) a];
         final running = shown.any((a) => a.kind == MadeKind.server && serverStateOf(a, tasks, live: live) == ServerState.running);
-        // `showAppSheet` scrolls whatever it is given and caps it where the
-        // status bar starts; this sheet scrolls its own list under a pinned
-        // switch, so it is given a bounded height of its own.
-        final nav = MediaQuery.of(Navigator.of(context).context);
-        final cap = MediaQuery.sizeOf(context).height - nav.padding.top - nav.padding.bottom - _grabber;
         final scaler = MediaQuery.textScalerOf(context);
-        return ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: cap),
+        return SheetScaffold(
+          title: 'Made in this session',
+          kind: SheetKind.list,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(Gap.lg, 8, Gap.lg, Gap.lg),
+            // The list kind's inset 4 + 12: the rows sit 16 from the edge.
+            padding: const EdgeInsets.symmetric(horizontal: Gap.md),
             child: LayoutBuilder(
               builder: (context, box) => Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: Gap.sm, bottom: Gap.sm),
-                    child: Semantics(
-                      header: true,
-                      child: Text('Made in this session', style: Type.label.copyWith(color: ds.textSecondary)),
-                    ),
-                  ),
                   if (shown.isEmpty)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: Gap.xl),
@@ -255,8 +240,7 @@ class _SessionMadeSheetState extends State<SessionMadeSheet> {
                       onChanged: _pick,
                     ),
                   if (tab != null)
-                    Flexible(
-                      child: SizedBox(
+                    SizedBox(
                         height: math.min(
                           _bodyHeight(shown, kinds, box.maxWidth, scaler, files),
                           MediaQuery.sizeOf(context).height * _bodyShare,
@@ -286,7 +270,6 @@ class _SessionMadeSheetState extends State<SessionMadeSheet> {
                               ),
                           ],
                         ),
-                      ),
                     ),
                 ],
               ),
@@ -351,7 +334,6 @@ class _MoreRow extends StatelessWidget {
         leading: const IconTile(icon: LucideIcons.chevronDown),
         leadingOnTitle: false,
         title: '$count more',
-        divider: false,
         onTap: onTap,
       );
 }
@@ -467,7 +449,7 @@ class _WebRow extends StatelessWidget {
     final running = state == ServerState.running;
     final blocked = asset.kind == MadeKind.server && asset.port != null && sensitiveServiceOf(asset.port!) != null;
     final unavailable = _isFile && !filesAvailable;
-    return ListRow(
+    final row = ListRow(
       leading: IconTile(
         icon: switch (asset.kind) {
           MadeKind.server => LucideIcons.server,
@@ -480,10 +462,14 @@ class _WebRow extends StatelessWidget {
       leadingOnTitle: false,
       title: visibleText(asset.title),
       subtitle: _subtitle,
-      divider: divider,
       dim: state == ServerState.stopped || blocked || unavailable,
       onTap: unavailable ? null : onTap,
       trailing: running ? const LinkDot(state: LinkState.online) : null,
+    );
+    if (!divider) return row;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [row, Hairline(indent: ListRow.textIndent())],
     );
   }
 }

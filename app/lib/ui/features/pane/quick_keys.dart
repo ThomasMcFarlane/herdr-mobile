@@ -10,13 +10,6 @@ import 'key_modifiers.dart';
 
 const quickKeysHeight = 44.0;
 
-/// How long an arrow is held before it repeats, and the gap between repeats.
-const _repeatDelay = Duration(milliseconds: 320);
-const _repeatGap = Duration(milliseconds: 45);
-
-/// A touch that moves further than this is a scroll of the row, not a hold.
-const _holdSlop = 10.0;
-
 sealed class _Key {
   const _Key(this.label, {this.icon, String? semantic}) : semantic = semantic ?? label;
 
@@ -129,149 +122,40 @@ class QuickKeys extends StatelessWidget {
         itemCount: set.length,
         separatorBuilder: (_, _) => const SizedBox(width: Gap.sm),
         itemBuilder: (_, i) => switch (set[i]) {
-          final _Send key => _KeyButton(
-              data: key,
-              repeat: key.repeat,
-              onPressed: enabled ? () => onKeys(key.keys) : null,
+          final _Send key => _cap(
+              key,
+              onTap: enabled ? () => unawaited(onKeys(key.keys)) : null,
+              onRepeat: enabled && key.repeat ? () => onKeys(key.keys) : null,
             ),
-          final _Insert key => _KeyButton(
-              data: key,
-              onPressed: enabled ? () async => onInsert(key.text) : null,
-            ),
+          final _Insert key => _cap(key, onTap: enabled ? () => onInsert(key.text) : null),
           final _Modifier key => ListenableBuilder(
               listenable: modifiers,
-              builder: (_, _) => _KeyButton(
-                data: key,
+              builder: (_, _) => _cap(
+                key,
                 active: key.ctrl ? modifiers.ctrl : modifiers.alt,
-                onPressed: enabled
-                    ? () async => key.ctrl ? modifiers.toggleCtrl() : modifiers.toggleAlt()
-                    : null,
+                onTap: !enabled
+                    ? null
+                    : () {
+                        if (key.ctrl) {
+                          modifiers.toggleCtrl();
+                        } else {
+                          modifiers.toggleAlt();
+                        }
+                      },
               ),
             ),
         },
       ),
     );
   }
-}
 
-class _KeyButton extends StatefulWidget {
-  const _KeyButton({
-    required this.data,
-    required this.onPressed,
-    this.active = false,
-    this.repeat = false,
-  });
-
-  final _Key data;
-  final Future<void> Function()? onPressed;
-  final bool active;
-  final bool repeat;
-
-  @override
-  State<_KeyButton> createState() => _KeyButtonState();
-}
-
-class _KeyButtonState extends State<_KeyButton> {
-  Timer? _timer;
-  Offset _downAt = Offset.zero;
-  bool _holding = false;
-
-  /// The hold already pressed the key, so the tap that ends it must not.
-  bool _repeated = false;
-
-  void _down(PointerDownEvent event) {
-    if (!widget.repeat || widget.onPressed == null) return;
-    _downAt = event.position;
-    _holding = true;
-    _repeated = false;
-    _timer = Timer(_repeatDelay, _tick);
-  }
-
-  void _move(PointerMoveEvent event) {
-    if (_holding && (event.position - _downAt).distance > _holdSlop) _stop();
-  }
-
-  void _stop() {
-    _holding = false;
-    _timer?.cancel();
-    _timer = null;
-  }
-
-  Future<void> _tick() async {
-    final press = widget.onPressed;
-    if (!_holding || press == null) return;
-    _repeated = true;
-    await press();
-    if (_holding && mounted) _timer = Timer(_repeatGap, _tick);
-  }
-
-  void _tap() {
-    if (_repeated) {
-      _repeated = false;
-      return;
-    }
-    Haptics.tick();
-    widget.onPressed?.call();
-  }
-
-  @override
-  void dispose() {
-    _stop();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final ds = context.ds;
-    final data = widget.data;
-    final enabled = widget.onPressed != null;
-    final color = !enabled
-        ? ds.textTertiary
-        : widget.active
-            ? ds.accentText
-            : ds.text;
-    final fill = widget.active
-        ? ds.accent.withValues(alpha: ds.isDark ? 0.22 : 0.14)
-        : null;
-    return Listener(
-      onPointerDown: _down,
-      onPointerMove: _move,
-      onPointerUp: (_) => _stop(),
-      onPointerCancel: (_) => _stop(),
-      child: PressBuilder(
-        onTap: enabled ? _tap : null,
-        scale: 0.96,
-        selected: data is _Modifier ? widget.active : null,
-        // Icon keys are named; text keys are read from their text.
-        semanticLabel: data.icon != null ? data.semantic : null,
-        builder: (context, pressed) => Center(
-          child: AnimatedContainer(
-            duration: pressed ? Motion.press : Motion.release,
-            curve: Motion.easeOut,
-            height: 36,
-            constraints: const BoxConstraints(minWidth: 44),
-            padding: const EdgeInsets.symmetric(horizontal: Gap.md),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: fill ?? (pressed ? ds.fillPressed : ds.fill),
-              borderRadius: BorderRadius.circular(Radii.sm),
-            ),
-            child: data.icon != null
-                ? Icon(data.icon, size: 16, color: color)
-                : Text(
-                    data.label,
-                    maxLines: 1,
-                    style: TextStyle(
-                      fontFamily: monoFamily,
-                      fontSize: 13,
-                      height: 1.2,
-                      fontWeight: FontWeight.w500,
-                      color: color,
-                    ),
-                  ),
-          ),
-        ),
-      ),
-    );
-  }
+  /// Icon keys are named; text keys are read from their text.
+  static Widget _cap(_Key key, {required VoidCallback? onTap, Future<void> Function()? onRepeat, bool? active}) => KeyCap(
+    label: key.icon == null ? key.label : null,
+    icon: key.icon,
+    semanticLabel: key.icon != null ? key.semantic : null,
+    onTap: onTap,
+    onRepeat: onRepeat,
+    active: active,
+  );
 }

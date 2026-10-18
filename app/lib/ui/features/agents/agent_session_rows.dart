@@ -104,7 +104,7 @@ class AgentSessionRow extends StatelessWidget {
     final swipeable = sessionReviewable(session) && !sel.active;
     bool review() => markSessionReviewedWithUndo(context, session);
 
-    return SwipeToReview(
+    final row = SwipeToReview(
       enabled: swipeable,
       onReviewed: review,
       inset: Gap.md,
@@ -135,7 +135,6 @@ class AgentSessionRow extends StatelessWidget {
                 ],
               ),
               dim: !live,
-              divider: divider,
               semanticLabel: live
                   ? null
                   : [
@@ -157,6 +156,8 @@ class AgentSessionRow extends StatelessWidget {
         ),
       ),
     );
+    if (!divider) return row;
+    return Column(mainAxisSize: MainAxisSize.min, children: [row, Hairline(indent: ListRow.textIndent())]);
   }
 }
 

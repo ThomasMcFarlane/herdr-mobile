@@ -128,6 +128,7 @@ void main() {
         ..setSavedCopy(null);
       await tester.pump(const Duration(milliseconds: 600));
       expect(session.unseenDone, isFalse, reason: 'the live replay shows it: reviewed');
+      await tester.pump(const Duration(milliseconds: 300)); // the Undo toast rises into place
 
       await tester.tap(find.text('Undo'));
       await tester.pump(const Duration(milliseconds: 600));

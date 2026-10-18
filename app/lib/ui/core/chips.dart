@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'motion.dart';
 import 'theme.dart';
 import 'press.dart';
+import 'roll_text.dart';
 
 /// Pill used for filters, tags and pick-one rows. [leading] is a small glyph
 /// (a status glyph keeps its own colour); [icon] is a Lucide icon the chip
-/// colours with its label. [count] is rendered with tabular figures. Paints 32
+/// colours with its label. [count] is rendered with tabular figures and rolls
+/// when it changes ([RollText]). Paints 32
 /// high, takes a 44 touch target (headers reserve [height] for a chip row).
 ///
 /// Selected is a tint of the accent with the label in accent text: a tint,
@@ -93,7 +95,11 @@ class AppChip extends StatelessWidget {
                 box.hasBoundedWidth ? Flexible(child: text) : text,
                 if (count != null) ...[
                   const SizedBox(width: Gap.sm),
-                  Text('$count', style: Type.count.copyWith(color: selected ? ds.accentText : ds.textMuted)),
+                  RollText(
+                    text: '$count',
+                    style: Type.count.copyWith(color: selected ? ds.accentText : ds.textMuted),
+                    overflow: TextOverflow.visible,
+                  ),
                 ],
               ],
             );

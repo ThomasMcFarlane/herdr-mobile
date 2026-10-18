@@ -15,29 +15,21 @@ Future<PathCandidate?> showPathChoices(BuildContext context, String name, List<P
     context,
     builder: (ctx) {
       final ds = ctx.ds;
-      return Padding(
-        padding: const EdgeInsets.only(bottom: Gap.md),
+      return SheetScaffold(
+        title: '$name is in ${candidates.length} places',
+        kind: SheetKind.list,
+        // The rows bring their own gutter.
+        bleed: true,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.lg, Gap.gutter, Gap.xs),
-              child: Semantics(
-                header: true,
-                child: Text(
-                  '$name is in ${candidates.length} places',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Type.title.copyWith(color: ds.text),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(Gap.gutter, 0, Gap.gutter, Gap.sm),
+              padding: const EdgeInsets.only(left: Gap.gutter, right: Gap.gutter, bottom: Gap.sm),
               child: Text('Newest first', style: Type.secondary.copyWith(color: ds.textSecondary)),
             ),
-            for (var i = 0; i < candidates.length; i++)
+            for (var i = 0; i < candidates.length; i++) ...[
+              if (i > 0) Hairline(indent: ListRow.textIndent()),
               ListRow(
                 title: candidates[i].relative,
                 titleMaxLines: 2,
@@ -47,12 +39,12 @@ Future<PathCandidate?> showPathChoices(BuildContext context, String name, List<P
                 ].join(' · '),
                 leading: Icon(
                   candidates[i].stat.isDirectory ? LucideIcons.folder : fileIconForName(candidates[i].stat.name),
-                  size: 20,
+                  size: IconSize.lead,
                   color: ds.textSecondary,
                 ),
-                divider: i < candidates.length - 1,
                 onTap: () => Navigator.of(ctx).pop(candidates[i]),
               ),
+            ],
           ],
         ),
       );

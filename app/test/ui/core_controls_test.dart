@@ -523,7 +523,6 @@ void main() {
             title: 'Title',
             subtitle: 'a second line',
             subtitle2: 'and a third',
-            divider: false,
           ),
         ]),
       );

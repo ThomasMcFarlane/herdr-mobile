@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart' show Tooltip;
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -20,11 +19,11 @@ String newLinesLabel(int lines) {
 /// - the agent started waiting on them ([needsYou]): a pill that says `Needs
 ///   you`, with the blocked glyph. It wins over the count.
 ///
-/// It comes and goes with opacity and a small scale ([Motion.release], none
-/// under reduced motion). While it fades out it keeps what it last said, so it
-/// does not turn into a chevron on the way out. The pill paints 36 high inside a
-/// 44 dp target. The owner fires the haptic and scrolls in [onPressed].
-class TerminalJumpPill extends StatefulWidget {
+/// A compact [FloatingPill]: it comes and goes with opacity and a small scale,
+/// and while it fades out it keeps what it last said, so it does not turn
+/// into a chevron on the way out. The owner fires the haptic and scrolls in
+/// [onPressed].
+class TerminalJumpPill extends StatelessWidget {
   const TerminalJumpPill({
     super.key,
     required this.visible,
@@ -43,109 +42,22 @@ class TerminalJumpPill extends StatefulWidget {
 
   final VoidCallback onPressed;
 
-  static const _height = 36.0;
-
-  @override
-  State<TerminalJumpPill> createState() => _TerminalJumpPillState();
-}
-
-class _TerminalJumpPillState extends State<TerminalJumpPill> {
-  late int _unseen = widget.unseen;
-  late bool _needsYou = widget.needsYou;
-
-  @override
-  void didUpdateWidget(TerminalJumpPill old) {
-    super.didUpdateWidget(old);
-    if (widget.visible) {
-      _unseen = widget.unseen;
-      _needsYou = widget.needsYou;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final visible = widget.visible;
-    final duration = Motion.reduced(context) ? Duration.zero : Motion.release;
-    return ExcludeSemantics(
-      excluding: !visible,
-      child: IgnorePointer(
-        ignoring: !visible,
-        child: AnimatedOpacity(
-          opacity: visible ? 1 : 0,
-          duration: duration,
-          curve: Motion.easeOut,
-          child: AnimatedScale(
-            scale: visible ? 1 : 0.92,
-            duration: duration,
-            curve: Motion.easeOut,
-            child: _content(context),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _content(BuildContext context) {
-    if (!_needsYou && _unseen <= 0) {
-      return CircleButton(
-        icon: LucideIcons.chevronsDown,
-        tooltip: 'Jump to latest',
-        size: TerminalJumpPill._height,
-        onPressed: widget.onPressed,
-      );
-    }
-    final ds = context.ds;
-    final label = _needsYou ? 'Needs you' : newLinesLabel(_unseen);
-    final tint = _needsYou ? ds.blocked : ds.accent;
-    final textColor = _needsYou ? ds.blockedText : ds.accentText;
-    return Tooltip(
-      message: 'Jump to latest',
-      excludeFromSemantics: true,
-      child: PressBuilder(
-        onTap: widget.onPressed,
-        scale: 0.96,
-        semanticLabel: '$label, jump to latest',
-        button: true,
-        minTapSize: kMinTap,
-        builder: (context, pressed) => AnimatedContainer(
-          duration: Motion.pressing(pressed),
-          curve: Motion.easeOut,
-          height: TerminalJumpPill._height,
-          padding: EdgeInsets.only(left: _needsYou ? 10 : 14, right: 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(TerminalJumpPill._height / 2),
-            // Opaque: it floats over text, which must not show through.
-            color: Color.alphaBlend(
-              tint.withValues(
-                alpha: ds.isDark ? (pressed ? 0.3 : 0.22) : (pressed ? 0.2 : 0.14),
-              ),
-              ds.bg,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (_needsYou) ...[
-                const StatusGlyph(status: AgentStatus.blocked, size: 16),
-                const SizedBox(width: 6),
-              ],
-              ExcludeSemantics(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  style: Type.label.copyWith(
-                    color: textColor,
-                    fontWeight: FontWeight.w600,
-                    fontFeatures: Type.tabular,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 6),
-              Icon(LucideIcons.chevronsDown, size: 16, color: textColor),
-            ],
-          ),
-        ),
-      ),
+    final label = needsYou ? 'Needs you' : (unseen > 0 ? newLinesLabel(unseen) : null);
+    return FloatingPill(
+      icon: label == null ? LucideIcons.chevronsDown : null,
+      leading: needsYou ? const StatusGlyph(status: AgentStatus.blocked, size: IconSize.row) : null,
+      label: label,
+      trailing: label == null
+          ? null
+          : Icon(LucideIcons.chevronsDown, size: IconSize.row, color: context.ds.textSecondary),
+      size: FloatingPillSize.compact,
+      tooltip: 'Jump to latest',
+      semanticLabel: label == null ? 'Jump to latest' : '$label, jump to latest',
+      haptic: false,
+      visible: visible,
+      onTap: onPressed,
     );
   }
 }

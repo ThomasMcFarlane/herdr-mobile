@@ -591,23 +591,21 @@ class _ReviewActions extends StatelessWidget {
             Flexible(child: _OfflineNote(count: offline)),
             const SizedBox(width: Gap.sm),
           ],
-          if (onMarkAll case final markAll?)
+          if (onMarkAll case final markAll?) ...[
             Flexible(
-              child: AppButton(
+              child: TextAction(
                 key: const ValueKey('mark-all-reviewed'),
                 label: 'Mark all reviewed',
-                kind: AppButtonKind.ghost,
-                compact: true,
-                onPressed: markAll,
+                onTap: markAll,
               ),
             ),
+            const SizedBox(width: Gap.md),
+          ],
           Flexible(
-            child: AppButton(
+            child: TextAction(
               key: const ValueKey('select-all-done'),
               label: 'Select all',
-              kind: AppButtonKind.ghost,
-              compact: true,
-              onPressed: onSelectAll,
+              onTap: onSelectAll,
             ),
           ),
         ],

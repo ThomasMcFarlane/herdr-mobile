@@ -128,20 +128,20 @@ bool _samePayload(PlanRow a, PlanRow b) {
   if (a.kind != b.kind || a.live != b.live || a.quiet != b.quiet || a.nested != b.nested) return false;
   if (a.first != b.first || a.last != b.last || a.count != b.count || a.label != b.label) return false;
   switch (a.kind) {
-    case RowKind.text || RowKind.content:
+    case TranscriptRowKind.text || TranscriptRowKind.content:
       if (a.live) return identical(a.item, b.item);
       return _sameBlock(a.part, b.part);
-    case RowKind.fold || RowKind.changedHead || RowKind.changedMore:
+    case TranscriptRowKind.fold || TranscriptRowKind.changedHead || TranscriptRowKind.changedMore:
       return identical(a.turn, b.turn);
-    case RowKind.changedFile:
+    case TranscriptRowKind.changedFile:
       return identical(a.turn, b.turn) && identical(a.file, b.file);
-    case RowKind.thinking:
+    case TranscriptRowKind.thinking:
       return _sameList(a.thoughts, b.thoughts);
-    case RowKind.group:
+    case TranscriptRowKind.group:
       return _sameList(a.group!.tools, b.group!.tools);
-    case RowKind.divider:
+    case TranscriptRowKind.divider:
       return true;
-    case RowKind.user || RowKind.tool || RowKind.stop || RowKind.note:
+    case TranscriptRowKind.user || TranscriptRowKind.tool || TranscriptRowKind.stop || TranscriptRowKind.note:
       return identical(a.item, b.item);
   }
 }
@@ -637,7 +637,7 @@ class _TranscriptViewState extends State<TranscriptView> with TickerProviderStat
       );
     }
     final Widget child = switch (row.kind) {
-      RowKind.user => UserRow(
+      TranscriptRowKind.user => UserRow(
         rowKey: row.key,
         message: item as TranscriptMessage,
         gap: row.gap,
@@ -645,7 +645,7 @@ class _TranscriptViewState extends State<TranscriptView> with TickerProviderStat
         onToggle: _toggle,
         all: all,
       ),
-      RowKind.fold => FoldRow(
+      TranscriptRowKind.fold => FoldRow(
         rowKey: row.key,
         turn: row.turn!,
         gap: row.gap,
@@ -653,14 +653,14 @@ class _TranscriptViewState extends State<TranscriptView> with TickerProviderStat
         onToggle: _toggle,
         note: row.label,
       ),
-      RowKind.thinking => ThinkingRow(
+      TranscriptRowKind.thinking => ThinkingRow(
         rowKey: row.key,
         thoughts: row.thoughts,
         gap: row.gap,
         open: open,
         onToggle: _toggle,
       ),
-      RowKind.tool => toolOrSubagentRow(
+      TranscriptRowKind.tool => toolOrSubagentRow(
         session: widget.session,
         rowKey: row.key,
         item: item as TranscriptTool,
@@ -670,8 +670,8 @@ class _TranscriptViewState extends State<TranscriptView> with TickerProviderStat
         onToggle: _toggle,
         nested: row.nested,
       ),
-      RowKind.group => GroupRow(rowKey: row.key, group: row.group!, gap: row.gap, open: open, onToggle: _toggle),
-      RowKind.text => AgentTextRow(
+      TranscriptRowKind.group => GroupRow(rowKey: row.key, group: row.group!, gap: row.gap, open: open, onToggle: _toggle),
+      TranscriptRowKind.text => AgentTextRow(
         rowKey: row.key,
         block: row.part as MdBlock,
         gap: row.gap,
@@ -680,15 +680,15 @@ class _TranscriptViewState extends State<TranscriptView> with TickerProviderStat
         message: item as TranscriptMessage,
         onToggle: _toggle,
       ),
-      RowKind.content => ContentRow(
+      TranscriptRowKind.content => ContentRow(
         rowKey: row.key,
         block: row.part as ContentBlock,
         gap: row.gap,
         expanded: all,
         onToggle: _toggle,
       ),
-      RowKind.changedHead => ChangedHeadRow(rowKey: row.key, turn: row.turn!, gap: row.gap),
-      RowKind.changedFile => ChangedFileRow(
+      TranscriptRowKind.changedHead => ChangedHeadRow(rowKey: row.key, turn: row.turn!, gap: row.gap),
+      TranscriptRowKind.changedFile => ChangedFileRow(
         rowKey: row.key,
         file: row.file!,
         last: row.last,
@@ -696,14 +696,14 @@ class _TranscriptViewState extends State<TranscriptView> with TickerProviderStat
         all: all,
         onToggle: _toggle,
       ),
-      RowKind.changedMore => ChangedMoreRow(rowKey: row.key, count: row.count, all: open, onToggle: _toggle),
-      RowKind.divider => SinceDivider(rowKey: row.key, label: row.label ?? 'New', gap: row.gap),
-      RowKind.stop => StopNoteRow(
+      TranscriptRowKind.changedMore => ChangedMoreRow(rowKey: row.key, count: row.count, all: open, onToggle: _toggle),
+      TranscriptRowKind.divider => SinceDivider(rowKey: row.key, label: row.label ?? 'New', gap: row.gap),
+      TranscriptRowKind.stop => StopNoteRow(
         rowKey: row.key,
         reason: (item as TranscriptStop).reason,
         gap: row.gap,
       ),
-      RowKind.note => NoteRow(rowKey: row.key, text: (item as TranscriptNote).text, gap: row.gap),
+      TranscriptRowKind.note => TranscriptNoteRow(rowKey: row.key, text: (item as TranscriptNote).text, gap: row.gap),
     };
     return _Reveal(key: key, animate: _entering.contains(row.key), reduced: _reducedMotion, child: child);
   }
@@ -742,7 +742,18 @@ class _TranscriptViewState extends State<TranscriptView> with TickerProviderStat
   Widget build(BuildContext context) {
     notifyRegionBuilt('transcript');
     if (_rows.isEmpty) {
-      if (_earlier == EarlierHistory.none) return const _EmptyTranscript();
+      if (_earlier == EarlierHistory.none) {
+        // Scrolls when the keyboard leaves it little room.
+        return const Center(
+          child: SingleChildScrollView(
+            child: EmptyState(
+              icon: LucideIcons.messageSquare,
+              title: 'Nothing said yet',
+              message: 'Tell the agent what to do.',
+            ),
+          ),
+        );
+      }
       // The end of the log is all tool output with nothing to show: what was
       // said is earlier, so read it rather than say nothing was.
       if (_earlier == EarlierHistory.available) {
@@ -837,9 +848,8 @@ class _TranscriptViewState extends State<TranscriptView> with TickerProviderStat
           bottom: Gap.md,
           child: ListenableBuilder(
             listenable: Listenable.merge([_away, _frozen]),
-            builder: (context, _) => _away.value
-                ? JumpToLatest(newBlocks: _newBlocks(), onPressed: _jumpToLatest)
-                : const SizedBox.shrink(),
+            builder: (context, _) =>
+                JumpToLatest(visible: _away.value, newBlocks: _newBlocks(), onPressed: _jumpToLatest),
           ),
         ),
       ],
@@ -922,19 +932,10 @@ class _EarlierRow extends StatelessWidget {
             compact: true,
             onPressed: onLoad,
           ),
-          EarlierHistory.loading => Semantics(
-            liveRegion: true,
-            child: SizedBox(
-              height: 36,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const BusySpinner(),
-                  const SizedBox(width: Gap.sm),
-                  Text('Loading earlier messages…', style: style),
-                ],
-              ),
-            ),
+          // As tall as the button it replaces, so the list does not jump.
+          EarlierHistory.loading => const SizedBox(
+            height: kMinTap,
+            child: LoadingRow('Loading earlier messages…', padding: EdgeInsets.zero, center: true),
           ),
           // 64 MB: `_maxTail` of the observed session and the host's ceiling.
           EarlierHistory.tooLong => Text(
@@ -946,38 +947,6 @@ class _EarlierRow extends StatelessWidget {
         },
       ),
     );
-  }
-}
-
-class _EmptyTranscript extends StatelessWidget {
-  const _EmptyTranscript();
-
-  @override
-  Widget build(BuildContext context) {
-    final ds = context.ds;
-    return Center(
-      child: SingleChildScrollView(
-        child: Padding(
-        padding: const EdgeInsets.all(Gap.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(LucideIcons.messageSquare, size: 28, color: ds.textTertiary),
-            const SizedBox(height: Gap.md),
-            Semantics(
-              header: true,
-              child: Text('Nothing said yet', style: Type.row.copyWith(color: ds.text)),
-            ),
-            const SizedBox(height: Gap.xs),
-            Text(
-              'Tell the agent what to do.',
-              textAlign: TextAlign.center,
-              style: Type.secondary.copyWith(color: ds.textSecondary),
-            ),
-          ],
-        ),
-      ),
-    ));
   }
 }
 

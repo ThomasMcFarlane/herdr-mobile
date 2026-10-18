@@ -525,12 +525,17 @@ void main() {
       await _pump(tester, _viewer(projectFs(), '/home/dev/herdr-mobile/pubspec.yaml'));
       await _settle(tester);
 
-      await tester.tap(find.byTooltip('Copy path'));
+      await tester.tap(find.byTooltip('File options'));
+      await _settle(tester);
+      await tester.tap(find.text('Copy path'));
       await tester.pump();
       expect(copied.last, '/home/dev/herdr-mobile/pubspec.yaml');
       expect(find.text('Path copied'), findsOneWidget);
+      await _settle(tester);
 
-      await tester.tap(find.byTooltip('Copy contents'));
+      await tester.tap(find.byTooltip('File options'));
+      await _settle(tester);
+      await tester.tap(find.text('Copy contents'));
       await _settle(tester);
       expect(copied.last, 'name: herdr_mobile\nversion: 1.4.0+4102');
     });
@@ -544,10 +549,12 @@ void main() {
       await _pump(tester, _viewer(projectFs(), '/home/dev/herdr-mobile/pubspec.yaml'));
       await _settle(tester);
 
-      await tester.tap(find.byTooltip('Copy contents'));
+      await tester.tap(find.byTooltip('File options'));
+      await _settle(tester);
+      await tester.tap(find.text('Copy contents'));
       await _settle(tester);
 
-      expect(find.textContaining("Couldn't copy"), findsOneWidget);
+      expect(find.textContaining('Couldn’t copy'), findsOneWidget);
     });
 
     testWidgets('an empty file says so and offers no copy', (tester) async {
@@ -555,7 +562,10 @@ void main() {
       await _settle(tester);
 
       expect(find.text('Empty file'), findsOneWidget);
-      expect(find.byTooltip('Copy contents'), findsNothing);
+      await tester.tap(find.byTooltip('File options'));
+      await _settle(tester);
+      expect(find.text('Copy contents'), findsNothing);
+      expect(find.text('Copy path'), findsOneWidget);
       expect(find.text('Wrap'), findsNothing);
     });
 

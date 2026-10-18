@@ -238,20 +238,13 @@ class _ChooseTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
-    return PressBuilder(
-      onTap: onTap,
-      haptic: true,
-      builder: (context, pressed) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: _rowInset),
-        child: AnimatedContainer(
-          duration: Motion.pressing(pressed),
-          curve: Motion.easeOut,
-          constraints: const BoxConstraints(minHeight: _rowHeight),
-          padding: const EdgeInsets.symmetric(horizontal: Gap.gutter - _rowInset, vertical: Gap.md),
-          decoration: BoxDecoration(
-            color: pressed ? ds.fill : Colors.transparent,
-            borderRadius: BorderRadius.circular(Radii.sm),
-          ),
+    return PressRow(
+      onTap: () {
+        Haptics.tick();
+        onTap();
+      },
+      minHeight: _rowHeight,
+      padding: const EdgeInsets.symmetric(horizontal: Gap.gutter - _rowInset, vertical: Gap.md),
           child: Row(
             children: [
               IconTile(icon: LucideIcons.folderOpen, color: ds.accentText),
@@ -267,7 +260,7 @@ class _ChooseTile extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: Type.row.copyWith(color: ds.text),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: Gap.hair),
                     Text(
                       'Opens the phone\'s file picker',
                       maxLines: 1,
@@ -279,13 +272,11 @@ class _ChooseTile extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
     );
   }
 }
 
-const _rowInset = 8.0;
+const _rowInset = PressRow.inset;
 const _rowHeight = 56.0;
 
 /// One file: type tile, name cut in the middle, one muted line, and the
@@ -325,22 +316,14 @@ class _FileRow extends StatelessWidget {
       children: [
         Stack(
           children: [
-            PressBuilder(
-              onTap: onTap,
-              haptic: true,
+            PressRow(
+              onTap: () {
+                Haptics.tick();
+                onTap();
+              },
               semanticLabel: label,
-              builder: (context, pressed) => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: _rowInset),
-                child: AnimatedContainer(
-                  duration: Motion.pressing(pressed),
-                  curve: Motion.easeOut,
-                  constraints: const BoxConstraints(minHeight: _rowHeight),
-                  alignment: Alignment.centerLeft,
-                  padding: EdgeInsets.fromLTRB(Gap.gutter - _rowInset, Gap.md, trailing + Gap.xs, Gap.md),
-                  decoration: BoxDecoration(
-                    color: pressed ? ds.fill : Colors.transparent,
-                    borderRadius: BorderRadius.circular(Radii.sm),
-                  ),
+              minHeight: _rowHeight,
+              padding: EdgeInsets.fromLTRB(Gap.gutter - _rowInset, Gap.md, trailing + Gap.xs, Gap.md),
                   child: Row(
                     children: [
                       IconTile(icon: fileIconForName(shown)),
@@ -351,7 +334,7 @@ class _FileRow extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             MiddleEllipsisText(shown, style: Type.row.copyWith(color: ds.text)),
-                            const SizedBox(height: 2),
+                            const SizedBox(height: Gap.hair),
                             Text(
                               detail,
                               maxLines: 2,
@@ -363,8 +346,6 @@ class _FileRow extends StatelessWidget {
                       ),
                     ],
                   ),
-                ),
-              ),
             ),
             Positioned(
               top: 0,
@@ -385,7 +366,7 @@ class _FileRow extends StatelessWidget {
                       scale: 0.9,
                       minTapSize: kMinTap,
                       semanticLabel: 'Remove $shown from recent files',
-                      builder: (context, pressed) => Icon(LucideIcons.x, size: 16, color: ds.textSecondary),
+                      builder: (context, pressed) => Icon(LucideIcons.x, size: IconSize.row, color: ds.textSecondary),
                     ),
                 ],
               ),

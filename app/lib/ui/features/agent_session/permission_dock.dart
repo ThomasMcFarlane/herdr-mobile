@@ -287,13 +287,6 @@ class _PermissionPanelState extends State<PermissionPanel> with TapGuardState<Pe
   bool get _unread => _overflows && !_atEnd && !_opened;
 
   @override
-  void initState() {
-    super.initState();
-    // A request is news: it is the thing the person is here for.
-    Haptics.armed();
-  }
-
-  @override
   void dispose() {
     _timer?.cancel();
     _scroll.dispose();
@@ -335,17 +328,10 @@ class _PermissionPanelState extends State<PermissionPanel> with TapGuardState<Pe
         context,
         builder: (ctx) {
           final ds = ctx.ds;
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.xl, Gap.gutter, Gap.lg),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Semantics(header: true, child: Text('Everything it will run', style: Type.title.copyWith(color: ds.text))),
-                const SizedBox(height: Gap.md),
-                SelectableText(_info.subject, style: dockMono(ds)),
-              ],
-            ),
+return SheetScaffold(
+            title: 'Everything it will run',
+            kind: SheetKind.message,
+            child: SelectableText(_info.subject, style: dockMono(ds)),
           );
         },
       ),
@@ -372,12 +358,13 @@ class _PermissionPanelState extends State<PermissionPanel> with TapGuardState<Pe
 
   void _send(PermissionOption option) {
     _timer?.cancel();
-    Haptics.sent();
     setState(() {
       _sent = option.optionId;
       _confirming = null;
     });
     widget.onAnswer(PermissionSelected(option.optionId));
+    // Handed to the session: the answer is out.
+    Haptics.sent();
   }
 
   /// Assistive activation (and a tap on an option that has no gate): a gated
@@ -411,12 +398,12 @@ class _PermissionPanelState extends State<PermissionPanel> with TapGuardState<Pe
   void _cancel() {
     if (_sent != null || !settled) return;
     _timer?.cancel();
-    Haptics.sent();
     setState(() {
       _sent = _cancelled;
       _confirming = null;
     });
     widget.onAnswer(const PermissionCancelled());
+    Haptics.sent();
   }
 
   @override
@@ -439,42 +426,19 @@ class _PermissionPanelState extends State<PermissionPanel> with TapGuardState<Pe
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            DecoratedBox(
-              decoration: BoxDecoration(
-                color: ds.blockedWash,
-                borderRadius: BorderRadius.circular(Radii.sm),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: Icon(toolIcon(kind), size: 16, color: ds.blockedText),
-                        ),
-                        const SizedBox(width: Gap.sm),
-                        Expanded(
-                          child: Semantics(
-                            header: true,
-                            child: Text(
-                              header,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: Type.prompt.copyWith(fontWeight: FontWeight.w600, color: ds.text),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+            QuestionWash(
+              question: header,
+              size: QuestionWashSize.full,
+              questionIsHeader: true,
+              leading: Icon(toolIcon(kind), size: IconSize.row, color: ds.blockedText),
+              details: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
                     if (_evidence.intent case final said?) EvidenceIntent(text: said),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: Gap.sm),
                     if (_evidence.planMarkdown case final plan?) ...[
                       PlanEvidence(markdown: plan),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: Gap.sm),
                     ],
                     if (_showSubject) ...[
                       NotificationListener<ScrollMetricsNotification>(
@@ -496,58 +460,58 @@ class _PermissionPanelState extends State<PermissionPanel> with TapGuardState<Pe
                         ),
                     ],
                     if (_evidence.diffs.isNotEmpty) ...[
-                      const SizedBox(height: 6),
+                      const SizedBox(height: Gap.sm),
                       DiffEvidence(evidence: _evidence),
                     ],
                     if (_paths.isNotEmpty) ...[
-                      const SizedBox(height: 6),
+                      const SizedBox(height: Gap.sm),
                       _Paths(paths: _paths, style: dockMono(ds, size: 12)),
                     ],
                     if (info.risk != null) ...[
-                      const SizedBox(height: 6),
+                      const SizedBox(height: Gap.sm),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Padding(
-                            padding: const EdgeInsets.only(top: 1),
-                            child: Icon(LucideIcons.triangleAlert, size: 14, color: ds.dangerText),
+                            padding: const EdgeInsets.only(top: Gap.hair),
+                            child: Icon(LucideIcons.triangleAlert, size: IconSize.inline, color: ds.dangerText),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: Gap.sm),
                           Expanded(
                             child: Text(
                               'Look closely: ${info.risk}',
-                              style: Type.secondary.copyWith(color: ds.dangerText, fontWeight: FontWeight.w500),
+                              style: Type.secondaryStrong.copyWith(color: ds.dangerText),
                             ),
                           ),
                         ],
                       ),
                     ],
-                  ],
-                ),
+                ],
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: Gap.sm),
             for (final option in request.options) ...[
-              Listener(
-                behavior: HitTestBehavior.translucent,
-                onPointerDown: (_) {
-                  if (!settled && !locked) Haptics.tick();
-                },
-                child: _OptionChip(
-                  // A hold belongs to this option of this request (the panel is
-                  // keyed by request): anything else under the finger drops it.
-                  key: ValueKey(option.optionId),
-                  label: visibleText(option.name),
-                  gate: _gate(option),
-                  confirming: _confirming == option.optionId,
-                  confirmReason: _confirmReason,
-                  sending: _sent == option.optionId,
-                  enabled: live,
-                  onTap: () => _choose(option),
-                  onHold: () => _held(option),
-                ),
+              AnswerChip(
+                // A hold belongs to this option of this request (the panel is
+                // keyed by request): anything else under the finger drops it.
+                key: ValueKey(option.optionId),
+                label: visibleText(option.name),
+                reason: _confirming == option.optionId ? _confirmReason : _gate(option),
+                risk: _gate(option) == null ? AnswerRisk.none : AnswerRisk.gate,
+                state: _sent == option.optionId
+                    ? AnswerChipState.sending
+                    : _confirming == option.optionId
+                    ? AnswerChipState.primed
+                    : AnswerChipState.rest,
+                // A primed option stays held until its window ends, even when
+                // its gate went away (the command was read meanwhile): a finger
+                // that is already on it must not send by lifting.
+                hold: _gate(option) != null || _confirming == option.optionId,
+                enabled: live,
+                onTap: () => _choose(option),
+                onHeld: () => _held(option),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: Gap.sm),
             ],
             Row(
               mainAxisAlignment: widget.more > 0 ? MainAxisAlignment.spaceBetween : MainAxisAlignment.end,
@@ -556,25 +520,18 @@ class _PermissionPanelState extends State<PermissionPanel> with TapGuardState<Pe
                   Flexible(
                     child: Text(
                       '${widget.more} more waiting',
-                      style: Type.label.copyWith(color: ds.blockedText, fontWeight: FontWeight.w600),
+                      style: Type.labelStrong.copyWith(color: ds.blockedText),
                     ),
                   ),
                 Flexible(
-                  child: PressBuilder(
-                    onTap: live ? _cancel : null,
-                    button: true,
-                    builder: (context, pressed) => Container(
-                      constraints: const BoxConstraints(minHeight: kMinTap),
-                      padding: const EdgeInsets.symmetric(horizontal: Gap.md),
-                      alignment: Alignment.center,
-                      child: Text(
-                        'Cancel request',
-                        textAlign: TextAlign.end,
-                        style: Type.label.copyWith(
-                          color: live ? (pressed ? ds.text : ds.textSecondary) : ds.textMuted,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: Gap.md),
+                    child: TextAction(
+                      label: 'Cancel request',
+                      tone: TextActionTone.quiet,
+                      // The answer's own haptic fires once it is handed over.
+                      haptic: false,
+                      onTap: _cancel,
                     ),
                   ),
                 ),
@@ -663,114 +620,6 @@ class _Paths extends StatelessWidget {
         if (paths.length > _shown)
           Text('+${paths.length - _shown} more files', style: Type.caption.copyWith(color: ds.textSecondary)),
       ],
-    );
-  }
-}
-
-class _OptionChip extends StatelessWidget {
-  const _OptionChip({
-    super.key,
-    required this.label,
-    required this.gate,
-    required this.confirming,
-    required this.confirmReason,
-    required this.sending,
-    required this.enabled,
-    required this.onTap,
-    required this.onHold,
-  });
-
-  final String label;
-  final String? gate;
-  final bool confirming;
-  final String confirmReason;
-  final bool sending;
-  final bool enabled;
-
-  /// A tap on an option with no gate; for a gated one, the assistive
-  /// activation (the two-step flow).
-  final VoidCallback onTap;
-
-  /// A hold of a gated option reached its end.
-  final VoidCallback onHold;
-
-  /// A primed option stays held until its window ends, even when its gate went
-  /// away (the command was read meanwhile): a finger that is already on it
-  /// must not send by lifting.
-  bool get _gated => !sending && (gate != null || confirming);
-
-  String? get _semantic => confirming
-      ? 'Confirm: $label, $confirmReason'
-      : (gate == null ? null : '$label, needs holding or a second activation: $gate');
-
-  @override
-  Widget build(BuildContext context) {
-    if (!_gated) {
-      return PressBuilder(
-        onTap: enabled ? onTap : null,
-        scale: 0.985,
-        button: true,
-        semanticLabel: _semantic,
-        builder: (context, pressed) => _body(context, pressed: pressed),
-      );
-    }
-    return HoldToConfirm(
-      enabled: enabled,
-      semanticLabel: _semantic,
-      onActivate: onTap,
-      onConfirmed: onHold,
-      builder: (context, hold) => _body(context, pressed: hold.holding, hold: hold),
-    );
-  }
-
-  Widget _body(BuildContext context, {required bool pressed, HoldState? hold}) {
-    final ds = context.ds;
-    final (bg, pressedBg, fg, border) = confirming
-        ? (ds.danger.withValues(alpha: 0.14), ds.danger.withValues(alpha: 0.24), ds.dangerText, ds.danger.withValues(alpha: 0.55))
-        : (ds.fill, ds.fillPressed, ds.text, null as Color?);
-    final reason = gate ?? (confirming ? confirmReason : null);
-    final shown = (hold?.showsHold ?? false)
-        ? (reason == null ? 'Hold to send' : 'Hold to send · $reason')
-        : confirming
-            ? 'Hold or tap again · $confirmReason'
-            : label;
-    final row = Row(
-      children: [
-        if (sending) ...[
-          const BusySpinner(size: 14),
-          const SizedBox(width: 10),
-        ] else if (confirming) ...[
-          Icon(LucideIcons.triangleAlert, size: 16, color: fg),
-          const SizedBox(width: 8),
-        ],
-        Expanded(
-          child: Text(
-            shown,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: Type.answer.copyWith(
-              // Dimmed while the panel ignores taps (just appeared, or an
-              // answer is on its way): a static state, no animation.
-              color: enabled || sending ? fg : ds.textMuted,
-            ),
-          ),
-        ),
-        if (gate != null && !confirming && !sending) Icon(LucideIcons.triangleAlert, size: 15, color: ds.textSecondary),
-      ],
-    );
-    // The padding sits on the content, not the chip: the fill, a layer between
-    // the chip's colour and its words, covers the whole chip.
-    final content = Padding(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6), child: row);
-    return AnimatedContainer(
-      duration: Motion.pressing(pressed),
-      curve: Motion.easeOut,
-      constraints: const BoxConstraints(minHeight: kMinTap),
-      decoration: BoxDecoration(
-        color: pressed && enabled ? pressedBg : bg,
-        borderRadius: BorderRadius.circular(Radii.sm),
-        border: border == null ? null : Border.all(color: border),
-      ),
-      child: hold == null ? content : Stack(fit: StackFit.passthrough, children: [hold.fill, content]),
     );
   }
 }

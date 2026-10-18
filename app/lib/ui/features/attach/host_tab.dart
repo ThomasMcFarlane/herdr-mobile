@@ -233,12 +233,14 @@ class _HostTabState extends State<HostTab> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.xs, Gap.gutter, Gap.xs),
-              child: _FindField(
+              // A finger on the field asks the sheet for its full height, so
+              // the keyboard has room by the time it opens.
+              child: SearchField(
                 controller: _search,
-                focus: _focus,
+                focusNode: _focus,
                 hint: 'Find in ${visibleText(vm.name)}',
                 onChanged: vm.setQuery,
-                onExpand: _expand,
+                onPointerDown: _expand,
               ),
             ),
             SizedBox(
@@ -449,70 +451,6 @@ class _HostRowState extends State<_HostRow> {
             )
           : null,
       onTap: widget.onTap,
-    );
-  }
-}
-
-/// The find field: 44 dp, the folder's name in the hint, a clear button. It
-/// asks the sheet for its full height as soon as a finger lands on it, so the
-/// keyboard has room by the time it opens.
-class _FindField extends StatelessWidget {
-  const _FindField({
-    required this.controller,
-    required this.focus,
-    required this.hint,
-    required this.onChanged,
-    required this.onExpand,
-  });
-
-  final TextEditingController controller;
-  final FocusNode focus;
-  final String hint;
-  final ValueChanged<String> onChanged;
-  final VoidCallback onExpand;
-
-  @override
-  Widget build(BuildContext context) {
-    final ds = context.ds;
-    return Semantics(
-      label: 'Find in this folder',
-      textField: true,
-      child: Listener(
-        onPointerDown: (_) => onExpand(),
-        child: ListenableBuilder(
-          listenable: controller,
-          builder: (context, _) => TextField(
-            controller: controller,
-            focusNode: focus,
-            autocorrect: false,
-            enableSuggestions: false,
-            textInputAction: TextInputAction.search,
-            onChanged: onChanged,
-            onTapOutside: (_) => focus.unfocus(),
-            style: Type.body.copyWith(fontSize: 15, color: ds.text),
-            cursorColor: ds.accent,
-            textAlignVertical: TextAlignVertical.center,
-            decoration: InputDecoration(
-              hintText: hint,
-              constraints: const BoxConstraints(minHeight: kMinTap, maxHeight: kMinTap),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-              prefixIcon: Icon(LucideIcons.search, size: 16, color: ds.textTertiary),
-              suffixIcon: controller.text.isEmpty
-                  ? null
-                  : PressBuilder(
-                      onTap: () {
-                        controller.clear();
-                        onChanged('');
-                      },
-                      semanticLabel: 'Clear search',
-                      minTapSize: kMinTap,
-                      builder: (context, pressed) =>
-                          Icon(LucideIcons.x, size: 16, color: pressed ? ds.text : ds.textSecondary),
-                    ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

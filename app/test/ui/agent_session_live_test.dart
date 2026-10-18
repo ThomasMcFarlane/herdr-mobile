@@ -422,6 +422,7 @@ void main() {
       await tester.tap(find.text('4 new'));
       await tester.pump(const Duration(milliseconds: 100));
       expect(transcriptPosition(tester).extentAfter, 0);
+      await tester.pump(const Duration(milliseconds: 200)); // the pill fades out
       expect(find.byTooltip('Jump to latest'), findsNothing);
       handle.dispose();
     });

@@ -90,47 +90,57 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: CustomScrollView(
         slivers: [
           const SliverLargeTitle(title: 'Settings'),
+          // Each group draws its own hairline (it opens in place), so the
+          // groups are custom rows that bring their own separation. Built
+          // whole, not lazily: five groups, and an opening group measures
+          // the one above it to scroll itself into view.
           SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (update != null)
-                  UpdateGroup(
+            child: RowColumn(
+            rows: [
+              if (update != null)
+                CustomRow(
+                  id: 'update',
+                  child: UpdateGroup(
                     update: update,
                     open: _open == _Open.update,
                     onToggle: () => _toggle(_Open.update),
                   ),
-                _LookGroup(open: _open == _Open.look, onToggle: () => _toggle(_Open.look)),
-                _AgentsGroup(open: _open == _Open.agents, onToggle: () => _toggle(_Open.agents)),
-                _NotificationsGroup(
+                ),
+              CustomRow(
+                id: 'look',
+                child: _LookGroup(open: _open == _Open.look, onToggle: () => _toggle(_Open.look)),
+              ),
+              CustomRow(
+                id: 'agents',
+                child: _AgentsGroup(open: _open == _Open.agents, onToggle: () => _toggle(_Open.agents)),
+              ),
+              CustomRow(
+                id: 'notifications',
+                child: _NotificationsGroup(
                   open: _open == _Open.notifications,
                   onToggle: () => _toggle(_Open.notifications),
                 ),
-                _StorageGroup(open: _open == _Open.storage, onToggle: () => _toggle(_Open.storage)),
-                _AboutGroup(
+              ),
+              CustomRow(
+                id: 'storage',
+                child: _StorageGroup(open: _open == _Open.storage, onToggle: () => _toggle(_Open.storage)),
+              ),
+              CustomRow(
+                id: 'about',
+                child: _AboutGroup(
                   update: update,
                   open: _open == _Open.about,
                   onToggle: () => _toggle(_Open.about),
                 ),
-                SizedBox(height: FloatingBar.clearance(context) + Gap.md),
-              ],
-            ),
+              ),
+              GapRow(id: 'clearance', height: FloatingBar.clearance(context) + Gap.md),
+            ],
+          ),
           ),
         ],
       ),
     );
   }
-}
-
-/// A switch row inset to the page gutter, as a group's body holds it.
-class _Inset extends StatelessWidget {
-  const _Inset(this.child);
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) =>
-      Padding(padding: const EdgeInsets.symmetric(horizontal: Gap.gutter), child: child);
 }
 
 /// How the app and the terminal look: theme, the agent list, the terminal's
@@ -169,8 +179,10 @@ class _LookGroup extends StatelessWidget {
       summary: '${_theme(theme)} \u00b7 ${_density(density)} \u00b7 ${FontSizeControl.format(fontSize)} pt',
       open: open,
       onToggle: onToggle,
-      children: [
-        SettingsField(
+      rows: [
+        CustomRow(
+          id: 'theme',
+          child: SettingsField(
           title: 'Theme',
           child: Segmented<ThemeChoice>(
             options: const [
@@ -182,7 +194,10 @@ class _LookGroup extends StatelessWidget {
             onChanged: (next) => unawaited(settings.setTheme(next)),
           ),
         ),
-        SettingsField(
+        ),
+        CustomRow(
+          id: 'density',
+          child: SettingsField(
           title: 'Agent list',
           // Only where the setting hides a rule: Cards and Compact say it all.
           hint: density == BoardDensity.auto
@@ -199,31 +214,34 @@ class _LookGroup extends StatelessWidget {
             onChanged: (next) => unawaited(settings.setDensity(next)),
           ),
         ),
-        const _Inset(Padding(padding: EdgeInsets.only(top: Gap.sm), child: FontSizeControl())),
-        const SizedBox(height: Gap.sm),
-        _Inset(
-          SwitchRow(
-            title: 'Wrap long lines',
-            subtitle: 'Fit lines to the screen instead of scrolling sideways.',
-            value: wrap,
-            onChanged: (next) => unawaited(terminal.setWrap(next)),
+        ),
+        const CustomRow(
+          id: 'font-size',
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(Gap.gutter, Gap.sm, Gap.gutter, Gap.sm),
+            child: FontSizeControl(),
           ),
         ),
-        _Inset(
-          SwitchRow(
-            title: 'Dark terminal',
-            subtitle: 'Keep it dark when the app is light.',
-            value: darkTerminal,
-            onChanged: (next) => unawaited(settings.setDarkTerminal(next)),
-          ),
+        ToggleRow(
+          id: 'wrap',
+          title: 'Wrap long lines',
+          subtitle: 'Fit lines to the screen instead of scrolling sideways.',
+          value: wrap,
+          onChanged: (next) => unawaited(terminal.setWrap(next)),
         ),
-        _Inset(
-          SwitchRow(
-            title: 'Smooth text',
-            subtitle: 'Show answers at an even pace, not in bursts.',
-            value: smoothText,
-            onChanged: (next) => unawaited(settings.setSmoothText(next)),
-          ),
+        ToggleRow(
+          id: 'dark-terminal',
+          title: 'Dark terminal',
+          subtitle: 'Keep it dark when the app is light.',
+          value: darkTerminal,
+          onChanged: (next) => unawaited(settings.setDarkTerminal(next)),
+        ),
+        ToggleRow(
+          id: 'smooth-text',
+          title: 'Smooth text',
+          subtitle: 'Show answers at an even pace, not in bursts.',
+          value: smoothText,
+          onChanged: (next) => unawaited(settings.setSmoothText(next)),
         ),
       ],
     );
@@ -239,7 +257,6 @@ class _AgentsGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ds = context.ds;
     final settings = context.read<AppSettings>();
     final openAs = context.select<AppSettings, OpenAgentsAs>((s) => s.openAgentsAs);
     // Absent where the app runs without them (tests).
@@ -251,8 +268,10 @@ class _AgentsGroup extends StatelessWidget {
       summary: phrases == null ? opens : '$opens \u00b7 $phrases ${phrases == 1 ? 'phrase' : 'phrases'}',
       open: open,
       onToggle: onToggle,
-      children: [
-        SettingsField(
+      rows: [
+        CustomRow(
+          id: 'open-as',
+          child: SettingsField(
           title: 'Open agents as',
           hint: openAs == OpenAgentsAs.chat
               ? 'omp, Claude Code and Codex open as a chat when the app can find their session log; the terminal is one tap away. Any other agent, or one it cannot find, opens as a terminal.'
@@ -266,22 +285,16 @@ class _AgentsGroup extends StatelessWidget {
             onChanged: (next) => unawaited(settings.setOpenAgentsAs(next)),
           ),
         ),
+        ),
         if (phrases != null)
-          ListRow(
+          ActionRow(
+            id: 'quick-phrases',
             title: 'Quick phrases',
-            titleMaxLines: 1,
-            divider: false,
+            value: '$phrases',
+            chevron: true,
             onTap: () => unawaited(Navigator.of(context).push(
               MaterialPageRoute<void>(builder: (_) => const QuickPhrasesPage()),
             )),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('$phrases', style: Type.secondary.copyWith(color: ds.textSecondary)),
-                const SizedBox(width: Gap.xs),
-                Icon(LucideIcons.chevronRight, size: 16, color: ds.textTertiary),
-              ],
-            ),
           ),
       ],
     );
@@ -365,59 +378,38 @@ class _NotificationsGroupState extends State<_NotificationsGroup> {
                   : 'When an agent needs me',
       open: widget.open,
       onToggle: widget.onToggle,
-      children: [
+      rows: [
         if (_blocked)
-          Padding(
+          CustomRow(
+            id: 'blocked',
+            child: Padding(
             padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.sm, Gap.gutter, Gap.xs),
-            child: Semantics(
+            child: StatusPanel(
+              color: ds.blocked,
+              icon: LucideIcons.bellOff,
               liveRegion: true,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: ds.blockedWash,
-                  borderRadius: BorderRadius.circular(Radii.sm),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(Gap.md),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(LucideIcons.bellOff, size: 18, color: ds.blockedText),
-                      const SizedBox(width: Gap.md),
-                      Expanded(
-                        child: Text(
-                          'Android is blocking notifications for herdr. '
-                          'Allow them in the system settings for this app.',
-                          style: Type.secondary.copyWith(color: ds.blockedText),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              message: 'Android is blocking notifications for herdr. '
+                  'Allow them in the system settings for this app.',
             ),
           ),
-        _Inset(
-          SwitchRow(
-            title: 'Notify me when an agent needs me',
-            value: enabled,
-            onChanged: (next) => unawaited(_setEnabled(next)),
           ),
+        ToggleRow(
+          id: 'notify',
+          title: 'Notify me when an agent needs me',
+          value: enabled,
+          onChanged: (next) => unawaited(_setEnabled(next)),
         ),
-        _Inset(
-          SwitchRow(
-            title: 'Also when an agent finishes',
-            value: alsoDone,
-            enabled: enabled,
-            onChanged: (next) => unawaited(settings.setAlsoDone(next)),
-          ),
+        ToggleRow(
+          id: 'also-done',
+          title: 'Also when an agent finishes',
+          value: alsoDone,
+          enabled: enabled,
+          onChanged: (next) => unawaited(settings.setAlsoDone(next)),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: Gap.gutter, vertical: Gap.sm),
-          child: Text(
-            'While agents work, herdr keeps a quiet \u201cWatching\u201d notice so '
-            'Android keeps the connection alive. Notifications clear when you open the app.',
-            style: Type.secondary.copyWith(color: ds.textMuted),
-          ),
+        const NoteRow(
+          id: 'watching',
+          text: 'While agents work, herdr keeps a quiet \u201cWatching\u201d notice so '
+              'Android keeps the connection alive. Notifications clear when you open the app.',
         ),
       ],
     );
@@ -498,16 +490,16 @@ class _StorageGroupState extends State<_StorageGroup> {
                     : 'Cache \u00b7 ${formatBytes(bytes)}',
             open: widget.open,
             onToggle: widget.onToggle,
-            children: [
-              ListRow(
+            rows: [
+              EntityRow(
+                id: 'clear-cache',
                 title: 'Clear cache',
                 titleMaxLines: 1,
                 subtitle: 'Copies of what you looked at on your machines, kept so it is not downloaded twice. At most 192 MB, the oldest go first.',
                 subtitleMaxLines: 4,
-                trailing: Icon(LucideIcons.trash2, size: 16, color: context.ds.textTertiary),
+                trailing: Icon(LucideIcons.trash2, size: IconSize.row, color: context.ds.textTertiary),
                 // A plain tap is the right guard: all of it can be downloaded again.
                 onTap: () => unawaited(_clear()),
-                divider: false,
               ),
             ],
           );
@@ -554,9 +546,10 @@ class _AboutGroup extends StatelessWidget {
       open: open,
       onToggle: onToggle,
       divider: false,
-      children: [
-        if (update != null) _UpdateRows(update: update),
-        ListRow(
+      rows: [
+        if (update != null) CustomRow(id: 'updates', dividerIndent: Gap.gutter, child: _UpdateRows(update: update)),
+        EntityRow(
+          id: 'connection',
           title: 'Connection',
           titleMaxLines: 1,
           subtitleMaxLines: 8,
@@ -567,20 +560,21 @@ class _AboutGroup extends StatelessWidget {
                   'to look for a new version and, when you tap Download, to fetch it. '
                   'Dictation uses your phone\'s own speech service.',
         ),
-        ListRow(
+        EntityRow(
+          id: 'source',
           title: 'Source code',
           titleMaxLines: 1,
           subtitle: _repoLabel,
           subtitleMaxLines: 2,
-          trailing: Icon(LucideIcons.externalLink, size: 16, color: context.ds.textTertiary),
+          trailing: Icon(LucideIcons.externalLink, size: IconSize.row, color: context.ds.textTertiary),
           onTap: () => unawaited(_openRepo(context)),
         ),
-        ListRow(
+        EntityRow(
+          id: 'licenses',
           title: 'Licenses',
           titleMaxLines: 1,
-          trailing: Icon(LucideIcons.chevronRight, size: 16, color: context.ds.textTertiary),
+          trailing: Icon(LucideIcons.chevronRight, size: IconSize.row, color: context.ds.textTertiary),
           onTap: () => _openLicenses(context),
-          divider: false,
         ),
       ],
     );
@@ -610,30 +604,28 @@ class _UpdateRows extends StatelessWidget {
                       : update.upToDate
                           ? 'You have the latest version.'
                           : 'Asks github.com for the newest release.');
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ListRow(
+          return RowColumn(
+            rows: [
+              EntityRow(
+                id: 'check',
                 title: 'Check for updates',
                 titleMaxLines: 1,
                 subtitle: subtitle,
                 subtitleMaxLines: 4,
                 subtitleColor: problem != null ? ds.dangerText : null,
                 trailing: checking
-                    ? const BusySpinner(size: 18)
-                    : Icon(LucideIcons.refreshCw, size: 16, color: ds.textTertiary),
+                    ? const BusySpinner(size: IconSize.bar)
+                    : Icon(LucideIcons.refreshCw, size: IconSize.row, color: ds.textTertiary),
                 onTap: update.stage == UpdateStage.idle ? () => unawaited(update.check()) : null,
               ),
-              _Inset(
-                SwitchRow(
-                  title: 'Check automatically',
-                  subtitle: 'Asks github.com about twice a day while you use the app, with this '
-                      'app\'s name and version. A download comes from GitHub\'s file servers.',
-                  value: update.autoCheck,
-                  onChanged: (on) => unawaited(update.setAutoCheck(on)),
-                ),
+              ToggleRow(
+                id: 'auto-check',
+                title: 'Check automatically',
+                subtitle: 'Asks github.com about twice a day while you use the app, with this '
+                    'app\'s name and version. A download comes from GitHub\'s file servers.',
+                value: update.autoCheck,
+                onChanged: (on) => unawaited(update.setAutoCheck(on)),
               ),
-              const Hairline(indent: Gap.gutter),
             ],
           );
         },

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/models/web_bridge.dart';
@@ -30,11 +29,9 @@ Future<void> showLinkSheet(BuildContext context, String url, {MachineConnection?
     context,
     builder: (ctx) {
       final ds = ctx.ds;
-      Future<void> copy() async {
+      void copy() {
         Navigator.of(ctx).pop();
-        await Clipboard.setData(ClipboardData(text: url));
-        Haptics.tick();
-        toast('Link copied');
+        copyText(context, url, what: 'Link copied');
       }
 
       Future<void> open() async {
@@ -63,8 +60,8 @@ Future<void> showLinkSheet(BuildContext context, String url, {MachineConnection?
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Icon(icon, size: 16, color: ds.textSecondary),
+                  padding: const EdgeInsets.only(top: Gap.hair),
+                  child: Icon(icon, size: IconSize.row, color: ds.textSecondary),
                 ),
                 const SizedBox(width: Gap.sm),
                 Expanded(
@@ -74,37 +71,39 @@ Future<void> showLinkSheet(BuildContext context, String url, {MachineConnection?
             ),
           );
 
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.xl, Gap.gutter, Gap.lg),
+      return SheetScaffold(
+        title: host.isEmpty ? 'Link' : host,
+        kind: SheetKind.message,
+        actions: [
+          if (!local)
+            AppButton(
+              label: 'Open in browser',
+              icon: LucideIcons.externalLink,
+              expand: true,
+              onPressed: open,
+            )
+          else if (previewable)
+            AppButton(
+              label: 'Open on phone',
+              icon: LucideIcons.smartphone,
+              expand: true,
+              onPressed: openOnPhone,
+            ),
+          AppButton(
+            label: 'Copy link',
+            icon: LucideIcons.copy,
+            kind: local && !previewable ? AppButtonKind.primary : AppButtonKind.secondary,
+            expand: true,
+            onPressed: copy,
+          ),
+        ],
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Semantics(
-              header: true,
-              child: Text(
-                host.isEmpty ? 'Link' : host,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Type.title.copyWith(color: ds.text),
-              ),
-            ),
-            const SizedBox(height: Gap.md),
-            Container(
-              padding: const EdgeInsets.all(Gap.md),
-              decoration: BoxDecoration(
-                color: ds.fill,
-                borderRadius: BorderRadius.circular(Radii.sm),
-              ),
-              child: SelectableText(
-                url,
-                style: TextStyle(
-                  fontFamily: monoFamily,
-                  fontSize: 13,
-                  height: 1.45,
-                  color: ds.text,
-                ),
-              ),
+            const SizedBox(height: Gap.xs),
+            Panel(
+              child: SelectableText(url, style: Mono.input.copyWith(color: ds.text)),
             ),
             if (previewable)
               note(
@@ -117,31 +116,6 @@ Future<void> showLinkSheet(BuildContext context, String url, {MachineConnection?
               note(LucideIcons.server, 'This address is on the machine, not your phone.')
             else if (plain)
               note(LucideIcons.triangleAlert, 'This link is not encrypted.'),
-            const SizedBox(height: Gap.xl),
-            if (!local) ...[
-              AppButton(
-                label: 'Open in browser',
-                icon: LucideIcons.externalLink,
-                expand: true,
-                onPressed: open,
-              ),
-              const SizedBox(height: Gap.sm),
-            ] else if (previewable) ...[
-              AppButton(
-                label: 'Open on phone',
-                icon: LucideIcons.smartphone,
-                expand: true,
-                onPressed: openOnPhone,
-              ),
-              const SizedBox(height: Gap.sm),
-            ],
-            AppButton(
-              label: 'Copy link',
-              icon: LucideIcons.copy,
-              kind: local && !previewable ? AppButtonKind.primary : AppButtonKind.secondary,
-              expand: true,
-              onPressed: copy,
-            ),
           ],
         ),
       );

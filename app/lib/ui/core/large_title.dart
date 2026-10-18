@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
 import 'press.dart';
-import 'buttons.dart';
 import 'chips.dart';
 import 'motion.dart';
 import 'tokens.dart';
+import 'top_bar.dart';
 
 /// Large-title page header (Apple/Notion pattern) as a pinned sliver.
 ///
@@ -27,12 +27,22 @@ class SliverLargeTitle extends StatelessWidget {
     this.bottomHeight = 0,
   });
 
+  /// A pushed screen's header: [AppBackButton] leads.
+  const SliverLargeTitle.back({
+    super.key,
+    required this.title,
+    this.subtitle,
+    this.actions = const [],
+    this.bottom,
+    this.bottomHeight = 0,
+  }) : leading = const AppBackButton();
+
   final String title;
 
   /// One quiet line under the big title.
   final Widget? subtitle;
 
-  /// Typically a back [CircleButton].
+  /// The root tabs have none; pushed screens use [SliverLargeTitle.back].
   final Widget? leading;
   final List<Widget> actions;
 

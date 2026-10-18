@@ -45,18 +45,11 @@ class FoldRow extends StatelessWidget {
       padding: EdgeInsets.only(top: gap),
       child: Semantics(
         expanded: open,
-        child: PressBuilder(
+        child: PressRow(
           onTap: () => onToggle(rowKey),
           semanticLabel: parts.join(', '),
-          builder: (context, pressed) => AnimatedContainer(
-            duration: Motion.pressing(pressed),
-            curve: Motion.easeOut,
-            constraints: const BoxConstraints(minHeight: kMinTap),
-            padding: const EdgeInsets.symmetric(horizontal: Gap.xs, vertical: 6),
-            decoration: BoxDecoration(
-              color: pressed ? ds.fill : Colors.transparent,
-              borderRadius: BorderRadius.circular(Radii.sm),
-            ),
+          minHeight: kMinTap,
+          padding: const EdgeInsets.symmetric(horizontal: Gap.xs, vertical: Gap.xs),
             child: Row(
               children: [
                 Caret(open: open),
@@ -79,7 +72,6 @@ class FoldRow extends StatelessWidget {
                 ),
               ],
             ),
-          ),
         ),
       ),
     );
@@ -154,29 +146,21 @@ class ThinkingRow extends StatelessWidget {
         children: [
           Semantics(
             expanded: open,
-            child: PressBuilder(
+            child: PressRow(
               onTap: () => onToggle(rowKey),
               semanticLabel: 'Thinking',
-              builder: (context, pressed) => AnimatedContainer(
-                duration: Motion.pressing(pressed),
-                curve: Motion.easeOut,
-                constraints: const BoxConstraints(minHeight: kMinTap),
-                padding: const EdgeInsets.symmetric(horizontal: Gap.xs),
-                decoration: BoxDecoration(
-                  color: pressed ? ds.fill : Colors.transparent,
-                  borderRadius: BorderRadius.circular(Radii.sm),
-                ),
+              minHeight: kMinTap,
+              padding: const EdgeInsets.symmetric(horizontal: Gap.xs),
                 child: Row(
                   children: [
-                    Icon(LucideIcons.brain, size: 16, color: ds.textSecondary),
-                    const SizedBox(width: 10),
+                    Icon(LucideIcons.brain, size: IconSize.row, color: ds.textSecondary),
+                    const SizedBox(width: Gap.sm),
                     Text(
                       'Thinking',
                       style: Type.secondary.copyWith(color: ds.textSecondary, fontWeight: FontWeight.w500),
                     ),
                   ],
                 ),
-              ),
             ),
           ),
           if (open)
@@ -215,22 +199,15 @@ class GroupRow extends StatelessWidget {
       padding: EdgeInsets.only(top: gap),
       child: Semantics(
         expanded: open,
-        child: PressBuilder(
+        child: PressRow(
           onTap: () => onToggle(rowKey),
           semanticLabel: label,
-          builder: (context, pressed) => AnimatedContainer(
-            duration: Motion.pressing(pressed),
-            curve: Motion.easeOut,
-            constraints: const BoxConstraints(minHeight: kMinTap),
-            padding: const EdgeInsets.symmetric(horizontal: Gap.xs, vertical: 6),
-            decoration: BoxDecoration(
-              color: pressed ? ds.fill : Colors.transparent,
-              borderRadius: BorderRadius.circular(Radii.sm),
-            ),
+          minHeight: kMinTap,
+          padding: const EdgeInsets.symmetric(horizontal: Gap.xs, vertical: Gap.xs),
             child: Row(
               children: [
-                Icon(group.reads > 0 ? LucideIcons.fileText : LucideIcons.search, size: 16, color: ds.textSecondary),
-                const SizedBox(width: 10),
+                Icon(group.reads > 0 ? LucideIcons.fileText : LucideIcons.search, size: IconSize.row, color: ds.textSecondary),
+                const SizedBox(width: Gap.sm),
                 Expanded(
                   child: Text(
                     visibleText(label),
@@ -241,7 +218,6 @@ class GroupRow extends StatelessWidget {
                 Caret(open: open),
               ],
             ),
-          ),
         ),
       ),
     );

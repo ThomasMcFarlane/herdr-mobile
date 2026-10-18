@@ -95,15 +95,14 @@ class _QueuedMessagesState extends State<QueuedMessages> {
               ),
             ),
           if (queued.length > queuedRowsShown)
-            PressBuilder(
-              onTap: () => setState(() => _all = !_all),
-              builder: (context, pressed) => Container(
-                constraints: const BoxConstraints(minHeight: kMinTap),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Gap.md),
+              child: Align(
                 alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.symmetric(horizontal: Gap.md),
-                child: Text(
-                  _all ? 'Show fewer' : '${queued.length - shown.length} more queued',
-                  style: Type.label.copyWith(color: pressed ? ds.text : ds.textSecondary),
+                child: TextAction(
+                  label: _all ? 'Show less' : '${queued.length - shown.length} more queued',
+                  tone: TextActionTone.quiet,
+                  onTap: () => setState(() => _all = !_all),
                 ),
               ),
             ),
@@ -135,55 +134,47 @@ class _QueuedRow extends StatelessWidget {
       if (attachments > 0) '+ $attachments attachment${attachments == 1 ? '' : 's'}',
       ?reason,
     ].join(' · ');
-    return DecoratedBox(
-      decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.sm)),
+    return Panel(
+      padding: const EdgeInsets.symmetric(vertical: Gap.xs),
       child: Row(
         children: [
           Expanded(
-            child: PressBuilder(
+            child: PressRow(
               onTap: onEdit,
-              builder: (context, pressed) => AnimatedContainer(
-                duration: Motion.pressing(pressed),
-                curve: Motion.easeOut,
-                constraints: const BoxConstraints(minHeight: kMinTap),
-                padding: const EdgeInsets.fromLTRB(Gap.md, Gap.sm, 0, Gap.sm),
-                decoration: BoxDecoration(
-                  color: pressed ? ds.fillPressed : Colors.transparent,
-                  borderRadius: const BorderRadius.horizontal(left: Radius.circular(Radii.sm)),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Icon(
-                      message.held ? LucideIcons.pause : LucideIcons.clock,
-                      size: 14,
-                      color: ds.textSecondary,
-                      semanticLabel: message.held ? 'Held' : 'Queued',
-                    ),
-                    const SizedBox(width: Gap.sm),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
+              minHeight: kMinTap - 2 * Gap.xs,
+              padding: const EdgeInsetsDirectional.fromSTEB(Gap.md - PressRow.inset, Gap.xs, 0, Gap.xs),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Icon(
+                    message.held ? LucideIcons.pause : LucideIcons.clock,
+                    size: IconSize.inline,
+                    color: ds.textSecondary,
+                    semanticLabel: message.held ? 'Held' : 'Queued',
+                  ),
+                  const SizedBox(width: Gap.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          message.text.isEmpty ? 'Attachment' : visibleText(message.text),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Type.compact.copyWith(color: ds.text),
+                        ),
+                        if (note.isNotEmpty)
                           Text(
-                            message.text.isEmpty ? 'Attachment' : visibleText(message.text),
+                            note,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: Type.compact.copyWith(color: ds.text),
+                            style: Type.caption.copyWith(color: ds.textMuted),
                           ),
-                          if (note.isNotEmpty)
-                            Text(
-                              note,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: Type.caption.copyWith(color: ds.textMuted),
-                            ),
-                        ],
-                      ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -252,7 +243,6 @@ class _EditQueuedState extends State<_EditQueued> {
 
   @override
   Widget build(BuildContext context) {
-    final ds = context.ds;
     return ListenableBuilder(
       listenable: widget.session,
       builder: (context, _) {
@@ -260,23 +250,14 @@ class _EditQueuedState extends State<_EditQueued> {
         final gone = message == null;
         final attachments = message?.attachments.length ?? 0;
         final changed = _text.text.trim().isNotEmpty && _text.text != _initial;
-        return Padding(
-          // Lifts the sheet over the keyboard.
-          padding: EdgeInsets.fromLTRB(
-            Gap.gutter,
-            Gap.xl,
-            Gap.gutter,
-            Gap.lg + MediaQuery.viewInsetsOf(context).bottom,
-          ),
+        return SheetScaffold(
+          title: 'Edit queued message',
+          kind: SheetKind.form,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Semantics(
-                header: true,
-                child: Text('Edit queued message', style: Type.title.copyWith(color: ds.text)),
-              ),
-              const SizedBox(height: Gap.lg),
+              const SizedBox(height: Gap.sm),
               LabeledField(
                 label: 'Message',
                 controller: _text,

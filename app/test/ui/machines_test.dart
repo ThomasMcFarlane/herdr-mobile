@@ -182,7 +182,7 @@ void main() {
       ]);
       for (final (width, scale) in [(360.0, 1.0), (320.0, 2.0)]) {
         await _pump(tester, const MachinesScreen(), fleet: h, width: width, scale: scale);
-        expect(find.text('120'), findsOneWidget, reason: 'attention count is shown in full');
+        expect(find.text('99+'), findsOneWidget, reason: 'attention count is never cut: past 99 the badge says 99+');
         expect(find.text('Tuấn Nguyễn'), findsOneWidget);
         expect(find.text('x'), findsOneWidget);
         // A machine with no workspaces says so rather than "0 workspaces · 0 agents".

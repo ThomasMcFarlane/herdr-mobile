@@ -220,11 +220,7 @@ class _FormState extends State<_Form> with RestorationMixin {
     setState(() {});
   }
 
-  Future<void> _copy(String text, String done) async {
-    final toaster = Toaster.of(context);
-    await Clipboard.setData(ClipboardData(text: text));
-    toaster.show(done);
-  }
+  void _copy(String text, String done) => copyText(context, text, what: done);
 
   /// Validates every field. Fields inside a collapsed "Advanced" are not built,
   /// so a bad session name there would slip through: open the section and
@@ -374,38 +370,34 @@ class _FormState extends State<_Form> with RestorationMixin {
   /// key, null = close the sheet and carry on editing.
   Future<bool?> _askAfterFailedTest(String? why) => showAppSheet<bool>(
         context,
-        builder: (ctx) => Padding(
-          padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.xl, Gap.gutter, Gap.lg),
+        builder: (ctx) => SheetScaffold(
+          title: 'The new key could not connect',
+          kind: SheetKind.message,
+          actions: [
+            AppButton(
+              label: 'Keep the old key',
+              expand: true,
+              onPressed: () => Navigator.of(ctx).pop(false),
+            ),
+            AppButton(
+              label: 'Save anyway',
+              kind: AppButtonKind.danger,
+              expand: true,
+              onPressed: () => Navigator.of(ctx).pop(true),
+            ),
+          ],
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Semantics(
-                header: true,
-                child: Text('The new key could not connect', style: Type.title.copyWith(color: ctx.ds.text)),
-              ),
               if (why != null && why.isNotEmpty) ...[
-                const SizedBox(height: Gap.sm),
                 Text(why, style: Type.secondary.copyWith(color: ctx.ds.textSecondary)),
+                const SizedBox(height: Gap.sm),
               ],
-              const SizedBox(height: Gap.sm),
               Text(
                 'If its public key is not on the machine yet, saving now locks this phone out '
                 'of it, and the old key is gone.',
                 style: Type.compact.copyWith(color: ctx.ds.textSecondary),
-              ),
-              const SizedBox(height: Gap.xl),
-              AppButton(
-                label: 'Keep the old key',
-                expand: true,
-                onPressed: () => Navigator.of(ctx).pop(false),
-              ),
-              const SizedBox(height: Gap.sm),
-              AppButton(
-                label: 'Save anyway',
-                kind: AppButtonKind.danger,
-                expand: true,
-                onPressed: () => Navigator.of(ctx).pop(true),
               ),
             ],
           ),
@@ -473,13 +465,8 @@ class _FormState extends State<_Form> with RestorationMixin {
               child: CustomScrollView(
                 keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                 slivers: [
-                  SliverLargeTitle(
+                  SliverLargeTitle.back(
                     title: _editing ? 'Edit machine' : 'Add machine',
-                    leading: CircleButton(
-                      icon: LucideIcons.chevronLeft,
-                      tooltip: 'Back',
-                      onPressed: () => Navigator.of(context).maybePop(),
-                    ),
                   ),
                   SliverToBoxAdapter(
                     child: Column(
@@ -597,7 +584,7 @@ class _FormState extends State<_Form> with RestorationMixin {
                               ),
                           ],
                         ),
-                        FormSectionHeader(
+                        SectionLabel(
                           label: 'Advanced',
                           expanded: _advanced,
                           onTap: () => setState(() => _advancedR.value = !_advanced),

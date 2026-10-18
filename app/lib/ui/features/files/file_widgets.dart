@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/models/remote_file.dart';
 import '../../../data/repositories/path_finder.dart' show PathNotFound;
-import '../../../data/services/system_clipboard.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import 'file_kind.dart';
 
@@ -47,17 +45,6 @@ IconData iconForEntry(RemoteEntry e) {
   if (e.isDirectory) return LucideIcons.folder;
   if (e.kind == RemoteEntryKind.other) return LucideIcons.fileCog;
   return fileIconForName(e.name);
-}
-
-/// Copies [text] and says so with a toast. Where the system already shows its
-/// own confirmation (Android 13+: "Copied to clipboard"), a plain `Copied` is
-/// left to it, so the phone does not say it twice; words that tell more than
-/// that (`Copied as Markdown`, `Copied the first 1 MB`) still show.
-void copyToClipboard(BuildContext context, String text, String done) {
-  Clipboard.setData(ClipboardData(text: text));
-  Haptics.tick();
-  if (SystemClipboard.confirms && done == 'Copied') return;
-  showToast(context, done);
 }
 
 /// What a failed file operation says: an icon, a short title, a sentence.
@@ -210,36 +197,7 @@ class FileResolvingPage extends StatelessWidget {
       backgroundColor: ds.bg,
       body: Column(
         children: [
-          MediaQuery.withClampedTextScaling(
-            maxScaleFactor: kBarTextScale,
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(Gap.gutter - 6, MediaQuery.paddingOf(context).top, Gap.gutter - 6, 0),
-              child: SizedBox(
-                height: 60,
-                child: Row(
-                  children: [
-                    CircleButton(
-                      icon: LucideIcons.chevronLeft,
-                      tooltip: 'Back',
-                      onPressed: () => Navigator.of(context).maybePop(),
-                    ),
-                    const SizedBox(width: Gap.sm),
-                    Expanded(
-                      child: Semantics(
-                        header: true,
-                        child: Text(
-                          title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Type.barTitle.copyWith(color: ds.text),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          AppTopBar(title: title),
           Expanded(
             child: failed == null
                 ? DelayedSkeleton(rows: rows, note: note)
@@ -274,7 +232,7 @@ class FileResolvingPage extends StatelessWidget {
                             label: 'Copy path',
                             icon: LucideIcons.copy,
                             kind: AppButtonKind.secondary,
-                            onPressed: () => copyToClipboard(context, path!, 'Path copied'),
+                            onPressed: () => copyText(context, path!, what: 'Path copied'),
                           ),
                         ),
                       ],

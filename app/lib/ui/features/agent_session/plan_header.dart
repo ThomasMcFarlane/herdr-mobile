@@ -115,70 +115,44 @@ class _PlanState extends State<_Plan> {
     // that does not fit scrolls there instead of overflowing.
     return SingleChildScrollView(child: Padding(
       padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.xs),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: ds.fill,
-          borderRadius: BorderRadius.circular(Radii.md),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: FoldPanel(
+        expanded: _open,
+        onToggle: (open) => setState(() => _open = open),
+        header: Row(
           children: [
-            Semantics(
-              expanded: _open,
-              child: PressBuilder(
-                onTap: () => setState(() => _open = !_open),
-                builder: (context, pressed) => AnimatedContainer(
-                  duration: Motion.pressing(pressed),
-                  curve: Motion.easeOut,
-                  constraints: const BoxConstraints(minHeight: kMinTap),
-                  padding: const EdgeInsets.symmetric(horizontal: Gap.md),
-                  decoration: BoxDecoration(
-                    color: pressed ? ds.fillPressed : Colors.transparent,
-                    borderRadius: BorderRadius.circular(Radii.md),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(LucideIcons.listChecks, size: 16, color: ds.textSecondary),
-                      const SizedBox(width: Gap.sm),
-                      Expanded(
-                        child: Text.rich(
-                          TextSpan(
-                            text: 'Plan',
-                            style: Type.label.copyWith(color: ds.text, fontWeight: FontWeight.w600),
-                            children: [
-                              TextSpan(
-                                text: '  $done of ${plan.length}',
-                                style: Type.label.copyWith(color: ds.textSecondary, fontFeatures: Type.tabular),
-                              ),
-                              if (current != null && !_open)
-                                TextSpan(
-                                  text: '  ${current.content}',
-                                  style: Type.secondary.copyWith(color: ds.textMuted),
-                                ),
-                            ],
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+            Icon(LucideIcons.listChecks, size: IconSize.row, color: ds.textSecondary),
+            const SizedBox(width: Gap.sm),
+            Expanded(
+              child: Text.rich(
+                TextSpan(
+                  text: 'Plan',
+                  style: Type.labelStrong.copyWith(color: ds.text),
+                  children: [
+                    TextSpan(
+                      text: '  $done of ${plan.length}',
+                      style: Type.label.copyWith(color: ds.textSecondary, fontFeatures: Type.tabular),
+                    ),
+                    if (current != null && !_open)
+                      TextSpan(
+                        text: '  ${current.content}',
+                        style: Type.secondary.copyWith(color: ds.textMuted),
                       ),
-                      const SizedBox(width: Gap.xs),
-                      Icon(_open ? LucideIcons.chevronUp : LucideIcons.chevronDown, size: 14, color: ds.textTertiary),
-                    ],
-                  ),
+                  ],
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            if (_open)
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: _listHeight),
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  padding: const EdgeInsets.fromLTRB(Gap.md, 0, Gap.md, Gap.sm),
-                  itemCount: plan.length,
-                  itemBuilder: (context, i) => _Step(entry: plan[i]),
-                ),
-              ),
           ],
+        ),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: _listHeight),
+          child: ListView.builder(
+            shrinkWrap: true,
+            padding: EdgeInsets.zero,
+            itemCount: plan.length,
+            itemBuilder: (context, i) => _Step(entry: plan[i]),
+          ),
         ),
       ),
     ));

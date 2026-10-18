@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
-import '../../../data/models/herdr_models.dart';
 import '../../../data/repositories/attention_set.dart';
 import '../../../data/repositories/fleet_repository.dart';
 import '../../../data/repositories/machine_connection.dart';
@@ -98,7 +97,7 @@ class _MachineRow extends StatelessWidget {
 
   static const _tile = 32.0;
   static const _gap = 12.0;
-  static const _inset = 8.0;
+  static const _inset = PressRow.inset;
 
   void _open(BuildContext context) => Navigator.of(context).push(
         MaterialPageRoute<void>(builder: (_) => MachineScreen(machine: machine)),
@@ -179,22 +178,13 @@ class _MachineRow extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        PressBuilder(
+        PressRow(
           // A disabled machine has nothing to open: the tap offers the menu,
           // where Enable is.
           onTap: p.enabled ? () => _open(context) : () => _menu(context),
           onLongPress: () => _menu(context),
           semanticLabel: semantic,
-          builder: (context, pressed) => Padding(
-            padding: const EdgeInsets.symmetric(horizontal: _inset),
-            child: AnimatedContainer(
-              duration: pressed ? Motion.press : Motion.release,
-              curve: Motion.easeOut,
-              decoration: BoxDecoration(
-                color: pressed ? ds.fill : Colors.transparent,
-                borderRadius: BorderRadius.circular(Radii.sm),
-              ),
-              padding: const EdgeInsets.fromLTRB(Gap.gutter - _inset, 12, Gap.gutter - _inset - 8, 12),
+          padding: const EdgeInsets.fromLTRB(Gap.gutter - _inset, Gap.md, Gap.gutter - _inset - Gap.sm, Gap.md),
               child: Row(
                 children: [
                   const SizedBox(width: _tile, child: Center(child: IconTile(icon: LucideIcons.server))),
@@ -228,7 +218,7 @@ class _MachineRow extends StatelessWidget {
                       ],
                     ),
                   ),
-                  if (needYou > 0) ...[const SizedBox(width: Gap.sm), _NeedsChip(count: needYou)],
+                  if (needYou > 0) ...[const SizedBox(width: Gap.sm), CountBadge(count: needYou)],
                   if (!p.enabled && roomy) ...[const SizedBox(width: Gap.sm), enable],
                   const SizedBox(width: Gap.xs),
                   CircleButton(
@@ -240,8 +230,6 @@ class _MachineRow extends StatelessWidget {
                   ),
                 ],
               ),
-            ),
-          ),
         ),
         if (!p.enabled && !roomy)
           Padding(
@@ -344,39 +332,4 @@ bool _fits(BuildContext context, String text, TextStyle style, double width) {
   final fits = painter.width <= width;
   painter.dispose();
   return fits;
-}
-
-/// "Agents need you" count: the blocked glyph and the number, never clipped.
-class _NeedsChip extends StatelessWidget {
-  const _NeedsChip({required this.count});
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    final ds = context.ds;
-    return Container(
-      height: 24,
-      padding: const EdgeInsets.fromLTRB(7, 0, 9, 0),
-      decoration: BoxDecoration(
-        color: ds.blocked.withValues(alpha: ds.isDark ? 0.16 : 0.12),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const StatusGlyph(status: AgentStatus.blocked, size: 13),
-          const SizedBox(width: 5),
-          Text(
-            '$count',
-            style: Type.caption.copyWith(
-              color: ds.blockedText,
-              fontWeight: FontWeight.w600,
-              fontFeatures: Type.tabular,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

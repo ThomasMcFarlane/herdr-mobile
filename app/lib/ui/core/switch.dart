@@ -97,7 +97,7 @@ class SwitchRow extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 56),
           padding: const EdgeInsets.symmetric(vertical: Gap.sm),
           decoration: BoxDecoration(
-            color: pressed ? ds.fill : Colors.transparent,
+            color: pressed ? ds.pressTint : ds.pressTint.withAlpha(0),
             borderRadius: BorderRadius.circular(Radii.sm),
           ),
           child: Row(

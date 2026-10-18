@@ -9,7 +9,6 @@ import '../../../data/services/image_decode.dart';
 import '../../../data/services/photo_export.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../files/file_format.dart';
-import '../files/file_widgets.dart' show copyToClipboard;
 import 'photo_info.dart';
 import 'photo_item.dart';
 import 'photo_stage.dart';
@@ -202,7 +201,7 @@ class PhotoViewerState extends State<PhotoViewer> with SingleTickerProviderState
           SheetAction(
             label: 'Copy path',
             icon: LucideIcons.link,
-            onTap: () => copyToClipboard(context, entry.item.path!, 'Path copied'),
+            onTap: () => copyText(context, entry.item.path!, what: 'Path copied'),
           ),
       ],
     );
@@ -340,45 +339,17 @@ class _TopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ds = context.ds;
-    final top = MediaQuery.paddingOf(context).top;
     final entry = model.count == 0 ? null : model.currentEntry;
     final title = model.count > 1 ? model.positionLabel : (model.count == 0 ? 'Photo' : model.current.name);
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xB3000000), Color(0x00000000)],
-        ),
-      ),
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(Gap.gutter - 6, top, Gap.gutter - 6, Gap.md),
-        child: SizedBox(
-          height: 60,
-          child: Row(
-            children: [
-              CircleButton(icon: LucideIcons.chevronLeft, tooltip: 'Back', onPressed: onBack),
-              const SizedBox(width: Gap.sm),
-              Expanded(
-                child: Semantics(
-                  header: true,
-                  liveRegion: true,
-                  child: Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Type.barTitle.copyWith(color: ds.text),
-                  ),
-                ),
-              ),
-              CircleButton(icon: LucideIcons.info, tooltip: 'Photo info', onPressed: entry == null ? null : onInfo),
-              const SizedBox(width: 4),
-              CircleButton(icon: LucideIcons.share2, tooltip: 'Save or share', onPressed: entry == null ? null : onShare),
-            ],
-          ),
-        ),
-      ),
+    return AppTopBar(
+      overlay: true,
+      announceTitle: true,
+      leading: AppBackButton(onPressed: onBack),
+      title: title,
+      actions: [
+        CircleButton(icon: LucideIcons.info, tooltip: 'Photo info', onPressed: entry == null ? null : onInfo),
+        CircleButton(icon: LucideIcons.share2, tooltip: 'Save or share', onPressed: entry == null ? null : onShare),
+      ],
     );
   }
 }
@@ -548,7 +519,7 @@ class _FailureView extends StatelessWidget {
                         label: 'Copy path',
                         icon: LucideIcons.copy,
                         kind: AppButtonKind.secondary,
-                        onPressed: () => copyToClipboard(context, entry.item.path!, 'Path copied'),
+                        onPressed: () => copyText(context, entry.item.path!, what: 'Path copied'),
                       ),
                   ],
                 ),

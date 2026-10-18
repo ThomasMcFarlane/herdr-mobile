@@ -420,6 +420,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       expect(transcriptPosition(tester).extentAfter, 0);
       expect(find.text('new paragraph at the end'), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 200)); // the pill fades out
       expect(find.byTooltip('Jump to latest'), findsNothing);
     });
 
@@ -458,6 +459,7 @@ void main() {
       expect(find.text('Step 0'), findsNothing);
 
       await tester.tap(find.textContaining('Plan', findRichText: true));
+      await tester.pump(); // the fold starts opening
       await tester.pump(const Duration(milliseconds: 100));
       expect(find.text('Step 0'), findsOneWidget);
       expect(find.text('Step 6'), findsOneWidget);

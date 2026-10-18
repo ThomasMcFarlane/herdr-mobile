@@ -1,22 +1,36 @@
-// One copy, one confirmation: where the system says "Copied to clipboard" the
-// app stays quiet about a plain copy.
+// One copy, one confirmation: where Android says "Copied to clipboard" itself
+// (13 and later) the app says nothing of its own; it still says what the
+// system cannot (a cut copy) and that the clipboard refused.
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/services/system_clipboard.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
-import 'package:herdr_mobile/ui/features/files/file_widgets.dart';
 
-Future<void> pump(WidgetTester tester, String done) async {
-  tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async => null);
+late List<String> copied;
+
+Future<void> copy(WidgetTester tester, {required bool systemConfirms, String? caveat, bool refuse = false}) async {
+  copied = [];
+  tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+    if (call.method != 'Clipboard.setData') return null;
+    if (refuse) throw PlatformException(code: 'denied');
+    copied.add((call.arguments as Map)['text'] as String);
+    return null;
+  });
   addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
+  SystemClipboard.confirms = systemConfirms;
   await tester.pumpWidget(
     MaterialApp(
       theme: AppTheme.light(),
       navigatorObservers: [ToastRouteObserver()],
       home: Scaffold(
         body: Builder(
-          builder: (context) => TextButton(onPressed: () => copyToClipboard(context, 'x', done), child: const Text('copy')),
+          builder: (context) => Center(
+            child: AppButton(
+              label: 'copy',
+              onPressed: () => copyText(context, '/srv/app/main.go', what: 'Path copied', caveat: caveat),
+            ),
+          ),
         ),
       ),
     ),
@@ -29,22 +43,26 @@ Future<void> pump(WidgetTester tester, String done) async {
 void main() {
   tearDown(() => SystemClipboard.confirms = false);
 
-  testWidgets('the app says Copied itself when the system does not', (tester) async {
-    SystemClipboard.confirms = false;
-    await pump(tester, 'Copied');
-    expect(find.text('Copied'), findsOneWidget);
+  testWidgets('where the system confirms a copy, the app says nothing: one confirmation, not two', (tester) async {
+    await copy(tester, systemConfirms: true);
+    expect(copied, ['/srv/app/main.go']);
+    expect(find.byKey(toastKey), findsNothing);
   });
 
-  testWidgets('a plain Copied is left to the system where it confirms', (tester) async {
-    SystemClipboard.confirms = true;
-    await pump(tester, 'Copied');
-    expect(find.text('Copied'), findsNothing);
+  testWidgets('where it does not, the app says what was copied', (tester) async {
+    await copy(tester, systemConfirms: false);
+    expect(find.text('Path copied'), findsOneWidget);
   });
 
-  testWidgets('words that say more than Copied still show where the system confirms', (tester) async {
-    SystemClipboard.confirms = true;
-    await pump(tester, 'Copied as Markdown');
-    expect(find.text('Copied as Markdown'), findsOneWidget);
+  testWidgets('news the system cannot give is always said', (tester) async {
+    await copy(tester, systemConfirms: true, caveat: 'Only the first 1 MB was copied');
+    expect(find.text('Only the first 1 MB was copied'), findsOneWidget);
+    expect(find.text('Path copied'), findsNothing);
+  });
+
+  testWidgets('a clipboard that refuses is said, whatever the system does', (tester) async {
+    await copy(tester, systemConfirms: true, refuse: true);
+    expect(find.text('Couldn’t copy: the clipboard refused it.'), findsOneWidget);
   });
 
   test('detect keeps the default off where there is no Android channel', () async {

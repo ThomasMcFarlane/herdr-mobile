@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/repositories/agent_session.dart';
@@ -102,33 +101,6 @@ typedef RowSelect = ({bool active, bool selected});
 RowSelect rowSelect(BuildContext context, String ref) => context.select<BoardSelection?, RowSelect>(
       (s) => (active: s?.active ?? false, selected: s?.isSelected(ref) ?? false),
     );
-
-/// The round mark of a picked (or pickable) row.
-class SelectMark extends StatelessWidget {
-  const SelectMark({super.key, required this.selected, this.size = 20});
-
-  final bool selected;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    final ds = context.ds;
-    // The row says "selected" once; the mark is only the picture.
-    return ExcludeSemantics(
-      child: Container(
-        width: size,
-        height: size,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: selected ? ds.accent : ds.surface,
-          border: Border.all(color: selected ? ds.accent : ds.textTertiary, width: 1.5),
-        ),
-        child: selected ? Icon(LucideIcons.check, size: size - 8, color: ds.onAccent) : null,
-      ),
-    );
-  }
-}
 
 /// The look of a flat board row (the compact list, an agent session) while the
 /// board is picking: a soft rounded tint inset like the pressed highlight, and

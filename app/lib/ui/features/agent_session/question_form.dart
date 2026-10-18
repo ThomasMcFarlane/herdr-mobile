@@ -127,8 +127,6 @@ class _QuestionPanelState extends State<QuestionPanel> with TapGuardState<Questi
   @override
   void initState() {
     super.initState();
-    // A question is news, like a permission request.
-    Haptics.armed();
     for (final f in _schema?.fields ?? const <ElicitationField>[]) {
       switch (f) {
         case StringField():
@@ -229,42 +227,15 @@ class _QuestionPanelState extends State<QuestionPanel> with TapGuardState<Questi
     ];
     return Padding(
       padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.sm),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: ds.blockedWash,
-          borderRadius: BorderRadius.circular(Radii.sm),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Flexible(
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: Icon(LucideIcons.circleHelp, size: 16, color: ds.blockedText),
-                          ),
-                          const SizedBox(width: Gap.sm),
-                          Expanded(
-                            child: Semantics(
-                              header: true,
-                              child: Text(
-                                _heading,
-                                style: Type.prompt.copyWith(height: 1.4, fontWeight: FontWeight.w600, color: ds.text),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+      child: QuestionWash(
+        question: _heading,
+        size: QuestionWashSize.full,
+        questionIsHeader: true,
+        leading: Icon(LucideIcons.circleHelp, size: IconSize.row, color: ds.blockedText),
+        details: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
                       if (_plan case final plan?) ...[
                         if (plan.intent case final said?) EvidenceIntent(text: said),
                         const SizedBox(height: Gap.sm),
@@ -278,7 +249,7 @@ class _QuestionPanelState extends State<QuestionPanel> with TapGuardState<Questi
                         ),
                       ] else ...[
                         if (schema.description != null && schema.description!.isNotEmpty) ...[
-                          const SizedBox(height: 4),
+                          const SizedBox(height: Gap.xs),
                           Text(schema.description!, style: Type.secondary.copyWith(color: ds.textSecondary)),
                         ],
                         if (secrets.isNotEmpty) ...[
@@ -305,10 +276,13 @@ class _QuestionPanelState extends State<QuestionPanel> with TapGuardState<Questi
                           ),
                         ],
                       ],
-                    ],
-                  ),
-                ),
-              ),
+          ],
+        ),
+        // The answers stay in reach; the question and the fields scroll.
+        footer: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
               if (schema != null && request.autoResolution != null) ...[
                 const SizedBox(height: Gap.sm),
                 AutoResolveLabel(deadline: _arrived.add(request.autoResolution!), now: widget.now),
@@ -341,13 +315,12 @@ class _QuestionPanelState extends State<QuestionPanel> with TapGuardState<Questi
                 const SizedBox(height: Gap.sm),
                 Text(
                   '${widget.more} more waiting',
-                  style: Type.label.copyWith(color: ds.blockedText, fontWeight: FontWeight.w600),
+                  style: Type.labelStrong.copyWith(color: ds.blockedText),
                 ),
               ],
             ],
           ),
         ),
-      ),
     );
   }
 }
@@ -594,7 +567,7 @@ class _Choices extends StatelessWidget {
               child: Text(hint!, style: Type.caption.copyWith(color: ds.textMuted)),
             ),
           if (options.isEmpty)
-            Text('No choices offered.', style: Type.secondary.copyWith(color: ds.textMuted)),
+            const EmptyState.inline('No choices offered.', padding: EdgeInsets.zero),
           for (final o in options)
             _ChoiceRow(
               label: o.title,
@@ -619,38 +592,16 @@ class _ChoiceRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
-    return PressBuilder(
-      onTap: onTap,
+    // Selection is the mark's, not a row wash: `selected` reaches semantics only.
+    return Semantics(
       selected: selected,
-      builder: (context, pressed) => AnimatedContainer(
-        duration: Motion.pressing(pressed),
-        curve: Motion.easeOut,
-        constraints: const BoxConstraints(minHeight: kMinTap),
-        decoration: BoxDecoration(
-          color: pressed ? ds.fill : Colors.transparent,
-          borderRadius: BorderRadius.circular(Radii.sm),
-        ),
+      child: PressRow(
+        onTap: onTap,
+        minHeight: kMinTap,
         child: Row(
           children: [
-            const SizedBox(width: 2),
-            ExcludeSemantics(
-              child: Container(
-                width: 20,
-                height: 20,
-                decoration: BoxDecoration(
-                  shape: multi ? BoxShape.rectangle : BoxShape.circle,
-                  borderRadius: multi ? BorderRadius.circular(5) : null,
-                  color: selected && multi ? ds.accent : Colors.transparent,
-                  border: Border.all(color: selected ? ds.accent : ds.textTertiary, width: selected && !multi ? 2 : 1.5),
-                ),
-                alignment: Alignment.center,
-                child: selected
-                    ? (multi
-                        ? Icon(LucideIcons.check, size: 14, color: ds.onAccent)
-                        : Container(width: 8, height: 8, decoration: BoxDecoration(shape: BoxShape.circle, color: ds.accent)))
-                    : null,
-              ),
-            ),
+            const SizedBox(width: Gap.hair),
+            SelectMark(selected: selected, shape: multi ? SelectMarkShape.square : SelectMarkShape.circle),
             const SizedBox(width: Gap.md),
             Expanded(
               child: Padding(

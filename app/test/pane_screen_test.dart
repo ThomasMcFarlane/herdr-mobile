@@ -249,7 +249,7 @@ void main() {
     expect(transport.sources, ['recent']);
     expect(terminalRow('rows as the terminal has them'), findsOneWidget);
     expect(tester.widget<TerminalView>(find.byType(TerminalView)).wrap, isFalse);
-    expect(find.byTooltip('Wrap lines to screen'), findsOneWidget);
+    expect(find.byTooltip('Pane options'), findsOneWidget);
     await teardown(tester);
   });
 
@@ -306,7 +306,7 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(inBar('title $_pane'), findsOneWidget);
-    expect(find.byTooltip('Wrap lines to screen'), findsOneWidget,
+    expect(find.byTooltip('Pane options'), findsOneWidget,
         reason: 'the buttons keep their room');
     await teardown(tester);
   });
@@ -333,27 +333,30 @@ void main() {
     await teardown(tester);
   });
 
-  testWidgets('the wrap button switches to unwrapped lines and back, and '
-      'remembers', (tester) async {
+  testWidgets('Wrap lines in the pane options switches to unwrapped lines '
+      'and back, and remembers', (tester) async {
     await pumpPane(tester);
 
-    await tester.tap(find.byTooltip('Wrap lines to screen'));
+    await tester.tap(find.byTooltip('Pane options'));
+    await _settle(tester);
+    await tester.tap(find.text('Wrap lines'));
     await _settle(tester);
 
     expect(transport.sources, ['recent', 'recent_unwrapped']);
     expect(terminalRow('joined line from herdr'), findsOneWidget);
     expect(terminalRow('rows as the terminal has them'), findsNothing);
     expect(tester.widget<TerminalView>(find.byType(TerminalView)).wrap, isTrue);
-    expect(find.byTooltip('Show exact terminal layout'), findsOneWidget);
+    expect(tester.widget<SwitchRow>(find.byType(SwitchRow)).value, isTrue);
     expect(settings.wrap, isTrue);
     expect(store.wrap, isTrue);
 
-    await tester.tap(find.byTooltip('Show exact terminal layout'));
+    await tester.tap(find.text('Wrap lines'));
     await _settle(tester);
 
     expect(transport.sources.last, 'recent');
     expect(terminalRow('rows as the terminal has them'), findsOneWidget);
     expect(tester.widget<TerminalView>(find.byType(TerminalView)).wrap, isFalse);
+    expect(tester.widget<SwitchRow>(find.byType(SwitchRow)).value, isFalse);
     expect(store.wrap, isFalse);
     await teardown(tester);
   });
@@ -366,7 +369,9 @@ void main() {
 
     expect(transport.sources.first, 'recent_unwrapped');
     expect(terminalRow('joined line from herdr'), findsOneWidget);
-    expect(find.byTooltip('Show exact terminal layout'), findsOneWidget);
+    await tester.tap(find.byTooltip('Pane options'));
+    await _settle(tester);
+    expect(tester.widget<SwitchRow>(find.byType(SwitchRow)).value, isTrue);
     await teardown(tester);
   });
 
@@ -520,7 +525,7 @@ void main() {
 
     testWidgets('says why it cannot be used while offline', (tester) async {
       await pumpPane(tester);
-      expect(find.text('Message claude…'), findsOneWidget);
+      expect(find.text('Message Claude Code…'), findsOneWidget);
 
       await goOffline(tester);
 

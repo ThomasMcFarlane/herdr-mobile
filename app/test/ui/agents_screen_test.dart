@@ -509,8 +509,9 @@ void main() {
         of: find.widgetWithText(SectionLabel, 'Working'),
         matching: find.byType(RotationTransition),
       );
-      expect(tester.widget<RotationTransition>(chevron).turns.value, -0.25,
-          reason: 'the chevron must not spin to catch up');
+      // Folded, the caret points right (no turn).
+      expect(tester.widget<RotationTransition>(chevron).turns.value, 0,
+          reason: 'the caret must not spin to catch up');
       await teardownUi(tester, h);
     });
 

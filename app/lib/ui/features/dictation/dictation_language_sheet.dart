@@ -51,19 +51,13 @@ Future<void> showDictationLanguageSheet(BuildContext context, Dictation dictatio
       context,
       builder: (ctx) {
         final ds = ctx.ds;
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(4, 8, 4, 12),
+        return SheetScaffold(
+          title: 'Dictate in',
+          kind: SheetKind.list,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                child: Semantics(
-                  header: true,
-                  child: Text('Dictate in', style: Type.label.copyWith(color: ds.textSecondary)),
-                ),
-              ),
               for (final c in choices)
                 SheetActionRow(
                   action: SheetAction(
@@ -78,7 +72,7 @@ Future<void> showDictationLanguageSheet(BuildContext context, Dictation dictatio
                   },
                 ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                padding: const EdgeInsets.only(left: Gap.lg, top: Gap.sm, right: Gap.lg),
                 child: Text(
                   'One language at a time. The phone\'s speech service may send what you say '
                   'to Google, unless an offline language is installed in it.',

@@ -136,18 +136,12 @@ class _FormState extends State<_Form> {
   Widget build(BuildContext context) {
     final ds = context.ds;
     final vm = context.watch<NewAgentSessionViewModel>();
-    final back = CircleButton(
-      icon: LucideIcons.chevronLeft,
-      tooltip: 'Back',
-      onPressed: () => Navigator.of(context).maybePop(),
-    );
-
     if (vm.machines.isEmpty) {
       return Scaffold(
         backgroundColor: ds.bg,
         body: CustomScrollView(
           slivers: [
-            SliverLargeTitle(title: 'New agent session', leading: back),
+            SliverLargeTitle.back(title: 'New agent session'),
             SliverFillRemaining(
               hasScrollBody: false,
               child: Padding(
@@ -182,7 +176,7 @@ class _FormState extends State<_Form> {
               child: CustomScrollView(
                 keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                 slivers: [
-                  SliverLargeTitle(title: 'New agent session', leading: back),
+                  SliverLargeTitle.back(title: 'New agent session'),
                   SliverToBoxAdapter(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -237,9 +231,8 @@ class _FormState extends State<_Form> {
                         ListRow(
                           title: 'Past sessions',
                           subtitle: 'Continue a conversation an agent kept',
-                          leading: Icon(LucideIcons.history, size: 20, color: ds.textSecondary),
-                          trailing: Icon(LucideIcons.chevronRight, size: 16, color: ds.textTertiary),
-                          divider: false,
+                          leading: Icon(LucideIcons.history, size: IconSize.lead, color: ds.textSecondary),
+                          trailing: Icon(LucideIcons.chevronRight, size: IconSize.row, color: ds.textTertiary),
                           onTap: () {
                             Haptics.tick();
                             unawaited(openPastSessions(context, machine: machine, cwd: _folder.text));

@@ -98,21 +98,12 @@ class _LocationRow extends StatelessWidget {
         ],
       ),
     );
-    if (!tappable) return Padding(padding: const EdgeInsets.symmetric(vertical: 2), child: row);
-    return PressBuilder(
+    if (!tappable) return Padding(padding: const EdgeInsets.symmetric(vertical: Gap.hair), child: row);
+    return PressRow(
       onTap: onTap,
       semanticLabel: line == null ? 'Open $path' : 'Open $path at line $line',
-      builder: (context, pressed) => AnimatedContainer(
-        duration: Motion.pressing(pressed),
-        curve: Motion.easeOut,
-        constraints: const BoxConstraints(minHeight: kMinTap),
-        alignment: Alignment.centerLeft,
-        decoration: BoxDecoration(
-          color: pressed ? ds.fillPressed : const Color(0x00000000),
-          borderRadius: BorderRadius.circular(Radii.sm),
-        ),
-        child: row,
-      ),
+      minHeight: kMinTap,
+      child: row,
     );
   }
 }

@@ -4,7 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/acp/acp_models.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../files/file_format.dart';
-import '../files/file_widgets.dart' show copyToClipboard, fileIconForName;
+import '../files/file_widgets.dart' show fileIconForName;
 import 'code_panel.dart';
 import 'content_chip.dart';
 import 'content_image_cache.dart' show base64DecodedLength;
@@ -121,7 +121,7 @@ class EmbeddedResourceView extends StatelessWidget {
           all: expanded,
           cap: embeddedResourceLines,
           onToggleAll: onToggle,
-          onCopy: () => copyToClipboard(context, text, 'Copied'),
+          onCopy: () => copyText(context, text, what: 'Output copied'),
         ),
       ],
     );

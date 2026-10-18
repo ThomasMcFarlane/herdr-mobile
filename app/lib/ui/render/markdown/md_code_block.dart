@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -94,18 +93,14 @@ class _MdCodeBlockState extends State<MdCodeBlock> {
     _longest = longest;
   }
 
-  Future<void> _copy() async {
-    try {
-      await Clipboard.setData(ClipboardData(text: widget.code.text));
-    } on PlatformException {
-      Haptics.failed();
-      return;
-    }
-    Haptics.tick();
-    if (!mounted) return;
+  /// The button turns into a check for a moment: the feedback stays on the
+  /// button, where the eye is. The words are [copyText]'s, said only where
+  /// the system does not say them itself.
+  void _copy() {
+    copyText(context, widget.code.text, what: 'Code copied');
     setState(() => _copied = true);
     _reset?.cancel();
-    _reset = Timer(const Duration(milliseconds: 1600), () {
+    _reset = Timer(Dwell.copied, () {
       if (mounted) setState(() => _copied = false);
     });
   }
@@ -273,13 +268,9 @@ class _Header extends StatelessWidget {
                 children: [
                   Icon(
                     copied ? LucideIcons.check : LucideIcons.copy,
-                    size: 16,
+                    size: IconSize.row,
                     color: copied || pressed ? context.ds.accentText : colors.muted,
                   ),
-                  if (copied) ...[
-                    const SizedBox(width: Gap.xs),
-                    Text('Copied', style: label.copyWith(color: context.ds.accentText)),
-                  ],
                 ],
               ),
             ),

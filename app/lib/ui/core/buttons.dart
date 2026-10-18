@@ -146,13 +146,18 @@ class CircleButton extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: active
-                ? ds.accent.withValues(alpha: ds.isDark ? 0.22 : 0.14)
+                ? ds.accentWash
                 : filled
                     ? (pressed ? ds.fillPressed : ds.fill)
                     : (pressed ? ds.fill : Colors.transparent),
           ),
           alignment: Alignment.center,
-          child: Icon(icon, size: size * 0.5, color: active ? ds.accentText : ds.text),
+          // A disabled button keeps its disc; the icon fades to decoration.
+          child: Icon(
+            icon,
+            size: size * 0.5,
+            color: onPressed == null ? ds.textTertiary : (active ? ds.accentText : ds.text),
+          ),
         ),
       ),
     );

@@ -296,90 +296,86 @@ class _SubagentCardState extends State<SubagentCard> {
   }
 
   Widget _panel({required bool open}) {
-    final ds = context.ds;
     final run = widget.run;
-    return DecoratedBox(
-      decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.md)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          RunClock(run: run, tone: widget.tone, builder: (context, now) => _header(open, now)),
-          if (open) _body(run),
-        ],
-      ),
+    final onOpen = widget.onOpen;
+    if (onOpen != null) {
+      return Panel(
+        padding: const EdgeInsets.symmetric(vertical: Gap.xs),
+        child: PressRow(
+          onTap: onOpen,
+          minHeight: kMinTap - 2 * Gap.xs,
+          padding: const EdgeInsets.symmetric(horizontal: Gap.md - PressRow.inset, vertical: Gap.xs),
+          child: RunClock(
+            run: run,
+            tone: widget.tone,
+            builder: (context, now) => Row(
+              children: [
+                Expanded(child: _header(now)),
+                const SizedBox(width: Gap.sm),
+                Icon(LucideIcons.chevronRight, size: IconSize.row, color: context.ds.textTertiary),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    return FoldPanel(
+      expanded: open,
+      onToggle: (_) => _expansion.toggle(run.id),
+      header: RunClock(run: run, tone: widget.tone, builder: (context, now) => _header(now)),
+      child: Builder(builder: (context) => _body(run)),
     );
   }
 
-  Widget _header(bool open, DateTime now) {
+  /// Where the card's text starts, past its glyph.
+  static const _textIndent = IconSize.row + Gap.sm;
+
+  Widget _header(DateTime now) {
     final ds = context.ds;
     final run = widget.run;
     final tone = widget.tone;
-    final roster = widget.onOpen != null;
     final title = visibleText(runTitle(run));
     final line = runLine(run, tone, now: now);
     final why = tone == RunTone.failed ? failureLine(run) : null;
     return Semantics(
-      expanded: roster ? null : open,
-      child: PressBuilder(
-        onTap: roster ? widget.onOpen : () => _expansion.toggle(run.id),
-        semanticLabel: [title, line, ?why].join(', '),
-        builder: (context, pressed) => AnimatedContainer(
-          duration: Motion.pressing(pressed),
-          curve: Motion.easeOut,
-          constraints: const BoxConstraints(minHeight: kMinTap),
-          padding: const EdgeInsets.fromLTRB(Gap.md, 10, Gap.md, 10),
-          decoration: BoxDecoration(
-            color: pressed ? ds.fillPressed : Colors.transparent,
-            borderRadius: BorderRadius.vertical(
-              top: const Radius.circular(Radii.md),
-              bottom: Radius.circular(open ? 0 : Radii.md),
+      label: [title, line, ?why].join(', '),
+      excludeSemantics: true,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(padding: const EdgeInsets.only(top: Gap.hair), child: RunGlyph(tone: tone)),
+          const SizedBox(width: Gap.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Type.secondaryStrong.copyWith(color: ds.text),
+                ),
+                const SizedBox(height: Gap.hair),
+                Text(
+                  line,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Type.caption.copyWith(color: runLineColor(ds, tone), fontFeatures: Type.tabular),
+                ),
+                if (why != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: Gap.hair),
+                    child: Text(
+                      why,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Type.caption.copyWith(color: ds.dangerText),
+                    ),
+                  ),
+              ],
             ),
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(padding: const EdgeInsets.only(top: 2), child: RunGlyph(tone: tone)),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Type.secondary.copyWith(color: ds.text, fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      line,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Type.caption.copyWith(color: runLineColor(ds, tone), fontFeatures: Type.tabular),
-                    ),
-                    if (why != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Text(
-                          why,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: Type.caption.copyWith(color: ds.dangerText),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: Gap.sm),
-              Padding(
-                padding: const EdgeInsets.only(top: 3),
-                child: roster
-                    ? Icon(LucideIcons.chevronRight, size: 14, color: ds.textTertiary)
-                    : Caret(open: open),
-              ),
-            ],
-          ),
-        ),
+        ],
       ),
     );
   }
@@ -391,48 +387,56 @@ class _SubagentCardState extends State<SubagentCard> {
     final cut = result.length > cardResultChars ? result.length - cardResultChars : 0;
     final doc = result.isEmpty ? null : (_results[run] ??= parseMd(cut == 0 ? result : result.substring(0, cardResultChars)));
     final call = widget.callRow;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(Gap.md + 26, 0, Gap.md, Gap.sm),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (assignment.isNotEmpty) ...[
-            _Label('Asked to'),
-            Text(
-              visibleText(assignment),
-              maxLines: 5,
-              overflow: TextOverflow.ellipsis,
-              style: Type.secondary.copyWith(color: ds.textSecondary),
-            ),
-            const SizedBox(height: Gap.sm),
-          ],
-          if (doc != null) ...[
-            _Label('Result'),
-            MdToneScope(tone: MdTone.quiet, child: MdDocumentView(document: doc)),
-            if (cut > 0)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text('… $cut more characters', style: Type.caption.copyWith(color: ds.textMuted)),
-              ),
-            const SizedBox(height: Gap.xs),
-          ] else if (run.note != null && run.note!.trim().isNotEmpty) ...[
-            Text(visibleText(run.note!.trim()), style: Type.secondary.copyWith(color: ds.textSecondary)),
-            const SizedBox(height: Gap.xs),
-          ],
-          _ActionRow(
-            label: run.hasTranscript ? 'Open conversation' : 'Open summary',
-            icon: run.hasTranscript ? LucideIcons.messageSquareText : LucideIcons.listTree,
-            onTap: _openRun,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsetsDirectional.only(start: _textIndent),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (assignment.isNotEmpty) ...[
+                _Label('Asked to'),
+                Text(
+                  visibleText(assignment),
+                  maxLines: 5,
+                  overflow: TextOverflow.ellipsis,
+                  style: Type.secondary.copyWith(color: ds.textSecondary),
+                ),
+                const SizedBox(height: Gap.sm),
+              ],
+              if (doc != null) ...[
+                _Label('Result'),
+                MdToneScope(tone: MdTone.quiet, child: MdDocumentView(document: doc)),
+                if (cut > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(top: Gap.xs),
+                    child: Text('… $cut more characters', style: Type.caption.copyWith(color: ds.textMuted)),
+                  ),
+                const SizedBox(height: Gap.xs),
+              ] else if (run.note != null && run.note!.trim().isNotEmpty) ...[
+                Text(visibleText(run.note!.trim()), style: Type.secondary.copyWith(color: ds.textSecondary)),
+                const SizedBox(height: Gap.xs),
+              ],
+            ],
           ),
-          if (call != null) ...[
-            _ActionRow(
-              label: 'Call details',
-              icon: LucideIcons.wrench,
-              onTap: () => setState(() => _details = !_details),
-              expanded: _details,
-            ),
-            if (_details)
-              ToolRow(
+        ),
+        _ActionRow(
+          label: run.hasTranscript ? 'Open conversation' : 'Open summary',
+          icon: run.hasTranscript ? LucideIcons.messageSquareText : LucideIcons.listTree,
+          onTap: _openRun,
+        ),
+        if (call != null) ...[
+          _ActionRow(
+            label: 'Call details',
+            icon: LucideIcons.wrench,
+            onTap: () => setState(() => _details = !_details),
+            expanded: _details,
+          ),
+          if (_details)
+            Padding(
+              padding: const EdgeInsetsDirectional.only(start: _textIndent),
+              child: ToolRow(
                 rowKey: '${widget.run.id}:call',
                 item: call,
                 gap: 0,
@@ -446,9 +450,9 @@ class _SubagentCardState extends State<SubagentCard> {
                   }
                 }),
               ),
-          ],
+            ),
         ],
-      ),
+      ],
     );
   }
 }
@@ -465,7 +469,8 @@ class _Label extends StatelessWidget {
   );
 }
 
-/// A 44 dp row inside the open card: an icon and a label.
+/// A 44 dp row inside the open card: an icon and a label, the icon on the
+/// card's text column.
 class _ActionRow extends StatelessWidget {
   const _ActionRow({required this.label, required this.icon, required this.onTap, this.expanded});
 
@@ -479,29 +484,19 @@ class _ActionRow extends StatelessWidget {
     final ds = context.ds;
     return Semantics(
       expanded: expanded,
-      child: PressBuilder(
+      child: PressRow(
         onTap: onTap,
-        builder: (context, pressed) => AnimatedContainer(
-          duration: Motion.pressing(pressed),
-          curve: Motion.easeOut,
-          constraints: const BoxConstraints(minHeight: kMinTap),
-          decoration: BoxDecoration(
-            color: pressed ? ds.fillPressed : Colors.transparent,
-            borderRadius: BorderRadius.circular(Radii.sm),
-          ),
-          child: Row(
-            children: [
-              Icon(icon, size: 16, color: ds.textSecondary),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  label,
-                  style: Type.secondary.copyWith(color: ds.text, fontWeight: FontWeight.w500),
-                ),
-              ),
-              if (expanded != null) Caret(open: expanded!) else Icon(LucideIcons.chevronRight, size: 14, color: ds.textTertiary),
-            ],
-          ),
+        minHeight: kMinTap,
+        padding: const EdgeInsetsDirectional.only(start: _SubagentCardState._textIndent - PressRow.inset),
+        child: Row(
+          children: [
+            Icon(icon, size: IconSize.row, color: ds.textSecondary),
+            const SizedBox(width: Gap.sm),
+            Expanded(
+              child: Text(label, style: Type.secondaryStrong.copyWith(color: ds.text)),
+            ),
+            Caret(open: expanded ?? false),
+          ],
         ),
       ),
     );

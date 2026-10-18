@@ -31,10 +31,8 @@ class LiveOutput extends StatelessWidget {
       final ds = context.ds;
       return Padding(
         padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.sm),
-        child: DecoratedBox(
-          decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.sm)),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Panel(
+          padding: const EdgeInsets.symmetric(horizontal: Gap.md, vertical: Gap.sm),
             child: Semantics(
               label: 'Live output from the terminal',
               child: Column(
@@ -43,7 +41,7 @@ class LiveOutput extends StatelessWidget {
                   ExcludeSemantics(
                     child: Text('Live from terminal', style: Type.caption.copyWith(color: ds.textMuted)),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: Gap.xs),
                   for (final row in rows)
                     ExcludeSemantics(
                       child: Text(
@@ -62,7 +60,6 @@ class LiveOutput extends StatelessWidget {
                 ],
               ),
             ),
-          ),
         ),
       );
     },
@@ -123,25 +120,15 @@ class _Roster extends StatelessWidget {
     select: (s) => s.subagents,
     same: (a, b) => a.length == b.length && _same(a, b),
     builder: (context, entries) {
-      final ds = context.ds;
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(4, 8, 4, 12),
+      return SheetScaffold(
+        title: 'Subagents',
+        kind: SheetKind.list,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: Semantics(
-                header: true,
-                child: Text('Subagents', style: Type.label.copyWith(color: ds.textSecondary)),
-              ),
-            ),
             if (entries.isEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-                child: Text('None started yet.', style: Type.secondary.copyWith(color: ds.textMuted)),
-              ),
+              const EmptyState.inline('None started yet.', padding: EdgeInsets.fromLTRB(Gap.lg, Gap.xs, Gap.lg, Gap.md)),
             for (final e in entries) _SubagentRow(session: session, entry: e),
           ],
         ),
@@ -194,7 +181,7 @@ class _SubagentRow extends StatelessWidget {
       if (info.toolCount > 0) '${info.toolCount} ${info.toolCount == 1 ? 'tool' : 'tools'}',
     ].join(' · ');
     final parent = session;
-    return PressBuilder(
+    return PressRow(
       onTap: parent is ObservedAgentSession
           ? () {
               final navigator = Navigator.of(context)..pop();
@@ -202,14 +189,8 @@ class _SubagentRow extends StatelessWidget {
               unawaited(openSubagentChat(navigator.context, parent, entry.name));
             }
           : null,
-      button: true,
-      builder: (context, pressed) => Container(
-        constraints: const BoxConstraints(minHeight: kMinTap),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: pressed ? ds.fill : Colors.transparent,
-          borderRadius: BorderRadius.circular(Radii.sm),
-        ),
+      minHeight: kMinTap,
+      padding: const EdgeInsets.symmetric(horizontal: Gap.lg - PressRow.inset, vertical: Gap.sm),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -224,7 +205,7 @@ class _SubagentRow extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: Gap.sm),
-                Text(detail, style: Type.caption.copyWith(color: color, fontWeight: FontWeight.w600)),
+                Text(detail, style: Type.captionStrong.copyWith(color: color)),
               ],
             ),
             if (info.assignment.isNotEmpty)
@@ -242,7 +223,6 @@ class _SubagentRow extends StatelessWidget {
                 style: TextStyle(fontFamily: monoFamily, fontSize: 11.5, color: ds.textMuted),
               ),
           ],
-        ),
       ),
     );
   }

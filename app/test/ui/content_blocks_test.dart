@@ -424,7 +424,7 @@ void main() {
       await tester.tap(find.byIcon(LucideIcons.copy));
       await tester.pump();
       expect(clipboard, text);
-      expect(find.text('Copied'), findsOneWidget);
+      expect(find.textContaining(' copied'), findsOneWidget);
       await tester.pump(const Duration(seconds: 4));
     });
 
@@ -560,7 +560,7 @@ void main() {
       expect(find.text('Copy message'), findsOneWidget, reason: 'the toolbar carries it');
       await tapToolbar(tester, 'Copy as Markdown');
       expect(clipboard, source, reason: 'the Markdown source, byte for byte');
-      expect(find.text('Copied as Markdown'), findsOneWidget);
+      expect(find.text('Markdown copied'), findsOneWidget);
       await tester.pump(const Duration(seconds: 4));
     });
 
@@ -572,7 +572,7 @@ void main() {
       expect(clipboard, parseMd(source).plainText);
       expect(clipboard, isNot(contains('**')));
       expect(clipboard, contains('Some bold and code here.'));
-      expect(find.text('Copied'), findsOneWidget);
+      expect(find.text('Message copied'), findsOneWidget);
       await tester.pump(const Duration(seconds: 4));
     });
 

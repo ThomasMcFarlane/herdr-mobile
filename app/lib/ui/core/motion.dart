@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/physics.dart';
 import 'package:flutter/services.dart';
 
 /// Motion tokens. UI motion stays under ~300ms and uses one strong ease-out

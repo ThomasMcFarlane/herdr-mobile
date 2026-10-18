@@ -23,10 +23,6 @@ import 'session_overview_model.dart' show contextWarning;
 import 'background_strip.dart' show BackgroundChip;
 import 'subagent_roster.dart' show SubagentsChip;
 
-const _barHeight = 56.0;
-const _shortBarHeight = 52.0;
-const _shortScreen = 520.0;
-
 /// The glyph status of an agent session: blocked on the person, working, done
 /// and not yet looked at, or idle.
 AgentStatus sessionStatus(AgentPhase phase, {required bool unseenDone}) => switch (phase) {
@@ -45,7 +41,7 @@ String sessionWhere(AgentSessionView session, {String? title}) {
   return [session.agentLabel, session.machine.profile.label, if (!same) folder].where((s) => s.isNotEmpty).join(' · ');
 }
 
-/// The one slim bar: back, the status glyph beside the title over where the
+/// The one slim bar ([AppTopBar]): back, the status glyph beside the title over where the
 /// session lives, and the button for its modes and options (which hold the
 /// way to the terminal of an agent in a pane).
 class SessionBar extends StatelessWidget {
@@ -55,140 +51,46 @@ class SessionBar extends StatelessWidget {
 
 
   @override
-  Widget build(BuildContext context) {
-    final ds = context.ds;
-    final height = MediaQuery.sizeOf(context).height < _shortScreen ? _shortBarHeight : _barHeight;
-    return Padding(
-      padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: Gap.md),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-        Row(
-          children: [
-            CircleButton(
-              icon: LucideIcons.chevronLeft,
-              tooltip: 'Back',
-              onPressed: () => Navigator.of(context).maybePop(),
-            ),
-            const SizedBox(width: Gap.xs),
-            Expanded(
-              child: SessionSelect<(String, AgentPhase, bool, AgentLink, int?)>(
-                session: session,
-                select: (s) => (s.title, s.phase, s.unseenDone, s.link, contextWarning(s.state.usage)),
-                builder: (context, v) {
-                  final (title, phase, unseen, link, contextPercent) = v;
-                  // The whole title area opens the session overview.
-                  return PressBuilder(
-                    onTap: () => unawaited(showSessionOverview(context, session)),
-                    builder: (context, pressed) => AnimatedContainer(
-                      duration: Motion.pressing(pressed),
-                      curve: Motion.easeOut,
-                      constraints: BoxConstraints(minHeight: height),
-                      padding: const EdgeInsets.symmetric(horizontal: Gap.sm),
-                      decoration: BoxDecoration(
-                        color: pressed ? ds.fill : Colors.transparent,
-                        borderRadius: BorderRadius.circular(Radii.sm),
-                      ),
-                      child: Row(
-                        children: [
-                          StatusGlyph(
-                            status: sessionStatus(phase, unseenDone: unseen),
-                            size: 16,
-                            dim: link != AgentLink.live,
-                          ),
-
-                          const SizedBox(width: Gap.sm),
-                          Expanded(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Semantics(
-                                  header: true,
-                                  child: Text(
-                                    title,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: Type.barTitle.copyWith(color: ds.text),
-                                  ),
-                                ),
-                                const SizedBox(height: 1),
-                                // Where yields first; the context warning keeps its
-                                // words until the row is narrower than they are, then
-                                // it ends in an ellipsis instead of overflowing.
-                                LayoutBuilder(
-                                  builder: (context, box) => Row(
-                                    children: [
-                                      Flexible(
-                                        child: Text(
-                                          sessionWhere(session, title: title),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: Type.secondary.copyWith(color: ds.textSecondary),
-                                        ),
-                                      ),
-                                      // The context window is nearly full: said in words,
-                                      // in the danger tone, and only then.
-                                      if (contextPercent != null) ...[
-                                        const SizedBox(width: Gap.sm),
-                                        ConstrainedBox(
-                                          constraints: BoxConstraints(maxWidth: box.maxWidth - Gap.sm),
-                                          child: Text(
-                                            'Context $contextPercent%',
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: Type.secondary.copyWith(
-                                              color: ds.dangerText,
-                                              fontWeight: FontWeight.w600,
-                                              fontFeatures: Type.tabular,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            CircleButton(
-              icon: LucideIcons.ellipsis,
-              tooltip: 'Session options',
-              onPressed: () => showSessionOptions(context, session),
-            ),
-          ],
+  Widget build(BuildContext context) => SessionSelect<(String, AgentPhase, bool, AgentLink, int?)>(
+    session: session,
+    select: (s) => (s.title, s.phase, s.unseenDone, s.link, contextWarning(s.state.usage)),
+    builder: (context, v) {
+      final (title, phase, unseen, link, contextPercent) = v;
+      return AppTopBar(
+        title: title,
+        subtitle: sessionWhere(session, title: title),
+        // The context window is nearly full: said in words, in the danger
+        // tone, and only then.
+        subtitleAlert: contextPercent == null ? null : 'Context $contextPercent%',
+        glyph: StatusGlyph(
+          status: sessionStatus(phase, unseenDone: unseen),
+          size: IconSize.row,
+          dim: link != AgentLink.live,
         ),
-        Padding(
-          // Under the title, past the back button: where the status glyph starts.
-          padding: const EdgeInsets.only(left: Gap.md + 44),
-          // The chips wrap rather than shrink: the subagents chip carries "1
-          // waiting for you" and must not end in an ellipsis to make room for
-          // the Made chip (it did at 320 wide). The background chip only shows in
-          // the compact layout, which is wide.
-          child: Wrap(
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              SubagentsChip(session: session),
-              BackgroundChip(session: session),
-              MadeChip(session: session),
-            ],
+        // The whole title area opens the session overview.
+        onTitleTap: () => unawaited(showSessionOverview(context, session)),
+        actions: [
+          CircleButton(
+            icon: LucideIcons.ellipsis,
+            tooltip: 'Session options',
+            onPressed: () => showSessionOptions(context, session),
           ),
-        ),
+        ],
+        // The chips wrap rather than shrink: the subagents chip carries "1
+        // waiting for you" and must not end in an ellipsis to make room for
+        // the Made chip (it did at 320 wide). The background chip only shows
+        // in the compact layout, which is wide.
+        bottom: Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            SubagentsChip(session: session),
+            BackgroundChip(session: session),
+            MadeChip(session: session),
           ],
         ),
-      ),
-    );
-  }
+      );
+    },
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -360,23 +262,13 @@ class _OptionsSheetState extends State<_OptionsSheet> {
       final settings = _settings(widget.session.state);
       final picking = settings.where((s) => s.id == _picking).firstOrNull;
       if (picking != null) return _Picker(setting: picking, onBack: () => setState(() => _picking = null), onPick: (c) => _pick(picking, c));
-      final ds = context.ds;
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(4, 8, 4, 12),
+      return SheetScaffold(
+        title: settings.isEmpty ? 'Session' : 'Mode and model',
+        kind: SheetKind.actions,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: Semantics(
-                header: true,
-                child: Text(
-                  settings.isEmpty ? 'Session' : 'Mode and model',
-                  style: Type.label.copyWith(color: ds.textSecondary),
-                ),
-              ),
-            ),
             for (final s in settings)
               if (s.kind == _Kind.boolean)
                 SwitchRow(
@@ -430,6 +322,9 @@ class _SettingRow extends StatelessWidget {
   final _Setting setting;
   final VoidCallback onTap;
 
+  /// Two lines: the option and its current choice.
+  static const _minHeight = 56.0;
+
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
@@ -438,10 +333,10 @@ class _SettingRow extends StatelessWidget {
       builder: (context, pressed) => AnimatedContainer(
         duration: Motion.pressing(pressed),
         curve: Motion.easeOut,
-        constraints: const BoxConstraints(minHeight: 56),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        constraints: const BoxConstraints(minHeight: _minHeight),
+        padding: const EdgeInsets.symmetric(horizontal: Gap.lg, vertical: Gap.sm),
         decoration: BoxDecoration(
-          color: pressed ? ds.fill : Colors.transparent,
+          color: pressed ? ds.pressTint : Colors.transparent,
           borderRadius: BorderRadius.circular(Radii.sm),
         ),
         child: Row(
@@ -460,7 +355,7 @@ class _SettingRow extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(LucideIcons.chevronRight, size: 16, color: ds.textTertiary),
+            Icon(LucideIcons.chevronRight, size: IconSize.row, color: ds.textTertiary),
           ],
         ),
       ),
@@ -548,13 +443,13 @@ class _PickerState extends State<_Picker> {
               semanticLabel: 'Back to options',
               builder: (context, pressed) => Container(
                 constraints: const BoxConstraints(minHeight: kMinTap),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: Gap.lg),
                 child: Row(
                   children: [
-                    Icon(LucideIcons.chevronLeft, size: 18, color: ds.textSecondary),
-                    const SizedBox(width: 8),
+                    Icon(LucideIcons.chevronLeft, size: IconSize.bar, color: ds.textSecondary),
+                    const SizedBox(width: Gap.sm),
                     Expanded(
-                      child: Text(setting.name, style: Type.label.copyWith(color: ds.textSecondary, fontWeight: FontWeight.w600)),
+                      child: Text(setting.name, style: Type.labelStrong.copyWith(color: ds.textSecondary)),
                     ),
                   ],
                 ),
@@ -562,21 +457,11 @@ class _PickerState extends State<_Picker> {
             ),
             if (setting.choices.length > _Picker.searchFrom)
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: Semantics(
-                  label: 'Search ${setting.name}',
-                  child: TextField(
-                    controller: _query,
-                    autocorrect: false,
-                    enableSuggestions: false,
-                    onChanged: (_) => setState(() {}),
-                    style: Type.body.copyWith(fontSize: 15, color: ds.text),
-                    cursorColor: ds.accent,
-                    decoration: InputDecoration(
-                      hintText: 'Search ${setting.choices.length} choices',
-                      prefixIcon: Icon(LucideIcons.search, size: 16, color: ds.textTertiary),
-                    ),
-                  ),
+                padding: const EdgeInsets.fromLTRB(Gap.lg, 0, Gap.lg, Gap.sm),
+                child: SearchField(
+                  controller: _query,
+                  hint: 'Search ${setting.choices.length} choices',
+                  onChanged: (_) => setState(() {}),
                 ),
               ),
             Expanded(child: _list(context)),
@@ -590,7 +475,7 @@ class _PickerState extends State<_Picker> {
     final ds = context.ds;
     final entries = _entries();
     if (entries.isEmpty) {
-      return Center(child: Text('Nothing matches.', style: Type.secondary.copyWith(color: ds.textMuted)));
+      return const Center(child: EmptyState.inline('Nothing matches.'));
     }
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
@@ -610,27 +495,22 @@ class _PickerState extends State<_Picker> {
         // it, or leaving it for a safer one, is a tap.
         if (risk.risk == ModeRisk.dangerous && !selected) {
           final primed = _primed == choice.value;
-          return HoldToConfirm(
+          return AnswerChip(
+            label: choice.name,
+            detail: [?risk.reason, if ((choice.description ?? '').isNotEmpty) choice.description!].join('\n'),
+            risk: AnswerRisk.gate,
+            tone: AnswerChipTone.danger,
+            state: primed ? AnswerChipState.primed : AnswerChipState.rest,
+            hold: true,
+            holdVerb: 'Hold to switch to ${choice.name}',
             semanticLabel: primed
                 ? 'Confirm: switch to ${choice.name}, activate again to confirm'
                 : '${choice.name}, dangerous, needs holding or a second activation: ${risk.reason}',
-            onActivate: () => _activate(choice),
-            onConfirmed: () => widget.onPick(choice),
-            builder: (context, hold) => _ChoiceRow(
-              choice: choice,
-              risk: risk,
-              selected: false,
-              pressed: hold.holding,
-              hold: hold,
-              primed: primed,
-            ),
+            onTap: () => _activate(choice),
+            onHeld: () => widget.onPick(choice),
           );
         }
-        return PressBuilder(
-          onTap: () => widget.onPick(choice),
-          selected: selected,
-          builder: (context, pressed) => _ChoiceRow(choice: choice, risk: risk, selected: selected, pressed: pressed),
-        );
+        return _ChoiceRow(choice: choice, risk: risk, selected: selected, onTap: () => widget.onPick(choice));
       },
     );
   }
@@ -644,46 +524,37 @@ class _ChoiceRow extends StatelessWidget {
     required this.choice,
     required this.risk,
     required this.selected,
-    required this.pressed,
-    this.hold,
-    this.primed = false,
+    required this.onTap,
   });
 
   final ConfigChoice choice;
   final ModeAssessment risk;
   final bool selected;
-  final bool pressed;
+  final VoidCallback onTap;
 
-  /// Set for a dangerous mode, entered by a hold.
-  final HoldState? hold;
-  final bool primed;
+  /// One line of choice with room above and below.
+  static const _minHeight = 52.0;
 
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
     final danger = risk.risk == ModeRisk.dangerous;
-    final hold = this.hold;
-    final title = (hold?.showsHold ?? false)
-        ? 'Hold to switch to ${choice.name}'
-        : primed
-        ? 'Hold or tap again'
-        : choice.name;
+    final title = choice.name;
     final marker = switch (risk.risk) {
-      ModeRisk.dangerous => Icon(LucideIcons.triangleAlert, size: 16, color: ds.dangerText),
-      ModeRisk.elevated => Icon(LucideIcons.shieldHalf, size: 16, color: ds.textSecondary),
+      ModeRisk.dangerous => Icon(LucideIcons.triangleAlert, size: IconSize.row, color: ds.dangerText),
+      ModeRisk.elevated => Icon(LucideIcons.shieldHalf, size: IconSize.row, color: ds.textSecondary),
       ModeRisk.none => null,
     };
     final reason = risk.reason;
-    // The padding sits on the content, not the row: a hold's fill covers the
-    // whole row.
+    // The padding sits on the content, not the row; the press inset is part of it.
     final content = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: Gap.lg - PressRow.inset, vertical: Gap.sm),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (marker != null) ...[
-            Padding(padding: const EdgeInsets.only(top: 3), child: marker),
-            const SizedBox(width: 8),
+            Padding(padding: const EdgeInsets.only(top: Gap.hair), child: marker),
+            const SizedBox(width: Gap.sm),
           ],
           Expanded(
             child: Column(
@@ -708,23 +579,15 @@ class _ChoiceRow extends StatelessWidget {
               ],
             ),
           ),
-          if (selected) Icon(LucideIcons.check, size: 18, color: ds.accentText),
+          if (selected) Icon(LucideIcons.check, size: IconSize.bar, color: ds.accentText),
         ],
       ),
     );
-    return AnimatedContainer(
-      duration: Motion.pressing(pressed),
-      curve: Motion.easeOut,
-      constraints: const BoxConstraints(minHeight: 52),
-      decoration: BoxDecoration(
-        color: primed
-            ? ds.danger.withValues(alpha: 0.14)
-            : pressed
-            ? ds.fill
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(Radii.sm),
-      ),
-      child: hold == null ? content : Stack(fit: StackFit.passthrough, children: [hold.fill, content]),
+    return PressRow(
+      onTap: onTap,
+      selected: selected,
+      minHeight: _minHeight,
+      child: content,
     );
   }
 }

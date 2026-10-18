@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show RenderAbstractViewport;
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'package:herdr_mobile/ui/core/kit.dart';
 
@@ -25,7 +24,7 @@ class SettingsGroup extends StatefulWidget {
     required this.summary,
     required this.open,
     required this.onToggle,
-    required this.children,
+    required this.rows,
     this.tint,
     this.divider = true,
     this.footer,
@@ -40,7 +39,8 @@ class SettingsGroup extends StatefulWidget {
   final String summary;
   final bool open;
   final VoidCallback onToggle;
-  final List<Widget> children;
+  /// The group's body, a [RowColumn]: dividers come from neighbouring rows.
+  final List<RowSpec> rows;
   final Color? tint;
 
   /// A hairline under the group, inset to the text. Not under the last one.
@@ -112,7 +112,6 @@ class _SettingsGroupState extends State<SettingsGroup> {
 
   @override
   Widget build(BuildContext context) {
-    final ds = context.ds;
     final w = widget;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -121,23 +120,13 @@ class _SettingsGroupState extends State<SettingsGroup> {
           expanded: w.open,
           liveRegion: w.announce,
           child: ListRow(
-            leading: IconTile(icon: w.icon, size: 32, color: w.tint),
+            leading: IconTile(icon: w.icon, size: RowMetrics.leadingExtent, color: w.tint),
             leadingOnTitle: false,
             title: w.title,
             subtitle: w.summary,
             subtitleMaxLines: 2,
-            divider: w.divider && !w.open && w.footer == null,
             onTap: w.onToggle,
-            // The app's fold caret: right when closed, down when open (as in
-            // `FormSectionHeader`), not a third meaning for a chevron.
-            trailing: ExcludeSemantics(
-              child: AnimatedRotation(
-                turns: w.open ? 0.25 : 0,
-                duration: Motion.reduced(context) ? Duration.zero : Motion.expand,
-                curve: Motion.easeOut,
-                child: Icon(LucideIcons.chevronRight, size: 16, color: ds.textTertiary),
-              ),
-            ),
+            trailing: Caret(open: w.open),
           ),
         ),
         ?w.footer,
@@ -145,10 +134,10 @@ class _SettingsGroupState extends State<SettingsGroup> {
           open: w.open,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [...w.children, const SizedBox(height: Gap.sm)],
+            children: [RowColumn(rows: w.rows), const SizedBox(height: Gap.sm)],
           ),
         ),
-        if (w.divider && (w.open || w.footer != null)) const Hairline(indent: Gap.gutter + 32 + 12),
+        if (w.divider) Hairline(indent: ListRow.textIndent()),
       ],
     );
   }

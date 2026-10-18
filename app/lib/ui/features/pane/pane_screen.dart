@@ -22,6 +22,7 @@ import '../../../data/repositories/terminal_prompt.dart';
 import '../../../data/repositories/terminal_settings.dart';
 import '../../../data/services/dictation.dart';
 import '../../../data/services/image_prep.dart' show PreparedImage, prepareImage;
+import '../../../data/words/agent_names.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../../render/terminal/terminal_links.dart';
 import '../../render/terminal/terminal_view.dart';
@@ -51,10 +52,6 @@ import '../composer/command_model.dart';
 import '../composer/command_palette.dart';
 import '../composer/command_hint.dart';
 import '../composer/unknown_command.dart';
-
-/// Screens shorter than this (a phone on its side) get a lower bar and no
-/// docked answers: a question and its chips would leave the terminal a few rows.
-const shortScreen = 520.0;
 
 /// One agent's terminal, one screen: the slim bar ([PaneTopBar]), then the
 /// pane's banner, terminal, answer dock, quick keys and composer. A swipe on
@@ -176,9 +173,7 @@ class _PaneScreenState extends State<PaneScreen> {
     return changed;
   }
 
-  void _toggleWrap() {
-    Haptics.tick();
-    final next = !_settings.wrap;
+  void _setWrap(bool next) {
     _vm?.setWrap(next);
     unawaited(_settings.setWrap(next));
   }
@@ -231,6 +226,19 @@ class _PaneScreenState extends State<PaneScreen> {
       showActionSheet(
         context,
         title: title,
+        // Fit to the screen or keep the agent's exact layout: a setting
+        // changed now and then, so it lives here, not in the bar.
+        footer: [
+          ListenableBuilder(
+            listenable: _settings,
+            builder: (context, _) => SwitchRow(
+              title: 'Wrap lines',
+              value: _settings.wrap,
+              enabled: _vm != null,
+              onChanged: _setWrap,
+            ),
+          ),
+        ],
         actions: [
           // An agent whose log the app can follow has its chat as well.
           if (machine != null && observed != null && observed.supports(machine, _paneId))
@@ -245,12 +253,12 @@ class _PaneScreenState extends State<PaneScreen> {
           SheetAction(
             label: 'Copy title',
             icon: LucideIcons.copy,
-            onTap: () => unawaited(Clipboard.setData(ClipboardData(text: title))),
+            onTap: () => copyText(context, title, what: 'Title copied'),
           ),
           SheetAction(
             label: 'Copy pane id $_paneId',
             icon: LucideIcons.hash,
-            onTap: () => unawaited(Clipboard.setData(ClipboardData(text: _paneId))),
+            onTap: () => copyText(context, _paneId, what: 'Pane id copied'),
           ),
         ],
       ),
@@ -269,12 +277,9 @@ class _PaneScreenState extends State<PaneScreen> {
               bar: PaneTopBar(
                 title: _title,
                 viewModel: vm,
-                actions: PaneBarActions(
-                  machine: machine,
-                  onToggleWrap: vm == null ? null : _toggleWrap,
-                  onOpenFiles: machine == null ? null : () => _openFiles(machine),
-                  onMore: _showActions,
-                ),
+                machine: machine,
+                onOpenFiles: machine == null ? null : () => _openFiles(machine),
+                onMore: _showActions,
               ),
             ),
             Expanded(child: _page ?? const _MissingMachine()),
@@ -733,7 +738,9 @@ class _PaneLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     final compact = compactLayout(context);
     final top = MediaQuery.paddingOf(context).top;
-    final short = MediaQuery.sizeOf(context).height < shortScreen;
+    // A phone on its side: no docked answers, a question and its chips
+    // would leave the terminal a few rows.
+    final short = AppTopBar.isShort(context);
     return Column(
         children: [
           banner,
@@ -1035,14 +1042,17 @@ class _Composer extends StatelessWidget {
     );
     final sending = context.select<PaneViewModel, bool>((v) => v.sending);
     final enabled = state == LinkState.online && open;
-    final hint = switch (state) {
-      LinkState.online => open ? 'Message ${agent ?? 'pane'}…' : 'Pane closed',
-      LinkState.connecting => 'Connecting…',
-      LinkState.approval => 'Waiting for sign-in approval',
-      LinkState.reconnecting || LinkState.offline => 'Offline — reconnecting',
-      LinkState.attention => 'Needs attention — see above',
-      LinkState.disabled => 'Machine disabled',
-    };
+    final hint = composerHint(
+      agentName(agent),
+      linkWord: switch (state) {
+        LinkState.online => open ? null : 'Pane closed',
+        LinkState.connecting => 'Connecting…',
+        LinkState.approval => 'Waiting for sign-in approval',
+        LinkState.reconnecting || LinkState.offline => 'Offline — reconnecting',
+        LinkState.attention => 'Needs attention — see above',
+        LinkState.disabled => 'Machine disabled',
+      },
+    );
     return ComposerFrame(
       // An agent's prompt takes pictures and files, as the chat's does; a
       // shell's line takes none, as it takes no dictation. In the compact

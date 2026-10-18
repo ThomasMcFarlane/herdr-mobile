@@ -111,7 +111,7 @@ class Composer extends StatelessWidget {
       final observed = session.isObserved;
       final attaches = session.attachMode != AttachMode.none;
       final queuing = working && !observed;
-      final hint = reason ?? blocked ?? (relay != null ? '$relay…' : 'Message ${session.agentLabel}…');
+      final hint = composerHint(session.agentLabel, linkWord: reason ?? blocked ?? (relay != null ? '$relay…' : null));
       final field = ComposerFrame(
         // A subagent's run takes no attachments. In the compact layout the
         // chips are gone, and the paperclip says how many go along.

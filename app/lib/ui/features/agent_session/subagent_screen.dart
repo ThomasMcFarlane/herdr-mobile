@@ -121,67 +121,20 @@ class _RunBar extends StatelessWidget {
   final String runId;
 
   @override
-  Widget build(BuildContext context) {
-    final ds = context.ds;
-    return Padding(
-      padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: Gap.md),
-        child: Row(
-          children: [
-            CircleButton(
-              icon: LucideIcons.chevronLeft,
-              tooltip: 'Back',
-              onPressed: () => Navigator.of(context).maybePop(),
-            ),
-            const SizedBox(width: Gap.xs),
-            Expanded(
-              child: SessionSelect<(String, String?)>(
-                session: session,
-                select: (s) {
-                  final run = s.subagentRun(runId);
-                  return (run == null ? 'Subagent' : runTitle(run), run?.agentType);
-                },
-                builder: (context, v) {
-                  final (title, type) = v;
-                  final kind = type == null || type.trim().isEmpty ? 'Subagent' : 'Subagent · ${visibleText(type.trim())}';
-                  return ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 52),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: Gap.sm),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Semantics(
-                            header: true,
-                            child: Text(
-                              visibleText(title),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Type.barTitle.copyWith(color: ds.text),
-                            ),
-                          ),
-                          const SizedBox(height: 1),
-                          Text(
-                            kind,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Type.secondary.copyWith(color: ds.textSecondary),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => SessionSelect<(String, String?)>(
+    session: session,
+    select: (s) {
+      final run = s.subagentRun(runId);
+      return (run == null ? 'Subagent' : runTitle(run), run?.agentType);
+    },
+    builder: (context, v) {
+      final (title, type) = v;
+      return AppTopBar(
+        title: visibleText(title),
+        subtitle: type == null || type.trim().isEmpty ? 'Subagent' : 'Subagent · ${visibleText(type.trim())}',
+      );
+    },
+  );
 }
 
 class _StripSnap {
@@ -285,49 +238,30 @@ class _PinnedPromptState extends State<PinnedPrompt> {
         if (text.isEmpty) return const SizedBox.shrink();
         final shown = visibleText(text);
         final maxOpen = MediaQuery.sizeOf(context).height * 0.4;
-        return Semantics(
-          expanded: _open,
-          child: PressBuilder(
-            onTap: () => setState(() => _open = !_open),
-            builder: (context, pressed) => Container(
-              constraints: const BoxConstraints(minHeight: kMinTap),
-              padding: const EdgeInsets.fromLTRB(Gap.lg, 8, Gap.md, 8),
-              decoration: BoxDecoration(
-                color: pressed ? ds.fillPressed : ds.fill,
-                border: Border(bottom: BorderSide(color: ds.hairline)),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Asked to',
-                          style: Type.caption.copyWith(color: ds.textMuted, fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 2),
-                        if (_open)
-                          ConstrainedBox(
-                            constraints: BoxConstraints(maxHeight: maxOpen),
-                            child: SingleChildScrollView(
-                              child: Text(shown, style: Type.secondary.copyWith(color: ds.text)),
-                            ),
-                          )
-                        else
-                          Text(
-                            shown,
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
-                            style: Type.secondary.copyWith(color: ds.text),
-                          ),
-                      ],
-                    ),
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(Gap.lg, Gap.xs, Gap.lg, Gap.xs),
+          child: FoldPanel(
+            expanded: _open,
+            onToggle: (open) => setState(() => _open = open),
+            header: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Asked to', style: Type.captionStrong.copyWith(color: ds.textMuted)),
+                if (!_open) ...[
+                  const SizedBox(height: Gap.hair),
+                  Text(
+                    shown,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: Type.secondary.copyWith(color: ds.text),
                   ),
-                  const SizedBox(width: Gap.sm),
-                  Padding(padding: const EdgeInsets.only(top: 4), child: Caret(open: _open)),
                 ],
+              ],
+            ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxOpen),
+              child: SingleChildScrollView(
+                child: Text(shown, style: Type.secondary.copyWith(color: ds.text)),
               ),
             ),
           ),
@@ -397,33 +331,42 @@ class LogStatusLine extends StatelessWidget {
       builder: (context, status) {
         if (status != SubagentLogStatus.loading && status != SubagentLogStatus.failed) return const SizedBox.shrink();
         final failed = status == SubagentLogStatus.failed;
-        final row = Container(
-          width: double.infinity,
-          constraints: const BoxConstraints(minHeight: kMinTap),
-          padding: const EdgeInsets.symmetric(horizontal: Gap.lg),
-          decoration: BoxDecoration(border: Border(bottom: BorderSide(color: ds.hairline))),
-          child: Row(
-            children: [
-              if (failed)
-                Icon(LucideIcons.refreshCw, size: 14, color: ds.textSecondary)
-              else
-                const BusySpinner(size: 14),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  failed ? 'Couldn’t read the log · Tap to retry' : 'Loading…',
-                  style: Type.secondary.copyWith(color: ds.textSecondary),
-                ),
+        if (!failed) {
+          return Semantics(
+            liveRegion: false,
+            label: 'Loading the subagent’s log',
+            child: ExcludeSemantics(
+              child: Container(
+                width: double.infinity,
+                constraints: const BoxConstraints(minHeight: kMinTap),
+                alignment: Alignment.centerLeft,
+                decoration: BoxDecoration(border: Border(bottom: BorderSide(color: ds.hairline))),
+                child: const LoadingRow('Loading…', padding: EdgeInsets.symmetric(horizontal: Gap.lg)),
               ),
-            ],
-          ),
+            ),
+          );
+        }
+        final content = Row(
+          children: [
+            Icon(LucideIcons.refreshCw, size: IconSize.inline, color: ds.textSecondary),
+            const SizedBox(width: Gap.sm),
+            Expanded(
+              child: Text('Couldn’t read the log · Tap to retry', style: Type.secondary.copyWith(color: ds.textSecondary)),
+            ),
+          ],
         );
-        if (!failed) return Semantics(liveRegion: false, label: 'Loading the subagent’s log', child: ExcludeSemantics(child: row));
-        return PressBuilder(
-          onTap: () => session.retrySubagentLog(runId),
-          button: true,
-          semanticLabel: 'Couldn’t read the log. Retry',
-          builder: (context, pressed) => ColoredBox(color: pressed ? ds.fillPressed : Colors.transparent, child: row),
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            PressRow(
+              onTap: () => session.retrySubagentLog(runId),
+              semanticLabel: 'Couldn’t read the log. Retry',
+              minHeight: kMinTap,
+              padding: const EdgeInsets.symmetric(horizontal: Gap.lg - PressRow.inset),
+              child: content,
+            ),
+            const Hairline(),
+          ],
         );
       },
     );
@@ -486,14 +429,12 @@ class SubagentSummaryBody extends StatelessWidget {
       ),
     );
     return [
-      (c) => Container(
-        padding: const EdgeInsets.all(Gap.md),
-        decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.sm)),
+      (c) => Panel(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(padding: const EdgeInsets.only(top: 2), child: Icon(LucideIcons.info, size: 16, color: ds.textSecondary)),
-            const SizedBox(width: 10),
+            Padding(padding: const EdgeInsets.only(top: Gap.hair), child: Icon(LucideIcons.info, size: IconSize.row, color: ds.textSecondary)),
+            const SizedBox(width: Gap.sm),
             Expanded(
               child: Text(
                 'Summary only. ${session.agentLabel} sends a summary of its subagents, not their conversation.',
@@ -562,14 +503,8 @@ class SubagentSummaryBody extends StatelessWidget {
       ],
       if (output.isNotEmpty) ...[
         (c) => section('Recent output'),
-        (c) => Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(Gap.md),
-          decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.sm)),
-          child: Text(
-            output.join('\n'),
-            style: TextStyle(fontFamily: monoFamily, fontSize: 11.5, height: 1.4, color: ds.textSecondary),
-          ),
+        (c) => Panel(
+          child: Text(output.join('\n'), style: Mono.small.copyWith(color: ds.textSecondary)),
         ),
       ],
       if (note != null && note.isNotEmpty && (doc == null))

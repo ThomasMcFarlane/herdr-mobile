@@ -308,18 +308,13 @@ class _BrowserViewState extends State<_BrowserView> {
         physics: const AlwaysScrollableScrollPhysics(),
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         slivers: [
-          SliverLargeTitle(
+          SliverLargeTitle.back(
             title: vm.name,
             subtitle: Text(
               count,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Type.secondary.copyWith(color: ds.textSecondary),
-            ),
-            leading: CircleButton(
-              icon: LucideIcons.chevronLeft,
-              tooltip: 'Back',
-              onPressed: () => Navigator.of(context).maybePop(),
             ),
             actions: [
               if (showToggle)
@@ -468,7 +463,6 @@ class _Tools extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ds = context.ds;
     final vm = context.read<FileBrowserViewModel>();
     final options = vm.options;
     return Padding(
@@ -478,42 +472,7 @@ class _Tools extends StatelessWidget {
           if (search)
             Padding(
               padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.xs, Gap.gutter, Gap.xs),
-              child: Semantics(
-                label: 'Find in this folder',
-                textField: true,
-                child: ListenableBuilder(
-                  listenable: controller,
-                  builder: (context, _) => TextField(
-                    controller: controller,
-                    autocorrect: false,
-                    enableSuggestions: false,
-                    textInputAction: TextInputAction.search,
-                    onChanged: vm.setQuery,
-                    onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
-                    style: Type.body.copyWith(fontSize: 15, color: ds.text),
-                    cursorColor: ds.accent,
-                    textAlignVertical: TextAlignVertical.center,
-                    decoration: InputDecoration(
-                      hintText: 'Find in ${vm.name}',
-                      constraints: const BoxConstraints(minHeight: kMinTap, maxHeight: kMinTap),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                      prefixIcon: Icon(LucideIcons.search, size: 16, color: ds.textTertiary),
-                      suffixIcon: controller.text.isEmpty
-                          ? null
-                          : PressBuilder(
-                              onTap: () {
-                                controller.clear();
-                                vm.setQuery('');
-                              },
-                              semanticLabel: 'Clear search',
-                              minTapSize: kMinTap,
-                              builder: (context, pressed) =>
-                                  Icon(LucideIcons.x, size: 16, color: pressed ? ds.text : ds.textSecondary),
-                            ),
-                    ),
-                  ),
-                ),
-              ),
+              child: SearchField(controller: controller, hint: 'Find in ${vm.name}', onChanged: vm.setQuery),
             ),
           if (!compact)
             SizedBox(
@@ -527,14 +486,14 @@ class _Tools extends StatelessWidget {
                     AppChip(
                       label: options.sort.label,
                       semanticLabel: 'Sort by ${options.sort.label}',
-                      leading: Icon(LucideIcons.arrowUpDown, size: 14, color: ds.textSecondary),
+                      icon: LucideIcons.arrowUpDown,
                       selected: options.sort != FileSort.name,
                       onTap: () => unawaited(_showSortSheet(context, options)),
                     ),
                     const SizedBox(width: Gap.sm),
                     AppChip(
                       label: 'Changed in the last hour',
-                      leading: Icon(LucideIcons.clock, size: 14, color: options.recentOnly ? ds.text : ds.textSecondary),
+                      icon: LucideIcons.clock,
                       selected: options.recentOnly,
                       onTap: () => options.setRecentOnly(!options.recentOnly),
                     ),
@@ -563,20 +522,13 @@ Future<void> _showSortSheet(BuildContext context, FileBrowserOptions options) =>
   builder: (sheet) => ListenableBuilder(
     listenable: options,
     builder: (context, _) {
-      final ds = context.ds;
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(4, 8, 4, 12),
+      return SheetScaffold(
+        title: 'Sort by',
+        kind: SheetKind.actions,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: Semantics(
-                header: true,
-                child: Text('Sort by', style: Type.label.copyWith(color: ds.textSecondary)),
-              ),
-            ),
             for (final sort in FileSort.values)
               _SortRow(
                 sort: sort,
@@ -587,7 +539,7 @@ Future<void> _showSortSheet(BuildContext context, FileBrowserOptions options) =>
                 },
               ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: Gap.lg),
               child: SwitchRow(
                 title: 'Folders first',
                 value: options.foldersFirst,
@@ -611,23 +563,18 @@ class _SortRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
-    return PressBuilder(
-      onTap: onTap,
-      haptic: true,
+    return PressRow(
+      onTap: () {
+        Haptics.tick();
+        onTap();
+      },
       selected: selected,
-      builder: (context, pressed) => AnimatedContainer(
-        duration: Motion.pressing(pressed),
-        curve: Motion.easeOut,
-        constraints: const BoxConstraints(minHeight: 52),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        decoration: BoxDecoration(
-          color: pressed ? ds.fill : Colors.transparent,
-          borderRadius: BorderRadius.circular(Radii.sm),
-        ),
+      minHeight: 52,
+      padding: const EdgeInsets.symmetric(horizontal: Gap.lg - PressRow.inset, vertical: Gap.xs + Gap.hair),
         child: Row(
           children: [
-            Icon(_sortIcons[sort], size: 20, color: ds.textSecondary),
-            const SizedBox(width: 12),
+            Icon(_sortIcons[sort], size: IconSize.lead, color: ds.textSecondary),
+            const SizedBox(width: Gap.md),
             Expanded(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -638,10 +585,9 @@ class _SortRow extends StatelessWidget {
                 ],
               ),
             ),
-            if (selected) Icon(LucideIcons.check, size: 18, color: ds.accentText),
+            if (selected) Icon(LucideIcons.check, size: IconSize.bar, color: ds.accentText),
           ],
         ),
-      ),
     );
   }
 }
@@ -770,7 +716,7 @@ class _FileBreadcrumbsState extends State<FileBreadcrumbs> {
             child: Row(
               children: [
                 for (final (i, c) in crumbs.indexed) ...[
-                  if (i > 0) Icon(LucideIcons.chevronRight, size: 14, color: ds.textTertiary),
+                  if (i > 0) Icon(LucideIcons.chevronRight, size: IconSize.inline, color: ds.textTertiary),
                   PressBuilder(
                     onTap: i == crumbs.length - 1 ? null : () => widget.onTap(c.path),
                     minTapSize: kMinTap,
@@ -778,17 +724,16 @@ class _FileBreadcrumbsState extends State<FileBreadcrumbs> {
                       height: 32,
                       constraints: const BoxConstraints(minWidth: 32),
                       alignment: Alignment.center,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: Gap.sm),
                       decoration: BoxDecoration(
-                        color: pressed ? ds.fill : Colors.transparent,
+                        color: pressed ? ds.pressTint : ds.pressTint.withAlpha(0),
                         borderRadius: BorderRadius.circular(Radii.sm),
                       ),
                       child: Text(
                         c.label,
                         maxLines: 1,
-                        style: Type.label.copyWith(
+                        style: (i == crumbs.length - 1 ? Type.labelStrong : Type.label).copyWith(
                           color: i == crumbs.length - 1 ? ds.text : ds.textSecondary,
-                          fontWeight: i == crumbs.length - 1 ? FontWeight.w600 : FontWeight.w500,
                         ),
                       ),
                     ),

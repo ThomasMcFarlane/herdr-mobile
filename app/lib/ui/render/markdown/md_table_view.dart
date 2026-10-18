@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/semantics.dart' show CustomSemanticsAction;
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -123,17 +122,7 @@ class _MdTableViewState extends State<MdTableView> {
     return _widths = out;
   }
 
-  Future<void> _copy(BuildContext context, String text, String done) async {
-    try {
-      await Clipboard.setData(ClipboardData(text: text));
-    } on PlatformException {
-      Haptics.failed();
-      return;
-    }
-    Haptics.tick();
-    if (!context.mounted) return;
-    Toaster.maybeOf(context)?.show(done);
-  }
+  void _copy(BuildContext context, String text, String done) => copyText(context, text, what: done);
 
   void _actions(BuildContext context) {
     final t = widget.table;

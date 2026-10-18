@@ -69,23 +69,20 @@ class _StripRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final ds = context.ds;
     final second = text.secondary;
-    return PressBuilder(
-      onTap: onTap,
-      scale: 0.985,
-      haptic: true,
-      semanticLabel: semantics,
-      builder: (context, pressed) => AnimatedContainer(
-        duration: Motion.pressing(pressed),
-        curve: Motion.easeOut,
-        constraints: const BoxConstraints(minHeight: 48),
-        padding: const EdgeInsets.symmetric(horizontal: Gap.md, vertical: Gap.sm),
-        decoration: BoxDecoration(
-          color: pressed ? ds.fillPressed : ds.fill,
-          borderRadius: BorderRadius.circular(Radii.sm),
-        ),
+    // One tap target: the whole panel is the row, its press tint inset inside.
+    return Panel(
+      padding: const EdgeInsets.symmetric(vertical: Gap.xs),
+      child: PressRow(
+        onTap: () {
+          Haptics.tick();
+          onTap();
+        },
+        semanticLabel: semantics,
+        minHeight: 48 - 2 * Gap.xs,
+        padding: const EdgeInsets.symmetric(horizontal: Gap.md - PressRow.inset, vertical: Gap.xs),
         child: Row(
           children: [
-            Icon(LucideIcons.layers, size: 14, color: ds.textSecondary),
+            Icon(LucideIcons.layers, size: IconSize.inline, color: ds.textSecondary),
             const SizedBox(width: Gap.sm),
             Expanded(
               child: Column(
@@ -110,7 +107,7 @@ class _StripRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: Gap.sm),
-            Icon(LucideIcons.chevronUp, size: 14, color: ds.textTertiary),
+            Icon(LucideIcons.chevronUp, size: IconSize.inline, color: ds.textTertiary),
           ],
         ),
       ),
