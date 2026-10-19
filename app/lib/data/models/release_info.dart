@@ -219,4 +219,48 @@ class ReleaseInfo {
 
   @override
   int get hashCode => Object.hash(version, apkUrl, size, sha256);
+
+  /// The walkthrough clip the notes lead with, or null (see [ReleaseClip]).
+  ReleaseClip? get clip => ReleaseClip.find(notes, version);
+}
+
+/// The release's walkthrough video, as its notes link it: one Markdown line,
+/// a poster image that links to the clip,
+/// `[![Watch what's new · 6 changes · 0:19 · 7.5 MB](…/v0.1.20/0.1.20-whats-new.jpg)](…/v0.1.20/0.1.20-whats-new.mp4)`.
+/// GitHub draws it as a clickable poster; the update sheet draws the poster
+/// and opens the clip in the browser on a tap.
+///
+/// Only the two release files of that version are accepted
+/// ([ReleaseInfo.isReleaseFile]): the poster is the one picture the app
+/// fetches from release notes, so a notes line naming any other address stays
+/// text and nothing is fetched from it.
+@immutable
+class ReleaseClip {
+  const ReleaseClip({required this.label, required this.poster, required this.video, required this.line});
+
+  /// What the clip is and costs, written by the release: "Watch what's new ·
+  /// 6 changes · 0:19 · 7.5 MB".
+  final String label;
+  final String poster;
+  final String video;
+
+  /// The whole notes line, so the sheet can draw the notes without it.
+  final String line;
+
+  static final _line = RegExp(r'^\[!\[([^\]\n]+)\]\(([^)\s]+)\)\]\(([^)\s]+)\)[ \t]*$', multiLine: true);
+
+  static ReleaseClip? find(String notes, String version) {
+    for (final m in _line.allMatches(notes)) {
+      final poster = m.group(2)!;
+      final video = m.group(3)!;
+      if (ReleaseInfo.isReleaseFile(poster, version, '$version-whats-new.jpg') &&
+          ReleaseInfo.isReleaseFile(video, version, '$version-whats-new.mp4')) {
+        return ReleaseClip(label: m.group(1)!.trim(), poster: poster, video: video, line: m.group(0)!);
+      }
+    }
+    return null;
+  }
+
+  /// [notes] without this clip's line.
+  String without(String notes) => notes.replaceFirst(line, '').trim();
 }

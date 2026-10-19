@@ -3,7 +3,8 @@
 #
 # Usage: make_clip.sh --version X.Y.Z --slug <kebab> --recording <mp4> \
 #          --headline "<text>" [--caption "Try it: <path>"] \
-#          [--touches <touches.json>] [--trim-start S] [--trim-end S]
+#          [--touches <touches.json>] [--trim-start S] [--trim-end S] \
+#          [--poster-at S]
 #
 # The clip is the recording itself: 1080x1920 (9:16, for phones), the whole
 # screen fitted and letterboxed on paper or ink, silent. It fades up into the
@@ -49,6 +50,14 @@
 # resolution and size. Run it from inside the repo: the repo root comes from
 # `git rev-parse --show-toplevel`. Media under local/ are git-ignored and never
 # committed: upload them to the GitHub release.
+#
+# Poster: next to the mp4 it writes local/release-media/<version>/<version>-<slug>.jpg,
+# one frame of the rendered clip, 720 px wide (9:16), JPEG of at most 80 KB
+# (the quality is lowered until it fits; it fails if even the lowest does not).
+# The app's update sheet and the GitHub release show it as the clip's poster.
+# --poster-at S picks the frame, in seconds of the rendered clip. Default: 0.6 s
+# after the first chapter's card has fully entered, or 1.0 s without chapters.
+# Pick a calm frame: not one where an orange "needs you" card dominates.
 set -euo pipefail
 
 HYPERFRAMES="hyperframes@0.8.174"
@@ -67,11 +76,11 @@ die() {
 }
 
 usage() {
-  sed -n '4,6p' "$0" | sed 's/^# \{0,1\}//' >&2
+  sed -n '4,7p' "$0" | sed 's/^# \{0,1\}//' >&2
   exit 1
 }
 
-version="" slug="" recording="" headline="" caption="" touches="" trim_start=0 trim_end=0
+version="" slug="" recording="" headline="" caption="" touches="" trim_start=0 trim_end=0 poster_at=""
 while (($#)); do
   case "$1" in
     --version) version="${2-}"; shift 2 ;;
@@ -82,6 +91,7 @@ while (($#)); do
     --touches) touches="${2-}"; shift 2 ;;
     --trim-start) trim_start="${2-}"; shift 2 ;;
     --trim-end) trim_end="${2-}"; shift 2 ;;
+    --poster-at) poster_at="${2-}"; shift 2 ;;
     -h | --help) usage ;;
     *) printf 'make_clip: unknown argument: %s\n' "$1" >&2; usage ;;
   esac
@@ -101,6 +111,8 @@ done
 for t in "$trim_start" "$trim_end"; do
   [[ "$t" =~ ^[0-9]+(\.[0-9]+)?$ ]] || die "bad trim '$t': give seconds, e.g. 1.5."
 done
+[[ -z "$poster_at" || "$poster_at" =~ ^[0-9]+(\.[0-9]+)?$ ]] ||
+  die "bad --poster-at '$poster_at': give seconds into the rendered clip, e.g. 1.2."
 for tool in git ffmpeg ffprobe node npx; do
   command -v "$tool" >/dev/null || die "$tool is not on PATH."
 done
@@ -193,6 +205,11 @@ JS
   )" || exit 1
 fi
 chapters="$(printf '%s' "$steps_json" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).steps.filter(x=>x.kind==="chapter").length))')"
+# Default poster time. Mirrors assets/clip/clip.js: a chapter card starts
+# entering at max(t - 0.1, 0.3) and takes 0.25 s (Motion.sheetIn).
+if [[ -z "$poster_at" ]]; then
+  poster_at="$(printf '%s' "$steps_json" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const c=JSON.parse(s).steps.find(x=>x.kind==="chapter");console.log(c?(Math.max(c.t-0.1,0.3)+0.25+0.6).toFixed(2):"1.00")})')"
+fi
 
 # The walkthrough (chapters) is the long shape; everything else stays short.
 if ((chapters > 0)); then
@@ -316,11 +333,25 @@ resolution="$(ffprobe -v error -select_streams v:0 -show_entries stream=width,he
 codec="$(ffprobe -v error -select_streams v:0 -show_entries stream=codec_name -of default=nw=1:nk=1 "$out")"
 bytes="$(wc -c <"$out" | tr -d ' ')"
 size="$(awk -v b="$bytes" 'BEGIN { printf "%.1f MB", b / 1048576 }')"
+# The poster: one frame, 720 px wide, JPEG, at most 80 KB.
+poster="${out%.mp4}.jpg"
+awk -v p="$poster_at" -v d="$duration" 'BEGIN { exit !(p < d) }' ||
+  die "--poster-at ${poster_at} s is past the end of the ${duration} s clip."
+poster_bytes=""
+for q in $(seq 2 31); do
+  ffmpeg -nostdin -v error -y -ss "$poster_at" -i "$out" -frames:v 1 \
+    -vf "scale=720:-2:flags=lanczos" -q:v "$q" "$poster"
+  poster_bytes="$(wc -c <"$poster" | tr -d ' ')"
+  ((poster_bytes <= 80 * 1024)) && break
+done
+((poster_bytes <= 80 * 1024)) ||
+  die "poster at ${poster_at} s is $((poster_bytes / 1024)) KB even at the lowest JPEG quality, over 80 KB: pick a calmer frame with --poster-at."
 
 printf '%s\n' "$out"
 printf 'duration:   %.2f s\n' "$duration"
 printf 'resolution: %s (%s, no audio)\n' "$resolution" "$codec"
 printf 'size:       %s (%s bytes)\n' "$size" "$bytes"
+printf 'poster:     %s (%s s, %s KB, JPEG q %s)\n' "$poster" "$poster_at" "$((poster_bytes / 1024))" "$q"
 
 [[ "$resolution" == "${WIDTH}x${HEIGHT}" ]] ||
   die "rendered $resolution, expected ${WIDTH}x${HEIGHT}: check data-width/data-height in assets/clip/index.html."

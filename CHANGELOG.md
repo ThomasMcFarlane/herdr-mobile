@@ -4,6 +4,18 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [Unreleased]
+
+- `Update available` in Settings opens one sheet: what's new first, then
+  `Download`, then `Install`, so the notes are on the way rather than behind a
+  second button. It says where the file comes from and, once downloaded, that
+  it matched the release's checksum; Android still asks before it installs.
+- When a release comes with a short clip of its changes, the sheet opens on
+  it. `Play` opens it in your browser, and nothing of the video loads before
+  that tap.
+- Coming back to Settings with an update you have not opened yet scrolls it
+  to the top, so the row is in view.
+
 ## [0.1.19] - 2026-10-19
 
 ### A page from your machine gets the same bar as every screen

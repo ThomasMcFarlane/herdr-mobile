@@ -1,6 +1,7 @@
 // Renders Settings to PNGs for review: the five groups (closed, each open, the
-// update row open, downloading behind another group, Android blocking
-// notifications), the update states and the tab bar mark. Light and dark, 412 dp
+// update row, downloading behind another group, Android blocking
+// notifications), the update sheet at each stage, with and without a
+// walkthrough clip, and the tab bar mark. Light and dark, 412 dp
 // at text scale 1 and 1.6, and 320 dp at 2 for the groups. Off by default; it
 // writes files:
 //
@@ -147,10 +148,14 @@ void main() {
               ],
               child: app,
             ),
-            // The three states that differ only in About's check row.
+            // The three states that differ only in About's check row; the
+            // others are the update sheet at that stage.
             pump: (t) async {
               if (const {'checking-none', 'uptodate', 'check-failed'}.contains(name)) {
                 await openSettingsGroup(t, 'About');
+              } else {
+                await t.tap(find.text('Update available'));
+                await t.pump(const Duration(milliseconds: 600));
               }
             },
           );
@@ -221,20 +226,32 @@ void main() {
     }
   }
 
-  testWidgets('notes sheet', (tester) async {
+  testWidgets('update sheet with a walkthrough clip', (tester) async {
+    final feed = FakeReleaseFeed();
+    final update = await make(feed, FakeReleaseFiles());
+    const base = 'https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.7';
+    feed.answer = ReleaseInfo(
+      version: _release.version,
+      apkUrl: _release.apkUrl,
+      size: _release.size,
+      pageUrl: _release.pageUrl,
+      notes: "[![Watch what's new · 4 changes · 0:14 · 5.1 MB]($base/0.1.7-whats-new.jpg)]($base/0.1.7-whats-new.mp4)\n\n$_notes",
+      sha256: _release.sha256,
+    );
+    await update.check();
     await shoot(
       tester,
       Builder(
         builder: (context) => Scaffold(
           body: Center(
             child: TextButton(
-              onPressed: () => unawaited(showReleaseNotes(context, _release)),
+              onPressed: () => unawaited(showUpdateSheet(context, update)),
               child: const Text('open'),
             ),
           ),
         ),
       ),
-      '$out/notes.png',
+      '$out/sheet-clip.png',
       pump: (t) async {
         await t.tap(find.text('open'));
         await t.pump(const Duration(milliseconds: 600));

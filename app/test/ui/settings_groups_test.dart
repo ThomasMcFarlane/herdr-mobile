@@ -1,6 +1,7 @@
 // Settings is five rows (Look, Agents, Notifications, Storage, About), each saying what
 // it is set to and opening in place, one at a time, with a newer version's row
-// above them. These tests hold the rules that keep it five rows long.
+// above them that opens the update sheet. These tests hold the rules that keep
+// it five rows long, and the update's path from notes to Install.
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
@@ -30,30 +31,49 @@ import '../support/settings_support.dart';
 import '../support/shot.dart' show loadAppFonts;
 import '../support/update_fakes.dart';
 
-final _release = ReleaseInfo(
-  version: '99.0.0',
-  apkUrl: 'https://example.invalid/herdr-mobile-99.0.0.apk',
-  size: 48 * 1024 * 1024,
-  pageUrl: 'https://example.invalid/releases/tag/v99.0.0',
-  notes: '',
-  sha256: 'a' * 64,
-);
+const _base = 'https://github.com/tuan3w/herdr-mobile/releases/download/v99.0.0';
 
-/// An updater with the fakes behind it; [found] is whether a newer version was
-/// already found.
-({AppUpdate update, FakeReleaseFeed feed, FakeReleaseFiles files}) _updater(WidgetTester tester) {
-  final feed = FakeReleaseFeed()..answer = _release;
+ReleaseInfo _release({String notes = '### One new thing\n\nIt does what it says.'}) => ReleaseInfo(
+      version: '99.0.0',
+      apkUrl: 'https://example.invalid/herdr-mobile-99.0.0.apk',
+      size: 48 * 1024 * 1024,
+      pageUrl: 'https://example.invalid/releases/tag/v99.0.0',
+      notes: notes,
+      sha256: 'a' * 64,
+    );
+
+/// An updater with the fakes behind it, its newer version not yet looked for.
+({AppUpdate update, FakeReleaseFeed feed, FakeReleaseFiles files, FakeApkInstaller installer}) _updater(
+  WidgetTester tester, {
+  ReleaseInfo? release,
+}) {
+  final feed = FakeReleaseFeed()..answer = release ?? _release();
   final files = FakeReleaseFiles();
+  final installer = FakeApkInstaller();
   final update = AppUpdate(
     store: MemoryUpdateStore(),
     feed: feed,
     files: files,
-    installer: FakeApkInstaller(),
+    installer: installer,
     current: AppVersion.tryParse('0.1.0'),
   );
   addTearDown(update.dispose);
-  return (update: update, feed: feed, files: files);
+  return (update: update, feed: feed, files: files, installer: installer);
 }
+
+Future<void> _openSheet(WidgetTester tester) async {
+  await tester.tap(find.text('Update available'));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 600));
+}
+
+Future<void> _closeSheet(WidgetTester tester) async {
+  Navigator.of(tester.element(find.text('Update to 99.0.0'))).pop();
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 600));
+}
+
+ScrollPosition _position(WidgetTester tester) => tester.state<ScrollableState>(find.byType(Scrollable).first).position;
 
 /// [showing] is whether the tab is in front: the shell turns tickers off in the
 /// tabs that are not.
@@ -271,24 +291,62 @@ void main() {
   });
 
   group('a newer version', () {
-    testWidgets('is the one row open on entry, with Download one tap away', (tester) async {
+    testWidgets('its row opens one sheet: the notes first, then Download with its size', (tester) async {
       final u = _updater(tester);
       await u.update.check();
       await _pump(tester, update: u.update);
-      expect(find.text('Update available'), findsOneWidget);
-      expect(find.text('Theme'), findsNothing, reason: 'the others stay closed');
+      expect(find.text('Theme'), findsNothing, reason: 'every group stays closed');
+      expect(find.textContaining('Download'), findsNothing, reason: 'nothing to download before the notes');
 
-      await tester.tap(find.text('Download'));
+      await _openSheet(tester);
+      expect(find.text('Update to 99.0.0'), findsOneWidget);
+      expect(find.text('It does what it says.'), findsOneWidget);
+      expect(find.text('From github.com/$appRepository \u00b7 you have $appVersion'), findsOneWidget);
+      expect(find.textContaining('Checksum'), findsNothing, reason: 'nothing was checked yet');
+
+      await tester.tap(find.text('Download 48 MB'));
       await tester.pump();
       expect(u.update.stage, UpdateStage.downloading);
+      expect(find.text('Cancel'), findsOneWidget);
     });
 
-    testWidgets('found while the tab is behind another opens when it is next shown', (tester) async {
+    testWidgets('once downloaded it says what was checked and what Android does, and Install hands it over',
+        (tester) async {
+      final u = _updater(tester);
+      await u.update.check();
+      await _pump(tester, update: u.update);
+      await _openSheet(tester);
+      await tester.tap(find.text('Download 48 MB'));
+      await tester.pump();
+      u.files.running!.complete(File('/x.apk'));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Checksum matched: the file the release lists'), findsOneWidget);
+      expect(find.text('Android asks before it installs.'), findsOneWidget);
+      await tester.tap(find.text('Install 99.0.0'));
+      await tester.pump();
+      expect(u.installer.installed, ['/x.apk']);
+    });
+
+    testWidgets('a release without notes says so and offers its page', (tester) async {
+      final u = _updater(tester, release: _release(notes: ''));
+      await u.update.check();
+      await _pump(tester, update: u.update);
+      await _openSheet(tester);
+      expect(find.text('No notes came with this release.'), findsOneWidget);
+      expect(find.text('Open on GitHub'), findsOneWidget);
+      expect(find.text('Download 48 MB'), findsOneWidget, reason: 'never a dead end');
+    });
+
+    testWidgets('found while the tab is behind another puts the row back in view when it is next shown',
+        (tester) async {
       final u = _updater(tester);
       final showing = ValueNotifier(true);
-      await _pump(tester, update: u.update, showing: showing);
-      expect(find.text('Update available'), findsNothing);
-      await openSettingsGroup(tester, 'Look');
+      await _pump(tester, update: u.update, showing: showing, size: const Size(320, 640), textScale: 2);
+      await openSettingsGroup(tester, 'About');
+      await tester.pump(Motion.expand * 2);
+      expect(_position(tester).pixels, greaterThan(0), reason: 'the person left the page scrolled down');
 
       showing.value = false;
       await tester.pump();
@@ -296,45 +354,64 @@ void main() {
       await tester.pump();
       showing.value = true;
       await tester.pump();
-      await tester.pump(Motion.expand * 2);
-      expect(find.text('Download'), findsOneWidget, reason: 'the dot brought the person here: one tap');
-      expect(find.text('Theme'), findsNothing, reason: 'Look made way for it');
+      expect(_position(tester).pixels, 0, reason: 'the dot brought the person here');
+      expect(find.text('Update available').hitTestable(), findsOneWidget);
     });
 
-    testWidgets('found while the page is showing does not move what the person has open', (tester) async {
+    testWidgets('found while the page is showing does not move it', (tester) async {
       final u = _updater(tester);
-      await _pump(tester, update: u.update);
-      await openSettingsGroup(tester, 'Look');
+      await _pump(tester, update: u.update, size: const Size(320, 640), textScale: 2);
+      await openSettingsGroup(tester, 'About');
+      await tester.pump(Motion.expand * 2);
+      final before = _position(tester).pixels;
+      expect(before, greaterThan(0));
 
       await u.update.check();
       await tester.pump();
-      await tester.pump(Motion.expand * 2);
-      expect(find.text('Update available'), findsOneWidget, reason: 'the row appears');
-      expect(find.text('Theme'), findsOneWidget, reason: 'nothing moves under the thumb');
-      expect(find.text('Download'), findsNothing);
+      expect(_position(tester).pixels, before, reason: 'nothing moves under the thumb');
     });
 
-    testWidgets('keeps its progress in sight behind another group', (tester) async {
+    testWidgets('once its sheet was opened, coming back leaves the page where the person left it', (tester) async {
+      final u = _updater(tester);
+      await u.update.check();
+      final showing = ValueNotifier(true);
+      await _pump(tester, update: u.update, showing: showing, size: const Size(320, 640), textScale: 2);
+      await _openSheet(tester);
+      await _closeSheet(tester);
+      await openSettingsGroup(tester, 'About');
+      await tester.pump(Motion.expand * 2);
+      final before = _position(tester).pixels;
+      expect(before, greaterThan(0));
+
+      showing.value = false;
+      await tester.pump();
+      showing.value = true;
+      await tester.pump();
+      expect(_position(tester).pixels, before);
+    });
+
+    testWidgets('keeps its progress in sight on the row after the sheet is put away', (tester) async {
       final u = _updater(tester);
       await u.update.check();
       await _pump(tester, update: u.update);
-      await tester.tap(find.text('Download'));
+      await _openSheet(tester);
+      await tester.tap(find.text('Download 48 MB'));
       await tester.pump();
       u.files.report(20 * 1024 * 1024);
       await tester.pump();
+      await _closeSheet(tester);
 
-      await openSettingsGroup(tester, 'Look');
-      expect(find.text('Download'), findsNothing, reason: 'its body closed with the others');
       expect(find.textContaining('Downloading 20 MB of 48 MB'), findsOneWidget);
       expect(find.bySemanticsLabel('Download progress'), findsOneWidget);
     });
 
-    testWidgets('a failure is a short line on the row and the whole sentence once, in the body', (tester) async {
+    testWidgets('a failure is a short line on the row and the whole sentence once, in the sheet', (tester) async {
       const reason = 'The download stopped at 31 MB of 48 MB. It continues from there when you try again.';
       final u = _updater(tester);
       await u.update.check();
       await _pump(tester, update: u.update);
-      await tester.tap(find.text('Download'));
+      await _openSheet(tester);
+      await tester.tap(find.text('Download 48 MB'));
       await tester.pump();
       u.files.running!.completeError(const UpdateException(reason));
       await tester.pump();
@@ -345,7 +422,7 @@ void main() {
       expect(find.text('Retry'), findsOneWidget);
     });
 
-    testWidgets('a download that finishes or fails is announced with its group closed', (tester) async {
+    testWidgets('a download that finishes is announced on the row with the sheet put away', (tester) async {
       final handle = tester.ensureSemantics();
       final u = _updater(tester);
       await u.update.check();
@@ -353,15 +430,36 @@ void main() {
       bool live() => tester.getSemantics(find.text('Update available')).flagsCollection.isLiveRegion;
       expect(live(), isFalse, reason: 'nothing to announce yet');
 
-      await tester.tap(find.text('Download'));
+      await _openSheet(tester);
+      await tester.tap(find.text('Download 48 MB'));
       await tester.pump();
-      await openSettingsGroup(tester, 'Look');
+      await _closeSheet(tester);
       u.files.running!.complete(File('/x.apk'));
       await tester.pump();
       await tester.pump();
       expect(u.update.stage, UpdateStage.ready);
       expect(live(), isTrue);
       handle.dispose();
+    });
+
+    testWidgets('leads with the release\'s walkthrough clip', (tester) async {
+      const clip = "[![Watch what's new · 6 changes · 0:19 · 7.5 MB]($_base/99.0.0-whats-new.jpg)]($_base/99.0.0-whats-new.mp4)";
+      final u = _updater(tester, release: _release(notes: '$clip\n\n### One new thing\n\nIt does what it says.'));
+      await u.update.check();
+      await _pump(tester, update: u.update);
+      await _openSheet(tester);
+      expect(find.text("Watch what's new · 6 changes · 0:19 · 7.5 MB · opens in your browser"), findsOneWidget);
+      expect(find.text('It does what it says.'), findsOneWidget);
+    });
+
+    testWidgets('fetches nothing a notes line names on another host', (tester) async {
+      const elsewhere = "[![Watch what's new](https://evil.example/99.0.0-whats-new.jpg)]($_base/99.0.0-whats-new.mp4)";
+      final u = _updater(tester, release: _release(notes: '$elsewhere\n\nIt does what it says.'));
+      await u.update.check();
+      await _pump(tester, update: u.update);
+      await _openSheet(tester);
+      expect(find.textContaining('opens in your browser'), findsNothing);
+      expect(find.byWidgetPredicate((w) => w is Image && w.image is NetworkImage), findsNothing);
     });
 
     testWidgets('says the version once: About points up instead of repeating it', (tester) async {

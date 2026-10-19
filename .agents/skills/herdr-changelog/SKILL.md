@@ -11,9 +11,11 @@ The supervisor from `AGENTS.md`: someone whose agents work while they are
 elsewhere, with seconds of attention. They read the notes in three places:
 
 - the GitHub release (the section verbatim, via `tool/release-notes.sh`);
-- the in-app "What's new" sheet (`showReleaseNotes`, `update_group.dart`), only
-  before an update is downloaded. It draws `> [!TIP]` as a card, and shows an
-  image only as a quiet "Image: alt · host" chip, because it never loads images;
+- the in-app update sheet (`showUpdateSheet`, `update_group.dart`), read on
+  the way to Download and Install. It opens on the walkthrough's poster (a tap
+  plays the clip in the browser), draws `> [!TIP]` as a card, and shows any
+  other image only as a quiet "Image: alt · host" chip: the poster is the one
+  picture it fetches;
 - Google Play's "What's new", plain text, 500 characters at most.
 
 They want to know what they will notice, and where to find it so they can try
@@ -88,6 +90,8 @@ path in the last clause of a nine-line bullet.
 ```markdown
 ## [0.1.15] - 2026-10-17
 
+[![Watch what's new · 3 changes · 0:14 · 5.2 MB](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.15/0.1.15-whats-new.jpg)](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.15/0.1.15-whats-new.mp4)
+
 ### Pictures are downloaded once
 
 A picture you looked at is kept on the phone, so opening it again, going
@@ -104,7 +108,6 @@ back to one in the viewer or returning to a folder no longer downloads it.
   a line of text.
 
 ![Settings with the Storage group open, showing 38 MB kept and Clear cache](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.15/0.1.15-pictures-kept.png)
-[Watch what's new in 0.1.15: 3 changes on the phone (0:24)](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.15/0.1.15-whats-new.mp4)
 
 **Fixed**
 
@@ -160,16 +163,20 @@ read. Create the folders if they are missing.
 - Labels without backticks, still spelled exactly: Try it: in Settings, open
   Storage.
 
-## 7. Media: a still per headline, one walkthrough clip per release
+## 7. Media: the walkthrough leads, a still per headline
 
+- **The walkthrough leads the section.** Its line comes first, above the
+  first `###`: a poster image that links to the clip,
+  `[![Watch what's new · N changes · m:ss · X MB](…/<version>-whats-new.jpg)](…/<version>-whats-new.mp4)`.
+  GitHub draws it as a clickable poster; the update sheet draws the poster
+  with a play mark and opens the clip in the browser on a tap. The owner chose
+  "the clip leads" from a rendered comparison of five placements. The label
+  says what it is and what it costs, because the sheet shows it on the
+  control: nothing of the video loads before that tap.
 - Each `###` block ends with exactly one still (`![alt](…png)`), named
-  `<version>-<slug>.png`.
-- The first block also links the release's walkthrough clip once:
-  `[Watch what's new in <version>: N changes on the phone (m:ss)](…/<version>-whats-new.mp4)`.
+  `<version>-<slug>.png`. In the sheet a still is a chip; on GitHub it
+  illustrates what was just read.
 - Fixes get no media.
-- Media close the block, below the bullets and cards. On GitHub the still
-  illustrates what was just read, and in the in-app sheet the chip doesn't push
-  a tip off the first screen.
 
 Work in `local/release-media/<version>/`. `/local/` is git-ignored: media never
 enter git, so the repo doesn't grow with every release; they live on the
@@ -226,18 +233,24 @@ working.
    ```bash
    .agents/skills/herdr-changelog/scripts/make_clip.sh --version <version> --slug whats-new \
      --recording /tmp/release_clip/recording.mp4 --touches /tmp/release_clip/touches.json \
-     --headline '<the first ### headline>'
+     --headline '<the first ### headline>' [--poster-at S]
    ```
    The template in `assets/clip/` fades straight into the footage. It shows
    the chapter label with a progress mark (`2/6`). It eases the camera in
    toward each touch, and draws an accent ring that presses on a tap and
    follows a drag. Step captions sit in a pill clear of the player's controls.
    The clip ends on the last frame with "herdr mobile <version>". It is
-   silent, at most 80 s and 30 MB.
+   silent, at most 80 s and 30 MB. It also writes the poster,
+   `<version>-whats-new.jpg`: a frame of the clip, 720 px wide, at most 80 KB
+   (the one picture the update sheet fetches without a tap).
 4. **Look at it:** extract a frame from a few chapters
    (`ffmpeg -ss <t> -i <clip> -frames:v 1 /tmp/f.png`) and open them. Check
    that the captions are readable at half size, the ring sits on what was
-   touched, and the zoom never cuts off the thing that changed.
+   touched, and the zoom never cuts off the thing that changed. Open the
+   poster too: it must not show a "needs you" card, an orange mark or a
+   waiting question. On a supervisor's screen that reads as a real agent
+   needing them (the first default poster did exactly that). Pick a calm
+   frame with `--poster-at` instead.
 
 **What a test cannot draw** has to come from the phone: the page viewer's
 WebView (a platform view renders nothing in a test), Android's own UI (the
@@ -266,7 +279,7 @@ media and check that every link resolves:
 
 ```bash
 gh run watch "$(gh run list --workflow release.yml --limit 1 --json databaseId --jq '.[0].databaseId')"
-gh release upload v<version> local/release-media/<version>/<version>-*.png local/release-media/<version>/<version>-*.mp4
+gh release upload v<version> local/release-media/<version>/<version>-*.{png,jpg,mp4}
 python3 .agents/skills/herdr-changelog/scripts/check_changelog.py <version> --remote
 ```
 
@@ -297,9 +310,10 @@ Fix every finding before committing. It checks:
 - `tip`: the "Try it:" prefix and at most 3 cards;
 - `label`: every backticked label in a tip is a quoted string in `app/lib`;
 - `play`: the file exists, is under 500 characters and is plain text;
-- `media`: one still per headline, the walkthrough linked once, at most one
-  phone clip per headline, named right, alt text of 4 words or more, files
-  present locally (`--remote`: reachable on the release).
+- `media`: the walkthrough line first with its poster and clip, one still per
+  headline, at most one phone clip per headline, named right, text of 4 words
+  or more, the poster under 80 KB, files present locally (`--remote`:
+  reachable on the release).
 
 It cannot judge whether a bullet is true, whether every commit is covered, or
 whether a tip's path really works. Do those by reading (section 3) and by

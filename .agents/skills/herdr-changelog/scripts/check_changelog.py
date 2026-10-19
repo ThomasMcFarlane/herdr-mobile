@@ -17,11 +17,12 @@ Rules (release = a version argument; unreleased skips the release-only ones):
   label    every backticked label in a tip is a quoted string in app/lib/**/*.dart
   play     release: fastlane/metadata/android/en-US/changelogs/<N>.txt exists for
            the +N in app/pubspec.yaml, <= 500 characters, plain text
-  media    release: each headline block has one still (and at most one phone
-           clip); the section links the walkthrough <version>-whats-new.mp4 once;
-           all are v<version>/<version>-<slug>.png|.mp4 on the GitHub release,
-           with alt text that reads alone; files present under
-           local/release-media/<version>/ (or, with --remote, on the release)
+  media    release: the section starts with the walkthrough line
+           [![label](<version>-whats-new.jpg)](<version>-whats-new.mp4); each
+           headline block has one still (and at most one phone clip); all are
+           v<version> assets on the GitHub release, with text that reads alone;
+           files present under local/release-media/<version>/ (or, with
+           --remote, on the release)
 """
 import re
 import subprocess
@@ -34,6 +35,8 @@ PLAY_LIMIT = 500
 MAX_TIPS = 3
 STILL_MAX_BYTES = 1_500_000
 CLIP_MAX_BYTES = 30_000_000
+# The poster is the one picture the update sheet fetches unasked.
+POSTER_MAX_BYTES = 81_920
 # Product names that are CamelCase by their makers, not widget names.
 CAMEL_OK = {'GitHub', 'YouTube', 'JavaScript', 'TypeScript', 'MacBook', 'PowerShell', 'WhatsApp', 'LaTeX', 'OpenSSH', 'WireGuard'}
 
@@ -204,8 +207,12 @@ def check_play(root: Path, version: str) -> list[str]:
     return out
 
 
+WALKTHROUGH = re.compile(r'^\[!\[([^\]]+)\]\(([^)\s]+)\)\]\(([^)\s]+)\)\s*$')
+
+
 def check_media(body: list[tuple[int, str]], root: Path, version: str, remote: bool) -> list[str]:
     out = []
+    lead: list[tuple[int, str]] = []  # before the first headline
     blocks: list[tuple[str, list[tuple[int, str]]]] = []
     for n, line in body:
         if line.startswith('### '):
@@ -214,47 +221,61 @@ def check_media(body: list[tuple[int, str]], root: Path, version: str, remote: b
             break
         elif blocks:
             blocks[-1][1].append((n, line.strip()))
+        else:
+            lead.append((n, line.strip()))
     asset = re.compile(rf'^https://github\.com/[^/]+/[^/]+/releases/download/v{re.escape(version)}/'
-                       rf'({re.escape(version)}-[a-z0-9]+(?:-[a-z0-9]+)*)\.(png|mp4)$')
+                       rf'({re.escape(version)}-[a-z0-9]+(?:-[a-z0-9]+)*)\.(png|jpg|mp4)$')
     local = root / 'local' / 'release-media' / version
-    walkthrough = f'{version}-whats-new.mp4'
-    found_walkthrough = 0
+    limits = {'png': STILL_MAX_BYTES, 'jpg': POSTER_MAX_BYTES, 'mp4': CLIP_MAX_BYTES}
+
+    def asset_ok(n: int, url: str, kind: str, name_must: str | None = None) -> None:
+        a = asset.match(url)
+        if not a or a.group(2) != kind or (name_must and f'{a.group(1)}.{kind}' != name_must):
+            want = name_must or f'{version}-<slug>.{kind}'
+            out.append(f'media: line {n}: {url} is not the v{version} release asset {want}')
+            return
+        name = f'{a.group(1)}.{kind}'
+        if remote:
+            try:
+                req = urllib.request.Request(url, method='HEAD')
+                with urllib.request.urlopen(req, timeout=20) as r:
+                    size = int(r.headers.get('Content-Length') or 0)
+                if size > limits[kind]:
+                    out.append(f'media: {name} is {size} bytes on the release; keep it under {limits[kind]}')
+            except (urllib.error.URLError, TimeoutError) as e:
+                out.append(f'media: {url} is not reachable ({e}); upload it with gh release upload')
+        else:
+            f = local / name
+            if not f.exists():
+                out.append(f'media: local/release-media/{version}/{name} is missing; make it before release')
+            elif f.stat().st_size > limits[kind]:
+                out.append(f'media: {name} is {f.stat().st_size} bytes; keep it under {limits[kind]}')
+
+    # The walkthrough leads: its poster line comes before the first headline,
+    # so GitHub and the in-app sheet both open on it.
+    walks = [(n, m) for n, s in lead if (m := WALKTHROUGH.match(s))]
+    stray = [n for _, lines in blocks for n, s in lines if WALKTHROUGH.match(s) or s.endswith(f'-whats-new.mp4)')]
+    for n in stray:
+        out.append(f'media: line {n}: the walkthrough goes above the first "### " headline, as the line [![…](poster)](clip)')
+    if blocks and len(walks) != 1:
+        out.append(f'media: start the section with the walkthrough line [![…]({version}-whats-new.jpg)]({version}-whats-new.mp4) (found {len(walks)})')
+    for n, m in walks:
+        if len(m.group(1).split()) < 4:
+            out.append(f'media: line {n}: "{m.group(1)}" is too short; say what it is and costs: "Watch what\'s new · 6 changes · 0:19 · 7.5 MB"')
+        asset_ok(n, m.group(2), 'jpg', f'{version}-whats-new.jpg')
+        asset_ok(n, m.group(3), 'mp4', f'{version}-whats-new.mp4')
+
     for head, lines in blocks:
         stills = [(n, m) for n, s in lines if (m := IMAGE.match(s))]
         clips = [(n, m) for n, s in lines if (m := LINK_LINE.match(s)) and m.group(2).endswith('.mp4')]
         if len(stills) != 1:
             out.append(f'media: "### {head}" has {len(stills)} stills; give it exactly one')
-        found_walkthrough += sum(1 for _, m in clips if m.group(2).endswith('/' + walkthrough))
-        extra = [c for c in clips if not c[1].group(2).endswith('/' + walkthrough)]
-        if len(extra) > 1:
-            out.append(f'media: "### {head}" links {len(extra)} phone clips; one at most, the walkthrough covers the rest')
+        if len(clips) > 1:
+            out.append(f'media: "### {head}" links {len(clips)} phone clips; one at most, the walkthrough covers the rest')
         for (n, m), kind in [(x, 'png') for x in stills] + [(x, 'mp4') for x in clips]:
-            text, url = m.group(1), m.group(2)
-            a = asset.match(url)
-            if not a or a.group(2) != kind:
-                out.append(f'media: line {n}: {url} is not the v{version} release asset {version}-<slug>.{kind}')
-                continue
-            if len(text.split()) < 4:
-                out.append(f'media: line {n}: "{text}" is too short; the in-app sheet shows only this text, so it must read alone')
-            name = f'{a.group(1)}.{kind}'
-            limit = STILL_MAX_BYTES if kind == 'png' else CLIP_MAX_BYTES
-            if remote:
-                try:
-                    req = urllib.request.Request(url, method='HEAD')
-                    with urllib.request.urlopen(req, timeout=20) as r:
-                        size = int(r.headers.get('Content-Length') or 0)
-                    if size > limit:
-                        out.append(f'media: {name} is {size} bytes on the release; keep it under {limit}')
-                except (urllib.error.URLError, TimeoutError) as e:
-                    out.append(f'media: {url} is not reachable ({e}); upload it with gh release upload')
-            else:
-                f = local / name
-                if not f.exists():
-                    out.append(f'media: local/release-media/{version}/{name} is missing; make it before release')
-                elif f.stat().st_size > limit:
-                    out.append(f'media: {name} is {f.stat().st_size} bytes; keep it under {limit}')
-    if blocks and found_walkthrough != 1:
-        out.append(f'media: link the walkthrough {walkthrough} exactly once (found {found_walkthrough}), in the first headline block')
+            if len(m.group(1).split()) < 4:
+                out.append(f'media: line {n}: "{m.group(1)}" is too short; the in-app sheet shows only this text, so it must read alone')
+            asset_ok(n, m.group(2), kind)
     return out
 
 

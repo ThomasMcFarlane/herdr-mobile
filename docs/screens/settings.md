@@ -39,24 +39,37 @@ when it differs from `pubspec.yaml`. `AppSwitch` / `SwitchRow` are the kit's
 version on GitHub is a suggestion, so it is quiet: a 10 dp accent dot on the
 Settings tab's icon (`TabSpec.mark`; the loud orange count stays the Agents
 badge's alone) and an `Update available` row at the top of Settings, absent
-when there is nothing newer. No toast, no notification, nothing on the board.
-The row says the version and its size and is the one group open when the
-person gets there (Download is then one tap, not two): on entry, or, when the
-version is found while the tab is behind another, when it is next shown. A
-version found while the page is showing does not open it: nothing moves under
-the thumb. Its body offers one step at a time: Download (`Retry` after a
-failure), a progress bar and Cancel, Install; `What's new` opens the release
-notes (the version's `CHANGELOG.md` section, rendered with the shared
-Markdown) in a sheet before anything is downloaded. While bytes arrive the
-row carries the progress bar, open or not, so a download is never out of
-sight behind another group; "Ready to install" and a failure are said to a
-screen reader with the group closed. A failure says what happened and what to
-do, whole and in red, in the body (the row only says "Update failed, open to
-see why"); nothing is lost (a stopped download continues from its bytes).
-Install opens Android's own confirm dialog, so nothing is installed silently;
-if Android does not yet allow herdr to install apps, its settings page opens
-and the body says to tap Install again after allowing it. The buttons stack at
-large text sizes (a cut button label otherwise). About holds `Check for
+when there is nothing newer. No toast, no notification, nothing on the board,
+and no sheet that opens by itself. The row says the version and its size; a
+tap opens the update sheet (`showUpdateSheet`). Settings keeps its place
+between visits, so arriving on the page with a version whose sheet was not
+opened yet scrolls it back to the top, row in view: the dot is what brought
+the person there. A version found while the page is showing does not move
+it: nothing moves under the thumb.
+
+The sheet is the whole update, read before acted on. Why: Download used to be
+the row's main button with `What's new` a text button beside it, and the
+notes sheet had no button, so not reading was the default path (the owner:
+"let people check the changelog before install, provide some trust"). Top to
+bottom: `Update to <version>`; the walkthrough's poster when the notes lead
+with one (`ReleaseClip`: a poster image linking to the clip, both files of that
+very release; a tap opens the clip in the browser, nothing of the video loads
+before; the poster is the one picture fetched from notes, any other image
+stays a chip); the notes; then, pinned over a hairline, one line of what herdr
+knows and the one next step. Before the download the line says where it comes
+from and which version you have, and the step is `Download <size>` (`Retry`
+after a failure, with the reason whole and in red above it); while bytes
+arrive, the progress bar, the count and Cancel; once downloaded, `Checksum
+matched: the file the release lists`, `Install <version>` and `Android asks
+before it installs.` Android's signing rule is not claimed on this path:
+Android applies it after Install and herdr does not know the outcome. While
+bytes arrive the row carries the progress bar too, so a download stays in
+sight after the sheet is put away; "Ready to install" and a failure are said
+to a screen reader on the row. Nothing is lost (a stopped download continues
+from its bytes). Install opens Android's own confirm dialog, so nothing is
+installed silently; if Android does not yet allow herdr to install apps, its
+settings page opens and the sheet says to tap Install again after allowing
+it. A release without notes says so and offers its page on GitHub. About holds `Check for
 updates` (the manual check, with the reason when it fails) and `Check
 automatically` (on by default: at most every 12 h while the app is in front;
 the request carries the app name and version, and a download comes from

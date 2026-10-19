@@ -229,9 +229,11 @@ this shape (the release workflow produces it; so must a by-hand upload):
   re-published under the same tag (`gh release upload --clobber`) is handled:
   a download that no longer matches is thrown away and the release is read
   again, so re-publish before anyone has the file, not after;
-- the release body is the "What's new" sheet, as Markdown: it is the version's
+- the release body is the update sheet, as Markdown: it is the version's
   `CHANGELOG.md` section (`tool/release-notes.sh`), so write it for the person
-  who reads it before tapping Download;
+  who reads it before tapping Download. A first line
+  `[![label](…/X.Y.Z-whats-new.jpg)](…/X.Y.Z-whats-new.mp4)` becomes the sheet's
+  poster and play button (`ReleaseClip`; both files of that release only);
 - every URL must start with `https://github.com/tuan3w/herdr-mobile/releases/download/`;
   anything else is ignored.
 
