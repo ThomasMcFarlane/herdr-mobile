@@ -34,9 +34,11 @@ person wants to see it now, from the phone, and then go back to the agent.
   light).
 - **The bar.** Title: the page's `<title>` (read again `Dwell.titleSettle`
   after a single-page app changes route), else its address on the machine
-  (`localhost:5173/settings`; a file's name). Under it, the kit's
-  `AddressPill`: `🌐 localhost:5173/settings · devbox`, or just the machine
-  when the title already is the address (said once). Actions: `Reload` (off
+  (`localhost:5173/settings`; a file's name). On the bar's second line, in
+  place of a subtitle, the kit's `AddressPill`:
+  `🌐 localhost:5173/settings · devbox`, or just the machine when the title
+  already is the address (said once). Why the second line and not a row of
+  its own: the row cost the page about 26 dp, felt on a phone. Actions: `Reload` (off
   while a failure panel offers Retry) and `⋯` (`Page options`). The hairline
   under the bar is the edge between herdr and the page.
 - **Not from the machine.** A page that ends up showing another site (a form
