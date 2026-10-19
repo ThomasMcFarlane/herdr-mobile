@@ -5,7 +5,7 @@ import 'tokens.dart';
 
 /// Where a page shown in herdr comes from, as a browser shows it: a globe,
 /// the page's [address] and, after a dot, [where] it is served from (the
-/// machine), in one quiet pill. It sits in a top bar's `bottom`, under the
+/// machine), in one quiet pill. It is a top bar's `subtitleLine`, under the
 /// title, so the screen reads as a web page and not as one of herdr's own.
 ///
 /// [address] is left out (null) when the title already says it, so the
@@ -29,8 +29,10 @@ class AddressPill extends StatelessWidget {
     final ds = context.ds;
     final quiet = Type.caption.copyWith(color: ds.textSecondary);
     final address = this.address;
+    // Sits on the bar's second line, in place of a subtitle: a second row
+    // under the bar cost the page ~40 dp of height (owner's check on a phone).
     return Padding(
-      padding: const EdgeInsets.only(top: Gap.xs),
+      padding: const EdgeInsets.only(top: Gap.hair),
       child: Align(
         alignment: AlignmentDirectional.centerStart,
         child: DecoratedBox(
@@ -39,7 +41,7 @@ class AddressPill extends StatelessWidget {
             borderRadius: BorderRadius.circular(Radii.pill),
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: Gap.sm, vertical: Gap.xs),
+            padding: const EdgeInsets.symmetric(horizontal: Gap.sm, vertical: Gap.hair),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [

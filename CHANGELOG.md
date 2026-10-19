@@ -4,6 +4,11 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [Unreleased]
+
+- A page from a machine gets more of the screen: its address pill sits on the
+  bar's second line instead of a row of its own.
+
 ## [0.1.18] - 2026-10-19
 
 ### Pages from your machine open inside herdr

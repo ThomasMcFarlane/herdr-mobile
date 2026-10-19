@@ -641,7 +641,9 @@ class _WebPreviewScreenState extends State<WebPreviewScreen> {
               // a web page and not as one of herdr's own (an owner's check found
               // title-over-host alone looked like any other screen). Said once:
               // a title that is the address leaves the pill the machine's name.
-              bottom: AddressPill(
+              // It is the bar's second line, not a row of its own, so the page
+              // keeps the height.
+              subtitleLine: AddressPill(
                 address: address == title ? null : address,
                 where: widget.machine.profile.label,
                 foreign: foreign,

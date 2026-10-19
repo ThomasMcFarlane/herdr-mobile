@@ -469,7 +469,7 @@ final List<KitEntry> kitCatalog = [
   KitEntry('AddressPill', KitStatus.beta, [
     KitState('a page from a machine', (c) => AppTopBar(
           title: 'herdr web preview test',
-          bottom: const AddressPill(address: 'localhost:8790/page2.html', where: 'build-box'),
+          subtitleLine: const AddressPill(address: 'localhost:8790/page2.html', where: 'build-box'),
           actions: [
             CircleButton(icon: LucideIcons.rotateCw, tooltip: 'Reload', onPressed: _noop),
             CircleButton(icon: LucideIcons.ellipsis, tooltip: 'More', onPressed: _noop),
@@ -477,15 +477,15 @@ final List<KitEntry> kitCatalog = [
         ), bleed: true),
     KitState('the title is the address', (c) => AppTopBar(
           title: 'localhost:8790/page2.html',
-          bottom: const AddressPill(address: null, where: 'build-box'),
+          subtitleLine: const AddressPill(address: null, where: 'build-box'),
         ), bleed: true),
     KitState('not from the machine', (c) => AppTopBar(
           title: 'Sign in',
-          bottom: const AddressPill(address: 'evil.example.com', where: 'build-box', foreign: true),
+          subtitleLine: const AddressPill(address: 'evil.example.com', where: 'build-box', foreign: true),
         ), bleed: true),
     KitState('long, Vietnamese', (c) => AppTopBar(
           title: _vi,
-          bottom: const AddressPill(address: 'localhost:5173/bao-cao/thang-muoi/doanh-thu', where: 'máy chủ phát triển'),
+          subtitleLine: const AddressPill(address: 'localhost:5173/bao-cao/thang-muoi/doanh-thu', where: 'máy chủ phát triển'),
         ), bleed: true),
   ]),
   KitEntry('SliverLargeTitle', KitStatus.beta, [
