@@ -102,7 +102,7 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen> {
                 child: _failure != null
                     ? _Failed(onRetry: () => unawaited(_load()))
                     : video == null || !video.value.isInitialized
-                        ? const Center(child: BusySpinner(size: 24))
+                        ? const Center(child: BusySpinner(size: IconSize.lead))
                         : _Stage(video: video, onTap: () => _toggle(video)),
               ),
             ),
