@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
@@ -127,6 +128,26 @@ class _WebPreviewScreenState extends State<WebPreviewScreen> {
 
   late final WebViewController _view = _newView();
   late final Toaster _toaster = Toaster.of(context);
+
+  // -- the bar steps aside while reading ----------------------------------
+  //
+  // Reading down a page, the bar folds away and the page gets its height, as
+  // a browser's does; any scroll up, the top of the page, a new page, and
+  // anything that is not the page plainly shown bring it back. It moves only
+  // when no finger is on the page, so the page never jumps under a finger
+  // (the view never moves under a finger: herdr-motion).
+
+  /// How far the page is read down, in one go, before the bar folds away.
+  static const _barHideAfter = 48.0;
+
+  /// How far a scroll up brings the bar back: a small pull is enough.
+  static const _barShowAfter = 16.0;
+
+  bool _barHidden = false;
+  bool? _barWanted;
+  double? _scrollY;
+  double _scrollRun = 0;
+  int _fingers = 0;
   VoidCallback? _release;
 
   var _phase = _Phase.opening;
@@ -228,6 +249,7 @@ class _WebPreviewScreenState extends State<WebPreviewScreen> {
   WebViewController _newView() {
     final view = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setOnScrollPositionChange(_onScroll)
       ..setNavigationDelegate(
         NavigationDelegate(
           onNavigationRequest: _onNavigation,
@@ -253,6 +275,46 @@ class _WebPreviewScreenState extends State<WebPreviewScreen> {
       // the rule refuses.
     }
     return view;
+  }
+
+  void _onScroll(ScrollPositionChange change) {
+    if (!mounted) return;
+    // Android reports device pixels, iOS points.
+    final scale = defaultTargetPlatform == TargetPlatform.android ? MediaQuery.devicePixelRatioOf(context) : 1.0;
+    final y = change.y / scale;
+    final last = _scrollY;
+    _scrollY = y;
+    if (y <= 0) {
+      _scrollRun = 0;
+      return _wantBar(true);
+    }
+    if (last == null) return;
+    final dy = y - last;
+    if (dy == 0) return;
+    if (_scrollRun != 0 && dy.sign != _scrollRun.sign) _scrollRun = 0;
+    _scrollRun += dy;
+    if (_scrollRun > _barHideAfter) {
+      _wantBar(false);
+    } else if (_scrollRun < -_barShowAfter) {
+      _wantBar(true);
+    }
+  }
+
+  void _wantBar(bool shown) {
+    _barWanted = shown;
+    if (_fingers == 0) _applyBar();
+  }
+
+  void _applyBar() {
+    final want = _barWanted;
+    _barWanted = null;
+    if (want == null || _barHidden == !want || !mounted) return;
+    setState(() => _barHidden = !want);
+  }
+
+  void _fingerUp(PointerEvent _) {
+    if (_fingers > 0) _fingers--;
+    if (_fingers == 0) _applyBar();
   }
 
   // -- opening ---------------------------------------------------------------
@@ -430,6 +492,11 @@ class _WebPreviewScreenState extends State<WebPreviewScreen> {
 
   void _onPageStarted(String url) {
     _pending = null;
+    // A new page starts at its top, with the bar.
+    _scrollY = null;
+    _scrollRun = 0;
+    _barWanted = null;
+    _barHidden = false;
     final uri = Uri.tryParse(url);
     if (!mounted) return;
     setState(() {
@@ -635,7 +702,14 @@ class _WebPreviewScreenState extends State<WebPreviewScreen> {
         backgroundColor: ds.bg,
         body: Column(
           children: [
-            AppTopBar(
+            // The status bar's height stays: only the bar itself folds.
+            SizedBox(height: MediaQuery.paddingOf(context).top),
+            Collapse(
+              open: !_barHidden || covered || MediaQuery.accessibleNavigationOf(context),
+              child: MediaQuery.removePadding(
+                context: context,
+                removeTop: true,
+                child: AppTopBar(
               title: title,
               // The address in a pill, as a browser shows it: the screen reads as
               // a web page and not as one of herdr's own (an owner's check found
@@ -657,10 +731,18 @@ class _WebPreviewScreenState extends State<WebPreviewScreen> {
                 ),
                 CircleButton(icon: LucideIcons.ellipsis, tooltip: 'Page options', onPressed: _showOptions),
               ],
+                ),
+              ),
             ),
             _LoadBar(progress: loading ? _progress : null),
             Expanded(
-              child: Padding(
+              child: Listener(
+                // Translucent: the page's own view takes the touch; this only counts fingers.
+                behavior: HitTestBehavior.translucent,
+                onPointerDown: (_) => _fingers++,
+                onPointerUp: _fingerUp,
+                onPointerCancel: _fingerUp,
+                child: Padding(
                 // The app is edge to edge: a page's own footer must not sit
                 // under the gesture bar.
                 padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom),
@@ -697,6 +779,7 @@ class _WebPreviewScreenState extends State<WebPreviewScreen> {
                       ),
                   ],
                 ),
+              ),
               ),
             ),
           ],

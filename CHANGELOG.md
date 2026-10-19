@@ -8,6 +8,8 @@ release.
 
 - A page from a machine gets more of the screen: its address pill sits on the
   bar's second line instead of a row of its own.
+- Reading down a page folds the bar away; scroll up a little, or reach the
+  top, and it comes back.
 
 ## [0.1.18] - 2026-10-19
 

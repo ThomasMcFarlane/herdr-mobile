@@ -106,6 +106,36 @@ void main() {
     expect(web.javaScript, isTrue, reason: 'dev pages need it');
   });
 
+  testWidgets('reading down folds the bar away, a scroll up or the top brings it back, never under a finger', (tester) async {
+    await pump(tester, ServerPage(Uri.parse('http://localhost:3000/')));
+    double pageTop() => tester.getTopLeft(find.byType(WebViewWidget)).dy;
+    final withBar = pageTop();
+    final dpr = tester.view.devicePixelRatio;
+
+    // Device pixels, as Android reports them: 10 dp, then 200 dp down.
+    web.scrollTo(10 * dpr);
+    web.scrollTo(200 * dpr);
+    await _settle(tester);
+    expect(pageTop(), lessThan(withBar), reason: 'the page gets the bar\'s height while it is read');
+
+    web.scrollTo(170 * dpr);
+    await _settle(tester);
+    expect(pageTop(), withBar, reason: 'a scroll up brings the bar back');
+
+    // A finger on the page: the bar waits until it lifts.
+    final finger = await tester.startGesture(tester.getCenter(find.byType(WebViewWidget)));
+    web.scrollTo(400 * dpr);
+    await _settle(tester);
+    expect(pageTop(), withBar, reason: 'nothing moves under a finger');
+    await finger.up();
+    await _settle(tester);
+    expect(pageTop(), lessThan(withBar));
+
+    web.scrollTo(0);
+    await _settle(tester);
+    expect(pageTop(), withBar, reason: 'the top of the page shows the bar');
+  });
+
   testWidgets('Back goes back in the page first, then leaves, never through the entry page', (tester) async {
     await pump(tester, ServerPage(Uri.parse('http://localhost:3000/')));
     expect(web.current, 'http://localhost:51111/');
