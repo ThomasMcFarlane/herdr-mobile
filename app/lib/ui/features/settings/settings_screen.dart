@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
@@ -23,12 +24,12 @@ import 'settings_group.dart';
 import 'update_group.dart';
 
 /// The groups of Settings, top to bottom. The page opens one at a time.
-enum _Open { update, look, agents, notifications, storage, about }
+enum _Open { look, agents, notifications, storage, about }
 
 /// The third root tab: five groups (Look, Agents, Notifications, Storage, About), each
 /// a row that says what it is set to and opens in place, one at a time, with
-/// a newer version's row above them. Everything here applies at once and is
-/// remembered.
+/// a newer version's row above them (it opens the update sheet). Everything
+/// here applies at once and is remembered.
 ///
 /// Why groups, not a long page: the page was about 1,800 dp, and every new
 /// setting made the next one harder to find. Five rows fit one screen at normal
@@ -46,40 +47,44 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  // Closed on the first visit, except that a newer version is open: it is the
-  // one thing that came to the person, and Download is then one tap away, not
-  // two. A version found while this tab is behind another opens it too (the
-  // tab's dot is what brings the person here; the state outlives a visit). Not
-  // when found while the page is showing: nothing moves under the thumb.
-  late _Open? _open = widget.update?.release != null ? _Open.update : null;
-  late bool _hadRelease = widget.update?.release != null;
+  // Closed on every visit: one group opens at a time, on a tap.
+  _Open? _open;
+
+  // The page keeps its place between visits, and the Update row is its first
+  // row, so a person who had scrolled down had only the tab's dot to say a
+  // newer version was there. Arriving on the page with a version whose sheet
+  // was not opened yet puts the row back in view: the dot is what brought the
+  // person here. Not while the page is showing: nothing moves under the thumb.
+  // The page scrolls with the shell's primary controller (re-tapping the tab
+  // scrolls it to the top too), so it is read from there, not owned here.
+  String? _openedVersion;
+  ValueListenable<TickerModeData>? _shown;
 
   @override
-  void initState() {
-    super.initState();
-    widget.update?.addListener(_onUpdate);
-  }
-
-  @override
-  void didUpdateWidget(SettingsScreen old) {
-    super.didUpdateWidget(old);
-    if (old.update == widget.update) return;
-    old.update?.removeListener(_onUpdate);
-    widget.update?.addListener(_onUpdate);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final shown = TickerMode.getValuesNotifier(context);
+    if (shown == _shown) return;
+    _shown?.removeListener(_onShown);
+    _shown = shown..addListener(_onShown);
   }
 
   @override
   void dispose() {
-    widget.update?.removeListener(_onUpdate);
+    _shown?.removeListener(_onShown);
     super.dispose();
   }
 
-  void _onUpdate() {
-    final has = widget.update?.release != null;
-    final found = has && !_hadRelease;
-    _hadRelease = has;
-    final showing = TickerMode.getValuesNotifier(context).value.enabled;
-    if (found && !showing && mounted) setState(() => _open = _Open.update);
+  void _onShown() {
+    final release = widget.update?.release;
+    if (!mounted || _shown?.value.enabled != true || release == null || release.version == _openedVersion) return;
+    final scroll = PrimaryScrollController.maybeOf(context);
+    if (scroll != null && scroll.hasClients && scroll.offset > 0) scroll.jumpTo(0);
+  }
+
+  void _openUpdate(AppUpdate update) {
+    _openedVersion = update.release?.version;
+    unawaited(showUpdateSheet(context, update));
   }
 
   void _toggle(_Open group) => setState(() => _open = _open == group ? null : group);
@@ -90,6 +95,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       backgroundColor: context.ds.bg,
       body: CustomScrollView(
+        primary: true,
         slivers: [
           const SliverLargeTitle(title: 'Settings'),
           // Each group draws its own hairline (it opens in place), so the
@@ -102,11 +108,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               if (update != null)
                 CustomRow(
                   id: 'update',
-                  child: UpdateGroup(
-                    update: update,
-                    open: _open == _Open.update,
-                    onToggle: () => _toggle(_Open.update),
-                  ),
+                  child: UpdateGroup(update: update, onOpen: () => _openUpdate(update)),
                 ),
               CustomRow(
                 id: 'look',

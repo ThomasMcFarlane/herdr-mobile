@@ -121,7 +121,9 @@ class _SettingsGroupState extends State<SettingsGroup> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Semantics(
-          expanded: w.open,
+          // A group without rows opens a sheet instead (Update): it is not a
+          // control that expands.
+          expanded: w.rows.isEmpty ? null : w.open,
           liveRegion: w.announce,
           child: ListRow(
             leading: IconTile(icon: w.icon, size: RowMetrics.leadingExtent, color: w.tint),

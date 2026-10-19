@@ -405,9 +405,9 @@ A drag along the bar carries the capsule 1:1 (a tick per cell, the bar lifts to
 finger's speed to the cell a flick would reach. Re-tapping the selected tab
 scrolls that tab to the top, on every tab, with no haptic (nothing changed
 tab). A single tap, not a double: a double tap would hold the single one back
-to wait for a second. Settings too: it keeps its place between visits, and the
-Update row is its first row, so a person who had scrolled down had only a dot
-on the tab to say a newer version was there. The count badge (`CountBadge`, 16
+to wait for a second. Settings keeps its place between visits too; its Update
+row is the first row, so arriving there with an update not yet opened scrolls
+it back into view (`docs/screens/settings.md`). The count badge (`CountBadge`, 16
 high, `99+`) rides the icon's corner, arrives and leaves with a scale over
 `settle`, and its number rolls; its ring takes the colour under it. Settings
 carries a quiet accent dot for an update, never a count. No hide-on-scroll and
