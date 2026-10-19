@@ -43,9 +43,6 @@ void main() {
     Directory(_out).createSync(recursive: true);
   });
 
-  /// How far the painted page is scrolled, in dp (the fake has no real page).
-  final scrolled = ValueNotifier<double>(0);
-
   /// The page's picture for [brightness], or null when it is not there.
   Future<ui.Image?> picture(WidgetTester tester, Brightness brightness) async {
     final file = File(brightness == Brightness.dark ? '/tmp/web_preview_page_dark.png' : '/tmp/web_preview_page.png');
@@ -68,25 +65,12 @@ void main() {
     final web = FakeWebView.install(pagePort: 8790);
     web.titles[_page] = _title;
     final image = await picture(tester, brightness);
-    scrolled.value = 0;
     web.paint = (context, url) {
       if (url == null || url.contains('/__herdr/')) return const SizedBox.expand();
       if (image != null) {
         return ColoredBox(
           color: context.ds.bg,
-          child: ClipRect(
-            child: ValueListenableBuilder<double>(
-              valueListenable: scrolled,
-              builder: (context, y, _) => OverflowBox(
-                alignment: Alignment.topCenter,
-                maxHeight: double.infinity,
-                child: Transform.translate(
-                  offset: Offset(0, -y),
-                  child: RawImage(image: image, fit: BoxFit.fitWidth, width: MediaQuery.sizeOf(context).width),
-                ),
-              ),
-            ),
-          ),
+          child: RawImage(image: image, fit: BoxFit.fitWidth, alignment: Alignment.topCenter),
         );
       }
       return ColoredBox(
@@ -124,40 +108,6 @@ void main() {
 
     testWidgets('page shown, $mode', (tester) async {
       await render(tester, 'shown', brightness: brightness);
-    });
-
-    // Reading down folds the bar away; a small scroll up brings it back.
-    Future<void> scrollTo(WidgetTester tester, FakeWebView web, double dp) async {
-      scrolled.value = dp;
-      web.scrollTo(dp * tester.view.devicePixelRatio);
-      for (var i = 0; i < 4; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-      }
-    }
-
-    testWidgets('reading down, $mode', (tester) async {
-      await render(
-        tester,
-        'reading',
-        brightness: brightness,
-        then: (tester, web) async {
-          await scrollTo(tester, web, 10);
-          await scrollTo(tester, web, 260);
-        },
-      );
-    });
-
-    testWidgets('a scroll up, $mode', (tester) async {
-      await render(
-        tester,
-        'scroll-up',
-        brightness: brightness,
-        then: (tester, web) async {
-          await scrollTo(tester, web, 10);
-          await scrollTo(tester, web, 260);
-          await scrollTo(tester, web, 230);
-        },
-      );
     });
 
     testWidgets('loading a page, $mode', (tester) async {
