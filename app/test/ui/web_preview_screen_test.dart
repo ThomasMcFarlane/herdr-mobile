@@ -153,17 +153,18 @@ void main() {
     expect(find.textContaining('net::'), findsNothing);
   });
 
-  testWidgets('Copy link copies the page\'s address on the machine, never the phone\'s tokened URL', (tester) async {
+  testWidgets('⋯ shows the whole link, and Copy link copies it: the address on the machine, never the phone\'s tokened URL', (tester) async {
     await pump(tester, ServerPage(Uri.parse('http://localhost:3000/')));
-    await web.navigate('http://localhost:51111/page2.html#b');
+    await web.navigate('http://localhost:51111/page2.html?tab=logs#b');
     await _settle(tester);
 
     await tester.tap(find.byTooltip('Page options'));
     await _settle(tester);
+    expect(find.text('http://localhost:3000/page2.html?tab=logs#b'), findsOneWidget, reason: 'the bar cuts the address; the sheet shows all of it');
     await tester.tap(find.text('Copy link'));
     await _settle(tester);
 
-    expect(copied, ['http://localhost:3000/page2.html#b']);
+    expect(copied, ['http://localhost:3000/page2.html?tab=logs#b']);
     expect(copied.single, isNot(contains(_token)));
   });
 
@@ -215,7 +216,8 @@ void main() {
     web.land('https://evil.example.com/login');
     await _settle(tester);
 
-    expect(find.text('evil.example.com · not from build-box'), findsOneWidget);
+    expect(find.text('evil.example.com'), findsWidgets, reason: 'the real host, not the machine\'s address');
+    expect(find.textContaining('build-box'), findsNothing, reason: 'another site never sits under the machine\'s name');
     expect(
       find.descendant(of: find.byType(AppTopBar), matching: find.textContaining('localhost:3000')),
       findsNothing,

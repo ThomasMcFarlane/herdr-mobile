@@ -32,21 +32,29 @@ person wants to see it now, from the phone, and then go back to the agent.
   `prefers-color-scheme` follows the phone, as in its browser (not yet seen on
   a phone; herdr's own Dark choice with the phone in day mode leaves pages
   light).
-- **The bar.** Title: the page's `<title>` (read again `Dwell.titleSettle`
+- **The bar.** The same bar as every other screen (`AppTopBar`): a globe in
+  the glyph's place (where an agent screen shows its status) says "a web
+  page"; the title is the page's `<title>` (read again `Dwell.titleSettle`
   after a single-page app changes route), else its address on the machine
-  (`localhost:5173/settings`; a file's name). Under it, the kit's
-  `AddressPill`: `🌐 localhost:5173/settings · devbox`, or just the machine
-  when the title already is the address (said once). Actions: `Reload` (off
-  while a failure panel offers Retry) and `⋯` (`Page options`). The hairline
-  under the bar is the edge between herdr and the page.
+  (`localhost:5173/settings`; a file's name); the second line is where it
+  comes from, `localhost:5173/settings · devbox`, or just the machine when the
+  title already is the address (said once). Why the plain bar: a pill of its
+  own (0.1.18) cost the page height and looked like no other screen; the
+  owner chose consistency, with the globe to say "web" (a prototype of four
+  bars, 2026-10-19). Actions: `Reload` (off while a failure panel offers
+  Retry) and `⋯` (`Page options`). The hairline under the bar is the edge
+  between herdr and the page.
 - **Not from the machine.** A page that ends up showing another site (a form
-  it posted there, which Android does not ask about) shows that site's host in
-  the pill with a warning mark and `not from devbox`, so another site never
-  sits under the machine's name; Copy link then copies that site's address.
+  it posted there, which Android does not ask about) shows that site's host on
+  the second line and never the machine's name; Copy link then copies that
+  site's address. No extra warning: the host is the honest part, and the owner
+  found a `not from` label noise.
 - **Back** goes back in the page's history first, then leaves (the bar's Back
   and the system gesture alike; with nothing behind the page the system Back
   pops at once). The entry page that sets the cookie is never a step.
-- **`⋯`.** `Copy link` copies the page's address on the machine
+- **`⋯`.** Its title is the whole link, wrapped (the bar's line is cut to fit,
+  and the person often wants to read the full address); `Copy link` copies
+  that link, the page's address on the machine
   (`http://localhost:5173/settings`: the machine's port, never the phone's
   listener port or the token); a file's page is `Copy path` with its path on
   the machine. `Open in browser` hands the page to the phone's browser with a
