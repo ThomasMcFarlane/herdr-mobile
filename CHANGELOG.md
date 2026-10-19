@@ -4,7 +4,9 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
-## [Unreleased]
+## [0.1.19] - 2026-10-19
+
+### A page from your machine gets the same bar as every screen
 
 - A page from a machine has the same bar as every other screen: a globe, its
   title, and where it comes from underneath. The page gets more of the
