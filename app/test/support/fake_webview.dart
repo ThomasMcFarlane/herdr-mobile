@@ -55,11 +55,6 @@ class FakeWebView extends WebViewPlatform {
 
   FakeNavigationDelegate? _delegate;
 
-  void Function(ScrollPositionChange change)? _onScroll;
-
-  /// The page scrolled to [y] (device pixels, as Android reports them).
-  void scrollTo(double y) => _onScroll?.call(ScrollPositionChange(0, y));
-
   /// Addresses that answer with a file: like the Android plugin, a load of
   /// one asks the delegate again for the same address (`onDownloadStart`)
   /// instead of starting a page. Capped, so a test that loops ends.
@@ -227,10 +222,6 @@ class _FakeController extends PlatformWebViewController {
   @override
   Future<void> setPlatformNavigationDelegate(covariant FakeNavigationDelegate handler) async =>
       view._delegate = handler;
-
-  @override
-  Future<void> setOnScrollPositionChange(void Function(ScrollPositionChange scrollPositionChange)? onScrollPositionChange) async =>
-      view._onScroll = onScrollPositionChange;
 
   @override
   Future<void> setBackgroundColor(Color color) async => view.backgrounds.add(color);

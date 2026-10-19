@@ -41,15 +41,6 @@ person wants to see it now, from the phone, and then go back to the agent.
   its own: the row cost the page about 26 dp, felt on a phone. Actions: `Reload` (off
   while a failure panel offers Retry) and `⋯` (`Page options`). The hairline
   under the bar is the edge between herdr and the page.
-- **The bar steps aside while reading.** Reading down a page (48 dp in one
-  go) folds the bar away (`Collapse`), and the page gets its height, as a
-  browser's does; a scroll up of 16 dp, the top of the page, a new page,
-  loading, a failure and a screen reader bring it back. It moves only when no
-  finger is on the page, so the page never jumps under a finger; the status
-  bar's height always stays. Why here and nowhere else: this screen is the
-  one reading surface whose content is not herdr's, and the owner found the
-  page short on a phone; root screens keep their bars put (DESIGN.md "Bottom
-  stack").
 - **Not from the machine.** A page that ends up showing another site (a form
   it posted there, which Android does not ask about) shows that site's host in
   the pill with a warning mark and `not from devbox`, so another site never
