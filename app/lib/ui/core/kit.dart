@@ -4,7 +4,6 @@
 /// files inside this folder import each other directly.
 library;
 
-export 'address_pill.dart';
 export 'answer_chip.dart';
 export 'bottom_stack.dart';
 export 'brand_mark.dart';

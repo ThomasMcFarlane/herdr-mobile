@@ -636,18 +636,20 @@ class _WebPreviewScreenState extends State<WebPreviewScreen> {
         body: Column(
           children: [
             AppTopBar(
-              title: title,
-              // The address in a pill, as a browser shows it: the screen reads as
-              // a web page and not as one of herdr's own (an owner's check found
-              // title-over-host alone looked like any other screen). Said once:
-              // a title that is the address leaves the pill the machine's name.
-              // It is the bar's second line, not a row of its own, so the page
-              // keeps the height.
-              subtitleLine: AddressPill(
-                address: address == title ? null : address,
-                where: widget.machine.profile.label,
-                foreign: foreign,
+              // The same bar as every other screen: a glyph, the title and a
+              // `where` line. The globe in the glyph's place (where an agent
+              // screen shows its status) says "a web page"; the line says where
+              // it comes from, once (a title that is the address leaves the line
+              // the machine's name). A page not from the machine says so in the
+              // bar's alert tone.
+              glyph: Icon(
+                foreign ? LucideIcons.triangleAlert : LucideIcons.globe,
+                size: IconSize.row,
+                color: foreign ? ds.dangerText : ds.textSecondary,
               ),
+              title: title,
+              subtitle: foreign ? address : (address == title ? widget.machine.profile.label : '$address · ${widget.machine.profile.label}'),
+              subtitleAlert: foreign ? 'not from ${widget.machine.profile.label}' : null,
               actions: [
                 CircleButton(
                   icon: LucideIcons.rotateCw,

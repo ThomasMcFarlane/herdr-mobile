@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:herdr_mobile/data/models/web_bridge.dart';
 import 'package:herdr_mobile/data/repositories/fleet_repository.dart';
 import 'package:herdr_mobile/data/repositories/machine_connection.dart';
@@ -215,7 +216,9 @@ void main() {
     web.land('https://evil.example.com/login');
     await _settle(tester);
 
-    expect(find.text('evil.example.com · not from build-box'), findsOneWidget);
+    expect(find.text('evil.example.com'), findsWidgets, reason: 'the real host, not the machine\'s address');
+    expect(find.text('not from build-box'), findsOneWidget);
+    expect(find.byIcon(LucideIcons.triangleAlert), findsOneWidget, reason: 'a warning in place of the globe');
     expect(
       find.descendant(of: find.byType(AppTopBar), matching: find.textContaining('localhost:3000')),
       findsNothing,

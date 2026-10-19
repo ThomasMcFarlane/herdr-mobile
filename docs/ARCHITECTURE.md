@@ -468,7 +468,7 @@ code:
     asked about like any navigation (the plugin's `onCreateWindow`) and goes
     nowhere the rule refuses.
   - What it is never asked about, and so cannot be stopped: a form POST (it
-    loads in the view, and the address pill then shows that site's host with
+    loads in the view, and the bar then shows that site's host with
     `not from <machine>` in the warning tone), and anything an `<iframe>`
     loads (Android's plugin asks about the top frame only; the frame rule in
     `webNavigation` runs on iOS). A page's own scripts, images, frames and

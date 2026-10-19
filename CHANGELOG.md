@@ -6,8 +6,9 @@ release.
 
 ## [Unreleased]
 
-- A page from a machine gets more of the screen: its address pill sits on the
-  bar's second line instead of a row of its own.
+- A page from a machine has the same bar as every other screen: a globe, its
+  title, and where it comes from underneath. The page gets more of the
+  screen than with 0.1.18's address pill.
 
 ## [0.1.18] - 2026-10-19
 
