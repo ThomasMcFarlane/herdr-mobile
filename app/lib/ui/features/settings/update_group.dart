@@ -9,6 +9,7 @@ import '../../../data/repositories/app_update.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../../render/markdown/markdown.dart';
 import '../../support/open_link.dart';
+import 'clip_player.dart';
 import 'settings_group.dart';
 
 /// The top of Settings while a newer version exists: one row that says what
@@ -106,7 +107,7 @@ class _UpdateSheet extends StatelessWidget {
                     child: Text('Update to ${release.version}', style: Type.title.copyWith(color: ds.text)),
                   ),
                 ),
-                if (clip != null) _ClipCard(clip),
+                if (clip != null) _ClipCard(clip, version: release.version),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: _inset),
                   child: notes.isEmpty
@@ -194,22 +195,18 @@ class _Facts extends StatelessWidget {
   }
 }
 
-/// The walkthrough's poster with a play mark and what it costs on it. A tap
-/// opens the clip in the browser (the phone's own player); nothing of the
-/// video loads before that tap. The poster is the one picture fetched with
-/// the sheet: a small JPEG, from the release itself. If it cannot load, the
-/// card keeps its words and the play mark.
+/// The walkthrough's poster with a play mark, and what it is and costs under
+/// it. A tap plays it in the app ([openClipPlayer]); nothing of the video
+/// loads before that tap. The poster is the one picture fetched with the
+/// sheet: a small JPEG, from the release itself. If it cannot load, the card
+/// keeps its words and the play mark.
 class _ClipCard extends StatelessWidget {
-  const _ClipCard(this.clip);
+  const _ClipCard(this.clip, {required this.version});
 
   final ReleaseClip clip;
+  final String version;
 
-  Future<void> _play(BuildContext context) async {
-    final toaster = Toaster.of(context);
-    if (!await openInBrowser(clip.video)) {
-      toaster.show('Couldn\u2019t open on this phone: no browser could open it.', kind: ToastKind.failed);
-    }
-  }
+  void _play(BuildContext context) => unawaited(openClipPlayer(context, clip, title: 'What\u2019s new in $version'));
 
   @override
   Widget build(BuildContext context) {
@@ -229,11 +226,11 @@ class _ClipCard extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(_inset, Gap.xs, _inset, Gap.md),
       child: Semantics(
         button: true,
-        label: '${clip.label}, opens in your browser',
+        label: '${clip.label}, plays here',
         excludeSemantics: true,
         child: PressBuilder(
           minTapSize: kMinTap,
-          onTap: () => unawaited(_play(context)),
+          onTap: () => _play(context),
           builder: (context, pressed) => Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -264,7 +261,7 @@ class _ClipCard extends StatelessWidget {
               ),
               const SizedBox(height: Gap.xs),
               Text(
-                '${clip.label} \u00b7 opens in your browser',
+                clip.label,
                 style: Type.caption.copyWith(color: ds.textMuted, fontFeatures: Type.tabular),
               ),
             ],

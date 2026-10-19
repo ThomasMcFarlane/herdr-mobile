@@ -13,7 +13,7 @@ elsewhere, with seconds of attention. They read the notes in three places:
 - the GitHub release (the section verbatim, via `tool/release-notes.sh`);
 - the in-app update sheet (`showUpdateSheet`, `update_group.dart`), read on
   the way to Download and Install. It opens on the walkthrough's poster (a tap
-  plays the clip in the browser), draws `> [!TIP]` as a card, and shows any
+  plays the clip inside the app), draws `> [!TIP]` as a card, and shows any
   other image only as a quiet "Image: alt · host" chip: the poster is the one
   picture it fetches;
 - Google Play's "What's new", plain text, 500 characters at most.
@@ -169,7 +169,7 @@ read. Create the folders if they are missing.
   first `###`: a poster image that links to the clip,
   `[![Watch what's new · N changes · m:ss · X MB](…/<version>-whats-new.jpg)](…/<version>-whats-new.mp4)`.
   GitHub draws it as a clickable poster; the update sheet draws the poster
-  with a play mark and opens the clip in the browser on a tap. The owner chose
+  with a play mark and plays the clip in the app on a tap. The owner chose
   "the clip leads" from a rendered comparison of five placements. The label
   says what it is and what it costs, because the sheet shows it on the
   control: nothing of the video loads before that tap.
@@ -288,12 +288,12 @@ reads the latest release and expects its APK there.
 Extra assets are safe: the updater picks its download by exact name
 (`herdr-mobile-<version>.apk`) and its line in `SHA256SUMS`.
 
-Unverified: GitHub showing a release-asset PNG inline in the notes. The assets
-serve with their real content type (the APK serves as
-`application/vnd.android.package-archive`), so a PNG should show inline. Open
-the release page after the first upload and confirm. GitHub never plays an
-`.mp4` inline unless it was uploaded through its web editor, so the clip is a
-link.
+Checked on v0.1.20: GitHub serves every release file as a download
+(`Content-Disposition: attachment`, `application/octet-stream`), whatever
+type it was uploaded with. Images in the notes still show on the release page
+(the browser decodes them; checked), but a browser saves an `.mp4` instead of
+playing it. So the update sheet plays the clip itself (`clip_player.dart`), and
+on GitHub the poster is a link that downloads the clip.
 
 ## 8. Check
 
