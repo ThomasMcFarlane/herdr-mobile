@@ -122,9 +122,13 @@ every step to the end, and remove what does not serve them (skill
 | A design question with no clear answer: a throwaway rendered prototype of 2-4 directions to discuss | `herdr-prototype` |
 | An independent critique of rendered screens or a prototype, from a reviewer who has not seen your pick | `herdr-critic` |
 | A review of a change, branch or area for bugs, UI/UX and maintainability, with the serious findings reproduced | `herdr-review` |
+| Release notes: the Unreleased bullets, the release section with Try-it tips, the Play text, the stills and the walkthrough clip | `herdr-changelog` |
 
 The skills are the project's own, in `.agents/skills/` (linked into
-`.claude/skills/` and `.pi/skills/`). Edit them like code.
+`.claude/skills/` and `.pi/skills/`). Edit them like code. The exception is
+the HyperFrames video skills (`hyperframes*`, `media-use` and the video
+workflows): they are copied from heygen-com/hyperframes, so refresh them from
+upstream instead of editing them, or the next refresh loses the edit.
 
 ## Commands
 
@@ -162,12 +166,16 @@ cannot be filtered, `fix(test):` and `feat(gallery):` can.
 ## Releasing
 
 1. Bump the version (see "Versions") and add a `## [x.y.z] - date` section at
-   the top of `CHANGELOG.md`: what the person notices, not the commits.
+   the top of `CHANGELOG.md`: what the person notices, not the commits (skill
+   `herdr-changelog`, which also writes the Play text and makes the media).
 2. `tool/check.sh`, then commit and tag: `git tag vX.Y.Z && git push origin main vX.Y.Z`.
 3. `.github/workflows/release.yml` checks the tag against pubspec, runs the
    checks, builds and signs the APK, and publishes it with `SHA256SUMS` and
    the changelog section as notes. Without the signing secrets it skips, and
    the APK is built and uploaded by hand the same way (`docs/DEVELOPMENT.md`).
+4. Attach the release's stills and walkthrough clip with `gh release upload`
+   once the workflow has published (`herdr-changelog` section 7). They never
+   go into git.
 
 ## Writing things down
 
