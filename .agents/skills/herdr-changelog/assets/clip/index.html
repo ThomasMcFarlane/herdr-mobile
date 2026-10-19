@@ -1,0 +1,278 @@
+<!doctype html>
+<!--
+  herdr mobile release clip: the phone recording itself, 1080x1920 (9:16, made
+  to be watched on a phone), silent. No title or end card: it fades up from the
+  backdrop into the first frame, plays the footage, holds the last frame with
+  its last caption, and fades out. Either one change (a Try-it clip) or a
+  walkthrough of the release's whole change list (chapters).
+
+  This is a template: index.html (layout, look) and clip.js (the timeline).
+  scripts/make_clip.sh copies both to local/release-media/<version>/clip-<slug>/
+  and adds:
+    - assets/recording.mp4: the trimmed recording fitted whole into the canvas
+      (letterboxed on paper or ink, whichever matches the footage), with its
+      last frame held for hold + FADE seconds. With touches it is prepared at
+      1.25x the canvas so the punch-in stays sharp; CSS draws it at 1080x1920.
+    - fonts/Inter-*.ttf from app/assets/fonts/.
+  and rewrites the variable defaults below and the data-duration of #recording
+  and the root. Edit the look here, never in a working copy.
+
+  Variables (make_clip.sh fills them):
+    headline           metadata only, never drawn.
+    version            drawn only on a walkthrough's last card.
+    caption            "Try it: ..." or empty; `backticked` labels take the accent.
+    backdrop           the letterbox colour (paper #FBFBFA or ink #0D0E10).
+    touches            JSON {"steps":[...]} already in canvas pixels and in clip
+                       time: {t, x, y, kind: tap|drag|release, label, to:{x,y},
+                       until} and {t, kind: chapter, label, index, total}.
+    hold               seconds the last frame holds (0.8; 1.6 for walkthroughs).
+
+  Motion (clip.js):
+    - Touches: a camera punches in (ZOOM) toward each gesture shortly before
+      it, holds, and eases back out; gestures less than MERGE_GAP apart in the
+      same chapter share one punch-in and the camera pans between them; each
+      chapter starts back at 1x. A soft accent ring marks each touch: it
+      presses in on a tap, follows a drag, lifts at release.
+    - Captions, one card at a time: without chapters, each step's label; with
+      chapters, a card per chapter (progress segments, "2/5", the change's
+      name) whose smaller step line changes under the name. Last: the Try-it
+      path, or "herdr mobile <version>" and "N changes".
+    - No touches (show_touches baked into the footage): the Try-it caption
+      only, and a slow settle-in from 1.04x over the first second.
+    Always: fade up from the backdrop over 0.3 s; hold the last frame; fade out
+    over FADE (0.4 s).
+
+  Look (docs/DESIGN.md): captions are drawn like a toast, a transient message
+  over content: inverseSurface #2B2A27, onInverse #F1F1EF, inverseAccent
+  #AAB2F5 on "Try it" and on `labels`. The touch ring is accent #5E6AD2, its
+  disc the accent at 16% (Ds.wash on ink). Inter only. Sizes are dp x2.6 (a
+  1080 px frame shown on a ~412 dp phone): body 15 -> 40, Radii.md 14 -> 36,
+  a 36 dp fingertip -> 96 px ring. Flat: no shadow, no blur, no gradient.
+  UI motion follows Motion: captions arrive in 250 ms (sheetIn) with 40 px
+  travel (Motion.travel 16 dp x2.6) and leave in 190 ms (sheetOut), both
+  ease-out quint (Motion.easeOut, power4.out here); the ring presses in
+  100 ms (press), releases in 180 ms (release) and fades over 420 ms
+  (arrival). The camera is not UI: it moves like a camera, sine.inOut over
+  0.6-0.7 s, because an ease-out start reads as a jump cut in footage.
+-->
+<html
+  lang="en"
+  data-composition-variables='[
+    {"id":"headline","type":"string","label":"Headline (metadata only, not drawn)","default":"See the next agent while you swipe"},
+    {"id":"caption","type":"string","label":"Caption (Try it: path, `labels` in backticks)","default":"Try it: on an agent&#39;s screen, drag slowly sideways."},
+    {"id":"version","type":"string","label":"Version (metadata only, not drawn)","default":"0.1.17"},
+    {"id":"backdrop","type":"color","label":"Letterbox colour","default":"#FBFBFA"},
+    {"id":"touches","type":"string","label":"Touch steps (canvas px, clip time)","default":"{\"steps\":[]}"},
+    {"id":"hold","type":"number","label":"Last-frame hold (s)","default":0.8,"min":0.4,"max":3,"step":0.1}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>herdr mobile release clip</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face {
+        font-family: "Inter";
+        src: url("fonts/Inter-Regular.ttf") format("truetype");
+        font-weight: 400;
+      }
+      @font-face {
+        font-family: "Inter";
+        src: url("fonts/Inter-SemiBold.ttf") format("truetype");
+        font-weight: 600;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: #fbfbfa;
+      }
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: var(--backdrop, #fbfbfa);
+        font-family: "Inter", sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      /* The camera: translate then scale about the top-left corner, so a
+         canvas point p lands at x + scale * p. */
+      #camera {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1080px;
+        height: 1920px;
+        transform-origin: 0 0;
+      }
+      #recording {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1080px;
+        height: 1920px;
+      }
+      .ring {
+        position: absolute;
+        width: 96px;
+        height: 96px;
+        margin: -48px 0 0 -48px;
+        border-radius: 50%;
+        border: 5px solid #5e6ad2;
+        background: rgba(94, 106, 210, 0.16);
+        opacity: 0;
+      }
+      /* Captions: 200 px clear at the bottom, 120 px at the top, for a phone
+         player's controls. A step whose touch would sit under the bottom
+         caption shows its caption at the top instead (under the progress). */
+      .lane {
+        position: absolute;
+        left: 64px;
+        right: 64px;
+        height: 0;
+      }
+      #lane-bottom {
+        bottom: 200px;
+      }
+      #lane-top {
+        top: 152px;
+      }
+      .caption {
+        position: absolute;
+        left: 0;
+        right: 0;
+        width: fit-content;
+        max-width: 952px;
+        margin: 0 auto;
+        padding: 28px 36px 30px;
+        border-radius: 36px;
+        background: #2b2a27;
+        color: #f1f1ef;
+        font-size: 40px;
+        line-height: 1.35;
+        font-weight: 400;
+        text-align: center;
+        text-wrap: balance;
+        opacity: 0;
+      }
+      #lane-bottom .caption {
+        bottom: 0;
+      }
+      #lane-top .caption {
+        top: 0;
+      }
+      .caption .try {
+        font-weight: 600;
+        color: #aab2f5;
+        white-space: nowrap;
+      }
+      .caption .try svg {
+        width: 38px;
+        height: 38px;
+        margin-right: 10px;
+        vertical-align: -6px;
+      }
+      .caption .ui {
+        font-weight: 600;
+        color: #aab2f5;
+      }
+      /* A chapter: the change's name stays; the step under it changes. Type
+         does the hierarchy (DESIGN.md principle 2): the name is 40 px w600,
+         the step 34 px w400, one colour. Steps stack in one grid cell so the
+         card keeps its size while they crossfade. */
+      .caption.chapter {
+        text-align: left;
+        min-width: 560px;
+      }
+      .chapter .name {
+        font-weight: 600;
+      }
+      .chapter .count {
+        margin-right: 16px;
+        color: #aab2f5;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+      }
+      .chapter .lines {
+        display: grid;
+      }
+      .chapter .lines:not(:empty) {
+        margin-top: 10px;
+      }
+      .chapter .line {
+        grid-area: 1 / 1;
+        font-size: 34px;
+        line-height: 1.35;
+        opacity: 0;
+      }
+      .caption.end .name {
+        font-weight: 600;
+      }
+      .caption.end .sub {
+        font-size: 34px;
+      }
+      /* Progress through the change list, on the chapter card itself, so it
+         never sits over the footage: done, current (inverseAccent), to come. */
+      .chapter .bar {
+        display: flex;
+        gap: 8px;
+        height: 6px;
+        margin-bottom: 20px;
+      }
+      .chapter .seg {
+        flex: 1;
+        border-radius: 3px;
+        background: rgba(241, 241, 239, 0.2);
+      }
+      .chapter .seg.done {
+        background: rgba(241, 241, 239, 0.6);
+      }
+      .chapter .seg.now {
+        background: #aab2f5;
+      }
+      #veil {
+        position: absolute;
+        inset: 0;
+        background: var(--backdrop, #fbfbfa);
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="herdr-release-clip"
+      data-start="0"
+      data-duration="8.17"
+      data-width="1080"
+      data-height="1920"
+    >
+      <div id="camera">
+        <video
+          id="recording"
+          class="clip"
+          src="assets/recording.mp4"
+          muted
+          playsinline
+          data-start="0"
+          data-duration="8.17"
+          data-track-index="0"
+        ></video>
+      </div>
+      <div id="lane-top" class="lane"></div>
+      <div id="lane-bottom" class="lane"></div>
+      <div id="veil"></div>
+    </div>
+    <script src="clip.js"></script>
+    <script>
+      window.__timelines["herdr-release-clip"] = window.herdrClipTimeline;
+    </script>
+  </body>
+</html>

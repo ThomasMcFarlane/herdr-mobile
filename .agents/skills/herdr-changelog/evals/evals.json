@@ -1,0 +1,51 @@
+{
+  "skill_name": "herdr-changelog",
+  "evals": [
+    {
+      "id": 1,
+      "name": "release-0.1.17-big",
+      "prompt": "prepare the changelog for release 0.1.17: turn Unreleased into the release section, write the Play what's new and the media shot list",
+      "expected_output": "A ## [0.1.17] section in the chosen format covering the 38 commits since v0.1.16 that a person notices, a plain-text Play note under 500 characters, and a shot list with one still and one clip per headline.",
+      "files": [],
+      "assertions": [
+        "check_changelog.py passes on the produced section (media files aside)",
+        "play.txt is at most 500 characters and plain text",
+        "every tip label exists in app/lib of that clone",
+        "no bullet without a surviving feat/fix/perf commit",
+        "every person-visible commit is covered",
+        "shot list names one still and one clip per headline, named <version>-<slug>"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "release-0.1.18-feature",
+      "prompt": "prepare the changelog for release 0.1.18: turn Unreleased into the release section, write the Play what's new and the media shot list",
+      "expected_output": "A ## [0.1.18] section about pages from the machine opening inside herdr, with Try-it tips whose labels exist in app/lib, a Play note and a shot list.",
+      "files": [],
+      "assertions": [
+        "check_changelog.py passes on the produced section (media files aside)",
+        "play.txt is at most 500 characters and plain text",
+        "every tip label exists in app/lib of that clone",
+        "no bullet without a surviving feat/fix/perf commit",
+        "every person-visible commit is covered",
+        "shot list names one still and one clip per headline, named <version>-<slug>"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "release-0.1.19-with-revert",
+      "prompt": "prepare the changelog for release 0.1.19: turn Unreleased into the release section, write the Play what's new and the media shot list",
+      "expected_output": "A ## [0.1.19] section that says nothing about the feature added in 41da349 and reverted in 2cca332, a Play note and a shot list.",
+      "files": [],
+      "assertions": [
+        "check_changelog.py passes on the produced section (media files aside)",
+        "play.txt is at most 500 characters and plain text",
+        "every tip label exists in app/lib of that clone",
+        "no bullet without a surviving feat/fix/perf commit",
+        "every person-visible commit is covered",
+        "shot list names one still and one clip per headline, named <version>-<slug>",
+        "nothing about the bar folding away while reading (41da349, reverted by 2cca332)"
+      ]
+    }
+  ]
+}
