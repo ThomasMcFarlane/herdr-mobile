@@ -4,17 +4,27 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
-## [Unreleased]
+## [0.1.20] - 2026-10-19
 
-- `Update available` in Settings opens one sheet: what's new first, then
-  `Download`, then `Install`, so the notes are on the way rather than behind a
-  second button. It says where the file comes from and, once downloaded, that
-  it matched the release's checksum; Android still asks before it installs.
+[![Watch what's new · 3 changes · 0:13 · 4.6 MB](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.20/0.1.20-whats-new.jpg)](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.20/0.1.20-whats-new.mp4)
+
+### Read what's new before you update
+
+`Update available` in Settings now opens one sheet: what changed comes first,
+then `Download` and `Install`.
+
+> [!TIP]
+> Try it: when Settings has a dot, tap `Update available`.
+
+- The sheet says where the file comes from and, once downloaded, that it
+  matched the release's checksum. Android still asks before it installs.
 - When a release comes with a short clip of its changes, the sheet opens on
   it. `Play` opens it in your browser, and nothing of the video loads before
   that tap.
 - Coming back to Settings with an update you have not opened yet scrolls it
   to the top, so the row is in view.
+
+![The update sheet: what's new in 0.1.20 above Download 23 MB](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.20/0.1.20-update-sheet.png)
 
 ## [0.1.19] - 2026-10-19
 

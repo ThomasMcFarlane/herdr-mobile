@@ -14,12 +14,13 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:herdr_mobile/data/models/release_info.dart';
 import 'package:herdr_mobile/data/repositories/agent_session.dart';
+import 'package:herdr_mobile/data/repositories/app_update.dart';
 import 'package:herdr_mobile/data/repositories/notification_settings.dart';
 import 'package:herdr_mobile/data/repositories/quick_phrases.dart';
 import 'package:herdr_mobile/data/services/notifier.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
-import 'package:herdr_mobile/ui/features/agents/agent_swipe.dart';
 import 'package:herdr_mobile/ui/shell/home_shell.dart';
 import 'package:provider/provider.dart';
 
@@ -28,7 +29,17 @@ import '../support/clip_recorder.dart';
 import '../support/fake_agent_session.dart';
 import '../support/memory_quick_phrases_store.dart';
 import '../support/shot.dart';
-import '../support/turn_fixtures.dart';
+import '../support/update_fakes.dart';
+
+/// The release's own notes, as the sheet shows them: its section of
+/// CHANGELOG.md without the heading and without the walkthrough line (the
+/// poster is fetched from GitHub, which a test cannot reach).
+String _notes(String version) {
+  final lines = File('../CHANGELOG.md').readAsLinesSync();
+  final start = lines.indexWhere((l) => l.startsWith('## [$version]'));
+  final end = lines.indexWhere((l) => l.startsWith('## ['), start + 1);
+  return lines.sublist(start + 1, end).where((l) => !l.startsWith('[![')).join('\n').trim();
+}
 
 void main() {
   if (Platform.environment['RELEASE_CLIP'] == null) {
@@ -38,25 +49,36 @@ void main() {
   final dir = Platform.environment['RELEASE_CLIP_DIR'] ?? '/tmp/release_clip';
   setUpAll(loadAppFonts);
 
-  // 0.1.17, "One design language" and "See the next agent while you swipe".
-  testWidgets('0.1.17 walkthrough', (tester) async {
+  // 0.1.20, "Read what's new before you update".
+  testWidgets('0.1.20 walkthrough', (tester) async {
     final h = await DemoFleet.create(timed: true);
-    final session = FakeAgentSession(
-      key: 'a/k1',
-      title: 'Review the ledger migration plan',
-      cwd: projectDir,
-      machine: h.fleet.connection('a'),
-      state: stateWith(items: richTurn()),
+    final sessions = FakeAgentSessions(const []);
+    const version = '0.1.20';
+    final release = ReleaseInfo(
+      version: version,
+      apkUrl: 'https://github.com/tuan3w/herdr-mobile/releases/download/v$version/herdr-mobile-$version.apk',
+      size: 23819658,
+      pageUrl: ReleaseInfo.pageFor(version),
+      notes: _notes(version),
+      sha256: 'a' * 64,
     );
-    final sessions = FakeAgentSessions([session]);
+    final files = FakeReleaseFiles();
+    final update = AppUpdate(
+      store: MemoryUpdateStore(),
+      feed: FakeReleaseFeed()..answer = release,
+      files: files,
+      installer: FakeApkInstaller(),
+      current: AppVersion.tryParse('0.1.19'),
+    );
+    addTearDown(update.dispose);
+    await update.check();
     final rec = ClipRecorder(dir);
-    const total = 6;
-    // A person watching on a phone: enough to see each result land, no more.
+    const total = 3;
     const beat = Duration(milliseconds: 500);
 
     await shoot(
       tester,
-      const HomeShell(),
+      HomeShell(update: update),
       '$dir/last.png',
       wrap: (app) => demoProviders(h, extra: [
         ListenableProvider<AgentSessions>.value(value: sessions),
@@ -67,49 +89,31 @@ void main() {
       ])(rec.wrap(app)),
       pump: (t) async {
         await h.ageStatuses(t);
-        await h.terminalSettings.setWrap(true);
         await t.pump(const Duration(milliseconds: 600));
 
-        rec.chapter(1, total, 'One name per agent, one way to read time');
-        await rec.hold(t, const Duration(milliseconds: 1800));
-
-        rec.chapter(2, total, 'The tab bar says where you are');
-        final agents = t.getCenter(find.byKey(FloatingTabBar.tabKey('Agents')));
-        final machines = t.getCenter(find.byKey(FloatingTabBar.tabKey('Machines')));
-        await rec.drag(t, agents, machines - agents, 'Drag along the bar', over: const Duration(milliseconds: 700), rest: const Duration(milliseconds: 200));
-        await rec.hold(t, const Duration(milliseconds: 1400));
-
-        rec.chapter(3, total, 'Settings has a hidden kit');
+        rec.chapter(1, total, 'The dot on Settings leads to the update');
+        await rec.hold(t, const Duration(milliseconds: 1200));
         await rec.tap(t, find.byKey(FloatingTabBar.tabKey('Settings')), 'Open Settings');
-        await rec.hold(t, beat);
-        await rec.longPress(t, find.text('About').first, 'Hold About', hold: const Duration(milliseconds: 600));
-        await rec.hold(t, const Duration(milliseconds: 900));
-        final kit = t.getCenter(find.byType(Scaffold).last);
-        await rec.drag(t, kit, const Offset(0, -320), 'Every component, light and dark', over: const Duration(milliseconds: 800), rest: Duration.zero);
-        await rec.hold(t, beat);
-        await rec.tap(t, find.byTooltip('Back').last, 'Back');
-        await rec.hold(t, beat);
-        await rec.tap(t, find.byKey(FloatingTabBar.tabKey('Agents')), 'Back to Agents');
-        await rec.hold(t, beat);
+        await rec.hold(t, const Duration(milliseconds: 1200));
 
-        rec.chapter(4, total, 'A toast rises from behind the bar', top: true);
-        await rec.tap(t, find.text('Mark all reviewed').first, 'Mark all reviewed');
-        await rec.hold(t, const Duration(milliseconds: 1100));
-        // It swipes away: part of the change, and quicker than waiting it out.
-        final toast = t.getCenter(find.textContaining('Marked', findRichText: true).first);
-        await rec.drag(t, toast, const Offset(240, 0), 'Swipe it away', over: const Duration(milliseconds: 350), rest: Duration.zero);
-        await rec.hold(t, const Duration(milliseconds: 600));
+        rec.chapter(2, total, 'What\u2019s new comes first');
+        await rec.tap(t, find.text('Update available'), 'Tap Update available');
+        await rec.hold(t, const Duration(milliseconds: 1600));
+        final notes = t.getCenter(find.text('Update to $version'));
+        await rec.drag(t, notes + const Offset(0, 260), const Offset(0, -180), 'Read what changed',
+            over: const Duration(milliseconds: 900));
+        await rec.hold(t, const Duration(milliseconds: 800));
 
-        rec.chapter(5, total, 'See the next agent while you swipe');
-        await rec.tap(t, find.text('Approve migration for payments ledger').first, 'Open the agent that needs you');
-        await rec.hold(t, const Duration(milliseconds: 1000));
-        final from = t.getCenter(find.byType(AgentSwipe)) + const Offset(120, 0);
-        await rec.drag(t, from, const Offset(-150, 0), 'Drag slowly sideways', over: const Duration(milliseconds: 1100), rest: const Duration(milliseconds: 200));
-        await rec.hold(t, const Duration(milliseconds: 1300));
-
-        rec.chapter(6, total, 'Wrap lines moved into Pane options', top: true);
-        await rec.tap(t, find.byTooltip('Pane options').first, 'Pane options');
-        await rec.hold(t, const Duration(milliseconds: 1900));
+        rec.chapter(3, total, 'Then Download and Install', top: true);
+        await rec.tap(t, find.text('Download ${megabytes(release.size)}'), 'Download');
+        for (var i = 1; i <= 16; i++) {
+          files.report(release.size * i ~/ 16);
+          await rec.hold(t, const Duration(milliseconds: 120));
+        }
+        files.running!.complete(File('/x.apk'));
+        await t.pump();
+        await rec.hold(t, const Duration(milliseconds: 2200));
+        await rec.hold(t, beat);
       },
     );
     rec.finish();
