@@ -561,19 +561,18 @@ class _WebPreviewScreenState extends State<WebPreviewScreen> {
     final foreign = _foreign;
     final isFile = !foreign && widget.page is FilePage;
     final ds = context.ds;
+    // The whole link, as Copy link copies it: the bar's line is cut to fit,
+    // and the person often wants to see (and check) the full address.
+    final link = foreign ? _url.toString() : page?.address ?? widget.page.address;
     unawaited(
       showActionSheet(
         context,
-        title: visibleText(_title ?? page?.label ?? widget.page.label),
+        title: visibleText(link),
         actions: [
           SheetAction(
             label: isFile ? 'Copy path' : 'Copy link',
             icon: LucideIcons.link,
-            onTap: () => copyText(
-              context,
-              foreign ? _url.toString() : page?.address ?? widget.page.address,
-              what: isFile ? 'Path copied' : 'Link copied',
-            ),
+            onTap: () => copyText(context, link, what: isFile ? 'Path copied' : 'Link copied'),
           ),
           SheetAction(
             label: 'Open in browser',
@@ -640,16 +639,11 @@ class _WebPreviewScreenState extends State<WebPreviewScreen> {
               // `where` line. The globe in the glyph's place (where an agent
               // screen shows its status) says "a web page"; the line says where
               // it comes from, once (a title that is the address leaves the line
-              // the machine's name). A page not from the machine says so in the
-              // bar's alert tone.
-              glyph: Icon(
-                foreign ? LucideIcons.triangleAlert : LucideIcons.globe,
-                size: IconSize.row,
-                color: foreign ? ds.dangerText : ds.textSecondary,
-              ),
+              // the machine's name). A page from another site shows that site's
+              // host alone, never the machine's name. The whole link is in `⋯`.
+              glyph: Icon(LucideIcons.globe, size: IconSize.row, color: ds.textSecondary),
               title: title,
               subtitle: foreign ? address : (address == title ? widget.machine.profile.label : '$address · ${widget.machine.profile.label}'),
-              subtitleAlert: foreign ? 'not from ${widget.machine.profile.label}' : null,
               actions: [
                 CircleButton(
                   icon: LucideIcons.rotateCw,

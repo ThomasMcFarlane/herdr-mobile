@@ -6,7 +6,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:herdr_mobile/data/models/web_bridge.dart';
 import 'package:herdr_mobile/data/repositories/fleet_repository.dart';
 import 'package:herdr_mobile/data/repositories/machine_connection.dart';
@@ -154,17 +153,18 @@ void main() {
     expect(find.textContaining('net::'), findsNothing);
   });
 
-  testWidgets('Copy link copies the page\'s address on the machine, never the phone\'s tokened URL', (tester) async {
+  testWidgets('⋯ shows the whole link, and Copy link copies it: the address on the machine, never the phone\'s tokened URL', (tester) async {
     await pump(tester, ServerPage(Uri.parse('http://localhost:3000/')));
-    await web.navigate('http://localhost:51111/page2.html#b');
+    await web.navigate('http://localhost:51111/page2.html?tab=logs#b');
     await _settle(tester);
 
     await tester.tap(find.byTooltip('Page options'));
     await _settle(tester);
+    expect(find.text('http://localhost:3000/page2.html?tab=logs#b'), findsOneWidget, reason: 'the bar cuts the address; the sheet shows all of it');
     await tester.tap(find.text('Copy link'));
     await _settle(tester);
 
-    expect(copied, ['http://localhost:3000/page2.html#b']);
+    expect(copied, ['http://localhost:3000/page2.html?tab=logs#b']);
     expect(copied.single, isNot(contains(_token)));
   });
 
@@ -217,8 +217,7 @@ void main() {
     await _settle(tester);
 
     expect(find.text('evil.example.com'), findsWidgets, reason: 'the real host, not the machine\'s address');
-    expect(find.text('not from build-box'), findsOneWidget);
-    expect(find.byIcon(LucideIcons.triangleAlert), findsOneWidget, reason: 'a warning in place of the globe');
+    expect(find.textContaining('build-box'), findsNothing, reason: 'another site never sits under the machine\'s name');
     expect(
       find.descendant(of: find.byType(AppTopBar), matching: find.textContaining('localhost:3000')),
       findsNothing,
