@@ -4,6 +4,13 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [Unreleased]
+
+### Fixes
+
+- A session started in a worktree now shows at the computer inside that
+  worktree's own workspace, next to its shell, not in `Phone sessions`.
+
 ## [0.1.23] - 2026-10-20
 
 ### Mermaid diagrams are drawn in answers

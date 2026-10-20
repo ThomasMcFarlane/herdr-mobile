@@ -1,6 +1,7 @@
 @TestOn('linux || mac-os')
 library;
 
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -213,6 +214,47 @@ void main() {
       expect(h.herdrCalls().where((c) => isCall(c, 'tab', 'close')), [
         ['tab', 'close', 'w1:t1'],
       ]);
+    });
+
+    test('a session in a linked worktree opens its tab in that worktree\'s workspace, not in Phone sessions', () async {
+      final h = await newHost();
+      await h.useFakeHerdr();
+      final wt = '${h.work}/wt';
+      Directory('$wt/app').createSync(recursive: true);
+      Map<String, Object?> space(String id, String label, {String? path, bool linked = false}) => {
+        'workspace_id': id,
+        'number': 1,
+        'label': label,
+        'focused': false,
+        'pane_count': 1,
+        'tab_count': 1,
+        'active_tab_id': '$id:t0',
+        'agent_status': 'unknown',
+        if (path != null) 'worktree': {'checkout_path': path, 'is_linked_worktree': linked, 'repo_key': h.work, 'repo_name': 'work', 'repo_root': h.work},
+      };
+      File('${h.home.path}/herdr.state').writeAsStringSync(
+        jsonEncode({
+          'tabs': 0,
+          'workspaces': [
+            space('w1', 'Phone sessions'),
+            space('w2', 'wt', path: wt, linked: true),
+            space('w3', 'work', path: h.work),
+          ],
+        }),
+      );
+      List<List<String>> tabs() => [for (final c in h.herdrCalls()) if (c.length > 1 && c[0] == 'tab' && c[1] == 'create') c];
+      String workspaceOf(List<String> c) => c[c.indexOf('--workspace') + 1];
+
+      // Inside the linked worktree (a folder below it counts): its workspace.
+      await h.start(cwd: '$wt/app');
+      await eventually(() => tabs().length == 1, what: 'the tab in the worktree');
+      expect(workspaceOf(tabs().single), 'w2');
+
+      // The main checkout's workspace is the person's own: Phone sessions, as before.
+      await h.start();
+      await eventually(() => tabs().length == 2, what: 'the tab in Phone sessions');
+      expect(workspaceOf(tabs().last), 'w1');
+      expect(h.herdrCalls().where((c) => c.length > 1 && c[0] == 'workspace' && c[1] == 'create'), isEmpty);
     });
 
     test('~/.herdr-mobile/no-panes keeps herdr out', () async {
