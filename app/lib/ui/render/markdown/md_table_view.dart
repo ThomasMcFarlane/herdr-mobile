@@ -7,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'package:herdr_mobile/ui/core/kit.dart';
 import 'md_document.dart';
+import 'md_edge_fade.dart';
 import 'md_more_row.dart';
 import 'md_styles.dart';
 import 'md_text.dart';
@@ -203,7 +204,7 @@ class _MdTableViewState extends State<MdTableView> {
           // proportion to what they need.
           return table(avail);
         }
-        return _EdgeFade(
+        return MdEdgeFade(
           controller: _scroll,
           child: SingleChildScrollView(
             controller: _scroll,
@@ -237,44 +238,4 @@ class _MdTableViewState extends State<MdTableView> {
       ),
     );
   }
-}
-
-/// Fades the edge of a sideways scroller that has more behind it.
-class _EdgeFade extends StatelessWidget {
-  const _EdgeFade({required this.controller, required this.child});
-
-  final ScrollController controller;
-  final Widget child;
-
-  static const _fade = 28.0;
-
-  @override
-  Widget build(BuildContext context) => ListenableBuilder(
-    listenable: controller,
-    child: child,
-    builder: (context, child) {
-      var left = false;
-      var right = true;
-      if (controller.hasClients && controller.position.hasContentDimensions) {
-        final p = controller.position;
-        left = p.pixels > 1;
-        right = p.pixels < p.maxScrollExtent - 1;
-      }
-      if (!left && !right) return child!;
-      return ShaderMask(
-        blendMode: BlendMode.dstIn,
-        shaderCallback: (rect) {
-          final f = math.min(_fade / rect.width, 0.45);
-          // The mask reads alpha only: any opaque colour keeps, transparent fades.
-          final solid = context.ds.text;
-          final clear = solid.withAlpha(0);
-          return LinearGradient(
-            colors: [left ? clear : solid, solid, solid, right ? clear : solid],
-            stops: [0, f, 1 - f, 1],
-          ).createShader(rect);
-        },
-        child: child,
-      );
-    },
-  );
 }

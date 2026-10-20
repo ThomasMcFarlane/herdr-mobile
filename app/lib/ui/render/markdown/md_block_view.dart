@@ -8,6 +8,7 @@ import 'md_document.dart';
 import 'md_styles.dart';
 import 'md_table_view.dart';
 import 'md_text.dart';
+import '../mermaid/md_diagram_view.dart';
 
 /// The vertical gap above [next], from the block before it. Headings take
 /// room above and keep close to what they introduce; a lead-in line sits
@@ -147,6 +148,12 @@ Widget _body(
         child: MdInlineText(inlines: block.inlines, style: MdStyles.of(context).heading(block.level)),
       );
     case MdCode():
+      // A closed mermaid fence is drawn; the open tail of a streaming message
+      // is still the code that is arriving, so a diagram that ends a message
+      // appears when the message ends.
+      if (!tail && block.language.toLowerCase() == 'mermaid') {
+        return MdDiagramView(code: block, expanded: expanded, onToggleExpanded: onToggle);
+      }
       return MdCodeBlock(code: block, tail: tail, expanded: expanded, onToggleExpanded: onToggle);
     case MdTable():
       return MdTableView(table: block, tail: tail, expanded: expanded, onToggleExpanded: onToggle);

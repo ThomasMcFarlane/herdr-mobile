@@ -61,6 +61,12 @@ dependencies:
   # (ui/render/markdown/md_parser.dart); chosen by the bench-off in
   # tool/md-bench. Nothing outside ui/render/markdown/ imports it.
   markdown: ^7.3.1
+  # Mermaid diagrams (ui/render/mermaid/): mermaid_core is the pure-Dart parser
+  # and layout (it runs in an isolate, no dart:ui), mermaid_flutter only for
+  # its ScenePainter. Exact pins: 0.x with eight releases in two months.
+  # Nothing outside ui/render/mermaid/ imports either.
+  mermaid_core: 0.3.2
+  mermaid_flutter: 0.3.2
   # Grapheme-cluster boundaries for the reveal pacer
   # (data/streaming/reveal_pacer.dart); already in the SDK's tree.
   characters: ^1.4.1
