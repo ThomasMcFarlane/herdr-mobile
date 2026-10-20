@@ -4,12 +4,50 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
-## [Unreleased]
+## [0.1.22] - 2026-10-20
+
+[![Watch what's new · 3 changes · 0:21 · 6.9 MB](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.22/0.1.22-whats-new.jpg)](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.22/0.1.22-whats-new.mp4)
+
+### See and manage your worktrees from the phone
+
+A repo with several worktrees open in herdr is now one section on its
+machine's screen: each checkout with its branch and the agents running in it.
+You can start an agent in a new worktree, or remove one, without leaving the
+app.
+
+> [!TIP]
+> Try it: on a machine's screen, tap `New agent session` (the `+` at the top),
+> choose `Checkout`, then `New worktree…`.
+
+> [!TIP]
+> Try it: on a machine's screen, tap the `⋯` on a checkout (`Checkout actions`),
+> then `Remove worktree`, and hold the button.
+
+- A worktree reads `worktree-a · herdr-mobile` (its folder, then its repo) on
+  the board, in notifications and in the toast after `Start`. The main
+  checkout and a repo with a single open checkout look as before.
+- A phone session started in a folder of a checkout is listed under that
+  checkout, not under `Phone sessions`.
+- `Remove worktree` takes a hold, not a tap, and never forces: a checkout with
+  uncommitted changes is kept and the toast says so. The branch stays, and the
+  sheet says how many agents working there will stop.
+- `Checkout` appears for a folder in a git repo. `Branch` is optional: left
+  empty, herdr names it. herdr runs your `worktree.created` hooks on the
+  machine, as on the desktop. On a herdr that cannot create worktrees, `Start`
+  says so and `This folder` still works.
+- Frame times on a phone were not measured.
+
+![The studio-mac screen: the payments-api repo lists its Main checkout on main with a blocked agent, then two worktrees, each with its branch and its agent](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.22/0.1.22-worktrees-places.png)
+
+**Fixed**
 
 - An omp plan review now shows as needing you, with the plan to read and its
   options as buttons. Before, the agent looked finished and the review waited
   in the terminal, and with a model slider or a nearly full context the
   buttons were missing or chose the wrong option.
+- `Close workspace` on a main checkout whose worktrees are still open no
+  longer ends in an error from herdr: it is dimmed and says `Worktrees are
+  open · close them first`.
 
 ## [0.1.21] - 2026-10-20
 

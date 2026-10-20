@@ -1,15 +1,24 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/models/herdr_models.dart';
+import '../../../data/models/machine_layout.dart';
 import '../../../data/repositories/agent_screens.dart';
 import '../../../data/repositories/machine_connection.dart';
+import '../../../data/words/plural.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../agents/agent_navigation.dart';
 import 'machine_actions.dart';
+import 'machine_field.dart' show shortPath;
+import 'new_agent_session_screen.dart';
 import 'rename_sheet.dart';
+import 'session_prefill.dart';
 
-/// What can be done to a workspace: a new tab, a new name, closing it.
+/// What can be done to a workspace: a new tab, a new name, closing it. A
+/// worktree's workspace also starts a session in its folder, and a linked one
+/// can be removed (held, never forced).
 Future<void> showWorkspaceActions(
   BuildContext context,
   MachineConnection machine,
@@ -57,20 +66,100 @@ Future<void> showWorkspaceActions(
     if (await actions.closeWorkspace(workspace.id) case final error?) toast(error);
   }
 
+  void newSessionHere(WorkspaceWorktree worktree) {
+    // The navigator outlives the sheet that started this.
+    unawaited(openNewAgentSession(
+      navigator.context,
+      machine: machine,
+      prefill: SessionPrefill(machineId: machine.profile.id, folder: worktree.checkoutPath),
+    ));
+  }
+
+  Future<void> removeWorktree(WorkspaceWorktree worktree) async {
+    final folder = worktree.checkoutPath;
+    final worktreeName = machine.places.ofWorkspace(workspace.id)?.checkoutName ?? name;
+    final branch = machine.branchOf(folder);
+    final working = _agentsWorkingIn(machine, workspace.id);
+    final ok = await showConfirmSheet(
+      navigator.context,
+      title: 'Remove $worktreeName?',
+      confirmLabel: 'Remove worktree',
+      hold: true,
+      message: 'Deletes the folder ${shortPath(folder)} on ${machine.profile.label}. '
+          '${branch == null ? 'The branch stays. ' : 'The branch $branch stays. '}'
+          '${working.stop > 0 ? '${countOf(working.stop, 'agent')} working there will stop. ' : ''}'
+          '${working.lose > 0 ? '${countOf(working.lose, 'phone session')} running there will lose the folder. ' : ''}'
+          'If it has uncommitted changes, git refuses and nothing is deleted.',
+    );
+    if (!ok) return;
+    if (await actions.removeWorktree(workspace) case final error?) return toast(error);
+    toaster.show('Removed $worktreeName');
+  }
+
+  final worktree = workspace.worktree;
+  // A primary that still has linked worktrees open cannot be closed alone:
+  // herdr refuses (`workspace_group_close_required`) and the phone never sends
+  // `close_group`, so the row says what to do first.
+  final worktreesOpen = worktree != null &&
+      !worktree.isLinked &&
+      machine.snapshot.workspaces.any(
+        (o) => o.id != workspace.id && o.worktree != null && o.worktree!.isLinked && o.worktree!.repoKey == worktree.repoKey,
+      );
+
   return showActionSheet(
     context,
     title: name,
     actions: [
+      if (worktree != null)
+        SheetAction(label: 'New agent session here', icon: LucideIcons.plus, onTap: () => newSessionHere(worktree)),
       SheetAction(label: 'New tab here', icon: LucideIcons.plus, onTap: newTab),
       SheetAction(label: 'Rename', icon: LucideIcons.pencil, onTap: rename),
+      if (worktree != null && worktree.isLinked)
+        SheetAction(
+          label: 'Remove worktree',
+          icon: LucideIcons.gitBranchMinus,
+          destructive: true,
+          onTap: () => removeWorktree(worktree),
+        ),
       SheetAction(
         label: 'Close workspace',
         icon: LucideIcons.trash2,
         destructive: true,
         onTap: close,
+        unavailable: worktreesOpen ? 'Worktrees are open · close them first' : null,
       ),
     ],
   );
+}
+
+/// The agents working or blocked under the checkout [workspaceId] on the
+/// machine screen, split by what removing the worktree does to them: those
+/// in the checkout's own workspace stop with it; phone sessions placed under
+/// it live in another workspace, keep running, and lose their folder.
+({int stop, int lose}) _agentsWorkingIn(MachineConnection machine, String workspaceId) {
+  final items = machineLayout(machine.snapshot, machine.places, machine.keeperPanes.keys.toSet());
+  final List<PaneEntry> panes = [
+    for (final item in items)
+      ...switch (item) {
+        RepoItem() => [
+            for (final b in item.blocks)
+              if (b.workspace.id == workspaceId) ...b.panes,
+          ],
+        WorkspaceItem() => item.workspace.id == workspaceId ? item.panes : const <PaneEntry>[],
+      },
+  ];
+  var stop = 0;
+  var lose = 0;
+  for (final e in panes) {
+    final busy = e.pane.agent != null && (e.pane.status == AgentStatus.working || e.pane.status == AgentStatus.blocked);
+    if (!busy) continue;
+    if (e.pane.workspaceId == workspaceId) {
+      stop++;
+    } else {
+      lose++;
+    }
+  }
+  return (stop: stop, lose: lose);
 }
 
 /// What can be done to a pane: a new name, closing it.

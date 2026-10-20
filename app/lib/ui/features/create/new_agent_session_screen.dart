@@ -11,10 +11,12 @@ import '../../../data/repositories/agent_session_settings.dart';
 import '../../../data/repositories/fleet_repository.dart';
 import '../../../data/repositories/machine_connection.dart';
 import '../../../data/words/agent_names.dart';
+import '../../../data/words/place_name.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../agents/agent_navigation.dart';
 import '../history/past_sessions_navigation.dart';
 import '../files/files_navigation.dart';
+import 'checkout_field.dart';
 import 'machine_field.dart';
 import 'new_agent_session_view_model.dart';
 import 'session_prefill.dart';
@@ -63,7 +65,13 @@ class _Form extends StatefulWidget {
 class _FormState extends State<_Form> {
   final _formKey = GlobalKey<FormState>();
   final _folder = TextEditingController();
+  final _branch = TextEditingController();
   late final NewAgentSessionViewModel _vm = context.read<NewAgentSessionViewModel>();
+
+  /// Waits for typing in the folder field to pause before it asks the machine
+  /// for the folder's checkouts, and what the text was when it last did.
+  Timer? _lookupTimer;
+  String _typed = '';
 
   /// The machine the folder field was last prefilled for, and what it was
   /// prefilled with: the field follows the machine until the person types.
@@ -81,22 +89,50 @@ class _FormState extends State<_Form> {
       _filled = prefill.folder;
       _filledFor = prefill.machineId;
       _folder.text = _filled;
+      // A duplicate's folder is known: look at once, not after a pause.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _lookUpNow();
+      });
     }
+    _typed = _folder.text.trim();
+    _folder.addListener(_onFolderText);
     _vm.addListener(_syncFolder);
     _syncFolder();
   }
 
   @override
   void dispose() {
+    _lookupTimer?.cancel();
     _vm.removeListener(_syncFolder);
     _folder.dispose();
+    _branch.dispose();
     super.dispose();
+  }
+
+  void _onFolderText() {
+    final text = _folder.text.trim();
+    if (text == _typed) return;
+    _typed = text;
+    _lookUpSoon();
+  }
+
+  void _lookUpSoon() {
+    _lookupTimer?.cancel();
+    _lookupTimer = Timer(Dwell.typingPause, () => unawaited(_vm.lookUp(_folder.text)));
+  }
+
+  void _lookUpNow() {
+    _lookupTimer?.cancel();
+    _typed = _folder.text.trim();
+    unawaited(_vm.lookUp(_folder.text));
   }
 
   void _syncFolder() {
     final id = _vm.machine?.profile.id;
     if (id == null || id == _filledFor) return;
     _filledFor = id;
+    // Another machine: its repos are not this one's.
+    _lookUpSoon();
     if (_folder.text.trim().isNotEmpty && _folder.text != _filled) return;
     _filled = _vm.rememberedFolder;
     _folder.text = _filled;
@@ -109,7 +145,10 @@ class _FormState extends State<_Form> {
       machine,
       startDir: start.startsWith('/') ? start : null,
     );
-    if (picked != null && mounted) _folder.text = picked;
+    if (picked != null && mounted) {
+      _folder.text = picked;
+      _lookUpNow();
+    }
   }
 
   Future<void> _start({required bool open}) async {
@@ -118,7 +157,7 @@ class _FormState extends State<_Form> {
     final nav = Navigator.of(context);
     final toaster = Toaster.of(context);
     setState(() => _opening = open);
-    final session = await _vm.start(_folder.text);
+    final session = await _vm.start(_folder.text, branch: _branch.text);
     if (session == null) return;
     if (open) {
       if (!mounted) return;
@@ -127,7 +166,7 @@ class _FormState extends State<_Form> {
       if (mounted) nav.pop();
       showStartedToast(
         toaster,
-        message: '${session.agentLabel} started in ${cwdTail(session.cwd)} · ${session.machine.profile.label}',
+        message: '${session.agentLabel} started in ${placeName(session.machine.places, session.cwd)} · ${session.machine.profile.label}',
         onOpen: () => unawaited(openAgent(nav.context, SessionAgent(session.key))),
       );
     }
@@ -191,35 +230,78 @@ class _FormState extends State<_Form> {
                               lost: vm.machineLost,
                               onSelect: vm.selectMachine,
                             ),
-                            LabeledField(
-                              label: 'Folder',
-                              controller: _folder,
-                              mono: true,
-                              hint: '/home/you/code/my-project',
-                              helper: 'An absolute path on the machine',
-                              keyboardType: TextInputType.url,
-                              textInputAction: TextInputAction.done,
-                              validator: agentFolderError,
-                              suffix: machine == null || !machineSupportsFiles(machine)
-                                  ? null
-                                  : Align(
-                                      widthFactor: 1,
-                                      heightFactor: 1,
-                                      child: CircleButton(
-                                        icon: LucideIcons.folderOpen,
-                                        tooltip: 'Browse folders',
-                                        filled: false,
-                                        size: CircleButton.compact,
-                                        onPressed: () => _browse(machine),
-                                      ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                LabeledField(
+                                  label: 'Folder',
+                                  controller: _folder,
+                                  mono: true,
+                                  hint: '/home/you/code/my-project',
+                                  helper: 'An absolute path on the machine',
+                                  keyboardType: TextInputType.url,
+                                  textInputAction: TextInputAction.done,
+                                  validator: agentFolderError,
+                                  suffix: machine == null || !machineSupportsFiles(machine)
+                                      ? null
+                                      : Align(
+                                          widthFactor: 1,
+                                          heightFactor: 1,
+                                          child: CircleButton(
+                                            icon: LucideIcons.folderOpen,
+                                            tooltip: 'Browse folders',
+                                            filled: false,
+                                            size: CircleButton.compact,
+                                            onPressed: () => _browse(machine),
+                                          ),
+                                        ),
+                                ),
+                                // Only for a folder in a git repo; it glides in so what
+                                // is below does not jump.
+                                Collapse(
+                                  open: vm.checkouts != null,
+                                  child: ListenableBuilder(
+                                    listenable: _folder,
+                                    builder: (context, _) => Column(
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: [
+                                        const SizedBox(height: Gap.sm),
+                                        CheckoutField(
+                                          folder: _folder.text.trim(),
+                                          checkouts: vm.checkouts ?? const [],
+                                          choice: vm.choice,
+                                          agentsWorking: vm.agentsWorking,
+                                          onSelect: vm.chooseCheckout,
+                                        ),
+                                        Collapse(
+                                          open: vm.choice is NewWorktree,
+                                          child: Padding(
+                                            padding: const EdgeInsets.only(top: Gap.sm),
+                                            child: LabeledField(
+                                              label: 'Branch',
+                                              controller: _branch,
+                                              mono: true,
+                                              hint: 'Named by herdr',
+                                              helper: 'Optional',
+                                              validator: vm.branchError,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
+                                  ),
+                                ),
+                              ],
                             ),
                             ListenableBuilder(
                               listenable: _folder,
                               builder: (context, _) => RecentFolders(
                                 paths: vm.recent,
                                 selected: _folder.text.trim(),
-                                onPick: (path) => _folder.text = path,
+                                onPick: (path) {
+                                  _folder.text = path;
+                                  _lookUpNow();
+                                },
                               ),
                             ),
                           ],

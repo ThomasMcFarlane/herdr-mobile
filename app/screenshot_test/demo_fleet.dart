@@ -2,6 +2,7 @@
 // their agents, terminals and files, wired like the app wires real ones.
 //
 // All names below are invented.
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -32,12 +33,18 @@ const studioHome = '/Users/maya';
 const projectDir = '$studioHome/code/payments-api';
 const chartPath = '$projectDir/docs/checkout-latency.png';
 
+/// With `worktrees: true` studio-mac's payments-api is a repo with two linked
+/// worktrees open next to its main checkout (herdr groups them).
+const rateLimitDir = '$studioHome/.herdr/worktrees/payments-api/worktree-fix-rate-limit';
+const refundDir = '$studioHome/.herdr/worktrees/payments-api/worktree-refund-endpoint';
+
 /// Pane id -> (status, minutes in that status). Panes not listed here are idle
 /// from the start, for as long as the app has watched them.
 const _states = {
   'a1:p1': ('blocked', 4),
   'a1:p2': ('working', 18),
   'a2:p1': ('working', 6),
+  'a3:p1': ('working', 12),
   'b1:p1': ('working', 9),
   'b1:p2': ('done', 25),
   'c1:p1': ('working', 65),
@@ -48,6 +55,8 @@ const _titles = {
   'a1:p1': 'Approve migration for payments ledger',
   'a1:p2': 'Fix flaky retry test in checkout',
   'a2:p1': 'Upgrade Flutter and fix analyzer warnings',
+  'a3:p1': 'Smooth out rate limiter bursts',
+  'a4:p1': 'Draft the refund endpoint',
   'b1:p1': 'Remove unused feature flags',
   'b1:p2': 'Rotate staging TLS certificates',
   'b1:p3': 'Triage overnight CI failures',
@@ -124,19 +133,40 @@ class DemoFleet {
   /// With [timed], every agent starts idle and [ageStatuses] moves them to
   /// their real states, so the board can say how long each has been there. The
   /// app only knows how long a state lasted if it saw it begin.
-  static Future<DemoFleet> create({Uint8List? chart, bool timed = false}) async {
+  ///
+  /// With [worktrees], studio-mac's payments-api has two linked worktrees open
+  /// (`worktree-fix-rate-limit`, `worktree-refund-endpoint`) and answers
+  /// `worktree.list` and `worktree.remove` like herdr does.
+  static Future<DemoFleet> create({Uint8List? chart, bool timed = false, bool worktrees = false}) async {
     String status(String id) => timed ? 'idle' : (_states[id]?.$1 ?? 'idle');
     Pane pane(String id, String ws, String agent) => (id: id, ws: ws, agent: agent, status: status(id));
+
+    final studio = snapshotWith(
+      [
+        pane('a1:p1', 'a1', 'claude'),
+        pane('a1:p2', 'a1', 'omp'),
+        pane('a2:p1', 'a2', 'codex'),
+        if (worktrees) ...[pane('a3:p1', 'a3', 'omp'), pane('a4:p1', 'a4', 'codex')],
+      ],
+      workspaces: [
+        (id: 'a1', label: 'payments-api'),
+        (id: 'a2', label: 'mobile-app'),
+        if (worktrees) ...[(id: 'a3', label: 'worktree-fix-rate-limit'), (id: 'a4', label: 'worktree-refund-endpoint')],
+      ],
+      title: (id) => _titles[id] ?? '',
+      cwd: (id) => switch (id.substring(0, 2)) {
+        'a1' => projectDir,
+        'a3' => rateLimitDir,
+        'a4' => refundDir,
+        _ => '$studioHome/code/mobile-app',
+      },
+    );
+    if (worktrees) _groupPaymentsApi(studio);
 
     final specs = [
       (
         profile: _machine('a', 'studio-mac', 'studio-mac.tail1a2b.ts.net', 'maya', auth: SshAuth.none),
-        snapshot: snapshotWith(
-          [pane('a1:p1', 'a1', 'claude'), pane('a1:p2', 'a1', 'omp'), pane('a2:p1', 'a2', 'codex')],
-          workspaces: const [(id: 'a1', label: 'payments-api'), (id: 'a2', label: 'mobile-app')],
-          title: (id) => _titles[id] ?? '',
-          cwd: (id) => id.startsWith('a1') ? projectDir : '$studioHome/code/mobile-app',
-        ),
+        snapshot: studio,
       ),
       (
         profile: _machine('b', 'build-server', '10.0.4.21', 'deploy'),
@@ -179,7 +209,10 @@ class DemoFleet {
     final machines = MachineRepository(profiles: MemoryProfileStore(), secrets: MemorySecretStore());
     await machines.load();
     final skew = _Skew();
-    final transports = {for (final s in specs) s.profile.id: UiTransport(s.snapshot)};
+    final transports = {
+      for (final s in specs)
+        s.profile.id: s.profile.id == 'a' && worktrees ? _WorktreeTransport(s.snapshot) : UiTransport(s.snapshot),
+    };
     final fleet = FleetRepository(
       machines: machines,
       network: FakeNetwork(),
@@ -201,6 +234,10 @@ class DemoFleet {
         'a1:p1': claudeMigrationSession(),
         'a1:p2': ompFlakyTestSession(),
         'a2:p1': codexFlutterSession(),
+        if (worktrees) ...{
+          'a3:p1': ompFlakyTestSession(),
+          'a4:p1': idleSession('Refund endpoint drafted: POST /refunds with idempotency keys.'),
+        },
       });
     transports['b']!
       ..fs = FakeFs(home: '/home/deploy')
@@ -298,3 +335,73 @@ Widget Function(Widget) demoProviders(
           ],
           child: app,
         );
+
+const _paymentsRepoKey = '$projectDir/.git';
+
+Map<String, Object> _provenance(String path, {required bool linked}) => {
+      'checkout_path': path,
+      'is_linked_worktree': linked,
+      'repo_key': _paymentsRepoKey,
+      'repo_name': 'payments-api',
+      'repo_root': projectDir,
+    };
+
+/// Marks payments-api's workspaces as one repo group, the way herdr's
+/// `workspace.worktree` does for a primary checkout and its linked ones.
+void _groupPaymentsApi(Map<String, dynamic> snapshot) {
+  const checkouts = {
+    'a1': (projectDir, false),
+    'a3': (rateLimitDir, true),
+    'a4': (refundDir, true),
+  };
+  for (final w in snapshot['workspaces'] as List) {
+    final ws = w as Map<String, dynamic>;
+    if (checkouts[ws['workspace_id']] case (final path, final linked)?) {
+      ws['worktree'] = _provenance(path, linked: linked);
+    }
+  }
+}
+
+/// studio-mac when [DemoFleet.create] has `worktrees`: it also answers
+/// `worktree.list` (the checkouts still open, with their branches) and
+/// `worktree.remove` (the workspace and its panes go, as with herdr).
+class _WorktreeTransport extends UiTransport {
+  _WorktreeTransport(super.snapshot);
+
+  static const _branches = {
+    projectDir: 'main',
+    rateLimitDir: 'fix/rate-limit',
+    refundDir: 'feat/refund-endpoint',
+  };
+
+  @override
+  Future<Map<String, dynamic>> request(String method, [Map<String, dynamic> params = const {}]) {
+    switch (method) {
+      case 'worktree.list':
+        calls.add((method, params));
+        return Future.value({
+          'type': 'worktree_list',
+          'worktrees': [
+            for (final w in snapshot['workspaces'] as List)
+              if ((w as Map<String, dynamic>)['worktree'] case final Map<String, dynamic> wt)
+                {
+                  'path': wt['checkout_path'],
+                  'branch': _branches[wt['checkout_path']],
+                  'label': w['label'],
+                  'is_linked_worktree': wt['is_linked_worktree'],
+                  'open_workspace_id': w['workspace_id'],
+                },
+          ],
+        });
+      case 'worktree.remove':
+        calls.add((method, params));
+        final id = params['workspace_id'];
+        for (final key in const ['workspaces', 'tabs', 'panes']) {
+          (snapshot[key] as List).removeWhere((e) => (e as Map)['workspace_id'] == id);
+        }
+        scheduleMicrotask(() => emit({'event': 'workspace.closed'}));
+        return Future.value({'type': 'ok'});
+    }
+    return super.request(method, params);
+  }
+}

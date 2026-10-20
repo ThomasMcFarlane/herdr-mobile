@@ -526,8 +526,9 @@ coming from its side.
    `MachineConnection.agentPanes`). Right after the phone starts a keeper, a
    new agent pane on that machine triggers one `list`, so the pane is not
    shown twice until the next 30 s listing. The machine screen still lists
-   the pane (it is a pane of that workspace), but a tap opens the session's
-   chat (`MachineConnection.keeperPanes` maps the pane to the session key).
+   the pane: in its own workspace, or, when its folder is inside an open
+   checkout of a repo (`machineLayout`), under that checkout. A tap opens the
+   session's chat (`MachineConnection.keeperPanes` maps the pane to the session key).
    Why: the terminal there is a plain-text view of the same session, without
    the dock, photos or files.
 6. **Prompts from another client are shown live.** A prompt from one client

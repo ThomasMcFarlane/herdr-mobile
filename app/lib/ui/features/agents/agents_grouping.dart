@@ -9,8 +9,8 @@ import '../../../data/repositories/fleet_repository.dart';
 import '../../../data/repositories/machine_connection.dart';
 import '../../../data/words/agent_names.dart';
 import '../../../data/words/elapsed.dart';
+import '../../../data/words/place_name.dart';
 import '../../../data/words/where_line.dart';
-import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// The board's sections, top to bottom: what needs the person first, then
 /// what finished and awaits a look, then what is still running. A rank of its
@@ -168,7 +168,7 @@ AgentRowData agentRow(FleetAgent a, {required bool showMachine}) {
   // its session log says, when that was read (`PaneSessionNames`).
   final named = a.betterTitle;
   final workspace = a.workspace?.label ?? '';
-  final path = cwdTail(pane.cwd);
+  final path = placeName(a.machine.places, pane.cwd);
   // herdr gives no status timestamps, so a pane that was already idle when the
   // app first looked has no time of its own, or only a bound. The file its agent
   // writes says when it last did: the end of its last turn, the moment it went

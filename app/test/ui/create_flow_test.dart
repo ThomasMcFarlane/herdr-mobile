@@ -15,11 +15,13 @@ import 'package:herdr_mobile/ui/features/machines/machine_screen.dart';
 import 'package:herdr_mobile/ui/features/pane/pane_screen.dart';
 import 'package:herdr_mobile/ui/shell/home_shell.dart';
 import 'package:provider/provider.dart';
+import 'package:herdr_mobile/ui/features/create/management_sheets.dart';
 
 import '../support/create_harness.dart';
 import '../support/fake_fs.dart';
 import '../support/fake_transport.dart';
 import '../support/herdr_stub.dart';
+import 'hold_support.dart';
 import '../support/memory_app_settings_store.dart';
 import '../support/memory_terminal_settings_store.dart';
 import 'ui_harness.dart' show attentionSetProvider;
@@ -416,6 +418,172 @@ void main() {
 
       expect(find.text('Close pane'), findsNothing);
       await _tearDown(tester, h);
+    });
+  });
+
+  group('worktrees', () {
+    /// w1 is the primary checkout of a repo, w2 a linked worktree of it, w3 a
+    /// plain workspace; codex is working in w2.
+    Future<CreateHarness> open(WidgetTester tester) async {
+      final h = await _env();
+      final snap = h.stubs['a']!.snapshot;
+      Map<String, Object> worktree(String path, {required bool linked}) => {
+            'checkout_path': path,
+            'is_linked_worktree': linked,
+            'repo_key': '/work/w1/.git',
+            'repo_name': 'payments-api',
+            'repo_root': '/work/w1',
+          };
+      final workspaces = snap['workspaces'] as List;
+      (workspaces[0] as Map)['worktree'] = worktree('/work/w1', linked: false);
+      (workspaces[1] as Map)['worktree'] = worktree('/work/wt/worktree-a', linked: true);
+      ((snap['panes'] as List)[2] as Map)['agent_status'] = 'working';
+      await h.connection('a').refresh();
+      return h;
+    }
+
+    Future<void> openActions(WidgetTester tester, CreateHarness h, String workspaceId) async {
+      final machine = h.connection('a');
+      final workspace = machine.snapshot.workspaces.firstWhere((w) => w.id == workspaceId);
+      await _pump(
+        tester,
+        h,
+        Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: TextButton(
+                onPressed: () => showWorkspaceActions(context, machine, workspace),
+                child: const Text('open actions'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open actions'));
+      await _flush(tester);
+    }
+
+    Future<void> askToRemove(WidgetTester tester, CreateHarness h) async {
+      await openActions(tester, h, 'w2');
+      await tester.tap(find.text('Remove worktree'));
+      await _flush(tester);
+    }
+
+    testWidgets('removing asks with a hold, names what is lost, and a tap or an early release removes nothing', (tester) async {
+      final h = await open(tester);
+      final t = h.stubs['a']!;
+      await askToRemove(tester, h);
+
+      expect(find.text('Remove worktree-a?'), findsOneWidget);
+      expect(find.textContaining('Deletes the folder'), findsOneWidget);
+      expect(find.textContaining('1 agent working there will stop'), findsOneWidget);
+      expect(find.textContaining('git refuses and nothing is deleted'), findsOneWidget);
+      expect(find.byType(HoldToConfirm), findsOneWidget);
+
+      await quickTap(tester, find.byType(HoldToConfirm));
+      expect(find.text('Hold to remove worktree'), findsOneWidget, reason: 'a tap says how');
+      await advance(tester, const Duration(seconds: 3));
+
+      final early = await pressAndHold(tester, find.byType(HoldToConfirm), const Duration(milliseconds: 300));
+      await early.up();
+      await advance(tester, const Duration(milliseconds: 300));
+
+      expect(t.paramsOf('worktree.remove'), isEmpty);
+      expect(find.text('Remove worktree-a?'), findsOneWidget, reason: 'the sheet stays');
+      await _tearDown(tester, h);
+    });
+
+    testWidgets('a completed hold removes the worktree by workspace id and never forces', (tester) async {
+      final h = await open(tester);
+      final t = h.stubs['a']!;
+      await askToRemove(tester, h);
+
+      await holdFor(tester, find.byType(HoldToConfirm));
+      await _flush(tester);
+
+      expect(t.paramsOf('worktree.remove').single, {'workspace_id': 'w2'});
+      expect(find.text('Removed worktree-a'), findsOneWidget);
+      await _tearDown(tester, h);
+    });
+
+    testWidgets('a dirty checkout is refused in words the phone can act on, never "use --force"', (tester) async {
+      final h = await open(tester);
+      // What herdr 0.9.3 answers for a checkout with staged or untracked files.
+      h.stubs['a']!.on['worktree.remove'] = (_) => throw const HerdrApiException(
+            'dirty_worktree_requires_force',
+            "fatal: '/wt/worktree-a' contains modified or untracked files, use --force to delete it",
+          );
+      await askToRemove(tester, h);
+
+      await holdFor(tester, find.byType(HoldToConfirm));
+      await _flush(tester);
+
+      expect(find.text('It has uncommitted changes. Nothing was removed.'), findsOneWidget);
+      expect(find.textContaining('--force'), findsNothing);
+      await _tearDown(tester, h);
+    });
+
+    testWidgets('cancelling the removal sends nothing', (tester) async {
+      final h = await open(tester);
+      await askToRemove(tester, h);
+
+      await tester.tap(_button('Cancel'));
+      await _flush(tester);
+
+      expect(h.stubs['a']!.paramsOf('worktree.remove'), isEmpty);
+      await _tearDown(tester, h);
+    });
+
+    testWidgets('closing a primary with an open worktree is dimmed and sends nothing', (tester) async {
+      final h = await open(tester);
+      await openActions(tester, h, 'w1');
+
+      expect(find.text('Worktrees are open · close them first'), findsOneWidget);
+      expect(find.text('Remove worktree'), findsNothing, reason: 'the primary is not a linked worktree');
+      await tester.tap(find.text('Close workspace'));
+      await _flush(tester);
+
+      expect(find.textContaining('Close payments-api?'), findsNothing);
+      expect(h.stubs['a']!.paramsOf('workspace.close'), isEmpty);
+      await _tearDown(tester, h);
+    });
+
+    testWidgets('a worktree starts a session in its own folder', (tester) async {
+      final h = await open(tester);
+      await openActions(tester, h, 'w2');
+
+      await tester.tap(find.text('New agent session here'));
+      await _flush(tester);
+
+      expect(find.byType(NewAgentSessionScreen), findsOneWidget);
+      expect(tester.widget<TextFormField>(_field('Folder')).controller!.text, '/work/wt/worktree-a');
+      await _tearDown(tester, h);
+    });
+
+    testWidgets('a plain workspace keeps the old actions', (tester) async {
+      final plain = await _env();
+      final machine = plain.connection('a');
+      await _pump(
+        tester,
+        plain,
+        Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () => showWorkspaceActions(context, machine, machine.snapshot.workspaces.first),
+              child: const Text('open actions'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open actions'));
+      await _flush(tester);
+
+      expect(find.text('New tab here'), findsOneWidget);
+      expect(find.text('Close workspace'), findsOneWidget);
+      expect(find.text('New agent session here'), findsNothing);
+      expect(find.text('Remove worktree'), findsNothing);
+      expect(find.text('Worktrees are open · close them first'), findsNothing);
+      await _tearDown(tester, plain);
     });
   });
 }

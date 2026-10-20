@@ -1,12 +1,17 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:herdr_mobile/ui/core/kit.dart' show Dwell;
 
 import '../../../data/acp/agent_host.dart';
+import '../../../data/models/herdr_models.dart';
+import '../../../data/models/worktrees.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/agent_session_settings.dart';
 import '../../../data/repositories/fleet_repository.dart';
 import '../../../data/repositories/machine_connection.dart';
+import '../../../data/services/herdr_api.dart';
+import '../../../data/services/herdr_transport.dart';
 import 'session_prefill.dart';
 import 'session_start_support.dart' show NewSessionError, folderError, recentFolders;
 
@@ -17,6 +22,34 @@ String? agentFolderError(String? folder) {
   final problem = folderError(folder);
   if (problem != null) return problem;
   return folder!.trim().startsWith('/') ? null : 'An absolute path, starting with /';
+}
+
+/// Where the session runs, within the repo of the typed folder.
+sealed class CheckoutChoice {
+  const CheckoutChoice();
+}
+
+/// The typed folder itself. The default: creating things is never implicit.
+final class ThisFolder extends CheckoutChoice {
+  const ThisFolder();
+}
+
+/// A checkout that already exists, by path.
+final class ExistingCheckout extends CheckoutChoice {
+  const ExistingCheckout(this.path);
+
+  final String path;
+
+  @override
+  bool operator ==(Object other) => other is ExistingCheckout && other.path == path;
+
+  @override
+  int get hashCode => path.hashCode;
+}
+
+/// A worktree herdr makes when the session starts.
+final class NewWorktree extends CheckoutChoice {
+  const NewWorktree();
 }
 
 /// State of the new-agent-session form: which machine and agent, what the
@@ -122,6 +155,7 @@ class NewAgentSessionViewModel extends ChangeNotifier {
     _machineId = id;
     _agent = _rememberedAgent();
     _error = null;
+    _forgetCheckouts();
     unawaited(_probe());
     _changed();
   }
@@ -139,9 +173,104 @@ class NewAgentSessionViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Starts the session in [folder]. Null when it did not start; [error] says
-  /// why. The caller opens the returned session.
-  Future<AgentSessionView?> start(String folder) async {
+  /// The checkouts of the repo the typed folder is in, null while unknown or
+  /// when the folder is no git repo: the form then has no checkout to offer.
+  List<WorktreeInfo>? get checkouts => _checkouts;
+
+  /// Where the session runs. Applies to the folder the checkouts were read
+  /// for; a folder typed since says [ThisFolder].
+  CheckoutChoice get choice => _choice;
+
+  List<WorktreeInfo>? _checkouts;
+  CheckoutChoice _choice = const ThisFolder();
+
+  // The folder [_checkouts] and [_choice] are about (set when its lookup
+  // starts, cleared when it failed so a re-pick asks again), and a counter so
+  // only the latest lookup's answer is kept.
+  String? _lookedFor;
+  int _lookup = 0;
+
+  /// Reads the checkouts of the repo [folder] is in. Never an error: a folder
+  /// that is no git repo, a repo herdr does not trust, a herdr without
+  /// worktrees and a machine that does not answer all leave the form without
+  /// a `Checkout` row.
+  Future<void> lookUp(String folder) async {
+    final path = folder.trim();
+    final m = machine;
+    if (m == null || agentFolderError(path) != null) return _forgetCheckouts();
+    if (path == _lookedFor) return;
+    _forgetCheckouts();
+    final mine = _lookup;
+    _lookedFor = path;
+    final List<WorktreeInfo> found;
+    try {
+      found = await m.api.listWorktrees(cwd: path);
+    } on Exception catch (e) {
+      debugPrint('herdr: no checkouts for $path on ${m.profile.id}: $e');
+      if (mine == _lookup) _lookedFor = null;
+      return;
+    }
+    if (mine != _lookup || _disposed || found.isEmpty) return;
+    _checkouts = found;
+    m.noteBranches(found);
+    notifyListeners();
+  }
+
+  /// Drops what a lookup found and ignores any answer still on its way.
+  void _forgetCheckouts() {
+    _lookup++;
+    _lookedFor = null;
+    if (_checkouts == null && _choice is ThisFolder) return;
+    _checkouts = null;
+    _choice = const ThisFolder();
+    if (!_disposed) notifyListeners();
+  }
+
+  void chooseCheckout(CheckoutChoice choice) {
+    if (choice == _choice) return;
+    _choice = choice;
+    _error = null;
+    notifyListeners();
+  }
+
+  /// Why [branch] cannot name a new branch; null when it can (or is empty:
+  /// herdr names it). Whether git takes the name is left to git.
+  String? branchError(String? branch) {
+    final b = branch?.trim() ?? '';
+    if (b.isEmpty) return null;
+    if (_unfit.hasMatch(b)) return 'No spaces or control characters';
+    if (b.startsWith('-')) return 'Can’t start with -';
+    return null;
+  }
+
+  static final _unfit = RegExp(r'[\s\x00-\x1f\x7f]');
+
+  /// Agents working or waiting for an answer in [checkoutPath] or below, on the
+  /// chosen machine (the sessions the phone started are panes there too).
+  int agentsWorking(String checkoutPath) {
+    final m = machine;
+    if (m == null) return 0;
+    var base = checkoutPath;
+    if (base.length > 1 && base.endsWith('/')) base = base.substring(0, base.length - 1);
+    var n = 0;
+    for (final p in m.snapshot.panes) {
+      final cwd = p.cwd;
+      if (p.agent == null || cwd == null) continue;
+      if (p.status != AgentStatus.working && p.status != AgentStatus.blocked) continue;
+      if (cwd == base || cwd.startsWith(base == '/' ? '/' : '$base/')) n++;
+    }
+    return n;
+  }
+
+  /// The choice that applies to [folder]: none made yet for a folder whose
+  /// lookup has not started.
+  CheckoutChoice _choiceFor(String folder) => folder == _lookedFor ? _choice : const ThisFolder();
+
+  /// Starts the session in [folder], or in the checkout [choice] names within
+  /// its repo; [branch] names the branch of a new worktree (empty: herdr
+  /// names it). Null when it did not start; [error] says why. The caller
+  /// opens the returned session.
+  Future<AgentSessionView?> start(String folder, {String branch = ''}) async {
     if (_busy) return null;
     final m = machine;
     final path = folder.trim();
@@ -150,21 +279,104 @@ class NewAgentSessionViewModel extends ChangeNotifier {
     }
     final problem = agentFolderError(path);
     if (problem != null) return _fail(NewSessionError('Check the form', problem));
+    final choice = _choiceFor(path);
+    if (choice is NewWorktree) {
+      final bad = branchError(branch);
+      if (bad != null) return _fail(NewSessionError('Check the form', bad));
+    }
     final agentId = _agent;
 
     _busy = true;
     _error = null;
     notifyListeners();
+    WorktreeInfo? made;
     try {
-      final session = await _sessions.start(machine: m, agent: agentId, cwd: path);
+      var cwd = path;
+      switch (choice) {
+        case ThisFolder():
+          break;
+        case ExistingCheckout(path: final there):
+          cwd = there;
+        case NewWorktree():
+          final CreatedWorktree created;
+          try {
+            created = await m.api.createWorktree(cwd: path, branch: branch.trim());
+          } on HerdrUnsupportedException {
+            final v = m.snapshot.version;
+            return _fail(NewSessionError(
+              'Worktrees aren’t supported',
+              'herdr${v.isEmpty ? '' : ' $v'} on ${m.profile.label} can’t create worktrees. '
+                  'Update herdr on that machine, or choose This folder.',
+            ));
+          } on HerdrApiException catch (e) {
+            return _fail(NewSessionError('Couldn’t create the worktree', e.message));
+          } on HerdrTransportException catch (e) {
+            return _fail(await _createUnanswered(m, path, e.message));
+          } on TimeoutException {
+            return _fail(await _createUnanswered(m, path, 'The machine did not answer in time.'));
+          }
+          final worktree = created.worktree;
+          made = worktree;
+          try {
+            // So the toast names the new checkout by its repo.
+            await m.refresh().timeout(Dwell.refreshTimeout);
+          } on Exception {
+            // Offline or slow: events bring the lists up to date later.
+          }
+          m.noteBranches([worktree]);
+          cwd = worktree.path;
+          // Before the session starts: a start that fails and is retried must
+          // reuse this worktree, not make a second.
+          _adopt(path, worktree);
+      }
+      final session = await _sessions.start(machine: m, agent: agentId, cwd: cwd);
       unawaited(_settings.remember(machineId: m.profile.id, agent: agentId, folder: path));
       return session;
     } on AgentHostException catch (e) {
-      return _fail(NewSessionError('Couldn’t start the session', e.message));
+      final w = made;
+      return _fail(NewSessionError(
+        'Couldn’t start the session',
+        w == null ? e.message : '${e.message} The worktree ${w.name} was created; Start again to use it.',
+      ));
     } finally {
       _busy = false;
       if (!_disposed) notifyListeners();
     }
+  }
+
+  /// Makes [made] the chosen checkout of the repo [folder] is in.
+  void _adopt(String folder, WorktreeInfo made) {
+    if (_lookedFor != folder) return;
+    final known = _checkouts;
+    if (known != null && !known.any((c) => c.path == made.path)) _checkouts = [...known, made];
+    _choice = ExistingCheckout(made.path);
+  }
+
+  /// A create whose answer was lost (timeout, dropped link): herdr may have made
+  /// the worktree anyway, since its hooks can outlast the request. Looks again;
+  /// a single new linked checkout is adopted so Start again uses it instead of
+  /// making a second. Otherwise says it may exist.
+  Future<NewSessionError> _createUnanswered(MachineConnection m, String folder, String why) async {
+    final before = {for (final c in _checkouts ?? const <WorktreeInfo>[]) c.path};
+    try {
+      final now = await m.api.listWorktrees(cwd: folder).timeout(Dwell.refreshTimeout);
+      final fresh = [for (final w in now) if (w.isLinked && !before.contains(w.path)) w];
+      if (before.isNotEmpty && fresh.length == 1 && !_disposed) {
+        _checkouts = now;
+        m.noteBranches(now);
+        _adopt(folder, fresh.single);
+        return NewSessionError(
+          'The worktree was created',
+          '${fresh.single.name} exists, but the machine answered late. Start again to use it.',
+        );
+      }
+    } on Exception {
+      // Still not answering: say so below.
+    }
+    return NewSessionError(
+      'Couldn’t create the worktree',
+      '$why It may still have been created: check Checkout before trying again.',
+    );
   }
 
   AgentSessionView? _fail(NewSessionError error) {

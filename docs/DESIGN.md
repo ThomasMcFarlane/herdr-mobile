@@ -274,7 +274,7 @@ change. Status: **stable** = a catalog entry, a semantics test and this row.
 | `HoldToConfirm` | `hold_confirm.dart` | the hold guard | |
 | `AppTopBar`, `AppBackButton` | `top_bar.dart` | every top bar | seven bars, twelve Backs |
 | `SliverLargeTitle` | `large_title.dart` | a root or list page's title | |
-| `showAppSheet`, `SheetScaffold`, `SheetTitle`, `SheetGrabber`, `showActionSheet`, `showConfirmSheet` | `sheets.dart` | every sheet: four kinds (actions, list, message, form) | 23 sheets with their own paddings |
+| `showAppSheet`, `SheetScaffold`, `SheetTitle`, `SheetGrabber`, `showActionSheet`, `showConfirmSheet` | `sheets.dart` | every sheet: four kinds (actions, list, message, form); a confirm sheet takes `hold: true` and its danger button is then a `HoldToConfirm` (a tap says how; a screen reader activates twice), for what deletes something outside the app | 23 sheets with their own paddings |
 | `FloatingBar*`, `FloatingTabBar`, `BottomStackTransition` | `bottom_stack.dart` | the bottom stack (below) | |
 | `FloatingPill` | `floating_pill.dart` | a pill over content (jump to latest, changed on disk) | three pills |
 | `showToast`, `Toaster`, `ToastShelf`, `ToastCard` | `toast.dart` | the one transient message (`ToastCard` is its picture, for the catalog) | `SnackBar` |

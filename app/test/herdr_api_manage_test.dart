@@ -240,4 +240,75 @@ void main() {
       expect(const HerdrApiException('invalid_request', 'x').isNotFound, isFalse);
     });
   });
+
+  group('worktrees', () {
+    Map<String, dynamic> info(String path, {String? branch, bool linked = true, String? open, bool bare = false, bool prunable = false}) => {
+          'path': path,
+          'branch': branch,
+          'label': 'app',
+          'is_linked_worktree': linked,
+          'is_detached': branch == null,
+          'is_bare': bare,
+          'is_prunable': prunable,
+          'open_workspace_id': open,
+        };
+
+    test('create sends only cwd and focus:false without a branch, and adds the branch when given', () async {
+      t.on['worktree.create'] = (_) => {
+            'type': 'worktree_created',
+            'workspace': {'workspace_id': 'wW'},
+            'tab': {'tab_id': 'wW:t1'},
+            'root_pane': {'pane_id': 'wW:p1'},
+            'worktree': info('/wt/app-x', branch: 'worktree/x', open: 'wW'),
+          };
+
+      final r = await api.createWorktree(cwd: '/r', branch: '');
+      await api.createWorktree(cwd: '/r', branch: 'fix/x');
+
+      expect(t.paramsOf('worktree.create'), [
+        {'cwd': '/r', 'focus': false},
+        {'cwd': '/r', 'branch': 'fix/x', 'focus': false},
+      ]);
+      expect((r.workspaceId, r.tabId, r.rootPaneId, r.worktree.path, r.worktree.branch), ('wW', 'wW:t1', 'wW:p1', '/wt/app-x', 'worktree/x'));
+    });
+
+    test('a create answer without the worktree is a transport error', () async {
+      t.on['worktree.create'] = (_) => {
+            'workspace': {'workspace_id': 'wW'},
+            'tab': {'tab_id': 'wW:t1'},
+            'root_pane': {'pane_id': 'wW:p1'},
+          };
+
+      await expectLater(api.createWorktree(cwd: '/r'), throwsA(isA<HerdrTransportException>()));
+    });
+
+    test('remove sends the workspace id and never force', () async {
+      t.on['worktree.remove'] = (_) => {'type': 'worktree_removed'};
+      await api.removeWorktree('w9');
+
+      expect(t.paramsOf('worktree.remove'), [
+        {'workspace_id': 'w9'},
+      ]);
+    });
+
+    test('list drops bare and prunable checkouts and keeps one herdr has not opened', () async {
+      t.on['worktree.list'] = (_) => {
+            'type': 'worktree_list',
+            'worktrees': [
+              info('/r/app', branch: 'main', linked: false, open: 'w1'),
+              info('/wt/gone', branch: 'x', prunable: true),
+              info('/r/app.git', bare: true),
+              info('/wt/closed', branch: 'feat'),
+              {'label': 'no path'},
+            ],
+          };
+
+      final list = await api.listWorktrees(cwd: '/r/app');
+
+      expect(t.paramsOf('worktree.list'), [
+        {'cwd': '/r/app'},
+      ]);
+      expect(list.map((w) => (w.path, w.openWorkspaceId)), [('/r/app', 'w1'), ('/wt/closed', null)]);
+    });
+  });
 }

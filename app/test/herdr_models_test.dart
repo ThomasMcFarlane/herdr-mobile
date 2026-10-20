@@ -3,11 +3,13 @@ import 'dart:collection';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/herdr_models.dart';
 import 'package:herdr_mobile/data/models/machine_profile.dart';
+import 'package:herdr_mobile/data/models/worktrees.dart';
 import 'package:herdr_mobile/data/repositories/fleet_repository.dart';
 import 'package:herdr_mobile/data/repositories/machine_connection.dart';
 import 'package:herdr_mobile/data/services/herdr_api.dart';
 
 import 'support/fake_transport.dart';
+import 'support/worktree_fixtures.dart';
 
 Pane _pane(String title) => Pane.fromJson({
       'pane_id': 'w1:p1',
@@ -172,11 +174,55 @@ void main() {
       }
     });
 
+    test('a workspace\'s worktree is read from the five keys the wire keeps', () {
+      final worktree = _Spy({...wireLinkedWorktree});
+      Workspace.fromJson({'workspace_id': 'w', 'worktree': worktree});
+
+      final wire = ((snapshotWireFields['workspaces']! as Map)['worktree']! as Map).keys.toSet();
+      expect(wire, worktree.read);
+    });
+
     test('covers every field a pane read is parsed from', () {
       final read = _Spy({});
       PaneRead.fromJson(read);
 
       expect(paneReadWireFields.keys.toSet(), read.read);
+    });
+  });
+
+  group('workspace worktree', () {
+    Workspace parse(Object? worktree) => Workspace.fromJson(wireWorkspace('w1', worktree: worktree));
+
+    test('is read, survives the disk cache and a status roll-up', () {
+      final w = parse(wireLinkedWorktree);
+
+      expect(w.worktree!.isLinked, isTrue);
+      expect(w.worktree!.checkoutPath, wireLinkedWorktree['checkout_path']);
+      expect(Workspace.fromJson(w.toJson()), w);
+      expect(w.withStatus(AgentStatus.blocked).worktree, w.worktree);
+      expect(parse(wirePrimaryWorktree), isNot(w));
+    });
+
+    test('null or a malformed map leaves a plain workspace, never drops it', () {
+      expect(parse(null).worktree, isNull);
+      expect(parse('x').worktree, isNull);
+      expect(parse({...wireLinkedWorktree, 'checkout_path': ''}).worktree, isNull);
+      expect(parse({...wireLinkedWorktree}..remove('repo_name')).worktree, isNull);
+      expect(parse({...wireLinkedWorktree, 'repo_key': 3}).id, 'w1');
+    });
+
+    test('a checkout that went detached stops showing its old branch', () {
+      final machine = MachineConnection(
+        profile: const MachineProfile(id: 'm', label: 'box', host: 'h', username: 'u'),
+        api: HerdrApi(FakeTransport()),
+      );
+      addTearDown(machine.dispose);
+      const path = '/r/wt';
+      machine.noteBranches([const WorktreeInfo(path: path, label: 'x', isLinked: true, branch: 'feat/x')]);
+      expect(machine.branchOf(path), 'feat/x');
+
+      machine.noteBranches([const WorktreeInfo(path: path, label: 'x', isLinked: true, isDetached: true)]);
+      expect(machine.branchOf(path), isNull);
     });
   });
 }

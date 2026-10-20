@@ -137,7 +137,11 @@ know why. To accept a new key, remove the machine and add it again.
 dot in front), `N agents · user@host` and, when agents need you, their count. Its
 `More` menu has `Edit`, `Disable` (stop connecting without deleting it) and
 `Remove` (deletes the connection and its credentials from the phone). Tap a
-machine to see its workspaces, tabs and panes; `Browse files` and the `+`
+machine to see its workspaces, tabs and panes. A repo with several worktrees
+open in herdr is one section: the repo, then its checkouts (`Main checkout`
+and one per worktree, with the branch), with the agents in each; the `+` on the
+repo starts an agent in its main checkout and `⋯` on a checkout can start one
+there or remove the worktree (held, never forced). `Browse files` and the `+`
 (`New agent session` on that machine) are at the top.
 
 ## 4. The board
@@ -376,7 +380,11 @@ when it can.
 
 1. Under `Where`, pick the machine and type a `Folder` (an absolute path, or
    one starting with `~`), or browse to it. Folders used before are offered
-   below the field.
+   below the field. When the folder is in a git repo, a `Checkout` row
+   appears: `This folder` (the default), another checkout of the same repo, or
+   `New worktree…`, which has herdr add a worktree (a new folder and branch,
+   named by herdr unless you type a `Branch`) and starts the session in it.
+   The row says how many agents already work in the folder.
 2. Under `Agent`, pick `omp`, `Claude Code`, `Codex` or `pi`. An agent that
    isn't installed on the machine is dimmed with the reason.
 3. Tap `Start` (stay where you are; the toast has `Open`) or

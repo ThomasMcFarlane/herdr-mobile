@@ -5,16 +5,16 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/models/herdr_models.dart';
-import '../../../data/repositories/agent_screens.dart';
+import '../../../data/models/machine_layout.dart';
 import '../../../data/repositories/machine_connection.dart';
 import 'approval_button.dart';
-import '../../../data/words/agent_names.dart';
-import '../../../data/words/where_line.dart';
+import '../../../data/words/place_name.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
-import '../agents/agent_navigation.dart';
 import '../create/management_sheets.dart';
 import '../create/new_agent_session_screen.dart';
 import '../files/files_navigation.dart';
+import 'machine_pane_rows.dart';
+import 'machine_repo_section.dart';
 
 /// Everything running on one machine: workspaces (herdr's order) → tabs
 /// (newest first) → panes.
@@ -45,17 +45,28 @@ class _MachineViewState extends State<_MachineView> {
   /// Workspaces whose pane list was lifted past the cap.
   final _showAll = <String>{};
 
-  bool _isOpen(MachineConnection machine, Workspace w) =>
-      _toggled[w.id] ??
-      (machine.snapshot.workspaces.length <= 4 ||
-          w.status == AgentStatus.blocked ||
-          w.status == AgentStatus.done);
+  /// Open by default when something here needs a look, or when there is little
+  /// to scroll. [key] is a workspace id or a repo key.
+  bool _isOpen(String key, AgentStatus status, int sections) =>
+      _toggled[key] ??
+      (sections <= 4 || status == AgentStatus.blocked || status == AgentStatus.done);
+
+  @override
+  void initState() {
+    super.initState();
+    // Branches are decoration read once on arrival and on pull-to-refresh: no
+    // timer, no subscription.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(context.read<MachineConnection>().loadBranches());
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
     final machine = context.watch<MachineConnection>();
     final snap = machine.snapshot;
+    final items = machineLayout(snap, machine.places, machine.keeperPanes.keys.toSet());
     final state = machine.state;
     final approval = machine.approvalUrl;
 
@@ -88,6 +99,7 @@ class _MachineViewState extends State<_MachineView> {
         onRefresh: () async {
           if (machine.isLive) {
             await machine.refresh();
+            unawaited(machine.loadBranches());
           } else {
             machine.retry();
           }
@@ -155,19 +167,28 @@ class _MachineViewState extends State<_MachineView> {
               )
             else
               SliverList.builder(
-                itemCount: snap.workspaces.length,
-                itemBuilder: (_, i) {
-                  final w = snap.workspaces[i];
-                  final open = _isOpen(machine, w);
-                  return _WorkspaceSection(
-                    key: ValueKey(w.id),
-                    machine: machine,
-                    workspace: w,
-                    open: open,
-                    showAll: _showAll.contains(w.id),
-                    onToggle: () => setState(() => _toggled[w.id] = !open),
-                    onShowAll: () => setState(() => _showAll.add(w.id)),
-                  );
+                itemCount: items.length,
+                itemBuilder: (_, i) => switch (items[i]) {
+                  WorkspaceItem(:final workspace, :final panes) => _WorkspaceSection(
+                      key: ValueKey(workspace.id),
+                      machine: machine,
+                      workspace: workspace,
+                      panes: panes,
+                      open: _isOpen(workspace.id, workspace.status, items.length),
+                      showAll: _showAll.contains(workspace.id),
+                      onToggle: () => setState(() => _toggled[workspace.id] = !_isOpen(workspace.id, workspace.status, items.length)),
+                      onShowAll: () => setState(() => _showAll.add(workspace.id)),
+                    ),
+                  final RepoItem repo => MachineRepoSection(
+                      key: ValueKey(repo.group.repoKey),
+                      machine: machine,
+                      item: repo,
+                      open: _isOpen(repo.group.repoKey, repo.status, items.length),
+                      onToggle: () => setState(
+                          () => _toggled[repo.group.repoKey] = !_isOpen(repo.group.repoKey, repo.status, items.length)),
+                      showAll: _showAll.contains,
+                      onShowAll: (id) => setState(() => _showAll.add(id)),
+                    ),
                 },
               ),
             SliverToBoxAdapter(
@@ -180,16 +201,12 @@ class _MachineViewState extends State<_MachineView> {
   }
 }
 
-/// Past this many panes a workspace lists the first ones and offers the rest
-/// behind "Show all": a workspace with a hundred panes would otherwise build a
-/// hundred rows at once (its rows are not in a lazy list).
-const _paneCap = 30;
-
 class _WorkspaceSection extends StatelessWidget {
   const _WorkspaceSection({
     super.key,
     required this.machine,
     required this.workspace,
+    required this.panes,
     required this.open,
     required this.showAll,
     required this.onToggle,
@@ -198,6 +215,7 @@ class _WorkspaceSection extends StatelessWidget {
 
   final MachineConnection machine;
   final Workspace workspace;
+  final List<PaneEntry> panes;
   final bool open;
   final bool showAll;
   final VoidCallback onToggle;
@@ -205,56 +223,33 @@ class _WorkspaceSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final snap = machine.snapshot;
-    // Newest tab first: herdr opens a tab at the end of its workspace, so in
-    // its order a session just started from the phone, and the ones still
-    // working, sat at the bottom under every finished one. Panes keep their
-    // order within a tab (splits of one place).
-    final tabs = [...snap.tabsOf(workspace.id)]..sort((a, b) => b.number.compareTo(a.number));
-    final multiTab = tabs.length > 1;
     final live = machine.isLive;
 
-    // A tab label only matters when there is more than one.
     // These are row descriptions only: [Collapse] builds nothing for a
     // workspace that is closed.
-    final rows = <RowSpec>[];
-    var total = 0;
-    var shown = 0;
-    for (final tab in tabs) {
-      final label = tab.label.isEmpty ? 'Tab ${tab.number}' : tab.label;
-      for (final pane in snap.panesOf(tab.id)) {
-        total++;
-        if (!showAll && total > _paneCap) continue;
-        shown++;
-        rows.add(CustomRow(
-          id: pane.id,
-          dividerIndent: ListRow.textIndent(leadingExtent: _PaneRow.leadingExtent),
-          child: RepaintBoundary(
-            child: _PaneRow(
-              machine: machine,
-              pane: pane,
-              tabLabel: multiTab ? label : null,
-              dim: !live,
-            ),
-          ),
-        ));
-      }
-    }
-    if (total > shown) rows.add(CustomRow(id: 'show-all', child: _ShowAllRow(total: total, onTap: onShowAll)));
+    final rows = machinePaneRows(
+      machine: machine,
+      entries: panes,
+      showAll: showAll,
+      onShowAll: onShowAll,
+      folderOf: (pane) => placeName(machine.places, pane.cwd),
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SectionLabel(
           label: workspace.label.isEmpty ? workspace.id : workspace.label,
-          count: workspace.paneCount,
+          // The rows listed, not herdr's count: sessions placed under a
+          // checkout elsewhere are not in this list.
+          count: panes.length,
           expanded: open,
           onTap: onToggle,
           leading: StatusGlyph(status: workspace.status, size: IconSize.inline, dim: !live),
           // Nudged right so the dots line up with the chevrons of the rows below;
           // the hit box moves with them.
           trailing: Transform.translate(
-            offset: const Offset(_dotsNudge, 0),
+            offset: const Offset(machineDotsNudge, 0),
             child: CircleButton(
               icon: LucideIcons.ellipsis,
               tooltip: 'Workspace actions',
@@ -269,91 +264,6 @@ class _WorkspaceSection extends StatelessWidget {
           child: RowColumn(rows: rows),
         ),
       ],
-    );
-  }
-
-  /// Moves the workspace's ⋯ right so its dots line up with the row chevrons.
-  static const _dotsNudge = 10.0;
-}
-
-/// "Show all 120 panes": the quiet row that ends a capped workspace.
-class _ShowAllRow extends StatelessWidget {
-  const _ShowAllRow({required this.total, required this.onTap});
-
-  final int total;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => PressRow(
-        onTap: onTap,
-        minHeight: _minHeight,
-        // Aligned with the pane titles above.
-        padding: EdgeInsetsDirectional.only(
-          start: ListRow.textIndent(leadingExtent: _PaneRow.leadingExtent) - PressRow.inset,
-          end: Gap.gutter - PressRow.inset,
-        ),
-        child: Text(
-          'Show all $total panes',
-          style: Type.labelStrong.copyWith(color: context.ds.accentText),
-        ),
-      );
-
-  /// A quiet closing row, lower than a pane row.
-  static const _minHeight = 48.0;
-}
-
-class _PaneRow extends StatelessWidget {
-  const _PaneRow({
-    required this.machine,
-    required this.pane,
-    required this.tabLabel,
-    required this.dim,
-  });
-
-  final MachineConnection machine;
-  final Pane pane;
-  final String? tabLabel;
-  final bool dim;
-
-  /// Leading column: the terminal tile is 28, so the glyphs share that width.
-  static const leadingExtent = 28.0;
-
-  @override
-  Widget build(BuildContext context) {
-    final agent = pane.agent;
-    final name = agentName(agent);
-    final title = pane.title.isNotEmpty ? pane.title : name;
-    // whereLine's drop rules for the agent and the folder; the tab sits
-    // between them, since a workspace with several tabs needs it as well as
-    // the folder.
-    final subtitle = [
-      whereLine(agent: agent != null ? name : null, title: title),
-      ?tabLabel,
-      whereLine(folder: cwdTail(pane.cwd), title: title),
-    ].where((s) => s.isNotEmpty).join(' · ');
-
-    return ListRow(
-      leading: agent != null
-          ? StatusGlyph(status: pane.status, size: IconSize.lead)
-          : const IconTile(icon: LucideIcons.squareTerminal, size: leadingExtent),
-      leadingExtent: leadingExtent,
-      title: title,
-      titleMaxLines: 2,
-      subtitle: subtitle,
-      dim: dim,
-      onLongPress: dim
-          ? null
-          : () {
-              Haptics.hold();
-              showPaneActions(context, machine, pane, title: title);
-            },
-      onTap: () {
-        Haptics.tick();
-        // A keeper's view pane is the agent session as text: the chat shows
-        // the same session whole, with the dock, photos and files.
-        final session = machine.keeperPanes[pane.id];
-        unawaited(openAgent(context, session != null ? SessionAgent(session) : PaneAgent(machine.profile.id, pane.id)));
-      },
     );
   }
 }
