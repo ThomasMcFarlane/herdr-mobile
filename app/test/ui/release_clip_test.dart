@@ -14,32 +14,19 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:herdr_mobile/data/models/release_info.dart';
 import 'package:herdr_mobile/data/repositories/agent_session.dart';
-import 'package:herdr_mobile/data/repositories/app_update.dart';
-import 'package:herdr_mobile/data/repositories/notification_settings.dart';
-import 'package:herdr_mobile/data/repositories/quick_phrases.dart';
-import 'package:herdr_mobile/data/services/notifier.dart';
+import 'package:herdr_mobile/data/repositories/agent_session_repository.dart';
+import 'package:herdr_mobile/data/repositories/agent_session_settings.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
+import 'package:herdr_mobile/ui/features/create/checkout_field.dart';
 import 'package:herdr_mobile/ui/shell/home_shell.dart';
 import 'package:provider/provider.dart';
 
 import '../../screenshot_test/demo_fleet.dart';
 import '../support/clip_recorder.dart';
-import '../support/fake_agent_session.dart';
-import '../support/memory_quick_phrases_store.dart';
+import '../support/fake_agent_host.dart';
 import '../support/shot.dart';
-import '../support/update_fakes.dart';
-
-/// The release's own notes, as the sheet shows them: its section of
-/// CHANGELOG.md without the heading and without the walkthrough line (the
-/// poster is fetched from GitHub, which a test cannot reach).
-String _notes(String version) {
-  final lines = File('../CHANGELOG.md').readAsLinesSync();
-  final start = lines.indexWhere((l) => l.startsWith('## [$version]'));
-  final end = lines.indexWhere((l) => l.startsWith('## ['), start + 1);
-  return lines.sublist(start + 1, end).where((l) => !l.startsWith('[![')).join('\n').trim();
-}
+import 'history_support.dart' show MemorySessionStore;
 
 void main() {
   if (Platform.environment['RELEASE_CLIP'] == null) {
@@ -49,76 +36,70 @@ void main() {
   final dir = Platform.environment['RELEASE_CLIP_DIR'] ?? '/tmp/release_clip';
   setUpAll(loadAppFonts);
 
-  // 0.1.20, "Read what's new before you update".
-  testWidgets('0.1.20 walkthrough', (tester) async {
-    final h = await DemoFleet.create(timed: true);
-    final sessions = FakeAgentSessions(const []);
-    const version = '0.1.20';
-    final release = ReleaseInfo(
-      version: version,
-      apkUrl: 'https://github.com/tuan3w/herdr-mobile/releases/download/v$version/herdr-mobile-$version.apk',
-      size: 23819658,
-      pageUrl: ReleaseInfo.pageFor(version),
-      notes: _notes(version),
-      sha256: 'a' * 64,
-    );
-    final files = FakeReleaseFiles();
-    final update = AppUpdate(
-      store: MemoryUpdateStore(),
-      feed: FakeReleaseFeed()..answer = release,
-      files: files,
-      installer: FakeApkInstaller(),
-      current: AppVersion.tryParse('0.1.19'),
-    );
-    addTearDown(update.dispose);
-    await update.check();
+  // 0.1.21, "See and manage your worktrees from the phone".
+  testWidgets('0.1.21 walkthrough', (tester) async {
+    final h = await DemoFleet.create(timed: true, worktrees: true);
+    await h.online(tester);
+    final hosts = <String, FakeAgentHost>{};
+    final sessions = AgentSessionRepository(fleet: h.fleet, hostFor: (c) => hosts.putIfAbsent(c.profile.id, FakeAgentHost.new));
+    final settings = AgentSessionSettings(MemorySessionStore());
+    await settings.load();
     final rec = ClipRecorder(dir);
     const total = 3;
     const beat = Duration(milliseconds: 500);
 
     await shoot(
       tester,
-      HomeShell(update: update),
+      const HomeShell(),
       '$dir/last.png',
       wrap: (app) => demoProviders(h, extra: [
         ListenableProvider<AgentSessions>.value(value: sessions),
-        // Settings reads these.
-        ChangeNotifierProvider(create: (_) => NotificationSettings(MemoryNotificationStore())),
-        ChangeNotifierProvider(create: (_) => QuickPhrases(MemoryQuickPhrasesStore(['continue', 'run the tests']))),
-        Provider<Notifier>.value(value: const NullNotifier()),
+        ChangeNotifierProvider.value(value: settings),
       ])(rec.wrap(app)),
       pump: (t) async {
         await h.ageStatuses(t);
         await t.pump(const Duration(milliseconds: 600));
 
-        rec.chapter(1, total, 'The dot on Settings leads to the update');
-        await rec.hold(t, const Duration(milliseconds: 1200));
-        await rec.tap(t, find.byKey(FloatingTabBar.tabKey('Settings')), 'Open Settings');
-        await rec.hold(t, const Duration(milliseconds: 1200));
-
-        rec.chapter(2, total, 'What\u2019s new comes first');
-        await rec.tap(t, find.text('Update available'), 'Tap Update available');
-        await rec.hold(t, const Duration(milliseconds: 1600));
-        final notes = t.getCenter(find.text('Update to $version'));
-        await rec.drag(t, notes + const Offset(0, 260), const Offset(0, -180), 'Read what changed',
-            over: const Duration(milliseconds: 900));
+        // 1. A machine's screen: the repo, its checkouts, branches and agents.
+        rec.chapter(1, total, 'A repo shows its checkouts and who works in each');
+        await rec.tap(t, find.byKey(FloatingTabBar.tabKey('Machines')), 'Open Machines');
         await rec.hold(t, const Duration(milliseconds: 800));
+        await rec.tap(t, find.text('studio-mac'), 'Open studio-mac');
+        await rec.hold(t, const Duration(milliseconds: 2800));
 
-        rec.chapter(3, total, 'Then Download and Install', top: true);
-        await rec.tap(t, find.text('Download ${megabytes(release.size)}'), 'Download');
-        for (var i = 1; i <= 16; i++) {
-          files.report(release.size * i ~/ 16);
-          await rec.hold(t, const Duration(milliseconds: 120));
+        // 2. New agent session: Checkout, New worktree…, Branch.
+        rec.chapter(2, total, 'Start an agent in a new worktree', top: true);
+        await rec.tap(t, find.byTooltip('New agent session in payments-api'), 'Start a session in the repo');
+        await rec.hold(t, const Duration(milliseconds: 1400));
+        await rec.tap(t, find.byType(CheckoutField), 'Open Checkout');
+        await rec.hold(t, const Duration(milliseconds: 1200));
+        await rec.tap(t, find.text('New worktree…'), 'Pick New worktree…');
+        await rec.hold(t, const Duration(milliseconds: 900));
+        await rec.tap(t, find.widgetWithText(TextFormField, 'Named by herdr'), 'Type a Branch');
+        const branch = 'feat/refund-webhooks';
+        for (var i = 1; i <= branch.length; i++) {
+          await t.enterText(find.widgetWithText(TextFormField, 'Named by herdr'), branch.substring(0, i));
+          await rec.hold(t, const Duration(milliseconds: 70));
         }
-        files.running!.complete(File('/x.apk'));
-        await t.pump();
-        await rec.hold(t, const Duration(milliseconds: 2200));
+        await rec.hold(t, const Duration(milliseconds: 1600));
+
+        // 3. A checkout's ⋯: Remove worktree asks for a hold.
+        rec.chapter(3, total, 'Remove a worktree with a hold', top: true);
+        await rec.tap(t, find.byType(AppBackButton).hitTestable(), 'Back to the machine');
+        await rec.hold(t, const Duration(milliseconds: 1000));
+        await rec.tap(t, find.byTooltip('Checkout actions').at(2), 'Open Checkout actions');
+        await rec.hold(t, const Duration(milliseconds: 1000));
+        await rec.tap(t, find.text('Remove worktree'), 'Remove worktree');
+        await rec.hold(t, const Duration(milliseconds: 1500));
+        await rec.longPress(t, find.byType(HoldToConfirm), 'Hold to remove', hold: const Duration(milliseconds: 1100));
+        await rec.hold(t, const Duration(milliseconds: 1600));
         await rec.hold(t, beat);
       },
     );
     rec.finish();
     await tester.pumpWidget(const SizedBox());
     sessions.dispose();
+    settings.dispose();
     h.dispose();
   });
 }

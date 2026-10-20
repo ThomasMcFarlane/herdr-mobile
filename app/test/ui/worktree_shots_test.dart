@@ -2,7 +2,8 @@
 // Checkout row to PNGs for review, with worst-case data: a 40-character repo
 // name, 12 checkouts, a 60-character branch, one checkout with 31 panes (past
 // the `Show all` cap), a blocked agent in a collapsed repo, an offline machine,
-// text scale 1 and 2, light and dark, 412 and 320 wide. Off by default; it
+// text scale 1 and 2, light and dark, 412 and 320 wide, plus the demo fleet's
+// repo for the release still (demo-repo-light-412.png). Off by default; it
 // writes files:
 //
 //   WORKTREE_SHOTS=1 flutter test test/ui/worktree_shots_test.dart
@@ -22,6 +23,7 @@ import 'package:herdr_mobile/ui/features/create/session_prefill.dart';
 import 'package:herdr_mobile/ui/features/machines/machine_screen.dart';
 import 'package:provider/provider.dart';
 
+import '../../screenshot_test/demo_fleet.dart';
 import '../support/create_harness.dart';
 import '../support/shot.dart';
 import '../support/worktree_fixtures.dart';
@@ -206,6 +208,27 @@ void main() {
         brightness: Brightness.dark,
         offline: true,
       ));
+
+  // The release still: the invented demo fleet's studio-mac, where payments-api
+  // has a main checkout and two worktrees (no private names).
+  testWidgets('machine: the demo fleet\'s repo with its worktrees (release still)', (tester) async {
+    final h = await DemoFleet.create(timed: true, worktrees: true);
+    await shoot(
+      tester,
+      MachineScreen(machine: h.fleet.connection('a')!),
+      '$out/demo-repo-light-412.png',
+      size: const Size(412, 800),
+      imageScale: 2,
+      wrap: demoProviders(h),
+      pump: (t) async {
+        await h.ageStatuses(t);
+        await settle(t);
+      },
+    );
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    h.dispose();
+  });
 
   Future<void> formShot(
     WidgetTester tester,
