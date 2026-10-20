@@ -4,12 +4,23 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
-## [Unreleased]
+## [0.1.25] - 2026-10-20
 
-- A page that asks for a user name and password (a dev server, or a reverse
-  proxy in front of it, with Basic auth) now shows a `Sign in` sheet. It used
-  to load nothing and give no way to enter them. Dismissing the sheet cancels
-  the sign-in; nothing typed is kept.
+### A page behind a password asks you to sign in
+
+A page that wants a user name and password (a dev server, or a reverse proxy
+in front of it, with Basic auth) now asks for them. It used to load nothing
+and give no way to enter them.
+
+> [!TIP]
+> Try it: tap a link to a page behind a password and choose `Open page`; the
+> `Sign in` sheet appears.
+
+- The sheet names the machine and shows the server's own words for what it
+  protects. A page and its pictures asking together share one sheet, so you
+  type once. A wrong password asks again.
+- Dismissing the sheet cancels the sign-in. What you type is used for that
+  page only and is not kept. Not tried on a phone yet.
 
 ## [0.1.24] - 2026-10-20
 
