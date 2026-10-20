@@ -4,6 +4,29 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [0.1.23] - 2026-10-20
+
+### Mermaid diagrams are drawn in answers
+
+When an agent answers with a Mermaid diagram, you now see the diagram, not
+its source: flowcharts, sequence, state, ER and class diagrams, in the app's
+own look, light and dark.
+
+> [!TIP]
+> Try it: ask an agent to draw a flowchart in Mermaid, then tap the diagram,
+> or `Open diagram`, to zoom it full screen.
+
+- A diagram wider than the screen scrolls sideways; a tall one is cropped
+  with `Show all`. `Copy source` on a diagram copies the Mermaid text as the
+  agent wrote it, and `Save or share` in the full-screen view sends the
+  diagram as a picture.
+- A left-to-right flowchart is drawn top-down when that fits the screen
+  better; the header says so.
+- Other kinds (a Gantt chart, a pie chart), a diagram with a mistake in it,
+  and one that is still arriving stay as code, with a line saying why.
+- Laying one out took under 2 ms for 95% of 2,213 real diagrams on a laptop.
+  Frame times on a phone and the size of the app were not measured.
+
 ## [0.1.22] - 2026-10-20
 
 [![Watch what's new · 3 changes · 0:21 · 6.9 MB](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.22/0.1.22-whats-new.jpg)](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.22/0.1.22-whats-new.mp4)
