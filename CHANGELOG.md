@@ -4,21 +4,33 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
-## [Unreleased]
+## [0.1.24] - 2026-10-20
 
-### Fixes
+[![Watch what's new · 1 change · 0:13 · 2.8 MB](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.24/0.1.24-whats-new.jpg)](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.24/0.1.24-whats-new.mp4)
 
-- A session started in a worktree now shows at the computer inside that
-  worktree's own workspace, next to its shell, not in `Phone sessions`.
+### A session in a worktree shows up in that worktree
+
+At the computer, an agent you start in a worktree from the phone now has its
+tab in that worktree's own workspace in herdr, next to its shell. It used to
+sit in `Phone sessions`, and the worktree looked empty.
+
+> [!TIP]
+> Try it: start a new agent session, open `Checkout` and pick `New worktree…`:
+> `Branch` starts with a name you can keep or change.
+
+- `New worktree…` fills `Branch` with a name like `worktree/brave-meadow-45e8`,
+  one the repo has no branch of yet. Change it, or clear it to let herdr name it.
+- Only sessions started from now on move. A session in a repo's main checkout
+  stays in `Phone sessions`. Not checked on a live herdr desktop yet.
+
+![New agent session with Checkout set to New worktree and Branch holding worktree/merry-harbor-4ce3](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.24/0.1.24-branch-suggested.png)
+
+**Fixed**
+
 - A picture with see-through pixels, a PNG or WebP, in the full-screen
   viewer no longer shows a strip of grey squares past its right and bottom
   edge. The strip grew as you zoomed in; it was seen on a large diagram.
   Not checked on a phone yet.
-
-### New
-
-- `New worktree…` starts with a branch name filled in (`worktree/brave-meadow-45e8`
-  style); change it, or clear it to let herdr name it.
 
 ## [0.1.23] - 2026-10-20
 
