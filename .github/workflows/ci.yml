@@ -1,9 +1,30 @@
 name: CI
 
+# Markdown, store text and the agent skills cannot change a test result, so a
+# change that only touches them skips the run. Not docs/**: the tests read
+# docs/herdr-api.schema.json, and tool/ holds the design lint they import.
+# (If a branch rule requires the `check` job, a skipped run leaves it pending:
+# drop the filters then.)
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'fastlane/**'
+      - 'LICENSE'
+      - '.agents/**'
+      - '.claude/**'
+      - '.pi/**'
+      - '.omp/**'
   pull_request:
+    paths-ignore:
+      - '**/*.md'
+      - 'fastlane/**'
+      - 'LICENSE'
+      - '.agents/**'
+      - '.claude/**'
+      - '.pi/**'
+      - '.omp/**'
 
 # It only reads the code: the token can do nothing else (CodeQL
 # actions/missing-workflow-permissions).
@@ -15,17 +36,70 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # analyze + design lint: seconds, so its own job and never queued behind tests.
   check:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
           flutter-version: 3.47.6
+          # Caches the SDK and the pub cache (keyed on pubspec.lock).
           cache: true
 
-      - name: Analyze and test
-        run: tool/check.sh
+      - name: Analyze and design lint
+        run: tool/check.sh --quick
+
+  # The tests are ~1,550 s of work that waits on processes and timers, and a
+  # runner has 4 cores: more jobs per runner made timing tests fail, so they
+  # are split over runners instead. Measured on 4 pinned cores: 308 s whole,
+  # ~91-101 s per quarter (kernel compile ~25 s each, then a quarter of the
+  # tests); thirds took ~118 s.
+  test:
+    name: test (${{ matrix.shard }}/4)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.6
+          # Caches the SDK and the pub cache (keyed on pubspec.lock).
+          cache: true
+
+      - name: Test
+        env:
+          HERDR_TEST_ONLY: rest
+          HERDR_TEST_SHARD: ${{ matrix.shard }}/4
+        run: tool/check.sh --tests
+
+  # The tests tagged `timing` (app/dart_test.yaml) assert on real time and
+  # failed intermittently when run beside the others on a busy CPU. Here they
+  # run alone at half the jobs: 276 tests, ~80 s on 4 pinned cores.
+  test-timing:
+    name: test (timing)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.6
+          # Caches the SDK and the pub cache (keyed on pubspec.lock).
+          cache: true
+
+      - name: Test
+        env:
+          HERDR_TEST_ONLY: timing
+        run: tool/check.sh --tests
