@@ -83,6 +83,15 @@ class OmpLogMapper implements SessionLogMapper {
   var _bgEpoch = 0;
   var _turnEnded = false;
 
+  /// The plan the agent submitted with `write xd://propose` and has not been
+  /// answered: omp opens its plan review for it.
+  ProposedPlan? _proposed;
+
+  /// What the agent last wrote to each plan file (`local://<slug>-plan.md`),
+  /// by path; null when something else changed the file since. The submitted
+  /// plan is that file, and the log holds its text only as the write's content.
+  final _planFiles = <String, String?>{};
+
   @override
   PendingAsk? get pendingAsk => _ask;
 
@@ -99,6 +108,9 @@ class OmpLogMapper implements SessionLogMapper {
   bool get turnEnded => _turnEnded;
 
   @override
+  ProposedPlan? get proposedPlan => _proposed;
+
+  @override
   void reset() {
     _seen.clear();
     _started.clear();
@@ -111,6 +123,8 @@ class OmpLogMapper implements SessionLogMapper {
     _taskView = null;
     _bgEpoch = 0;
     _turnEnded = false;
+    _planFiles.clear();
+    _proposed = null;
   }
 
   @override
@@ -154,6 +168,10 @@ class OmpLogMapper implements SessionLogMapper {
         return _customMessage(e, line);
       case 'custom':
         return _custom(e, line);
+      case 'mode_change':
+        // Approving the plan, or leaving plan mode, ends the review.
+        if (e['mode'] != 'plan') _proposed = null;
+        return const [];
       default:
         return const [];
     }
@@ -201,6 +219,7 @@ class OmpLogMapper implements SessionLogMapper {
     final key = _firstTime(e, line);
     if (key == null) return const [];
     _turnEnded = false;
+    _proposed = null;
     return [..._userClears(), userMessageUpsert(key, text, pictures)];
   }
 
@@ -233,11 +252,14 @@ class OmpLogMapper implements SessionLogMapper {
         final key = _firstTime(e, line);
         if (key == null) return const [];
         _turnEnded = false;
+        _proposed = null;
         return [..._userClears(), userMessageUpsert(key, text, pictures)];
       case 'assistant':
         final key = _firstTime(e, line);
         if (key == null) return const [];
         final out = _assistant(key, m);
+        // The abort that opens the review leaves an aborted message behind it.
+        if (m['stopReason'] != 'aborted') _proposed = null;
         _turnEnded = _endsTurn(m['stopReason']) && _open.isEmpty;
         return out;
       case 'toolResult':
@@ -392,6 +414,7 @@ class OmpLogMapper implements SessionLogMapper {
     _started.add(id);
     _open[id] = _OpenCall(name, diffs, names, command: _commandOf(args));
     if (name == 'ask') _ask = _parseAsk(id, args);
+    _notePlanFile(name, args);
     final intent = b['intent'] is String ? b['intent'] as String : (args?['i'] is String ? args!['i'] as String : null);
     final roster = _roster(names);
     return ToolCallStart(
@@ -406,6 +429,39 @@ class OmpLogMapper implements SessionLogMapper {
         locations: _locationsOfCall(name, args),
       ),
     );
+  }
+
+  static final _planFile = RegExp(r'-plan\.md$');
+  static const _fileTools = {'edit', 'patch', 'apply_patch', 'ast_edit', 'multi_edit', 'str_replace'};
+
+  /// Keeps what the agent writes to a plan file, and forgets it when another
+  /// tool changes that file (the plan sent for approval would then not be the
+  /// text written, and showing the old text as the plan would be wrong).
+  void _notePlanFile(String name, Json? args) {
+    if (args == null) return;
+    final path = args['path'];
+    if (name == 'write' && path is String && _planFile.hasMatch(path)) {
+      final content = args['content'];
+      _planFiles[path] = content is String ? content : null;
+    } else if (_planFiles.isNotEmpty && _fileTools.contains(name)) {
+      final text = jsonEncode(args);
+      for (final p in _planFiles.keys) {
+        if (text.contains(p.substring(p.lastIndexOf('/') + 1))) _planFiles[p] = null;
+      }
+    }
+  }
+
+  /// The plan a result submits: `write xd://propose` (details `xdev.tool` is
+  /// `propose`, its `inner` names the plan file and title). Null for any other.
+  ProposedPlan? _proposalOf(String name, Json? details) {
+    if (name != 'write') return null;
+    final xdev = details?['xdev'];
+    if (xdev is! Map || xdev['tool'] != 'propose' || xdev['mode'] != 'execute') return null;
+    final inner = xdev['inner'];
+    final path = inner is Map ? inner['planFilePath'] : null;
+    if (path is! String) return null;
+    final title = (inner as Map)['title'];
+    return ProposedPlan(title: title is String ? title : '', markdown: _planFiles[path]);
   }
 
   static Json? _arguments(Object? raw) {
@@ -432,6 +488,8 @@ class OmpLogMapper implements SessionLogMapper {
     final rawName = m['toolName'];
     final name = open?.name ?? (rawName is String && rawName.isNotEmpty ? rawName : 'tool');
     final details = m['details'] is Map<String, dynamic> ? m['details'] as Map<String, dynamic> : null;
+    // A result after the proposal's own ends it; the proposal's result starts it.
+    _proposed = isError ? null : _proposalOf(name, details);
 
     // The change as the result reports it (real old text) wins over the one
     // the call's arguments implied; a failed call changed nothing.

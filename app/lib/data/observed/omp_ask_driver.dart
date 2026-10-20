@@ -773,12 +773,80 @@ class OmpApprovalScreen extends OmpMenuScreen {
 }
 
 /// omp's plan review ("Plan mode - next step"): Approve and execute / compact
-/// context / keep context, Refine plan, Save and quit. Needs the focus on the
-/// option list (the default; `tab` moves it to the plan text).
+/// context / keep context, Refine plan, Save and quit. Keys only act on the
+/// options while the focus is on them (the default; `tab` moves it to the
+/// Contents or the plan text, where `down` scrolls and `enter` only moves the
+/// focus back), which [focusOnOptions] says.
 class OmpPlanReviewScreen extends OmpMenuScreen {
-  const OmpPlanReviewScreen(super.options);
+  const OmpPlanReviewScreen(super.options, {this.focusOnOptions = true});
+
+  /// False while the Contents, the plan text or a note being typed has the
+  /// focus: nothing sent would choose an option.
+  final bool focusOnOptions;
 
   List<String>? get approve => keysForLabel('Approve and execute');
+
+  static const _keepContext = 'Approve and keep';
+
+  /// omp draws "keep context" disabled once the context is over 95% full, and
+  /// its cursor then skips the row: counting `down` over it overshoots (from
+  /// the top, 3 downs reach "Save and quit" instead of "Refine plan", which
+  /// quits omp). Nothing on a plain-text screen says the row is disabled, so
+  /// it is worked out from the usage the label prints. Near the 95% line the
+  /// printed rounding cannot tell: a choice whose keys differ either way is
+  /// not offered.
+  @override
+  List<String>? keysFor(int index) {
+    final c = cursorIndex;
+    if (!focusOnOptions || c == null || index < 0 || index >= options.length) return null;
+    final keep = options.indexWhere((o) => o.label.startsWith(_keepContext));
+    final state = keep < 0 || keep == c ? _Keep.enabled : _keepState(options[keep].label);
+    List<String>? walk(int disabled) {
+      if (index == disabled) return null;
+      final step = index > c ? 1 : -1;
+      var n = 0;
+      for (var i = c; i != index; i += step) {
+        if (i + step != disabled) n++;
+      }
+      return [...List.filled(n, step > 0 ? 'down' : 'up'), 'enter'];
+    }
+
+    final on = walk(-1);
+    final off = walk(keep);
+    return switch (state) {
+      _Keep.enabled => on,
+      _Keep.disabled => off,
+      _Keep.unknown => on != null && off != null && on.join(' ') == off.join(' ') ? on : null,
+    };
+  }
+}
+
+enum _Keep { enabled, disabled, unknown }
+
+final _usage = RegExp(r'\(~(\d+(?:\.\d+)?)([kmb]?) / (\d+(?:\.\d+)?)([kmb]?)\)');
+
+/// What the keep-context row's `(~used / window)` says about it being over
+/// omp's 95% line. Each figure is printed rounded (one decimal below 10 units,
+/// whole above), so it is a range.
+_Keep _keepState(String label) {
+  final m = _usage.firstMatch(label);
+  // `Approve and keep context` alone is what omp prints without a usage. Any
+  // other text is a label a narrow pane cut (`… (~199k / 2…`): it may be over
+  // the line, and counting `down` over a disabled row quits omp.
+  if (m == null) return label.trim() == 'Approve and keep context' ? _Keep.enabled : _Keep.unknown;
+  (double, double) range(String number, String suffix) {
+    final unit = switch (suffix) { 'k' => 1e3, 'm' => 1e6, 'b' => 1e9, _ => 1.0 };
+    final v = double.parse(number);
+    final half = suffix.isEmpty || v >= 10 ? 0.5 : 0.05;
+    return ((v - half) * unit, (v + half) * unit);
+  }
+
+  final (usedLow, usedHigh) = range(m[1]!, m[2]!);
+  final (windowLow, windowHigh) = range(m[3]!, m[4]!);
+  if (windowLow <= 0) return _Keep.unknown;
+  if (usedLow / windowHigh * 100 > 95) return _Keep.disabled;
+  if (usedHigh / windowLow * 100 <= 95) return _Keep.enabled;
+  return _Keep.unknown;
 }
 
 final _approvalTitle = RegExp(r'^Allow tool: (.+)$');
@@ -836,18 +904,37 @@ OmpApprovalScreen? parseOmpApproval(String screen) {
 }
 
 /// Reads the plan review options; null when it is not on [screen].
+///
+/// With two or more role models omp draws a model slider between the prompt
+/// and the options (`continue with ◂ smol ▶ default ▸ slow`, then `↳ model
+/// name`); those rows are not options.
 OmpPlanReviewScreen? parseOmpPlanReview(String screen) {
   final lines = _screenLines(screen);
   final at = lines.lastIndexWhere((l) => _cell(l)?.trim() == 'Plan mode - next step');
   if (at < 0) return null;
   final options = <OmpMenuOption>[];
-  for (var i = at + 1; i < lines.length; i++) {
+  var i = at + 1;
+  for (; i < lines.length; i++) {
     if (lines[i].trimLeft().startsWith('├') || lines[i].trimLeft().startsWith('╰')) break;
     final c = _cell(lines[i]);
     if (c == null || c.trim().isEmpty) continue;
     final m = _menuRow.firstMatch(' $c');
-    if (m == null) return null;
-    options.add(OmpMenuOption(m[2]!.trim(), m[1] != ' '));
+    final label = m?[2]!.trim();
+    if (options.isEmpty && (label == null || !_labelStart.hasMatch(label))) continue; // the slider
+    if (label == null) return null;
+    options.add(OmpMenuOption(label, m![1] != ' '));
   }
-  return options.isEmpty ? null : OmpPlanReviewScreen(options);
+  if (options.isEmpty) return null;
+  // The hint row under the options names what the keys do now: only with the
+  // focus on the options does it say `confirm` (`open`, `scroll`, `save`
+  // elsewhere).
+  String? hint;
+  for (i++; i < lines.length; i++) {
+    if (lines[i].trimLeft().startsWith('╰')) break;
+    final c = _cell(lines[i]);
+    if (c != null && c.trim().isNotEmpty) hint = c;
+  }
+  return OmpPlanReviewScreen(options, focusOnOptions: hint == null || hint.contains('confirm'));
 }
+
+final _labelStart = RegExp(r'^[A-Za-z0-9]');

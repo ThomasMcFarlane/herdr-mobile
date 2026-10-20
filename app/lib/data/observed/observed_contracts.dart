@@ -95,6 +95,17 @@ class PendingAsk {
   final List<AskQuestion> questions;
 }
 
+/// A plan the agent submitted for approval.
+class ProposedPlan {
+  const ProposedPlan({required this.title, this.markdown});
+
+  final String title;
+
+  /// The plan's text as the agent wrote it; null when the log does not hold the
+  /// text the agent submitted (the file was changed by another tool).
+  final String? markdown;
+}
+
 /// What the person answered, one entry per question, in order.
 class AskAnswer {
   const AskAnswer({this.selected = const [], this.custom});
@@ -155,6 +166,11 @@ abstract interface class SessionLogMapper {
 
   /// The question tool call that has no result yet, if any.
   PendingAsk? get pendingAsk;
+
+  /// The plan the agent submitted for the person's decision and that nothing
+  /// in the log has answered yet, or null. The agent's own program asks about
+  /// it on its screen (omp's plan review); the log has the text.
+  ProposedPlan? get proposedPlan;
 
   /// Ids of tool calls that started and have no result yet.
   Set<String> get openToolCalls;

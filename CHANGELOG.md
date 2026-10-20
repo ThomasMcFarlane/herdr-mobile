@@ -4,6 +4,13 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [Unreleased]
+
+- An omp plan review now shows as needing you, with the plan to read and its
+  options as buttons. Before, the agent looked finished and the review waited
+  in the terminal, and with a model slider or a nearly full context the
+  buttons were missing or chose the wrong option.
+
 ## [0.1.21] - 2026-10-20
 
 ### A release's clip plays inside herdr

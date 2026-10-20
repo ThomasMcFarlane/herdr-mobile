@@ -79,6 +79,9 @@ class CodexLogMapper implements SessionLogMapper {
   PendingAsk? get pendingAsk => _ask;
 
   @override
+  ProposedPlan? get proposedPlan => null; // codex asks through its own approval (herdr reports it blocked)
+
+  @override
   Set<String> get openToolCalls => {
     // A script that outlives its wait (a cell) is a background task, not the call a
     // permission dialog asks about.

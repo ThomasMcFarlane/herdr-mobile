@@ -15,6 +15,7 @@ import 'data/repositories/attention_set.dart';
 import 'data/repositories/fleet_repository.dart';
 import 'data/repositories/last_seen.dart';
 import 'data/repositories/machine_connection.dart';
+import 'data/observed/omp_kind.dart' show ompWaitsOnPlanReview;
 import 'data/repositories/machine_repository.dart';
 import 'data/repositories/notification_settings.dart';
 import 'data/repositories/pane_previews.dart';
@@ -65,6 +66,8 @@ ConnectionFactory sshConnectionFactory({
         ),
         machineId: profile.id,
       ),
+      // omp opens its plan review without telling herdr the agent is blocked.
+      screenWaits: const {'omp': ompWaitsOnPlanReview},
     );
     inboxJanitor.watch(connection);
     return connection;
