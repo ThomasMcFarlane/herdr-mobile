@@ -133,9 +133,10 @@ Future<void> showWorkspaceActions(
 }
 
 /// The agents working or blocked under the checkout [workspaceId] on the
-/// machine screen, split by what removing the worktree does to them: those
-/// in the checkout's own workspace stop with it; phone sessions placed under
-/// it live in another workspace, keep running, and lose their folder.
+/// machine screen, split by what removing the worktree does to them: agents
+/// in the checkout's own workspace stop with it; a phone session keeps running
+/// (its keeper is a daemon, the pane is only a viewer, in this workspace or
+/// another) and loses its folder.
 ({int stop, int lose}) _agentsWorkingIn(MachineConnection machine, String workspaceId) {
   final items = machineLayout(machine.snapshot, machine.places, machine.keeperPanes.keys.toSet());
   final List<PaneEntry> panes = [
@@ -153,7 +154,7 @@ Future<void> showWorkspaceActions(
   for (final e in panes) {
     final busy = e.pane.agent != null && (e.pane.status == AgentStatus.working || e.pane.status == AgentStatus.blocked);
     if (!busy) continue;
-    if (e.pane.workspaceId == workspaceId) {
+    if (e.pane.workspaceId == workspaceId && !machine.keeperPanes.containsKey(e.pane.id)) {
       stop++;
     } else {
       lose++;

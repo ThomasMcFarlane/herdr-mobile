@@ -383,7 +383,8 @@ when it can.
    below the field. When the folder is in a git repo, a `Checkout` row
    appears: `This folder` (the default), another checkout of the same repo, or
    `New worktree…`, which has herdr add a worktree (a new folder and branch,
-   named by herdr unless you type a `Branch`) and starts the session in it.
+   named by the `Branch` field, which starts with a suggested name you can change
+   or clear to let herdr name it) and starts the session in it.
    The row says how many agents already work in the folder.
 2. Under `Agent`, pick `omp`, `Claude Code`, `Codex` or `pi`. An agent that
    isn't installed on the machine is dimmed with the reason.
@@ -394,7 +395,8 @@ when it can.
 one.
 
 **At the computer.** When herdr runs on the machine, each agent session also
-gets a tab in a herdr workspace called `Phone sessions`. herdr lists it with
+gets a tab in a herdr workspace: the worktree's own when the session runs in
+a linked worktree, else one called `Phone sessions`. herdr lists it with
 the other agents (working, blocked or idle), on that machine and on any
 computer connected to it. The tab shows the conversation: type a line and
 press Enter to send it, type the number of an option to answer a permission,

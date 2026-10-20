@@ -493,6 +493,18 @@ void main() {
       await _tearDown(tester, h);
     });
 
+    testWidgets('a phone session whose view tab sits in the worktree loses its folder, it does not stop', (tester) async {
+      final h = await open(tester);
+      // The keeper opens its tab in the worktree's own workspace: w2:p0 is only a
+      // viewer, the agent is a daemon that outlives the folder.
+      h.connection('a').setKeeperPanes({'w2:p0': 'a/k1'});
+      await askToRemove(tester, h);
+
+      expect(find.textContaining('1 phone session running there will lose the folder'), findsOneWidget);
+      expect(find.textContaining('will stop'), findsNothing);
+      await _tearDown(tester, h);
+    });
+
     testWidgets('a completed hold removes the worktree by workspace id and never forces', (tester) async {
       final h = await open(tester);
       final t = h.stubs['a']!;

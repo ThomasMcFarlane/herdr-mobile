@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' show Random;
 
 import 'package:flutter/foundation.dart';
 import 'package:herdr_mobile/ui/core/kit.dart' show Dwell;
@@ -62,7 +63,8 @@ class NewAgentSessionViewModel extends ChangeNotifier {
     required this._settings,
     String? machineId,
     this.prefill,
-  }) {
+    Random? random,
+  }) : _random = random ?? Random() {
     // A duplicate keeps its machine even when it is offline: the form then
     // says so, rather than starting the folder somewhere else.
     _machineId = prefill?.machineId ?? _initialMachine(machineId);
@@ -75,6 +77,7 @@ class NewAgentSessionViewModel extends ChangeNotifier {
 
   /// What a duplicate starts from; null for a form opened empty.
   final SessionPrefill? prefill;
+  final Random _random;
 
   final FleetRepository _fleet;
   final AgentSessions _sessions;
@@ -232,6 +235,29 @@ class NewAgentSessionViewModel extends ChangeNotifier {
     _error = null;
     notifyListeners();
   }
+
+  /// A branch name to start the `Branch` field with, in herdr's own shape
+  /// (`worktree/brave-meadow-45e8`) and not the branch of any checkout the
+  /// lookup found. Why: a field left empty hides the name until the worktree
+  /// exists; shown, it can be read, changed and recognised later on the desk.
+  String suggestBranch() {
+    final taken = {for (final c in _checkouts ?? const <WorktreeInfo>[]) ?c.branch};
+    while (true) {
+      final tag = _random.nextInt(0x10000).toRadixString(16).padLeft(4, '0');
+      final name = 'worktree/${_adjectives[_random.nextInt(_adjectives.length)]}-'
+          '${_nouns[_random.nextInt(_nouns.length)]}-$tag';
+      if (!taken.contains(name)) return name;
+    }
+  }
+
+  static const _adjectives = [
+    'brave', 'calm', 'bright', 'quiet', 'lucky', 'swift', 'gentle', 'bold',
+    'sunny', 'misty', 'amber', 'cosmic', 'keen', 'merry', 'noble', 'witty',
+  ];
+  static const _nouns = [
+    'meadow', 'river', 'stone', 'cloud', 'forest', 'harbor', 'lantern', 'maple',
+    'comet', 'canyon', 'falcon', 'garden', 'island', 'orchard', 'summit', 'willow',
+  ];
 
   /// Why [branch] cannot name a new branch; null when it can (or is empty:
   /// herdr names it). Whether git takes the name is left to git.

@@ -52,10 +52,11 @@ AgentStatus bestStatus(Iterable<AgentStatus> statuses) {
 /// as they are, in herdr's order (a repo sits where its first checkout is).
 ///
 /// A phone session ([keeperPaneIds]: the view panes of keeper-hosted agents)
-/// is started in whatever folder was asked for and lands in the workspace the
-/// keeper happens to be in. When its folder is inside an open checkout it is
-/// listed under that checkout instead; when it is in no checkout it stays
-/// where herdr put it.
+/// is started in whatever folder was asked for. Its tab is in the workspace
+/// of the linked worktree holding that folder, else in `Phone sessions`. When
+/// its folder is inside an open checkout it is listed under that checkout
+/// (where it already sits, if that is the workspace its tab is in); when it is
+/// in no checkout it stays where herdr put it.
 List<MachineItem> machineLayout(Snapshot s, PlaceIndex places, Set<String> keeperPaneIds) {
   final tabsByWorkspace = <String, List<Tab>>{};
   for (final t in s.tabs) {
