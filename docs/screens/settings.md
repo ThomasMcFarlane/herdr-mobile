@@ -53,7 +53,7 @@ notes sheet had no button, so not reading was the default path (the owner:
 "let people check the changelog before install, provide some trust"). Top to
 bottom: `Update to <version>`; the walkthrough's poster when the notes lead
 with one (`ReleaseClip`: a poster image linking to the clip, both files of that
-very release; a tap opens the clip in the browser, nothing of the video loads
+very release; a tap plays the clip in the app (`clip_player.dart`: GitHub serves release files as downloads, so a browser saved it instead), nothing of the video loads
 before; the poster is the one picture fetched from notes, any other image
 stays a chip); the notes; then, pinned over a hairline, one line of what herdr
 knows and the one next step. Before the download the line says where it comes

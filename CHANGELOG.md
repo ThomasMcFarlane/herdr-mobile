@@ -4,9 +4,9 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
-## [0.1.21] - 2026-10-20
+## [0.1.22] - 2026-10-20
 
-[![Watch what's new · 3 changes · 0:21 · 6.9 MB](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.21/0.1.21-whats-new.jpg)](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.21/0.1.21-whats-new.mp4)
+[![Watch what's new · 3 changes · 0:21 · 6.9 MB](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.22/0.1.22-whats-new.jpg)](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.22/0.1.22-whats-new.mp4)
 
 ### See and manage your worktrees from the phone
 
@@ -37,13 +37,29 @@ app.
   says so and `This folder` still works.
 - Frame times on a phone were not measured.
 
-![The studio-mac screen: the payments-api repo lists its Main checkout on main with a blocked agent, then two worktrees, each with its branch and its agent](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.21/0.1.21-worktrees-places.png)
+![The studio-mac screen: the payments-api repo lists its Main checkout on main with a blocked agent, then two worktrees, each with its branch and its agent](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.22/0.1.22-worktrees-places.png)
 
 **Fixed**
 
+- An omp plan review now shows as needing you, with the plan to read and its
+  options as buttons. Before, the agent looked finished and the review waited
+  in the terminal, and with a model slider or a nearly full context the
+  buttons were missing or chose the wrong option.
 - `Close workspace` on a main checkout whose worktrees are still open no
   longer ends in an error from herdr: it is dimmed and says `Worktrees are
   open · close them first`.
+
+## [0.1.21] - 2026-10-20
+
+### A release's clip plays inside herdr
+
+`Play` on the clip at the top of the update sheet now plays it inside herdr,
+silent, with `Play again` at the end.
+
+- Nothing of the clip loads before you tap `Play`. If it can't load, it says
+  so and offers `Retry`.
+- You see this from your next update on: the sheet that offers an update is
+  drawn by the version you already have.
 
 ## [0.1.20] - 2026-10-19
 

@@ -290,7 +290,12 @@ class ObservedRig {
   final PanePreviews previews;
   final source = FakeLogSource();
 
-  static Future<ObservedRig> create({String status = 'idle', String? log = ompLog, String agent = 'omp'}) async {
+  static Future<ObservedRig> create({
+    String status = 'idle',
+    String? log = ompLog,
+    String agent = 'omp',
+    Map<String, bool Function(String screen)> screenWaits = const {},
+  }) async {
     final transport = ScreenTransport(ompSnapshot(status: status, log: log, agent: agent));
     final machine = MachineConnection(
       profile: omp,
@@ -299,6 +304,7 @@ class ObservedRig {
       pollInterval: const Duration(hours: 1),
       structuralDelay: const Duration(milliseconds: 10),
       churnInterval: const Duration(milliseconds: 30),
+      screenWaits: screenWaits,
     )..start();
     await eventually(() => machine.isLive, reason: 'machine online');
     final previews = PanePreviews(

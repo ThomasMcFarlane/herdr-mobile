@@ -1369,4 +1369,58 @@ void main() {
       });
     });
   });
+
+  // plan_proposal.jsonl is a real plan-mode turn: the agent writes the plan to
+  // local://hello-py-plan.md, submits it with `write xd://propose`, omp aborts the
+  // turn and opens its plan review (herdr then reports the pane done).
+  group('proposedPlan (omp plan mode)', () {
+    test('the submitted plan is the text the agent wrote, until something answers it', () {
+      final m = OmpLogMapper();
+      final lines = _lines('plan_proposal');
+      // Everything up to and including the aborted message and the mode entry.
+      _feed(m, lines);
+      final plan = m.proposedPlan!;
+      expect(plan.title, 'hello-py');
+      expect(plan.markdown, startsWith('## Context\nCreate `/tmp/ompplan/hello.py`'));
+      expect(plan.markdown, contains('## Verification'));
+    });
+
+    test('is not there before the proposal result', () {
+      final m = OmpLogMapper();
+      final lines = _lines('plan_proposal');
+      final at = lines.indexWhere((l) => l.contains('"xdev"'));
+      _feed(m, lines.take(at));
+      expect(m.proposedPlan, isNull);
+    });
+
+    test('a message from the person, a new turn or leaving plan mode ends it', () {
+      for (final answer in [
+        _user('u9', 'refine: add a docstring'),
+        _assistant('a9', [{'type': 'text', 'text': 'Starting.'}]),
+        _entry({'type': 'mode_change', 'id': 'm9', 'timestamp': '2026-10-20T00:22:00.000Z', 'mode': 'default'}),
+      ]) {
+        final m = OmpLogMapper();
+        _feed(m, [..._lines('plan_proposal'), answer]);
+        expect(m.proposedPlan, isNull, reason: answer);
+      }
+    });
+
+    test('a plan file changed by another tool after the write is not shown as the plan', () {
+      final m = OmpLogMapper();
+      final lines = _lines('plan_proposal');
+      final propose = lines.indexWhere((l) => l.contains('xd://propose'));
+      final edit = _assistant('a5', [
+        {
+          'type': 'toolCall',
+          'id': 'tc-edit',
+          'name': 'edit',
+          'arguments': {'input': '[local://hello-py-plan.md#4AE0]\n- 1:old\n+ new'},
+        },
+      ], stop: 'toolUse');
+      _feed(m, [...lines.take(propose + 1), edit, ...lines.skip(propose + 1)]);
+      final plan = m.proposedPlan!;
+      expect(plan.title, 'hello-py');
+      expect(plan.markdown, isNull);
+    });
+  });
 }

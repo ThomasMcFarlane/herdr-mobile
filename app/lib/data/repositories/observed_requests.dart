@@ -186,15 +186,19 @@ String askSignature(PendingAsk ask) => [
 /// The permission request for a dialog [prompt] understood on the pane. The
 /// title, kind and input are the log's open tool call's when there is one
 /// (structured arguments beat scraped text), else the prompt's own subject.
-/// Option [PermissionOption.optionId] is the reply's index.
-PermissionRequest promptRequest(PromptInfo prompt, {required String paneId, ToolCall? call}) {
+/// [plan] is the plan the dialog asks about, when the log has its text: the
+/// card shows it, so the person approves what they read. Option
+/// [PermissionOption.optionId] is the reply's index.
+PermissionRequest promptRequest(PromptInfo prompt, {required String paneId, ToolCall? call, String? plan}) {
   final subject = prompt.subject.trim();
   final input = call == null ? null : _evidenceInput(call);
   final fields = <String, Object?>{
     'toolCallId': call?.toolCallId ?? 'prompt',
     'title': call != null && call.title.trim().isNotEmpty ? call.title : prompt.question,
     'kind': call == null ? 'other' : _kindWire(call.kind),
-    if (input != null)
+    if (plan != null && plan.trim().isNotEmpty)
+      'rawInput': {if (input is Map) ...input.cast<String, Object?>(), 'plan': plan}
+    else if (input != null)
       'rawInput': input
     else if (subject.isNotEmpty)
       'rawInput': {'command': subject},

@@ -14,6 +14,7 @@ import '../services/herdr_transport.dart';
 import '../services/remote_files.dart';
 import '../services/snapshot_cache.dart';
 import 'reviewed_state.dart';
+import 'screen_waits.dart';
 import 'web_preview.dart';
 
 enum LinkState {
@@ -73,9 +74,29 @@ class MachineConnection extends ChangeNotifier {
     this.quietAfter = const Duration(minutes: 5),
     this.seenWriteInterval = const Duration(minutes: 2),
     this._clock = DateTime.now,
+    this.screenWaits = const {},
   });
 
   final DateTime Function() _clock;
+
+  /// Reads that find an agent waiting on the person while herdr says it is
+  /// finished (null: no agent kind has one). Panes it finds show as blocked.
+  late final ScreenWaits? _waits = screenWaits.isEmpty
+      ? null
+      : ScreenWaits(
+          readers: screenWaits,
+          read: (paneId) async => (await _api.readPane(paneId, lines: 60)).text,
+          onChange: _onReviewedChanged,
+          clock: _clock,
+        );
+
+  /// Per agent label: whether its screen shows a wait herdr does not report as
+  /// blocked (omp's plan review). See [ScreenWaits].
+  final Map<String, bool Function(String screen)> screenWaits;
+
+  /// An answer was sent to [paneId] by keys: the wait it was for is read again
+  /// shortly, so a pane that went on stops showing as waiting at once.
+  void answeredByKeys(String paneId) => _waits?.answered(paneId);
 
   final MachineProfile profile;
   final HerdrApi _api;
@@ -374,16 +395,26 @@ class MachineConnection extends ChangeNotifier {
     return 'pane';
   }
 
-  /// [raw] as the app shows it: reviewed `done` becomes `idle`, and a
-  /// workspace or tab whose roll-up was that `done` is worked out again from
+  /// [raw] as the app shows it: reviewed `done` becomes `idle`, a pane the
+  /// screen shows waiting on the person ([ScreenWaits]) becomes `blocked`, and
+  /// a workspace or tab whose roll-up was one of those is worked out again from
   /// what its panes now show (herdr ranks blocked, done, working, idle).
   Snapshot _present(Snapshot raw) {
     final reviewed = _reviewed;
-    if (reviewed == null) return raw;
+    final waiting = _waits?.panes ?? const <String>{};
+    if (reviewed == null && waiting.isEmpty) return raw;
     List<Pane>? panes;
+    final blockedWorkspaces = <String>{};
+    final blockedTabs = <String>{};
     for (var i = 0; i < raw.panes.length; i++) {
       final p = raw.panes[i];
-      if (p.status == AgentStatus.done &&
+      final hideable = p.status == AgentStatus.done || p.status == AgentStatus.idle;
+      if (hideable && waiting.contains(p.id)) {
+        (panes ??= List.of(raw.panes))[i] = p.withStatus(AgentStatus.blocked);
+        blockedWorkspaces.add(p.workspaceId);
+        blockedTabs.add(p.tabId);
+      } else if (p.status == AgentStatus.done &&
+          reviewed != null &&
           reviewed.isReviewed(profile.id, p.id, _completionKey(p))) {
         (panes ??= List.of(raw.panes))[i] = p.withStatus(AgentStatus.idle);
       }
@@ -401,13 +432,15 @@ class MachineConnection extends ChangeNotifier {
       version: raw.version,
       workspaces: [
         for (final w in raw.workspaces)
-          w.status == AgentStatus.done
+          w.status == AgentStatus.done || blockedWorkspaces.contains(w.id)
               ? w.withStatus(rollup((p) => p.workspaceId == w.id))
               : w,
       ],
       tabs: [
         for (final t in raw.tabs)
-          t.status == AgentStatus.done ? t.withStatus(rollup((p) => p.tabId == t.id)) : t,
+          t.status == AgentStatus.done || blockedTabs.contains(t.id)
+              ? t.withStatus(rollup((p) => p.tabId == t.id))
+              : t,
       ],
       panes: panes,
     );
@@ -603,6 +636,7 @@ class MachineConnection extends ChangeNotifier {
     _raw = s;
     _checkSubscription();
     _endStaleReviews(s);
+    _waits?.update(s.panes);
     final quietChanged = _evaluateQuiet(s, now);
     final shown = _present(s);
     final shownChanged = shown != _snapshot;
@@ -831,6 +865,7 @@ class MachineConnection extends ChangeNotifier {
     if (raw?['pane_id'] case final String id) {
       _lastEvent[id] = _clock();
       if (!_activity.isClosed) _activity.add(id);
+      _waits?.touch(id);
     }
 
     final updated = _parsePane(raw);
@@ -943,6 +978,7 @@ class MachineConnection extends ChangeNotifier {
       unawaited(cache.write(profile.id, _raw, observed: _observed()).catchError((Object _) {}));
     }
     _reviewed?.removeListener(_onReviewedChanged);
+    _waits?.dispose();
     unawaited(_activity.close());
     unawaited(_api.close());
     super.dispose();

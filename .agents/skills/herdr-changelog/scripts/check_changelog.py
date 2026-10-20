@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """Checks one section of CHANGELOG.md, and its Play text and media, before a commit.
 
-    python3 check_changelog.py <x.y.z | unreleased> [--remote]
+    python3 check_changelog.py <x.y.z | unreleased> [--remote] [--no-media=REASON]
+
+--no-media skips the media rule for a release whose changes only the phone
+can show while no phone is at hand (a test cannot draw video, a WebView or
+Android's own UI). The reason is required and printed, so a release without
+media says why instead of passing silently.
 
 Works on the git repo of the current directory (not the one this script lives
 in), so running it by absolute path inside a clone checks that clone. Prints
@@ -282,7 +287,8 @@ def check_media(body: list[tuple[int, str]], root: Path, version: str, remote: b
 def main() -> int:
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
     remote = '--remote' in sys.argv[1:]
-    if len(args) != 1 or not re.fullmatch(r'\d+\.\d+\.\d+|unreleased', args[0]):
+    no_media = next((a.split('=', 1)[1].strip() for a in sys.argv[1:] if a.startswith('--no-media=')), None)
+    if len(args) != 1 or not re.fullmatch(r'\d+\.\d+\.\d+|unreleased', args[0]) or no_media == '':
         print(__doc__.strip().splitlines()[2].strip(), file=sys.stderr)
         return 2
     version = args[0]
@@ -302,7 +308,10 @@ def main() -> int:
     findings += check_tips(body, root)
     if version != 'unreleased':
         findings += check_play(root, version)
-        findings += check_media(body, root, version, remote)
+        if no_media is None:
+            findings += check_media(body, root, version, remote)
+        else:
+            print(f'note: media not checked: {no_media}')
     for f in findings:
         print(f)
     if not findings:

@@ -95,6 +95,7 @@ connection (one `SSHClient`), with these channels on it:
 | Session log follow (observed omp, Claude Code and Codex sessions) | While a screen shows it | `ssh_log_source.dart` |
 | Looking for a session log (Claude Code and Codex: SFTP `stat`/`list`/`read` of their own folders; a `pane.process_info` for a Claude pane herdr reports no session for) | When a screen opens the chat, again when the pane's session reference changes, and every 5 s doubling to 30 s while the file does not exist yet | `session_log_locator.dart`, `claude_locator.dart`, `codex_locator.dart` |
 | Session log peek (omp panes: a name when the title is only the folder, the file's date when idle) | A `stat`, plus two SFTP reads (16 KB head, 64 KB tail) for a name, when a pane needs it and when its status changes; none in the background | `pane_session_names.dart` |
+| Screen read of a finished omp pane, to see whether its plan review is open (60 rows) | When the pane first shows `done`/`idle` and once more 1.5 s later; on activity or after an answer while the review is up; every 20 s poll at most every 15 s while it is up; none for a working or blocked pane | `screen_waits.dart` |
 
 herdr's socket takes one request per connection. The mux script on the host
 takes pipelined JSON requests on stdin and serves each one on its own thread,
@@ -360,6 +361,21 @@ line.
   tool by keys, ask it to stop a background job). Approvals are read from the
   screen by the prompt detector for all three. Facts that took a capture to
   learn are in `docs/ENGINEERING.md`, "Observed Claude Code and Codex".
+- **A wait herdr does not report.** omp opens its plan review by aborting the
+  turn, and herdr's omp integration reports no `blocked` for it: herdr says
+  `done` (or `idle`) with the review on screen (the `plan-review` fixture is
+  `status: idle`). `ScreenWaits` (owned by `MachineConnection`) reads the screen
+  of a finished omp pane and `MachineConnection.snapshot` then shows the pane,
+  its tab and its workspace as `blocked`, so the board, alerts and the session
+  screen need no second rule. The review's options come from the screen
+  (`parseOmpPlanReview`: the model slider's rows are not options, a disabled
+  "keep context" row is skipped by omp's cursor, keys only choose while the
+  options have the focus) and its text from the log (`proposedPlan` on the
+  session log mapper: the plan file the agent wrote, then `write xd://propose`).
+  An answered review stops counting at once: omp redraws it as `<option> —
+  submitting…` (no options), which does not parse. In the background profile
+  there is no `pane_updated`, so a review dismissed in the terminal keeps the
+  pane blocked until the next 4-minute poll.
 - **Names for omp panes.** `PaneSessionNames` (owned by `FleetRepository`)
   reads the head and tail of the log a pane reports, only for an omp pane whose
   title says nothing, and gives `FleetAgent.sessionName`; the board, the

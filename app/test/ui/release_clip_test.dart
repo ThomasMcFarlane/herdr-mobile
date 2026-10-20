@@ -36,8 +36,8 @@ void main() {
   final dir = Platform.environment['RELEASE_CLIP_DIR'] ?? '/tmp/release_clip';
   setUpAll(loadAppFonts);
 
-  // 0.1.21, "See and manage your worktrees from the phone".
-  testWidgets('0.1.21 walkthrough', (tester) async {
+  // 0.1.22, "See and manage your worktrees from the phone".
+  testWidgets('0.1.22 walkthrough', (tester) async {
     final h = await DemoFleet.create(timed: true, worktrees: true);
     await h.online(tester);
     final hosts = <String, FakeAgentHost>{};
