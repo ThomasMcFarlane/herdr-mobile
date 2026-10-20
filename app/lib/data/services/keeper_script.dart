@@ -938,6 +938,27 @@ def herdr_result(out):
     return r if isinstance(r, dict) else {}
 
 
+def checkout_workspace(workspaces, cwd):
+    """The workspace id herdr has open for the linked worktree that holds `cwd`
+    (the folder itself or one below it; the deepest checkout wins), else None.
+    `workspace list` carries `worktree.checkout_path` on herdr 0.9.3; an older
+    herdr has none, and then the session goes where it always did. Only linked
+    worktrees: the main checkout's workspace is the person's own."""
+    here = os.path.normpath(cwd)
+    best, best_len = None, -1
+    for w in workspaces:
+        wt = w.get("worktree") if isinstance(w, dict) else None
+        if not (isinstance(wt, dict) and wt.get("is_linked_worktree") is True):
+            continue
+        path, wid = wt.get("checkout_path"), w.get("workspace_id")
+        if not (isinstance(path, str) and path and isinstance(wid, str) and wid):
+            continue
+        path = os.path.normpath(path)
+        if (here == path or here.startswith(path.rstrip("/") + "/")) and len(path) > best_len:
+            best, best_len = wid, len(path)
+    return best
+
+
 def view_runnable(path):
     """True when `python3 '<path>' view ID` is safe to type into a shell: the
     path is one single-quoted word."""
@@ -1922,8 +1943,9 @@ class Keeper(object):
 
     def open_pane(self):
         """Shows the session in herdr on this computer (docs/AGENT_SESSIONS.md,
-        "Shared sessions"): a tab in the workspace `Phone sessions` (made when
-        missing, never focused) running `view`, which reports the session to
+        "Shared sessions"): a tab in the workspace of the linked worktree that
+        holds the session's folder, else in `Phone sessions` (made when
+        missing, never focused), running `view`, which reports the session to
         herdr. A chain of herdr commands that tick polls, never waited for; no
         herdr, no server or any failure: logged, and nothing else changes."""
         if os.environ.get("HERDR_MOBILE_NO_PANE") == "1" or os.path.exists(os.path.join(home_dir(), ".herdr-mobile", "no-panes")):
@@ -1944,13 +1966,22 @@ class Keeper(object):
 
     def pane_workspaces(self, out):
         res = herdr_result(out)
-        for w in (res.get("workspaces") if isinstance(res.get("workspaces"), list) else []):
-            if isinstance(w, dict) and w.get("label") == PANE_WORKSPACE and isinstance(w.get("workspace_id"), str):
-                self.herdr_call(
-                    ["tab", "create", "--workspace", w["workspace_id"], "--cwd", self.cwd, "--label", self.pane_label(), "--no-focus"],
-                    lambda o: self.pane_made(o, False),
-                )
-                return
+        spaces = res.get("workspaces") if isinstance(res.get("workspaces"), list) else []
+        # A session in a worktree belongs in that worktree's workspace: at the
+        # desk the person opens the worktree and finds its agent there, not
+        # an empty shell beside a tab in `Phone sessions`.
+        wid = checkout_workspace(spaces, self.cwd)
+        if wid is None:
+            for w in spaces:
+                if isinstance(w, dict) and w.get("label") == PANE_WORKSPACE and isinstance(w.get("workspace_id"), str):
+                    wid = w["workspace_id"]
+                    break
+        if wid is not None:
+            self.herdr_call(
+                ["tab", "create", "--workspace", wid, "--cwd", self.cwd, "--label", self.pane_label(), "--no-focus"],
+                lambda o: self.pane_made(o, False),
+            )
+            return
         # A new workspace comes with a tab and a pane: this session takes them.
         self.herdr_call(
             ["workspace", "create", "--label", PANE_WORKSPACE, "--cwd", self.cwd, "--no-focus"],

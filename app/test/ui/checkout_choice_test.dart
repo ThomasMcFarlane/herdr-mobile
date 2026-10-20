@@ -1,6 +1,7 @@
 // The `Checkout` choice of the new-agent-session form: what a folder's repo
 // offers, and the create-then-start sequence of a new worktree.
 import 'dart:async';
+import 'dart:math' show Random;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/acp/agent_host.dart';
@@ -54,6 +55,20 @@ Future<_Env> _env() async {
     machineId: 'a',
   );
   return _Env(h, vm, h.stubs['a']!, host);
+}
+
+/// A [Random] that counts up, so one run of names can be repeated exactly.
+class _Counting implements Random {
+  int _n = 0;
+
+  @override
+  int nextInt(int max) => _n++ % max;
+
+  @override
+  double nextDouble() => 0;
+
+  @override
+  bool nextBool() => false;
 }
 
 void main() {
@@ -249,6 +264,36 @@ void main() {
     expect(e.vm.branchError('fix x'), 'No spaces or control characters');
     expect(e.vm.branchError('a\tb'), 'No spaces or control characters');
     expect(e.vm.branchError('-D'), 'Can’t start with -');
+  });
+
+  test('the suggested branch is a name git takes and never one a checkout already has', () async {
+    e = await _env();
+    expect(e.vm.branchError(e.vm.suggestBranch()), isNull);
+    expect(e.vm.suggestBranch(), matches(RegExp(r'^worktree/[a-z]+-[a-z]+-[0-9a-f]{4}$')));
+
+    // The name a fresh sequence would suggest first is the one a checkout holds.
+    final probe = NewAgentSessionViewModel(
+      fleet: e.h.fleet,
+      sessions: e.h.agents,
+      settings: e.h.agentSettings,
+      machineId: 'a',
+      random: _Counting(),
+    );
+    final first = probe.suggestBranch();
+    probe.dispose();
+    e.stub.on['worktree.list'] = (_) => _list([_worktree('/r/app', branch: first)]);
+    final vm = NewAgentSessionViewModel(
+      fleet: e.h.fleet,
+      sessions: e.h.agents,
+      settings: e.h.agentSettings,
+      machineId: 'a',
+      random: _Counting(),
+    );
+    addTearDown(vm.dispose);
+    await vm.lookUp('/r/app');
+    expect(vm.checkouts, hasLength(1));
+
+    expect(vm.suggestBranch(), isNot(first));
   });
 
   test('a bad branch name stops a new worktree before anything is created', () async {

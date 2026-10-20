@@ -476,9 +476,15 @@ coming from its side.
    not looking at, for something done at the desk, is noise). Another phone
    is named `on another phone`.
 4. **herdr sees the session through a pane the keeper opens.** When the agent
-   has answered `initialize`, the keeper opens a tab in a herdr workspace
-   labelled `Phone sessions` (created when missing, never focused) and runs the
-   keeper's `view` command in it. `view` is a line-oriented client of the
+   has answered `initialize`, the keeper opens a tab in the herdr workspace
+   of the linked worktree that holds the session's folder (from
+   `workspace list`'s `worktree.checkout_path`; the deepest wins; none on
+   herdr without worktrees), else in a workspace
+   labelled `Phone sessions` (created when missing, never focused). Why: the
+   desk lists a worktree as its own workspace, and a session in it that sat
+   in `Phone sessions` left that workspace an empty shell. The main checkout's
+   workspace is the person's own, so its sessions stay in `Phone sessions`.
+   The tab runs the keeper's `view` command in it. `view` is a line-oriented client of the
    keeper: it prints the conversation, takes a typed line as a prompt and a
    number as the answer to a waiting permission (the card shows the call's
    command or path whole, from `rawInput`), and reports the session's

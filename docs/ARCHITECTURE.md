@@ -243,8 +243,9 @@ What the keeper itself does on the host (`docs/AGENT_SESSIONS.md` "The keeper"):
 - It listens on a unix socket only. Its state lives in `~/.herdr-mobile/keepers/`
   (directory 0700, files 0600). Every attached client gets every update; the
   first answer to a waiting request wins.
-- When herdr runs on the host, it opens a tab in herdr's `Phone sessions`
-  workspace (never focused) that runs `view <id>`: a terminal client of the
+- When herdr runs on the host, it opens a tab in the workspace of the linked
+  worktree that holds the session's folder, else in herdr's `Phone sessions`
+  workspace (never focused), that runs `view <id>`: a terminal client of the
   keeper that reports the session's state to herdr, so herdr on any connected
   computer lists it. `~/.herdr-mobile/no-panes` turns this off
   (`docs/AGENT_SESSIONS.md` "Shared sessions").
