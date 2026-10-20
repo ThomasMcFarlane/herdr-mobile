@@ -32,7 +32,7 @@ Future<void> openDiagramViewer(BuildContext context, MermaidDrawn drawn) {
         id: 'mermaid:${identityHashCode(drawn)}',
         name: '${drawn.kind.label}.png',
         mime: 'image/png',
-        origin: 'Diagram in the conversation',
+        origin: 'Diagram',
         source: MemoryPhotoSource(() => _png(drawn, surface)),
       ),
     ],

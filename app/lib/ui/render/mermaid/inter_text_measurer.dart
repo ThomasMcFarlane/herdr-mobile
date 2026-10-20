@@ -73,39 +73,58 @@ final class InterTextMeasurer implements core.TextMeasurer {
     return core.Size(widest.ceilToDouble(), lines.length * (size * _lineHeight).ceilToDouble());
   }
 
-  /// Greedy wrap at spaces; a word wider than [maxWidth] breaks by character,
-  /// as `TextPainter` does.
+  /// Greedy wrap where [TextPainter]'s line breaker would: after a space, and
+  /// after a hyphen or a slash that is followed by a letter (a path, a URL or a
+  /// hyphenated name wraps there, not only at spaces). A piece wider than
+  /// [maxWidth] breaks by character.
   static List<String> _wrap(String line, double maxWidth, double Function(String) width) {
     final out = <String>[];
     var current = '';
-    for (final word in line.split(' ')) {
-      final candidate = current.isEmpty ? word : '$current $word';
-      if (width(candidate) <= maxWidth) {
+    for (final piece in _pieces(line)) {
+      final candidate = current + piece;
+      if (width(candidate.trimRight()) <= maxWidth) {
         current = candidate;
         continue;
       }
       if (current.isNotEmpty) {
-        out.add(current);
+        out.add(current.trimRight());
         current = '';
       }
-      if (width(word) <= maxWidth) {
-        current = word;
+      if (width(piece.trimRight()) <= maxWidth) {
+        current = piece;
         continue;
       }
-      // Break the long word where the next character no longer fits.
-      var piece = '';
-      for (final rune in word.runes) {
-        final next = piece + String.fromCharCode(rune);
-        if (piece.isNotEmpty && width(next) > maxWidth) {
-          out.add(piece);
-          piece = String.fromCharCode(rune);
+      // Break the long piece where the next character no longer fits.
+      var part = '';
+      for (final rune in piece.runes) {
+        final next = part + String.fromCharCode(rune);
+        if (part.isNotEmpty && width(next.trimRight()) > maxWidth) {
+          out.add(part);
+          part = String.fromCharCode(rune);
         } else {
-          piece = next;
+          part = next;
         }
       }
-      current = piece;
+      current = part;
     }
-    if (current.isNotEmpty || out.isEmpty) out.add(current);
+    if (current.isNotEmpty || out.isEmpty) out.add(current.trimRight());
     return out;
   }
+
+  /// [line] cut after every place it may break, the break character kept on
+  /// the piece before it.
+  static Iterable<String> _pieces(String line) sync* {
+    var start = 0;
+    for (var i = 0; i < line.length; i++) {
+      final c = line.codeUnitAt(i);
+      final breaks = c == 0x20 || ((c == 0x2D || c == 0x2F) && i + 1 < line.length && _letter(line.codeUnitAt(i + 1)));
+      if (breaks) {
+        yield line.substring(start, i + 1);
+        start = i + 1;
+      }
+    }
+    if (start < line.length) yield line.substring(start);
+  }
+
+  static bool _letter(int c) => (c >= 0x41 && c <= 0x5A) || (c >= 0x61 && c <= 0x7A) || c > 0x7F;
 }

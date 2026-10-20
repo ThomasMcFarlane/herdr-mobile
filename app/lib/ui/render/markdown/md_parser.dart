@@ -93,7 +93,21 @@ List<MdBlock> parseMdChunk(String chunk, {required bool softBreaksAsNewlines}) {
     // Only link reference definitions: keep what was written.
     return [MdParagraph(MdInlines([MdSpan(chunk.trim())]))];
   }
-  return blocks;
+  return _markUnclosed(blocks, chunk);
+}
+
+// A closing fence: three or more backticks or tildes alone on the line, inside
+// whatever quote or list indentation the chunk has.
+final _closingFence = RegExp(r'^[ \t>]*(?:`{3,}|~{3,})[ \t]*$');
+
+/// Only the last top-level block of a chunk can be a fence that never closed
+/// (an open fence swallows the rest of the text): [blocks] with it marked.
+List<MdBlock> _markUnclosed(List<MdBlock> blocks, String chunk) {
+  final last = blocks.last;
+  if (last is! MdCode || last.language.isEmpty) return blocks;
+  final nl = chunk.lastIndexOf('\n');
+  if (_closingFence.hasMatch(chunk.substring(nl + 1))) return blocks;
+  return [...blocks.take(blocks.length - 1), MdCode(language: last.language, text: last.text, closed: false)];
 }
 
 /// Whether `s[from, to)` is only spaces and tabs.

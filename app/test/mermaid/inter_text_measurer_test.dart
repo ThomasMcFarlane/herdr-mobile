@@ -58,6 +58,11 @@ const _labels = [
   'Needs "quotes" and (parens) [brackets]',
   'mixed CASE and lower case words together',
   'x',
+  'https://example.com/a/b/c/d?x=1&y=2',
+  'src/features/agent_session/session_bar.dart and more words',
+  'very-long-hyphenated-compound-word-here-and-there',
+  'a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p',
+  'well-known open-source cross-platform tool 2024-10-20',
 ];
 
 void main() {
@@ -84,22 +89,29 @@ void main() {
     });
   }
 
-  test('wrapped at 130 we never have fewer lines than the painter, and mostly the same', () {
+  test('wrapped at the widths the engine asks for we never have fewer lines than the painter, and mostly the same', () {
     // The 3% margin makes a line near the limit wrap one word early: a taller
-    // box with a little room, never text that overflows its box.
-    const style = core.TextStyleSpec(fontFamily: 'Inter', fontSize: 13);
+    // box with a little room, never text that overflows its box. The engine
+    // sizes a node from this answer and the painter wraps the same text again.
     const ours = InterTextMeasurer();
     const painter = FlutterTextMeasurer();
-    var same = 0;
-    final rows = <String>[];
-    for (final label in _labels) {
-      final a = ours.measure(label, style, maxWidth: 130);
-      final b = painter.measure(label, style, maxWidth: 130);
-      rows.add('${a.height}/${b.height}  $label');
-      expect(a.height, greaterThanOrEqualTo(b.height), reason: label);
-      if (a.height == b.height) same++;
+    for (final weight in [400, 700]) {
+      final style = core.TextStyleSpec(fontFamily: 'Inter', fontSize: 13, fontWeight: weight);
+      var same = 0;
+      var total = 0;
+      final rows = <String>[];
+      for (final maxWidth in [88.0, 130.0, 150.0, 160.0, 200.0, 300.0]) {
+        for (final label in _labels) {
+          final a = ours.measure(label, style, maxWidth: maxWidth);
+          final b = painter.measure(label, style, maxWidth: maxWidth);
+          rows.add('${a.height}/${b.height}  @$maxWidth  $label');
+          expect(a.height, greaterThanOrEqualTo(b.height), reason: '@$maxWidth w$weight $label');
+          total++;
+          if (a.height == b.height) same++;
+        }
+      }
+      printOnFailure(rows.join('\n'));
+      expect(same / total, greaterThanOrEqualTo(0.85), reason: 'weight $weight');
     }
-    printOnFailure(rows.join('\n'));
-    expect(same / _labels.length, greaterThanOrEqualTo(0.8));
   });
 }

@@ -76,24 +76,34 @@ class _MdDiagramViewState extends State<MdDiagramView> {
     super.dispose();
   }
 
-  /// Asks for the layout of this source under this theme. What is on screen
-  /// stays until the answer comes (a theme change does not blink).
+  /// Asks for the layout of this source under this theme. A result the cache
+  /// already holds is on the first frame (no code block that jumps taller a
+  /// frame later); otherwise what is on screen stays until the answer comes (a
+  /// theme change does not blink).
   void _ask() {
     final ds = context.ds;
     final key = '${ds.brightness.index}\u0000${widget.code.text}';
     if (key == _key) return;
     _key = key;
+    final kept = MermaidCache.shared.peek(widget.code.text, ds);
+    if (kept != null) {
+      _asked = null;
+      _adopt(kept);
+      return;
+    }
     final asked = MermaidCache.shared.layout(widget.code.text, ds);
     _asked = asked;
     asked.then((result) {
       if (!mounted || !identical(_asked, asked)) return;
-      final lease = result is MermaidDrawn ? MermaidCache.shared.acquirePicture(result) : null;
-      setState(() {
-        _lease?.release();
-        _lease = lease;
-        _result = result;
-      });
+      setState(() => _adopt(result));
     });
+  }
+
+  void _adopt(MermaidResult result) {
+    final lease = result is MermaidDrawn ? MermaidCache.shared.acquirePicture(result) : null;
+    _lease?.release();
+    _lease = lease;
+    _result = result;
   }
 
   Future<void> _copy() async {

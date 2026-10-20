@@ -14,10 +14,12 @@ import 'mermaid_theme.dart';
 ///  * **Layouts.** A result is kept by `(brightness, source)`: a row that
 ///    scrolls out and back, or the same diagram in the answer and in the file
 ///    viewer, costs nothing the second time. 24 results; a failure from an
-///    unexpected throw is not kept.
-///  * **Two isolates at most.** A screen of six diagrams must not start six
-///    isolates (each holds the engine's code and a copy of the scene): the rest
-///    wait their turn.
+///    unexpected throw is not kept. [peek] hands a kept result back at once, so
+///    a row that returns draws the diagram on its first frame.
+///  * **Two isolates at most, newest first.** A screen of six diagrams must not
+///    start six isolates (each holds the engine's code and a copy of the
+///    scene): the rest wait their turn, and the one asked for last, which is
+///    the one on screen after a fast scroll, goes first.
 ///  * **Pictures.** Recording a scene lays out every label with `TextPainter`
 ///    on the UI thread. A recorded `ui.Picture` is kept (16, reference-counted)
 ///    so that a row scrolling back in costs one `drawPicture`.
@@ -32,34 +34,46 @@ class MermaidCache {
   static const _isolates = 2;
 
   final Future<MermaidResult> Function(MermaidJob job) _layout;
-  final _results = <String, Future<MermaidResult>>{};
-  final _waiting = Queue<void Function()>();
+  final _results = <String, _Layout>{};
+  final _waiting = <void Function()>[];
   int _running = 0;
+
+  static String _key(String source, Ds ds) => '${ds.brightness.index}\u0000$source';
+
+  /// The kept result for [source] under [ds], or null while it is not here
+  /// (never asked, evicted, or still being laid out).
+  MermaidResult? peek(String source, Ds ds) {
+    final key = _key(source, ds);
+    final hit = _results.remove(key);
+    if (hit == null) return null;
+    _results[key] = hit;
+    return hit.result;
+  }
 
   /// The result for [source] under [ds]; the same future for the same key.
   Future<MermaidResult> layout(String source, Ds ds) {
-    final key = '${ds.brightness.index}\u0000$source';
+    final key = _key(source, ds);
     final hit = _results.remove(key);
     if (hit != null) {
       _results[key] = hit;
-      return hit;
+      return hit.done.future;
     }
     final job = MermaidJob(source: source, theme: mermaidThemeOf(ds), darkText: mermaidDarkText, lightText: mermaidLightText);
-    final done = Completer<MermaidResult>();
-    final future = done.future;
-    _results[key] = future;
+    final entry = _Layout();
+    _results[key] = entry;
     while (_results.length > _resultsKept) {
       _results.remove(_results.keys.first);
     }
     _start(() async {
       try {
-        done.complete(await _layout(job));
+        entry.result = await _layout(job);
       } catch (e) {
-        _results.remove(key);
-        done.complete(MermaidFailed("Couldn't draw this diagram · $e"));
+        if (identical(_results[key], entry)) _results.remove(key);
+        entry.result = MermaidFailed("Couldn't draw this diagram · $e");
       }
+      entry.done.complete(entry.result);
     });
-    return future;
+    return entry.done.future;
   }
 
   void _start(Future<void> Function() job) {
@@ -67,7 +81,7 @@ class MermaidCache {
       _running++;
       job().whenComplete(() {
         _running--;
-        if (_waiting.isNotEmpty) _waiting.removeFirst()();
+        if (_waiting.isNotEmpty) _waiting.removeLast()();
       });
     }
 
@@ -107,7 +121,6 @@ class MermaidCache {
   }
 
   /// Pictures held now (the phone bench logs it).
-  // (public: the phone bench reads it)
   int get picturesHeld => _pictures.length;
 
   /// A scene recorded at its own size, in dp.
@@ -121,6 +134,12 @@ class MermaidCache {
   /// A scene recorded at its own size, for a caller that draws it elsewhere
   /// (the viewer's picture): the caller disposes it.
   static ui.Picture recordUncached(MermaidDrawn drawn) => _record(drawn);
+}
+
+/// One layout: its future, and its result once there is one.
+final class _Layout {
+  final done = Completer<MermaidResult>();
+  MermaidResult? result;
 }
 
 final class _Recorded {

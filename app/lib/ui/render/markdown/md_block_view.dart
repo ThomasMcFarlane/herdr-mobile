@@ -148,10 +148,11 @@ Widget _body(
         child: MdInlineText(inlines: block.inlines, style: MdStyles.of(context).heading(block.level)),
       );
     case MdCode():
-      // A closed mermaid fence is drawn; the open tail of a streaming message
-      // is still the code that is arriving, so a diagram that ends a message
+      // Only a closed fence is drawn: the open tail of a streaming message, a
+      // thought still arriving and a message cut off in the middle of a fence
+      // are code that has not finished. So a diagram that ends a message
       // appears when the message ends.
-      if (!tail && block.language.toLowerCase() == 'mermaid') {
+      if (!tail && block.closed && block.language.toLowerCase() == 'mermaid') {
         return MdDiagramView(code: block, expanded: expanded, onToggleExpanded: onToggle);
       }
       return MdCodeBlock(code: block, tail: tail, expanded: expanded, onToggleExpanded: onToggle);

@@ -249,8 +249,6 @@ void main() {
   setUpAll(() async {
     await loadAppFonts();
     Directory(out).createSync(recursive: true);
-    // The shots read the layout in the same isolate: no real time to wait for.
-    MermaidCache.shared = MermaidCache((job) async => layoutMermaid(job));
   });
 
   final cases = <String, String>{
@@ -269,6 +267,9 @@ void main() {
     tester.view.padding = const FakeViewPadding(top: 24 * dpr, bottom: 20 * dpr);
     tester.view.viewPadding = tester.view.padding;
     addTearDown(tester.view.reset);
+    // The layout futures must be born in this test's zone, and the shots read
+    // them in the same isolate: no real time to wait for.
+    MermaidCache.shared = MermaidCache((job) async => layoutMermaid(job));
     final key = GlobalKey();
     final controller = ScrollController(initialScrollOffset: offset);
     addTearDown(controller.dispose);
@@ -287,6 +288,7 @@ void main() {
         home: _Page(markdown: markdown, controller: controller, tone: name == 'quiet' ? MdTone.quiet : MdTone.reading),
       ),
     );
+    await tester.pump(const Duration(milliseconds: 100));
     await tester.pump(const Duration(milliseconds: 100));
     final boundary = key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
     await tester.runAsync(() async {

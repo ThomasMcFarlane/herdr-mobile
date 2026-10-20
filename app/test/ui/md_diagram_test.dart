@@ -75,6 +75,31 @@ void main() {
     semantics.dispose();
   });
 
+  testWidgets('a fence that never closed (a cut-off message, a thought arriving) is code, not a diagram', (tester) async {
+    final semantics = tester.ensureSemantics();
+    final block = parseMd('Here:\n\n```mermaid\nflowchart TD\n A-->B\n B-->C').blocks.last as MdCode;
+    expect(block.closed, isFalse);
+    expect((_block(_flow) as MdCode).closed, isTrue);
+    await _pump(tester, _Harness(block: block));
+    expect(find.bySemanticsLabel('Diagram, flowchart'), findsNothing);
+    expect(find.text('mermaid'), findsOneWidget, reason: 'the code block header');
+    expect(find.textContaining("Couldn't draw"), findsNothing, reason: 'no layout was asked for');
+    semantics.dispose();
+  });
+
+  testWidgets('a diagram the cache holds is on the first frame, with no code block that jumps taller after it', (tester) async {
+    final semantics = tester.ensureSemantics();
+    final h = _Harness(block: _block(_flow));
+    await _pump(tester, h);
+    expect(find.bySemanticsLabel('Diagram, flowchart'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(h);
+    expect(find.bySemanticsLabel('Diagram, flowchart'), findsOneWidget, reason: 'drawn by the first frame, not one microtask later');
+    expect(find.text('mermaid'), findsNothing);
+    semantics.dispose();
+  });
+
   testWidgets('a kind the app does not draw stays code, with the reason', (tester) async {
     await _pump(tester, _Harness(block: _block('gantt\n title x\n section a\n t1 :a1, 2024-01-01, 3d')));
     expect(find.text("Can't draw gantt chart diagrams yet · showing the source"), findsOneWidget);
