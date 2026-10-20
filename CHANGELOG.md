@@ -4,6 +4,15 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [Unreleased]
+
+### Fixes
+
+- A picture with see-through pixels, a PNG or WebP, in the full-screen
+  viewer no longer shows a strip of grey squares past its right and bottom
+  edge. The strip grew as you zoomed in; it was seen on a large diagram.
+  Not checked on a phone yet.
+
 ## [0.1.23] - 2026-10-20
 
 ### Mermaid diagrams are drawn in answers
