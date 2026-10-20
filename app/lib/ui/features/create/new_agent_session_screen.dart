@@ -78,6 +78,12 @@ class _FormState extends State<_Form> {
   String? _filledFor;
   String _filled = '';
 
+  /// What the `Branch` field was last filled with, and whether `New worktree…`
+  /// was chosen at the last look: the field is filled when it becomes chosen,
+  /// never while the person is typing in it or after they cleared it.
+  String _suggested = '';
+  bool _wasNew = false;
+
   /// Whether the start running now opens the session when it is done: picks
   /// the button that shows the spinner.
   bool _opening = false;
@@ -98,12 +104,14 @@ class _FormState extends State<_Form> {
     _folder.addListener(_onFolderText);
     _vm.addListener(_syncFolder);
     _syncFolder();
+    _vm.addListener(_syncBranch);
   }
 
   @override
   void dispose() {
     _lookupTimer?.cancel();
     _vm.removeListener(_syncFolder);
+    _vm.removeListener(_syncBranch);
     _folder.dispose();
     _branch.dispose();
     super.dispose();
@@ -136,6 +144,18 @@ class _FormState extends State<_Form> {
     if (_folder.text.trim().isNotEmpty && _folder.text != _filled) return;
     _filled = _vm.rememberedFolder;
     _folder.text = _filled;
+  }
+
+  void _syncBranch() {
+    final isNew = _vm.choice is NewWorktree;
+    if (isNew == _wasNew) return;
+    _wasNew = isNew;
+    // Typed text is the person's; only an empty field or an untouched
+    // suggestion is replaced.
+    if (isNew && (_branch.text.isEmpty || _branch.text == _suggested)) {
+      _suggested = _vm.suggestBranch();
+      _branch.text = _suggested;
+    }
   }
 
   Future<void> _browse(MachineConnection machine) async {
@@ -282,7 +302,7 @@ class _FormState extends State<_Form> {
                                               controller: _branch,
                                               mono: true,
                                               hint: 'Named by herdr',
-                                              helper: 'Optional',
+                                              helper: 'Change it, or clear it to let herdr name it',
                                               validator: vm.branchError,
                                             ),
                                           ),
