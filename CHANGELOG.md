@@ -11,6 +11,18 @@ release.
   in the terminal, and with a model slider or a nearly full context the
   buttons were missing or chose the wrong option.
 
+## [0.1.21] - 2026-10-20
+
+### A release's clip plays inside herdr
+
+`Play` on the clip at the top of the update sheet now plays it inside herdr,
+silent, with `Play again` at the end.
+
+- Nothing of the clip loads before you tap `Play`. If it can't load, it says
+  so and offers `Retry`.
+- You see this from your next update on: the sheet that offers an update is
+  drawn by the version you already have.
+
 ## [0.1.20] - 2026-10-19
 
 [![Watch what's new · 3 changes · 0:13 · 4.6 MB](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.20/0.1.20-whats-new.jpg)](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.20/0.1.20-whats-new.mp4)
