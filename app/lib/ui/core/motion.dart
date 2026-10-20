@@ -153,6 +153,9 @@ abstract final class Dwell {
   /// The keyboard counts as still once its inset has not moved for this long.
   static const keyboardQuiet = Duration(milliseconds: 120);
 
+  /// A field that triggers a lookup waits for typing to pause this long.
+  static const typingPause = Duration(milliseconds: 500);
+
   /// A spinner or a skeleton shows only for work that takes longer than this.
   static const spinnerDelay = Duration(milliseconds: 120);
 

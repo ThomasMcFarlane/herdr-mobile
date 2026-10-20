@@ -42,6 +42,86 @@ enum AgentStatus {
 
   /// Sort rank: what needs the user most comes first.
   int get attentionRank => index;
+
+  /// How much a status matters when several are rolled into one (a workspace,
+  /// a repo): what needs the person, then what finished and awaits a look,
+  /// then what still runs. Not [attentionRank], whose order is persisted and
+  /// puts working above done. Higher wins.
+  int get rollupRank => switch (this) {
+        blocked => 4,
+        done => 3,
+        working => 2,
+        idle => 1,
+        unknown => 0,
+      };
+}
+
+/// Git provenance of a workspace herdr opened as part of a worktree group
+/// (`workspace.worktree`). Null for a plain workspace: herdr only reports it
+/// for the primary checkout and its linked worktrees, together.
+class WorkspaceWorktree {
+  const WorkspaceWorktree({
+    required this.repoKey,
+    required this.repoName,
+    required this.repoRoot,
+    required this.checkoutPath,
+    required this.isLinked,
+  });
+
+  /// Null unless every field a place needs is there: a half-known checkout
+  /// would name the wrong place, so the workspace stays plain instead.
+  static WorkspaceWorktree? tryParse(Object? json) {
+    if (json is! Map) return null;
+    String? text(String key) {
+      final v = json[key];
+      return v is String && v.isNotEmpty ? v : null;
+    }
+
+    final checkoutPath = text('checkout_path');
+    final repoKey = text('repo_key');
+    final repoName = text('repo_name');
+    final repoRoot = text('repo_root');
+    if (checkoutPath == null ||
+        repoKey == null ||
+        repoName == null ||
+        repoRoot == null) {
+      return null;
+    }
+    return WorkspaceWorktree(
+      repoKey: repoKey,
+      repoName: repoName,
+      repoRoot: repoRoot,
+      checkoutPath: checkoutPath,
+      isLinked: json['is_linked_worktree'] == true,
+    );
+  }
+
+  final String repoKey;
+  final String repoName;
+  final String repoRoot;
+  final String checkoutPath;
+  final bool isLinked;
+
+  Map<String, dynamic> toJson() => {
+        'checkout_path': checkoutPath,
+        'is_linked_worktree': isLinked,
+        'repo_key': repoKey,
+        'repo_name': repoName,
+        'repo_root': repoRoot,
+      };
+
+  @override
+  bool operator ==(Object other) =>
+      other is WorkspaceWorktree &&
+      other.repoKey == repoKey &&
+      other.repoName == repoName &&
+      other.repoRoot == repoRoot &&
+      other.checkoutPath == checkoutPath &&
+      other.isLinked == isLinked;
+
+  @override
+  int get hashCode =>
+      Object.hash(repoKey, repoName, repoRoot, checkoutPath, isLinked);
 }
 
 class Workspace {
@@ -53,6 +133,7 @@ class Workspace {
     required this.paneCount,
     required this.tabCount,
     required this.status,
+    this.worktree,
   });
 
   factory Workspace.fromJson(Map<String, dynamic> j) => Workspace(
@@ -63,6 +144,7 @@ class Workspace {
         paneCount: (j['pane_count'] as num?)?.toInt() ?? 0,
         tabCount: (j['tab_count'] as num?)?.toInt() ?? 0,
         status: AgentStatus.parse(j['agent_status']),
+        worktree: WorkspaceWorktree.tryParse(j['worktree']),
       );
 
   final String id;
@@ -72,6 +154,7 @@ class Workspace {
   final int paneCount;
   final int tabCount;
   final AgentStatus status;
+  final WorkspaceWorktree? worktree;
 
   Map<String, dynamic> toJson() => {
         'workspace_id': id,
@@ -81,6 +164,7 @@ class Workspace {
         'pane_count': paneCount,
         'tab_count': tabCount,
         'agent_status': status.name,
+        if (worktree != null) 'worktree': worktree!.toJson(),
       };
 
   Workspace withStatus(AgentStatus status) => Workspace(
@@ -91,6 +175,7 @@ class Workspace {
         paneCount: paneCount,
         tabCount: tabCount,
         status: status,
+        worktree: worktree,
       );
 
   @override
@@ -102,11 +187,12 @@ class Workspace {
       other.focused == focused &&
       other.paneCount == paneCount &&
       other.tabCount == tabCount &&
-      other.status == status;
+      other.status == status &&
+      other.worktree == worktree;
 
   @override
-  int get hashCode =>
-      Object.hash(id, number, label, focused, paneCount, tabCount, status);
+  int get hashCode => Object.hash(
+      id, number, label, focused, paneCount, tabCount, status, worktree);
 }
 
 class Tab {
@@ -377,6 +463,13 @@ const snapshotWireFields = <String, Object>{
     'pane_count': true,
     'tab_count': true,
     'agent_status': true,
+    'worktree': <String, Object>{
+      'checkout_path': true,
+      'is_linked_worktree': true,
+      'repo_key': true,
+      'repo_name': true,
+      'repo_root': true,
+    },
   },
   'tabs': <String, Object>{
     'tab_id': true,

@@ -17,11 +17,13 @@ import 'package:herdr_mobile/ui/features/machines/machine_form_screen.dart';
 import 'package:herdr_mobile/ui/features/machines/machine_form_view_model.dart' show TransportFactory;
 import 'package:herdr_mobile/ui/features/machines/machine_screen.dart';
 import 'package:herdr_mobile/ui/features/machines/machines_screen.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../support/fake_agent_session.dart';
 import '../support/fake_transport.dart';
 import '../support/memory_stores.dart';
+import '../support/worktree_fixtures.dart';
 import 'ui_harness.dart';
 
 
@@ -469,6 +471,73 @@ void main() {
       await _flush(tester);
       expect(find.text('title w1:p1'), findsOneWidget);
       await _tearDown(tester, h);
+    });
+
+    group('a repo with worktrees', () {
+      const primary = '/home/u/workspace/herdr-mobile';
+      const linked = '/home/u/.herdr/worktrees/herdr-mobile/worktree-a';
+
+      Map<String, dynamic> repoSnapshot() {
+        final j = snapshotWith(
+          [
+            (id: 'w1:p0', ws: 'w1', agent: 'claude', status: 'blocked'),
+            (id: 'w2:p0', ws: 'w2', agent: 'omp', status: 'working'),
+            (id: 'w3:p0', ws: 'w3', agent: 'omp', status: 'working'),
+          ],
+          workspaces: const [
+            (id: 'w1', label: 'herdr-mobile'),
+            (id: 'w2', label: 'worktree-a'),
+            (id: 'w3', label: 'Phone sessions'),
+          ],
+          cwd: (id) => switch (id) {
+            'w1:p0' => primary,
+            'w2:p0' => '$linked/app',
+            _ => '$linked/lib',
+          },
+        );
+        final ws = j['workspaces'] as List;
+        (ws[0] as Map<String, dynamic>)['worktree'] = wirePrimaryWorktree;
+        (ws[1] as Map<String, dynamic>)['worktree'] = {...wireLinkedWorktree, 'checkout_path': linked};
+        return j;
+      }
+
+      testWidgets('lists the checkouts under one repo header, with branches, and a phone session under its checkout', (tester) async {
+        final h = await UiHarness.create([(profile: _m('a', 'box'), snapshot: repoSnapshot())]);
+        h.transports['a']!.answers['worktree.list'] = {
+          'type': 'worktree_list',
+          'worktrees': [
+            {'path': primary, 'label': 'x', 'branch': 'main', 'is_linked_worktree': false, 'is_detached': false, 'is_bare': false, 'is_prunable': false},
+            {'path': linked, 'label': 'x', 'branch': 'feat/login', 'is_linked_worktree': true, 'is_detached': false, 'is_bare': false, 'is_prunable': false},
+          ],
+        };
+        final machine = h.fleet.connection('a')!;
+        machine.setKeeperPanes({'w3:p0': 'a/k1'});
+        await _pump(tester, MachineScreen(machine: machine), fleet: h, height: 1200);
+
+        expect(find.text('herdr-mobile'), findsOneWidget, reason: 'one header for the repo');
+        expect(find.text('Main checkout'), findsNothing, reason: 'the title carries the branch in one rich text');
+        expect(find.textContaining('Main checkout', findRichText: true), findsOneWidget);
+        expect(find.textContaining('worktree-a', findRichText: true), findsOneWidget, reason: 'the checkout is a header, not a section of its own');
+        expect(find.text('Phone sessions'), findsNothing, reason: 'its only session moved under its checkout');
+        expect(find.text('title w3:p0'), findsOneWidget);
+        expect(find.textContaining('feat/login', findRichText: true), findsOneWidget, reason: 'the branch is read once on arrival');
+        expect(find.text('3'), findsOneWidget, reason: 'the repo counts the rows under it');
+        await _tearDown(tester, h);
+      });
+
+      testWidgets('offline, the repo keeps its rows and its buttons are off', (tester) async {
+        final h = await UiHarness.create([(profile: _m('a', 'box'), snapshot: repoSnapshot())]);
+        final machine = h.fleet.connection('a')!;
+        machine.goOffline();
+        await _pump(tester, MachineScreen(machine: machine), fleet: h, height: 1200);
+
+        expect(machine.isLive, isFalse);
+        expect(find.textContaining('Main checkout', findRichText: true), findsOneWidget);
+        final plus = tester.widget<CircleButton>(find.widgetWithIcon(CircleButton, LucideIcons.plus).last);
+        final dots = tester.widget<CircleButton>(find.widgetWithIcon(CircleButton, LucideIcons.ellipsis).first);
+        expect((plus.onPressed, dots.onPressed), (null, null));
+        await _tearDown(tester, h);
+      });
     });
 
     testWidgets('tab names appear on panes only when a workspace has several tabs', (tester) async {

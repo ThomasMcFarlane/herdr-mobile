@@ -12,6 +12,7 @@ import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/agent_screens.dart' show AgentView, PaneAgent;
 import '../../../data/words/agent_names.dart';
 import '../../../data/words/plural.dart';
+import '../../../data/words/place_name.dart';
 import '../../../data/words/where_line.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../create/new_agent_session_screen.dart' show openNewAgentSession;
@@ -40,7 +41,7 @@ AgentStatus sessionStatus(AgentPhase phase, {required bool unseenDone}) => switc
 String sessionWhere(AgentSessionView session, {String? title}) => whereLine(
   agent: agentName(session.agent),
   machine: session.machine.profile.label,
-  folder: cwdTail(session.cwd),
+  folder: placeName(session.machine.places, session.cwd),
   title: title ?? session.title,
 );
 

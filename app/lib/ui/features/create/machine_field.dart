@@ -28,7 +28,7 @@ class MachineField extends StatelessWidget {
 
   /// Padding inside the outline, so the text sits [Gap.lg] in from the field's
   /// edge like a [LabeledField]'s (the 1 dp outline makes up the rest).
-  static const _textInset = Gap.lg - 1;
+  static const textInset = Gap.lg - 1;
 
   @override
   Widget build(BuildContext context) {
@@ -65,8 +65,8 @@ class MachineField extends StatelessWidget {
           builder: (context, pressed) => AnimatedContainer(
             duration: Motion.pressing(pressed),
             curve: Motion.easeOut,
-            constraints: const BoxConstraints(minHeight: _fieldMinHeight),
-            padding: const EdgeInsets.symmetric(horizontal: _textInset),
+            constraints: const BoxConstraints(minHeight: fieldMinHeight),
+            padding: const EdgeInsets.symmetric(horizontal: textInset),
             alignment: Alignment.centerLeft,
             decoration: BoxDecoration(
               color: pressed ? ds.fill : ds.surface,
@@ -158,4 +158,4 @@ String shortPath(String path, {int max = 26}) {
 }
 
 /// The field's height at one line of input, matching the kit's text fields.
-const _fieldMinHeight = 46.0;
+const fieldMinHeight = 46.0;

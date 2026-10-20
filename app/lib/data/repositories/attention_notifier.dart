@@ -4,6 +4,7 @@ import 'dart:ui' show AppLifecycleState;
 import '../acp/session_state.dart' show AgentPhase;
 import '../models/herdr_models.dart' show AgentStatus;
 import '../models/pane_preview.dart' show PromptInfo;
+import '../models/places.dart' show PlaceIndex;
 import '../services/notifier.dart';
 import 'pane_answerer.dart';
 import 'agent_session.dart';
@@ -13,6 +14,7 @@ import 'machine_connection.dart' show LinkState, MachineConnection;
 import 'notification_settings.dart';
 import '../words/agent_names.dart';
 import '../words/plural.dart';
+import '../words/place_name.dart';
 import '../words/where_line.dart';
 
 /// `herdr://agent/<machine>/<pane>`, both parts percent-encoded (a pane id
@@ -352,7 +354,7 @@ class AttentionNotifier {
           NotifyKind.needsYou,
           reachable: !a.stale,
           id: () => notificationIdFor(key),
-          title: () => _title(a.betterTitle ?? pane.title, _folder(pane.cwd), agentName(pane.agent)),
+          title: () => _title(a.betterTitle ?? pane.title, _folder(a.machine.places, pane.cwd), agentName(pane.agent)),
           body: () => 'needs you · ${whereLine(agent: agentName(pane.agent), machine: machine.label)}',
           link: () => agentLinkFor(machine.id, pane.id),
           pane: (machineId: machine.id, paneId: pane.id),
@@ -363,7 +365,7 @@ class AttentionNotifier {
           NotifyKind.finished,
           reachable: !a.stale,
           id: () => notificationIdFor(key),
-          title: () => _title(a.betterTitle ?? pane.title, _folder(pane.cwd), agentName(pane.agent)),
+          title: () => _title(a.betterTitle ?? pane.title, _folder(a.machine.places, pane.cwd), agentName(pane.agent)),
           body: () => 'done · ${whereLine(agent: agentName(pane.agent), machine: machine.label)}',
           link: () => agentLinkFor(machine.id, pane.id),
         ));
@@ -410,10 +412,11 @@ class AttentionNotifier {
     return sessionLinkFor(machineId, keeper);
   }
 
-  static String _folder(String? cwd) {
+  /// What the pane's folder is called (`placeName`), empty for the root or none.
+  static String _folder(PlaceIndex places, String? cwd) {
     if (cwd == null) return '';
-    final parts = cwd.split('/').where((s) => s.isNotEmpty);
-    return parts.isEmpty ? '' : parts.last;
+    final name = placeName(places, cwd);
+    return name == '/' ? '' : name;
   }
 
   /// The first non-empty of [title], [folder] and [agent], on one line and cut

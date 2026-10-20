@@ -1,4 +1,5 @@
 import '../models/herdr_models.dart';
+import '../models/worktrees.dart';
 import 'herdr_transport.dart';
 import 'remote_files.dart';
 
@@ -129,6 +130,46 @@ class HerdrApi {
       },
     );
   }
+
+  /// The checkouts of the repo that [cwd] (a folder in it) or [workspaceId]
+  /// belongs to, including ones herdr has not opened. Throws when the folder
+  /// is not in a git repo, or on a herdr that predates worktrees
+  /// ([HerdrUnsupportedException]).
+  Future<List<WorktreeInfo>> listWorktrees({String? cwd, String? workspaceId}) async {
+    final r = await _call('worktree.list', {
+      'cwd': ?cwd,
+      'workspace_id': ?workspaceId,
+    });
+    return WorktreeInfo.parseList(r['worktrees']);
+  }
+
+  /// Adds a linked worktree to the repo of [cwd] and opens a shell workspace in
+  /// it (never focused: the desktop's view is not the phone's to move). With no
+  /// [branch] herdr names branch and folder itself. herdr runs the owner's
+  /// `worktree.created` hooks.
+  Future<CreatedWorktree> createWorktree({required String cwd, String? branch}) async {
+    final r = await _call('worktree.create', {
+      'cwd': cwd,
+      if (branch != null && branch.isNotEmpty) 'branch': branch,
+      'focus': false,
+    });
+    final info = WorktreeInfo.tryParse(r['worktree']);
+    if (info == null) {
+      throw const HerdrTransportException('Unexpected response from herdr', fatal: false);
+    }
+    return CreatedWorktree(
+      worktree: info,
+      workspaceId: _id(r, 'workspace', 'workspace_id'),
+      tabId: _id(r, 'tab', 'tab_id'),
+      rootPaneId: _id(r, 'root_pane', 'pane_id'),
+    );
+  }
+
+  /// Removes the linked worktree open as [workspaceId]: its folder goes, its
+  /// branch stays. herdr refuses a checkout with uncommitted changes. There is
+  /// no `force` here on purpose: the phone never throws work away.
+  Future<void> removeWorktree(String workspaceId) =>
+      _call('worktree.remove', {'workspace_id': workspaceId});
 
   /// Adds a tab (with one pane) to [workspaceId].
   Future<({String tabId, String rootPaneId})> createTab({

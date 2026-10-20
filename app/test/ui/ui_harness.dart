@@ -46,11 +46,18 @@ class UiTransport extends FakeTransport {
   /// Text per pane id; wins over [paneText].
   final Map<String, String> paneTexts = {};
 
+  /// A fixed answer per method, for what a screen asks besides the snapshot.
+  final Map<String, Map<String, dynamic>> answers = {};
+
   @override
   Future<Map<String, dynamic>> request(
     String method, [
     Map<String, dynamic> params = const {},
   ]) {
+    if (answers[method] case final answer?) {
+      calls.add((method, params));
+      return Future.value(answer);
+    }
     if (method != 'pane.read') return super.request(method, params);
     calls.add((method, params));
     final text = paneTexts[params['pane_id']] ?? paneText;

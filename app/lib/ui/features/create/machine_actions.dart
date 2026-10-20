@@ -28,6 +28,26 @@ class MachineActions {
   Future<String?> closePane(String paneId) =>
       _run(() => machine.api.closePane(paneId), goneIsFine: true);
 
+  /// Removes the linked worktree that [workspace] is: its folder goes, its
+  /// branch stays. Never forced: a checkout with uncommitted changes is
+  /// refused by git and nothing is deleted. herdr's own refusal
+  /// (`dirty_worktree_requires_force`, measured on 0.9.3) tells the reader to
+  /// pass `--force`, which this app has no way to do, so it is said otherwise.
+  Future<String?> removeWorktree(Workspace workspace) async {
+    final error = await _run(() async {
+      try {
+        await machine.api.removeWorktree(workspace.id);
+      } on HerdrApiException catch (e) {
+        if (e.code == 'dirty_worktree_requires_force') {
+          throw HerdrApiException(e.code, 'It has uncommitted changes. Nothing was removed.');
+        }
+        rethrow;
+      }
+    });
+    if (error == null) return null;
+    return error.trim().isEmpty ? 'It may have uncommitted changes. Nothing was removed.' : error;
+  }
+
   /// Adds a tab to [workspace], in the folder its first pane is in.
   Future<({String? error, String? paneId})> newTab(Workspace workspace) async {
     String? paneId;

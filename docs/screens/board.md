@@ -143,6 +143,20 @@ pane still opens, in its terminal or its chat. Why: two forms for one job
 drifted apart (what each remembered, what each accepted), and the agent form
 is the one people use.
 
+**Where in the repo: the `Checkout` row** (`create/checkout_field.dart`). Once
+the typed folder (looked up 500 ms after typing stops, at once after a browse or
+a recent-folder pick) is in a git repo, `worktree.list` fills a `Checkout` row
+under `Folder`: `This folder`, one row per other checkout of the repo (branch,
+`N working`, `not open in herdr`) and `New worktree…`, which reveals an optional
+`Branch` (empty: herdr names branch and folder, branching from the folder's
+current commit). Any failure of the lookup (not a git repo, untrusted repo, a
+herdr without worktrees, offline) just leaves the row out; it is never an error.
+Why: two agents in one checkout share its files; a
+worktree keeps them apart, and creating one is never implicit (every start begins
+at `This folder`, and only the typed folder is remembered). Start creates the
+worktree first, then the session in it; if the session then fails to start, the
+worktree stays chosen, so Start again reuses it instead of making a second.
+
 `Start` returns to where the form was opened and shows a toast (`Open` opens
 it); `Start and open` replaces the form. `Duplicate` (the pane options, the
 session options) opens the agent form prefilled with machine, folder and agent

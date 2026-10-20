@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'buttons.dart';
+import 'hold_confirm.dart';
 import 'motion.dart';
 import 'rows.dart';
 import 'tokens.dart';
@@ -322,25 +323,36 @@ Future<void> showActionSheet(
 );
 
 /// Confirmation in a sheet. Returns true if confirmed.
+///
+/// With [hold] the confirm button has to be held ([HoldToConfirm]) instead of
+/// tapped: for what cannot be taken back and deletes something outside the app
+/// (a worktree's folder). A tap or an early release only says how; assistive
+/// technology gets a two-step activation. Only a [destructive] confirmation
+/// can be held: the fill is the danger tint.
 Future<bool> showConfirmSheet(
   BuildContext context, {
   required String title,
   required String message,
   required String confirmLabel,
   bool destructive = true,
+  bool hold = false,
 }) async {
+  assert(!hold || destructive, 'a held confirmation is a danger button');
   final result = await showAppSheet<bool>(
     context,
     builder: (ctx) => SheetScaffold(
       title: title,
       kind: SheetKind.message,
       actions: [
-        AppButton(
-          label: confirmLabel,
-          kind: destructive ? AppButtonKind.danger : AppButtonKind.primary,
-          expand: true,
-          onPressed: () => Navigator.of(ctx).pop(true),
-        ),
+        if (hold)
+          _HoldConfirmButton(label: confirmLabel, onConfirmed: () => Navigator.of(ctx).pop(true))
+        else
+          AppButton(
+            label: confirmLabel,
+            kind: destructive ? AppButtonKind.danger : AppButtonKind.primary,
+            expand: true,
+            onPressed: () => Navigator.of(ctx).pop(true),
+          ),
         AppButton(
           label: 'Cancel',
           kind: AppButtonKind.secondary,
@@ -353,3 +365,89 @@ Future<bool> showConfirmSheet(
   );
   return result ?? false;
 }
+
+/// The danger button of a held confirmation, painted like the expanded danger
+/// [AppButton] (same height, radius, wash), with the hold's fill under the
+/// label. [HoldToConfirm.onActivate] (a screen reader, a switch) primes it; a
+/// second activation within [Dwell.confirm] confirms.
+class _HoldConfirmButton extends StatefulWidget {
+  const _HoldConfirmButton({required this.label, required this.onConfirmed});
+
+  final String label;
+  final VoidCallback onConfirmed;
+
+  @override
+  State<_HoldConfirmButton> createState() => _HoldConfirmButtonState();
+}
+
+class _HoldConfirmButtonState extends State<_HoldConfirmButton> {
+  Timer? _unprime;
+  bool _primed = false;
+
+  @override
+  void dispose() {
+    _unprime?.cancel();
+    super.dispose();
+  }
+
+  void _activate() {
+    if (_primed) {
+      _unprime?.cancel();
+      widget.onConfirmed();
+      return;
+    }
+    setState(() => _primed = true);
+    _unprime = Timer(Dwell.confirm, () {
+      if (mounted) setState(() => _primed = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ds = context.ds;
+    return HoldToConfirm(
+      onConfirmed: widget.onConfirmed,
+      onActivate: _activate,
+      semanticLabel: _primed ? 'Confirm: ${widget.label}' : '${widget.label}, needs holding or a second activation',
+      scale: PressScale.panel,
+      builder: (context, hold) {
+        final shown = _primed
+            ? 'Hold or tap again'
+            : hold.showsHold
+            ? 'Hold to ${widget.label.toLowerCase()}'
+            : widget.label;
+        return AnimatedContainer(
+          duration: Motion.pressing(hold.holding),
+          curve: Motion.easeOut,
+          height: 46,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: hold.holding ? ds.washPressed(ds.danger) : ds.wash(ds.danger),
+            borderRadius: BorderRadius.circular(Radii.sm),
+            // Always a border, clear unless primed: a border pads the box, and
+            // a primed button must not grow under the finger.
+            border: Border.all(color: _primed ? ds.armedEdge(ds.danger) : Colors.transparent),
+          ),
+          child: Stack(
+            fit: StackFit.passthrough,
+            children: [
+              hold.fill,
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  child: Text(
+                    shown,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Type.button.copyWith(color: ds.dangerText),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+

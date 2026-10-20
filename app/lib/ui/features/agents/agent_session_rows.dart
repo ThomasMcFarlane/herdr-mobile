@@ -8,6 +8,7 @@ import '../../../data/repositories/agent_screens.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/attention_set.dart';
 import '../../../data/words/elapsed.dart';
+import '../../../data/words/place_name.dart';
 import '../../../data/words/where_line.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../../support/step_clock.dart';
@@ -54,7 +55,7 @@ String _permissionLine(PermissionRequest r) {
 String sessionMeta(AgentSessionView s) => whereLine(
       agent: s.agentLabel,
       machine: s.machine.profile.label,
-      folder: cwdTail(s.cwd),
+      folder: placeName(s.machine.places, s.cwd),
       title: s.title,
     );
 

@@ -4,7 +4,9 @@ import 'package:flutter/foundation.dart';
 
 import '../models/herdr_models.dart';
 import '../models/machine_profile.dart';
+import '../models/places.dart';
 import '../models/status_time.dart';
+import '../models/worktrees.dart';
 import '../services/aligned_ticker.dart';
 import '../services/auth_notice.dart';
 import '../services/herdr_api.dart';
@@ -191,6 +193,61 @@ class MachineConnection extends ChangeNotifier {
   /// person has reviewed as idle instead of done, in panes and in the
   /// workspace and tab roll-ups. Every screen reads this, so they agree.
   Snapshot get snapshot => _snapshot;
+
+  /// Where the snapshot's folders live (repo and checkout). Rebuilt only when
+  /// the shown snapshot is a new one, since every where-line asks.
+  PlaceIndex get places {
+    if (!identical(_snapshot, _placesFor)) {
+      _places = PlaceIndex.of(_snapshot);
+      _placesFor = _snapshot;
+    }
+    return _places!;
+  }
+
+  PlaceIndex? _places;
+  Snapshot? _placesFor;
+
+  final Map<String, String> _branches = {};
+
+  /// The branch checked out in [checkoutPath], once read (`loadBranches`,
+  /// `noteBranches`). Null while unknown or for a detached checkout: herdr's
+  /// snapshot carries no branch, so it is decoration read on demand.
+  String? branchOf(String checkoutPath) => _branches[checkoutPath];
+
+  /// Reads the branches of every repo with several open checkouts, one
+  /// `worktree.list` per repo. A failure leaves the branches out: they are
+  /// decoration, nothing is retried and nothing is shown about it. Only on a
+  /// live link: a request on a dead one would start a connection attempt of
+  /// its own, outside the link's retry and back-off.
+  Future<void> loadBranches() async {
+    if (!isLive) return;
+    final groups = places.repos;
+    if (groups.isEmpty) return;
+    final lists = await Future.wait([
+      for (final g in groups)
+        api.listWorktrees(workspaceId: g.checkouts.first.id).catchError(
+              (Object _) => const <WorktreeInfo>[],
+              test: (e) => e is HerdrApiException || e is HerdrTransportException || e is TimeoutException,
+            ),
+    ]);
+    noteBranches([for (final l in lists) ...l]);
+  }
+
+  /// Remembers the branches in [worktrees]; repaints only when one changed.
+  void noteBranches(List<WorktreeInfo> worktrees) {
+    var changed = false;
+    for (final w in worktrees) {
+      final branch = w.branch;
+      // A checkout that went detached has no branch any more: forget the old
+      // one rather than show it as current.
+      if (branch == null ? _branches.remove(w.path) != null : _branches[w.path] != branch) {
+        if (branch != null) _branches[w.path] = branch;
+        changed = true;
+      }
+    }
+    if (changed && !_disposed) notifyListeners();
+  }
+
   DateTime? get lastSync => _lastSync;
   bool get isLive => _state == LinkState.online;
 
@@ -335,7 +392,7 @@ class MachineConnection extends ChangeNotifier {
     AgentStatus rollup(bool Function(Pane) inGroup) {
       var best = AgentStatus.unknown;
       for (final p in panes!) {
-        if (inGroup(p) && _rollupRank(p.status) > _rollupRank(best)) best = p.status;
+        if (inGroup(p) && p.status.rollupRank > best.rollupRank) best = p.status;
       }
       return best;
     }
@@ -355,14 +412,6 @@ class MachineConnection extends ChangeNotifier {
       panes: panes,
     );
   }
-
-  static int _rollupRank(AgentStatus s) => switch (s) {
-        AgentStatus.blocked => 4,
-        AgentStatus.done => 3,
-        AgentStatus.working => 2,
-        AgentStatus.idle => 1,
-        AgentStatus.unknown => 0,
-      };
 
   /// The `https` link to approve a sign-in at, while [state] is
   /// [LinkState.approval]; null otherwise.
