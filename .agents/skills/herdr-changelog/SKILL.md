@@ -268,9 +268,13 @@ as its headline block's one phone clip:
    means you record again. Never blur it away silently.
 4. `make_clip.sh --version <version> --slug <slug> --recording local/release-media/<version>/raw-<slug>.mp4 --headline '<headline>' --caption 'Try it: <the tip path>'`.
 
-No phone connected and a change only the phone can show? Say so in the
-release notes' media plan and leave that change to the still. Never record a
-mock-up in its place.
+No phone connected and a change only the phone can show? Leave that change
+out of the walkthrough and give it the still. Never record a mock-up in its
+place. When nothing in the release can be recorded or rendered truthfully,
+ship it without media: no walkthrough line, no stills. Run the check with
+`--no-media="<why>"` and put the same reason in the release commit's body.
+0.1.21 was such a release: its one change was a video playing, and a test
+cannot draw video.
 
 ### Upload, after the release workflow
 
