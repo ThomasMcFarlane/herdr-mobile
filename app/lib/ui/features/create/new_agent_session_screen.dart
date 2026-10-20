@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/acp/agent_host.dart';
+import '../../../data/models/worktrees.dart';
 import '../../../data/repositories/agent_screens.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/agent_session_settings.dart';
@@ -80,7 +81,7 @@ class _FormState extends State<_Form> {
 
   /// What the `Branch` field was last filled with, and whether `New worktree…`
   /// was chosen at the last look: the field is filled when it becomes chosen,
-  /// never while the person is typing in it or after they cleared it.
+  /// never while the person is typing in it.
   String _suggested = '';
   bool _wasNew = false;
 
@@ -150,9 +151,11 @@ class _FormState extends State<_Form> {
     final isNew = _vm.choice is NewWorktree;
     if (isNew == _wasNew) return;
     _wasNew = isNew;
-    // Typed text is the person's; only an empty field or an untouched
-    // suggestion is replaced.
-    if (isNew && (_branch.text.isEmpty || _branch.text == _suggested)) {
+    // Typed text is the person's; an empty field, an untouched suggestion and
+    // the branch of a checkout that exists now (a worktree made by an earlier
+    // Start, which a second one would collide with) are replaced.
+    final taken = {for (final c in _vm.checkouts ?? const <WorktreeInfo>[]) ?c.branch};
+    if (isNew && (_branch.text.isEmpty || _branch.text == _suggested || taken.contains(_branch.text.trim()))) {
       _suggested = _vm.suggestBranch();
       _branch.text = _suggested;
     }
