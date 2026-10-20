@@ -91,6 +91,9 @@ class ClaudeLogMapper implements SessionLogMapper {
   PendingAsk? get pendingAsk => _ask;
 
   @override
+  ProposedPlan? get proposedPlan => null; // Claude asks through its own approval (herdr reports it blocked)
+
+  @override
   Set<String> get openToolCalls => {
     // A subagent's call stays open for its whole run: it is a task, not what a
     // permission dialog asks about.

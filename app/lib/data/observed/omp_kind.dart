@@ -24,8 +24,14 @@ const ompKind = ObservedKind(
 
 AskStepper _ompStepper(PendingAsk ask, List<AskAnswer> answers) => OmpAskDriver(ask, answers).next;
 
+/// Whether omp's screen shows the plan review. herdr does not call that pane
+/// blocked (see `ScreenWaits`), so the phone reads the screen to know.
+bool ompWaitsOnPlanReview(String screen) => parseOmpPlanReview(screen) != null;
+
 /// omp's tool approval or plan review as a prompt: each option with the keys
-/// that choose it from where the cursor is.
+/// that choose it from where the cursor is. An option no keys reach for sure
+/// (a disabled one, or the focus is off the options) is left out; with none
+/// left the screen is not a prompt the phone can answer.
 PromptInfo? ompMenuPrompt(String screen) {
   final approval = parseOmpApproval(screen);
   final OmpMenuScreen? menu = approval ?? parseOmpPlanReview(screen);
@@ -33,9 +39,9 @@ PromptInfo? ompMenuPrompt(String screen) {
   final replies = <QuickReply>[];
   for (final (i, o) in menu.options.indexed) {
     final keys = menu.keysFor(i);
-    if (keys == null) return null;
-    replies.add(QuickReply(label: o.label, keys: keys));
+    if (keys != null) replies.add(QuickReply(label: o.label, keys: keys));
   }
+  if (replies.isEmpty) return null;
   return PromptInfo(
     question: approval == null ? 'Plan mode - next step' : 'Allow tool: ${approval.tool}',
     subject: approval == null ? '' : _approvalSubject(approval.detail),

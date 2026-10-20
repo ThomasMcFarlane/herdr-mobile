@@ -1322,7 +1322,10 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
       // title, plan, diffs): a card made before the log has the call is made
       // again when it does.
       final call = prompt == null ? null : _callAsking(prompt);
-      final full = '$sig\u0003$_attempt\u0003${call?.toolCallId ?? ''}';
+      // omp's plan review (a menu of the agent's own) is about the plan its log
+      // says was submitted: the card shows the text, once the log has it.
+      final plan = prompt == null || _preview?.prompt != null ? null : _mapper.proposedPlan?.markdown;
+      final full = '$sig\u0003$_attempt\u0003${call?.toolCallId ?? ''}\u0003${plan?.hashCode ?? ''}';
       if (full == _pendingSig && _pending != null) {
         next = _pending;
       } else {
@@ -1337,8 +1340,9 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
           );
         } else {
           next = PendingPermission(
-            'prompt:${promptSignature(prompt!).hashCode}:$_attempt:${call?.toolCallId ?? ''}',
-            promptRequest(prompt, paneId: paneId, call: call),
+            // The plan is part of the id: the card builds what it shows once per id.
+            'prompt:${promptSignature(prompt!).hashCode}:$_attempt:${call?.toolCallId ?? ''}:${plan?.hashCode ?? ''}',
+            promptRequest(prompt, paneId: paneId, call: call, plan: plan),
           );
         }
       }
@@ -1696,8 +1700,10 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
         if (index >= fresh.replies.length) return _refuse(p, _screenMoved);
         await machine.api.sendKeys(paneId, fresh.replies[index].keys);
         machine.markReviewed(paneId);
+        machine.answeredByKeys(paneId);
       } else {
         await machine.api.sendKeys(paneId, const ['esc']);
+        machine.answeredByKeys(paneId);
       }
       _suppress(p);
     } on HerdrApiException catch (e) {

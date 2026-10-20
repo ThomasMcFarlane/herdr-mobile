@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/observed/omp_ask_driver.dart';
+import 'package:herdr_mobile/data/observed/omp_kind.dart' show ompMenuPrompt;
 
 import 'support/omp_ask_fixtures.dart';
 
@@ -133,6 +134,55 @@ void main() {
       final r = parseOmpPlanReview(fixtureScreen('plan-review-refine'))!;
       expect(r.cursorIndex, 3);
       expect(r.approve, ['up', 'up', 'up', 'enter']);
+    });
+
+    test('plan review with the model slider: its rows are not options', () {
+      final p = parseOmpPlanReview(fixtureScreen('plan-review-slider'))!;
+      expect([for (final o in p.options) o.label], [
+        'Approve and execute',
+        'Approve and compact context',
+        'Approve and keep context (~23k / 1m)',
+        'Refine plan',
+        'Save and quit',
+      ]);
+      expect(p.cursorIndex, 0);
+      expect(p.keysForLabel('Refine'), ['down', 'down', 'down', 'enter']);
+    });
+
+    test('keep context over 95% is skipped by the cursor: the keys do not count it', () {
+      String full(String usage) =>
+          fixtureScreen('plan-review').replaceAll('(~6.8k / 200k)', usage);
+      // 199k of 200k: disabled for sure, so Refine is two downs, not three
+      // (three would land on "Save and quit", which quits omp).
+      final over = parseOmpPlanReview(full('(~199k / 200k)'))!;
+      expect(over.keysForLabel('Refine'), ['down', 'down', 'enter']);
+      expect(over.keysForLabel('Save'), ['down', 'down', 'down', 'enter']);
+      expect(over.keysForLabel('Approve and keep'), isNull);
+      final under = parseOmpPlanReview(full('(~150k / 200k)'))!;
+      expect(under.keysForLabel('Refine'), ['down', 'down', 'down', 'enter']);
+      expect(under.keysForLabel('Approve and keep'), ['down', 'down', 'enter']);
+      // 1m is 0.95m to 1.05m once rounded, so 950k used cannot be told.
+      final edge = parseOmpPlanReview(full('(~950k / 1m)'))!;
+      expect(edge.keysForLabel('Refine'), isNull);
+      expect(edge.keysForLabel('Approve and compact'), ['down', 'enter']);
+      // A narrow pane cuts the label: the usage cannot be read, so it may be over.
+      final cut = parseOmpPlanReview(full('(~199k / 2…)').replaceAll('2…)', '2…'))!;
+      expect(cut.keysForLabel('Refine'), isNull);
+      expect(cut.keysForLabel('Approve and compact'), ['down', 'enter']);
+      // Going up crosses the row too.
+      final from = parseOmpPlanReview(
+        fixtureScreen('plan-review-refine').replaceAll('(~6.8k / 200k)', '(~199k / 200k)'),
+      )!;
+      expect(from.keysForLabel('Approve and execute'), ['up', 'up', 'enter']);
+    });
+
+    test('with the focus off the options no key chooses one', () {
+      final onText = fixtureScreen('plan-review').replaceAll('↑/↓ select · ⏎ confirm', '↑/↓ scroll · ⇧ faster');
+      final p = parseOmpPlanReview(onText)!;
+      expect(p.focusOnOptions, isFalse);
+      expect(p.keysFor(0), isNull);
+      expect(ompMenuPrompt(onText), isNull);
+      expect(ompMenuPrompt(fixtureScreen('plan-review'))!.replies, hasLength(5));
     });
 
     test('other screens are not menus', () {

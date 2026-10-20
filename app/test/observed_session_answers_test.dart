@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart' show VoidCallback;
+import 'package:herdr_mobile/data/decision/permission_evidence.dart' show permissionEvidence;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/repositories/attach_target.dart' show AttachMode;
 import 'package:herdr_mobile/data/acp/acp_models.dart';
@@ -51,8 +54,13 @@ const _working = '  ⠋ Working… (esc to interrupt)\n';
 
 List<String> _log(List<String> more) => [sessionLine(), userLine('u1', 'go'), ...more];
 
-Future<(ObservedRig, ObservedAgentSession)> _open(List<String> lines, {required String status, required String screen}) async {
-  final rig = await ObservedRig.create(status: status);
+Future<(ObservedRig, ObservedAgentSession)> _open(
+  List<String> lines, {
+  required String status,
+  required String screen,
+  Map<String, bool Function(String screen)> screenWaits = const {},
+}) async {
+  final rig = await ObservedRig.create(status: status, screenWaits: screenWaits);
   addTearDown(rig.dispose);
   rig.transport.screen = screen;
   rig.source.write(lines);
@@ -207,6 +215,53 @@ void main() {
       session.answerQuestion(session.state.pending.single.id, const ElicitationCancel());
       await eventually(() => session.error != null, reason: 'the person is told');
       expect(rig.sent('pane.send_keys'), isEmpty);
+    });
+  });
+
+  // herdr reports omp's plan review as `done` (omp aborts the turn to open it),
+  // so nothing but the screen says the agent waits. The log of a real plan-mode
+  // turn (plan_proposal.jsonl) has the plan the review is about.
+  group('the plan review of a pane herdr calls done', () {
+    final planLog = File('test/fixtures/omp_logs/plan_proposal.jsonl').readAsLinesSync().where((l) => l.isNotEmpty).toList();
+    final waits = {'omp': ompWaitsOnPlanReview};
+
+    Future<(ObservedRig, ObservedAgentSession)> reviewing() async {
+      final (rig, session) = await _open(planLog, status: 'done', screen: fixtureScreen('plan-review'), screenWaits: waits);
+      await eventually(() => session.state.pending.isNotEmpty, reason: 'the review is a request');
+      return (rig, session);
+    }
+
+    test('is a request with the plan to read, and the options as answers', () async {
+      final (_, session) = await reviewing();
+      final request = (session.state.pending.single as PendingPermission).request;
+      expect(permissionEvidence(request).planMarkdown, startsWith('## Context\nCreate `/tmp/ompplan/hello.py`'));
+      expect([for (final o in request.options) o.name], contains('Refine plan'));
+      expect(session.phase, AgentPhase.blockedOnPermission);
+    });
+
+    test('approving sends the keys the screen needs, after reading it again', () async {
+      final (rig, session) = await reviewing();
+      session.answerPermission(session.state.pending.single.id, const PermissionSelected('0'));
+      await eventually(() => rig.sent('pane.send_keys').isNotEmpty, reason: 'keys sent');
+      expect(rig.sent('pane.send_keys').single['keys'], ['enter']);
+    });
+
+    test('the plan reaches the card when the log delivers it after the screen was understood', () async {
+      final (rig, session) = await _open(planLog.take(3).toList(), status: 'done', screen: fixtureScreen('plan-review'), screenWaits: waits);
+      await eventually(() => session.state.pending.isNotEmpty, reason: 'the review is a request');
+      final first = session.state.pending.single.id;
+      expect(permissionEvidence((session.state.pending.single as PendingPermission).request).planMarkdown, isNull);
+
+      rig.source.push(planLog.skip(3).toList());
+      await eventually(() => session.state.pending.single.id != first, reason: 'the request is made again with the plan');
+      expect(permissionEvidence((session.state.pending.single as PendingPermission).request).planMarkdown, contains('## Verification'));
+    });
+
+    test('is no request once the review is gone from the screen', () async {
+      final (rig, session) = await reviewing();
+      rig.transport.screen = _working;
+      rig.machine.answeredByKeys('w1:p1');
+      await eventually(() => session.state.pending.isEmpty, reason: 'the request goes');
     });
   });
 
