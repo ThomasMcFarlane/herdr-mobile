@@ -442,14 +442,24 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('leads with the release\'s walkthrough clip', (tester) async {
+    testWidgets('leads with the release\'s walkthrough clip, which plays in the app; a failure offers Retry',
+        (tester) async {
       const clip = "[![Watch what's new · 6 changes · 0:19 · 7.5 MB]($_base/99.0.0-whats-new.jpg)]($_base/99.0.0-whats-new.mp4)";
       final u = _updater(tester, release: _release(notes: '$clip\n\n### One new thing\n\nIt does what it says.'));
       await u.update.check();
       await _pump(tester, update: u.update);
       await _openSheet(tester);
-      expect(find.text("Watch what's new · 6 changes · 0:19 · 7.5 MB · opens in your browser"), findsOneWidget);
+      expect(find.text("Watch what's new · 6 changes · 0:19 · 7.5 MB"), findsOneWidget);
       expect(find.text('It does what it says.'), findsOneWidget);
+
+      // No video plugin under test: the clip cannot load, which is the
+      // failure the person would meet offline.
+      await tester.tap(find.text('Play'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(find.text('What\u2019s new in 99.0.0'), findsOneWidget);
+      expect(find.text('Couldn\u2019t play the clip. Check the connection and try again.'), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
     });
 
     testWidgets('fetches nothing a notes line names on another host', (tester) async {
@@ -458,7 +468,7 @@ void main() {
       await u.update.check();
       await _pump(tester, update: u.update);
       await _openSheet(tester);
-      expect(find.textContaining('opens in your browser'), findsNothing);
+      expect(find.text('Play'), findsNothing);
       expect(find.byWidgetPredicate((w) => w is Image && w.image is NetworkImage), findsNothing);
     });
 

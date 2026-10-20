@@ -60,7 +60,7 @@ looked for in that user's home.
    You do not have to come back to this page: when a new version is out,
    Settings gets a small dot. Tap `Update available` there: the update sheet
    opens on what's new (a short clip of the changes when the release has one;
-   `Play` opens it in your browser), then `Download`, then `Install`. herdr
+   `Play` plays it), then `Download`, then `Install`. herdr
    checks the file against the release's checksum first, and Android asks you
    to confirm. The first time, Android also asks you to allow herdr to install
    apps: allow it and tap Install again. Settings > About >

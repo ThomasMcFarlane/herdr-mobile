@@ -24,6 +24,7 @@ import 'package:herdr_mobile/data/services/apk_installer.dart';
 import 'package:herdr_mobile/data/services/notifier.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/settings/settings_screen.dart';
+import 'package:herdr_mobile/ui/features/settings/clip_player.dart';
 import 'package:herdr_mobile/ui/features/settings/update_group.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
@@ -256,6 +257,22 @@ void main() {
         await t.tap(find.text('open'));
         await t.pump(const Duration(milliseconds: 600));
       },
+    );
+  });
+
+  testWidgets('clip player when the clip cannot load', (tester) async {
+    // No video plugin in a test: the player's failure state.
+    final clip = ReleaseClip.find(
+      "[![Watch what's new · 4 changes · 0:14 · 5.1 MB]"
+      '(https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.7/0.1.7-whats-new.jpg)]'
+      '(https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.7/0.1.7-whats-new.mp4)',
+      '0.1.7',
+    )!;
+    await shoot(
+      tester,
+      ClipPlayerScreen(clip: clip, title: 'What\u2019s new in 0.1.7'),
+      '$out/clip-player-failed.png',
+      pump: (t) => t.pump(const Duration(milliseconds: 600)),
     );
   });
 

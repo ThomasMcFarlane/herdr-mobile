@@ -4,6 +4,12 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [Unreleased]
+
+- `Play` on a release's clip in the update sheet plays it inside herdr,
+  silent, with `Play again` at the end. If the clip can't load, it says so
+  and offers `Retry`.
+
 ## [0.1.20] - 2026-10-19
 
 [![Watch what's new · 3 changes · 0:13 · 4.6 MB](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.20/0.1.20-whats-new.jpg)](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.20/0.1.20-whats-new.mp4)

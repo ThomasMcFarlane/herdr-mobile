@@ -82,6 +82,10 @@ dependencies:
   file_picker: ^13.1.0
   webview_flutter: ^4.14.0
   webview_flutter_android: ^4.13.0
+  # The update sheet's walkthrough clip (ui/features/settings/clip_player.dart).
+  # GitHub serves release files as downloads (attachment, octet-stream), so a
+  # browser saves the .mp4 instead of playing it; the player streams it.
+  video_player: ^2.14.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
