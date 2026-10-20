@@ -71,6 +71,11 @@ class FakeWebView extends WebViewPlatform {
   /// A navigation Android does not ask about (a form POST): it loads.
   void land(String url) => _load(Uri.parse(url));
 
+  /// The page's server asks for a user name and password, as the view does for
+  /// a 401: the answer comes through [HttpAuthRequest.onProceed] or
+  /// [HttpAuthRequest.onCancel].
+  void askAuth(HttpAuthRequest request) => _delegate?.onHttpAuthRequest?.call(request);
+
   /// A single-page app's route: the address changes, no page loads.
   void pushState(String url) {
     history
@@ -188,6 +193,7 @@ class FakeNavigationDelegate extends PlatformNavigationDelegate {
   ProgressCallback? onProgress;
   WebResourceErrorCallback? onWebResourceError;
   UrlChangeCallback? onUrlChange;
+  HttpAuthRequestCallback? onHttpAuthRequest;
 
   @override
   Future<void> setOnNavigationRequest(NavigationRequestCallback onNavigationRequest) async =>
@@ -208,6 +214,10 @@ class FakeNavigationDelegate extends PlatformNavigationDelegate {
 
   @override
   Future<void> setOnUrlChange(UrlChangeCallback onUrlChange) async => this.onUrlChange = onUrlChange;
+
+  @override
+  Future<void> setOnHttpAuthRequest(HttpAuthRequestCallback onHttpAuthRequest) async =>
+      this.onHttpAuthRequest = onHttpAuthRequest;
 }
 
 class _FakeController extends PlatformWebViewController {

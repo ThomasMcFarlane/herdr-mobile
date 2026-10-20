@@ -4,6 +4,13 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [Unreleased]
+
+- A page that asks for a user name and password (a dev server, or a reverse
+  proxy in front of it, with Basic auth) now shows a `Sign in` sheet. It used
+  to load nothing and give no way to enter them. Dismissing the sheet cancels
+  the sign-in; nothing typed is kept.
+
 ## [0.1.23] - 2026-10-20
 
 ### Mermaid diagrams are drawn in answers

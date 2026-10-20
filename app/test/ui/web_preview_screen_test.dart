@@ -13,7 +13,7 @@ import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/web/web_preview_screen.dart';
 import 'package:url_launcher_platform_interface/link.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
-import 'package:webview_flutter/webview_flutter.dart' show WebViewWidget;
+import 'package:webview_flutter/webview_flutter.dart' show HttpAuthRequest, WebViewWidget;
 
 import '../support/fake_fs.dart';
 import '../support/fake_transport.dart';
@@ -345,5 +345,75 @@ void main() {
     final page = tester.getRect(find.byType(WebViewWidget));
     final screen = tester.getRect(find.byType(WebPreviewScreen));
     expect(screen.bottom - page.bottom, closeTo(48 / tester.view.devicePixelRatio, 0.5));
+  });
+
+  group('a page that asks for a user name and password', () {
+    late List<String> answers;
+
+    HttpAuthRequest ask({String? realm = 'staging'}) => HttpAuthRequest(
+          host: 'localhost',
+          realm: realm,
+          onProceed: (c) => answers.add('${c.user}:${c.password}'),
+          onCancel: () => answers.add('cancel'),
+        );
+
+    setUp(() => answers = []);
+
+    /// The page is open and the toast about the port it got is gone (it sits
+    /// over the sheet's buttons).
+    Future<void> open(WidgetTester tester) async {
+      await pump(tester, ServerPage(Uri.parse('http://localhost:3000/')));
+      await tester.pump(const Duration(seconds: 10));
+    }
+
+    testWidgets('is answered with what the person types, once for every request waiting', (tester) async {
+      await open(tester);
+      web.askAuth(ask());
+      web.askAuth(ask()); // a picture on the same page
+      await _settle(tester);
+
+      expect(find.byType(SheetScaffold), findsOneWidget, reason: 'one sheet, not one per request');
+      expect(find.textContaining('staging'), findsOneWidget, reason: 'the server\'s own words for what it protects');
+      expect(find.textContaining('build-box'), findsWidgets);
+      expect(answers, isEmpty, reason: 'the view waits for the answer');
+
+      await tester.enterText(find.widgetWithText(TextFormField, '').first, 'ann');
+      await tester.enterText(find.widgetWithText(TextFormField, '').last, 'p@ss w0rd ');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(AppButton, 'Sign in'));
+      await _settle(tester);
+
+      expect(answers, ['ann:p@ss w0rd ', 'ann:p@ss w0rd '], reason: 'typed once, the password not trimmed');
+      expect(find.byType(SheetScaffold), findsNothing);
+    });
+
+    testWidgets('waits for a user name, and dismissing the sheet cancels every request', (tester) async {
+      await open(tester);
+      web.askAuth(ask(realm: null));
+      web.askAuth(ask(realm: null));
+      await _settle(tester);
+
+      expect(tester.widget<AppButton>(find.widgetWithText(AppButton, 'Sign in')).onPressed, isNull);
+
+      await tester.tapAt(const Offset(10, 10)); // the scrim
+      await _settle(tester);
+      expect(find.byType(SheetScaffold), findsNothing);
+      expect(answers, ['cancel', 'cancel']);
+    });
+
+    testWidgets('asks again when the server refuses what was typed', (tester) async {
+      await open(tester);
+      web.askAuth(ask());
+      await _settle(tester);
+      await tester.enterText(find.widgetWithText(TextFormField, '').first, 'ann');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(AppButton, 'Sign in'));
+      await _settle(tester);
+
+      web.askAuth(ask());
+      await _settle(tester);
+      expect(find.byType(SheetScaffold), findsOneWidget);
+      expect(answers, ['ann:']);
+    });
   });
 }

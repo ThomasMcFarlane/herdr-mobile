@@ -15,6 +15,7 @@ import 'package:herdr_mobile/ui/core/kit.dart';
 import '../../render/visible_text.dart';
 import '../../support/open_link.dart';
 import '../pane/link_sheet.dart';
+import 'http_auth_sheet.dart';
 import 'web_navigation.dart';
 
 /// What a [WebPreviewScreen] shows.
@@ -238,6 +239,7 @@ class _WebPreviewScreenState extends State<WebPreviewScreen> {
           },
           onUrlChange: (change) => _onUrl(change.url),
           onWebResourceError: _onError,
+          onHttpAuthRequest: _onAuthRequest,
         ),
       );
     final android = view.platform;
@@ -425,6 +427,51 @@ class _WebPreviewScreenState extends State<WebPreviewScreen> {
       await _view.loadRequest(entry);
     } on WebPreviewException catch (e) {
       _toaster.show(e.message, kind: ToastKind.failed);
+    }
+  }
+
+  // -- sign-in ----------------------------------------------------------------
+
+  /// Requests for sign-in that arrived while the sheet is up (a page and the
+  /// pictures on it ask together): they get the answer the sheet gets, so the
+  /// person types once.
+  List<HttpAuthRequest>? _authAsked;
+
+  /// The page's server wants a user name and password (Basic or Digest: a
+  /// dev server, or a reverse proxy in front of it). The view waits for an
+  /// answer and shows nothing meanwhile, so every request is answered:
+  /// dismissing the sheet, or leaving the screen, cancels it.
+  void _onAuthRequest(HttpAuthRequest request) {
+    final waiting = _authAsked;
+    if (waiting != null) {
+      waiting.add(request);
+      return;
+    }
+    if (!mounted) {
+      request.onCancel();
+      return;
+    }
+    final asked = _authAsked = [request];
+    unawaited(_askLogin(asked));
+  }
+
+  Future<void> _askLogin(List<HttpAuthRequest> asked) async {
+    HttpLogin? login;
+    try {
+      login = await showHttpAuthSheet(
+        context,
+        where: widget.machine.profile.label,
+        realm: asked.first.realm == null ? null : visibleText(asked.first.realm!),
+      );
+    } finally {
+      _authAsked = null;
+      for (final request in asked) {
+        if (login == null) {
+          request.onCancel();
+        } else {
+          request.onProceed(WebViewCredential(user: login.user, password: login.password));
+        }
+      }
     }
   }
 
