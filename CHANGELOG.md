@@ -10,6 +10,10 @@ release.
 
 - A session started in a worktree now shows at the computer inside that
   worktree's own workspace, next to its shell, not in `Phone sessions`.
+- A picture with see-through pixels, a PNG or WebP, in the full-screen
+  viewer no longer shows a strip of grey squares past its right and bottom
+  edge. The strip grew as you zoomed in; it was seen on a large diagram.
+  Not checked on a phone yet.
 
 ### New
 
