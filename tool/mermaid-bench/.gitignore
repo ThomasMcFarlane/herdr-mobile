@@ -1,0 +1,4 @@
+.dart_tool/
+build/
+# written by bin/corpus.dart into the working directory
+fails.tsv

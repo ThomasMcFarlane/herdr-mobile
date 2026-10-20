@@ -38,6 +38,8 @@ import 'ui/support/keyboard_frames.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import 'ui/features/agents/agent_navigation.dart' show openAgentFromLink, resumeAgent;
 import 'ui/features/machines/machine_form_view_model.dart' show TransportFactory;
+import 'ui/features/photos/mermaid_viewer.dart' show openDiagramViewer;
+import 'ui/render/mermaid/md_diagram_opener.dart';
 import 'ui/shell/home_shell.dart';
 
 /// How the app opens a connection to a saved machine: over SSH, with the
@@ -335,8 +337,11 @@ class _HerdrMobileAppState extends State<HerdrMobileApp>
                   // Edge to edge draws under the bars; screens handle top and
                   // bottom themselves, but nothing else clears the side insets
                   // (landscape 3-button bar, camera cutout).
-                  child: KeyboardFrames(
-                    child: SafeArea(top: false, bottom: false, child: child!),
+                  child: MdDiagramOpener(
+                    open: openDiagramViewer,
+                    child: KeyboardFrames(
+                      child: SafeArea(top: false, bottom: false, child: child!),
+                    ),
                   ),
                 ),
             navigatorKey: _links.navigatorKey,

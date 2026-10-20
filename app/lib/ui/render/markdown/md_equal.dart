@@ -13,7 +13,7 @@ bool mdBlocksEqual(MdBlock a, MdBlock b) {
     case (MdHeading a, MdHeading b):
       return a.level == b.level && mdInlinesEqual(a.inlines, b.inlines);
     case (MdCode a, MdCode b):
-      return a.language == b.language && a.text == b.text;
+      return a.language == b.language && a.text == b.text && a.closed == b.closed;
     case (MdRule(), MdRule()):
       return true;
     case (MdQuote a, MdQuote b):

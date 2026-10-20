@@ -182,11 +182,15 @@ final class MdHeading extends MdBlock {
 /// A fenced or indented code block. [text] is the raw code, without the
 /// trailing newline and without any indentation of an enclosing list item.
 /// [language] is the first word of the info string, `''` when there is none.
+/// [closed] is false for a top-level fence that never got its closing line:
+/// the text ended first (a message cut off, a thought still arriving). A
+/// diagram is drawn only from a closed fence.
 final class MdCode extends MdBlock {
-  const MdCode({required this.language, required this.text});
+  const MdCode({required this.language, required this.text, this.closed = true});
 
   final String language;
   final String text;
+  final bool closed;
 
   @override
   String get plainText => text;
