@@ -239,7 +239,7 @@ void main() {
       await pumpView(tester, FakeAgentSession(state: stateWith(items: items, turnActive: true)));
       expect(find.byIcon(LucideIcons.chevronRight), findsNothing);
       expect(find.byIcon(LucideIcons.chevronDown), findsNothing);
-      expect(find.byIcon(LucideIcons.circleX), findsOneWidget, reason: 'only the failure has a shape of its own');
+      expect(find.byWidgetPredicate((w) => w is StatusGlyph && w.isFailed), findsOneWidget, reason: 'only the failure has a shape of its own');
       expect(rich('parse.dart'), findsNWidgets(2));
       expect(find.text('+1'), findsNothing);
       expect(find.bySemanticsLabel(RegExp('1 line added, 1 line removed')), findsNothing, reason: 'no semantics without the handle');

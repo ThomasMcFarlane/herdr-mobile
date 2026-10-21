@@ -88,15 +88,14 @@ class RunGlyph extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ds = context.ds;
     return ExcludeSemantics(
       child: switch (tone) {
         RunTone.waitingForYou => StatusGlyph(status: AgentStatus.blocked, size: size),
         RunTone.starting || RunTone.stale => StatusGlyph(status: AgentStatus.idle, size: size),
         RunTone.running => StatusGlyph(status: AgentStatus.working, size: size),
         RunTone.done => StatusGlyph(status: AgentStatus.done, size: size),
-        RunTone.failed => Icon(LucideIcons.circleX, size: size, color: ds.danger),
-        RunTone.cancelled => Icon(LucideIcons.ban, size: size, color: ds.textTertiary),
+        RunTone.failed => StatusGlyph.failed(size: size),
+        RunTone.cancelled => StatusGlyph.cancelled(size: size),
       },
     );
   }

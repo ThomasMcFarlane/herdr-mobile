@@ -171,7 +171,7 @@ class _Step extends StatelessWidget {
       PlanStatus.pending => const StatusGlyph(status: AgentStatus.idle, size: IconSize.inline),
       PlanStatus.inProgress => const StatusGlyph(status: AgentStatus.working, size: IconSize.inline),
       PlanStatus.completed => const StatusGlyph(status: AgentStatus.done, size: IconSize.inline),
-      PlanStatus.cancelled => Icon(LucideIcons.ban, size: IconSize.inline, color: ds.textTertiary),
+      PlanStatus.cancelled => const StatusGlyph.cancelled(size: IconSize.inline),
     };
     final word = switch (entry.status) {
       PlanStatus.pending => 'pending',

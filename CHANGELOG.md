@@ -18,6 +18,9 @@ release.
 - A picture has one icon everywhere: the gallery, attachments, a photo that did
   not load and the pictures in `Made` share one drawn picture, one for "cannot
   be shown" and one for many.
+- A tool call, a subagent run or a plan step that failed or was cancelled now
+  has the same drawn look as the done, working and waiting shapes next to it,
+  in place of a generic cross and a generic "no entry" sign.
 
 ## [0.1.23] - 2026-10-20
 

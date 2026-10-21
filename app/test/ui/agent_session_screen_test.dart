@@ -146,7 +146,7 @@ void main() {
         expect(find.text(title), findsOneWidget);
       }
       expect(find.byIcon(LucideIcons.terminal), findsOneWidget);
-      expect(find.byIcon(LucideIcons.circleX), findsOneWidget);
+      expect(find.byWidgetPredicate((w) => w is StatusGlyph && w.isFailed), findsOneWidget);
 
       await tester.tap(find.text('Thinking'));
       await tester.pump();

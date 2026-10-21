@@ -24,7 +24,10 @@ without one gets deleted by the next person who does not understand it.
    primary action, links and the focused field. Colour otherwise means status.
 4. **Status is a shape first**, colour second (`StatusGlyph`): needs you =
    filled with a bar, working = half full, done = check, idle = empty ring,
-   unknown = dashed ring. Readable without colour.
+   unknown = dashed ring; a call, run or plan step that ended without being
+   done adds failed = danger disc with a cross and cancelled = quiet ring with
+   a slash (`StatusGlyph.failed`, `.cancelled`: not agent statuses, so
+   `AgentStatus` is unchanged). Readable without colour.
 5. **Hairlines, not elevation.** One physical pixel. The one shadow is
    `Ds.floatShadow`, for the floating bars and pills. Transient messages are on
    the inverse surface instead. No backdrop blur: a full-screen blur pass per

@@ -244,6 +244,17 @@ final List<KitEntry> kitCatalog = [
               const SizedBox(width: Gap.xs),
               Text(s.label, style: Type.label.copyWith(color: s.textColor(c.ds))),
             ]),
+          // A call, run or plan step that ended without being done.
+          Row(mainAxisSize: MainAxisSize.min, children: [
+            const StatusGlyph.failed(size: IconSize.lead),
+            const SizedBox(width: Gap.xs),
+            Text('Failed', style: Type.label.copyWith(color: c.ds.dangerText)),
+          ]),
+          Row(mainAxisSize: MainAxisSize.min, children: [
+            const StatusGlyph.cancelled(size: IconSize.lead),
+            const SizedBox(width: Gap.xs),
+            Text('Cancelled', style: Type.label.copyWith(color: c.ds.textSecondary)),
+          ]),
         ])),
     KitState('stale (dim)', (c) => const StatusGlyph(status: AgentStatus.working, size: IconSize.lead, dim: true)),
   ]),

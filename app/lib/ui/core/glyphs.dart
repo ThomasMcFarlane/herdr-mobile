@@ -72,19 +72,77 @@ extension LinkStateColor on LinkState {
 class StatusGlyph extends StatefulWidget {
   const StatusGlyph({
     super.key,
-    required this.status,
+    required AgentStatus this.status,
     this.size = 18,
     this.dim = false,
-  });
+  }) : _ended = null;
 
-  final AgentStatus status;
+  /// A call, run or plan step that failed: a disc in the danger colour with a
+  /// cross, the same grammar as done (disc and check) and needs-you (disc and
+  /// bar). Not an agent status: no agent is "failed", so [AgentStatus] and
+  /// everything that switches over it stay as they are.
+  const StatusGlyph.failed({super.key, this.size = 18, this.dim = false}) : status = null, _ended = _Ended.failed;
+
+  /// A call, run or plan step that was cancelled: the quiet ring of idle with
+  /// a slash through it.
+  const StatusGlyph.cancelled({super.key, this.size = 18, this.dim = false}) : status = null, _ended = _Ended.cancelled;
+
+  /// The agent status drawn; null for [StatusGlyph.failed] and [StatusGlyph.cancelled].
+  final AgentStatus? status;
+  final _Ended? _ended;
   final double size;
 
   /// Stale data: draw at reduced opacity.
   final bool dim;
 
+  /// What is drawn, for the shape and the words.
+  _Shape get _shape => switch (_ended) {
+        _Ended.failed => _Shape.failed,
+        _Ended.cancelled => _Shape.cancelled,
+        null => _Shape.of(status!),
+      };
+
+  /// Whether this is [StatusGlyph.failed].
+  bool get isFailed => _ended == _Ended.failed;
+
+  /// Whether this is [StatusGlyph.cancelled].
+  bool get isCancelled => _ended == _Ended.cancelled;
+
   @override
   State<StatusGlyph> createState() => _StatusGlyphState();
+}
+
+enum _Ended { failed, cancelled }
+
+/// Every shape the glyph draws: the agent statuses and the two ways a call, a
+/// run or a plan step can end without being done.
+enum _Shape {
+  idle(AgentStatus.idle),
+  unknown(AgentStatus.unknown),
+  working(AgentStatus.working),
+  done(AgentStatus.done),
+  blocked(AgentStatus.blocked),
+  failed(null),
+  cancelled(null);
+
+  const _Shape(this.status);
+
+  final AgentStatus? status;
+
+  static _Shape of(AgentStatus s) => switch (s) {
+        AgentStatus.idle => idle,
+        AgentStatus.unknown => unknown,
+        AgentStatus.working => working,
+        AgentStatus.done => done,
+        AgentStatus.blocked => blocked,
+      };
+
+  Color color(Ds ds) => status?.color(ds) ?? (this == failed ? ds.danger : ds.textTertiary);
+
+  String get label => status?.label ?? (this == failed ? 'Failed' : 'Cancelled');
+
+  /// News: the glyph sends one faint ring outward when it arrives.
+  bool get isNews => this == blocked || this == done || this == failed;
 }
 
 class _StatusGlyphState extends State<StatusGlyph> with SingleTickerProviderStateMixin {
@@ -92,15 +150,15 @@ class _StatusGlyphState extends State<StatusGlyph> with SingleTickerProviderStat
   // one null field.
   AnimationController? _controller;
   CurvedAnimation? _progress;
-  AgentStatus? _from;
+  _Shape? _from;
 
   @override
   void didUpdateWidget(StatusGlyph old) {
     super.didUpdateWidget(old);
-    if (old.status == widget.status || Motion.reduced(context)) return;
+    if (old._shape == widget._shape || Motion.reduced(context)) return;
     final controller = _controller ??= AnimationController(vsync: this, duration: Motion.settle);
     _progress ??= CurvedAnimation(parent: controller, curve: Motion.easeOut);
-    _from = old.status;
+    _from = old._shape;
     controller
       ..value = 0
       ..forward().whenComplete(() {
@@ -118,13 +176,13 @@ class _StatusGlyphState extends State<StatusGlyph> with SingleTickerProviderStat
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
-    final status = widget.status;
+    final shape = widget._shape;
     final from = _from;
     Widget glyph = CustomPaint(
       size: Size.square(widget.size),
       painter: _GlyphPainter(
-        status,
-        status.color(ds),
+        shape,
+        shape.color(ds),
         ds.onStatus,
         from: from,
         fromColor: from?.color(ds),
@@ -133,13 +191,13 @@ class _StatusGlyphState extends State<StatusGlyph> with SingleTickerProviderStat
     );
     // No Opacity layer for the (usual) undimmed glyph.
     if (widget.dim) glyph = Opacity(opacity: 0.45, child: glyph);
-    return Semantics(label: status.label, excludeSemantics: true, child: glyph);
+    return Semantics(label: shape.label, excludeSemantics: true, child: glyph);
   }
 }
 
 class _GlyphPainter extends CustomPainter {
   _GlyphPainter(
-    this.status,
+    this.shape,
     this.color,
     this.markColor, {
     this.from,
@@ -147,15 +205,15 @@ class _GlyphPainter extends CustomPainter {
     this.progress,
   }) : super(repaint: progress);
 
-  final AgentStatus status;
+  final _Shape shape;
   final Color color;
 
-  /// Check / "!" drawn on the filled shapes.
+  /// Check / "!" / cross drawn on the filled shapes.
   final Color markColor;
 
   /// The shape being left and how far the settle has got (0..1); both null
   /// at rest.
-  final AgentStatus? from;
+  final _Shape? from;
   final Color? fromColor;
   final Animation<double>? progress;
 
@@ -163,11 +221,11 @@ class _GlyphPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final p = progress?.value ?? 1.0;
     if (from != null && p < 1) {
-      _shape(canvas, size, from!, fromColor!, markColor, 1, 1 - p);
+      _draw(canvas, size, from!, fromColor!, markColor, 1, 1 - p);
     }
-    _shape(canvas, size, status, color, markColor, p, p);
-    // One faint ring leaving the glyph, for the two states that are news.
-    if (from != null && p < 1 && (status == AgentStatus.blocked || status == AgentStatus.done)) {
+    _draw(canvas, size, shape, color, markColor, p, p);
+    // One faint ring leaving the glyph, for the states that are news.
+    if (from != null && p < 1 && shape.isNews) {
       final c = size.center(Offset.zero);
       canvas.drawCircle(
         c,
@@ -182,10 +240,10 @@ class _GlyphPainter extends CustomPainter {
 
   /// One shape. [draw] is how much of it has been drawn in (1 = all of it),
   /// [alpha] its opacity.
-  static void _shape(
+  static void _draw(
     Canvas canvas,
     Size size,
-    AgentStatus status,
+    _Shape shape,
     Color color,
     Color markColor,
     double draw,
@@ -212,17 +270,17 @@ class _GlyphPainter extends CustomPainter {
       ..strokeJoin = StrokeJoin.round
       ..color = a(markColor);
 
-    switch (status) {
-      case AgentStatus.idle:
+    switch (shape) {
+      case _Shape.idle:
         // An empty ring is drawn round from the top.
         canvas.drawArc(Rect.fromCircle(center: c, radius: r), -math.pi / 2, 2 * math.pi * draw, false, ring);
-      case AgentStatus.unknown:
+      case _Shape.unknown:
         const dashes = 10;
         final sweep = 2 * math.pi / dashes;
         for (var i = 0; i < dashes; i++) {
           canvas.drawArc(Rect.fromCircle(center: c, radius: r), i * sweep, sweep * 0.55, false, ring);
         }
-      case AgentStatus.working:
+      case _Shape.working:
         // A quiet track and a half ring from the top, clockwise.
         canvas.drawCircle(c, r, ring..color = a(Ds.fade(color, 0.32)));
         canvas.drawArc(
@@ -235,7 +293,7 @@ class _GlyphPainter extends CustomPainter {
             ..strokeWidth = stroke * 1.5
             ..strokeCap = StrokeCap.round,
         );
-      case AgentStatus.done:
+      case _Shape.done:
         // The disc settles to size, then the check is stroked.
         canvas.drawCircle(c, (r + stroke / 2) * (0.7 + 0.3 * part(0, 0.5)), fill);
         final path = Path()
@@ -250,7 +308,7 @@ class _GlyphPainter extends CustomPainter {
             canvas.drawPath(metric.extractPath(0, metric.length * drawn), mark);
           }
         }
-      case AgentStatus.blocked:
+      case _Shape.blocked:
         // The disc settles to size, the bar is stroked down, the dot lands.
         canvas.drawCircle(c, (r + stroke / 2) * (0.7 + 0.3 * part(0, 0.5)), fill);
         final top = Offset(c.dx, c.dy - r * 0.46);
@@ -265,12 +323,28 @@ class _GlyphPainter extends CustomPainter {
             Paint()..color = a(markColor),
           );
         }
+      case _Shape.failed:
+        // The disc settles to size, then the two strokes of the cross.
+        canvas.drawCircle(c, (r + stroke / 2) * (0.7 + 0.3 * part(0, 0.5)), fill);
+        final k = r * 0.34;
+        final first = part(0.3, 0.7);
+        final second = part(0.55, 1);
+        final a1 = Offset(c.dx - k, c.dy - k), b1 = Offset(c.dx + k, c.dy + k);
+        final a2 = Offset(c.dx + k, c.dy - k), b2 = Offset(c.dx - k, c.dy + k);
+        if (first > 0) canvas.drawLine(a1, Offset.lerp(a1, b1, first)!, mark);
+        if (second > 0) canvas.drawLine(a2, Offset.lerp(a2, b2, second)!, mark);
+      case _Shape.cancelled:
+        // The idle ring, then the slash from top left to bottom right.
+        canvas.drawArc(Rect.fromCircle(center: c, radius: r), -math.pi / 2, 2 * math.pi * part(0, 0.7), false, ring);
+        final k = r * math.sqrt1_2;
+        final from = Offset(c.dx - k, c.dy - k);
+        canvas.drawLine(from, Offset.lerp(from, Offset(c.dx + k, c.dy + k), part(0.5, 1))!, ring..strokeCap = StrokeCap.round);
     }
   }
 
   @override
   bool shouldRepaint(_GlyphPainter old) =>
-      old.status != status ||
+      old.shape != shape ||
       old.color != color ||
       old.markColor != markColor ||
       old.from != from ||

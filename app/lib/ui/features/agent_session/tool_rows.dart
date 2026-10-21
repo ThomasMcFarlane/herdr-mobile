@@ -82,14 +82,13 @@ class ToolStatusGlyph extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ds = context.ds;
     return ExcludeSemantics(
       child: switch (status) {
         ToolStatus.pending => StatusGlyph(status: AgentStatus.idle, size: size),
         ToolStatus.inProgress => StatusGlyph(status: AgentStatus.working, size: size),
         ToolStatus.completed => StatusGlyph(status: AgentStatus.done, size: size),
-        ToolStatus.failed => Icon(LucideIcons.circleX, size: size, color: ds.danger),
-        ToolStatus.cancelled => Icon(LucideIcons.ban, size: size, color: ds.textTertiary),
+        ToolStatus.failed => StatusGlyph.failed(size: size),
+        ToolStatus.cancelled => StatusGlyph.cancelled(size: size),
       },
     );
   }

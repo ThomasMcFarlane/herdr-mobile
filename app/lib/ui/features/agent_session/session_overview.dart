@@ -545,7 +545,7 @@ class _CommandRow extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(top: Gap.hair),
                 child: command.failed
-                    ? Icon(LucideIcons.circleX, size: IconSize.row, color: ds.danger)
+                    ? const StatusGlyph.failed(size: IconSize.row)
                     : Icon(LucideIcons.terminal, size: IconSize.row, color: ds.textSecondary),
               ),
               const SizedBox(width: Gap.sm),
