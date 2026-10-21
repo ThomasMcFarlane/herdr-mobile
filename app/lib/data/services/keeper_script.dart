@@ -17,7 +17,7 @@ const keeperPython = r'''
 """herdr-keeper: owns one ACP agent process so it outlives the phone's SSH link.
 
 Subcommands: probe | list | start --agent ID --cwd DIR | attach ID [--z] | kill ID
-| view ID | follow PATH [--from N] | blob PATH START HASH | history AGENT [CWD].
+| view ID | follow PATH [--from N] [--to N] [--digest] | blob PATH START HASH | history AGENT [CWD].
 Single file, python 3.6+, standard library only. Design: docs/AGENT_SESSIONS.md.
 """
 import base64
@@ -150,6 +150,11 @@ FOLLOW_TAIL_MIN = 16 * 1024
 # still sent slimmed and deflated.
 FOLLOW_TAIL_MAX = 64 * 1024 * 1024
 FOLLOW_CUT = 16 * 1024
+# `follow --digest`: a read that looks for what a session made (a server, a
+# file) needs a command, a path and the first lines of what a tool printed, not
+# whole files and the model's thinking.
+FOLLOW_DIGEST_CUT = 8 * 1024
+FOLLOW_DIGEST_DROP = ("custom", "model_usage")
 FOLLOW_RAW = 2048
 FOLLOW_LINE = 4 * 1024 * 1024
 FOLLOW_READ = 1024 * 1024
@@ -3836,14 +3841,14 @@ def put(data):
         raise Gone()
 
 
-def cut_str(s):
-    """[s] cut to its first FOLLOW_CUT bytes (UTF-8) and a note, if longer."""
-    if len(s) * 4 <= FOLLOW_CUT:
+def cut_str(s, limit=FOLLOW_CUT):
+    """[s] cut to its first [limit] bytes (UTF-8) and a note, if longer."""
+    if len(s) * 4 <= limit:
         return s
     b = s.encode("utf-8", "replace")
-    if len(b) <= FOLLOW_CUT:
+    if len(b) <= limit:
         return s
-    head = b[:FOLLOW_CUT].decode("utf-8", "ignore")
+    head = b[:limit].decode("utf-8", "ignore")
     return "%s... [%d bytes cut]" % (head, len(b) - len(head.encode("utf-8")))
 
 
@@ -3864,15 +3869,16 @@ def payload_hash(p):
     return hashlib.sha1(p.encode("utf-8", "surrogatepass")).hexdigest()[:16]
 
 
-def scrub(v, start=None):
-    """[v] with every long string cut and every binary payload dropped; the
-    structure stays, so the result is JSON of the same shape. With [start], the
-    byte offset of the log line [v] came from, a dropped payload says where it
-    can be fetched again (`ref=<start>.<hash of the payload>`, see `blob`)."""
+def scrub(v, start=None, limit=FOLLOW_CUT):
+    """[v] with every long string cut (to [limit] bytes) and every binary
+    payload dropped; the structure stays, so the result is JSON of the same
+    shape. With [start], the byte offset of the log line [v] came from, a
+    dropped payload says where it can be fetched again (`ref=<start>.<hash of
+    the payload>`, see `blob`)."""
     if isinstance(v, str):
-        return cut_str(v)
+        return cut_str(v, limit)
     if isinstance(v, list):
-        return [scrub(x, start) for x in v]
+        return [scrub(x, start, limit) for x in v]
     if not isinstance(v, dict):
         return v
     binary = v.get("type") in FOLLOW_BINARY_TYPES
@@ -3881,7 +3887,7 @@ def scrub(v, start=None):
         if isinstance(x, str):
             p = binary_payload(binary, k, x)
             if p is None:
-                x = cut_str(x)
+                x = cut_str(x, limit)
             else:
                 n = len(x)
                 if start is None:
@@ -3890,8 +3896,8 @@ def scrub(v, start=None):
                     note = "[%d bytes of data not sent; ref=%d.%s]" % (n, start, payload_hash(p))
                 x = x[: n - len(p)] + note
         else:
-            x = scrub(x, start)
-        out[cut_str(k)] = x
+            x = scrub(x, start, limit)
+        out[cut_str(k, limit)] = x
     return out
 
 
@@ -3948,18 +3954,42 @@ def slim(o):
     return o
 
 
-def follow_record(raw, start=None):
+def digest(o):
+    """[o], a log entry as `slim` left it, as `follow --digest` sends it: the
+    model's thinking is emptied (it is the biggest part of a long agent log and
+    names nothing a person looks at) and the bookkeeping entries the phone
+    never maps to a row of the chat are not sent (None). Anything that is not
+    shaped like omp's is left as it is."""
+    if not isinstance(o, dict):
+        return o
+    if o.get("type") in FOLLOW_DIGEST_DROP:
+        return None
+    m = o.get("message")
+    c = m.get("content") if isinstance(m, dict) else None
+    if isinstance(c, list):
+        for b in c:
+            if isinstance(b, dict) and b.get("type") == "thinking" and isinstance(b.get("thinking"), str):
+                b["thinking"] = ""
+    return o
+
+
+def follow_record(raw, start=None, brief=False):
     """One log line (bytes) as the compact UTF-8 JSON the phone gets, or None
     for a blank line or a line the phone has no use for (see slim). Whatever is
     not JSON becomes {"raw": first 2 KB}. [start] is the line's offset in the
-    file (see scrub)."""
+    file (see scrub). [brief]: the digest of the line (see digest)."""
     if not raw.strip():
         return None
     try:
         obj = slim(json.loads(raw.decode("utf-8")))
+        if obj is not None and brief:
+            obj = digest(obj)
         if obj is None:
             return None
-        out = json.dumps(scrub(obj, start), ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+        out = json.dumps(
+            scrub(obj, start, FOLLOW_DIGEST_CUT if brief else FOLLOW_CUT),
+            ensure_ascii=False, separators=(",", ":"), allow_nan=False,
+        )
     except (ValueError, RecursionError):
         out = json.dumps(
             {"raw": raw[:FOLLOW_RAW].decode("utf-8", "replace")},
@@ -3973,13 +4003,17 @@ class Follower(object):
     records. `pos` is the offset after the last line consumed; the bytes of a
     line still waiting for its newline are held in `buf`, never printed."""
 
-    def __init__(self, path, frm, poll=FOLLOW_POLL, idle_exit=0, clock=time.monotonic, tail=FOLLOW_TAIL, zipped=False):
+    def __init__(self, path, frm, poll=FOLLOW_POLL, idle_exit=0, clock=time.monotonic, tail=FOLLOW_TAIL, zipped=False, until=None, brief=False):
         self.path = path
         self.frm = frm
         self.tail = tail
         self.poll = poll
         self.idle_exit = idle_exit
         self.clock = clock
+        # `until`: a bounded read of [frm, until) that ends there (no waiting for
+        # more); `brief`: the lines as `follow_record` digests them.
+        self.until = until
+        self.brief = brief
         self.last_growth = clock()
         self.fd = os.open(path, os.O_RDONLY)
         self.ident = None
@@ -4031,6 +4065,10 @@ class Follower(object):
             self.start_tail(st.st_size, False)
         elif frm <= st.st_size and (frm == 0 or self.byte_at(frm - 1) == b"\n"):
             self.pos = self.read_pos = frm
+        elif self.until is not None:
+            # a bounded read has no tail to fall back on: it starts over
+            self.pos = self.read_pos = 0
+            self.emit(b"R\t0\n")
         else:
             # the file is not the one the offset came from
             self.start_tail(st.st_size, True)
@@ -4055,15 +4093,34 @@ class Follower(object):
 
     def pump(self):
         while True:
-            data = os.pread(self.fd, FOLLOW_READ, self.read_pos)
+            want = FOLLOW_READ
+            finishing = False
+            if self.until is not None:
+                if self.read_pos >= self.until:
+                    # The tail of a log starts inside a line (`S` is size - tail),
+                    # and that line belongs to neither side: a bounded read ends
+                    # at the end of the line that holds its end, so the history
+                    # reaches the line the shown part starts after.
+                    if self.total == 0:
+                        return
+                    finishing = True
+                else:
+                    want = min(want, self.until - self.read_pos)
+            data = os.pread(self.fd, want, self.read_pos)
             if not data:
                 return
+            if finishing:
+                i = data.find(b"\n")
+                if i >= 0:
+                    data = data[: i + 1]
             self.read_pos += len(data)
             self.last_growth = self.clock()
             self.feed(data)
             if self.out:
                 self.emit(b"".join(self.out))
                 self.out = []
+            if finishing and data.endswith(b"\n"):
+                return
 
     def feed(self, data):
         n = len(data)
@@ -4089,7 +4146,7 @@ class Follower(object):
                 if self.over:
                     rec = json.dumps({"raw": "[line of %d bytes not sent]" % self.total}).encode("ascii")
                 else:
-                    rec = follow_record(bytes(self.buf), self.pos - self.total - 1)
+                    rec = follow_record(bytes(self.buf), self.pos - self.total - 1, self.brief)
                 if rec is not None:
                     self.out.append(b"%d\t%s\n" % (self.pos, rec))
             self.restart_line()
@@ -4128,6 +4185,8 @@ class Follower(object):
         # log or a resume at its end sends no record, and would otherwise have
         # to guess from the silence).
         self.emit(b"C\t%d\n" % self.pos)
+        if self.until is not None:
+            return
         while self.wait(self.interval()):
             if self.idle_exit and self.clock() - self.last_growth >= self.idle_exit:
                 return
@@ -4155,7 +4214,7 @@ def follow_target(path, sentence=None):
     return real
 
 
-def cmd_follow(path, frm, poll=FOLLOW_POLL, idle_exit=0, tail=FOLLOW_TAIL, zipped=False):
+def cmd_follow(path, frm, poll=FOLLOW_POLL, idle_exit=0, tail=FOLLOW_TAIL, zipped=False, until=None, brief=False):
     """Prints the tail of the log (or what follows byte [frm]), then every
     complete line appended later, one record per line: `<endOffset>\t<json>`
     (long strings and binary payloads cut), `S\t<offset>` where a tail read
@@ -4164,10 +4223,13 @@ def cmd_follow(path, frm, poll=FOLLOW_POLL, idle_exit=0, tail=FOLLOW_TAIL, zippe
     once, when the file's content up to that offset has been sent, or
     `E\t<message>` before exiting 70 when reading fails. Ends when stdout or
     stdin closes, or after [idle_exit] seconds (0: never) without growth.
-    The file is looked at every [poll] seconds, less often while it is quiet."""
+    The file is looked at every [poll] seconds, less often while it is quiet.
+    With [until] it reads [frm, until) once and ends after its `C` (a [frm]
+    that is not a line start of the file starts over at 0, with an `R`); with
+    [brief] the records are digests (see digest)."""
     real = follow_target(path)
     try:
-        Follower(real, frm, poll, idle_exit, tail=tail, zipped=zipped).run()
+        Follower(real, frm, poll, idle_exit, tail=tail, zipped=zipped, until=until, brief=brief).run()
     except Gone:
         pass
     except OSError as e:
@@ -4238,7 +4300,7 @@ def cmd_blob(path, start, h):
 
 def main(argv):
     if not argv:
-        fail(EX_USAGE, "usage: probe | list | start --agent ID --cwd DIR | attach ID [--z] | kill ID | view ID | follow PATH [--z] [--from N] [--poll-ms N] [--idle-exit S] [--tail-bytes N] | blob PATH START HASH | history AGENT [CWD]")
+        fail(EX_USAGE, "usage: probe | list | start --agent ID --cwd DIR | attach ID [--z] | kill ID | view ID | follow PATH [--z] [--from N] [--to N] [--digest] [--poll-ms N] [--idle-exit S] [--tail-bytes N] | blob PATH START HASH | history AGENT [CWD]")
     cmd, rest = argv[0], argv[1:]
     if cmd not in ("follow", "blob"):
         load_daemon_modules()
@@ -4262,20 +4324,26 @@ def main(argv):
             opts = {}
             i = 1
             zipped = False
+            brief = False
             while i < len(rest):
                 if rest[i] == "--z":
                     zipped = True
                     i += 1
-                elif i + 1 < len(rest) and rest[i] in ("--from", "--poll-ms", "--idle-exit", "--tail-bytes") and rest[i + 1].isdigit():
+                elif rest[i] == "--digest":
+                    brief = True
+                    i += 1
+                elif i + 1 < len(rest) and rest[i] in ("--from", "--to", "--poll-ms", "--idle-exit", "--tail-bytes") and rest[i + 1].isdigit():
                     opts[rest[i]] = int(rest[i + 1])
                     i += 2
                 else:
                     break
             if i != len(rest):
-                fail(EX_USAGE, "usage: follow PATH [--z] [--from N] [--poll-ms N] [--idle-exit S] [--tail-bytes N]")
+                fail(EX_USAGE, "usage: follow PATH [--z] [--from N] [--to N] [--digest] [--poll-ms N] [--idle-exit S] [--tail-bytes N]")
             poll = max(20, min(opts.get("--poll-ms", int(FOLLOW_POLL * 1000)), 60000)) / 1000.0
             tail = max(FOLLOW_TAIL_MIN, min(opts.get("--tail-bytes", FOLLOW_TAIL), FOLLOW_TAIL_MAX))
-            cmd_follow(rest[0], opts.get("--from"), poll, opts.get("--idle-exit", 0), tail, zipped)
+            until = opts.get("--to")
+            frm = opts.get("--from", 0 if until is not None else None)
+            cmd_follow(rest[0], frm, poll, opts.get("--idle-exit", 0), tail, zipped, until, brief)
         elif cmd == "blob" and len(rest) == 3 and rest[1] and all(c in "0123456789" for c in rest[1]) and len(rest[2]) == 16 and all(c in "0123456789abcdef" for c in rest[2]):
             cmd_blob(rest[0], int(rest[1]), rest[2])
         elif cmd == "attach" and len(rest) in (1, 2) and (len(rest) == 1 or rest[1] == "--z"):

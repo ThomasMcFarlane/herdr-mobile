@@ -168,7 +168,7 @@ class Turn {
   /// Calls that failed ([toolFailed]), were cancelled, and are not finished
   /// (pending or running).
   late final int failedCount = tools.where((t) => toolFailed(t.call)).length;
-  late final int cancelledCount = tools.where((t) => t.call.status == ToolStatus.cancelled).length;
+  late final int cancelledCount = tools.where((t) => t.call.status == ToolStatus.cancelled && !toolSkipped(t.call)).length;
   late final int unfinishedCount = tools.where((t) => !t.call.status.isFinished).length;
 
   /// The files changed by the turn's completed edit and delete calls, one per
@@ -240,16 +240,12 @@ class Turn {
   // -- what breaks out of the fold ----------------------------------------------
 
   /// What stays visible when the log folds, in order: calls that failed or
-  /// were cancelled, calls that wait for the person's permission ([waiting]:
+  /// were cancelled (not one the agent only skipped: [toolSkipped]), calls that wait for the person's permission ([waiting]:
   /// `AgentSessionState.waitingToolIds`), and the stop rows. The answer and
   /// the notes are visible anyway and not listed.
   List<TranscriptItem> breakouts([Set<String> waiting = const {}]) => [
     for (final item in items)
-      if ((item is TranscriptTool &&
-              (toolFailed(item.call) ||
-                  item.call.status == ToolStatus.cancelled ||
-                  waiting.contains(item.call.toolCallId))) ||
-          item is TranscriptStop)
+      if ((item is TranscriptTool && toolBreaksOut(item.call, waiting)) || item is TranscriptStop)
         item,
   ];
 

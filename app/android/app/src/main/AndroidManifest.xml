@@ -56,14 +56,18 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <!-- herdr://agent/<machine>/<pane-id>: what an alert notification
-                 opens (docs/ALERTS.md). Flutter hands the URI to the app as its
-                 initial route, or as route information while it runs. -->
+            <!-- herdr://agent/<machine>/<pane-id>, herdr://session/<machine>/<keeper>
+                 and herdr://agents: what an alert notification opens (docs/ALERTS.md)
+                 and what Copy session link gives out, so it also opens from another
+                 app. Flutter hands the URI to the app as its initial route, or as
+                 route information while it runs. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="herdr" android:host="agent"/>
+                <data android:scheme="herdr" android:host="session"/>
+                <data android:scheme="herdr" android:host="agents"/>
             </intent-filter>
             <meta-data
                 android:name="flutter_deeplinking_enabled"

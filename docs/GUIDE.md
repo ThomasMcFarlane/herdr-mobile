@@ -426,6 +426,21 @@ runs, a status line says what the agent is doing and for how long, and
 (`1 of 3`). `Session options` > `Session overview` shows the goal, plan,
 changed files, commands, mode and model, and context use.
 
+**Made, and the link.** The `Made` chip under the title lists what the agent
+made (servers, pages, pictures, documents) and shows up once there is
+something. `Session options` > `Made in this session` opens the same sheet at
+any time (dimmed, `Nothing has come up yet`, until then). In a long chat the
+phone has read only the end of the log: the chip says `Made 9+`, and opening the
+sheet reads the earlier part (once; the answer is kept for next time). A server
+the agent gave several pages of is one row per page. `Copy session link`
+puts `herdr://session/<machine>/<session>` on the clipboard; opening it on this
+phone (from a note, a message, `adb`) brings that session up.
+
+**Subagents.** The `Subagents` chip says how many run (`6 running`) and opens
+the list: Running, Waiting, then Done (failed first, the newest 8, `Show N
+more`). Each running subagent has `Ask to stop` (hold), and `Stop all` stops them
+all with one message to the agent; a tap on a row opens its conversation.
+
 **Sending while it works.** The message box stays open. omp and pi queue a
 message until the turn ends (the send button becomes `Queue`); Claude Code and
 Codex take it into the running turn. Queued messages show above the box; tap

@@ -4,6 +4,34 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [0.1.28] - 2026-10-21
+
+### Manage a swarm of subagents, and see everything an agent made
+
+When an agent fans out dozens of subagents, the ones running now are the first
+thing you see, and you can stop them from the phone. In a long chat, `Made` now
+finds what the agent made hours ago too.
+
+> [!TIP]
+> Try it: in a chat where an agent has launched subagents, tap the chip under the
+> title (`6 running`). Hold `Ask to stop` on one, or `Stop all`.
+
+- The subagent list is now Running, Waiting and Done: running first with their time and tools, the newest 8 finished ones,
+  then `Show N more`. The chip says `6 running`, not `6 of 66`: the total is in
+  the list, and a `+` says when only the end of a long chat has been read.
+- `Stop all` in that list stops subagents only, with one message to the agent.
+- A `wait` that omp skipped, or that had nothing to wait for, no longer shows as a
+  red failure under the agent's answer.
+- `Made` reads the earlier part of a long chat when you open it, once, and keeps
+  the answer: a 7 MB chat showed 1 thing of 10 before. The chip says `Made 9+`
+  until it has.
+- A server with several pages (a dashboard and its tabs) is one row per page, not
+  only the last one mentioned.
+- `Session options` has `Copy session link`, which opens the same session on
+  this phone.
+- Reading the earlier part of that chat took 0.70 MB instead of 0.99 MB on the
+  link (a laptop measurement, not a phone); the cost on a radio was not measured.
+
 ## [0.1.27] - 2026-10-21
 
 [![Watch what's new · 2 changes · 0:10 · 4.2 MB](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.27/0.1.27-whats-new.jpg)](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.27/0.1.27-whats-new.mp4)

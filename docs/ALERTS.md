@@ -243,6 +243,11 @@ tapping its card. `<machine>` is matched against your saved machines by label
 (any case), then by host, then by id. Both parts are percent-encoded (`w1:p2`
 travels as `w1%3Ap2`).
 
+`herdr://session/<machine>/<session>` opens an agent session's chat the same
+way, and `herdr://agents` opens the Agents tab. The manifest admits all three
+hosts, so they also open from another app; `Copy session link` in the session
+options hands out the second.
+
 If the link cannot be followed the app shows a short message over the board:
 no such machine, the machine is switched off, the pane is gone, or the machine
 did not answer within 8 s. A machine that is still reconnecting when you tap is

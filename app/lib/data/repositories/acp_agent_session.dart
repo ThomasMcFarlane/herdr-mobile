@@ -14,6 +14,7 @@ import '../acp/prompt_queue.dart';
 import '../acp/replay_since.dart';
 import '../decision/plain_text.dart' show plainLine;
 import '../acp/background/background_work.dart';
+import '../acp/session_made.dart' show MadeHistory;
 import '../acp/session_state.dart';
 import '../acp/turns/plain_text.dart' show clip, firstLine;
 import '../acp/transcript_log.dart';
@@ -375,6 +376,17 @@ class AcpAgentSession extends ChangeNotifier implements AgentSessionView {
   @override
   void loadEarlier() {}
 
+  // The keeper's replay is all there is of the chat; what a trimmed turn of it
+  // lost is not read again (docs/ENGINEERING.md, "Made in this session").
+  @override
+  MadeHistory? get madeHistory => null;
+
+  @override
+  MadeReach get madeReach => MadeReach.whole;
+
+  @override
+  void readEarlierMade() {}
+
   @override
   bool get unseenDone => phase == AgentPhase.idle && (_unseen || _listedUnseen);
 
@@ -555,8 +567,8 @@ class AcpAgentSession extends ChangeNotifier implements AgentSessionView {
   }
 
   @override
-  Future<BackgroundStopResult> stopAllBackground() async {
-    final stoppable = backgroundWork.stoppable;
+  Future<BackgroundStopResult> stopAllBackground({BackgroundKind? only}) async {
+    final stoppable = [for (final t in backgroundWork.stoppable) if (only == null || t.kind == only) t];
     if (stoppable.isEmpty) return const BackgroundNotStoppable();
     final results = <BackgroundStopResult>[
       for (final t in stoppable.where((t) => t.stop == StopRoute.direct)) await _stopDirect(t.id),

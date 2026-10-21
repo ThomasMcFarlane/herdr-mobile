@@ -21,7 +21,9 @@ import '../files/files_navigation.dart' show machineSupportsFiles, openFileBrows
 import '../agents/agent_navigation.dart' show agentViewAction;
 import 'session_select.dart';
 import 'session_overview.dart' show showSessionOverview;
-import 'session_made.dart' show MadeChip;
+import 'session_made.dart' show MadeChip, showSessionMade;
+import '../../../data/acp/session_made.dart' show madeAssetsOf;
+import '../../../data/repositories/attention_notifier.dart' show sessionLinkOf;
 import 'session_overview_model.dart' show contextWarning;
 import 'background_strip.dart' show BackgroundChip;
 import 'subagent_roster.dart' show SubagentsChip;
@@ -258,6 +260,21 @@ class _OptionsSheetState extends State<_OptionsSheet> {
     unawaited(openFileBrowser(navigator.context, session.machine, startDir: session.cwd.isEmpty ? null : session.cwd));
   }
 
+  /// The Made sheet (servers, pages, pictures, documents) in place of this one.
+  void _made() {
+    final session = widget.session;
+    final navigator = Navigator.of(context)..pop();
+    // ignore: use_build_context_synchronously
+    unawaited(showSessionMade(navigator.context, session));
+  }
+
+  /// The link that opens this session on this phone (`herdr://session/...`).
+  void _copyLink() {
+    // copyText finds the toaster in the app's overlay, so it outlives the sheet.
+    unawaited(copyText(context, sessionLinkOf(widget.session), what: 'Session link copied'));
+    Navigator.of(context).pop();
+  }
+
   @override
   Widget build(BuildContext context) => SessionSelect<(List<ConfigOption>, ModeState?)>(
     session: widget.session,
@@ -292,6 +309,31 @@ class _OptionsSheetState extends State<_OptionsSheet> {
                 action: SheetAction(label: 'Files', icon: LucideIcons.folderOpen, onTap: _files),
                 onTap: _files,
               ),
+            // Always here: the chip under the title only shows once something
+            // exists, so this is where "where are the files and pictures?" is
+            // answered, with its reason while there is nothing.
+            SessionSelect<(int, MadeReach)>(
+              session: widget.session,
+              select: (s) => (madeAssetsOf(s.state.items, cwd: s.cwd, history: s.madeHistory).length, s.madeReach),
+              builder: (context, v) {
+                final (made, reach) = v;
+                // Only the end of a long chat is read: the sheet reads the rest when opened.
+                final nothing = made == 0 && reach == MadeReach.whole;
+                return SheetActionRow(
+                  action: SheetAction(
+                    label: 'Made in this session',
+                    icon: LucideIcons.globe,
+                    onTap: _made,
+                    unavailable: nothing ? 'Nothing has come up yet' : null,
+                  ),
+                  onTap: _made,
+                );
+              },
+            ),
+            SheetActionRow(
+              action: SheetAction(label: 'Copy session link', icon: LucideIcons.link, onTap: _copyLink),
+              onTap: _copyLink,
+            ),
             if (!widget.session.isObserved)
               ListenableBuilder(
                 listenable: widget.session.machine,

@@ -475,8 +475,8 @@ void main() {
           SubagentEntry(info: SubagentInfo(name: 'Other'), state: SubagentState.finished),
         ];
       await _pump(tester, _app(SubagentsChip(session: session)));
-      expect(find.text('1 of 2 running'), findsOneWidget);
-      await tester.tap(find.text('1 of 2 running'));
+      expect(find.text('1 running'), findsOneWidget);
+      await tester.tap(find.text('1 running'));
       await tester.pumpAndSettle();
       expect(find.text('PongReply'), findsOneWidget);
       expect(find.text('Reply pong'), findsOneWidget);

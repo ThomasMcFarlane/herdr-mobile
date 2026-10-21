@@ -10,6 +10,7 @@ import '../acp/auth_needed.dart';
 import '../acp/past_session.dart' show ResumeTarget;
 import '../acp/prompt_queue.dart';
 import '../acp/background/background_work.dart';
+import '../acp/session_made.dart' show MadeFold, MadeHistory;
 import '../acp/session_state.dart';
 import '../acp/subagents/subagent_run.dart' show SubagentLogStatus, SubagentRun, SubagentSummary;
 import '../models/herdr_models.dart';
@@ -290,6 +291,21 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
   AgentSessionState? _wideLog;
   int? _wideHead;
 
+  // What the part of the log before the shown tail made (see [MadeHistory]):
+  // read from the host when the person asks (`readEarlierMade`, the digest of
+  // the lines, never the chat), kept per log in the disk cache, and read on
+  // top of by what is shown. All of it belongs to the log named by
+  // [_madeLoadedFor]: another log, or the same one starting over, drops it
+  // ([_dropMade]), which also ends a read under way (its [_madeToken] no longer
+  // matches).
+  MadeHistory? _madeHistory;
+  String? _madeLoadedFor;
+  Future<void>? _madeLoad;
+  Future<void>? _madeRun;
+  StreamSubscription<LogBatch>? _madeSub;
+  bool _madeFailed = false;
+  int _madeToken = 0;
+
   String? _problem;
   Timer? _problemTimer;
 
@@ -411,6 +427,184 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
     _wideLog = null;
     _wideHead = null;
     _composed = null;
+    _syncMade();
+  }
+
+  @override
+  MadeHistory? get madeHistory => (_head ?? 0) == 0 ? null : _madeHistory;
+
+  @override
+  MadeReach get madeReach {
+    final head = _head;
+    if (head == null || head == 0) return MadeReach.whole;
+    if (_madeRun != null) return MadeReach.reading;
+    final history = _madeHistory;
+    if (history != null && history.upTo >= head) return MadeReach.whole;
+    return _madeFailed ? MadeReach.failed : MadeReach.partial;
+  }
+
+  /// Looks the kept history of this log up, once per log, as soon as it is known
+  /// that the shown part is not all of it: a long chat opens with its count
+  /// right instead of after a tap.
+  void _syncMade() {
+    final head = _head;
+    final path = _followedPath;
+    if (head == null || head == 0 || path == null || _madeLoadedFor == path) return;
+    _madeLoadedFor = path;
+    _madeLoad = _loadMade(path, _madeToken);
+  }
+
+  Future<void> _loadMade(String path, int token) async {
+    MadeHistory? kept;
+    try {
+      final bytes = await DiskCache.shared.get(DiskCache.madeKey(machine.profile.id, path));
+      if (bytes != null) kept = MadeHistory.fromBytes(bytes);
+    } on Object {
+      // A cache that cannot be read is a cache with nothing in it.
+      kept = null;
+    }
+    if (kept == null || _disposed || token != _madeToken || _madeHistory != null) return;
+    _madeHistory = kept;
+    _changed();
+  }
+
+  void _dropMade() {
+    _madeToken++;
+    unawaited(_madeSub?.cancel());
+    _madeSub = null;
+    _madeHistory = null;
+    _madeLoadedFor = null;
+    _madeLoad = null;
+    _madeRun = null;
+    _madeFailed = false;
+  }
+
+  /// Nobody looks at the session any more: a read of the earlier part of the log
+  /// stops (the radio is a cost), keeping what is known. Opening the sheet again
+  /// asks again, from where the kept history ends.
+  void _cancelMadeRead() {
+    if (_madeRun == null) return;
+    _madeToken++;
+    unawaited(_madeSub?.cancel());
+    _madeSub = null;
+    _madeRun = null;
+    _madeFailed = false;
+    _changed();
+  }
+
+  @override
+  void readEarlierMade() {
+    final path = _followedPath;
+    final head = _head;
+    if (!held || _madeRun != null || path == null || head == null || head == 0) return;
+    if (madeReach != MadeReach.partial && madeReach != MadeReach.failed) return;
+    _madeFailed = false;
+    final token = _madeToken;
+    late final Future<void> run;
+    run = _readMade(path, head, token).whenComplete(() {
+      if (token != _madeToken || _disposed) return;
+      if (identical(_madeRun, run)) _madeRun = null;
+      _changed();
+    });
+    _madeRun = run;
+    _changed();
+  }
+
+  Future<void> _readMade(String path, int head, int token) async {
+    await _madeLoad;
+    if (_disposed || token != _madeToken) return;
+    final seed = _madeHistory;
+    if (seed != null && seed.upTo >= head) return;
+    try {
+      final history = await _scanEarlier(path, head, seed, token);
+      if (history == null || _disposed || token != _madeToken) return;
+      _madeHistory = history;
+      unawaited(
+        DiskCache.shared
+            .put(DiskCache.madeKey(machine.profile.id, path), history.toBytes())
+            .catchError((Object _) {}),
+      );
+    } on Object {
+      // The link, or a host that cannot read the log: the rows stay what they
+      // were and the sheet says so, with a way to try again.
+      if (!_disposed && token == _madeToken) _madeFailed = true;
+    }
+  }
+
+  /// Reads the log from where [seed] stopped (0 without one) to [head], as the
+  /// host's digest, maps it with this agent's mapper and folds what it made
+  /// onto [seed]. Slices its work like [_applyBatch]: the UI thread belongs to
+  /// the person. Null when the log changed under it ([_madeToken]).
+  Future<MadeHistory?> _scanEarlier(String path, int head, MadeHistory? seed, int token) async {
+    var mapper = _newMapper();
+    var log = AgentSessionState(_log.sessionId);
+    var base = seed;
+    var end = seed?.upTo ?? 0;
+    var caughtUp = false;
+    final done = Completer<void>();
+    var work = Future<void>.value();
+    final sub = _source.follow(path, from: seed?.upTo ?? 0, until: head, digest: true).listen(
+      (batch) {
+        work = work.then((_) async {
+          if (_disposed || token != _madeToken) return;
+          if (batch.reset) {
+            // The log is not the one the offset came from: all of it again.
+            mapper = _newMapper();
+            log = AgentSessionState(_log.sessionId);
+            base = null;
+          }
+          final lines = batch.lines;
+          await _inSlices(lines.length, (i) {
+            for (final u in mapper.map(lines[i])) {
+              log = log.apply(u);
+            }
+          });
+          end = batch.endOffset;
+          if (batch.caughtUp) caughtUp = true;
+        });
+      },
+      onError: (Object e, StackTrace s) {
+        work = work.then((_) {
+          if (!done.isCompleted) done.completeError(e, s);
+        });
+      },
+      onDone: () {
+        work = work.then((_) {
+          if (!done.isCompleted) done.complete();
+        });
+      },
+      cancelOnError: true,
+    );
+    _madeSub = sub;
+    try {
+      await done.future;
+    } finally {
+      if (identical(_madeSub, sub)) _madeSub = null;
+      unawaited(sub.cancel());
+    }
+    if (_disposed || token != _madeToken) return null;
+    if (!caughtUp) throw const HerdrTransportException('The connection to the log ended.');
+    final fold = MadeFold(cwd: cwd, from: base);
+    final items = log.items;
+    await _inSlices(items.length, (i) => fold.add(items[i]));
+    if (_disposed || token != _madeToken) return null;
+    return fold.history(end);
+  }
+
+  /// [step] for 0 until [n], in slices of at most [sliceLines] or [sliceBudget],
+  /// giving the event loop a turn between them.
+  Future<void> _inSlices(int n, void Function(int i) step) async {
+    final clock = Stopwatch()..start();
+    var at = 0;
+    while (at < n) {
+      clock.reset();
+      var k = 0;
+      while (at < n && k < sliceLines && (k == 0 || clock.elapsed < sliceBudget)) {
+        step(at++);
+        k++;
+      }
+      if (at < n) await Future<void>.delayed(Duration.zero);
+    }
   }
 
   @override
@@ -704,10 +898,11 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
   }
 
   @override
-  Future<BackgroundStopResult> stopAllBackground() async {
+  Future<BackgroundStopResult> stopAllBackground({BackgroundKind? only}) async {
     final work = backgroundWork;
-    if (work.running.isEmpty) return const BackgroundAlreadyDone();
-    return _askToStop(work.stoppable);
+    final running = [for (final t in work.running) if (only == null || t.kind == only) t];
+    if (running.isEmpty) return const BackgroundAlreadyDone();
+    return _askToStop([for (final t in work.stoppable) if (only == null || t.kind == only) t]);
   }
 
   /// One message for all of [tasks]; only ids that are plain tokens are put
@@ -819,6 +1014,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
   }
 
   void _stopFollowing() {
+    _cancelMadeRead();
     _lingerTimer = null;
     if (!_following && _sub == null) return;
     _epoch++;
@@ -887,6 +1083,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
                 // Another session: it opens at its end like any other.
                 _tailBytes = null;
                 _head = null;
+                _dropMade();
                 _ready = false;
                 _logLink = AgentLink.connecting;
               }
@@ -1045,6 +1242,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
     final wide = _wideLog != null;
     if (batch.reset) wide ? _startWide() : _resetLog();
     if (batch.head case final head?) wide ? _wideHead = head : _head = head;
+    if (!wide && batch.head != null) _syncMade();
     final lines = batch.lines;
     final big = lines.length > sliceLines || !_ready;
     if (big) _batching = true;
@@ -1102,6 +1300,17 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
 
   void _resetLog() {
     _mapper.reset();
+    // The log starts over: what was kept of the old one is wrong for the new, and
+    // the cache is keyed by the path alone.
+    final path = _followedPath;
+    if (path != null && _madeLoadedFor != null) {
+      unawaited(
+        DiskCache.shared
+            .put(DiskCache.madeKey(machine.profile.id, path), const MadeHistory(assets: [], span: 0, upTo: 0).toBytes())
+            .catchError((Object _) {}),
+      );
+    }
+    _dropMade();
     _log = AgentSessionState(_log.sessionId);
     _wideMapper = null;
     _wideLog = null;
@@ -2022,6 +2231,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
     machine.removeListener(_onMachine);
     parent?.removeListener(_onMachine);
     _dropStream();
+    _dropMade();
     _releaseHandle();
     for (final t in [
       _detachTimer,

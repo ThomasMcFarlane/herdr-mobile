@@ -29,9 +29,10 @@ class SshLogSource implements SessionLogSource {
 
   /// [tailBytes] widens the first read (the host's default is 192 KB, at most
   /// 64 MB): "load earlier" follows again with a bigger one and starts over.
+  /// [until] and [digest]: see [SessionLogSource.follow].
   @override
-  Stream<LogBatch> follow(String path, {int? from, int? tailBytes}) =>
-      _Follow(_host, path, from, tailBytes).stream;
+  Stream<LogBatch> follow(String path, {int? from, int? until, bool digest = false, int? tailBytes}) =>
+      _Follow(_host, path, from, until, digest, tailBytes).stream;
 
   /// The payload the follower dropped from the line at [start] (see
   /// [keeperBlobCommand]); the host reads the line again.
@@ -48,7 +49,7 @@ class SshLogSource implements SessionLogSource {
 }
 
 class _Follow {
-  _Follow(this._host, this._path, this._from, this._tailBytes) {
+  _Follow(this._host, this._path, this._from, this._until, this._digest, this._tailBytes) {
     _out = StreamController<LogBatch>(
       onListen: _start,
       onPause: () => _sub?.pause(),
@@ -60,6 +61,8 @@ class _Follow {
   final SshAgentHost _host;
   final String _path;
   final int? _from;
+  final int? _until;
+  final bool _digest;
   final int? _tailBytes;
   late final StreamController<LogBatch> _out;
 
@@ -87,7 +90,7 @@ class _Follow {
   void _start() {
     final String command;
     try {
-      command = keeperFollowCommand(_path, from: _from, tailBytes: _tailBytes, zipped: true);
+      command = keeperFollowCommand(_path, from: _from, until: _until, digest: _digest, tailBytes: _tailBytes, zipped: true);
     } on ArgumentError {
       _fail(const AgentHostException('That session log has a name the app cannot use.', fatal: true));
       return;

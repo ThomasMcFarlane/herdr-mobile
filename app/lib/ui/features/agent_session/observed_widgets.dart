@@ -1,15 +1,11 @@
-import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/words/elapsed.dart';
-import '../../../data/words/plural.dart';
-import '../../../data/repositories/observed_session.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../../support/step_clock.dart';
-import 'agent_session_navigation.dart';
 import 'session_select.dart';
 import '../../render/visible_text.dart';
 
@@ -84,136 +80,6 @@ class WorkingLabel extends StatelessWidget {
           style: Type.caption.copyWith(color: ds.working, fontFeatures: Type.tabular),
         );
       },
-    );
-  }
-}
-
-/// The roster of an observed session as a sheet: each subagent with its state,
-/// what it was asked (cut) and its latest tools. The host's artifact folder is
-/// listed to refine the states only while the sheet is open. (The chip that
-/// opens it, and the roster of an ACP session, are in `subagent_roster.dart`.)
-Future<void> showObservedSubagents(BuildContext context, AgentSessionView session) {
-  session.watchSubagents(true);
-  return showAppSheet<void>(context, builder: (ctx) => _Roster(session: session)).whenComplete(
-    () => session.watchSubagents(false),
-  );
-}
-
-class _Roster extends StatelessWidget {
-  const _Roster({required this.session});
-
-  final AgentSessionView session;
-
-  @override
-  Widget build(BuildContext context) => SessionSelect<List<SubagentEntry>>(
-    session: session,
-    select: (s) => s.subagents,
-    same: (a, b) => a.length == b.length && _same(a, b),
-    builder: (context, entries) {
-      return SheetScaffold(
-        title: 'Subagents',
-        kind: SheetKind.list,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (entries.isEmpty)
-              const EmptyState.inline('None started yet.', padding: EdgeInsets.fromLTRB(Gap.lg, Gap.xs, Gap.lg, Gap.md)),
-            for (final e in entries) _SubagentRow(session: session, entry: e),
-          ],
-        ),
-      );
-    },
-  );
-
-  static bool _same(List<SubagentEntry> a, List<SubagentEntry> b) {
-    for (var i = 0; i < a.length; i++) {
-      final x = a[i];
-      final y = b[i];
-      if (x.name != y.name ||
-          x.state != y.state ||
-          x.info.toolCount != y.info.toolCount ||
-          x.info.assignment != y.info.assignment ||
-          !listEquals(x.info.recentTools, y.info.recentTools)) {
-        return false;
-      }
-    }
-    return true;
-  }
-}
-
-class _SubagentRow extends StatelessWidget {
-  const _SubagentRow({required this.session, required this.entry});
-
-  final AgentSessionView session;
-  final SubagentEntry entry;
-
-  static String _state(SubagentState s) => switch (s) {
-    SubagentState.waiting => 'Waiting',
-    SubagentState.running => 'Running',
-    SubagentState.finished => 'Done',
-    SubagentState.failed => 'Failed',
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    final ds = context.ds;
-    final info = entry.info;
-    final color = switch (entry.state) {
-      SubagentState.running => ds.working,
-      SubagentState.failed => ds.dangerText,
-      SubagentState.finished => ds.done,
-      SubagentState.waiting => ds.textMuted,
-    };
-    final tools = info.recentTools.isEmpty ? null : info.recentTools.join(' · ');
-    final detail = [
-      _state(entry.state),
-      if (info.toolCount > 0) countOf(info.toolCount, 'tool'),
-    ].join(' · ');
-    final parent = session;
-    return PressRow(
-      onTap: parent is ObservedAgentSession
-          ? () {
-              final navigator = Navigator.of(context)..pop();
-              // ignore: use_build_context_synchronously
-              unawaited(openSubagentChat(navigator.context, parent, entry.name));
-            }
-          : null,
-      minHeight: kMinTap,
-      padding: const EdgeInsets.symmetric(horizontal: Gap.lg - PressRow.inset, vertical: Gap.sm),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    visibleText(entry.name),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Type.row.copyWith(color: ds.text),
-                  ),
-                ),
-                const SizedBox(width: Gap.sm),
-                Text(detail, style: Type.captionStrong.copyWith(color: color)),
-              ],
-            ),
-            if (info.assignment.isNotEmpty)
-              Text(
-                visibleText(info.assignment),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: Type.secondary.copyWith(color: ds.textSecondary),
-              ),
-            if (tools != null)
-              Text(
-                tools,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Mono.small.copyWith(color: ds.textMuted),
-              ),
-          ],
-      ),
     );
   }
 }

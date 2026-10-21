@@ -4,6 +4,7 @@ import 'dart:ui' show Tristate;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show RenderParagraph;
+import 'package:flutter/services.dart' show SystemChannels;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/acp/acp_models.dart';
 import 'package:herdr_mobile/data/acp/session_made.dart' show MadeKind;
@@ -13,11 +14,12 @@ import 'package:herdr_mobile/data/models/machine_profile.dart';
 import 'package:herdr_mobile/data/models/remote_file.dart';
 import 'package:herdr_mobile/data/models/web_bridge.dart';
 import 'package:herdr_mobile/data/observed/observed_contracts.dart' show SubagentInfo;
-import 'package:herdr_mobile/data/repositories/agent_session.dart' show AgentLink, SubagentEntry, SubagentState;
+import 'package:herdr_mobile/data/repositories/agent_session.dart' show AgentLink, MadeReach, SubagentEntry, SubagentState;
 import 'package:herdr_mobile/data/repositories/fleet_repository.dart';
 import 'package:herdr_mobile/data/repositories/machine_connection.dart';
 import 'package:herdr_mobile/data/services/herdr_api.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
+import 'package:herdr_mobile/ui/support/deep_link.dart' show SessionLink, parseSessionLink;
 import 'package:herdr_mobile/ui/features/agent_session/session_bar.dart';
 import 'package:herdr_mobile/ui/features/files/file_viewer_screen.dart';
 import 'package:herdr_mobile/ui/features/files/photo_thumbs.dart';
@@ -115,6 +117,52 @@ void main() {
   testWidgets('a session that has put nothing on the web has no chip', (tester) async {
     await pumpBar(tester, session([_say('Refactored the ledger, no pages.')]));
     expect(find.text('Made'), findsNothing);
+  });
+
+  group('session options', () {
+    Future<void> openOptions(WidgetTester tester) async {
+      await tester.tap(find.byTooltip('Session options'));
+      await _settle(tester);
+    }
+
+    testWidgets('with nothing made the chip is absent but the way in stays, dimmed with its reason', (tester) async {
+      await pumpBar(tester, session([_say('Refactored the ledger, no pages.')]));
+      await openOptions(tester);
+      expect(find.text('Made in this session'), findsOneWidget);
+      expect(find.text('Nothing has come up yet'), findsOneWidget);
+
+      await tester.tap(find.text('Made in this session'));
+      await _settle(tester);
+      expect(find.text('Nothing has come up yet'), findsOneWidget, reason: 'an inert row opens nothing');
+    });
+
+    testWidgets('once something is made the row opens the same sheet as the chip', (tester) async {
+      await pumpBar(tester, session([_say('Serving http://localhost:5173/'), _wrote('/home/dev/payments-api/reports/q3.html')]));
+      await openOptions(tester);
+      expect(find.text('Nothing has come up yet'), findsNothing);
+
+      await tester.tap(find.text('Made in this session'));
+      await _settle(tester);
+      expect(find.text('q3.html'), findsOneWidget);
+      expect(find.text('Copy session link'), findsNothing, reason: 'the options sheet is replaced, not stacked');
+    });
+
+    testWidgets('Copy session link puts the link the app opens on the clipboard', (tester) async {
+      String? copied;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        if (call.method == 'Clipboard.setData') copied = (call.arguments as Map)['text'] as String?;
+        return null;
+      });
+      addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
+      await pumpBar(tester, session([_say('hi')], key: 'm/keeper 1'));
+      await openOptions(tester);
+
+      await tester.tap(find.text('Copy session link'));
+      await _settle(tester);
+      expect(copied, 'herdr://session/m/keeper%201');
+      expect(parseSessionLink(copied), const SessionLink('m', 'keeper 1'));
+      expect(find.text('Session link copied'), findsOneWidget);
+    });
   });
 
   testWidgets('the chip counts what the transcript holds, and a new link appears in it', (tester) async {
@@ -234,7 +282,8 @@ void main() {
     s.update((st) => AgentSessionState('s', items: [...st.items, _say('Storybook http://localhost:6006/'), _say('again http://localhost:5173/x')]));
     await _settle(tester);
 
-    expect(tester.getTopLeft(find.text('localhost:5173/x')).dy, before, reason: 'same row, same place, newest path');
+    expect(tester.getTopLeft(find.text('localhost:5173')).dy, before, reason: 'the rows that were there stay where they were');
+    expect(find.text('localhost:5173/x'), findsNothing);
     expect(find.text('localhost:6006'), findsNothing);
 
     await tester.tapAt(const Offset(200, 20));
@@ -242,6 +291,7 @@ void main() {
     await tester.tap(find.text('Made'));
     await _settle(tester);
     expect(find.text('localhost:6006'), findsOneWidget);
+    expect(find.text('localhost:5173/x'), findsOneWidget, reason: 'a page of a server is a row of its own');
     expect(tester.getTopLeft(find.text('localhost:5173/x')).dy, lessThan(tester.getTopLeft(find.text('localhost:6006')).dy), reason: 'newest first again');
   });
 
@@ -318,14 +368,14 @@ void main() {
     await _settle(tester);
 
     expect(tester.takeException(), isNull);
-    final subagents = tester.getRect(find.text('1 of 2 running'));
+    final subagents = tester.getRect(find.text('1 running'));
     final web = tester.getRect(find.text('Made'));
     expect(web.right, lessThanOrEqualTo(320));
     // Whole words, not an ellipsis: never a pixel width, which depends on the
     // fonts. Fonts are per engine, and files that load Inter change them for
     // the files sharing the engine (--experimental-faster-testing).
-    expect(tester.renderObject<RenderParagraph>(find.text('1 of 2 running')).didExceedMaxLines, isFalse, reason: 'its words are whole');
-    expect(find.text('1 of 2 running'), findsOneWidget);
+    expect(tester.renderObject<RenderParagraph>(find.text('1 running')).didExceedMaxLines, isFalse, reason: 'its words are whole');
+    expect(find.text('1 running'), findsOneWidget);
     expect(web.top >= subagents.bottom - 1 || web.left >= subagents.right, isTrue, reason: 'beside it or under it, never over it');
   });
 
@@ -708,6 +758,42 @@ void main() {
     await _settle(tester);
     expect(find.text('Made in this session'), findsOneWidget);
     expect(find.byType(FileViewerScreen), findsNothing);
+  });
+
+  testWidgets('a long chat read in part: the chip says `+`, opening the sheet reads the rest, and the sheet says what it is doing', (tester) async {
+    final s = session([_say('Serving http://localhost:5173/')], key: 'm/partial')..madeReachValue = MadeReach.partial;
+    await pumpBar(tester, s);
+    expect(find.text('Made 1+'), findsOneWidget);
+    expect(s.readEarlierMadeCalls, 0, reason: 'nothing is read until the person looks');
+
+    await tester.tap(find.text('Made 1+'));
+    await _settle(tester);
+    expect(s.readEarlierMadeCalls, 1);
+    expect(find.text('Only the end of this chat has been read.'), findsOneWidget);
+
+    s.setMadeReach(MadeReach.reading);
+    await tester.pump();
+    expect(find.text('Reading earlier history…'), findsOneWidget);
+
+    s.setMadeReach(MadeReach.failed);
+    await tester.pump();
+    expect(find.textContaining('Couldn’t read the earlier part'), findsOneWidget);
+    await tester.tap(find.text('Retry'));
+    expect(s.readEarlierMadeCalls, 2);
+
+    s.setMadeReach(MadeReach.whole);
+    await tester.pump();
+    expect(find.text('Reading earlier history…'), findsNothing);
+    expect(find.text('Retry'), findsNothing);
+  });
+
+  testWidgets('nothing found yet but the chat is only read in part: the chip is there, and the sheet does not say nothing came up', (tester) async {
+    final s = session([_say('No links here.')], key: 'm/partial-empty')..madeReachValue = MadeReach.partial;
+    await pumpBar(tester, s);
+    await tester.tap(find.text('Made'));
+    await _settle(tester);
+    expect(find.text('Nothing has come up in this session yet.'), findsNothing);
+    expect(find.text('Only the end of this chat has been read.'), findsOneWidget);
   });
 
   testWidgets('rows keep their place across tabs while the sheet is open; what arrives is there the next time', (tester) async {

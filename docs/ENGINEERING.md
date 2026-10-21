@@ -317,7 +317,7 @@ Tailscale.
 - **Made in this session** (`session_made.dart` in `data/acp`, the `Made` chip and
   sheet in `ui/features/agent_session`): the servers, pages, pictures and
   documents a session made, found by scanning the transcript, so a link printed an hour ago
-  is not lost with the chat. Nothing is stored; the scan is memoized per
+  is not lost with the chat. The scan is memoized per
   transcript item, per list and per folder. The rules are narrow because a wide
   scan was wrong: run over 6,000 recorded sessions, "every `localhost` URL and
   every `.html` name in commands and output" was right for about 6% of its rows
@@ -347,10 +347,14 @@ Tailscale.
     letter or a URL; NOT `node_modules`, `.git` or system folders; NOT a
     relative name when no folder is known (an empty session folder counts as
     unknown: it would be taken against the login folder and open a decoy).
-  - Servers: a loopback link in the agent's own words (path kept; a bare
-    `localhost:5173`, `127.0.0.1:5173`, `0.0.0.0:5173` or `[::1]:5173` counts,
-    unless a `/`, `@`, `:`, `.` or `-` comes right before it: a tunnel
-    `-L 9100:127.0.0.1:9101` or a database URL is not a server), or a BANNER line a launched command printed in
+  - Servers: a loopback link in the agent's own words (path kept: one row per
+    page the agent named, newest 5 per port, `madeServerPathsCap`: with one row
+    per port, a table of a dashboard and its four tabs showed only the last tab;
+    a bare `localhost:5173`, `127.0.0.1:5173`, `0.0.0.0:5173` or `[::1]:5173`
+    counts, but only as the origin, and not when the same message links to a path
+    of that port, and not when a `/`, `@`, `:`, `.` or `-` comes right before it:
+    a tunnel `-L 9100:127.0.0.1:9101` or a database URL is not a server), or a
+    BANNER line a launched command printed in
     its first 8 KB, origin only: a labelled address at the start of the line
     (`Local: http://...`, `Network:`, `Local URL:`) or a launch phrase
     (`Uvicorn running on`, `Serving HTTP on`; `listening on` only from a command
@@ -379,6 +383,29 @@ Tailscale.
     its input, which a streaming patch keeps. The chip and sheet compare what
     the rows SHOW (`sameMadeAssets`), not the list, because a streaming tool
     replaces the transcript list on every chunk.
+  - **A long observed chat.** The phone opens an observed session with the last
+    192 KB of its log, so what was made earlier was not in the transcript (a 6.8 MB
+    session showed `Made 1` of 10 things). `MadeHistory` is what the earlier part
+    made: the sheet, when opened, reads `[last read, where the shown part
+    starts)` with `follow --to N --digest` (the host drops the model's thinking,
+    cuts strings to 8 KB and skips `custom`/`model_usage` entries: 0.70 MB against
+    0.99 MB zipped for that log, measured on a laptop, not a phone), maps it with
+    the same mapper and scanner (no second implementation to drift), and keeps
+    the rows in `DiskCache` per machine and log (`madeKey`), so the next visit
+    has them at once and reads only what is new. `MadeReach` says whether the
+    rows are all of them: the chip says `Made 9+` and the sheet `Only the end of
+    this chat has been read` until then. The shown part is read on top of the
+    history, so a file made earlier and deleted later is gone; reading some lines
+    twice (a wider tail overlaps the history) changes nothing, because the last
+    event of a row wins. Rules changed in the scanner bump `madeScanVersion`:
+    older kept rows are read again. A kept history is trusted while the log is the
+    same file (omp names logs with a time and an id); a log that starts over is
+    dropped. UNVERIFIED on a phone: the cost of the pass over a radio. Agent
+    sessions through a keeper have the same hole (the keeper trims old turns and
+    a trimmed call loses its output and diffs): not covered. A call whose line
+    is in one stretch and its result in the next (the shown part's start, a
+    resume point) is not scanned: its mapper starts without it. A read stops when
+    nobody holds the session (the next open reads again from the kept history).
   - A message that is still streaming is read once it has settled. UNVERIFIED:
     after a `session/load` replay the last message may stay live until the next
     item (`withSetup` does not settle it), so a link in it shows late.

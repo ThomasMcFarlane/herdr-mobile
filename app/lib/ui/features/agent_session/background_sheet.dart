@@ -10,6 +10,7 @@ import '../../../data/repositories/observed_session.dart' show ObservedAgentSess
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../../support/step_clock.dart';
 import 'agent_session_navigation.dart';
+import 'background_controls.dart';
 import 'background_format.dart';
 import 'session_select.dart';
 import 'subagent_roster.dart' show showSubagents;
@@ -38,14 +39,6 @@ Future<void> showBackgroundWork(BuildContext context, AgentSessionView session) 
 void showBackgroundToast(BuildContext context, String text, {required VoidCallback onView}) =>
     showToast(context, text, action: ToastAction('Open', onView), duration: Dwell.toastAction);
 
-enum _StopPhase { stopping, unconfirmed, finished }
-
-class _Stop {
-  const _Stop(this.phase, [this.reason]);
-
-  final _StopPhase phase;
-  final String? reason;
-}
 
 sealed class _Item {
   const _Item();
@@ -87,119 +80,30 @@ class BackgroundSheet extends StatefulWidget {
 }
 
 class _BackgroundSheetState extends State<BackgroundSheet> {
-  /// Per task key: what its stop is doing. Kept here, not in the rows: a lazy
-  /// list drops a row that scrolls away.
-  final Map<String, _Stop> _stops = {};
-  final Map<String, Timer> _timers = {};
+  late final BackgroundStopper _stopper = BackgroundStopper(widget.session)..addListener(_changed);
   final Set<String> _open = {};
   final Set<String> _readAll = {};
   bool _moreFinished = false;
 
-  /// A task key (or [_all]) the assistive activation primed.
-  String? _primed;
-  Timer? _primeTimer;
-  String? _summary;
-
-  static const _all = '\u0000all';
-
   AgentSessionView get _session => widget.session;
+
+  void _changed() {
+    if (mounted) setState(() {});
+  }
 
   @override
   void dispose() {
-    for (final t in _timers.values) {
-      t.cancel();
-    }
-    _primeTimer?.cancel();
+    _stopper.dispose();
     super.dispose();
   }
 
   // ---- stop ----------------------------------------------------------------
 
-  void _prime(String key) {
-    Haptics.armed();
-    _primeTimer?.cancel();
-    setState(() => _primed = key);
-    _primeTimer = Timer(Dwell.confirm, () {
-      if (mounted) setState(() => _primed = null);
-    });
-  }
-
-  void _clearPrime() {
-    _primeTimer?.cancel();
-    _primed = null;
-  }
-
-  /// The assistive activation: the first primes, the second stops.
-  void _activate(BackgroundTask task) => _primed == task.key ? _stop(task) : _prime(task.key);
-
-  void _setStop(String key, _Stop? stop) {
-    _timers.remove(key)?.cancel();
-    setState(() => stop == null ? _stops.remove(key) : _stops[key] = stop);
-    if (stop?.phase == _StopPhase.stopping) {
-      _timers[key] = Timer(Dwell.stopConfirm, () {
-        if (!mounted || _stops[key]?.phase != _StopPhase.stopping) return;
-        if (!_session.backgroundWork.running.any((t) => t.key == key)) return;
-        Haptics.failed();
-        _setStop(key, const _Stop(_StopPhase.unconfirmed));
-      });
-    }
-  }
-
-  void _stop(BackgroundTask task) {
-    _clearPrime();
-    _setStop(task.key, const _Stop(_StopPhase.stopping));
-    unawaited(_ask(task));
-  }
-
-  Future<void> _ask(BackgroundTask task) async {
-    final result = await _session.stopBackground(task.id);
-    if (!mounted) return;
-    switch (result) {
-      case BackgroundStopped():
-        // Accepted: stays `Stopping…` until the task leaves the running set.
-        Haptics.sent();
-      case BackgroundAlreadyDone():
-        _setStop(task.key, const _Stop(_StopPhase.finished));
-      case BackgroundNotStoppable():
-        _setStop(task.key, null);
-      case BackgroundStopFailed(:final reason):
-        Haptics.failed();
-        _setStop(task.key, _Stop(_StopPhase.unconfirmed, reason));
-    }
-  }
-
-  Future<void> _stopAll() async {
-    _clearPrime();
+  /// Reads the work when the hold completes, not when the sheet was built: the
+  /// list may have changed under the finger.
+  void _stopAll() {
     final work = _session.backgroundWork;
-    final targets = work.stoppable;
-    final skipped = work.running.length - targets.length;
-    for (final t in targets) {
-      _setStop(t.key, const _Stop(_StopPhase.stopping));
-    }
-    setState(() => _summary = null);
-    final result = await _session.stopAllBackground();
-    if (!mounted) return;
-    switch (result) {
-      case BackgroundStopped(:final asked):
-        Haptics.sent();
-        setState(() => _summary = stopAllSummary(stopped: targets.length, skipped: skipped, asked: asked));
-      case BackgroundAlreadyDone():
-        for (final t in targets) {
-          _setStop(t.key, const _Stop(_StopPhase.finished));
-        }
-        setState(() => _summary = 'Already done');
-      case BackgroundNotStoppable():
-        for (final t in targets) {
-          _setStop(t.key, null);
-        }
-        setState(() => _summary = 'Nothing here has a stop control');
-      case BackgroundStopFailed(:final reason):
-        Haptics.failed();
-        for (final t in targets) {
-          _setStop(t.key, const _Stop(_StopPhase.unconfirmed));
-        }
-        setState(() => _summary = visibleText(reason));
-    }
+    unawaited(_stopper.stopAll(targets: work.stoppable, skipped: work.running.length - work.stoppable.length));
   }
 
   // ---- rows ----------------------------------------------------------------
@@ -252,8 +156,8 @@ class _BackgroundSheetState extends State<BackgroundSheet> {
       final ds = context.ds;
       final items = _items(work);
       final sentence = work.running.isEmpty ? null : wakeSentence(work);
-      final stopAll = live && work.stoppable.length >= 2 && work.stoppable.any((t) => _stops[t.key]?.phase != _StopPhase.stopping);
-      final summary = _summary;
+      final stopAll = live && work.stoppable.length >= 2 && work.stoppable.any((t) => _stopper.stops[t.key]?.phase != StopPhase.stopping);
+      final summary = _stopper.summary;
       final routeMessage = work.running.any((t) => t.stop == StopRoute.message);
       final agent = _session.agentLabel;
       // What comes before the tasks and after them scrolls with them: one
@@ -267,18 +171,11 @@ class _BackgroundSheetState extends State<BackgroundSheet> {
         if (stopAll)
           Padding(
             padding: const EdgeInsets.only(left: Gap.md, top: Gap.md, right: Gap.md),
-            child: AnswerChip(
-              label: 'Stop all',
-              tone: AnswerChipTone.danger,
-              hold: true,
-              holdVerb: 'Hold to stop all',
-              state: _primed == _all ? AnswerChipState.primed : AnswerChipState.rest,
-              maxLines: 1,
-              semanticLabel: _primed == _all
-                  ? 'Confirm: Stop all ${work.stoppable.length}, activate again to confirm'
-                  : 'Stop all ${work.stoppable.length}, hold to confirm',
-              onTap: () => _primed == _all ? unawaited(_stopAll()) : _prime(_all),
-              onHeld: () => unawaited(_stopAll()),
+            child: StopAllChip(
+              count: work.stoppable.length,
+              primed: _stopper.primed == BackgroundStopper.all,
+              onTap: () => _stopper.primed == BackgroundStopper.all ? _stopAll() : _stopper.prime(BackgroundStopper.all),
+              onHeld: _stopAll,
             ),
           ),
         if (summary != null)
@@ -289,26 +186,17 @@ class _BackgroundSheetState extends State<BackgroundSheet> {
       ];
       final post = [
         if (!live)
-          _Footer(lines: const ['Not connected. This is the last known list.'])
+          const SheetFooter(lines: ['Not connected. This is the last known list.'])
         else if (work.hasRunning)
-          _Footer(
+          SheetFooter(
             lines: [
               'Stop on the message bar ends the turn only. Work listed here keeps running until you stop it.',
-              if (routeMessage) '$agent has no stop key for this. The phone sends $agent a message asking it to.',
+              if (routeMessage) messageRouteNote(agent),
             ],
           ),
       ];
       Widget item(BuildContext context, int i) => switch (items[i]) {
-          _Head(:final title, :final count) => Padding(
-            padding: const EdgeInsets.fromLTRB(Gap.md, Gap.md, Gap.md, Gap.xs),
-            child: Semantics(
-              header: true,
-              child: Text(
-                '$title · $count',
-                style: Type.labelStrong.copyWith(color: ds.textSecondary, fontFeatures: Type.tabular),
-              ),
-            ),
-          ),
+          _Head(:final title, :final count) => SectionHead(title, count),
           _TaskItem(:final task) => _TaskRow(
             key: ValueKey(task.key),
             task: task,
@@ -316,25 +204,19 @@ class _BackgroundSheetState extends State<BackgroundSheet> {
             live: live,
             expanded: _open.contains(task.key),
             readAll: _readAll.contains(task.key),
-            stop: _stops[task.key],
-            primed: _primed == task.key,
+            stop: _stopper.stops[task.key],
+            primed: _stopper.primed == task.key,
             opensSubagent: _opensSubagent(task),
             onTap: () => _opensSubagent(task) ? _openSubagent(task) : _toggle(task),
             onReadAll: () => setState(() => _readAll.add(task.key)),
-            onActivate: () => _activate(task),
-            onHold: () => _stop(task),
-            onRetry: () => _stop(task),
+            onActivate: () => _stopper.activate(task),
+            onHold: () => _stopper.stop(task),
+            onRetry: () => _stopper.stop(task),
           ),
-          _More(:final hidden, :final open) => Padding(
-            padding: const EdgeInsets.symmetric(horizontal: Gap.md),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: TextAction(
-                label: open ? 'Show less' : 'Show $hidden more',
-                tone: TextActionTone.quiet,
-                onTap: () => setState(() => _moreFinished = !_moreFinished),
-              ),
-            ),
+          _More(:final hidden, :final open) => ShowMoreRow(
+            hidden: hidden,
+            open: open,
+            onTap: () => setState(() => _moreFinished = !_moreFinished),
           ),
           _Note(:final text) => Padding(
             padding: const EdgeInsets.fromLTRB(Gap.md, Gap.xs, Gap.md, Gap.sm),
@@ -370,27 +252,6 @@ class _BackgroundSheetState extends State<BackgroundSheet> {
               ),
       );
     },
-  );
-}
-
-class _Footer extends StatelessWidget {
-  const _Footer({required this.lines});
-
-  final List<String> lines;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(Gap.md, Gap.xs, Gap.md, Gap.md),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (final line in lines)
-          Padding(
-            padding: const EdgeInsets.only(bottom: Gap.xs),
-            child: Text(line, style: Type.caption.copyWith(color: context.ds.textMuted)),
-          ),
-      ],
-    ),
   );
 }
 
@@ -437,7 +298,7 @@ class _TaskRow extends StatelessWidget {
   final bool live;
   final bool expanded;
   final bool readAll;
-  final _Stop? stop;
+  final TaskStop? stop;
   final bool primed;
   final bool opensSubagent;
   final VoidCallback onTap;
@@ -505,40 +366,19 @@ class _TaskRow extends StatelessWidget {
         : _meta(context, active ? DateTime.now() : null);
     final canStop = active && live && task.stop != StopRoute.none;
     final phase = stop?.phase;
-    final note = switch (phase) {
-      _StopPhase.unconfirmed => ('Couldn’t confirm', ds.dangerText, stop?.reason),
-      _StopPhase.finished => ('Already done', ds.done, null),
-      _ => null,
-    };
-    final Widget? noteLine = note == null
-        ? null
-        : Text(
-            [note.$1, ?note.$3].join(' \u00b7 '),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: Type.captionStrong.copyWith(color: note.$2),
-          );
-    final Widget? trailing = !canStop && phase != _StopPhase.unconfirmed
+    final noteLine = stopNote(context, stop);
+    final Widget? trailing = !canStop && phase != StopPhase.unconfirmed
         ? (opensSubagent ? Icon(LucideIcons.chevronRight, size: IconSize.row, color: ds.textTertiary) : null)
-        : switch (phase) {
-            _StopPhase.stopping => _StopStatus(label: 'Stopping…', semantic: 'Stopping ${visibleText(task.id)}'),
-            _StopPhase.unconfirmed => AppChip(
-              label: 'Retry',
-              semanticLabel: 'Retry stopping ${visibleText(task.id)}',
-              onTap: onRetry,
-            ),
-            _StopPhase.finished => null,
-            null => AnswerChip(
-              label: stopLabel(task.stop, agentLabel),
-              wide: false,
-              hold: true,
-              holdVerb: 'Hold to stop',
-              state: primed ? AnswerChipState.primed : AnswerChipState.rest,
-              semanticLabel: stopSemantics(task, agentLabel, primed: primed),
-              onTap: onActivate,
-              onHeld: onHold,
-            ),
-          };
+        : stopControl(
+            context,
+            task: task,
+            agentLabel: agentLabel,
+            stop: stop,
+            primed: primed,
+            onActivate: onActivate,
+            onHold: onHold,
+            onRetry: onRetry,
+          );
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -644,48 +484,6 @@ class _OpenText extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-}
-
-const _chipHeight = 36.0;
-const _chipMinWidth = 104.0;
-
-/// 44 dp to touch around a chip that paints [_chipHeight].
-Widget _touchBox(Widget chip) => ConstrainedBox(
-  constraints: const BoxConstraints(minWidth: kMinTap, minHeight: kMinTap),
-  child: Align(widthFactor: 1, heightFactor: 1, child: chip),
-);
-
-/// `Stopping…` with the one allowed spinner, until the task leaves running.
-class _StopStatus extends StatelessWidget {
-  const _StopStatus({required this.label, required this.semantic});
-
-  final String label;
-  final String semantic;
-
-  @override
-  Widget build(BuildContext context) {
-    final ds = context.ds;
-    return Semantics(
-      label: semantic,
-      excludeSemantics: true,
-      child: _touchBox(
-        Container(
-          constraints: const BoxConstraints(minWidth: _chipMinWidth, minHeight: _chipHeight),
-          padding: const EdgeInsets.symmetric(horizontal: Gap.md),
-          decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.sm)),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const BusySpinner(),
-              const SizedBox(width: Gap.sm),
-              Text(label, maxLines: 1, style: Type.labelStrong.copyWith(color: ds.textSecondary)),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

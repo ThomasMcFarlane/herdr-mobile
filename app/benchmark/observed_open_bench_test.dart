@@ -212,9 +212,9 @@ class _Timed implements SessionLogSource {
       _inner.blob(path, start: start, hash: hash);
 
   @override
-  Stream<LogBatch> follow(String path, {int? from, int? tailBytes}) {
+  Stream<LogBatch> follow(String path, {int? from, int? until, bool digest = false, int? tailBytes}) {
     follows++;
-    return _inner.follow(path, from: from, tailBytes: tailBytes).map((b) {
+    return _inner.follow(path, from: from, until: until, digest: digest, tailBytes: tailBytes).map((b) {
       firstBatchAt ??= _clock.now;
       batches++;
       lines.addAll(b.lines);

@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/acp/acp_models.dart';
 import 'package:herdr_mobile/data/acp/background/background_work.dart';
@@ -141,9 +144,10 @@ void main() {
         _run('npm start', output: 'Local: http://localhost:4000/internal/debug/x\n'),
       ];
       final byKey = {for (final a in madeAssetsOf(items)) a.key: a};
-      expect(byKey['localhost:8000']!.title, 'localhost:8000/docs');
+      expect(byKey['localhost:8000/docs']!.title, 'localhost:8000/docs');
       expect(byKey['localhost:5173'], isNotNull);
       expect(byKey['localhost:4000']!.url!.path, '/');
+      expect(byKey.keys, hasLength(3), reason: 'the bare port of an item that links to a path of it adds no second row');
     });
 
     test('a bare 127.0.0.1, 0.0.0.0 or [::1] with a port counts; a tunnel, a database URL or a longer address does not', () {
@@ -204,13 +208,40 @@ void main() {
       }
     });
 
-    test('a server mentioned again moves to the top and takes the newest path', () {
+    test('each page of a server the agent named is a row; a page mentioned again moves to the top', () {
       final items = [
         _say('Running http://localhost:3000/'),
         _say('Report at http://localhost:4000/'),
         _say('Try http://localhost:3000/health'),
       ];
-      expect(madeAssetsOf(items).map((a) => a.title), ['localhost:3000/health', 'localhost:4000']);
+      expect(madeAssetsOf(items).map((a) => a.title), ['localhost:3000/health', 'localhost:4000', 'localhost:3000']);
+      expect(_keys([...items, _say('and again http://localhost:3000/')]), ['localhost:3000', 'localhost:3000/health', 'localhost:4000']);
+    });
+
+    test('a dashboard and its tabs, linked in one table, are one row each (a log of a real session lost all but the last)', () {
+      final table = _say(
+        'Links (from elsewhere run `ssh -L 8765:localhost:8765 gpu-3` first):\n\n'
+        '| Dashboard | http://localhost:8765/ |\n'
+        '| Synth | http://localhost:8765/synth |\n'
+        '| Review | http://localhost:8765/review |\n'
+        '| Failures | http://localhost:8765/failures |\n',
+      );
+      expect(_keys([table]), ['localhost:8765/failures', 'localhost:8765/review', 'localhost:8765/synth', 'localhost:8765']);
+    });
+
+    test('a banner names the origin; a link in another message adds its page beside it', () {
+      final items = [_run('npm run dev', output: _vite), _say('The docs are at http://localhost:5173/docs/intro')];
+      expect(_keys(items), ['localhost:5173/docs/intro', 'localhost:5173']);
+    });
+
+    test('a server keeps its newest $madeServerPathsCap pages; another port is not pushed out', () {
+      final items = [
+        _say('http://localhost:9000/'),
+        for (var i = 0; i < 12; i++) _say('see http://localhost:8000/p$i'),
+      ];
+      final keys = _keys(items);
+      expect(keys.where((k) => k.startsWith('localhost:8000')), [for (var i = 11; i > 11 - madeServerPathsCap; i--) 'localhost:8000/p$i']);
+      expect(keys, contains('localhost:9000'));
     });
 
     test('a user message is not something the session made', () {
@@ -380,7 +411,7 @@ void main() {
     });
 
     test('a path inside a url is not a page, and a server is still found', () {
-      expect(_keys([_say('Wrote /tmp/out/final.html. Then http://localhost:8000/not-a-page.html is served.')]), ['/tmp/out/final.html', 'localhost:8000']);
+      expect(_keys([_say('Wrote /tmp/out/final.html. Then http://localhost:8000/not-a-page.html is served.')]), ['/tmp/out/final.html', 'localhost:8000/not-a-page.html']);
     });
 
     test('the same file under its spellings is one row', () {
@@ -539,6 +570,51 @@ void main() {
     test('the kinds are told apart on the rows', () {
       final items = [create('/w/a.md'), _write('/w/p.html'), _run('python p.py -o /w/c.png'), _say('http://localhost:3000/')];
       expect([for (final a in madeAssetsOf(items, cwd: '/w')) a.kind], [MadeKind.server, MadeKind.picture, MadeKind.page, MadeKind.doc]);
+    });
+  });
+
+  group('history (the part of a long log the phone did not load)', () {
+    MadeHistory read(List<TranscriptItem> items, {int upTo = 1000, MadeHistory? from}) =>
+        (MadeFold(cwd: '/w', from: from)..addAll(items)).history(upTo);
+
+    test('what the earlier part made is listed beneath what the shown part made, whichever order they were read in', () {
+      final older = read([_say('http://localhost:8790/'), _write('/w/old.html')]);
+      final shown = [_say('http://localhost:8765/')];
+      final keys = [for (final a in madeAssetsOf(shown, cwd: '/w', history: older)) a.key];
+      expect(keys, ['localhost:8765', '/w/old.html', 'localhost:8790']);
+    });
+
+    test('the shown part still removes and replaces what the earlier part made', () {
+      final older = read([_write('/w/gone.html'), _say('http://localhost:3000/')]);
+      final shown = [_delete('/w/gone.html'), _say('Now http://localhost:3000/health')];
+      expect([for (final a in madeAssetsOf(shown, cwd: '/w', history: older)) a.key], ['localhost:3000/health', 'localhost:3000']);
+    });
+
+    test('reading the same lines again on top of a history (a wider tail overlaps it) changes nothing', () {
+      final items = [_say('http://localhost:3000/'), _write('/w/a.html'), _delete('/w/a.html'), _say('http://localhost:4000/')];
+      final whole = [for (final a in madeAssetsOf(items, cwd: '/w')) a.key];
+      final overlapped = [for (final a in madeAssetsOf(items.sublist(1), cwd: '/w', history: read(items)) ) a.key];
+      expect(overlapped.toSet(), whole.toSet());
+    });
+
+    test('a history goes on from where an earlier one stopped', () {
+      final first = read([_say('http://localhost:3000/')], upTo: 10);
+      final second = read([_say('http://localhost:4000/')], upTo: 20, from: first);
+      expect(second.span, 2);
+      expect(second.upTo, 20);
+      expect([for (final a in second.assets) a.key], ['localhost:4000', 'localhost:3000']);
+    });
+
+    test('kept bytes read back to the same rows; damage and older rules are a history that does not exist', () {
+      final h = read([_say('http://localhost:3000/docs'), _write('/w/a.html'), _say('I created docs/spec.md')], upTo: 4242);
+      final back = MadeHistory.fromBytes(h.toBytes())!;
+      expect(back.upTo, 4242);
+      expect(back.span, h.span);
+      expect(sameMadeAssets(back.assets, h.assets), isTrue);
+      expect(back.assets.map((a) => a.order), h.assets.map((a) => a.order));
+      expect(MadeHistory.fromBytes(Uint8List.fromList(utf8.encode('{"v":0,"span":1,"upTo":1,"assets":[]}'))), isNull);
+      expect(MadeHistory.fromBytes(Uint8List.fromList(utf8.encode('{"v":$madeScanVersion,"span":1,"upTo":1,"assets":[{"kind":"nope"}]}'))), isNull);
+      expect(MadeHistory.fromBytes(Uint8List.fromList(utf8.encode('not json'))), isNull);
     });
   });
 }

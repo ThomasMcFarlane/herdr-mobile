@@ -5,6 +5,7 @@ import '../../../data/acp/auth_needed.dart';
 import '../../../data/acp/past_session.dart' show ResumeTarget;
 import '../../../data/acp/prompt_queue.dart';
 import '../../../data/acp/background/background_work.dart';
+import '../../../data/acp/session_made.dart' show MadeHistory;
 import '../../../data/acp/session_state.dart';
 import '../../../data/acp/subagents/subagent_run.dart';
 import '../../../data/repositories/agent_session.dart';
@@ -81,6 +82,15 @@ class SubagentRunSession extends ChangeNotifier implements AgentSessionView {
 
   @override
   void loadEarlier() {}
+
+  @override
+  MadeHistory? get madeHistory => null;
+
+  @override
+  MadeReach get madeReach => MadeReach.whole;
+
+  @override
+  void readEarlierMade() {}
   @override
   String? get error => null;
 
@@ -196,5 +206,5 @@ class SubagentRunSession extends ChangeNotifier implements AgentSessionView {
   @override
   Future<BackgroundStopResult> stopBackground(String id) async => const BackgroundNotStoppable();
   @override
-  Future<BackgroundStopResult> stopAllBackground() async => const BackgroundNotStoppable();
+  Future<BackgroundStopResult> stopAllBackground({BackgroundKind? only}) async => const BackgroundNotStoppable();
 }
