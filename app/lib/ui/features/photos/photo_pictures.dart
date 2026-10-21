@@ -130,9 +130,12 @@ class _Checkerboard extends CustomPainter {
     final path = Path();
     final columns = (size.width / _cell).ceil();
     final rows = (size.height / _cell).ceil();
+    // The last column and row are cut at the edge: a whole cell would stick out
+    // past the picture, a dashed strip of up to one cell on the right and bottom
+    // that shows at any zoom and grows with it (seen on a 2,487 px diagram).
     for (var y = 0; y < rows; y++) {
       for (var x = y.isEven ? 0 : 1; x < columns; x += 2) {
-        path.addRect(Rect.fromLTWH(x * _cell, y * _cell, _cell, _cell));
+        path.addRect(Rect.fromLTRB(x * _cell, y * _cell, math.min((x + 1) * _cell, size.width), math.min((y + 1) * _cell, size.height)));
       }
     }
     canvas.drawPath(path, light);

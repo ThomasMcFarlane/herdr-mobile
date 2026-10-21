@@ -22,6 +22,74 @@ release.
   has the same drawn look as the done, working and waiting shapes next to it,
   in place of a generic cross and a generic "no entry" sign.
 
+## [0.1.26] - 2026-10-21
+
+### Clearing an omp conversation clears the chat
+
+When you clear the conversation in omp's terminal, the chat now starts over
+too. It used to keep every old message above the note "The conversation was
+cleared on the machine", while the terminal was empty.
+
+- The old messages, questions waiting for an answer and plans waiting for
+  review go; the note stays as the first line of the new conversation. The
+  plan list is left as it was: not checked whether omp clears it.
+- Not tried on a phone yet. Claude Code already started a fresh chat after
+  `/clear`; Codex was not checked.
+
+**Fixed**
+
+- A chat of an agent running in a terminal (Claude Code, Codex, omp) no
+  longer stays on `Reconnecting…` with `Offline · reconnecting` in the
+  composer after a short drop of the connection. It used to stay that way
+  until you left the chat, with the agent's output still arriving. Not
+  checked on a phone yet.
+
+## [0.1.25] - 2026-10-20
+
+### A page behind a password asks you to sign in
+
+A page that wants a user name and password (a dev server, or a reverse proxy
+in front of it, with Basic auth) now asks for them. It used to load nothing
+and give no way to enter them.
+
+> [!TIP]
+> Try it: tap a link to a page behind a password and choose `Open page`; the
+> `Sign in` sheet appears.
+
+- The sheet names the machine and shows the server's own words for what it
+  protects. A page and its pictures asking together share one sheet, so you
+  type once. A wrong password asks again.
+- Dismissing the sheet cancels the sign-in. What you type is used for that
+  page only and is not kept. Not tried on a phone yet.
+
+## [0.1.24] - 2026-10-20
+
+[![Watch what's new · 1 change · 0:13 · 2.8 MB](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.24/0.1.24-whats-new.jpg)](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.24/0.1.24-whats-new.mp4)
+
+### A session in a worktree shows up in that worktree
+
+At the computer, an agent you start in a worktree from the phone now has its
+tab in that worktree's own workspace in herdr, next to its shell. It used to
+sit in `Phone sessions`, and the worktree looked empty.
+
+> [!TIP]
+> Try it: start a new agent session, open `Checkout` and pick `New worktree…`:
+> `Branch` starts with a name you can keep or change.
+
+- `New worktree…` fills `Branch` with a name like `worktree/brave-meadow-45e8`,
+  one the repo has no branch of yet. Change it, or clear it to let herdr name it.
+- Only sessions started from now on move. A session in a repo's main checkout
+  stays in `Phone sessions`. Not checked on a live herdr desktop yet.
+
+![New agent session with Checkout set to New worktree and Branch holding worktree/merry-harbor-4ce3](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.24/0.1.24-branch-suggested.png)
+
+**Fixed**
+
+- A picture with see-through pixels, a PNG or WebP, in the full-screen
+  viewer no longer shows a strip of grey squares past its right and bottom
+  edge. The strip grew as you zoomed in; it was seen on a large diagram.
+  Not checked on a phone yet.
+
 ## [0.1.23] - 2026-10-20
 
 ### Mermaid diagrams are drawn in answers

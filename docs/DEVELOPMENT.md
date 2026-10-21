@@ -24,9 +24,30 @@ fvm, puro and `~/flutter` (newest first), saying which it skipped and why.
 if its Dart does not fit. The autoresearch scripts and the analyze hook below
 use the same picker. Why: the `flutter` on `PATH` was once Dart 3.10 against
 `^3.13.5`, and pub get failed with a resolver error that never named the SDK.
-The tests run one file per core (`flutter test -j`, whose default is half the
-cores: most files wait on processes and timers, so half left the CPU idle);
-`HERDR_TEST_JOBS` overrides. A keeper test file stays under ~30 s so none of
+The tests run with `flutter test --experimental-faster-testing`, one job per
+usable core (`nproc`, so CPU pinning and a 4-core runner count; most files wait
+on processes and timers, but 1.5 jobs per core made timing tests fail);
+`HERDR_TEST_JOBS` overrides. Why: the default runner compiles and starts an
+engine per file through one compiler, and on 4 cores 308 files spent ~25,000
+summed seconds loading against ~625 running (1,243 s to 341 s with this
+runner). Two things follow from it. All files share one engine, so a file that
+needs the app fonts loads them itself (`loadAppFonts`, `test/support/shot.dart`)
+instead of relying on another file having done it. And the runner resolves this
+package's `"rootUri": "../"` in `.dart_tool/package_config.json` against the
+wrong directory (Flutter 3.47), so `tool/check.sh` writes an absolute path for
+the run and restores the file. CI splits the tests over four runners
+(`HERDR_TEST_SHARD=<i>/4 tool/check.sh --tests`; analyze and the lint are
+their own job, `--quick`): 4 cores cannot take more than one job per core
+without timing tests failing, and a quarter of the suite takes ~91-101 s, ~25 s of it
+compile, on each runner against ~300 s whole (measured on 4 pinned cores, not on
+a hosted runner). A test must not depend on the tests before it in its file:
+a shard runs a different subset. A test that asserts on real time (a timer
+raced against a bound, a process answering within N ms) and fails when the CPU
+is busy gets `@Tags(['timing'])` on its library (`app/dart_test.yaml`): CI runs
+those in their own job at half the jobs (`HERDR_TEST_ONLY=timing`), the shards
+run the rest (`rest`), and an unset `HERDR_TEST_ONLY` runs everything. Why: they
+failed intermittently beside the others on 4 cores; the tag is a quarantine,
+not a fix, so prefer polling or an injected clock when the test allows. A keeper test file stays under ~30 s so none of
 them ends the run waiting alone: split a file that grows past that.
 
 ## Code layout

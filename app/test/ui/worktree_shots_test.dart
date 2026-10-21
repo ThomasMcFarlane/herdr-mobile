@@ -283,8 +283,13 @@ void main() {
           await t.ensureVisible(find.text('New worktree…'));
           await t.tap(find.text('New worktree…'));
           await settle(t);
-          await t.enterText(find.byType(EditableText).at(1), _longBranch);
-          t.view.viewInsets = FakeViewPadding(bottom: 300 * phoneDpr);
+          if (name.contains('prefilled')) {
+            // The release still: what the Branch field starts with, nothing typed.
+            await t.ensureVisible(find.byType(EditableText).at(1));
+          } else {
+            await t.enterText(find.byType(EditableText).at(1), _longBranch);
+            t.view.viewInsets = FakeViewPadding(bottom: 300 * phoneDpr);
+          }
           await settle(t);
         }
       },
@@ -303,4 +308,5 @@ void main() {
         scale: 2,
       ));
   testWidgets('form: New worktree with the keyboard up', (tester) => formShot(tester, 'form-new-light-412'));
+  testWidgets('form: New worktree starts with a suggested branch (release still)', (tester) => formShot(tester, 'form-new-prefilled-light-412'));
 }

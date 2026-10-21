@@ -1069,7 +1069,8 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
     if (first) _toldSinceFirstBatch = false;
     _ready = true;
     _failure = null;
-    if (first) _setLink(AgentLink.live);
+    // Also after a drop: the first batch of the new channel ends the outage.
+    _setLink(AgentLink.live);
     if (wide) {
       // The older turns are not shown until all of them are there.
       if (!batch.caughtUp || _wideLog == null) {

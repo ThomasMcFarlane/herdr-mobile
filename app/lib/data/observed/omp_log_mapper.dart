@@ -21,7 +21,8 @@ import 'observed_contracts.dart';
 /// - `custom_message` that the user started (a skill prompt, a peer's prompt)
 ///   and `irc:incoming` (a message from another agent, as a note); an
 ///   `async-result` only updates [subagents];
-/// - `compaction`, `branch_summary` and `reset_boundary` (one quiet note);
+/// - `compaction` and `branch_summary` (one quiet note); `reset_boundary` (the
+///   conversation was cleared: the transcript starts over with one note);
 /// - `custom`: `user_todo_edit` (the plan) and `session_exit` (the process is
 ///   gone, so what was running is cancelled).
 ///
@@ -163,7 +164,7 @@ class OmpLogMapper implements SessionLogMapper {
       case 'branch_summary':
         return _note(e, line, 'Earlier messages were summarised');
       case 'reset_boundary':
-        return _note(e, line, 'The conversation was cleared on the machine');
+        return _cleared(e, line);
       case 'custom_message':
         return _customMessage(e, line);
       case 'custom':
@@ -182,6 +183,17 @@ class OmpLogMapper implements SessionLogMapper {
     final t = title.trim();
     if (t.isEmpty) return const [];
     return [SessionInfoUpdate(hasTitle: true, title: cutText(t, 200), hasUpdatedAt: false)];
+  }
+
+  /// The conversation was cleared on the machine: what was open is over, the
+  /// transcript restarts with one note saying why it is short.
+  List<SessionUpdate> _cleared(Json e, String line) {
+    final key = _firstTime(e, line);
+    if (key == null) return const [];
+    _ask = null;
+    _proposed = null;
+    _open.clear();
+    return [const TranscriptCleared(), messageUpsert(MessageRole.agent, key, 'The conversation was cleared on the machine')];
   }
 
   /// One quiet agent message for a housekeeping entry.
