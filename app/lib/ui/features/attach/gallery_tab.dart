@@ -110,7 +110,7 @@ class _GalleryTabState extends State<GalleryTab> with WidgetsBindingObserver {
           onSystemPicker: widget.onSystemPicker,
         ),
         GalleryAccess.undetermined => _Panel(
-          icon: LucideIcons.images,
+          icon: HerdrIcons.pictures,
           title: 'Attach photos from your phone',
           message: 'Photos stay on your phone until you attach them.',
           primary: ('Allow photo access', () => unawaited(model.request())),
@@ -118,7 +118,7 @@ class _GalleryTabState extends State<GalleryTab> with WidgetsBindingObserver {
           onSystemPicker: widget.onSystemPicker,
         ),
         GalleryAccess.denied => _Panel(
-          icon: LucideIcons.imageOff,
+          icon: HerdrIcons.pictureOff,
           title: 'Photo access is off',
           message: 'Allow it in the phone\u2019s settings to see your photos here.',
           primary: ('Open settings', () => unawaited(model.openSettings())),
@@ -126,7 +126,7 @@ class _GalleryTabState extends State<GalleryTab> with WidgetsBindingObserver {
           onSystemPicker: widget.onSystemPicker,
         ),
         GalleryAccess.unavailable => _Panel(
-          icon: LucideIcons.imageOff,
+          icon: HerdrIcons.pictureOff,
           title: 'Photos cannot be listed',
           message: 'This phone would not show its library to herdr. The system picker still works.',
           onCamera: widget.onCamera,
@@ -241,7 +241,7 @@ Future<void> _chooseAlbum(BuildContext context, GalleryModel model) async {
                   ),
                   child: Row(
                     children: [
-                      Icon(a.isRecent ? LucideIcons.images : LucideIcons.folder, size: IconSize.lead, color: ds.textSecondary),
+                      Icon(a.isRecent ? HerdrIcons.pictures : LucideIcons.folder, size: IconSize.lead, color: ds.textSecondary),
                       const SizedBox(width: Gap.md),
                       Expanded(
                         child: Text(a.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: Type.row.copyWith(color: ds.text)),
@@ -332,7 +332,7 @@ class _PanelState extends State<_Panel> {
                   ],
                   AppButton(
                     label: 'Open the system picker',
-                    icon: LucideIcons.image,
+                    icon: HerdrIcons.picture,
                     kind: primary == null ? AppButtonKind.primary : AppButtonKind.secondary,
                     expand: true,
                     onPressed: widget.onSystemPicker,
@@ -477,7 +477,7 @@ class _GridState extends State<_Grid> {
                     child: Padding(
                       padding: EdgeInsets.only(top: Gap.xl, bottom: clearance),
                       child: const EmptyState(
-                        icon: LucideIcons.imageOff,
+                        icon: HerdrIcons.pictureOff,
                         title: 'No photos yet',
                         message: 'Take one with the camera, or pick a file from the Files tab.',
                       ),

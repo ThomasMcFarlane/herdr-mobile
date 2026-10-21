@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/acp/acp_models.dart';
 import '../../../data/observed/log_picture.dart';
@@ -114,7 +113,7 @@ class _LogImageViewState extends State<LogImageView> {
     }
     final size = block.ref.bytes;
     return ContentChip(
-      icon: LucideIcons.image,
+      icon: HerdrIcons.picture,
       title: 'Image',
       // The size first: at a large text size the type may wrap or be cut, and the
       // size is what tells the person whether a tap is worth it.
@@ -150,7 +149,7 @@ class ImageReferenceLine extends StatelessWidget {
     }
     final note = problem ?? (uri.isEmpty ? 'The agent sent no picture data.' : null);
     return ContentChip(
-      icon: LucideIcons.image,
+      icon: HerdrIcons.picture,
       title: 'Image',
       detail: [if (detail.isNotEmpty) detail else if (mime.isNotEmpty) mime].join(' · '),
       note: note,
@@ -229,7 +228,7 @@ class _InlineImageState extends State<_InlineImage> {
       // that is not what it was and a view that cannot fetch it cannot.
       final retryable = _entry.retryable;
       return ContentChip(
-        icon: LucideIcons.image,
+        icon: HerdrIcons.picture,
         title: 'Image',
         detail: widget.block.mimeType,
         note: retryable ? '$problem Tap to retry.' : problem,
@@ -258,7 +257,7 @@ class _InlineImageState extends State<_InlineImage> {
             child: Center(
               child: logPicture && (widget.waited || _retried)
                   ? const BusySpinner(size: IconSize.lead)
-                  : Icon(LucideIcons.image, size: IconSize.lead, color: ds.textTertiary),
+                  : Icon(HerdrIcons.picture, size: IconSize.lead, color: ds.textTertiary),
             ),
           ),
         ),

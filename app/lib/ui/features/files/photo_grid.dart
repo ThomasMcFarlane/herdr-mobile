@@ -1,7 +1,6 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/models/remote_file.dart';
 import '../../../data/services/remote_files.dart';
@@ -198,9 +197,9 @@ class _PhotoThumbFaceState extends State<PhotoThumbFace> with SingleTickerProvid
         ColoredBox(
           color: ds.fill,
           child: switch (phase) {
-            ThumbPhase.tooBig => _Note(icon: LucideIcons.image, text: e.size == null ? null : size),
-            ThumbPhase.failed => const _Note(icon: LucideIcons.imageOff),
-            _ => image == null ? const _Note(icon: LucideIcons.image, faint: true) : null,
+            ThumbPhase.tooBig => _Note(icon: HerdrIcons.picture, text: e.size == null ? null : size),
+            ThumbPhase.failed => const _Note(icon: HerdrIcons.pictureOff),
+            _ => image == null ? const _Note(icon: HerdrIcons.picture, faint: true) : null,
           },
         ),
         if (image != null)

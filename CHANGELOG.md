@@ -15,6 +15,9 @@ release.
   in place of the generic globe and server.
 - The Settings groups have their own icons too: Look, Notifications, Storage,
   About and Update available, and Agents uses the same robot as the Agents tab.
+- A picture has one icon everywhere: the gallery, attachments, a photo that did
+  not load and the pictures in `Made` share one drawn picture, one for "cannot
+  be shown" and one for many.
 
 ## [0.1.23] - 2026-10-20
 

@@ -34,8 +34,14 @@ abstract final class HerdrIcons {
   /// A web page a session made: a browser window with text (Made).
   static const IconData madePage = IconData(0xE021, fontFamily: 'HerdrIcons');
 
-  /// A picture a session made (Made).
-  static const IconData madePicture = IconData(0xE022, fontFamily: 'HerdrIcons');
+  /// A picture: Made, the gallery, attachments, a photo that has not loaded.
+  static const IconData picture = IconData(0xE022, fontFamily: 'HerdrIcons');
+
+  /// A picture that cannot be shown: the picture, slashed.
+  static const IconData pictureOff = IconData(0xE025, fontFamily: 'HerdrIcons');
+
+  /// Many pictures: the gallery and recent photos.
+  static const IconData pictures = IconData(0xE026, fontFamily: 'HerdrIcons');
 
   /// A document a session made: a page with a folded corner (Made).
   static const IconData madeDoc = IconData(0xE023, fontFamily: 'HerdrIcons');

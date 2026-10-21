@@ -15,7 +15,6 @@ import 'package:herdr_mobile/ui/features/files/file_row.dart';
 import 'package:herdr_mobile/ui/features/files/photo_grid.dart';
 import 'package:herdr_mobile/ui/features/files/photo_thumbs.dart';
 import 'package:herdr_mobile/ui/features/photos/photo_viewer.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'support/fake_fs.dart';
 import 'support/fake_transport.dart';
@@ -523,8 +522,8 @@ void main() {
       expect(find.text('5 MB'), findsOneWidget);
       expect(files.reads, isNot(contains('/pics/big.png')));
       expect(find.byType(RawImage), findsOneWidget, reason: 'only ok.png has a picture');
-      expect(find.byIcon(LucideIcons.imageOff), findsOneWidget, reason: 'bad.png could not be read');
-      expect(find.byIcon(LucideIcons.image), findsOneWidget, reason: 'big.png is too big to fetch');
+      expect(find.byIcon(HerdrIcons.pictureOff), findsOneWidget, reason: 'bad.png could not be read');
+      expect(find.byIcon(HerdrIcons.picture), findsOneWidget, reason: 'big.png is too big to fetch');
     });
 
     testWidgets('each tile is a button labelled name and size; the name is never drawn', (tester) async {

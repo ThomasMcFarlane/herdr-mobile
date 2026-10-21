@@ -219,7 +219,7 @@ class _Thumb extends StatelessWidget {
         cacheWidth: (_thumb * 3).round(),
         gaplessPlayback: true,
         excludeFromSemantics: true,
-        errorBuilder: (_, _, _) => Icon(LucideIcons.image, size: IconSize.bar, color: ds.textSecondary),
+        errorBuilder: (_, _, _) => Icon(HerdrIcons.picture, size: IconSize.bar, color: ds.textSecondary),
       );
     } else if (a.previewPath != null) {
       picture = Image(
@@ -227,7 +227,7 @@ class _Thumb extends StatelessWidget {
         fit: BoxFit.cover,
         gaplessPlayback: true,
         excludeFromSemantics: true,
-        errorBuilder: (_, _, _) => Icon(LucideIcons.image, size: IconSize.bar, color: ds.textSecondary),
+        errorBuilder: (_, _, _) => Icon(HerdrIcons.picture, size: IconSize.bar, color: ds.textSecondary),
       );
     }
     final Widget child;
@@ -236,7 +236,7 @@ class _Thumb extends StatelessWidget {
     } else if (a.preparing) {
       child = const Center(child: BusySpinner());
     } else {
-      child = Icon(a.kind == AttachmentKind.image ? LucideIcons.image : LucideIcons.fileText, size: IconSize.bar, color: ds.textSecondary);
+      child = Icon(a.kind == AttachmentKind.image ? HerdrIcons.picture : LucideIcons.fileText, size: IconSize.bar, color: ds.textSecondary);
     }
     final tile = ClipRRect(
       borderRadius: BorderRadius.circular(Radii.xs),

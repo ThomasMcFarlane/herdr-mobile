@@ -13,7 +13,7 @@ extension AttachTabLook on AttachTab {
   };
 
   IconData get icon => switch (this) {
-    AttachTab.gallery => LucideIcons.images,
+    AttachTab.gallery => HerdrIcons.pictures,
     AttachTab.files => LucideIcons.fileText,
     AttachTab.host => HerdrIcons.machines,
   };

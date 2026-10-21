@@ -23,7 +23,6 @@ import 'package:herdr_mobile/ui/features/files/photo_thumbs.dart';
 import 'package:herdr_mobile/ui/features/photos/photo_viewer.dart';
 import 'package:herdr_mobile/ui/features/web/web_preview_screen.dart';
 import 'package:image/image.dart' as img;
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher_platform_interface/link.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
@@ -521,7 +520,7 @@ void main() {
     await openSheet(tester, session([picture('here.png'), picture('gone.png')]));
 
     expect(find.text('gone.png'), findsOneWidget);
-    expect(find.byIcon(LucideIcons.imageOff), findsOneWidget);
+    expect(find.byIcon(HerdrIcons.pictureOff), findsOneWidget);
     expect(find.byType(RawImage), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -628,7 +627,7 @@ void main() {
     onMachine(['$base/screenshots/here.png']);
     fs.fail = RemoteFileException(RemoteFileErrorKind.network, 'timed out');
     await openSheet(tester, session([picture('here.png')]));
-    expect(find.byIcon(LucideIcons.imageOff), findsNothing, reason: 'a link that is down says nothing about the file');
+    expect(find.byIcon(HerdrIcons.pictureOff), findsNothing, reason: 'a link that is down says nothing about the file');
     expect(find.byType(RawImage), findsNothing);
 
     fs.fail = null;

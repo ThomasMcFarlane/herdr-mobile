@@ -448,7 +448,7 @@ class _WebRow extends StatelessWidget {
         icon: switch (asset.kind) {
           MadeKind.server => HerdrIcons.madeServer,
           MadeKind.page => HerdrIcons.madePage,
-          MadeKind.picture => HerdrIcons.madePicture,
+          MadeKind.picture => HerdrIcons.picture,
           MadeKind.doc => HerdrIcons.madeDoc,
         },
         color: running ? ds.done : null,
@@ -686,9 +686,9 @@ class _PictureTileState extends State<_PictureTile> {
               child: entry == null
                   ? _QuietTile(
                       icon: switch (_face) {
-                        _Face.gone => LucideIcons.imageOff,
+                        _Face.gone => HerdrIcons.pictureOff,
                         _Face.unknown => LucideIcons.refreshCw,
-                        _ => LucideIcons.image,
+                        _ => HerdrIcons.picture,
                       },
                       faint: _face == _Face.loading,
                       pressed: pressed,

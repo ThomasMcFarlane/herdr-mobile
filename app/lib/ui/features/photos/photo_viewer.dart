@@ -464,7 +464,7 @@ class _FailureView extends StatelessWidget {
     final failure = entry.failure!;
     final (icon, title) = switch (failure.kind) {
       PhotoFailureKind.tooLarge => (LucideIcons.fileWarning, 'Too large to open here'),
-      PhotoFailureKind.notAnImage => (LucideIcons.imageOff, 'Can’t show this as a picture'),
+      PhotoFailureKind.notAnImage => (HerdrIcons.pictureOff, 'Can’t show this as a picture'),
       PhotoFailureKind.network => (LucideIcons.cloudOff, 'Connection lost'),
       PhotoFailureKind.unreadable => (LucideIcons.triangleAlert, 'Couldn’t open this photo'),
     };

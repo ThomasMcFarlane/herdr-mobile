@@ -320,7 +320,7 @@ class _BrowserViewState extends State<_BrowserView> {
             actions: [
               if (showToggle)
                 CircleButton(
-                  icon: LucideIcons.images,
+                  icon: HerdrIcons.pictures,
                   tooltip: showGrid ? 'List' : 'Photos',
                   active: showGrid,
                   onPressed: () {
