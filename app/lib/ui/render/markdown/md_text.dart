@@ -81,6 +81,10 @@ enum MdLinkKind {
 /// A path target and the line it names.
 typedef MdPathTarget = ({String path, int? line});
 
+/// One tappable stretch of a text span: UTF-16 range, and either a web address
+/// or a file path.
+typedef _Hit = ({int start, int end, String? url, MdPathTarget? path});
+
 /// Classifies the destination of a Markdown link or image.
 (MdLinkKind, MdPathTarget?) classifyLink(String url) {
   final u = url.trim();
@@ -288,31 +292,31 @@ class _MdInlineTextState extends State<MdInlineText> {
             out.add(TextSpan(text: text, style: compose(bits, link: styled), recognizer: tap));
             continue;
           }
-          if (onPath == null || text.length < 3) {
+          if ((onPath == null && onLink == null) || text.length < 3) {
             out.add(TextSpan(text: text, style: compose(bits, link: false)));
             continue;
           }
-          final found = _paths(text);
+          final found = _found(text, web: onLink != null, path: onPath != null);
           if (found.isEmpty) {
             out.add(TextSpan(text: text, style: compose(bits, link: false)));
             continue;
           }
+          TapGestureRecognizer tapHit(_Hit h) => _tap(() => h.url != null ? onLink!(context, h.url!) : pathTap(h.path!));
           if (isCode) {
-            // Inline code is a path when it is nothing but one.
-            final (s, e) = found.first.$1;
-            if (found.length == 1 && text.substring(0, s).trim().isEmpty && text.substring(e).trim().isEmpty) {
-              final target = found.first.$2;
-              out.add(TextSpan(text: text, style: compose(bits, link: true), recognizer: _tap(() => pathTap(target))));
+            // Inline code is a link when it is nothing but one.
+            final h = found.first;
+            if (found.length == 1 && text.substring(0, h.start).trim().isEmpty && text.substring(h.end).trim().isEmpty) {
+              out.add(TextSpan(text: text, style: compose(bits, link: true), recognizer: tapHit(h)));
             } else {
               out.add(TextSpan(text: text, style: compose(bits, link: false)));
             }
             continue;
           }
           var at = 0;
-          for (final ((s, e), target) in found) {
-            if (s > at) out.add(TextSpan(text: text.substring(at, s), style: compose(bits, link: false)));
-            out.add(TextSpan(text: text.substring(s, e), style: compose(bits, link: true), recognizer: _tap(() => pathTap(target))));
-            at = e;
+          for (final h in found) {
+            if (h.start > at) out.add(TextSpan(text: text.substring(at, h.start), style: compose(bits, link: false)));
+            out.add(TextSpan(text: text.substring(h.start, h.end), style: compose(bits, link: true), recognizer: tapHit(h)));
+            at = h.end;
           }
           if (at < text.length) out.add(TextSpan(text: text.substring(at), style: compose(bits, link: false)));
       }
@@ -320,13 +324,28 @@ class _MdInlineTextState extends State<MdInlineText> {
     return TextSpan(children: out);
   }
 
-  /// The path links of [text], as (UTF-16 range, target).
-  List<((int, int), MdPathTarget)> _paths(String text) {
-    final links = detectLinks(text).where((l) => l.kind == TerminalLinkKind.path).toList();
+  /// The links the scanner finds in [text] that a handler can follow: web
+  /// addresses when [web], file paths when [path]. Why web ones are looked for
+  /// here: the parser's autolink needs a dotted domain, so `http://localhost:8791/`
+  /// (what a dev server prints) was plain text, and inline code is never
+  /// autolinked at all.
+  List<_Hit> _found(String text, {required bool web, required bool path}) {
+    final links = detectLinks(text).where((l) {
+      return switch (l.kind) {
+        TerminalLinkKind.path => path,
+        TerminalLinkKind.url => web && classifyLink(l.target).$1 == MdLinkKind.web,
+      };
+    }).toList();
     if (links.isEmpty) return const [];
     final ranges = _unitRanges(text, links);
     return [
-      for (var i = 0; i < links.length; i++) (ranges[i], (path: links[i].target, line: links[i].line)),
+      for (var i = 0; i < links.length; i++)
+        (
+          start: ranges[i].$1,
+          end: ranges[i].$2,
+          url: links[i].kind == TerminalLinkKind.url ? links[i].target : null,
+          path: links[i].kind == TerminalLinkKind.path ? (path: links[i].target, line: links[i].line) : null,
+        ),
     ];
   }
 

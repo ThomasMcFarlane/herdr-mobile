@@ -271,6 +271,22 @@ void main() {
       expect(taps, [('lib/a.dart', 42), ('lib/b.dart', null), ('docs/c.md', 12)]);
     });
 
+    testWidgets('a dev-server address is a link in prose and alone in an inline-code badge', (tester) async {
+      final taps = <String>[];
+      await tester.pumpWidget(
+        _app(
+          MdActions(
+            onLink: (context, url) => taps.add(url),
+            child: _doc('Open http://localhost:8791/ or `http://localhost:8792/x?a=1` but `curl http://localhost:8793/` is a command.'),
+          ),
+        ),
+      );
+      await _tapSpan(tester, 'http://localhost:8791/');
+      await _tapSpan(tester, 'http://localhost:8792/x?a=1');
+      expect(_recognizerOf(tester, 'curl http://localhost:8793/'), isNull);
+      expect(taps, ['http://localhost:8791/', 'http://localhost:8792/x?a=1']);
+    });
+
     testWidgets('a path in prose is underlined; a path in an inline-code badge is accent only', (tester) async {
       await tester.pumpWidget(
         _app(MdActions(onPath: (context, path, line) {}, child: _doc('Open lib/a.dart:42 and `lib/b.dart` now.'))),

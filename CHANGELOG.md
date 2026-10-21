@@ -4,6 +4,11 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [Unreleased]
+
+- A dev-server address in an answer (`http://localhost:8791/`) is now a link
+  you can tap, in plain text and when it is the only thing in a code badge.
+
 ## [0.1.23] - 2026-10-20
 
 ### Mermaid diagrams are drawn in answers
