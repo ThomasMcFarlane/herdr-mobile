@@ -469,8 +469,7 @@ class _Planner {
     }
   }
 
-  bool _breaksOut(TranscriptTool tool) =>
-      toolFailed(tool.call) || tool.call.status == ToolStatus.cancelled || waiting.contains(tool.call.toolCallId);
+  bool _breaksOut(TranscriptTool tool) => toolBreaksOut(tool.call, waiting);
 
   /// The open log: per stretch between two pieces of narration, one thinking
   /// line, then the calls (adjacent reads and searches grouped); the

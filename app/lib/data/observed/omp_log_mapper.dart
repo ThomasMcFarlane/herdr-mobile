@@ -511,6 +511,14 @@ class OmpLogMapper implements SessionLogMapper {
       content.addAll(reported.isNotEmpty ? reported : (open?.diffs ?? const <ToolDiff>[]));
     }
     var text = _resultText(m['content']);
+    // omp marks two answers as errors that are not: a call it skipped because a
+    // job finished or a message queued meanwhile (`details.__interrupted`, or
+    // `source: interrupt_skipped` in the other shape; the text says to retry),
+    // and a `wait` with nothing to wait for. Neither failed; shown as failures
+    // they sat under the final answer of every turn (48 times in one session).
+    final skipped = isError && (details?['__interrupted'] == true || details?['source'] == 'interrupt_skipped');
+    final idle = isError && !skipped && name == 'wait' && (details?.isEmpty ?? true) && text.startsWith('Nothing to wait for');
+    final status = skipped ? 'cancelled' : (isError && !idle ? 'failed' : 'completed');
     if (details != null) _noteBackground(id, name, details, open, text, at);
     if (name == 'task') {
       _noteTask(details);
@@ -526,7 +534,8 @@ class OmpLogMapper implements SessionLogMapper {
     final fields = <String, Object?>{
       'toolCallId': id,
       if (!known) ...{'name': name, 'title': name, 'kind': kindWire(_kindOf(name))},
-      'status': isError ? 'failed' : 'completed',
+      'status': status,
+      if (skipped) '_meta': {'herdr': {'skipped': true}},
       'content': [for (final c in content) c.toJson()],
       if (text.isNotEmpty) 'rawOutput': capText(text),
       if (locations.isNotEmpty) 'locations': locations,

@@ -95,6 +95,23 @@ ToolSummary toolSummary(ToolCall call) => _summaries[call] ??= _summarize(call);
 /// `failed`, or the command ended with a non-zero code or a signal.
 bool toolFailed(ToolCall call) => call.status == ToolStatus.failed || (call.output?.failed ?? false);
 
+/// Whether the agent skipped the call: it was interrupted before it ran (omp,
+/// when a background job finished or a message of the person queued meanwhile:
+/// `details.__interrupted` or `source: interrupt_skipped`) and says so in its
+/// result, which asks for a retry. The row stays, cancelled, with that text, but
+/// it is not an exception to show under the answer: nothing failed.
+bool toolSkipped(ToolCall call) {
+  final herdr = call.meta?['herdr'];
+  return call.status == ToolStatus.cancelled && herdr is Map && herdr['skipped'] == true;
+}
+
+/// Whether [call] stays visible when its turn folds: it failed, was cancelled
+/// (and not merely skipped), or waits for the person ([waiting]).
+bool toolBreaksOut(ToolCall call, Set<String> waiting) =>
+    toolFailed(call) ||
+    (call.status == ToolStatus.cancelled && !toolSkipped(call)) ||
+    waiting.contains(call.toolCallId);
+
 ToolSummary _summarize(ToolCall call) {
   switch (call.kind) {
     case ToolKind.read || ToolKind.delete:

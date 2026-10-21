@@ -7,6 +7,8 @@ import 'package:herdr_mobile/data/observed/log_picture.dart';
 import 'package:herdr_mobile/data/acp/background/background_work.dart';
 import 'package:herdr_mobile/data/acp/session_state.dart';
 import 'package:herdr_mobile/data/observed/omp_log_mapper.dart';
+import 'package:herdr_mobile/data/acp/turns/tool_summary.dart' show toolSkipped;
+import 'package:herdr_mobile/data/acp/turns/turns.dart' show turnsOf;
 
 import 'support/transcript_fingerprint.dart';
 
@@ -468,6 +470,49 @@ void main() {
   });
 
   group('housekeeping, errors, odd input', () {
+    test('a wait omp skipped or had nothing to wait for did not fail: it is cancelled/done, and never a breakout of the turn', () {
+      final m = OmpLogMapper();
+      var s = _feed(m, [
+        _user('u1', 'go'),
+        _assistant('a1', [_call('c1', 'wait', {'i': 'Waiting for reviewers'})], stop: 'toolUse'),
+        _result(
+          'r1',
+          'c1',
+          'wait',
+          'Skipped due to a queued background completion (job or supervised process). Do not count this skipped result as completed work.',
+          details: {'__interrupted': true, 'source': 'interrupt_skipped', 'execution': 'started'},
+          error: true,
+        ),
+        _assistant('a2', [_call('c2', 'wait', {'i': 'Waiting for fix agents'})], stop: 'toolUse'),
+        _result('r2', 'c2', 'wait', 'Nothing to wait for: no background job or service you started is running.', error: true),
+        _assistant('a2b', [_call('c5', 'write', {'path': 'a.md', 'content': 'x'})], stop: 'toolUse'),
+        _result(
+          'r5',
+          'c5',
+          'write',
+          'Skipped due to queued user message. Do not count this skipped result as completed work.',
+          details: {'__synthetic': true, 'source': 'interrupt_skipped', 'executed': false},
+          error: true,
+        ),
+        _assistant('a3', [_call('c3', 'bash', {'command': 'false'})], stop: 'toolUse'),
+        _result('r3', 'c3', 'bash', 'exit 1', error: true),
+        _assistant('a4', [
+          {'type': 'text', 'text': 'Done.'},
+        ]),
+      ]);
+      final calls = {for (final t in s.items.whereType<TranscriptTool>()) t.call.toolCallId: t.call};
+      expect(calls['c1']!.status, ToolStatus.cancelled);
+      expect(toolSkipped(calls['c1']!), isTrue);
+      expect(toolSkipped(calls['c5']!), isTrue, reason: 'the other shape omp writes for a skipped call');
+      expect(calls['c2']!.status, ToolStatus.completed);
+      expect(calls['c3']!.status, ToolStatus.failed, reason: 'a real error is still one');
+      final turn = turnsOf(s.items).single;
+      expect([for (final i in turn.breakouts()) (i as TranscriptTool).call.toolCallId], ['c3'], reason: 'only the call that failed stays out of the fold');
+      expect(turn.cancelledCount, 0);
+      expect(turn.failedCount, 1);
+      expect(_toolText(calls['c1']!), contains('Skipped due to a queued background completion'), reason: 'the row says what happened');
+    });
+
     test('compaction and branch summary are quiet notes; a clear drops what came before it; the header title shows', () {
       final (s, _) = _run('compaction_branch');
       expect(s.title, 'Long running work');
