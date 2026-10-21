@@ -26,6 +26,15 @@ String agentLinkFor(String machineId, String paneId) =>
 String sessionLinkFor(String machineId, String keeperId) =>
     'herdr://session/${Uri.encodeComponent(machineId)}/${Uri.encodeComponent(keeperId)}';
 
+/// The link of an agent session: `herdr://session/<machine id>/<keeper>`. A
+/// session's key is `<machine id>/<keeper>`.
+String sessionLinkOf(AgentSessionView s) {
+  final machineId = s.machine.profile.id;
+  final prefix = '$machineId/';
+  final keeper = s.key.startsWith(prefix) ? s.key.substring(prefix.length) : s.key;
+  return sessionLinkFor(machineId, keeper);
+}
+
 /// The link of the summary notifications: the app, on its board.
 const agentsBoardLink = 'herdr://agents';
 
@@ -383,7 +392,7 @@ class AttentionNotifier {
           id: () => notificationIdFor(key),
           title: () => _title(s.title, '', s.agentLabel),
           body: () => 'needs you · ${whereLine(agent: s.agentLabel, machine: machine.label)}',
-          link: () => _sessionLink(s),
+          link: () => sessionLinkOf(s),
         ));
       } else if (s.link == AgentLink.connecting || s.link == AgentLink.reconnecting) {
         // Attaching (again): what it shows says nothing about whether the
@@ -398,18 +407,11 @@ class AttentionNotifier {
           id: () => notificationIdFor(key),
           title: () => _title(s.title, '', s.agentLabel),
           body: () => 'done · ${whereLine(agent: s.agentLabel, machine: machine.label)}',
-          link: () => _sessionLink(s),
+          link: () => sessionLinkOf(s),
         ));
       }
     }
     return (items: items, unknown: unknown);
-  }
-
-  static String _sessionLink(AgentSessionView s) {
-    final machineId = s.machine.profile.id;
-    final prefix = '$machineId/';
-    final keeper = s.key.startsWith(prefix) ? s.key.substring(prefix.length) : s.key;
-    return sessionLinkFor(machineId, keeper);
   }
 
   /// What the pane's folder is called (`placeName`), empty for the root or none.
