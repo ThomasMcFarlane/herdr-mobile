@@ -178,7 +178,7 @@ class _LookGroup extends StatelessWidget {
     final wrap = context.select<TerminalSettings, bool>((s) => s.wrap);
     final fontSize = context.select<TerminalSettings, double>((s) => s.fontSize);
     return SettingsGroup(
-      icon: LucideIcons.sunMoon,
+      icon: HerdrIcons.look,
       title: 'Look',
       summary: '${_theme(theme)} \u00b7 ${_density(density)} \u00b7 ${FontSizeControl.format(fontSize)} pt',
       open: open,
@@ -267,7 +267,7 @@ class _AgentsGroup extends StatelessWidget {
     final phrases = context.watch<QuickPhrases?>()?.phrases.length;
     final opens = openAs == OpenAgentsAs.chat ? 'Opens as chat' : 'Opens as terminal';
     return SettingsGroup(
-      icon: LucideIcons.messagesSquare,
+      icon: HerdrIcons.agents,
       title: 'Agents',
       summary: phrases == null ? opens : '$opens \u00b7 ${countOf(phrases, 'phrase')}',
       open: open,
@@ -369,7 +369,7 @@ class _NotificationsGroupState extends State<_NotificationsGroup> {
     final enabled = context.select<NotificationSettings, bool>((s) => s.enabled);
     final alsoDone = context.select<NotificationSettings, bool>((s) => s.alsoDone);
     return SettingsGroup(
-      icon: _blocked ? LucideIcons.bellOff : LucideIcons.bell,
+      icon: _blocked ? HerdrIcons.notificationsOff : HerdrIcons.notifications,
       // The orange that means "needs you", only while it does.
       tint: _blocked ? ds.blocked : null,
       title: 'Notifications',
@@ -390,7 +390,7 @@ class _NotificationsGroupState extends State<_NotificationsGroup> {
             padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.sm, Gap.gutter, Gap.xs),
             child: StatusPanel(
               color: ds.blocked,
-              icon: LucideIcons.bellOff,
+              icon: HerdrIcons.notificationsOff,
               liveRegion: true,
               message: 'Android is blocking notifications for herdr. '
                   'Allow them in the system settings for this app.',
@@ -486,7 +486,7 @@ class _StorageGroupState extends State<_StorageGroup> {
         builder: (context, snapshot) {
           final bytes = snapshot.data;
           return SettingsGroup(
-            icon: LucideIcons.hardDrive,
+            icon: HerdrIcons.storage,
             title: 'Storage',
             summary: bytes == null
                 ? 'Cache'
@@ -544,7 +544,7 @@ class _AboutGroup extends StatelessWidget {
   Widget build(BuildContext context) {
     final update = this.update;
     return SettingsGroup(
-      icon: LucideIcons.info,
+      icon: HerdrIcons.about,
       title: 'About',
       // A newer version is said once, on its own row at the top.
       summary: 'Version $appVersion',

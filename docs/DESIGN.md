@@ -168,8 +168,11 @@ figures.
 - `IconSize`: `inline` 14, `row` 16 (and every chevron), `bar` 18, `lead` 20
   (a row's status glyph), `nav` 24 (tab bar), `empty` 28, `hero` 48.
 - **Drawn icons** (`HerdrIcons`, `herdr_icons.dart`, generated with its font by
-  `tool/icons/build_icons.py`): the tab bar, the selection bar, and the agent
-  and machine everywhere. Why: Lucide draws on one grid with no keylines, so
+  `tool/icons/build_icons.py`): the tab bar, the selection bar, the agent
+  and machine everywhere, and the `Made` list (a glyph per kind: a window with a
+  pulse for a server, a window with text for a page, a picture, a document; a
+  sparkle on the chip), and the Settings groups (look, notifications and
+  notifications off, storage, about, update; Agents uses the agent). Why: Lucide draws on one grid with no keylines, so
   peers in one bar differed in weight (its `server` enclosed 1.7x the area of
   its `bot` and popped out of the tab bar; its 14-unit `x` sank next to
   `circleStop`). Ours keep Lucide's grammar, fit keylines, and are balanced by

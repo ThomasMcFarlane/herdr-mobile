@@ -101,6 +101,40 @@ GLYPHS = [
          # A bare x, larger than Lucide's 14 so it weighs with a ring and a
          # bubble, and keeps a shape of its own next to Stop.
          strokes=['M5 5L19 19', 'M19 5L5 19']),
+    # The Made list: what a session made, one glyph per kind, drawn as a set so
+    # the rows weigh the same (the chip uses the sparkle).
+    dict(cp=0xE020, name='madeServer', doc='A server a session started: a browser window with a pulse (Made).',
+         # Window, title-bar dots, and a heartbeat: alive, not a page. A bare bar
+         # under the top edge read as a bank card.
+         strokes=[rrect(3, 5, 21, 19.5, 2.5), 'M3 9.5H21', 'M7 14.5H9.5L11 12.5L13 16.5L14.5 14.5H17'],
+         fills=[circle(6.5, 7.25, 0.8), circle(9.5, 7.25, 0.8)]),
+    dict(cp=0xE021, name='madePage', doc='A web page a session made: a browser window with text (Made).',
+         strokes=[rrect(3, 5, 21, 19.5, 2.5), 'M3 9.5H21', 'M7 13.5H17', 'M7 16.25H13'],
+         fills=[circle(6.5, 7.25, 0.8), circle(9.5, 7.25, 0.8)]),
+    dict(cp=0xE022, name='madePicture', doc='A picture a session made (Made).',
+         strokes=[rrect(3, 5, 21, 19.5, 2.5), 'M3.5 17L9 12.5L12.75 15.75L15.5 13.5L20.5 17'], fills=[circle(8, 9.5, 1.4)]),
+    dict(cp=0xE023, name='madeDoc', doc='A document a session made: a page with a folded corner (Made).',
+         strokes=['M14 3H7.5A2.5 2.5 0 0 0 5 5.5V18.5A2.5 2.5 0 0 0 7.5 21H16.5A2.5 2.5 0 0 0 19 18.5V8Z', 'M14 3V8H19',
+                  'M8.75 13H15.25', 'M8.75 16.5H12.75']),
+    dict(cp=0xE024, name='made', doc='What a session made: the Made chip (a sparkle).',
+         strokes=['M12 2.5C12.7 8 16 11.3 21.5 12C16 12.7 12.7 16 12 21.5C11.3 16 8 12.7 2.5 12C8 11.3 11.3 8 12 2.5Z']),
+    # The Settings groups: peers in one list (Agents uses `agents`).
+    dict(cp=0xE030, name='look', doc='Look: theme and density (Settings).',
+         # Contrast: a ring, its right half filled. One glyph for light, dark and density.
+         rings=[(12, 12, 8.5)], fills=['M12 3.5A8.5 8.5 0 0 1 12 20.5Z']),
+    dict(cp=0xE031, name='notifications', doc='Notifications (Settings).',
+         strokes=['M5.5 16.5V11A6.5 6.5 0 0 1 18.5 11V16.5L20 18.5H4L5.5 16.5Z', 'M10 21.5H14']),
+    dict(cp=0xE032, name='notificationsOff', doc='Notifications the system blocks: the bell, slashed (Settings).',
+         strokes=['M5.5 16.5V11A6.5 6.5 0 0 1 18.5 11V16.5L20 18.5H4L5.5 16.5Z', 'M10 21.5H14'],
+         cut=((3, 3), (21, 21), 2.4)),
+    dict(cp=0xE033, name='storage', doc='Storage: the cache on the phone (Settings).',
+         # A cylinder: where saved copies live.
+         strokes=['M4 5.5C4 4 7.6 2.75 12 2.75S20 4 20 5.5S16.4 8.25 12 8.25S4 7 4 5.5Z',
+                  'M4 5.5V18.5C4 20 7.6 21.25 12 21.25S20 20 20 18.5V5.5', 'M4 12C4 13.5 7.6 14.75 12 14.75S20 13.5 20 12']),
+    dict(cp=0xE034, name='about', doc='About: version, repository, licences (Settings).',
+         rings=[(12, 12, 9)], strokes=['M12 11V16.5'], fills=[circle(12, 7.75, 1.2)]),
+    dict(cp=0xE035, name='update', doc='Update available: an arrow into a tray (Settings).',
+         strokes=['M12 2.5V14.5', 'M7 9.75L12 14.75L17 9.75', 'M3.5 14.5V18.5A2.5 2.5 0 0 0 6 21H18A2.5 2.5 0 0 0 20.5 18.5V14.5']),
 ]
 
 

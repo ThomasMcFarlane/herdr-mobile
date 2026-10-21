@@ -27,4 +27,37 @@ abstract final class HerdrIcons {
 
   /// Close agents (the selection bar).
   static const IconData close = IconData(0xE012, fontFamily: 'HerdrIcons');
+
+  /// A server a session started: a browser window with a pulse (Made).
+  static const IconData madeServer = IconData(0xE020, fontFamily: 'HerdrIcons');
+
+  /// A web page a session made: a browser window with text (Made).
+  static const IconData madePage = IconData(0xE021, fontFamily: 'HerdrIcons');
+
+  /// A picture a session made (Made).
+  static const IconData madePicture = IconData(0xE022, fontFamily: 'HerdrIcons');
+
+  /// A document a session made: a page with a folded corner (Made).
+  static const IconData madeDoc = IconData(0xE023, fontFamily: 'HerdrIcons');
+
+  /// What a session made: the Made chip (a sparkle).
+  static const IconData made = IconData(0xE024, fontFamily: 'HerdrIcons');
+
+  /// Look: theme and density (Settings).
+  static const IconData look = IconData(0xE030, fontFamily: 'HerdrIcons');
+
+  /// Notifications (Settings).
+  static const IconData notifications = IconData(0xE031, fontFamily: 'HerdrIcons');
+
+  /// Notifications the system blocks: the bell, slashed (Settings).
+  static const IconData notificationsOff = IconData(0xE032, fontFamily: 'HerdrIcons');
+
+  /// Storage: the cache on the phone (Settings).
+  static const IconData storage = IconData(0xE033, fontFamily: 'HerdrIcons');
+
+  /// About: version, repository, licences (Settings).
+  static const IconData about = IconData(0xE034, fontFamily: 'HerdrIcons');
+
+  /// Update available: an arrow into a tray (Settings).
+  static const IconData update = IconData(0xE035, fontFamily: 'HerdrIcons');
 }

@@ -446,10 +446,10 @@ class _WebRow extends StatelessWidget {
     final row = ListRow(
       leading: IconTile(
         icon: switch (asset.kind) {
-          MadeKind.server => LucideIcons.server,
-          MadeKind.page => LucideIcons.globe,
-          MadeKind.picture => LucideIcons.image,
-          MadeKind.doc => LucideIcons.fileText,
+          MadeKind.server => HerdrIcons.madeServer,
+          MadeKind.page => HerdrIcons.madePage,
+          MadeKind.picture => HerdrIcons.madePicture,
+          MadeKind.doc => HerdrIcons.madeDoc,
         },
         color: running ? ds.done : null,
       ),
@@ -794,7 +794,7 @@ class MadeChip extends StatelessWidget {
               label: 'Made',
               count: assets.length,
               semanticLabel: '${countOf(assets.length, 'item')} made',
-              leading: Icon(LucideIcons.globe, size: IconSize.inline, color: context.ds.textSecondary),
+              leading: Icon(HerdrIcons.made, size: IconSize.inline, color: context.ds.textSecondary),
               onTap: () => unawaited(showSessionMade(context, session)),
             ),
           );

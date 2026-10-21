@@ -10,6 +10,11 @@ release.
   you can tap, in plain text and when it is the only thing in a code badge.
 - `Made` also lists a server an agent names as `127.0.0.1:8791`, `0.0.0.0:8791`
   or `[::1]:8791`, not only as `localhost:8791` or a full link.
+- The `Made` list has its own icons: a browser window with a pulse for a
+  server, one with text for a page, and a picture and a document of their own,
+  in place of the generic globe and server.
+- The Settings groups have their own icons too: Look, Notifications, Storage,
+  About and Update available, and Agents uses the same robot as the Agents tab.
 
 ## [0.1.23] - 2026-10-20
 

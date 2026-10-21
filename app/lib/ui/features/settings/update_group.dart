@@ -45,7 +45,7 @@ class UpdateGroup extends StatelessWidget {
                 : '${release.version} \u00b7 ${megabytes(release.size)}',
           };
           return SettingsGroup(
-            icon: LucideIcons.download,
+            icon: HerdrIcons.update,
             title: 'Update available',
             summary: summary,
             tint: context.ds.accent,
