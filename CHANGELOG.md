@@ -4,6 +4,28 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [0.1.26] - 2026-10-21
+
+### Clearing an omp conversation clears the chat
+
+When you clear the conversation in omp's terminal, the chat now starts over
+too. It used to keep every old message above the note "The conversation was
+cleared on the machine", while the terminal was empty.
+
+- The old messages, questions waiting for an answer and plans waiting for
+  review go; the note stays as the first line of the new conversation. The
+  plan list is left as it was: not checked whether omp clears it.
+- Not tried on a phone yet. Claude Code already started a fresh chat after
+  `/clear`; Codex was not checked.
+
+**Fixed**
+
+- A chat of an agent running in a terminal (Claude Code, Codex, omp) no
+  longer stays on `Reconnecting…` with `Offline · reconnecting` in the
+  composer after a short drop of the connection. It used to stay that way
+  until you left the chat, with the agent's output still arriving. Not
+  checked on a phone yet.
+
 ## [0.1.25] - 2026-10-20
 
 ### A page behind a password asks you to sign in
