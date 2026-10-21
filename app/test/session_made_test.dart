@@ -146,6 +146,14 @@ void main() {
       expect(byKey['localhost:4000']!.url!.path, '/');
     });
 
+    test('a bare 127.0.0.1, 0.0.0.0 or [::1] with a port counts; a tunnel, a database URL or a longer address does not', () {
+      final items = [
+        _say('The API is on 127.0.0.1:8001, the app on 0.0.0.0:8002 and the docs on [::1]:8003.'),
+        _say('Tunnel with ssh -L 9100:127.0.0.1:9101 and connect postgres://u@127.0.0.1:9102/db or 10.127.0.0.1:9103.'),
+      ];
+      expect(_keys(items).toSet(), {'localhost:8001', 'localhost:8002', 'localhost:8003'});
+    });
+
     test('only plain http to the machine itself, spelled the ways a dev server spells it', () {
       final items = [
         _say(

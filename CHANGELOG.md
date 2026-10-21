@@ -8,6 +8,8 @@ release.
 
 - A dev-server address in an answer (`http://localhost:8791/`) is now a link
   you can tap, in plain text and when it is the only thing in a code badge.
+- `Made` also lists a server an agent names as `127.0.0.1:8791`, `0.0.0.0:8791`
+  or `[::1]:8791`, not only as `localhost:8791` or a full link.
 
 ## [0.1.23] - 2026-10-20
 

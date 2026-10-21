@@ -264,7 +264,13 @@ final _url = RegExp(
 );
 final _closingPunct = RegExp(r'''[.,;:!?'"]+$''');
 final _markRun = RegExp(r'[*_~]+$');
-final _bareLocalhost = RegExp(r'(?<![\w/.\-])localhost:(\d{2,5})(?![\w])', caseSensitive: false);
+// A bare `host:port` in prose: the spellings a dev server prints. Not after `/`
+// (the scheme case, read by [_url]), `@` (`postgres://u@127.0.0.1:5432`), `:`
+// (a tunnel, `ssh -L 8080:127.0.0.1:5432`), `.` or `-` (a longer name).
+final _bareLocalhost = RegExp(
+  r'(?<![\w/.\-@:])(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]):(\d{2,5})(?![\w])',
+  caseSensitive: false,
+);
 final _fence = RegExp(r'```[\s\S]*?```');
 final _token = RegExp(r'''[^\s"'`()<>\[\]{}|;,=*?]+''');
 // A word of making. `built` is apart: it also says what a build step did to the

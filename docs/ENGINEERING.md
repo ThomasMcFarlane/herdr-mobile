@@ -348,7 +348,9 @@ Tailscale.
     relative name when no folder is known (an empty session folder counts as
     unknown: it would be taken against the login folder and open a decoy).
   - Servers: a loopback link in the agent's own words (path kept; a bare
-    `localhost:5173` counts), or a BANNER line a launched command printed in
+    `localhost:5173`, `127.0.0.1:5173`, `0.0.0.0:5173` or `[::1]:5173` counts,
+    unless a `/`, `@`, `:`, `.` or `-` comes right before it: a tunnel
+    `-L 9100:127.0.0.1:9101` or a database URL is not a server), or a BANNER line a launched command printed in
     its first 8 KB, origin only: a labelled address at the start of the line
     (`Local: http://...`, `Network:`, `Local URL:`) or a launch phrase
     (`Uvicorn running on`, `Serving HTTP on`; `listening on` only from a command
