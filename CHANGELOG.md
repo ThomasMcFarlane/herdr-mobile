@@ -4,23 +4,45 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
-## [Unreleased]
+## [0.1.27] - 2026-10-21
 
-- A dev-server address in an answer (`http://localhost:8791/`) is now a link
-  you can tap, in plain text and when it is the only thing in a code badge.
+[![Watch what's new · 2 changes · 0:10 · 4.2 MB](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.27/0.1.27-whats-new.jpg)](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.27/0.1.27-whats-new.mp4)
+
+### A dev-server address in an answer is a link
+
+When an agent says `http://localhost:8791/`, in the text or alone in a code
+badge, you can now tap it and open the page from the link sheet. It used to be
+plain text.
+
+> [!TIP]
+> Try it: in a chat, tap a localhost address in an agent's answer, then `Open page`.
+
 - `Made` also lists a server an agent names as `127.0.0.1:8791`, `0.0.0.0:8791`
-  or `[::1]:8791`, not only as `localhost:8791` or a full link.
-- The `Made` list has its own icons: a browser window with a pulse for a
-  server, one with text for a page, and a picture and a document of their own,
-  in place of the generic globe and server.
-- The Settings groups have their own icons too: Look, Notifications, Storage,
-  About and Update available, and Agents uses the same robot as the Agents tab.
+  or `[::1]:8791`, not only as `localhost:8791` or a full link. A tunnel such
+  as `-L 9100:127.0.0.1:9101` or a database address is not listed as a server.
+- Tried in tests only; not on a phone yet.
+
+![A chat where a tapped localhost address opens the link sheet with Open page and Copy link](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.27/0.1.27-dev-server-links.png)
+
+### Icons drawn for herdr
+
+`Made`, Settings, pictures and the steps of a chat have icons drawn for herdr
+in place of generic ones, so one thing looks the same everywhere you meet it.
+
+> [!TIP]
+> Try it: in a chat, tap `Made` under the title to see the server, page, picture and document icons.
+
+- `Made` shows a browser window with a pulse for a server, one with text for a
+  page, and its own picture and document.
+- Settings groups have their own icons: `Look`, `Notifications`, `Storage`,
+  `About` and `Update available`. `Agents` uses the same robot as the Agents tab.
 - A picture has one icon everywhere: the gallery, attachments, a photo that did
-  not load and the pictures in `Made` share one drawn picture, one for "cannot
-  be shown" and one for many.
-- A tool call, a subagent run or a plan step that failed or was cancelled now
-  has the same drawn look as the done, working and waiting shapes next to it,
-  in place of a generic cross and a generic "no entry" sign.
+  not load and the pictures in `Made`.
+- A tool call, a subagent run or a plan step that failed or was cancelled has
+  the same drawn look as the done, working and waiting shapes next to it.
+- Seen in rendered screens only; not on a phone yet.
+
+![Made in this session on the Servers tab, two servers each with a browser-window icon](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.27/0.1.27-made-icons.png)
 
 ## [0.1.26] - 2026-10-21
 

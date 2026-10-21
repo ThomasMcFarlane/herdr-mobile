@@ -59,6 +59,15 @@ class ClipRecorder {
     await g.up();
   }
 
+  /// Taps the point [at] (a link inside a paragraph, which has no widget of
+  /// its own), captioned [label].
+  Future<void> tapAt(WidgetTester t, Offset at, String label) async {
+    _steps.add({'t': _now, ..._norm(t, at), 'kind': 'tap', 'label': label});
+    final g = await t.startGesture(at);
+    await hold(t, const Duration(milliseconds: 120));
+    await g.up();
+  }
+
   /// Holds a finger on the centre of [target] for [hold], captioned [label].
   Future<void> longPress(WidgetTester t, Finder target, String label, {Duration hold = const Duration(milliseconds: 700)}) async {
     final at = t.getCenter(target);
