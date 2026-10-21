@@ -6,6 +6,7 @@ import 'package:herdr_mobile/data/acp/auth_needed.dart';
 import 'package:herdr_mobile/data/acp/prompt_queue.dart';
 import 'package:herdr_mobile/data/acp/past_session.dart';
 import 'package:herdr_mobile/data/acp/background/background_work.dart';
+import 'package:herdr_mobile/data/acp/session_made.dart' show MadeHistory;
 import 'package:herdr_mobile/data/acp/session_state.dart';
 import 'package:herdr_mobile/data/acp/subagents/subagent_overlay.dart';
 import 'package:herdr_mobile/data/acp/subagents/subagent_run.dart' show SubagentLogStatus, SubagentRun, SubagentSummary;
@@ -101,6 +102,25 @@ class FakeAgentSession extends ChangeNotifier implements AgentSessionView {
 
   @override
   void loadEarlier() => loadEarlierCalls++;
+
+  MadeHistory? madeHistoryValue;
+  MadeReach madeReachValue = MadeReach.whole;
+  int readEarlierMadeCalls = 0;
+
+  void setMadeReach(MadeReach reach, {MadeHistory? history}) {
+    madeReachValue = reach;
+    madeHistoryValue = history;
+    notifyListeners();
+  }
+
+  @override
+  MadeHistory? get madeHistory => madeHistoryValue;
+
+  @override
+  MadeReach get madeReach => madeReachValue;
+
+  @override
+  void readEarlierMade() => readEarlierMadeCalls++;
   @override
   String? get error => _error;
 
@@ -381,6 +401,9 @@ class FakeAgentSession extends ChangeNotifier implements AgentSessionView {
   bool waitingOnBackground = false;
   final List<String> stopped = [];
   int stopAllCount = 0;
+
+  /// The `only` each Stop all was asked with, oldest first.
+  final stopAllOnly = <BackgroundKind?>[];
   BackgroundStopResult stopResult = const BackgroundStopped();
 
   @override
@@ -390,7 +413,8 @@ class FakeAgentSession extends ChangeNotifier implements AgentSessionView {
   }
 
   @override
-  Future<BackgroundStopResult> stopAllBackground() async {
+  Future<BackgroundStopResult> stopAllBackground({BackgroundKind? only}) async {
+    stopAllOnly.add(only);
     stopAllCount++;
     return stopResult;
   }

@@ -27,12 +27,18 @@ import '../../render/visible_text.dart';
 /// background tasks that say whether a server still runs, and whether anything
 /// here may be called live (a saved copy or a link that is down knows nothing
 /// of what runs now).
-typedef _Snap = (List<MadeAsset>, List<BackgroundTask>, bool);
+typedef _Snap = (List<MadeAsset>, List<BackgroundTask>, bool, MadeReach, MadeHistory?);
 
-_Snap _snap(AgentSessionView s) =>
-    (madeAssetsOf(s.state.items, cwd: s.cwd), s.backgroundWork.tasks, s.link == AgentLink.live && s.cachedAsOf == null);
+_Snap _snap(AgentSessionView s) => (
+  madeAssetsOf(s.state.items, cwd: s.cwd, history: s.madeHistory),
+  s.backgroundWork.tasks,
+  s.link == AgentLink.live && s.cachedAsOf == null,
+  s.madeReach,
+  s.madeHistory,
+);
 
-bool _same(_Snap a, _Snap b) => sameMadeAssets(a.$1, b.$1) && identical(a.$2, b.$2) && a.$3 == b.$3;
+bool _same(_Snap a, _Snap b) =>
+    sameMadeAssets(a.$1, b.$1) && identical(a.$2, b.$2) && a.$3 == b.$3 && a.$4 == b.$4 && identical(a.$5, b.$5);
 
 /// The servers and pages a session put on the web, newest first, one tap from
 /// the session bar. Each row opens as a page in herdr (`WebPreviewScreen`): a
@@ -89,6 +95,19 @@ class _SessionMadeSheetState extends State<SessionMadeSheet> {
   final _more = <MadeKind, int>{};
 
   late final _entries = _EntryLoader(widget.session);
+
+  /// The history the order was made from: when the read of the earlier part of
+  /// the log lands, the rows it found join the list (the person asked for them
+  /// by opening the sheet, and a line says it is reading).
+  MadeHistory? _orderHistory;
+
+  @override
+  void initState() {
+    super.initState();
+    // Opening the sheet is the ask: the part of a long log the phone has not
+    // read is read now, never before (a radio and a battery cost).
+    widget.session.readEarlierMade();
+  }
 
   @override
   void dispose() {
@@ -198,7 +217,14 @@ class _SessionMadeSheetState extends State<SessionMadeSheet> {
       select: _snap,
       same: _same,
       builder: (context, snap) {
-        final (assets, tasks, live) = snap;
+        final (assets, tasks, live, reach, history) = snap;
+        if (!identical(history, _orderHistory)) {
+          // The read of the earlier part landed: the rows it found are older than
+          // the ones shown, so they join at the end. Nothing already here moves.
+          _orderHistory = history;
+          final known = _order?.toSet() ?? const <String>{};
+          if (_order != null) _order = [..._order!, for (final a in assets) if (!known.contains(a.key)) a.key];
+        }
         final shown = _stable(assets);
         final ds = context.ds;
         final files = machineSupportsFiles(session.machine);
@@ -222,7 +248,7 @@ class _SessionMadeSheetState extends State<SessionMadeSheet> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (shown.isEmpty)
+                  if (shown.isEmpty && reach == MadeReach.whole)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: Gap.xl),
                       child: Text(
@@ -271,6 +297,7 @@ class _SessionMadeSheetState extends State<SessionMadeSheet> {
                           ],
                         ),
                     ),
+                  if (reach != MadeReach.whole) _EarlierNote(reach: reach, onRead: session.readEarlierMade),
                 ],
               ),
             ),
@@ -278,6 +305,42 @@ class _SessionMadeSheetState extends State<SessionMadeSheet> {
         );
       },
     );
+  }
+}
+
+/// Under the list while the rows may not be all of them: the phone read the end
+/// of a long chat, and the earlier part is being read, or could not be.
+class _EarlierNote extends StatelessWidget {
+  const _EarlierNote({required this.reach, required this.onRead});
+
+  final MadeReach reach;
+  final VoidCallback onRead;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Type.secondary.copyWith(color: context.ds.textSecondary);
+    return switch (reach) {
+      MadeReach.reading => const LoadingRow('Reading earlier history…'),
+      MadeReach.failed => Padding(
+        padding: const EdgeInsets.only(top: Gap.sm),
+        child: Row(
+          children: [
+            Expanded(child: Text('Couldn’t read the earlier part of this chat. These are the newest.', style: style)),
+            AppButton(label: 'Retry', kind: AppButtonKind.ghost, compact: true, onPressed: onRead),
+          ],
+        ),
+      ),
+      MadeReach.partial => Padding(
+        padding: const EdgeInsets.only(top: Gap.sm),
+        child: Row(
+          children: [
+            Expanded(child: Text('Only the end of this chat has been read.', style: style)),
+            AppButton(label: 'Read earlier', kind: AppButtonKind.ghost, compact: true, onPressed: onRead),
+          ],
+        ),
+      ),
+      MadeReach.whole => const SizedBox.shrink(),
+    };
   }
 }
 
@@ -780,20 +843,28 @@ class MadeChip extends StatelessWidget {
   final AgentSessionView session;
 
   @override
-  Widget build(BuildContext context) => SessionSelect<(List<MadeAsset>, bool)>(
+  Widget build(BuildContext context) => SessionSelect<(List<MadeAsset>, bool, MadeReach)>(
         session: session,
-        select: (s) => (madeAssetsOf(s.state.items, cwd: s.cwd), s.subagents.isNotEmpty || s.subagentSummary.total > 0),
-        same: (a, b) => sameMadeAssets(a.$1, b.$1) && a.$2 == b.$2,
+        select: (s) => (
+          madeAssetsOf(s.state.items, cwd: s.cwd, history: s.madeHistory),
+          s.subagents.isNotEmpty || s.subagentSummary.total > 0,
+          s.madeReach,
+        ),
+        same: (a, b) => sameMadeAssets(a.$1, b.$1) && a.$2 == b.$2 && a.$3 == b.$3,
         builder: (context, v) {
-          final (assets, besideSubagents) = v;
-          if (assets.isEmpty) return const SizedBox.shrink();
+          final (assets, besideSubagents, reach) = v;
+          final partial = reach != MadeReach.whole;
+          if (assets.isEmpty && !partial) return const SizedBox.shrink();
+          // `9+`: the rows are the newest ones, the earlier part is not read yet.
           return Padding(
             // The bar's row places the chips; this one follows the subagents chip.
             padding: besideSubagents ? const EdgeInsets.only(left: Gap.sm, bottom: Gap.hair) : const EdgeInsets.only(bottom: Gap.hair),
             child: AppChip(
-              label: 'Made',
-              count: assets.length,
-              semanticLabel: '${countOf(assets.length, 'item')} made',
+              label: partial ? (assets.isEmpty ? 'Made' : 'Made ${assets.length}+') : 'Made',
+              count: partial ? null : assets.length,
+              semanticLabel: partial
+                  ? '${countOf(assets.length, 'item')} made so far, earlier history not read'
+                  : '${countOf(assets.length, 'item')} made',
               leading: Icon(HerdrIcons.made, size: IconSize.inline, color: context.ds.textSecondary),
               onTap: () => unawaited(showSessionMade(context, session)),
             ),

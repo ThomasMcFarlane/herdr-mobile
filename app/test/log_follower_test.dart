@@ -716,6 +716,112 @@ void main() {
     });
   });
 
+  group('follow --to and --digest', skip: hasPython ? false : 'python3 is not installed', () {
+    /// The records of one run that ends by itself: `<offset>\t<json>` lines as
+    /// (offset, json), and the other records (`R`, `C`) as text.
+    Future<({List<(int, Map<String, dynamic>)> lines, List<String> notes, int code})> bounded(
+      File f, {
+      int? from,
+      required int until,
+      bool digest = false,
+    }) async {
+      final r = await host.runToEnd(keeperFollowCommand(f.path, from: from, until: until, digest: digest, pollMs: 40));
+      final lines = <(int, Map<String, dynamic>)>[];
+      final notes = <String>[];
+      for (final l in const LineSplitter().convert(r.out)) {
+        final tab = l.indexOf('\t');
+        final offset = int.tryParse(l.substring(0, tab));
+        if (offset == null) {
+          notes.add(l);
+        } else {
+          lines.add((offset, jsonDecode(l.substring(tab + 1)) as Map<String, dynamic>));
+        }
+      }
+      return (lines: lines, notes: notes, code: r.code);
+    }
+
+    test('reads [from, until) once, says where it stopped, and ends: it does not wait for the file to grow', () async {
+      final f = File(host.path());
+      final offsets = _write(f, [for (var i = 0; i < 8; i++) _json(i)]);
+      final r = await bounded(f, from: offsets[1], until: offsets[4]);
+      expect(r.code, 0);
+      expect([for (final l in r.lines) l.$2['n']], [2, 3, 4]);
+      expect(r.lines.last.$1, offsets[4]);
+      expect(r.notes, ['C\t${offsets[4]}']);
+    });
+
+    test('an until inside a line sends that line whole: the tail of a log starts inside one, and it is in neither part otherwise', () async {
+      final f = File(host.path());
+      final offsets = _write(f, [for (var i = 0; i < 6; i++) _json(i, pad: 'p' * 40)]);
+      final r = await bounded(f, from: offsets[1], until: offsets[2] + 5);
+      expect([for (final l in r.lines) l.$2['n']], [2, 3], reason: 'line 3 starts before until and ends after it');
+      expect(r.lines.last.$1, offsets[3]);
+      expect(r.notes, ['C\t${offsets[3]}']);
+      final exact = await bounded(f, from: offsets[1], until: offsets[2]);
+      expect([for (final l in exact.lines) l.$2['n']], [2], reason: 'an until on a line start adds nothing');
+    });
+
+    test('without a from it starts at the start of the file', () async {
+      final f = File(host.path());
+      final offsets = _write(f, [for (var i = 0; i < 5; i++) _json(i)]);
+      final r = await bounded(f, until: offsets[2]);
+      expect([for (final l in r.lines) l.$2['n']], [0, 1, 2]);
+    });
+
+    test('a from that is not a line start of the file starts over at 0, with a reset', () async {
+      final f = File(host.path());
+      final offsets = _write(f, [for (var i = 0; i < 5; i++) _json(i)]);
+      final r = await bounded(f, from: offsets[0] + 3, until: offsets[2]);
+      expect(r.notes.first, 'R\t0');
+      expect([for (final l in r.lines) l.$2['n']], [0, 1, 2]);
+      final beyond = await bounded(f, from: 1 << 20, until: offsets[1]);
+      expect(beyond.notes.first, 'R\t0');
+      expect([for (final l in beyond.lines) l.$2['n']], [0, 1]);
+    });
+
+    test('an until past the end of the file reads to the end', () async {
+      final f = File(host.path());
+      final offsets = _write(f, [_json(0), _json(1)]);
+      final r = await bounded(f, until: 1 << 30);
+      expect(r.lines, hasLength(2));
+      expect(r.notes, ['C\t${offsets.last}']);
+    });
+
+    test('a digest empties the model\'s thinking, cuts long strings to 8 KB and leaves bookkeeping entries out, but counts them in the offsets', () async {
+      final f = File(host.path());
+      final assistant = jsonEncode({
+        'type': 'message',
+        'message': {
+          'role': 'assistant',
+          'content': [
+            {'type': 'thinking', 'thinking': 'secret ' * 500, 'thinkingSignature': 'sig' * 300},
+            {'type': 'text', 'text': 'Open http://localhost:8765/synth'},
+            {'type': 'toolCall', 'id': 'c1', 'name': 'bash', 'arguments': {'command': 'npm run dev', 'blob': 'y' * 30000}},
+          ],
+        },
+      });
+      final offsets = _write(f, [
+        jsonEncode({'type': 'custom', 'customType': 'session_exit', 'data': 'z' * 100}),
+        assistant,
+        jsonEncode({'type': 'model_usage', 'n': 1}),
+        _json(7),
+      ]);
+      final r = await bounded(f, until: offsets.last, digest: true);
+      expect(r.lines.map((l) => l.$1), [offsets[1], offsets[3]], reason: 'each kept line says where it ends in the file');
+      final content = (r.lines.first.$2['message'] as Map)['content'] as List;
+      expect(content[0], {'type': 'thinking', 'thinking': ''});
+      expect(content[1]['text'], 'Open http://localhost:8765/synth');
+      expect(content[2]['arguments']['command'], 'npm run dev');
+      expect((content[2]['arguments']['blob'] as String).length, lessThan(9 * 1024));
+      expect(r.lines.last.$2['n'], 7);
+      expect(r.notes, ['C\t${offsets.last}']);
+
+      final plain = await bounded(f, until: offsets.last);
+      expect(plain.lines, hasLength(4), reason: 'without --digest every line comes');
+      expect(((plain.lines[1].$2['message'] as Map)['content'] as List)[0]['thinking'], startsWith('secret'));
+    });
+  });
+
   group('follow refuses', skip: hasPython ? false : 'python3 is not installed', () {
     Future<void> refused(String path, {String? why}) async {
       final r = await host.runToEnd(keeperFollowCommand(path));

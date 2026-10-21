@@ -599,7 +599,7 @@ void main() {
       await tester.tap(find.text('Survey RL frameworks'));
       await settle(tester);
       expect(find.text('Background work \u00b7 1'), findsNothing, reason: 'the sheet closed');
-      expect(find.text('Subagents'), findsOneWidget, reason: 'the existing roster');
+      expect(find.text('RLFrameworks'), findsOneWidget, reason: 'the roster row; the background sheet row says "Survey RL frameworks"');
     });
 
     testWidgets('a machine that is not reachable: the last list, no actions', (tester) async {

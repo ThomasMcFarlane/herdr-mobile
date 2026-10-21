@@ -262,6 +262,16 @@ String keeperAttachCommand(String keeperId, {bool zipped = false}) {
 /// [idleExit] > 0 it also ends, exit 0, after that many seconds without growth
 /// (for a phone that vanished without closing the channel).
 ///
+/// With [until] the command reads the part of the file from [from] (default 0)
+/// up to that byte offset once, sends its `C`, and ends: no waiting for more. A
+/// line that holds that offset is sent whole (`C` is its end): the tail of a log
+/// starts inside a line, which is in neither part otherwise.
+/// A [from] that is not a line start of the file makes it start over at 0 with
+/// an `R`. With [digest] the records are the digest of the lines: the model's
+/// thinking emptied, every string cut to 8 KB, and the bookkeeping entries
+/// (`custom`, `model_usage`) left out. That is what a read that looks for what
+/// a session made needs, about a third lighter than the lines the chat shows.
+///
 /// With [zipped] (`--z`) the records of a batch of at least 512 bytes travel as
 /// one `Z<base64 of zlib data>` line of ONE zlib stream (each batch ended with
 /// a sync flush), the others as they are: the log of a long chat is plain JSON
@@ -270,13 +280,23 @@ String keeperAttachCommand(String keeperId, {bool zipped = false}) {
 /// should ask.
 ///
 /// Throws [ArgumentError] for a [path] that is empty, too long or holds a
-/// control character, and for a negative [from] or [idleExit], a [pollMs] below
-/// 1 or a [tailBytes] below 1. [from] wins over [tailBytes].
-String keeperFollowCommand(String path, {int? from, int? pollMs, int? idleExit, int? tailBytes, bool zipped = false}) {
+/// control character, and for a negative [from], [until] or [idleExit], a
+/// [pollMs] below 1 or a [tailBytes] below 1. [from] wins over [tailBytes].
+String keeperFollowCommand(
+  String path, {
+  int? from,
+  int? until,
+  bool digest = false,
+  int? pollMs,
+  int? idleExit,
+  int? tailBytes,
+  bool zipped = false,
+}) {
   if (!_validPath(path)) {
     throw ArgumentError.value(path, 'path', 'invalid path');
   }
   if (from != null && from < 0) throw ArgumentError.value(from, 'from', 'invalid offset');
+  if (until != null && until < 0) throw ArgumentError.value(until, 'until', 'invalid offset');
   if (pollMs != null && pollMs < 1) throw ArgumentError.value(pollMs, 'pollMs', 'invalid interval');
   if (idleExit != null && idleExit < 0) throw ArgumentError.value(idleExit, 'idleExit', 'invalid time');
   if (tailBytes != null && tailBytes < 1) throw ArgumentError.value(tailBytes, 'tailBytes', 'invalid size');
@@ -285,6 +305,8 @@ String keeperFollowCommand(String path, {int? from, int? pollMs, int? idleExit, 
     path,
     if (zipped) '--z',
     if (from != null) ...['--from', '$from'],
+    if (until != null) ...['--to', '$until'],
+    if (digest) '--digest',
     if (pollMs != null) ...['--poll-ms', '$pollMs'],
     if (idleExit != null) ...['--idle-exit', '$idleExit'],
     if (tailBytes != null) ...['--tail-bytes', '$tailBytes'],

@@ -761,13 +761,13 @@ class _TranscriptViewState extends State<TranscriptView> with TickerProviderStat
           if (mounted && _rows.isEmpty) widget.session.loadEarlier();
         });
       }
-      return Center(child: _EarlierRow(earlier: _earlier, onLoad: widget.session.loadEarlier));
+      return Center(child: EarlierRow(earlier: _earlier, onLoad: widget.session.loadEarlier));
     }
     final center = _center;
     final index = _plan.index;
     final earlierRow = _earlier == EarlierHistory.none
         ? null
-        : _EarlierRow(earlier: _earlier, onLoad: widget.session.loadEarlier);
+        : EarlierRow(earlier: _earlier, onLoad: widget.session.loadEarlier);
     return Stack(
       children: [
         NotificationListener<ScrollMetricsNotification>(
@@ -926,8 +926,8 @@ class _RevealState extends State<_Reveal> with SingleTickerProviderStateMixin {
 /// Above the first row, when the log holds earlier messages: reading them
 /// (the one spinner), a tap to read them for a reader who stopped short of
 /// the top, or why they are not read.
-class _EarlierRow extends StatelessWidget {
-  const _EarlierRow({required this.earlier, required this.onLoad});
+class EarlierRow extends StatelessWidget {
+  const EarlierRow({super.key, required this.earlier, required this.onLoad});
 
   final EarlierHistory earlier;
   final VoidCallback onLoad;

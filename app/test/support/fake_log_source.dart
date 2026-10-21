@@ -15,7 +15,15 @@ import 'fake_transport.dart';
 /// delivers them, [drop] breaks the channel.
 class FakeLogSource implements SessionLogSource {
   /// What each `follow` was asked, oldest first.
-  final calls = <({String path, int? from, int? tailBytes})>[];
+  final calls = <({String path, int? from, int? until, bool digest, int? tailBytes})>[];
+
+  /// What a `follow` with `until` sends instead of the lines themselves, by the
+  /// line's index in [lines] (the host's digest of it); a line not here goes
+  /// out as it is.
+  final digests = <int, String>{};
+
+  /// Holds a `follow` with `until` until it completes: a read that takes a while.
+  Completer<void>? untilGate;
 
   /// The stream of each `follow`, oldest first.
   final streams = <StreamController<LogBatch>>[];
@@ -36,9 +44,9 @@ class FakeLogSource implements SessionLogSource {
   var _end = 0;
 
   @override
-  Stream<LogBatch> follow(String path, {int? from, int? tailBytes}) {
+  Stream<LogBatch> follow(String path, {int? from, int? until, bool digest = false, int? tailBytes}) {
     final index = streams.length;
-    calls.add((path: path, from: from, tailBytes: tailBytes));
+    calls.add((path: path, from: from, until: until, digest: digest, tailBytes: tailBytes));
     final c = StreamController<LogBatch>(onCancel: () => cancelled.add(index));
     streams.add(c);
     final error = openError;
@@ -47,6 +55,24 @@ class FakeLogSource implements SessionLogSource {
       scheduleMicrotask(() {
         c.addError(error);
         unawaited(c.close());
+      });
+    } else if (until != null) {
+      var at = _ends.indexWhere((e) => e > (from ?? 0));
+      if (at < 0) at = lines.length;
+      var stop = at;
+      // As the host: a line that starts before `until` is sent whole.
+      while (stop < lines.length && (stop == 0 ? 0 : _ends[stop - 1]) < until) {
+        stop++;
+      }
+      final sent = [for (var i = at; i < stop; i++) digest ? (digests[i] ?? lines[i]) : lines[i]];
+      final end = stop == 0 ? 0 : _ends[stop - 1];
+      final gate = untilGate;
+      scheduleMicrotask(() async {
+        if (gate != null) await gate.future;
+        if (c.isClosed) return;
+        if (sent.isNotEmpty) c.add(LogBatch(sent, end));
+        c.add(LogBatch(const [], end, caughtUp: true));
+        await c.close();
       });
     } else if (from == null && lines.isNotEmpty && !holdTails) {
       final tail = tailOf(tailBytes);

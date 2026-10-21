@@ -48,7 +48,15 @@ abstract interface class SessionLogSource {
   /// whether there is anything before it). Oversized fields are cut on the host so a line stays small (see
   /// the follower). The stream ends when the channel does; it errors with a
   /// retryable `HerdrTransportException` when the link drops.
-  Stream<LogBatch> follow(String path, {int? from, int? tailBytes});
+  ///
+  /// With [until] it is one bounded read instead: the lines from [from]
+  /// (default 0) up to that byte offset, then a batch with [LogBatch.caughtUp]
+  /// and the end of the stream; nothing is followed. A [from] that is not a
+  /// line start of the log comes back as a [LogBatch.reset] and the read
+  /// starts at 0. [digest] sends the lines lighter (the model's thinking
+  /// emptied, strings cut shorter, bookkeeping entries left out): for a read
+  /// that looks for what the session made, not one that shows the chat.
+  Stream<LogBatch> follow(String path, {int? from, int? until, bool digest = false, int? tailBytes});
 
   /// The bytes of a picture the follower left out of the line that begins at
   /// byte [start] of [path] (its note said `ref=<start>.<hash>`): the host

@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import '../models/made_files.dart';
 import '../models/remote_file.dart';
 import '../models/web_bridge.dart' show isPreviewHost;
@@ -73,12 +76,54 @@ class MadeAsset {
 
   /// The port, for matching a background task.
   int? get port => url == null ? null : (url!.hasPort ? url!.port : 80);
+
+  Map<String, Object?> toJson() => {
+    'kind': kind.name,
+    'key': key,
+    'title': title,
+    'where': where,
+    if (url != null) 'url': url.toString(),
+    if (path != null) 'path': path,
+    if (at != null) 'at': at!.millisecondsSinceEpoch,
+    'order': order,
+  };
+
+  /// A row read back; null when [json] is not one.
+  static MadeAsset? fromJson(Object? json) {
+    if (json is! Map) return null;
+    final kind = MadeKind.values.asNameMap()[json['kind']];
+    final key = json['key'], title = json['title'], where = json['where'], order = json['order'];
+    if (kind == null || key is! String || title is! String || where is! String || order is! int) return null;
+    final url = json['url'], path = json['path'], at = json['at'];
+    if (url != null && url is! String || path != null && path is! String || at != null && at is! int) return null;
+    final uri = url == null ? null : Uri.tryParse(url as String);
+    if (kind == MadeKind.server && uri == null) return null;
+    return MadeAsset(
+      kind: kind,
+      key: key,
+      title: title,
+      where: where,
+      url: uri,
+      path: path as String?,
+      at: at == null ? null : DateTime.fromMillisecondsSinceEpoch(at as int),
+      order: order,
+    );
+  }
 }
 
 /// The most rows of each kind a session shows (servers, pages, pictures, docs
 /// each keep their newest this many): a transcript can mention hundreds of
 /// ports or screenshots, and a flood of one kind must not push another out.
 const madeAssetsCap = 150;
+
+/// The most pages of one server (one port) a session shows: the pages the agent
+/// named, newest first. An agent that links a dashboard, its tabs and a health
+/// check has made one thing, and a flood of API paths must not fill the list.
+const madeServerPathsCap = 5;
+
+/// Bumped whenever the scanning rules change what a log makes: a [MadeHistory]
+/// kept under an older one was read with other rules and is read again.
+const madeScanVersion = 1;
 
 /// Whether [a] and [b] show the same rows. A tool call that streams replaces
 /// the transcript list on every chunk and with it the list this returns; the
@@ -93,13 +138,66 @@ bool sameMadeAssets(List<MadeAsset> a, List<MadeAsset> b) {
   return true;
 }
 
-/// The servers and pages of [items], newest mention first, one row each.
-/// Memoized by list identity and [cwd] (the folder a relative path is taken
-/// against; empty counts as unknown), and the scan of each item by the item.
-List<MadeAsset> madeAssetsOf(List<TranscriptItem> items, {String? cwd}) {
+/// What the part of a session's log that is not on the phone made, as far as it
+/// has been read: the rows (as [MadeFold.assets] gives them), how many
+/// transcript items it held ([span]: the items read after it are numbered from
+/// there, so they are newer) and the log byte offset it was read through
+/// ([upTo]: the log is whole when that reaches where the shown part starts).
+///
+/// Why it exists: a phone opens a long chat with the last 192 KB of its log, and
+/// a server or file made hours ago is not in that. Reading older lines again
+/// and again over a radio is the cost this avoids: the rows are small, the log
+/// is not, and an append-only log makes what was read stay right.
+class MadeHistory {
+  const MadeHistory({required this.assets, required this.span, required this.upTo});
+
+  final List<MadeAsset> assets;
+  final int span;
+  final int upTo;
+
+  Uint8List toBytes() => Uint8List.fromList(
+    utf8.encode(
+      jsonEncode({
+        'v': madeScanVersion,
+        'span': span,
+        'upTo': upTo,
+        'assets': [for (final a in assets) a.toJson()],
+      }),
+    ),
+  );
+
+  /// Kept bytes read back; null for anything that is not a history of the
+  /// current rules (damaged, older rules).
+  static MadeHistory? fromBytes(Uint8List bytes) {
+    try {
+      final j = jsonDecode(utf8.decode(bytes));
+      if (j is! Map || j['v'] != madeScanVersion) return null;
+      final span = j['span'], upTo = j['upTo'], list = j['assets'];
+      if (span is! int || upTo is! int || list is! List) return null;
+      final assets = <MadeAsset>[];
+      for (final x in list) {
+        final a = MadeAsset.fromJson(x);
+        if (a == null) return null;
+        assets.add(a);
+      }
+      return MadeHistory(assets: List.unmodifiable(assets), span: span, upTo: upTo);
+    } on FormatException {
+      return null;
+    }
+  }
+}
+
+/// The servers and pages of [items], newest mention first, one row each (a
+/// server one row per path the agent named, see [madeServerPathsCap]).
+/// [history] is what the part of the log before [items] made (see
+/// [MadeHistory]): [items] are read on top of it, so a file made there and
+/// deleted here is gone. Memoized by list identity, [cwd] (the folder a
+/// relative path is taken against; empty counts as unknown) and [history], and
+/// the scan of each item by the item.
+List<MadeAsset> madeAssetsOf(List<TranscriptItem> items, {String? cwd, MadeHistory? history}) {
   final base = cwd == null || cwd.isEmpty ? null : cwd;
-  final byCwd = _lists[items] ??= {};
-  return byCwd[base] ??= _build(items, base);
+  final memo = _lists[items] ??= {};
+  return memo[(base, history)] ??= (MadeFold(cwd: base, from: history)..addAll(items)).assets;
 }
 
 /// A server's state against the session's background tasks: running while a
@@ -119,17 +217,19 @@ ServerState serverStateOf(MadeAsset server, Iterable<BackgroundTask> tasks, {boo
   return named ? ServerState.stopped : ServerState.seen;
 }
 
-final _lists = Expando<Map<String?, List<MadeAsset>>>('session made list');
+final _lists = Expando<Map<(String?, MadeHistory?), List<MadeAsset>>>('session made list');
 final _mentions = Expando<List<_Mention>>('session made mentions');
 final _commandScans = Expando<List<_Mention>>('session made command');
 
 enum _Act { server, file, drop }
 
 /// One thing a transcript item said. [cd] is a `cd` the command made first.
+/// A server mention is [weak] when it only names the origin (a banner, a bare
+/// `localhost:5173`): the same item's own link to that port says more.
 class _Mention {
-  const _Mention.server(this.url, this.at) : act = _Act.server, path = null, cwd = null, cd = null;
-  const _Mention.file(this.path, this.cwd, this.cd, this.at) : act = _Act.file, url = null;
-  const _Mention.drop(this.path, this.cwd, this.cd, this.at) : act = _Act.drop, url = null;
+  const _Mention.server(this.url, this.at, {this.weak = false}) : act = _Act.server, path = null, cwd = null, cd = null;
+  const _Mention.file(this.path, this.cwd, this.cd, this.at) : act = _Act.file, url = null, weak = false;
+  const _Mention.drop(this.path, this.cwd, this.cd, this.at) : act = _Act.drop, url = null, weak = false;
 
   final _Act act;
   final Uri? url;
@@ -137,40 +237,93 @@ class _Mention {
   final String? cwd;
   final String? cd;
   final DateTime? at;
+  final bool weak;
 }
 
-List<MadeAsset> _build(List<TranscriptItem> items, String? sessionCwd) {
-  final byKey = <String, MadeAsset>{};
-  for (final (index, item) in items.indexed) {
+/// The rows of a transcript, one item at a time: what a long chat is read with
+/// in slices (the UI thread belongs to the person) and what [madeAssetsOf]
+/// and [MadeHistory] are made of.
+class MadeFold {
+  /// [from]: what the log made before the first item added; the items are
+  /// numbered after it, so their rows are newer than its rows.
+  MadeFold({String? cwd, MadeHistory? from})
+    : _cwd = cwd == null || cwd.isEmpty ? null : cwd,
+      _next = from?.span ?? 0 {
+    if (from != null) {
+      for (final a in from.assets) {
+        _byKey[a.key] = a;
+      }
+    }
+  }
+
+  final String? _cwd;
+  final _byKey = <String, MadeAsset>{};
+  int _next;
+
+  void addAll(Iterable<TranscriptItem> items) {
+    for (final item in items) {
+      add(item);
+    }
+  }
+
+  void add(TranscriptItem item) {
+    final index = _next++;
+    final mentions = _mentionsOf(item);
+    // A port the item linked to with a path of its own: its bare `localhost:PORT`
+    // and the banner that names only the origin say nothing more.
+    final linked = {
+      for (final m in mentions)
+        if (m.act == _Act.server && !m.weak) _portOf(m.url!),
+    };
     var seq = 0;
-    for (final m in _mentionsOf(item)) {
+    for (final m in mentions) {
       // Items are 1000 apart, the mentions of one item in the order scanned.
       final order = index * 1000 + seq++;
       switch (m.act) {
         case _Act.server:
+          if (m.weak && linked.contains(_portOf(m.url!))) break;
           final asset = _serverOf(m.url!, m.at, order);
-          // The command named a path and its own output only the server: the path stays.
-          final prev = byKey[asset.key];
-          if (prev != null && prev.order ~/ 1000 == index && prev.url?.path != '/' && asset.url?.path == '/') break;
-          byKey[asset.key] = asset;
+          _byKey[asset.key] = asset;
         case _Act.file:
-          final asset = _fileOf(m, sessionCwd, order);
-          if (asset != null) byKey[asset.key] = asset;
+          final asset = _fileOf(m, _cwd, order);
+          if (asset != null) _byKey[asset.key] = asset;
         case _Act.drop:
-          final key = _placed(m, sessionCwd);
-          if (key != null) byKey.remove(key);
+          final key = _placed(m, _cwd);
+          if (key != null) _byKey.remove(key);
       }
     }
   }
-  final out = byKey.values.toList()..sort((a, b) => b.order.compareTo(a.order));
-  // Newest first, so the first `madeAssetsCap` met of a kind are its newest.
-  final seen = <MadeKind, int>{};
-  final kept = [
-    for (final a in out)
-      if ((seen[a.kind] = (seen[a.kind] ?? 0) + 1) <= madeAssetsCap) a,
-  ];
-  return List.unmodifiable(kept);
+
+  /// How many items the log has been read through (the first number the next
+  /// item gets).
+  int get span => _next;
+
+  /// The rows, newest first. Each kind keeps its newest [madeAssetsCap], and a
+  /// port its newest [madeServerPathsCap] pages, so a flood of one thing never
+  /// pushes another out.
+  List<MadeAsset> get assets {
+    final out = _byKey.values.toList()..sort((a, b) => b.order.compareTo(a.order));
+    final seen = <MadeKind, int>{};
+    final perPort = <int, int>{};
+    final kept = <MadeAsset>[];
+    for (final a in out) {
+      final n = seen[a.kind] = (seen[a.kind] ?? 0) + 1;
+      if (n > madeAssetsCap) continue;
+      if (a.kind == MadeKind.server) {
+        final port = a.port!;
+        final p = perPort[port] = (perPort[port] ?? 0) + 1;
+        if (p > madeServerPathsCap) continue;
+      }
+      kept.add(a);
+    }
+    return List.unmodifiable(kept);
+  }
+
+  /// What is known now, to be kept: read through [upTo] bytes of the log.
+  MadeHistory history(int upTo) => MadeHistory(assets: assets, span: _next, upTo: upTo);
 }
+
+int _portOf(Uri url) => url.hasPort ? url.port : 80;
 
 List<_Mention> _mentionsOf(TranscriptItem item) {
   // A message that is still streaming grows under the same object and the
@@ -249,7 +402,7 @@ List<_Mention> _scan(TranscriptItem item) {
 }
 
 _Mention _withTime(_Mention m, DateTime? at) => switch (m.act) {
-  _Act.server => _Mention.server(m.url, at),
+  _Act.server => _Mention.server(m.url, at, weak: m.weak),
   _Act.file => _Mention.file(m.path, m.cwd, m.cd, at),
   _Act.drop => _Mention.drop(m.path, m.cwd, m.cd, at),
 };
@@ -313,7 +466,7 @@ void _say(String text, DateTime? at, List<_Mention> out) {
   }
   for (final m in _bareLocalhost.allMatches(text)) {
     final port = int.parse(m.group(1)!);
-    if (port >= 1 && port <= 65535) out.add(_Mention.server(Uri(scheme: 'http', host: 'localhost', port: port, path: '/'), at));
+    if (port >= 1 && port <= 65535) out.add(_Mention.server(Uri(scheme: 'http', host: 'localhost', port: port, path: '/'), at, weak: true));
   }
   // Pages: a code block shows what a file CONTAINS (`<img src="logo.svg">`), so
   // it is not read; a bare name needs a verb of making just before it.
@@ -517,7 +670,7 @@ void _banners(String printed, String command, DateTime? at, List<_Mention> out) 
     if (!_labelled.hasMatch(l) && !_banner.hasMatch(l) && !(launch && _listening.hasMatch(l))) continue;
     for (final m in _url.allMatches(l)) {
       final s = _serverUri(m.group(0)!, l.substring(0, m.start), keepPath: false);
-      if (s != null) out.add(_Mention.server(s, at));
+      if (s != null) out.add(_Mention.server(s, at, weak: true));
     }
   }
 }
@@ -573,11 +726,13 @@ Uri? _serverUri(String raw, String before, {required bool keepPath}) {
 }
 
 MadeAsset _serverOf(Uri url, DateTime? at, int order) {
-  final port = url.hasPort ? url.port : 80;
-  final path = url.path == '/' ? '' : _display(url.path);
+  final port = _portOf(url);
+  final root = url.path == '/' || url.path.isEmpty;
+  final path = root ? '' : _display(url.path);
   return MadeAsset(
     kind: MadeKind.server,
-    key: 'localhost:$port',
+    // The root keeps the port's own name, a page adds its path.
+    key: root ? 'localhost:$port' : 'localhost:$port${url.path}',
     title: 'localhost${url.hasPort ? ':$port' : ''}$path',
     where: '',
     url: url,

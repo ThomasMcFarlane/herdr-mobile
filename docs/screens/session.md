@@ -252,7 +252,9 @@ view, so they survive a row scrolling away.
   appear or go above what the reader is looking at do not move it.
 - **What breaks out of the fold.** A failed call (the agent said `failed`, or the
   command exited non-zero), a cancelled one, a call that waits for the
-  person's permission, a stop row and a note are ordinary rows after the
+  person's permission (not a call the agent only skipped: omp marks a `wait` it
+  interrupted or that had nothing to wait for as an error, 48 times in one session,
+  and `toolSkipped` keeps those in the fold, cancelled, with their text), a stop row and a note are ordinary rows after the
   answer, never folded; in an open log they stand in their place, once.
 - **The log's rows.** Tool calls are quiet rows (no chevron): the icon of the
   kind, ONE `toolSummary` line, ~44 dp, and a state shape only when the call
@@ -341,7 +343,20 @@ and `Call details`, the tool call itself with its body. The bar chip
 ones that need the person first, then the ones not started), Running,
 Finished (failed first, newest first); each row is the same card, a tap opens
 the run; the list is lazy past 8 lines (two thirds of the screen), so 25
-subagents cost the ones on screen. An observed session keeps its own roster.
+subagents cost the ones on screen. An observed session has the same sections
+(`observed_roster.dart`): Running, Waiting, Done (failed first, newest first, 8
+shown, `Show N more`), with Running first (omp names every subagent of a `task`
+call pending at once, so Waiting first would bury the ones that run); a running subagent whose job the log lists has the held
+stop of the background sheet (`Ask to stop` for omp, which can only be asked) and
+the sheet has one `Stop all` for them (`BackgroundStopper` and the controls in
+`background_controls.dart` are shared with the background sheet; `Stop all` asks
+for subagents only, in one message). The chip says `6 running` (the total is in
+the sheet title), or `66 subagents` when none runs, with a `+` while only the end
+of the log is read (the sheet then says so and offers `Load earlier messages`);
+with the link down it says no more than the count, and the rows say `Was
+running`. A subagent is matched to its job by name (Claude: by the agent id of its log); one with no job listed
+(Codex, a synchronous omp `task`) has no stop control. Why: a swarm of 24 reviewers left the running ones at the
+bottom of 66 oldest-first rows.
 
 *Drill-in* is a pushed screen (`SubagentRunScreen`): a bar with the description,
 a state strip with the same live line, then either the **conversation** (Claude:

@@ -424,6 +424,31 @@ void main() {
         ]);
       });
 
+      test('stop all of one kind names only that kind: the roster stops subagents, not shell jobs', () async {
+        final (rig, s) = await open([
+          sessionLine(),
+          userLine('u1', 'go'),
+          ..._bgStart('1', 'a'),
+          toolCallLine('t1', 'ct1', 'task', {
+            'tasks': [
+              {'name': 'Alpha', 'agent': 'task', 'task': 'review'},
+            ],
+          }),
+          toolResultLine('tr1', 'ct1', 'task', 'Backgrounded', details: {
+            'async': {'state': 'running', 'jobId': 'Alpha', 'type': 'task'},
+          }),
+          assistantLine('a9', 'waiting'),
+        ]);
+        expect(s.backgroundWork.running.map((t) => (t.id, t.kind)), [('bg_1', BackgroundKind.shell), ('Alpha', BackgroundKind.agent)]);
+        final result = await s.stopAllBackground(only: BackgroundKind.agent);
+        expect(result, isA<BackgroundStopped>());
+        expect(rig.sent('pane.send_input').map((p) => p['text']), [
+          'Stop these background job now: Alpha (write proc://Alpha/kill). Do nothing else.',
+        ]);
+        expect(await s.stopAllBackground(only: BackgroundKind.workflow), isA<BackgroundAlreadyDone>(), reason: 'nothing of that kind runs');
+        expect(rig.sent('pane.send_input'), hasLength(1));
+      });
+
       test('stop all with nothing running is already done', () async {
         final (rig, s) = await open([sessionLine(), userLine('u1', 'go'), assistantLine('a1', 'ok')]);
         expect(await s.stopAllBackground(), isA<BackgroundAlreadyDone>());

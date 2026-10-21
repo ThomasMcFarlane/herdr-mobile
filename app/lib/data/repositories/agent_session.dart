@@ -5,6 +5,7 @@ import '../acp/auth_needed.dart';
 import '../acp/past_session.dart';
 import '../acp/background/background_work.dart';
 import '../acp/prompt_queue.dart';
+import '../acp/session_made.dart' show MadeHistory;
 import '../acp/session_state.dart';
 import '../acp/subagents/subagent_run.dart' show SubagentLogStatus, SubagentRun, SubagentSummary;
 import '../observed/log_picture.dart' show LogPictureRef;
@@ -50,6 +51,25 @@ enum EarlierHistory {
 
   /// The log holds earlier messages, but more than the phone reads at once.
   tooLong,
+}
+
+/// How far what a session made (`Made`: servers, pages, pictures, documents) is
+/// known, against how much of the transcript the phone holds.
+enum MadeReach {
+  /// The rows are everything the session made: [AgentSessionView.state] holds
+  /// the whole transcript, or what came before it has been read.
+  whole,
+
+  /// The phone holds the end of a long log, and what the part before it made
+  /// has not been read: the rows are the newest ones, not all of them
+  /// ([AgentSessionView.readEarlierMade] reads the rest).
+  partial,
+
+  /// The part before it is being read.
+  reading,
+
+  /// It could not be read; [AgentSessionView.readEarlierMade] tries again.
+  failed,
 }
 
 /// One agent session as the screens see it. A `ChangeNotifier`-style
@@ -98,6 +118,19 @@ abstract interface class AgentSessionView implements Listenable, AttachTarget {
   /// otherwise nothing happens. What [state] holds now stays shown until they
   /// are all there, and nothing already shown moves.
   void loadEarlier();
+
+  /// What the part of the transcript before [state]'s first item made, once it
+  /// has been read (and kept, so a later visit has it at once); null while it
+  /// has not, and for a session that holds its whole transcript.
+  MadeHistory? get madeHistory;
+
+  /// Whether the rows of `Made` are all of them (see [MadeReach]).
+  MadeReach get madeReach;
+
+  /// Reads what the earlier part of the log made ([madeReach] is
+  /// [MadeReach.partial] or [MadeReach.failed]): only what this phone has not
+  /// read yet, never the chat itself. Otherwise nothing happens.
+  void readEarlierMade();
 
   /// Why [link] is [AgentLink.failed], [AgentLink.reconnecting] or
   /// [AgentLink.ended]; null otherwise.
@@ -377,8 +410,9 @@ abstract interface class AgentSessionView implements Listenable, AttachTarget {
   /// Never throws; the result says what happened.
   Future<BackgroundStopResult> stopBackground(String id);
 
-  /// Stops every running task that has a stop route.
-  Future<BackgroundStopResult> stopAllBackground();
+  /// Stops every running task that has a stop route. With [only], only the
+  /// tasks of that kind (the subagent roster stops subagents, not shell jobs).
+  Future<BackgroundStopResult> stopAllBackground({BackgroundKind? only});
 }
 
 /// A request ([requestId]) answered by another client of the keeper before

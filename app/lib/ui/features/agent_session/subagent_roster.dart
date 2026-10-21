@@ -8,19 +8,23 @@ import '../../../data/repositories/agent_session.dart';
 import '../../../data/words/plural.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import 'agent_session_navigation.dart';
-import 'observed_widgets.dart' show showObservedSubagents;
+import 'observed_roster.dart' show showObservedSubagents;
 import 'session_select.dart';
 import 'subagent_card.dart';
 import 'subagent_format.dart';
 
 class _ChipSnap {
-  const _ChipSnap(this.summary, this.blocked, this.live, this.observedTotal, this.observedRunning);
+  const _ChipSnap(this.summary, this.blocked, this.live, this.observedTotal, this.observedRunning, this.partial);
 
   final SubagentSummary summary;
   final int blocked;
   final bool live;
   final int observedTotal;
   final int observedRunning;
+
+  /// The phone has read only the end of the log: the observed total is of that
+  /// part.
+  final bool partial;
 
   @override
   bool operator ==(Object other) =>
@@ -29,14 +33,17 @@ class _ChipSnap {
       other.blocked == blocked &&
       other.live == live &&
       other.observedTotal == observedTotal &&
-      other.observedRunning == observedRunning;
+      other.observedRunning == observedRunning &&
+      other.partial == partial;
 
   @override
-  int get hashCode => Object.hash(summary, blocked, live, observedTotal, observedRunning);
+  int get hashCode => Object.hash(summary, blocked, live, observedTotal, observedRunning, partial);
 }
 
 /// The chip under the bar that opens the roster: `3 subagents`, `1 of 3
-/// running`, `1 needs you` (tinted), `1 of 3 failed`. The index of
+/// running`, `1 needs you` (tinted), `1 of 3 failed`; for a session followed
+/// through its log `6 running` (the total is in the sheet) or `66+ subagents`
+/// (the `+`: only the end of the log is read). The index of
 /// every subagent of the session, for an agent that talks ACP (their
 /// [SubagentRun]s) and for one followed through its log (the observed
 /// roster). Takes no room without subagents; the bar places it.
@@ -51,9 +58,11 @@ class SubagentsChip extends StatelessWidget {
     select: (s) => _ChipSnap(
       s.subagentSummary,
       blockedRunIds(s.state).length,
-      runsAreLive(s.state, linkLive: s.link == AgentLink.live),
+      // A log-followed session has no runs: its words are as live as its link.
+      s.subagents.isNotEmpty ? s.link == AgentLink.live : runsAreLive(s.state, linkLive: s.link == AgentLink.live),
       s.subagents.length,
       s.subagents.where((e) => e.state == SubagentState.running).length,
+      s.earlier != EarlierHistory.none,
     ),
     builder: (context, v) {
       final ds = context.ds;
@@ -66,13 +75,13 @@ class SubagentsChip extends StatelessWidget {
       if (!observed && v.live && v.blocked > 0) {
         label = needYou(v.blocked);
         tint = ds.blockedText;
-      } else if (running > 0 && (observed || v.live)) {
-        label = '$running of $total running';
+      } else if (running > 0 && v.live) {
+        label = observed ? '$running running' : '$running of $total running';
       } else if (!observed && v.summary.failed > 0) {
         label = '${v.summary.failed} of $total failed';
         tint = ds.dangerText;
       } else {
-        label = countOf(total, 'subagent');
+        label = observed ? '$total${v.partial ? '+' : ''} ${plural(total, 'subagent')}' : countOf(total, 'subagent');
       }
       return Padding(
         padding: const EdgeInsets.only(bottom: Gap.hair),

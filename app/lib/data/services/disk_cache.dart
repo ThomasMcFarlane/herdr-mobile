@@ -80,6 +80,10 @@ class DiskCache {
   /// An omp blob, by its sha256.
   static String ompKey(String sha256hex) => 'o:$sha256hex';
 
+  /// What the earlier part of one session log made (`MadeHistory`): small, and
+  /// derived from the log, so a cache the OS cleared costs one more read.
+  static String madeKey(String machineId, String logPath) => 'm:$machineId\u0000$logPath';
+
   static String _name(String key) => sha1.convert(utf8.encode(key)).toString();
 
   // -- state -------------------------------------------------------------------
