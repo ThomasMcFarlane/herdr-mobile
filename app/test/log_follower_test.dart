@@ -69,8 +69,8 @@ if cli is None:
 else:
     # `main` builds the Follower itself, with the real clock unless it is given this one.
     class CF(F):
-        def __init__(self, path, frm, poll, idle_exit, tail=None, zipped=False):
-            F.__init__(self, path, frm, poll, idle_exit, lambda: now[0], tail, zipped)
+        def __init__(self, path, frm, poll, idle_exit, tail=None, zipped=False, until=None, brief=False):
+            F.__init__(self, path, frm, poll, idle_exit, lambda: now[0], tail, zipped, until, brief)
     g["Follower"] = CF
     g["main"](["follow", log] + cli)
 print(json.dumps({"waits": waits, "reads": reads, "total": sum(waits), "bytes": read_bytes[0]}))
