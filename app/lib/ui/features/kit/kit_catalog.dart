@@ -147,7 +147,7 @@ final List<KitEntry> kitCatalog = [
           options: const [
             SegmentOption(1, 'Pictures', count: 4),
             SegmentOption(2, 'Pages', count: 17),
-            SegmentOption(3, 'Servers', count: 2),
+            SegmentOption(3, 'Apps', count: 2),
             SegmentOption(4, 'Tệp đã thay đổi', count: 120),
           ],
         ))),

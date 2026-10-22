@@ -17,8 +17,9 @@ person wants to see it now, from the phone, and then go back to the agent.
   `docs/ALERTS.md`), so switching apps or turning the screen off does not end
   the page either.
 - **Reached at once.** `openWebPreview` is the one way in, for `Open page` in
-  the link sheet (`ServerPage`), a server or page row of `Made` (`ServerPage`,
-  `FilePage` with the agent's path and folder) and `Show as page` in the file
+  the link sheet (`ServerPage`), an app or page row of `Made` (`ServerPage`
+  with `name`, the app's launch command; `FilePage` with the agent's path and
+  folder) and `Show as page` in the file
   viewer (`FilePage.stat`). The screen goes up on the frame of the tap and
   asks the machine for the listener inside it (`WebPreview.forwardUrl` /
   `staticUrl`): `BusySpinner` (after `Dwell.spinnerDelay`) while the machine
@@ -36,9 +37,12 @@ person wants to see it now, from the phone, and then go back to the agent.
   the glyph's place (where an agent screen shows its status) says "a web
   page"; the title is the page's `<title>` (read again `Dwell.titleSettle`
   after a single-page app changes route), else its address on the machine
-  (`localhost:5173/settings`; a file's name); the second line is where it
-  comes from, `localhost:5173/settings · devbox`, or just the machine when the
-  title already is the address (said once). Why the plain bar: a pill of its
+  (`localhost:5173/settings`; a file's name), else, for an app opened from
+  `Made`, what started it (`python label_server.py --port 8765`); the second
+  line is where it comes from, `localhost:5173/settings · devbox`, or just the
+  machine when the title already is the address (said once). For a named app
+  the machine leads (`devbox · python label_server.py…`) so a long command is
+  the part an ellipsis cuts. Why the plain bar: a pill of its
   own (0.1.18) cost the page height and looked like no other screen; the
   owner chose consistency, with the globe to say "web" (a prototype of four
   bars, 2026-10-19). Actions: `Reload` (off while a failure panel offers

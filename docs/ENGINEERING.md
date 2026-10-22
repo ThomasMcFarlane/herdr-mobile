@@ -369,8 +369,22 @@ Tailscale.
     credentials in the link, are dropped.
   - A server is `Running` only while a background task that is RUNNING and
     whose command names its port exists, `Stopped` when only ended or paused
-    ones do, else `Seen`. A saved copy or a link that is down says `Seen` for
+    ones do, else unknown (`Status unknown`, and `mentioned 4m ago` when the
+    transcript has a time). A saved copy or a link that is down says unknown for
     all: nothing in it is known to run now.
+  - **An app** is the row of a port (`madeAppsOf`): the pages the agent named on
+    it are chips under the row, and a tap opens its root page when the agent named
+    it, else the newest page named. Its name is what started it, never words a
+    model wrote: the command of a background task that names the port, else the
+    command the transcript launched it with (`MadeAsset.launch`, `launchLabelOf`:
+    no `cd`, wrapper, `VAR=x` or redirect, the program's folder dropped, 60
+    characters), else `App on port N`. A launch comes from a banner's command or
+    from a launch command's `--port N`, `-p N`, `http.server N` or `PORT=N`; it
+    makes NO row by itself (a command is not proof that a server came up). The
+    `Made N` chip and the tab count apps, not links (`madeCountOf`). The launch is
+    kept with the row, so `madeScanVersion` is 2. A link or a bare `localhost:port`
+    quoted in the agent's own words (a chat about this very sheet) still makes a
+    row: the scan cannot tell a quote from an announcement.
   - A port that is not a web server (SSH, Docker, MySQL, PostgreSQL, Redis,
     Elasticsearch, Memcached, MongoDB; `sensitiveServiceOf`) is listed dimmed
     with its name and is not opened from the list: an agent, steered by text it
@@ -413,18 +427,27 @@ Tailscale.
     a row added anywhere moves the others) and its height too: the switch is
     pinned above a scroll area that is as tall as the tallest tab's first batch,
     at most 60% of the screen, for EVERY tab (estimated from the type scale: the
-    tabs not open are not built; the cap is why a Servers tab of two rows sits
+    tabs not open are not built; the cap is why an Apps tab of two rows sits
     in some empty space under a long Pictures tab), so changing tab or
     scrolling a long list never moves the switch
-    from under the thumb. A tap says `Opening X…` (not for a picture: the toast
-    would stand over the viewer for its 3 s), a second tap on a row that is
-    opening says `Still opening X…`, one open per row at a time, and the browser
-    is only launched while the screen the sheet came from is still there.
+    from under the thumb. The tabs are the pages of a `PageView`: a swipe sideways
+    goes to the next kind and the switch follows (`_paged`), a tap on the switch
+    slides the page (`_settling` keeps the pages passed on the way from being
+    taken as choices), and only the page in view is built (a neighbour's picture
+    grid would read up to 2 MiB per tile over the radio). A tap says `Opening X…`
+    (not for a picture: the toast would stand over the viewer for its 3 s), a
+    second tap on a row that is opening says `Still opening X…`, one open per row
+    at a time. A row opens OVER the sheet, which stays on the stack: Back lands on
+    the list, on the same tab and scroll position, not on the board (the sheet
+    used to close on every tap, so a person could not look at the next item).
+    An error is a toast over the sheet. A picture opens in the viewer with the
+    sheet's other pictures (in its order, those the grid found gone left out) to
+    swipe to.
   - The sheet: the app's one switch (`Segmented`, docs/DESIGN.md "Components")
-    leads it with the kinds present (`Servers`, `Pages 17`, `Pictures 13`,
-    `Docs 8`, a live dot before Servers while one runs), only when two or more
+    leads it with the kinds present (`Apps`, `Pages 17`, `Pictures 13`,
+    `Docs 8`, a live dot before Apps while one runs), only when two or more
     kinds exist, the choice remembered per session; the default is the newest
-    non-server kind. Pictures are a lazy grid of real thumbnails (`PhotoThumbs`, the
+    non-app kind. Pictures are a lazy grid of real thumbnails (`PhotoThumbs`, the
     folder grid's cache; a file over 2 MB shows its size): only the tiles at the
     viewport and a row beyond ask the machine for their stat and picture (each is
     up to 2 MiB over the radio), and the crossed-out picture is for a file the

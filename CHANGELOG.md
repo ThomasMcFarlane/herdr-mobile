@@ -4,6 +4,39 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [0.1.29] - 2026-10-22
+
+[![Watch what's new · 3 changes · 0:18 · 6.1 MB](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.29/0.1.29-whats-new.jpg)](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.29/0.1.29-whats-new.mp4)
+
+### Made says what is running, and you can look at the next thing
+
+`Made` shows an app as what started it (`npm run dev -- --port 5173`),
+not as `localhost:5173`, with its pages under it. A tap opens the page over the
+list, so Back returns to the list, not to the agent's screen.
+
+> [!TIP]
+> Try it: in a chat where an agent started a server, tap `Made`, then `Apps`.
+> Swipe sideways to reach `Pages` and `Pictures`.
+
+- `Servers` is now `Apps`: one row per port, the pages the agent named on it as
+  chips under the row, and `Running`, `Stopped` or `Status unknown` (it was
+  `Seen`). Four links on one port were four rows; they are one.
+- A picture opens with the other pictures of the list to swipe to. Back
+  returns to the list on the same tab.
+- The tabs swipe: sideways on the list moves to the next tab.
+- The page bar of an app opened from `Made` says what started it, with the
+  machine first. The address stays in `⋯`.
+- The `Made 13` chip counts apps and other things, not links.
+- A link or `localhost:port` an agent only quotes in its words still makes a
+  row, as before. Not measured on a phone: how the swipes feel.
+
+![Made on the Apps tab: a running app named by its command, a database port, an app with no known command, and an app named by its launch command with its pages as chips, under the switch with Pages, Pictures and Docs](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.29/0.1.29-apps-named.png)
+
+**Fixed**
+
+- A tap on a row in `Made` no longer closes the list: Back no longer drops you
+  on the agent's screen, so you can open the next row.
+
 ## [0.1.28] - 2026-10-21
 
 ### Manage a swarm of subagents, and see everything an agent made

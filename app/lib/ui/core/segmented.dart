@@ -21,7 +21,7 @@ class SegmentOption<T> {
   final Widget? leading;
 
   /// What a screen reader says for this option instead of `label` / `label, count`
-  /// (for state the sighted see as a dot or colour: `Servers, 2, running`).
+  /// (for state the sighted see as a dot or colour: `Apps, 2, running`).
   final String? semanticLabel;
 }
 

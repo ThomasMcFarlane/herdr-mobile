@@ -59,6 +59,7 @@ void main() {
     required Brightness brightness,
     Size size = phone,
     double textScale = 1,
+    String? appName,
     Future<void> Function(WidgetTester tester, FakeWebView web)? then,
   }) async {
     final transport = FakeTransport()..webInfo = const WebBridgeInfo(port: 8790, token: '0123456789abcdef0123456789abcdef', entryPort: 51999);
@@ -89,7 +90,7 @@ void main() {
     final scale = textScale == 1 ? '' : '-x$textScale';
     await shoot(
       tester,
-      WebPreviewScreen(machine: pageMachine(transport, label: 'tuannd12'), page: ServerPage(Uri.parse(_page))),
+      WebPreviewScreen(machine: pageMachine(transport, label: 'tuannd12'), page: ServerPage(Uri.parse(_page), name: appName)),
       '$_out/$state-$mode-${size.width.toInt()}x${size.height.toInt()}$scale.png',
       brightness: brightness,
       size: size,
@@ -127,6 +128,25 @@ void main() {
         tester,
         'failed',
         brightness: brightness,
+        then: (tester, web) async {
+          web.failing.add('http://localhost:8790/page2.html');
+          await web.navigate('http://localhost:8790/page2.html');
+          await tester.pump(const Duration(milliseconds: 300));
+        },
+      );
+    });
+
+    // Opened from the Made sheet: the bar says what the app is, not its address.
+    testWidgets('an app named by what started it, $mode', (tester) async {
+      await render(tester, 'named', brightness: brightness, appName: 'python label_server.py --port 8790');
+    });
+
+    testWidgets('a named app that failed to load, $mode', (tester) async {
+      await render(
+        tester,
+        'named-failed',
+        brightness: brightness,
+        appName: 'python label_server.py --port 8790',
         then: (tester, web) async {
           web.failing.add('http://localhost:8790/page2.html');
           await web.navigate('http://localhost:8790/page2.html');

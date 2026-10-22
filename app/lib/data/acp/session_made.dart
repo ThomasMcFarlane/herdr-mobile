@@ -45,6 +45,7 @@ class MadeAsset {
     this.url,
     this.path,
     this.at,
+    this.launch,
     required this.order,
   });
 
@@ -74,8 +75,31 @@ class MadeAsset {
   /// Position of the last mention in the transcript: bigger is newer.
   final int order;
 
+  /// What started the server, from the command that launched it (the
+  /// transcript's, see [launchLabelOf]): `python label_server.py --port 8765`.
+  /// Null for a file and when no launch was seen. Raw text from the agent.
+  final String? launch;
+
   /// The port, for matching a background task.
   int? get port => url == null ? null : (url!.hasPort ? url!.port : 80);
+
+  /// A server row's address inside its app, decoded for display: `/docs`, `/`.
+  String get route {
+    final p = _display(url!.path);
+    return url!.hasQuery ? '$p?${url!.query}' : p;
+  }
+
+  MadeAsset withLaunch(String? launch) => MadeAsset(
+    kind: kind,
+    key: key,
+    title: title,
+    where: where,
+    url: url,
+    path: path,
+    at: at,
+    launch: launch,
+    order: order,
+  );
 
   Map<String, Object?> toJson() => {
     'kind': kind.name,
@@ -85,6 +109,7 @@ class MadeAsset {
     if (url != null) 'url': url.toString(),
     if (path != null) 'path': path,
     if (at != null) 'at': at!.millisecondsSinceEpoch,
+    if (launch != null) 'launch': launch,
     'order': order,
   };
 
@@ -94,8 +119,8 @@ class MadeAsset {
     final kind = MadeKind.values.asNameMap()[json['kind']];
     final key = json['key'], title = json['title'], where = json['where'], order = json['order'];
     if (kind == null || key is! String || title is! String || where is! String || order is! int) return null;
-    final url = json['url'], path = json['path'], at = json['at'];
-    if (url != null && url is! String || path != null && path is! String || at != null && at is! int) return null;
+    final url = json['url'], path = json['path'], at = json['at'], launch = json['launch'];
+    if (url != null && url is! String || path != null && path is! String || at != null && at is! int || launch != null && launch is! String) return null;
     final uri = url == null ? null : Uri.tryParse(url as String);
     if (kind == MadeKind.server && uri == null) return null;
     return MadeAsset(
@@ -106,6 +131,7 @@ class MadeAsset {
       url: uri,
       path: path as String?,
       at: at == null ? null : DateTime.fromMillisecondsSinceEpoch(at as int),
+      launch: launch as String?,
       order: order,
     );
   }
@@ -123,7 +149,7 @@ const madeServerPathsCap = 5;
 
 /// Bumped whenever the scanning rules change what a log makes: a [MadeHistory]
 /// kept under an older one was read with other rules and is read again.
-const madeScanVersion = 1;
+const madeScanVersion = 2;
 
 /// Whether [a] and [b] show the same rows. A tool call that streams replaces
 /// the transcript list on every chunk and with it the list this returns; the
@@ -133,7 +159,7 @@ bool sameMadeAssets(List<MadeAsset> a, List<MadeAsset> b) {
   if (a.length != b.length) return false;
   for (var i = 0; i < a.length; i++) {
     final x = a[i], y = b[i];
-    if (x.key != y.key || x.title != y.title || x.where != y.where || x.at != y.at || x.url != y.url) return false;
+    if (x.key != y.key || x.title != y.title || x.where != y.where || x.at != y.at || x.url != y.url || x.launch != y.launch) return false;
   }
   return true;
 }
@@ -200,6 +226,12 @@ List<MadeAsset> madeAssetsOf(List<TranscriptItem> items, {String? cwd, MadeHisto
   return memo[(base, history)] ??= (MadeFold(cwd: base, from: history)..addAll(items)).assets;
 }
 
+/// The background tasks that name [port] in their title or detail.
+Iterable<BackgroundTask> _tasksOfPort(int port, Iterable<BackgroundTask> tasks) {
+  final pattern = RegExp('(?<!\\d)$port(?!\\d)');
+  return tasks.where((t) => pattern.hasMatch(t.title) || (t.detail != null && pattern.hasMatch(t.detail!)));
+}
+
 /// A server's state against the session's background tasks: running while a
 /// task that names its port is running, stopped when only ended ones do, else
 /// just seen. [live] is false for a saved copy or a link that is not up: then
@@ -207,29 +239,141 @@ List<MadeAsset> madeAssetsOf(List<TranscriptItem> items, {String? cwd, MadeHisto
 ServerState serverStateOf(MadeAsset server, Iterable<BackgroundTask> tasks, {bool live = true}) {
   final port = server.port;
   if (port == null || !live) return ServerState.seen;
-  final pattern = RegExp('(?<!\\d)$port(?!\\d)');
   var named = false;
-  for (final t in tasks) {
-    if (!pattern.hasMatch(t.title) && !(t.detail != null && pattern.hasMatch(t.detail!))) continue;
+  for (final t in _tasksOfPort(port, tasks)) {
     if (t.status == BackgroundStatus.running) return ServerState.running;
     named = true;
   }
   return named ? ServerState.stopped : ServerState.seen;
 }
 
+/// What to call a server's app: the command of the background task that names
+/// its port (a running one before an ended one, the last of each), else the
+/// command the transcript launched it with ([MadeAsset.launch]), else null.
+String? serverNameOf(MadeAsset server, Iterable<BackgroundTask> tasks) {
+  final port = server.port;
+  if (port != null) {
+    BackgroundTask? pick;
+    for (final t in _tasksOfPort(port, tasks)) {
+      if (pick == null || t.status == BackgroundStatus.running || pick.status != BackgroundStatus.running) pick = t;
+    }
+    final label = pick == null ? null : launchLabelOf(pick.title);
+    if (label != null) return label;
+  }
+  return server.launch;
+}
+
+/// One server and the pages the agent named on it: the row of `Apps`. Four
+/// links `localhost:8765/review`, `/synth`... are one app, not four rows.
+class MadeApp {
+  const MadeApp({required this.port, required this.entry, required this.pages, required this.at});
+
+  final int port;
+
+  /// What a tap on the app opens: its root page when the agent named it, else
+  /// the newest page it named.
+  final MadeAsset entry;
+
+  /// The port's other rows, newest first; empty when there are none.
+  final List<MadeAsset> pages;
+
+  /// The newest time any of its rows was mentioned; null when none has a time.
+  final DateTime? at;
+}
+
+/// [servers] grouped by port into apps, in the order each port first appears
+/// (the sheet's stable newest-first order).
+List<MadeApp> madeAppsOf(Iterable<MadeAsset> servers) {
+  final groups = <int, List<MadeAsset>>{};
+  for (final s in servers) {
+    (groups[s.port!] ??= []).add(s);
+  }
+  return [
+    for (final MapEntry(key: port, value: group) in groups.entries)
+      () {
+        final root = group.where((a) => a.url!.path == '/' || a.url!.path.isEmpty).firstOrNull;
+        final entry = root ?? group.first;
+        DateTime? at;
+        for (final a in group) {
+          if (a.at != null && (at == null || a.at!.isAfter(at))) at = a.at;
+        }
+        return MadeApp(
+          port: port,
+          entry: entry,
+          pages: [for (final a in group) if (!identical(a, entry)) a],
+          at: at,
+        );
+      }(),
+  ];
+}
+
+/// How many things [assets] are as the sheet counts them: an app once however
+/// many of its pages were named, and every other row.
+int madeCountOf(Iterable<MadeAsset> assets) {
+  final ports = <int>{};
+  var others = 0;
+  for (final a in assets) {
+    if (a.kind == MadeKind.server) {
+      ports.add(a.port!);
+    } else {
+      others++;
+    }
+  }
+  return ports.length + others;
+}
+
+// A command word for what a launch is: a runner or an interpreter plus its
+// arguments. Not a step that only moves around or prints.
+const _notALaunch = {'cd', 'export', 'source', '.', 'set', 'mkdir', 'echo'};
+
+/// What to call the server a command started: the command without what
+/// surrounds a launch (`cd`, `nohup`, `VAR=x`, redirects, `&`) and with the
+/// program's folder dropped, at most 60 characters:
+/// `cd /w && nohup /home/u/.venv/bin/python label_server.py --port 8765 > log 2>&1 &`
+/// is `python label_server.py --port 8765`. Null when nothing is left.
+String? launchLabelOf(String command) {
+  for (final seg in _commandHead(command).split(_segments)) {
+    // Leading `VAR=x` and wrappers are not the program; a redirect or `&` ends
+    // its arguments (what follows is where its output goes).
+    final words = <String>[];
+    for (final w in _words(seg)) {
+      if (_redirect.hasMatch(w)) break;
+      if (words.isEmpty && (_assignment.hasMatch(w) || _wrappers.contains(w))) continue;
+      words.add(w);
+    }
+    if (words.isEmpty || _notALaunch.contains(words.first)) continue;
+    if (words.first.contains('/')) words[0] = words.first.substring(words.first.lastIndexOf('/') + 1);
+    if (words.first.isEmpty) continue;
+    final text = words.join(' ');
+    return text.length > 60 ? '${text.substring(0, 59)}…' : text;
+  }
+  return null;
+}
+
+final _redirect = RegExp(r'^(?:&|\d*>|&>|<)');
+final _assignment = RegExp(r'^[A-Za-z_]\w*=');
+final _launchPort = RegExp(r'(?:--port[= ]|-p |http\.server |PORT=)(\d{2,5})(?!\d)');
+
 final _lists = Expando<Map<(String?, MadeHistory?), List<MadeAsset>>>('session made list');
 final _mentions = Expando<List<_Mention>>('session made mentions');
 final _commandScans = Expando<List<_Mention>>('session made command');
 
-enum _Act { server, file, drop }
+enum _Act { server, file, drop, launch }
 
 /// One thing a transcript item said. [cd] is a `cd` the command made first.
 /// A server mention is [weak] when it only names the origin (a banner, a bare
-/// `localhost:5173`): the same item's own link to that port says more.
+/// `localhost:5173`): the same item's own link to that port says more. A launch
+/// mention names the [port] a command started and the [label] to call it by; it
+/// makes no row (a launch command is not proof that a server came up).
 class _Mention {
-  const _Mention.server(this.url, this.at, {this.weak = false}) : act = _Act.server, path = null, cwd = null, cd = null;
-  const _Mention.file(this.path, this.cwd, this.cd, this.at) : act = _Act.file, url = null, weak = false;
-  const _Mention.drop(this.path, this.cwd, this.cd, this.at) : act = _Act.drop, url = null, weak = false;
+  const _Mention.server(this.url, this.at, {this.weak = false})
+    : act = _Act.server, path = null, cwd = null, cd = null, port = null, label = null;
+  const _Mention.file(this.path, this.cwd, this.cd, this.at)
+    : act = _Act.file, url = null, weak = false, port = null, label = null;
+  const _Mention.drop(this.path, this.cwd, this.cd, this.at)
+    : act = _Act.drop, url = null, weak = false, port = null, label = null;
+  const _Mention.launch(this.port, this.label, this.at)
+    : act = _Act.launch, url = null, path = null, cwd = null, cd = null, weak = false;
 
   final _Act act;
   final Uri? url;
@@ -238,6 +382,8 @@ class _Mention {
   final String? cd;
   final DateTime? at;
   final bool weak;
+  final int? port;
+  final String? label;
 }
 
 /// The rows of a transcript, one item at a time: what a long chat is read with
@@ -252,12 +398,17 @@ class MadeFold {
     if (from != null) {
       for (final a in from.assets) {
         _byKey[a.key] = a;
+        // Newest first: the newest launch of a port is kept.
+        if (a.kind == MadeKind.server && a.launch != null) _launchByPort.putIfAbsent(a.port!, () => a.launch!);
       }
     }
   }
 
   final String? _cwd;
   final _byKey = <String, MadeAsset>{};
+
+  /// What last launched each port (see [launchLabelOf]); a row's [MadeAsset.launch].
+  final _launchByPort = <int, String>{};
   int _next;
 
   void addAll(Iterable<TranscriptItem> items) {
@@ -290,6 +441,8 @@ class MadeFold {
         case _Act.drop:
           final key = _placed(m, _cwd);
           if (key != null) _byKey.remove(key);
+        case _Act.launch:
+          _launchByPort[m.port!] = m.label!;
       }
     }
   }
@@ -314,7 +467,7 @@ class MadeFold {
         final p = perPort[port] = (perPort[port] ?? 0) + 1;
         if (p > madeServerPathsCap) continue;
       }
-      kept.add(a);
+      kept.add(a.kind == MadeKind.server && _launchByPort[a.port!] != null ? a.withLaunch(_launchByPort[a.port!]) : a);
     }
     return List.unmodifiable(kept);
   }
@@ -387,6 +540,18 @@ List<_Mention> _scan(TranscriptItem item) {
             final key = call.rawInput;
             final scanned = key is Map ? (_commandScans[key] ??= _scanCommand(command, call.cwd)) : _scanCommand(command, call.cwd);
             out.addAll(scanned.map((m) => _withTime(m, at)));
+            // A launch names its port. It makes no row by itself: only a link or a
+            // banner does, and then the row says what started it.
+            final head = _commandHead(command);
+            if (_launchLike.hasMatch(head) && !_testRun.hasMatch(head) && !_isProbe(command)) {
+              final label = launchLabelOf(command);
+              if (label != null) {
+                for (final m in _launchPort.allMatches(head)) {
+                  final port = int.parse(m.group(1)!);
+                  if (port >= 1 && port <= 65535) out.add(_Mention.launch(port, label, at));
+                }
+              }
+            }
           }
           // What a launched command printed names the server. Not what a probe printed.
           final printed = outputTextOf(call);
@@ -405,6 +570,7 @@ _Mention _withTime(_Mention m, DateTime? at) => switch (m.act) {
   _Act.server => _Mention.server(m.url, at, weak: m.weak),
   _Act.file => _Mention.file(m.path, m.cwd, m.cd, at),
   _Act.drop => _Mention.drop(m.path, m.cwd, m.cd, at),
+  _Act.launch => _Mention.launch(m.port, m.label, at),
 };
 
 const _textCap = 20000;
@@ -670,7 +836,11 @@ void _banners(String printed, String command, DateTime? at, List<_Mention> out) 
     if (!_labelled.hasMatch(l) && !_banner.hasMatch(l) && !(launch && _listening.hasMatch(l))) continue;
     for (final m in _url.allMatches(l)) {
       final s = _serverUri(m.group(0)!, l.substring(0, m.start), keepPath: false);
-      if (s != null) out.add(_Mention.server(s, at, weak: true));
+      if (s != null) {
+        out.add(_Mention.server(s, at, weak: true));
+        final label = launchLabelOf(command);
+        if (label != null) out.add(_Mention.launch(s.hasPort ? s.port : 80, label, at));
+      }
     }
   }
 }

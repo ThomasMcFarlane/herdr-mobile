@@ -267,6 +267,69 @@ void main() {
         reason: 'a saved copy or a link that is down knows of nothing running now',
       );
     });
+
+    test('launchLabelOf is what started the server: no cd, wrapper, redirect or folder of the program', () {
+      expect(
+        launchLabelOf('cd /w && nohup /home/u/.venv/bin/python label_server.py --port 8765 > log 2>&1 &'),
+        'python label_server.py --port 8765',
+      );
+      expect(launchLabelOf('PORT=3000 npm run dev'), 'npm run dev');
+      expect(launchLabelOf('cd /w'), isNull);
+      expect(launchLabelOf('python -m http.server 8000 --directory ${'x' * 80}')!.length, 60);
+    });
+
+    test('a launch command names its server, even with no banner; it makes no row by itself', () {
+      final launch = _run('cd /w && nohup python label_server.py --port 8765 > log 2>&1 &');
+      expect(_keys([launch]), isEmpty, reason: 'a command is not proof that a server came up');
+      final servers = madeAssetsOf([launch, _say('Review it at http://localhost:8765/review')]);
+      expect(servers.single.launch, 'python label_server.py --port 8765');
+
+      final banner = madeAssetsOf([_run('npm run dev', output: _vite)]);
+      expect(banner.single.launch, 'npm run dev');
+
+      expect(madeAssetsOf([_run('pytest --port 8765'), _say('http://localhost:8765/')]).single.launch, isNull, reason: 'a test run launches nothing');
+      expect(madeAssetsOf([_run('curl -p 8765 http://localhost:8765/x'), _say('http://localhost:8765/')]).single.launch, isNull, reason: 'a probe launches nothing');
+    });
+
+    test('a launch is kept with the row through a kept history, and the newest launch of a port wins', () {
+      final first = MadeFold()..addAll([_run('python a.py --port 8765'), _say('http://localhost:8765/')]);
+      final history = first.history(100);
+      final restored = MadeHistory.fromBytes(history.toBytes())!;
+      expect(restored.assets.single.launch, 'python a.py --port 8765');
+      final next = MadeFold(from: restored)..addAll([_run('python b.py --port 8765'), _say('again http://localhost:8765/x')]);
+      expect(next.assets.map((a) => a.launch), everyElement('python b.py --port 8765'));
+    });
+
+    test('madeAppsOf: the pages of one port are one app, opening on its root when the agent named it', () {
+      final assets = madeAssetsOf([
+        _say('http://localhost:8790/'),
+        _say('http://localhost:8765/label'),
+        _say('http://localhost:8765/'),
+        _say('http://localhost:8765/review'),
+        _say('http://localhost:8765/failures'),
+      ]).where((a) => a.kind == MadeKind.server).toList();
+      final apps = madeAppsOf(assets);
+      expect(apps.map((a) => a.port), [8765, 8790], reason: 'in the order each port first appears, newest first');
+      expect(apps.first.entry.route, '/');
+      expect(apps.first.pages.map((p) => p.route), ['/failures', '/review', '/label']);
+      expect(apps.last.pages, isEmpty);
+      expect(madeCountOf(assets), 2);
+
+      final noRoot = madeAppsOf(madeAssetsOf([_say('http://localhost:8765/label'), _say('http://localhost:8765/review')]));
+      expect(noRoot.single.entry.route, '/review', reason: 'no root named: the newest page opens');
+    });
+
+    test('serverNameOf: a running task\'s command, else the one the transcript launched it with', () {
+      final server = madeAssetsOf([_run('python old.py --port 5173'), _say('http://localhost:5173/')]).single;
+      BackgroundTask task(String title, BackgroundStatus s) =>
+          BackgroundTask(id: title, kind: BackgroundKind.shell, status: s, title: title);
+      expect(serverNameOf(server, const []), 'python old.py --port 5173');
+      expect(
+        serverNameOf(server, [task('vite --port 5173', BackgroundStatus.running), task('serve -p 5173', BackgroundStatus.finished)]),
+        'vite --port 5173',
+      );
+      expect(serverNameOf(server, [task('serve -p 51730', BackgroundStatus.running)]), 'python old.py --port 5173', reason: 'another port');
+    });
   });
 
   group('pages the agent wrote', () {

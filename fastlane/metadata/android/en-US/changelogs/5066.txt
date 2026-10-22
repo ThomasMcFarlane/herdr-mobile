@@ -1,0 +1,1 @@
+Made says what is running. An app shows as what started it, not localhost:8765, with its pages under it. A tap opens the page over the list, so Back returns to the list. Swipe sideways to move between tabs, and swipe between pictures in the viewer. Try it: in a chat where an agent started a server, tap Made, then Apps.
