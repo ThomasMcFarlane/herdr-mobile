@@ -16,9 +16,11 @@ import 'package:herdr_mobile/ui/core/kit.dart';
 import '../../../data/words/elapsed.dart';
 import '../../../data/words/plural.dart';
 import '../files/files_navigation.dart' show machineSupportsFiles, openRemoteFile;
-import '../files/photo_files.dart' show photoRoute;
+import '../files/photo_files.dart' show remotePhotoItem;
 import '../files/photo_grid.dart' show PhotoThumbFace;
 import '../files/photo_thumbs.dart' show PhotoThumbs;
+import '../photos/photo_item.dart' show PhotoItem;
+import '../photos/photo_viewer.dart' show openPhotoViewer;
 import '../web/web_preview_screen.dart';
 import 'session_select.dart';
 import '../../render/visible_text.dart';
@@ -40,13 +42,15 @@ _Snap _snap(AgentSessionView s) => (
 bool _same(_Snap a, _Snap b) =>
     sameMadeAssets(a.$1, b.$1) && identical(a.$2, b.$2) && a.$3 == b.$3 && a.$4 == b.$4 && identical(a.$5, b.$5);
 
-/// The servers and pages a session put on the web, newest first, one tap from
-/// the session bar. Each row opens as a page in herdr (`WebPreviewScreen`): a
-/// server through the SSH connection, a page from its folder on the machine.
+/// The apps, pages, pictures and documents a session made, newest first, one tap
+/// from the session bar. Each row opens over the sheet, which stays under it:
+/// Back returns to the list, so the person can look at the next one (an app or
+/// page as a page in herdr, `WebPreviewScreen`: an app through the SSH
+/// connection, a page from its folder on the machine; a picture in the photo
+/// viewer, which swipes to the other pictures; a document in the file viewer).
 ///
 /// [opener] is the screen the sheet was opened from: a viewer is only pushed
-/// while it is still there (a person who tapped a row and pressed Back is not
-/// sent to a page over the board seconds later).
+/// while it is still there.
 Future<void> showSessionMade(BuildContext opener, AgentSessionView session) =>
     showAppSheet<void>(opener, builder: (ctx) => SessionMadeSheet(session: session, opener: opener));
 
@@ -101,6 +105,20 @@ class _SessionMadeSheetState extends State<SessionMadeSheet> {
   /// by opening the sheet, and a line says it is reading).
   MadeHistory? _orderHistory;
 
+  /// What the last build showed, in the stable order: what a tapped picture
+  /// pages through.
+  List<MadeAsset> _shown = const [];
+
+  /// The kinds the last build had a tab for, in tab order: what a page index means.
+  List<MadeKind> _kinds = const [];
+
+  /// The pages of the tabs; null until there are two or more kinds.
+  PageController? _pager;
+
+  /// The switch is sliding the page to a tab: pages passed on the way are not
+  /// choices.
+  var _settling = false;
+
   @override
   void initState() {
     super.initState();
@@ -111,6 +129,7 @@ class _SessionMadeSheetState extends State<SessionMadeSheet> {
 
   @override
   void dispose() {
+    _pager?.dispose();
     _entries.dispose();
     super.dispose();
   }
@@ -121,9 +140,30 @@ class _SessionMadeSheetState extends State<SessionMadeSheet> {
     return [for (final k in order) ?byKey[k]];
   }
 
-  void _pick(MadeKind kind) {
+  /// The tab [kind] without moving the page (a swipe already did).
+  void _choose(MadeKind kind) {
     _lastTab[widget.session.key] = kind;
     setState(() => _picked = kind);
+  }
+
+  /// The switch above the list: the tab, and the page slides to it.
+  void _pick(MadeKind kind) {
+    _choose(kind);
+    final at = _kinds.indexOf(kind), pager = _pager;
+    if (at < 0 || pager == null || !pager.hasClients) return;
+    _settling = true;
+    unawaited(
+      pager
+          .animateToPage(at, duration: Motion.of(context, Motion.standard), curve: Motion.easeOut)
+          .whenComplete(() => _settling = false),
+    );
+  }
+
+  /// A swipe landed on page [i]: its kind is the tab. Pages passed over while
+  /// the switch slides the page are not choices.
+  void _paged(int i) {
+    if (_settling || i < 0 || i >= _kinds.length) return;
+    _choose(_kinds[i]);
   }
 
   void _showMore(MadeKind kind) => setState(() => _more[kind] = (_more[kind] ?? 0) + 1);
@@ -131,32 +171,44 @@ class _SessionMadeSheetState extends State<SessionMadeSheet> {
   /// How many of [kind]'s items are built.
   int _limit(MadeKind kind) => (kind == MadeKind.picture ? _gridStep : _listStep) * (1 + (_more[kind] ?? 0));
 
-  void _open(MadeAsset asset) => unawaited(openMadeAsset(context, widget.opener, widget.session, asset));
+  void _open(MadeAsset asset) => unawaited(
+        _openMade(
+          context,
+          widget.opener,
+          widget.session,
+          asset,
+          loader: _entries,
+          pictures: [for (final a in _shown) if (a.kind == MadeKind.picture) a],
+        ),
+      );
 
-  /// [items] of one kind as rows: the first [_limit] of them and a `N more`
-  /// row when there are others. [lastDivider] draws the hairline under the
-  /// last row (something follows it).
-  List<Widget> _rows(
-    List<MadeAsset> items,
-    MadeKind bucket, {
-    required bool lastDivider,
-    required List<BackgroundTask> tasks,
-    required bool live,
-    required bool files,
-  }) {
+  /// [items] of one kind (not apps) as rows: the first [_limit] of them and a
+  /// `N more` row when there are others.
+  List<Widget> _rows(List<MadeAsset> items, MadeKind bucket, {required bool files}) {
     final limit = _limit(bucket);
     final built = items.length > limit ? items.sublist(0, limit) : items;
     final rest = items.length - built.length;
     return [
       for (final (i, asset) in built.indexed)
-        _WebRow(
+        _FileRow(
           asset: asset,
-          state: asset.kind == MadeKind.server ? serverStateOf(asset, tasks, live: live) : null,
           filesAvailable: files,
-          divider: i < built.length - 1 || rest > 0 || lastDivider,
+          divider: i < built.length - 1 || rest > 0,
           onTap: () => _open(asset),
         ),
       if (rest > 0) _MoreRow(count: rest, onTap: () => _showMore(bucket)),
+    ];
+  }
+
+  /// [apps] as rows: the first [_limit] of them and a `N more` row.
+  List<Widget> _appRows(List<MadeApp> apps, {required List<BackgroundTask> tasks, required bool live}) {
+    final limit = _limit(MadeKind.server);
+    final built = apps.length > limit ? apps.sublist(0, limit) : apps;
+    final rest = apps.length - built.length;
+    return [
+      for (final (i, app) in built.indexed)
+        _AppRow(app: app, tasks: tasks, live: live, divider: i < built.length - 1 || rest > 0, onOpen: _open),
+      if (rest > 0) _MoreRow(count: rest, onTap: () => _showMore(MadeKind.server)),
     ];
   }
 
@@ -202,6 +254,15 @@ class _SessionMadeSheetState extends State<SessionMadeSheet> {
         final rows = (cells + _PictureGrid.columns - 1) ~/ _PictureGrid.columns;
         final note = files ? 0.0 : _noteHeight(width, scaler) + Gap.md;
         tallest = math.max(tallest, Gap.md + note + rows * tile + (rows - 1) * Gap.md);
+      } else if (kind == MadeKind.server) {
+        // An app is a row, and a line of chips more when it has pages (one
+        // wrapped line assumed: a longer wrap scrolls inside the area).
+        final apps = madeAppsOf(shown.where((a) => a.kind == kind));
+        final withPages = apps.take(_listStep).where((a) => a.pages.isNotEmpty).length;
+        tallest = math.max(
+          tallest,
+          (math.min(apps.length, _listStep) + (apps.length > _listStep ? 1 : 0)) * row + withPages * (AppChip.height + Gap.sm),
+        );
       } else {
         tallest = math.max(tallest, (math.min(n, _listStep) + (n > _listStep ? 1 : 0)) * row);
       }
@@ -226,6 +287,7 @@ class _SessionMadeSheetState extends State<SessionMadeSheet> {
           if (_order != null) _order = [..._order!, for (final a in assets) if (!known.contains(a.key)) a.key];
         }
         final shown = _stable(assets);
+        _shown = shown;
         final ds = context.ds;
         final files = machineSupportsFiles(session.machine);
         final kinds = [for (final k in _tabKinds) if (shown.any((a) => a.kind == k)) k];
@@ -234,9 +296,48 @@ class _SessionMadeSheetState extends State<SessionMadeSheet> {
         final newest = shown.where((a) => a.kind != MadeKind.server).firstOrNull?.kind ?? MadeKind.server;
         final tab = kinds.isEmpty ? null : (_picked != null && kinds.contains(_picked) ? _picked! : newest);
         final tabbed = kinds.length >= 2;
-        final content = [for (final a in shown) if (a.kind == tab) a];
+        _kinds = kinds;
+        if (tabbed) {
+          final at = kinds.indexOf(tab!);
+          final pager = _pager ??= PageController(initialPage: at);
+          // The kinds changed under it (the earlier history brought one): the page follows the tab.
+          if (!_settling && pager.hasClients && pager.page?.round() != at) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && pager.hasClients && !_settling) pager.jumpToPage(kinds.indexOf(tab));
+            });
+          }
+        }
+        final apps = madeAppsOf([for (final a in shown) if (a.kind == MadeKind.server) a]);
         final running = shown.any((a) => a.kind == MadeKind.server && serverStateOf(a, tasks, live: live) == ServerState.running);
         final scaler = MediaQuery.textScalerOf(context);
+        // One kind's list or grid. Each starts at its top (a page that was
+        // scrolled away is built again).
+        Widget scroller(MadeKind kind) => CustomScrollView(
+              key: ValueKey(kind),
+              // About a row of pictures past the edge, not the default
+              // 250 dp: every tile built is a read of up to 2 MiB over
+              // the radio, and on a phone that is a third of the grid.
+              scrollCacheExtent: const ScrollCacheExtent.pixels(120),
+              slivers: [
+                if (kind == MadeKind.picture)
+                  _PictureGrid(
+                    assets: [for (final a in shown) if (a.kind == kind) a],
+                    limit: _limit(MadeKind.picture),
+                    files: files,
+                    loader: _entries,
+                    onOpen: _open,
+                    onMore: () => _showMore(MadeKind.picture),
+                  )
+                else
+                  SliverToBoxAdapter(
+                    child: Column(
+                      children: kind == MadeKind.server
+                          ? _appRows(apps, tasks: tasks, live: live)
+                          : _rows([for (final a in shown) if (a.kind == kind) a], kind, files: files),
+                    ),
+                  ),
+              ],
+            );
         return SheetScaffold(
           title: 'Made in this session',
           kind: SheetKind.list,
@@ -260,42 +361,30 @@ class _SessionMadeSheetState extends State<SessionMadeSheet> {
                     _KindTabs(
                       tabs: [
                         for (final k in kinds)
-                          (k, _tabLabel(k), shown.where((a) => a.kind == k).length, k == MadeKind.server && running),
+                          (
+                            k,
+                            _tabLabel(k),
+                            k == MadeKind.server ? apps.length : shown.where((a) => a.kind == k).length,
+                            k == MadeKind.server && running,
+                          ),
                       ],
                       selected: tab!,
                       onChanged: _pick,
                     ),
                   if (tab != null)
                     SizedBox(
-                        height: math.min(
-                          _bodyHeight(shown, kinds, box.maxWidth, scaler, files),
-                          MediaQuery.sizeOf(context).height * _bodyShare,
-                        ),
-                        child: CustomScrollView(
-                          // Each tab starts at its top.
-                          key: ValueKey(tab),
-                          // About a row of pictures past the edge, not the default
-                          // 250 dp: every tile built is a read of up to 2 MiB over
-                          // the radio, and on a phone that is a third of the grid.
-                          scrollCacheExtent: const ScrollCacheExtent.pixels(120),
-                          slivers: [
-                            if (tab == MadeKind.picture)
-                              _PictureGrid(
-                                assets: content,
-                                limit: _limit(MadeKind.picture),
-                                files: files,
-                                loader: _entries,
-                                onOpen: _open,
-                                onMore: () => _showMore(MadeKind.picture),
-                              )
-                            else
-                              SliverToBoxAdapter(
-                                child: Column(
-                                  children: _rows(content, tab, lastDivider: false, tasks: tasks, live: live, files: files),
-                                ),
-                              ),
-                          ],
-                        ),
+                      height: math.min(
+                        _bodyHeight(shown, kinds, box.maxWidth, scaler, files),
+                        MediaQuery.sizeOf(context).height * _bodyShare,
+                      ),
+                      // A swipe sideways goes to the next kind, as the switch above does.
+                      child: tabbed
+                          ? PageView(
+                              controller: _pager,
+                              onPageChanged: _paged,
+                              children: [for (final k in kinds) scroller(k)],
+                            )
+                          : scroller(tab),
                     ),
                   if (reach != MadeReach.whole) _EarlierNote(reach: reach, onRead: session.readEarlierMade),
                 ],
@@ -348,11 +437,11 @@ String _tabLabel(MadeKind kind) => switch (kind) {
       MadeKind.page => 'Pages',
       MadeKind.picture => 'Pictures',
       MadeKind.doc => 'Docs',
-      MadeKind.server => 'Servers',
+      MadeKind.server => 'Apps',
     };
 
 /// The switch between what was made: the app's one `Segmented`, a cell per kind
-/// with its count, a live dot on Servers while one runs. The sheet only says
+/// with its count, a live dot on Apps while one runs. The sheet only says
 /// which kinds there are and which one is open; this is the one place that
 /// decides how it looks.
 class _KindTabs extends StatelessWidget {
@@ -405,33 +494,36 @@ class _MoreRow extends StatelessWidget {
 /// start a second open and a second viewer.
 final _opening = <String>{};
 
-/// Closes the sheet, then opens [asset]: a server or page as a page in herdr
-/// (the page's screen goes up at once and says there if it cannot open), a
-/// picture in the photo viewer and a document in the file viewer.
-Future<void> openMadeAsset(BuildContext sheet, BuildContext opener, AgentSessionView session, MadeAsset asset) async {
+/// Opens [asset] over the sheet, which stays on the stack under it (Back lands
+/// on the list, on the same tab): an app or page as a page in herdr (its screen
+/// goes up at once and says there if it cannot open), a picture in the photo
+/// viewer with the other [pictures] to swipe to, and a document in the file
+/// viewer. A failure is a toast over the sheet.
+Future<void> _openMade(
+  BuildContext sheet,
+  BuildContext opener,
+  AgentSessionView session,
+  MadeAsset asset, {
+  required _EntryLoader loader,
+  required List<MadeAsset> pictures,
+}) async {
   final toaster = Toaster.of(sheet);
-  final navigator = Navigator.of(opener);
   final machine = session.machine;
   final service = asset.kind == MadeKind.server && asset.port != null ? sensitiveServiceOf(asset.port!) : null;
   if (service != null) {
     // Not a web page: opened only from the link in the chat, where the whole
     // address is on the screen and the tap is the person's own.
-    Navigator.of(sheet).pop();
     toaster.show('That is a $service port. Open the link from the chat if you mean to.');
     return;
   }
   void failed(String text) => toaster.show(text, kind: ToastKind.failed);
   if (asset.kind != MadeKind.server && !machineSupportsFiles(machine)) {
-    Navigator.of(sheet).pop();
     failed('Files are not available on this machine.');
     return;
   }
   final id = '${session.key}\u0000${asset.key}';
-  final again = !_opening.add(id);
-  Navigator.of(sheet).pop();
-  if (again) {
-    // The sheet closes like after any tap, and the row says what it is doing
-    // instead of looking dead.
+  if (!_opening.add(id)) {
+    // The row says what it is doing instead of looking dead.
     toaster.show('Still opening ${visibleText(asset.title)}…');
     return;
   }
@@ -445,11 +537,39 @@ Future<void> openMadeAsset(BuildContext sheet, BuildContext opener, AgentSession
         // No toast: it would stand over the viewer for its 3 s (the app has no
         // way to take one down), and the tile the person tapped is already a
         // thumbnail of this picture.
-        final stat = await machine.files.stat(await machine.files.resolve(asset.path!, cwd: session.cwd));
+        final files = machine.files;
+        final stat = await files.stat(await files.resolve(asset.path!, cwd: session.cwd));
         if (!opener.mounted) return;
-        unawaited(navigator.push(photoRoute<void>(machine, stat, listSiblings: false)));
+        // The pictures of the list, in its order, with the tapped one open. A
+        // picture the grid found gone is left out; two rows that name one file
+        // are one picture (the viewer keeps its pictures by path).
+        final items = <PhotoItem>[];
+        final used = <String>{stat.path};
+        var at = 0;
+        for (final p in pictures) {
+          if (p.key == asset.key) {
+            at = items.length;
+            items.add(remotePhotoItem(files, path: stat.path, size: stat.size, modified: stat.modified));
+            continue;
+          }
+          if (loader.gone(p)) continue;
+          final String path;
+          try {
+            path = await files.resolve(p.path!, cwd: session.cwd);
+          } on RemoteFileException {
+            continue;
+          }
+          if (!used.add(path)) continue;
+          final known = loader.known(p);
+          items.add(remotePhotoItem(files, path: path, size: known?.size, modified: known?.modified));
+        }
+        if (!opener.mounted) return;
+        unawaited(openPhotoViewer(opener, items: items, initialIndex: at));
       case MadeKind.server:
-        if (opener.mounted) unawaited(openWebPreview(opener, machine, ServerPage(asset.url!)));
+        if (opener.mounted) {
+          final name = serverNameOf(asset, session.backgroundWork.tasks);
+          unawaited(openWebPreview(opener, machine, ServerPage(asset.url!, name: name)));
+        }
       case MadeKind.page:
         if (opener.mounted) unawaited(openWebPreview(opener, machine, FilePage(asset.path!, cwd: session.cwd)));
     }
@@ -464,64 +584,116 @@ Future<void> openMadeAsset(BuildContext sheet, BuildContext opener, AgentSession
   }
 }
 
-class _WebRow extends StatelessWidget {
-  const _WebRow({
+/// One app: the server of a port and the pages the agent named on it. Its name
+/// is what started it (the command of a background task on the port, or the one
+/// the transcript launched it with), else the port. A tap opens the app; a chip
+/// under it opens one of its pages.
+class _AppRow extends StatelessWidget {
+  const _AppRow({
+    required this.app,
+    required this.tasks,
+    required this.live,
+    required this.divider,
+    required this.onOpen,
+  });
+
+  final MadeApp app;
+  final List<BackgroundTask> tasks;
+  final bool live;
+  final bool divider;
+  final ValueChanged<MadeAsset> onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final ds = context.ds;
+    final service = sensitiveServiceOf(app.port);
+    final state = serverStateOf(app.entry, tasks, live: live);
+    final running = state == ServerState.running;
+    final named = service == null ? serverNameOf(app.entry, tasks) : null;
+    final at = app.at;
+    final when = at == null ? '' : formatAgo(at, DateTime.now());
+    // Said only as far as the phone knows: a link in the chat does not say the
+    // server still runs.
+    final status = service != null
+        ? 'not a web page'
+        : switch (state) {
+            ServerState.running => 'Running',
+            ServerState.stopped => when.isEmpty ? 'Stopped' : 'Stopped · $when',
+            ServerState.seen => when.isEmpty ? 'Status unknown' : 'Status unknown · mentioned $when',
+          };
+    final row = ListRow(
+      leading: IconTile(icon: HerdrIcons.madeServer, color: running ? ds.done : null),
+      leadingOnTitle: false,
+      title: visibleText(service ?? named ?? 'App on port ${app.port}'),
+      // The fallback name already says the port.
+      subtitle: [if (service != null || named != null) 'Port ${app.port}', status].join(' · '),
+      dim: state == ServerState.stopped || service != null,
+      onTap: () => onOpen(app.entry),
+      trailing: running ? const LinkDot(state: LinkState.online) : null,
+    );
+    final pages = service == null && app.pages.isNotEmpty;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        row,
+        if (pages)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: EdgeInsets.only(left: ListRow.textIndent(), right: Gap.md, bottom: Gap.xs),
+              child: Wrap(
+                spacing: Gap.sm,
+                children: [
+                  for (final p in app.pages) AppChip(label: visibleText(p.route), onTap: () => onOpen(p)),
+                ],
+              ),
+            ),
+          ),
+        if (divider) Hairline(indent: ListRow.textIndent()),
+      ],
+    );
+  }
+}
+
+/// A page or a document: its name, and under it the folder and time (or why it
+/// cannot be opened on this machine).
+class _FileRow extends StatelessWidget {
+  const _FileRow({
     required this.asset,
-    required this.state,
     required this.filesAvailable,
     required this.divider,
     required this.onTap,
   });
 
   final MadeAsset asset;
-
-  /// Only for a server.
-  final ServerState? state;
   final bool filesAvailable;
   final bool divider;
   final VoidCallback onTap;
 
-  bool get _isFile => asset.kind != MadeKind.server;
-
-  /// What the row says under its name: the state of a server (said only as far
-  /// as the phone knows), the folder and time of a file.
   String? get _subtitle {
+    if (!filesAvailable) return _noFiles;
     final at = asset.at;
     final when = at == null ? '' : formatAgo(at, DateTime.now());
-    final service = asset.kind == MadeKind.server && asset.port != null ? sensitiveServiceOf(asset.port!) : null;
-    if (service != null) return '$service, not a web page';
-    if (_isFile && !filesAvailable) return _noFiles;
-    final text = switch (state) {
-      ServerState.running => 'Running',
-      ServerState.stopped => when.isEmpty ? 'Stopped' : 'Stopped · $when',
-      ServerState.seen => when.isEmpty ? 'Seen' : 'Seen $when',
-      null => [visibleText(asset.where), when].where((s) => s.isNotEmpty).join(' · '),
-    };
+    final text = [visibleText(asset.where), when].where((s) => s.isNotEmpty).join(' · ');
     return text.isEmpty ? null : text;
   }
 
   @override
   Widget build(BuildContext context) {
-    final ds = context.ds;
-    final running = state == ServerState.running;
-    final blocked = asset.kind == MadeKind.server && asset.port != null && sensitiveServiceOf(asset.port!) != null;
-    final unavailable = _isFile && !filesAvailable;
     final row = ListRow(
       leading: IconTile(
         icon: switch (asset.kind) {
-          MadeKind.server => HerdrIcons.madeServer,
           MadeKind.page => HerdrIcons.madePage,
           MadeKind.picture => HerdrIcons.picture,
           MadeKind.doc => HerdrIcons.madeDoc,
+          MadeKind.server => HerdrIcons.madeServer,
         },
-        color: running ? ds.done : null,
       ),
       leadingOnTitle: false,
       title: visibleText(asset.title),
       subtitle: _subtitle,
-      dim: state == ServerState.stopped || blocked || unavailable,
-      onTap: unavailable ? null : onTap,
-      trailing: running ? const LinkDot(state: LinkState.online) : null,
+      dim: !filesAvailable,
+      onTap: filesAvailable ? onTap : null,
     );
     if (!divider) return row;
     return Column(
@@ -540,6 +712,8 @@ class _EntryLoader {
 
   final AgentSessionView _session;
   final _byKey = <String, Future<RemoteEntry?>>{};
+  final _known = <String, RemoteEntry>{};
+  final _gone = <String>{};
   final _waiting = Queue<Completer<void>>();
   var _running = 0;
   var _disposed = false;
@@ -551,6 +725,12 @@ class _EntryLoader {
   /// not be asked (link down, a timeout, a refusal): that says nothing about
   /// the file, so it is not remembered and the next ask goes to the machine.
   Future<RemoteEntry?> of(MadeAsset asset) => _byKey[asset.key] ??= _load(asset);
+
+  /// The entry of [asset] when it has been asked and found a file.
+  RemoteEntry? known(MadeAsset asset) => _known[asset.key];
+
+  /// Whether [asset] has been asked and found gone.
+  bool gone(MadeAsset asset) => _gone.contains(asset.key);
 
   /// The sheet is gone: tiles waiting for a turn are let go without asking.
   void dispose() {
@@ -584,8 +764,11 @@ class _EntryLoader {
       if (_disposed) return null;
       final files = _session.machine.files;
       final stat = await files.stat(await files.resolve(asset.path!, cwd: _session.cwd));
-      if (!stat.isFile) return null;
-      return RemoteEntry(
+      if (!stat.isFile) {
+        _gone.add(asset.key);
+        return null;
+      }
+      return _known[asset.key] = RemoteEntry(
         name: stat.name,
         path: stat.path,
         kind: RemoteEntryKind.file,
@@ -594,7 +777,10 @@ class _EntryLoader {
         modified: stat.modified,
       );
     } on Object catch (e) {
-      if (e is RemoteFileException && e.kind == RemoteFileErrorKind.notFound) return null;
+      if (e is RemoteFileException && e.kind == RemoteFileErrorKind.notFound) {
+        _gone.add(asset.key);
+        return null;
+      }
       _byKey.remove(asset.key);
       rethrow;
     } finally {
@@ -860,11 +1046,11 @@ class MadeChip extends StatelessWidget {
             // The bar's row places the chips; this one follows the subagents chip.
             padding: besideSubagents ? const EdgeInsets.only(left: Gap.sm, bottom: Gap.hair) : const EdgeInsets.only(bottom: Gap.hair),
             child: AppChip(
-              label: partial ? (assets.isEmpty ? 'Made' : 'Made ${assets.length}+') : 'Made',
-              count: partial ? null : assets.length,
+              label: partial ? (assets.isEmpty ? 'Made' : 'Made ${madeCountOf(assets)}+') : 'Made',
+              count: partial ? null : madeCountOf(assets),
               semanticLabel: partial
-                  ? '${countOf(assets.length, 'item')} made so far, earlier history not read'
-                  : '${countOf(assets.length, 'item')} made',
+                  ? '${countOf(madeCountOf(assets), 'item')} made so far, earlier history not read'
+                  : '${countOf(madeCountOf(assets), 'item')} made',
               leading: Icon(HerdrIcons.made, size: IconSize.inline, color: context.ds.textSecondary),
               onTap: () => unawaited(showSessionMade(context, session)),
             ),

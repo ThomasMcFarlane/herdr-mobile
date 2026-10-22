@@ -197,12 +197,13 @@ void main() {
     expect(find.text('Made in this session'), findsOneWidget);
     expect(find.text('q3.html'), findsOneWidget, reason: 'opens on the page: the newest kind that is not a server');
     expect(find.text('reports/'), findsOneWidget);
-    await tapChip(tester, 'Servers');
+    await tapChip(tester, 'Apps');
     await _settle(tester);
-    final ys = [for (final t in ['localhost:8000/docs', 'localhost:5173']) tester.getTopLeft(find.text(t)).dy];
+    // Named by what runs there, newest first; the state only as far as it is known.
+    final ys = [for (final t in ['uvicorn app:app --port 8000', 'vite --port 5173']) tester.getTopLeft(find.text(t)).dy];
     expect(ys, orderedEquals([...ys]..sort()), reason: 'newest first');
-    expect(find.text('Running'), findsOneWidget);
-    expect(find.textContaining('Stopped'), findsOneWidget);
+    expect(find.text('Port 5173 · Running'), findsOneWidget);
+    expect(find.text('Port 8000 · Stopped'), findsOneWidget);
   });
 
   testWidgets('a server opens in herdr through the connection, a page from its own folder', (tester) async {
@@ -211,11 +212,10 @@ void main() {
 
     await tester.tap(find.text('Made'));
     await _settle(tester);
-    await tapChip(tester, 'Servers');
+    await tapChip(tester, 'Apps');
     await _settle(tester);
-    await tester.tap(find.text('localhost:5173/app'));
+    await tester.tap(find.text('App on port 5173'));
     await _settle(tester);
-    expect(find.text('Made in this session'), findsNothing, reason: 'the sheet goes first');
     expect(find.byType(WebPreviewScreen), findsOneWidget);
     expect(transport.webBridges.single, isA<PortForward>().having((p) => p.port, 'port', 5173));
     expect(web.loaded.first.queryParameters['to'], '/app');
@@ -224,9 +224,9 @@ void main() {
     await tester.tap(find.byTooltip('Back'));
     await _settle(tester);
     expect(find.byType(WebPreviewScreen), findsNothing);
-    await tester.pump(const Duration(seconds: 1)); // the bar's rows settle before they take a tap
-    await tester.tap(find.text('Made'));
-    await _settle(tester);
+    expect(find.text('Made in this session'), findsOneWidget, reason: 'Back lands on the list, not on the board');
+    expect(find.text('App on port 5173'), findsOneWidget, reason: 'on the tab it was left on');
+    await tester.pump(const Duration(seconds: 6)); // the page's own toast ("Opened on port ...") stands over the bottom rows until it goes
     await tapChip(tester, 'Pages');
     await _settle(tester);
     await tester.tap(find.text('q3.html'));
@@ -259,17 +259,17 @@ void main() {
     await pumpBar(tester, s);
     await tester.tap(find.text('Made'));
     await _settle(tester);
-    expect(find.text('Running'), findsOneWidget);
+    expect(find.text('Port 5173 · Running'), findsOneWidget);
 
     s.setSavedCopy(DateTime(2026, 5, 20, 6, 31));
     await _settle(tester);
-    expect(find.text('Running'), findsNothing);
-    expect(find.text('Seen'), findsOneWidget);
+    expect(find.textContaining('Running'), findsNothing);
+    expect(find.text('Port 5173 · Status unknown'), findsOneWidget);
 
     s.setSavedCopy(null);
     s.setLink(AgentLink.reconnecting);
     await _settle(tester);
-    expect(find.text('Running'), findsNothing);
+    expect(find.textContaining('Running'), findsNothing);
   });
 
   testWidgets('rows do not move while the sheet is open; a link that arrives is there the next time', (tester) async {
@@ -277,22 +277,22 @@ void main() {
     await pumpBar(tester, s);
     await tester.tap(find.text('Made'));
     await _settle(tester);
-    final before = tester.getTopLeft(find.text('localhost:5173')).dy;
+    final before = tester.getTopLeft(find.text('App on port 5173')).dy;
 
     s.update((st) => AgentSessionState('s', items: [...st.items, _say('Storybook http://localhost:6006/'), _say('again http://localhost:5173/x')]));
     await _settle(tester);
 
-    expect(tester.getTopLeft(find.text('localhost:5173')).dy, before, reason: 'the rows that were there stay where they were');
-    expect(find.text('localhost:5173/x'), findsNothing);
-    expect(find.text('localhost:6006'), findsNothing);
+    expect(tester.getTopLeft(find.text('App on port 5173')).dy, before, reason: 'the rows that were there stay where they were');
+    expect(find.text('/x'), findsNothing);
+    expect(find.text('App on port 6006'), findsNothing);
 
     await tester.tapAt(const Offset(200, 20));
     await _settle(tester);
     await tester.tap(find.text('Made'));
     await _settle(tester);
-    expect(find.text('localhost:6006'), findsOneWidget);
-    expect(find.text('localhost:5173/x'), findsOneWidget, reason: 'a page of a server is a row of its own');
-    expect(tester.getTopLeft(find.text('localhost:5173/x')).dy, lessThan(tester.getTopLeft(find.text('localhost:6006')).dy), reason: 'newest first again');
+    expect(find.text('App on port 6006'), findsOneWidget);
+    expect(find.text('/x'), findsOneWidget, reason: 'a page of an app is a chip under it, not a row of its own');
+    expect(tester.getTopLeft(find.text('App on port 5173')).dy, lessThan(tester.getTopLeft(find.text('App on port 6006')).dy), reason: 'newest first again');
   });
 
   testWidgets('a port that is not a web server is not opened from the list, and says why', (tester) async {
@@ -300,14 +300,16 @@ void main() {
     await pumpBar(tester, s);
     await tester.tap(find.text('Made'));
     await _settle(tester);
-    expect(find.text('PostgreSQL, not a web page'), findsOneWidget);
+    expect(find.text('Port 5432 · not a web page'), findsOneWidget);
+    expect(find.text('Port 2375 · not a web page'), findsOneWidget);
 
-    await tester.tap(find.text('localhost:5432'));
+    await tester.tap(find.text('PostgreSQL'));
     await _settle(tester);
 
     expect(transport.webBridges, isEmpty);
     expect(launcher.opened, isEmpty);
     expect(find.textContaining('That is a PostgreSQL port'), findsOneWidget);
+    expect(find.text('Made in this session'), findsOneWidget, reason: 'the list stays for the next row');
   });
 
   testWidgets('a page on a machine without files is dimmed with its reason, not a surprise after the tap', (tester) async {
@@ -327,7 +329,7 @@ void main() {
     await _settle(tester);
     final gate = Completer<void>();
     transport.webGate = gate;
-    await tester.tap(find.text('localhost:5173'));
+    await tester.tap(find.text('App on port 5173'));
     await _settle(tester);
     expect(find.byType(WebPreviewScreen), findsOneWidget);
     expect(find.text('localhost:5173'), findsOneWidget, reason: 'the address, until the page has a title');
@@ -469,19 +471,19 @@ void main() {
     expect(find.text('two.html'), findsOneWidget);
   });
 
-  testWidgets('only servers: no tabs, the servers', (tester) async {
+  testWidgets('only apps: no tabs, the apps', (tester) async {
     await openSheet(tester, session([_say('Serving http://localhost:5173/')]));
-    expect(find.text('Servers'), findsNothing);
-    expect(find.text('localhost:5173'), findsOneWidget);
+    expect(find.text('Apps'), findsNothing);
+    expect(find.text('App on port 5173'), findsOneWidget);
   });
 
-  testWidgets('servers and one other kind: two chips, opening on the other', (tester) async {
+  testWidgets('apps and one other kind: two chips, opening on the other', (tester) async {
     onMachine(['$base/reports/one.html']);
     await openSheet(tester, session([_say('Serving http://localhost:5173/'), page('one.html')]));
-    expect(find.text('Servers'), findsOneWidget);
+    expect(find.text('Apps'), findsOneWidget);
     expect(find.text('Pages'), findsOneWidget);
     expect(find.text('one.html'), findsOneWidget);
-    expect(find.text('localhost:5173'), findsNothing);
+    expect(find.text('App on port 5173'), findsNothing);
   });
 
   testWidgets('it opens on the kind of the newest thing made, with exactly that tab selected', (tester) async {
@@ -519,23 +521,50 @@ void main() {
     expect(find.text('plan.md'), findsNothing);
   });
 
-  testWidgets('Servers is a chip that lists them; its dot shows only while one runs; the sheet never opens on it when something else exists', (tester) async {
+  testWidgets('Apps is a chip that lists them; its dot shows only while one runs; the sheet never opens on it when something else exists', (tester) async {
     final s = session(mixed(), key: 'm/servers');
     await openSheet(tester, s);
-    expect(find.text('Servers'), findsOneWidget);
-    expect(find.text('localhost:5173'), findsNothing, reason: 'opens on the pictures, the newest kind');
+    expect(find.text('Apps'), findsOneWidget);
+    expect(find.text('App on port 5173'), findsNothing, reason: 'opens on the pictures, the newest kind');
     expect(find.byType(LinkDot), findsNothing, reason: 'nothing runs');
 
-    await tapChip(tester, 'Servers');
+    await tapChip(tester, 'Apps');
     await _settle(tester);
-    expect(find.text('localhost:5173'), findsOneWidget);
+    expect(find.text('App on port 5173'), findsOneWidget);
     expect(find.text('d.png'), findsNothing);
-    expect(tester.getTopLeft(find.text('Servers')).dy, lessThan(tester.getTopLeft(find.text('localhost:5173')).dy), reason: 'chips lead the sheet');
+    expect(tester.getTopLeft(find.text('Apps')).dy, lessThan(tester.getTopLeft(find.text('App on port 5173')).dy), reason: 'chips lead the sheet');
 
     s.setBackground(runningVite());
     await _settle(tester);
     expect(find.byType(LinkDot), findsNWidgets(2), reason: 'the row\'s dot and the chip\'s');
     expect(find.descendant(of: find.byType(Segmented<MadeKind>), matching: find.byType(LinkDot)), findsOneWidget);
+  });
+
+  testWidgets('a swipe sideways goes to the neighbouring tab and the switch follows; the switch still jumps over several', (tester) async {
+    final handle = tester.ensureSemantics();
+    await openSheet(tester, session(mixed(), key: 'm/swipe'));
+    expect(selected(tester, 'Pictures'), isTrue);
+
+    await tester.fling(find.text('d.png'), const Offset(-300, 0), 1500);
+    await _settle(tester);
+    await tester.pump(const Duration(seconds: 1));
+    expect(selected(tester, 'Docs'), isTrue, reason: 'Docs follows Pictures');
+    expect(find.text('plan.md'), findsOneWidget);
+    expect(find.text('d.png'), findsNothing);
+
+    await tester.fling(find.text('plan.md'), const Offset(300, 0), 1500);
+    await _settle(tester);
+    await tester.fling(find.text('d.png'), const Offset(300, 0), 1500);
+    await _settle(tester);
+    expect(selected(tester, 'Pages'), isTrue);
+    expect(find.text('one.html'), findsOneWidget);
+
+    await tapChip(tester, 'Apps');
+    await _settle(tester);
+    expect(selected(tester, 'Apps'), isTrue);
+    expect(find.text('App on port 5173'), findsOneWidget, reason: 'the tab of the switch, not a page passed on the way');
+    expect(find.text('one.html'), findsNothing);
+    handle.dispose();
   });
 
   testWidgets('the sheet opens on the tab it was left on; a kind that is gone falls back to the newest', (tester) async {
@@ -585,36 +614,51 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('a tap on a picture opens the photo viewer after the sheet closes; on a missing one it says so', (tester) async {
+  testWidgets('a missing picture says so over the list, which stays for the next tap', (tester) async {
     onMachine(['$base/screenshots/here.png']);
     await openSheet(tester, session([picture('gone.png'), picture('here.png')]));
 
     await tester.tap(find.text('gone.png'));
     await _settle(tester);
-    expect(find.text('Made in this session'), findsNothing);
+    expect(find.text('Made in this session'), findsOneWidget);
     expect(find.text('gone.png is not on the machine any more.'), findsOneWidget);
     expect(find.byType(PhotoViewer), findsNothing);
-
-    await tester.pump(const Duration(seconds: 6));
-    await tester.tap(find.text('Made'));
-    await _settle(tester);
-    await tester.tap(find.text('here.png'));
-    await _settle(tester);
-    expect(find.text('Made in this session'), findsNothing);
-    expect(find.byType(PhotoViewer), findsOneWidget);
-    expect(find.textContaining('Opening'), findsNothing, reason: 'no toast stands over the photo');
   });
 
-  testWidgets('a tap on a document opens it in the file viewer', (tester) async {
+  testWidgets('a picture opens over the list with the list\'s other pictures to swipe to, in its order; Back returns to the list', (tester) async {
+    onMachine(['a', 'b', 'c'].map((n) => '$base/screenshots/$n.png'));
+    // Newest first in the grid: gone, c, b, a. The one the grid found gone is not in the viewer.
+    await openSheet(tester, session([picture('a.png'), picture('b.png'), picture('c.png'), picture('gone.png')]));
+
+    await tester.tap(find.text('b.png'));
+    await _settle(tester);
+    expect(find.byType(PhotoViewer), findsOneWidget);
+    expect(find.textContaining('Opening'), findsNothing, reason: 'no toast stands over the photo');
+    final model = tester.state<PhotoViewerState>(find.byType(PhotoViewer)).model;
+    expect([for (final i in model.items) i.name], ['c.png', 'b.png', 'a.png']);
+    expect(model.index, 1, reason: 'on the one that was tapped');
+
+    Navigator.of(tester.element(find.byType(PhotoViewer))).pop();
+    await _settle(tester);
+    expect(find.byType(PhotoViewer), findsNothing);
+    expect(find.text('Made in this session'), findsOneWidget, reason: 'Back lands on the list, not on the board');
+    expect(find.text('c.png'), findsOneWidget);
+  });
+
+  testWidgets('a document opens in the file viewer over the list; Back returns to it', (tester) async {
     await openSheet(tester, session(mixed()));
     await tapChip(tester, 'Docs');
     await _settle(tester);
     await tester.tap(find.text('plan.md'));
     await _settle(tester);
 
-    expect(find.text('Made in this session'), findsNothing);
     expect(find.byType(FileViewerScreen), findsOneWidget);
     expect(launcher.opened, isEmpty);
+
+    Navigator.of(tester.element(find.byType(FileViewerScreen))).pop();
+    await _settle(tester);
+    expect(find.text('Made in this session'), findsOneWidget);
+    expect(find.text('spec.pdf'), findsOneWidget, reason: 'on the Docs tab it was left on');
   });
 
   testWidgets('a page opens in herdr from its tab', (tester) async {
@@ -709,7 +753,7 @@ void main() {
 
     // Only how far from the top: the switch may scroll sideways to its cell.
     double top(String label) => tester.getRect(find.text(label)).top;
-    final servers = top('Servers');
+    final servers = top('Apps');
     final pictures = top('Pictures');
     expect(tester.getSize(find.byType(CustomScrollView)).height, lessThanOrEqualTo(892 * 0.6 + 0.5), reason: 'a long list scrolls inside the sheet, which does not fill the screen');
 
@@ -717,27 +761,61 @@ void main() {
     await _settle(tester);
     expect(top('Pictures'), pictures, reason: 'the switch does not scroll away with a long list');
 
-    await tapChip(tester, 'Servers');
+    await tapChip(tester, 'Apps');
     await _settle(tester);
-    expect(find.text('localhost:5173'), findsOneWidget);
-    expect(top('Servers'), servers, reason: 'a short tab after a tall one');
+    expect(find.text('App on port 5173'), findsOneWidget);
+    expect(top('Apps'), servers, reason: 'a short tab after a tall one');
     expect(top('Pictures'), pictures);
 
     await tapChip(tester, 'Pictures');
     await _settle(tester);
-    expect(top('Servers'), servers, reason: 'and a tall one after a short one');
+    expect(top('Apps'), servers, reason: 'and a tall one after a short one');
   });
 
-  testWidgets('a running server is said, not only shown as a dot', (tester) async {
+  testWidgets('a running app is said, not only shown as a dot', (tester) async {
     final handle = tester.ensureSemantics();
     final s = session(mixed(), key: 'm/says-running');
     await openSheet(tester, s);
-    expect(tester.getSemantics(find.text('Servers')).label, 'Servers, 1');
+    expect(tester.getSemantics(find.text('Apps')).label, 'Apps, 1');
 
     s.setBackground(runningVite());
     await _settle(tester);
-    expect(tester.getSemantics(find.text('Servers')).label, 'Servers, 1, running');
+    expect(tester.getSemantics(find.text('Apps')).label, 'Apps, 1, running');
     handle.dispose();
+  });
+
+  testWidgets('four pages of one server are one app named by what launched it, with a chip per page; a chip opens that page', (tester) async {
+    final launch = TranscriptTool(
+      ToolCall(
+        toolCallId: 'launch',
+        kind: ToolKind.execute,
+        status: ToolStatus.completed,
+        rawInput: {'command': 'cd /w && nohup python label_server.py --port 8765 > log 2>&1 &'},
+      ),
+    );
+    await openSheet(
+      tester,
+      session([
+        launch,
+        _say('Open http://localhost:8765/failures'),
+        _say('and http://localhost:8765/review'),
+        _say('and http://localhost:8765/synth'),
+        _say('and http://localhost:8765/'),
+        _say('Other: http://localhost:8790/'),
+      ]),
+    );
+
+    expect(find.text('python label_server.py --port 8765'), findsOneWidget);
+    expect(find.text('Port 8765 · Status unknown'), findsOneWidget);
+    expect(find.text('App on port 8790'), findsOneWidget);
+    expect(find.byType(AppChip), findsNWidgets(1 + 3), reason: 'the Made chip behind the sheet, and a chip for each of the three pages');
+    expect(find.text('/failures'), findsOneWidget);
+
+    await tester.tap(find.text('/review'));
+    await _settle(tester);
+    expect(transport.webBridges.single, isA<PortForward>().having((p) => p.port, 'port', 8765));
+    expect(web.loaded.first.queryParameters['to'], '/review');
+    expect(find.textContaining('python label_server.py --port 8765'), findsOneWidget, reason: 'the page\'s bar says what the app is, not only localhost:8765');
   });
 
   testWidgets('a machine without files: pages, pictures and documents are dimmed with the reason, and nothing is asked', (tester) async {

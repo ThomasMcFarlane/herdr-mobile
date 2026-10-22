@@ -427,12 +427,16 @@ runs, a status line says what the agent is doing and for how long, and
 changed files, commands, mode and model, and context use.
 
 **Made, and the link.** The `Made` chip under the title lists what the agent
-made (servers, pages, pictures, documents) and shows up once there is
-something. `Session options` > `Made in this session` opens the same sheet at
+made and shows up once there is something: `Apps` (a server and its pages, named
+by what started it, with `Running`, `Stopped` or `Status unknown`), `Pages`,
+`Pictures` and `Docs`. Swipe sideways, or tap a tab, to move between them. A tap on
+a row opens it over the list: Back returns to the list, so you can look at the
+next one, and a picture opens in a viewer that swipes to the other pictures.
+`Session options` > `Made in this session` opens the same sheet at
 any time (dimmed, `Nothing has come up yet`, until then). In a long chat the
 phone has read only the end of the log: the chip says `Made 9+`, and opening the
-sheet reads the earlier part (once; the answer is kept for next time). A server
-the agent gave several pages of is one row per page. `Copy session link`
+sheet reads the earlier part (once; the answer is kept for next time). The pages
+the agent gave of one server are chips under its row. `Copy session link`
 puts `herdr://session/<machine>/<session>` on the clipboard; opening it on this
 phone (from a note, a message, `adb`) brings that session up.
 
@@ -535,9 +539,11 @@ shows recent changes in this folder only. Sorting, `Folders first` and
 
 **Pages from a machine.** A dev server an agent started, or an HTML file it
 wrote, opens as a page inside herdr: `Open page` on a `localhost` link,
-a server or page in a session's `Made` sheet, or `Show as page` in the file
-viewer. The bar names the page, with where it comes from in a pill under the
-title (`localhost:5173 · devbox`); `Reload` and `⋯` sit on the right. Back
+an app or page in a session's `Made` sheet, or `Show as page` in the file
+viewer. The bar names the page, with where it comes from under the title
+(`devbox · python label_server.py` for an app opened from `Made`, which says
+what started it; `localhost:5173 · devbox` otherwise); `Reload` and `⋯` sit on
+the right. Back
 goes back in the page first, then leaves. While the page is open herdr keeps
 its machine's connection up, also when you switch apps or turn the screen
 off, with the Watching notice (below); if the connection drops anyway, the

@@ -29,11 +29,13 @@ sealed class WebPage {
   String get address;
 }
 
-/// A dev server address on the machine (`http://localhost:8790/#b`).
+/// A dev server address on the machine (`http://localhost:8790/#b`). [name] is
+/// what started it, when known (`python label_server.py --port 8765`).
 final class ServerPage extends WebPage {
-  const ServerPage(this.link);
+  const ServerPage(this.link, {this.name});
 
   final Uri link;
+  final String? name;
 
   MachinePage get _page => MachinePage.server(link);
 
@@ -667,8 +669,11 @@ class _WebPreviewScreenState extends State<WebPreviewScreen> {
       ServerPage(:final link) => MachinePage.server(link).place,
       FilePage() => widget.page.label,
     };
-    final title = visibleText(_title ?? (foreign ? _url!.host : page?.label ?? widget.page.label));
-    final address = foreign ? visibleText(_url!.host) : visibleText(page?.label ?? place);
+    // An app the agent started says what it is (`python label_server.py`) where
+    // the address `localhost:8790` said nothing; the address stays in `⋯`.
+    final appName = !foreign && widget.page is ServerPage ? (widget.page as ServerPage).name : null;
+    final title = visibleText(_title ?? (foreign ? _url!.host : appName ?? page?.label ?? widget.page.label));
+    final address = foreign ? visibleText(_url!.host) : visibleText(appName ?? page?.label ?? place);
     final failure = _failure;
     final covered = failure != null || _phase != _Phase.shown || _atEntry;
     final loading = failure == null && _phase != _Phase.opening && _progress < 100;
@@ -690,7 +695,14 @@ class _WebPreviewScreenState extends State<WebPreviewScreen> {
               // host alone, never the machine's name. The whole link is in `⋯`.
               glyph: Icon(LucideIcons.globe, size: IconSize.row, color: ds.textSecondary),
               title: title,
-              subtitle: foreign ? address : (address == title ? widget.machine.profile.label : '$address · ${widget.machine.profile.label}'),
+              // A long command ends in an ellipsis: the machine leads, so it is never the part cut.
+              subtitle: foreign
+                  ? address
+                  : address == title
+                      ? widget.machine.profile.label
+                      : appName != null
+                          ? '${widget.machine.profile.label} · $address'
+                          : '$address · ${widget.machine.profile.label}',
               actions: [
                 CircleButton(
                   icon: LucideIcons.rotateCw,
