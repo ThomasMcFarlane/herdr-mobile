@@ -137,17 +137,6 @@ impl LineCache {
         self.lines.get(&key).expect("just inserted")
     }
 
-    /// The lines of a block, built once and kept.
-    fn lines_for(
-        &mut self,
-        b: Block,
-        items: &VecDeque<Item>,
-        width: usize,
-        look: Look,
-    ) -> Vec<Line<'static>> {
-        self.ensure(b, items, width, look).clone()
-    }
-
     /// How many lines a block draws, without copying them: a scroll walks this per block,
     /// so a long history costs a lookup each, not a clone.
     fn count_for(
@@ -1454,9 +1443,13 @@ fn draw_history(
     // first, is its own lines `to - hi .. to - lo`, where `lo..hi` is that overlap.
     let mut out_window: Vec<Line> = Vec::new();
     if items.is_empty() {
+        // The welcome is the whole of the history: index it newest-first the way the blocks
+        // are, then hand back the oldest-first slice the tail expects.
         let mut w = welcome;
         w.reverse();
-        out_window.extend(w[v.scroll..end].iter().cloned());
+        let mut window = w[v.scroll..end].to_vec();
+        window.reverse();
+        out_window.extend(window);
     } else {
         if has_drop && total < end {
             out_window.push(Line::from(Span::styled(
@@ -1468,7 +1461,7 @@ fn draw_history(
             if to > v.scroll && from < end {
                 let lo = from.max(v.scroll);
                 let hi = to.min(end);
-                let lines = v.line_cache.lines_for(b, items, width, look);
+                let lines = v.line_cache.ensure(b, items, width, look);
                 out_window.extend(lines[(to - hi)..(to - lo)].iter().cloned());
             }
         }
@@ -2822,7 +2815,9 @@ mod tests {
         ))
         .join("\n");
         assert!(text.contains("• Ready when you are."), "{text}");
-        assert!(text.contains("Tip:"));
+        let ready = text.find("Ready when you are.").expect("the greeting");
+        let tip = text.find("Tip:").expect("the tip");
+        assert!(ready < tip, "the greeting sits above the tip, not below it: {text}");
     }
 
     #[test]
