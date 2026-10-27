@@ -4,6 +4,31 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [0.1.30] - 2026-10-27
+
+### A terminal client for your sessions, at the desk
+
+`herdr-tui` is a full-screen terminal client for the sessions your agents run. It is a
+separate download for the computer, not part of the phone app: this release changes nothing
+in the app itself.
+
+> [!TIP]
+> Try it: on the computer, run the install command below, then start herdr-tui
+> in a project folder. The session shows up in the app.
+
+```sh
+curl -fsSL https://github.com/tuan3w/herdr-mobile/releases/latest/download/install.sh | sh
+```
+
+- `herdr-tui` starts omp, claude, codex or pi in the current folder as a session the phone
+  also sees; `herdr-tui attach ID` reopens one that is running.
+- `herdr-tui ls` lists the sessions on the machine, the ones that need you first, and
+  `herdr-tui kill ID` ends them.
+- Tool runs fold, markdown and tables are laid out for the terminal, and a permission
+  request shows the command itself.
+- One file to install for Linux and macOS (x86_64 and arm64), checked against the release's
+  `herdr-tui-SHA256SUMS`. It carries the keeper; `python3` is still needed.
+
 ## [0.1.29] - 2026-10-22
 
 [![Watch what's new · 3 changes · 0:18 · 6.1 MB](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.29/0.1.29-whats-new.jpg)](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.29/0.1.29-whats-new.mp4)

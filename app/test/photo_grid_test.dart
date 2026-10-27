@@ -74,9 +74,16 @@ class _GatedFiles extends RemoteFiles {
   }
 }
 
+/// Images the engine is still making: it does that in real time, off the test's clock.
+var _pixelsPending = 0;
+
 Future<ui.Image> _pixel() {
   final done = Completer<ui.Image>();
-  ui.decodeImageFromPixels(Uint8List(4 * 4 * 4), 4, 4, ui.PixelFormat.rgba8888, done.complete);
+  _pixelsPending++;
+  ui.decodeImageFromPixels(Uint8List(4 * 4 * 4), 4, 4, ui.PixelFormat.rgba8888, (image) {
+    _pixelsPending--;
+    done.complete(image);
+  });
   return done.future;
 }
 
@@ -858,9 +865,13 @@ void main() {
 
 /// Lets reads, decodes and the cache's own scheduling run: the fakes are real
 /// futures, and the engine's decoder answers from another thread.
+/// Runs everything that can run now, then waits for the engine's images by the condition (not a
+/// fixed wait: a busy machine made 30 ms too short), then runs what those unblocked.
 Future<void> flush() async {
   await pumpEventQueue();
-  await Future<void>.delayed(const Duration(milliseconds: 30));
+  for (var i = 0; i < 2000 && _pixelsPending > 0; i++) {
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+  }
   await pumpEventQueue();
 }
 

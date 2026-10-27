@@ -119,3 +119,71 @@ jobs:
             gh release create "$GITHUB_REF_NAME" dist/* --title "herdr mobile $GITHUB_REF_NAME" \
               --notes-file "$RUNNER_TEMP/notes.md"
           fi
+
+  # herdr-tui, the desktop client (rust/), per platform. Needs no signing secrets. The binary
+  # carries the keeper, so a machine installs one file (tool/install-tui.sh).
+  tui:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, target: x86_64-unknown-linux-musl, asset: herdr-tui-linux-x86_64 }
+          - { os: ubuntu-24.04-arm, target: aarch64-unknown-linux-musl, asset: herdr-tui-linux-aarch64 }
+          - { os: macos-14, target: aarch64-apple-darwin, asset: herdr-tui-macos-arm64 }
+          - { os: macos-15-intel, target: x86_64-apple-darwin, asset: herdr-tui-macos-x86_64 }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install Rust target
+        run: |
+          rustup toolchain install stable --profile minimal --target "${{ matrix.target }}"
+          rustup default stable
+      - name: Install musl tools
+        if: contains(matrix.target, 'musl')
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - name: Check and test
+        working-directory: rust
+        run: |
+          cargo fmt --all --check
+          cargo clippy --workspace --all-targets -- -D warnings
+          cargo test --workspace
+      - name: Build
+        working-directory: rust
+        run: cargo build --release --locked -p herdr-tui --target "${{ matrix.target }}"
+      - name: Smoke test
+        run: rust/target/${{ matrix.target }}/release/herdr-tui --version
+      - name: Stage
+        run: |
+          mkdir dist
+          cp "rust/target/${{ matrix.target }}/release/herdr-tui" "dist/${{ matrix.asset }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: dist/${{ matrix.asset }}
+
+  tui-publish:
+    needs: tui
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Checksums and install script
+        run: |
+          cp tool/install-tui.sh dist/install.sh
+          (cd dist && sha256sum herdr-tui-* > herdr-tui-SHA256SUMS)
+          cat dist/herdr-tui-SHA256SUMS
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # The APK job may have made the release already, or be skipped (no secrets).
+          if ! gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            tool/release-notes.sh "${GITHUB_REF_NAME#v}" > "$RUNNER_TEMP/notes.md"
+            gh release create "$GITHUB_REF_NAME" --title "herdr mobile $GITHUB_REF_NAME" \
+              --notes-file "$RUNNER_TEMP/notes.md" || gh release view "$GITHUB_REF_NAME" >/dev/null
+          fi
+          gh release upload "$GITHUB_REF_NAME" dist/* --clobber

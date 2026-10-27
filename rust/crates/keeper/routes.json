@@ -1,0 +1,6 @@
+[
+  {"id": "omp", "label": "omp", "binary": "omp", "args": ["acp"]},
+  {"id": "claude", "label": "Claude Code", "binary": "claude-agent-acp", "args": [], "npx": "@agentclientprotocol/claude-agent-acp"},
+  {"id": "codex", "label": "Codex", "binary": "codex-acp", "args": [], "npx": "@agentclientprotocol/codex-acp", "air": ["asyncTasks"]},
+  {"id": "pi", "label": "pi", "binary": "pi-acp", "args": [], "npx": "pi-acp"}
+]
