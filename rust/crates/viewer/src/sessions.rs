@@ -1,6 +1,7 @@
 //! `herdr-tui ls`: the sessions on this machine as a table, what needs you first. Pure: the
 //! records go in, text comes out, so the order, the words and the fit are testable.
 
+use crate::width;
 use keeper::records::{Info, State};
 
 /// A session as one table row.
@@ -48,13 +49,42 @@ pub fn place(path: &str, home: &str, width: usize) -> String {
         }
         _ => path.to_string(),
     };
-    let n = short.chars().count();
-    if n <= width {
-        short
-    } else {
-        let tail: String = short.chars().skip(n - width.saturating_sub(1)).collect();
-        format!("…{tail}")
+    if width::of(&short) <= width {
+        return short;
     }
+    // The last clusters that fit beside the ellipsis, never half of one.
+    let room = width.saturating_sub(1);
+    let (mut used, mut from) = (0, short.len());
+    for (i, _, w) in width::cluster_indices(&short)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+    {
+        if used + w > room {
+            break;
+        }
+        used += w;
+        from = i;
+    }
+    format!("…{}", &short[from..])
+}
+
+/// `s` padded with spaces on the right to `to` columns (`{:w$}` pads by char, which misaligns
+/// wide and combining text).
+fn pad(s: &str, to: usize) -> String {
+    format!("{s}{}", " ".repeat(to.saturating_sub(width::of(s))))
+}
+
+/// The first `max` columns of `s`, cut between clusters.
+fn cut(s: &str, max: usize) -> &str {
+    let mut used = 0;
+    for (i, _, w) in width::cluster_indices(s) {
+        if used + w > max {
+            return &s[..i];
+        }
+        used += w;
+    }
+    s
 }
 
 #[must_use]
@@ -109,9 +139,9 @@ pub fn render(rows: &[Row], all: bool, width: usize) -> String {
         };
         let (wi, wa, ws, wp, wg) = (
             col(&|r| r.id.len(), "ID"),
-            col(&|r| r.agent.chars().count(), "AGENT"),
+            col(&|r| width::of(&r.agent), "AGENT"),
             col(&|r| r.state.len(), "STATE"),
-            col(&|r| r.place.chars().count(), "WHERE"),
+            col(&|r| width::of(&r.place), "WHERE"),
             col(&|r| r.age.len(), "AGE"),
         );
         let fixed = wi + wa + ws + wp + wg + 2 + 5 * 2 + 3;
@@ -120,17 +150,13 @@ pub fn render(rows: &[Row], all: bool, width: usize) -> String {
             "ID", "AGENT", "STATE", "WHERE", "AGE", "ON"
         ));
         for r in shown {
-            let title: String = r
-                .title
-                .chars()
-                .take(width.saturating_sub(fixed).max(10))
-                .collect();
+            let title = cut(&r.title, width.saturating_sub(fixed).max(10));
             out.push_str(&format!(
-                "{:wi$}  {:wa$}  {:ws$}  {:wp$}  {:>wg$}  {:>2}  {}\n",
+                "{:wi$}  {}  {:ws$}  {}  {:>wg$}  {:>2}  {}\n",
                 r.id,
-                r.agent,
+                pad(&r.agent, wa),
                 r.state,
-                r.place,
+                pad(&r.place, wp),
                 r.age,
                 if r.viewers > 0 {
                     r.viewers.to_string()
@@ -251,7 +277,7 @@ mod tests {
             24,
         );
         assert!(
-            p.starts_with('…') && p.ends_with("herdr-mobile/rust") && p.chars().count() <= 24,
+            p.starts_with('…') && p.ends_with("herdr-mobile/rust") && width::of(&p) <= 24,
             "{p}"
         );
         assert_eq!(place("/home/me", "/home/me", 20), "~");
@@ -268,6 +294,24 @@ mod tests {
             text.lines().all(|l| l.chars().count() <= 100),
             "titles are cut: {text}"
         );
+    }
+
+    #[test]
+    fn wide_text_keeps_the_columns_lined_up_and_is_cut_between_clusters() {
+        let p = place("/home/me/日本語のフォルダ/日本語", "/home/me", 12);
+        assert!(p.starts_with('…') && width::of(&p) <= 12, "{p}");
+        let mut a = info("aaaaaa", State::Running, 0, false, "/日本語/x", 0);
+        a.extra.insert("title".into(), "😀".repeat(60).into());
+        let b = info("bbbbbb", State::Running, 0, false, "/abc/x", 1);
+        let text = render(&rows(&[a, b], 0, "/h"), false, 60);
+        let at: Vec<usize> = text
+            .lines()
+            .filter(|l| l.contains(" 0s  "))
+            .map(|l| width::of(&l[..l.find(" 0s  ").unwrap_or(0)]))
+            .collect();
+        assert_eq!(at.len(), 2, "{text}");
+        assert_eq!(at[0], at[1], "the AGE column lines up: {text}");
+        assert!(text.lines().take(3).all(|l| width::of(l) <= 60), "{text}");
     }
 
     #[test]

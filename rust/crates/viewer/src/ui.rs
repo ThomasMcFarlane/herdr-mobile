@@ -343,13 +343,18 @@ fn wrap_ranges(text: &str, width: usize) -> Vec<(usize, usize)> {
                 row_start = at;
                 w = 0;
             }
-            for (i, _, cw) in width::cluster_indices(word) {
-                if w + cw > width && at + i > row_start {
-                    rows.push((row_start, at + i));
-                    row_start = at + i;
-                    w = 0;
+            if w + ww <= width {
+                // Fits whole: no need to look inside it.
+                w += ww;
+            } else {
+                for (i, _, cw) in width::cluster_indices(word) {
+                    if w + cw > width && at + i > row_start {
+                        rows.push((row_start, at + i));
+                        row_start = at + i;
+                        w = 0;
+                    }
+                    w += cw;
                 }
-                w += cw;
             }
             at += word.len();
         }
