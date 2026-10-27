@@ -321,10 +321,11 @@ impl Session {
                 Vec::new()
             }
             (Call::Init, Ok(init)) => {
-                // Present and not null counts, as on the phone (`{}` is a yes).
+                // A boolean `true`, as on the phone (`_b(prompt['image'])`).
                 self.images = init
                     .pointer("/agentCapabilities/promptCapabilities/image")
-                    .is_some_and(|v| !v.is_null() && *v != json!(false));
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false);
                 match self.start.clone() {
                     Start::Attach => {
                         self.phase = Phase::WaitingForSession;
@@ -537,7 +538,15 @@ impl Session {
         Ok(vec![self.call(
             Call::Prompt {
                 text: text.to_string(),
-                files: files.to_vec(),
+                // The picture bytes are not kept for the whole turn: a refused send gives the
+                // files back, and they are read again when it is sent again.
+                files: files
+                    .iter()
+                    .map(|f| Attachment {
+                        data: None,
+                        ..f.clone()
+                    })
+                    .collect(),
             },
             method::SESSION_PROMPT,
             json!({"sessionId": sid, "prompt": attach::blocks(text, files, self.images)}),
@@ -1453,7 +1462,10 @@ mod tests {
             json!([{"type": "image", "data": "aGk=", "mimeType": "image/png"}])
         );
         let (s, _) = open(json!({"agentCapabilities": {"promptCapabilities": {"image": {}}}}));
-        assert!(s.accepts_pictures(), "present and not null is a yes");
+        assert!(
+            !s.accepts_pictures(),
+            "only a boolean true is a yes, as on the phone"
+        );
         for no in [
             json!({}),
             json!({"agentCapabilities": {"promptCapabilities": {"image": false}}}),

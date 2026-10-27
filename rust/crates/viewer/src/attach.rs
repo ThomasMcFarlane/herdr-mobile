@@ -16,6 +16,11 @@ pub const MAX_FILES: usize = 10;
 /// reads it itself), so a message never carries megabytes of encoded pixels.
 pub const MAX_PICTURE_BYTES: u64 = 5 * 1024 * 1024;
 
+/// The most picture bytes one message carries as pictures (encoded, about a third more): the
+/// keeper refuses a line over 32 MiB, and the whole message is written at once. Pictures past it
+/// go as links.
+pub const MAX_PICTURES_TOTAL: u64 = 20 * 1024 * 1024;
+
 /// A file to send with the next message.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Attachment {
@@ -31,6 +36,9 @@ pub struct Attachment {
     pub size: u64,
     /// The picture's bytes, base64, read when the message is sent.
     pub data: Option<String>,
+    /// Goes as a link even though it is a picture: the message already carries
+    /// [`MAX_PICTURES_TOTAL`] bytes of pictures.
+    pub link: bool,
 }
 
 impl Attachment {
@@ -38,7 +46,10 @@ impl Attachment {
     /// small enough, and the agent takes pictures.
     #[must_use]
     pub fn is_picture(&self, agent_takes_pictures: bool) -> bool {
-        agent_takes_pictures && self.picture.is_some() && self.size <= MAX_PICTURE_BYTES
+        agent_takes_pictures
+            && !self.link
+            && self.picture.is_some()
+            && self.size <= MAX_PICTURE_BYTES
     }
 
     /// How it is listed above the input: its name, and `picture` when it goes as one.
@@ -101,7 +112,35 @@ pub fn attachment(abs: &str, cwd: &str) -> Attachment {
         picture: picture_type(abs),
         size: 0,
         data: None,
+        link: false,
     }
+}
+
+/// The bytes of the file at `path`, never more than [`MAX_PICTURE_BYTES`] of them, and only when it
+/// is a regular file (a pipe or a device could block the screen for good). `None` for anything
+/// else, or when it has grown past the limit.
+///
+/// # Errors
+/// The reason it could not be read.
+pub fn read_picture(path: &str) -> Result<Option<Vec<u8>>, String> {
+    use std::io::Read;
+    // Looked at before it is opened: opening a pipe with no writer waits for one.
+    if !std::fs::metadata(path)
+        .map_err(|e| e.to_string())?
+        .is_file()
+    {
+        return Ok(None);
+    }
+    let file = std::fs::File::open(path).map_err(|e| e.to_string())?;
+    let meta = file.metadata().map_err(|e| e.to_string())?;
+    if !meta.is_file() || meta.len() > MAX_PICTURE_BYTES {
+        return Ok(None);
+    }
+    let mut bytes = Vec::with_capacity(usize::try_from(meta.len()).unwrap_or(0));
+    file.take(MAX_PICTURE_BYTES + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|e| e.to_string())?;
+    Ok((bytes.len() as u64 <= MAX_PICTURE_BYTES).then_some(bytes))
 }
 
 fn percent_encode(path: &str) -> String {
@@ -340,5 +379,32 @@ mod tests {
         assert_eq!(base64(b"foo"), "Zm9v");
         assert_eq!(base64(b"foobar"), "Zm9vYmFy");
         assert_eq!(base64(&[0xff, 0xfe, 0xfd, 0xfc]), "//79/A==");
+    }
+
+    #[test]
+    fn only_a_regular_file_within_the_limit_is_read_as_a_picture() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let small = dir.path().join("a.png");
+        std::fs::write(&small, b"png").expect("write");
+        let p = small.to_string_lossy();
+        assert_eq!(read_picture(&p), Ok(Some(b"png".to_vec())));
+        let big = dir.path().join("big.png");
+        std::fs::write(
+            &big,
+            vec![0u8; usize::try_from(MAX_PICTURE_BYTES).expect("fits") + 1],
+        )
+        .expect("write");
+        assert_eq!(
+            read_picture(&big.to_string_lossy()),
+            Ok(None),
+            "over the limit: a link"
+        );
+        assert_eq!(
+            read_picture(&dir.path().to_string_lossy()),
+            Ok(None),
+            "a folder is no picture"
+        );
+        assert_eq!(read_picture("/dev/zero"), Ok(None), "a device never ends");
+        assert!(read_picture(&dir.path().join("gone.png").to_string_lossy()).is_err());
     }
 }

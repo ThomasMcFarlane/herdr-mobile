@@ -121,7 +121,13 @@ the agent does not list is held once (Enter again sends it), as the phone's `Unk
 Shift-Tab steps to the next mode, `/settings` lists every select option the agent reported that
 has a choice to make, `/info` (aliases `/version`, `/about`) writes the version, folder, program
 and session id into the conversation. In the list, skills (`skill:name`) follow the agent's
-commands and also answer to their name without `skill:`.
+commands and also answer to their name without `skill:`; a name typed in full is the first row.
+
+A mode that lowers the guard (`risk.rs`, a port of the phone's `mode_danger.dart`: bypass,
+full access, accept edits, auto...) is never reached by Shift-Tab, which skips it. Chosen with
+`/mode`, the first Enter says what it does and the same choice again confirms it (`/plan` back
+to the mode it left is exempt: it was the person's own). A local command that cannot run
+(`/model zzz`) leaves what was typed in the box; `/new` and Ctrl-R wait while files are attached.
 
 **Files and pictures.** A path (or several, quoted or with `\ ` as terminals write a dropped file,
 or `file://`) pasted into an *empty* box is attached, as the phone's `@file`; up to 10 a message,
@@ -130,8 +136,10 @@ mean the path. A file goes as a `resource_link` (`name` relative to the session'
 absolute `file://` `uri`, no title). A PNG, JPEG, GIF or WebP up to 5 MB goes as a picture (an
 `image` block, base64, read when the message is sent) when the agent's `initialize` says
 `promptCapabilities.image`; the list then says `· picture`, and the paste hint says `as a
-picture` or why it is a link (the agent takes none, or it is over 5 MB). Verified with omp: a
-picture from outside the session's folder, no tools allowed, was read correctly.
+picture` or why it is a link (the agent takes none, it is over 5 MB, or the message already
+carries 20 MB of pictures: the keeper refuses a line over 32 MiB). A picture is read only if it
+is still a regular file (a pipe or device goes as a link). Verified with omp: a picture from
+outside the session's folder, no tools allowed, was read correctly.
 
 Taking them off: Backspace on an empty box takes the last one off (a note says which), Ctrl-C takes
 all off, `/files` (aliases `/attachments`, `/detach`) opens a picker on the list and Enter takes the

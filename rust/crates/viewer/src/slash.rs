@@ -256,7 +256,8 @@ pub fn entries(text: &str, agent: &[acp::Command], tr: &Transcript, can_fresh: b
             inside.push(e);
         }
     }
-    prefix.sort_by_key(rank);
+    // What was typed in full comes first (`/mode` before `/model`), so Enter runs what was typed.
+    prefix.sort_by_key(|e| (!names(e).contains(&query), rank(e)));
     inside.sort_by_key(rank);
     prefix.extend(inside);
     prefix
@@ -475,19 +476,26 @@ pub fn plan_move(opt: &acp::ConfigOption, before: Option<&str>) -> Result<PlanMo
         .ok_or_else(|| "already in plan mode, and it is the only one".to_string())
 }
 
-/// Shift-Tab: the choice after the current one, round to the first. `None` when there is
-/// nothing to change to.
+/// Shift-Tab: the next choice after the current one, round to the first, that does not lower the
+/// guard (a risky mode is chosen on purpose, with `/mode`, never by a stray key). `None` when
+/// there is no such choice.
 #[must_use]
 pub fn next_choice(opt: &acp::ConfigOption) -> Option<(String, String)> {
     if opt.legacy || opt.choices.len() < 2 {
         return None;
     }
+    let n = opt.choices.len();
     let at = opt
         .choices
         .iter()
-        .position(|(v, _)| Some(v) == opt.current.as_ref());
-    opt.choices
-        .get(at.map_or(0, |i| (i + 1) % opt.choices.len()))
+        .position(|(v, _)| Some(v) == opt.current.as_ref())
+        .unwrap_or(n - 1);
+    (1..=n)
+        .map(|k| &opt.choices[(at + k) % n])
+        .find(|(v, name)| {
+            Some(v) != opt.current.as_ref()
+                && crate::risk::assess(v, name) == crate::risk::Risk::None
+        })
         .cloned()
 }
 
@@ -847,5 +855,27 @@ mod tests {
         let got = entries("/upd", &[], &tr, true);
         assert_eq!(names(&got), ["update"]);
         assert_eq!(got[0].hint.as_deref(), Some("[check|VERSION]"));
+    }
+
+    #[test]
+    fn what_was_typed_in_full_is_the_first_row_and_shift_tab_never_lands_on_a_risky_mode() {
+        let tr = Transcript::default();
+        assert_eq!(
+            names(&entries("/mode", &[], &tr, true))[..2],
+            ["mode", "model"]
+        );
+        assert_eq!(
+            names(&entries("/files", &[cmd("filesystem", None)], &tr, true))[..2],
+            ["files", "filesystem"]
+        );
+        let tr = tr_with(modes("default"));
+        let mut opt = tr.option("mode").expect("mode").clone();
+        // default -> (acceptEdits is elevated) -> plan
+        assert_eq!(next_choice(&opt).map(|c| c.0), Some("plan".into()));
+        opt.choices = vec![
+            ("default".into(), "Default".into()),
+            ("bypassPermissions".into(), "Bypass Permissions".into()),
+        ];
+        assert_eq!(next_choice(&opt), None, "the only other mode is dangerous");
     }
 }

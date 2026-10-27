@@ -27,8 +27,8 @@ use herdr_tui::session::{Effect, Event, Phase, Record, Refused, Session, Start};
 use herdr_tui::transcript::Transcript;
 use herdr_tui::ui;
 use herdr_tui::{
-    cli, delight, fold, herdr, highlight, host, input, lines, md, sessions, slash, termbg, theme,
-    update,
+    cli, delight, fold, herdr, highlight, host, input, lines, md, risk, sessions, slash, termbg,
+    theme, update,
 };
 use keeper::records::StateDir;
 use std::io::{BufReader, Write};
@@ -132,6 +132,11 @@ struct App {
     before_plan: Option<String>,
     /// An update is running; a second one waits for it.
     updating: bool,
+    /// What `can_fresh` said at the start: the command list asks on every key, the check reads
+    /// the disk.
+    fresh_ok: bool,
+    /// The risky mode the person chose once and is asked to choose again.
+    mode_confirm: Option<String>,
 }
 
 /// While this program owns the screen, a background job of the same terminal that tries to write
@@ -332,6 +337,8 @@ fn main() {
         files: Vec::new(),
         before_plan: None,
         updating: false,
+        fresh_ok: false,
+        mode_confirm: None,
     };
     // A fresh session started from another one (`/new`): say where the earlier one went.
     if let Some(prev) = std::env::var("HERDR_TUI_PREVIOUS")
@@ -342,6 +349,7 @@ fn main() {
             "Fresh session · the earlier one, {prev}, is still running"
         ));
     }
+    app.fresh_ok = app.can_fresh();
     app.run(first);
     app.reporter = herdr::Target::from_env(|k| std::env::var(k).ok()).map(|target| {
         let exe = std::env::current_exe().map_or_else(
@@ -704,6 +712,9 @@ impl App {
                 if !matches!(k.code, KeyCode::Char('1'..='9') | KeyCode::Enter) {
                     self.confirm = None;
                 }
+                if k.code != KeyCode::Enter {
+                    self.mode_confirm = None;
+                }
                 self.key(k);
             }
             Ev::Mouse(m) => self.mouse(m),
@@ -742,6 +753,9 @@ impl App {
     fn load_newer(&mut self) {
         if !self.composer.text.is_empty() {
             self.hint = Some("Send or clear your message first, then Ctrl-R".to_string());
+        } else if !self.files.is_empty() {
+            self.hint =
+                Some("Send the files or take them off (/files) first, then Ctrl-R".to_string());
         } else if !self.session.waiting().is_empty() {
             self.hint = Some("Answer the request first, then Ctrl-R".to_string());
         } else {
@@ -965,6 +979,10 @@ impl App {
             KeyCode::Esc if self.composer.text.is_empty() => self.dismiss(),
             KeyCode::Char('d') if ctrl => self.quit = true,
             KeyCode::Char('c') if ctrl => {
+                // A picker open: Ctrl-C closes it, whatever else it would do.
+                if self.view.picker.take().is_some() {
+                    return;
+                }
                 if self.transcript.running() || self.session.prompting() {
                     let fx = self.session.cancel(&mut self.transcript);
                     self.run(fx);
@@ -1202,26 +1220,32 @@ impl App {
 
     fn send(&mut self) {
         let text = self.composer.text.trim().to_string();
+        let raw = self.composer.text.clone();
         if text.is_empty() && self.files.is_empty() {
             return;
         }
         match slash::classify(&text, self.transcript.commands()) {
             slash::Run::Local(local, args) => {
-                self.composer.take();
+                // A command that cannot run leaves what was typed in the box.
+                let typed = self.composer.take();
+                self.hint = None;
                 self.run_local(local, &args);
+                if self.hint.is_some() {
+                    if let Some(t) = typed {
+                        self.composer.restore(t);
+                    }
+                }
                 return;
             }
             // A typo would reach the model as a message and cost a turn: held once, and sent
             // when Enter is pressed again on the same text.
             slash::Run::Unknown(word) => {
-                if self.held.as_deref() == Some(text.as_str()) {
-                    self.held = None;
-                } else {
+                if self.held.as_deref() != Some(raw.as_str()) {
                     self.hint = Some(format!(
                         "/{word} is not a command of {} · Enter sends it as a message",
                         self.agent
                     ));
-                    self.held = Some(text);
+                    self.held = Some(raw);
                     return;
                 }
             }
@@ -1237,6 +1261,7 @@ impl App {
             Ok(fx) => {
                 self.composer.take();
                 self.files.clear();
+                self.held = None;
                 self.view.scroll = 0;
                 self.run(fx);
             }
@@ -1274,7 +1299,7 @@ impl App {
                 &text,
                 self.transcript.commands(),
                 &self.transcript,
-                self.can_fresh(),
+                self.fresh_ok,
             )
         } else {
             Vec::new()
@@ -1318,6 +1343,18 @@ impl App {
             }
             KeyCode::Esc => self.view.picker = None,
             KeyCode::Enter => {
+                // A mode that lowers the guard is chosen twice: the first Enter says what it does.
+                let chosen = self
+                    .view
+                    .picker
+                    .as_ref()
+                    .filter(|p| p.kind == slash::PickerKind::Choices)
+                    .and_then(|p| p.chosen().cloned().map(|c| (p.option_id.clone(), c)));
+                if let Some((id, (value, name))) = chosen {
+                    if self.needs_mode_confirm(&id, &value, &name) {
+                        return true;
+                    }
+                }
                 if let Some(p) = self.view.picker.take() {
                     if let Some((value, name)) = p.chosen().cloned() {
                         match p.kind {
@@ -1432,6 +1469,10 @@ impl App {
         }
         match local {
             slash::Local::Fresh => {
+                if !self.files.is_empty() {
+                    self.hint = Some("Send the files or take them off (/files) first".to_string());
+                    return;
+                }
                 self.fresh = true;
                 self.quit = true;
                 return;
@@ -1536,7 +1577,7 @@ impl App {
         match result {
             Ok(said) => {
                 self.transcript.note(said);
-                if let Some(v) = self.watch.poll() {
+                if let Some(v) = self.watch.poll().or_else(|| self.newer.clone()) {
                     self.transcript
                         .note(format!("herdr-tui {v} is installed · Ctrl-R loads it"));
                     self.newer = Some(v);
@@ -1557,6 +1598,10 @@ impl App {
                 if m.entering {
                     self.before_plan = current;
                 }
+                if !m.entering {
+                    // Back to the mode that was left: it was the person's own choice.
+                    self.mode_confirm = Some(m.value.clone());
+                }
                 self.apply_choice(&id, &what, &m.value, &m.name);
             }
             Err(why) => self.hint = Some(format!("Unavailable: {why}")),
@@ -1573,8 +1618,11 @@ impl App {
             return;
         };
         let (id, what) = (opt.id.clone(), opt.name.clone());
-        if let Some((value, name)) = slash::next_choice(opt) {
-            self.apply_choice(&id, &what, &value, &name);
+        match slash::next_choice(opt) {
+            Some((value, name)) => self.apply_choice(&id, &what, &value, &name),
+            None => {
+                self.hint = Some("No other mode without a guard · /mode picks one".to_string());
+            }
         }
     }
 
@@ -1604,7 +1652,23 @@ impl App {
         let Some(paths) = attach::paths_in(text, &self.home.to_string_lossy()) else {
             return false;
         };
+        // A long list is no list of files to attach, and nothing on the disk is looked at for it.
+        if paths.len() > attach::MAX_FILES {
+            self.hint = Some(format!(
+                "At most {} files go with a message",
+                attach::MAX_FILES
+            ));
+            return true;
+        }
+        let pictures = self.session.accepts_pictures();
+        let mut picture_bytes: u64 = self
+            .files
+            .iter()
+            .filter(|f| f.is_picture(pictures))
+            .map(|f| f.size)
+            .sum();
         let mut found: Vec<attach::Attachment> = Vec::new();
+        let mut twice = 0;
         for p in &paths {
             let Ok(abs) = std::fs::canonicalize(p) else {
                 return false;
@@ -1614,25 +1678,39 @@ impl App {
             };
             let mut a = attach::attachment(abs, &self.cwd);
             a.size = std::fs::metadata(abs).map_or(0, |m| m.len());
-            if !self.files.iter().chain(&found).any(|f| f.uri == a.uri) {
-                found.push(a);
+            if self.files.iter().chain(&found).any(|f| f.uri == a.uri) {
+                twice += 1;
+                continue;
             }
+            if a.is_picture(pictures) {
+                if picture_bytes + a.size > attach::MAX_PICTURES_TOTAL {
+                    a.link = true;
+                } else {
+                    picture_bytes += a.size;
+                }
+            }
+            found.push(a);
         }
-        if self.files.len() + found.len() > attach::MAX_FILES {
-            self.hint = Some(format!(
-                "At most {} files go with a message",
-                attach::MAX_FILES
-            ));
-            return true;
-        }
-        let pictures = self.session.accepts_pictures();
+        let room = attach::MAX_FILES.saturating_sub(self.files.len());
+        let left_out = found.len().saturating_sub(room);
+        found.truncate(room);
         self.hint = Some(match found.as_slice() {
+            [] if left_out > 0 => format!("At most {} files go with a message", attach::MAX_FILES),
+            [] if twice > 0 => "Already attached".to_string(),
             [] => return true,
+            _ if left_out > 0 => format!(
+                "Attached {} of {} files · at most {} go with a message",
+                found.len(),
+                found.len() + left_out,
+                attach::MAX_FILES
+            ),
             [one] => {
                 let how = if one.is_picture(pictures) {
                     " as a picture"
                 } else if one.picture.is_some() && !pictures {
                     " as a link (this agent takes no pictures)"
+                } else if one.link {
+                    " as a link (this message's pictures are over 20 MB)"
                 } else if one.picture.is_some() {
                     " as a link (over 5 MB)"
                 } else {
@@ -1658,15 +1736,33 @@ impl App {
         let takes = self.session.accepts_pictures();
         for f in &mut self.files {
             if f.is_picture(takes) && f.data.is_none() {
-                let bytes = std::fs::read(&f.path)
-                    .map_err(|e| format!("Could not read {}: {e}", f.name))?;
-                f.size = bytes.len() as u64;
-                if f.is_picture(takes) {
-                    f.data = Some(attach::base64(&bytes));
+                match attach::read_picture(&f.path) {
+                    Ok(Some(bytes)) => f.data = Some(attach::base64(&bytes)),
+                    // No longer a regular file, or grown past the limit: it goes as a link.
+                    Ok(None) => f.link = true,
+                    Err(e) => return Err(format!("Could not read {}: {e}", f.name)),
                 }
             }
         }
         Ok(())
+    }
+
+    /// A mode that lowers the guard (`risk::assess`, the phone's rules) is chosen on purpose: the
+    /// first choice says what it does and waits for the same choice again. `true` while it waits.
+    fn needs_mode_confirm(&mut self, id: &str, value: &str, name: &str) -> bool {
+        if !self.transcript.option(id).is_some_and(|o| o.is("mode")) {
+            return false;
+        }
+        let risk = risk::assess(value, name);
+        if risk == risk::Risk::None || self.mode_confirm.as_deref() == Some(value) {
+            return false;
+        }
+        self.mode_confirm = Some(value.to_string());
+        self.hint = Some(format!(
+            "{name} {} · choose it again to confirm",
+            risk::why(risk)
+        ));
+        true
     }
 
     /// Asks the agent to change option `id` to `value`. Choosing what is already chosen sends
@@ -1678,8 +1774,13 @@ impl App {
             .and_then(|o| o.current.as_deref())
             == Some(value)
         {
+            self.hint = Some(format!("{what} is already {name}"));
             return;
         }
+        if self.needs_mode_confirm(id, value, name) {
+            return;
+        }
+        self.mode_confirm = None;
         match self
             .session
             .set_config(id, value, what, name, &self.transcript)
