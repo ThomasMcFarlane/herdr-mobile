@@ -16,6 +16,7 @@ use crate::shell;
 use crate::slash;
 use crate::theme::Theme;
 use crate::transcript::{Entry, Item, Role, Tool, Transcript};
+use crate::width;
 use acp::ToolStatus;
 use ratatui::{
     layout::{Constraint, Layout, Position, Rect},
@@ -25,7 +26,6 @@ use ratatui::{
     Frame,
 };
 use std::collections::{HashMap, HashSet, VecDeque};
-use unicode_width::UnicodeWidthChar;
 
 /// Columns every block keeps free on the left for its mark.
 const GUTTER: usize = 2;
@@ -333,7 +333,7 @@ pub struct Frame_<'a> {
 }
 
 fn width_of(s: &str) -> usize {
-    s.chars().map(|c| c.width().unwrap_or(0)).sum()
+    width::of(s)
 }
 
 /// The rows `text` wraps to, as byte ranges into it: at spaces, by display width, and a word longer
@@ -353,14 +353,18 @@ fn wrap_ranges(text: &str, width: usize) -> Vec<(usize, usize)> {
                 row_start = at;
                 w = 0;
             }
-            for (i, c) in word.char_indices() {
-                let cw = c.width().unwrap_or(0);
-                if w + cw > width && at + i > row_start {
-                    rows.push((row_start, at + i));
-                    row_start = at + i;
-                    w = 0;
+            if w + ww <= width {
+                // Fits whole: no need to look inside it.
+                w += ww;
+            } else {
+                for (i, _, cw) in width::cluster_indices(word) {
+                    if w + cw > width && at + i > row_start {
+                        rows.push((row_start, at + i));
+                        row_start = at + i;
+                        w = 0;
+                    }
+                    w += cw;
                 }
-                w += cw;
             }
             at += word.len();
         }
@@ -423,12 +427,11 @@ fn fit(s: &str, width: usize) -> String {
     }
     let mut out = String::new();
     let mut w = 0;
-    for c in s.chars() {
-        let cw = c.width().unwrap_or(0);
+    for (g, cw) in width::clusters(s) {
         if w + cw + 1 > width {
             break;
         }
-        out.push(c);
+        out.push_str(g);
         w += cw;
     }
     out.push('…');
@@ -778,13 +781,13 @@ fn run_lines(
         .count();
     let mut verbs: Vec<(String, usize)> = Vec::new();
     for t in &tools {
-        let verb = t
-            .title
-            .trim_start_matches("$ ")
-            .split_whitespace()
-            .next()
-            .unwrap_or("tool")
-            .to_string();
+        let verb = clean(
+            t.title
+                .trim_start_matches("$ ")
+                .split_whitespace()
+                .next()
+                .unwrap_or("tool"),
+        );
         match verbs.iter_mut().find(|(v, _)| *v == verb) {
             Some(slot) => slot.1 += 1,
             None => verbs.push((verb, 1)),
@@ -2223,6 +2226,109 @@ mod tests {
         );
         assert!(warm.cache_chars() > 0, "the cache never held a line");
     }
+
+    /// What a terminal shows after it is sent ratatui's updates, one by one: a wide glyph covers
+    /// the cell to its right, writing over either half of one blanks the other half, and nothing
+    /// else is touched. `""` is a covered cell.
+    struct Screen {
+        w: usize,
+        cells: Vec<String>,
+    }
+
+    impl Screen {
+        fn new(w: u16, h: u16) -> Screen {
+            Screen {
+                w: usize::from(w),
+                cells: vec![" ".to_string(); usize::from(w) * usize::from(h)],
+            }
+        }
+
+        fn put(&mut self, x: u16, y: u16, sym: &str) {
+            let i = usize::from(y) * self.w + usize::from(x);
+            if self.cells[i].is_empty() && x > 0 {
+                self.cells[i - 1] = " ".to_string();
+            }
+            for k in 1..width::of(&self.cells[i]) {
+                if i + k < self.cells.len() {
+                    self.cells[i + k] = " ".to_string();
+                }
+            }
+            self.cells[i] = sym.to_string();
+            for k in 1..width::of(sym) {
+                if usize::from(x) + k < self.w {
+                    self.cells[i + k] = String::new();
+                }
+            }
+        }
+
+        /// A buffer as the screen would show it drawn from scratch.
+        fn of(b: &Buffer) -> Screen {
+            let (w, h) = (b.area.width, b.area.height);
+            let mut s = Screen::new(w, h);
+            for y in 0..h {
+                for x in 0..w {
+                    if !s.cells[usize::from(y) * s.w + usize::from(x)].is_empty() {
+                        s.put(x, y, b[(x, y)].symbol());
+                    }
+                }
+            }
+            s
+        }
+    }
+
+    #[test]
+    fn scrolling_past_tables_of_wide_symbols_leaves_no_stale_cell_behind() {
+        // Frames are sent as ratatui sends them, only what changed since the last one, and the
+        // screen that results must be the one a cold draw of that moment shows. A glyph the
+        // layout thought narrower than the terminal drew it, or a cell never rewritten when a
+        // wide glyph went away, is a character left behind.
+        let table = "| Task | Done | Mark |\n|:--|:-:|:-:|\n| Board | ✅ | ● |\n| pi turn | ⚠️ | ◐ |\n| Codex | ❌ | ○ |\n| Heart | ❤️ | ✔️ |\n| Vote | 👍🏽 | 👨‍👩‍👧 |";
+        let doc: String = (1..=6)
+            .map(|i| format!("{i}. Task-list and status symbols\n\n{table}\n\n"))
+            .collect();
+        let mut tr = Transcript::default();
+        agent(&mut tr, "m", &doc);
+        let session = ready_session();
+        let composer = Composer::default();
+        let (w, h) = (60u16, 16u16);
+        let mut warm = View::default();
+        let mut shown = Screen::new(w, h);
+        let mut prev = Buffer::empty(ratatui::layout::Rect::new(0, 0, w, h));
+        for scroll in [0usize, 5, 11, 3, 20, 8, 1, 17, 0, 9, 14, 26, 2] {
+            warm.scroll = scroll;
+            let next = draw_with(&tr, &session, &composer, Theme::plain(), w, h, &mut warm);
+            for (x, y, cell) in prev.diff(&next) {
+                shown.put(x, y, cell.symbol());
+            }
+            prev = next;
+            let mut cold = View {
+                scroll,
+                ..View::default()
+            };
+            let fresh = draw_with(&tr, &session, &composer, Theme::plain(), w, h, &mut cold);
+            let want = Screen::of(&fresh);
+            let diff: Vec<(usize, usize, &str, &str)> = shown
+                .cells
+                .iter()
+                .zip(&want.cells)
+                .enumerate()
+                .filter(|(_, (a, b))| a != b)
+                .map(|(i, (a, b))| {
+                    (
+                        i % usize::from(w),
+                        i / usize::from(w),
+                        a.as_str(),
+                        b.as_str(),
+                    )
+                })
+                .collect();
+            assert!(
+                diff.is_empty(),
+                "left behind at scroll={scroll}: (x, y, shown, cold) {diff:?}"
+            );
+        }
+    }
+
     /// Three finished tool calls that fold into one run, and a line after, so the run is the
     /// block that opens.
     fn run_transcript() -> Transcript {

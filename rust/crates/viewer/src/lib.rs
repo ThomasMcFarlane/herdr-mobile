@@ -28,6 +28,7 @@ pub mod theme;
 pub mod transcript;
 pub mod ui;
 pub mod update;
+pub mod width;
 
 #[cfg(test)]
 pub mod shots;
