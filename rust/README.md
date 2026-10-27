@@ -41,7 +41,8 @@ herdr-tui update              # installs the latest release
 herdr-tui update 0.1.35       # installs that release, older ones too: the way back if a new one misbehaves
 ```
 
-It downloads with `curl` (or `wget`), checks the file against the release's `herdr-tui-SHA256SUMS`
+On a terminal the download shows as one line that grows (`▕███████▌   ▏ 40%  1.0 MB / 2.6 MB  758 KB/s`); in a
+log or a pipe it prints one plain line per step. It downloads with `curl` (or `wget`, without the bar), checks the file against the release's `herdr-tui-SHA256SUMS`
 (`sha256sum` or `shasum`), runs it once with `--version`, and only then renames it over the old one, so
 a failure at any step leaves what is installed as it was and sessions that are open keep running. The
 latest release is never a downgrade; a version you name is installed even if it is older. Releases

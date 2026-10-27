@@ -121,6 +121,223 @@ fn fetch(url: &str, to: &Path) -> Result<(), String> {
     }
 }
 
+/// What [`run`] tells the screen as it goes.
+pub enum Event<'a> {
+    /// A step begins.
+    Step(&'a str),
+    /// A file is arriving: bytes so far, the whole size when the server said it, bytes a second.
+    Bytes {
+        label: &'a str,
+        done: u64,
+        total: Option<u64>,
+        per_sec: f64,
+    },
+    /// The file has arrived.
+    Finished,
+}
+
+/// A size as a person reads it: `812 KB`, `2.5 MB`.
+#[must_use]
+pub fn human(bytes: u64) -> String {
+    #[allow(clippy::cast_precision_loss)]
+    let b = bytes as f64;
+    if b >= 1_000_000.0 {
+        format!("{:.1} MB", b / 1_000_000.0)
+    } else if b >= 1_000.0 {
+        format!("{:.0} KB", b / 1_000.0)
+    } else {
+        format!("{bytes} B")
+    }
+}
+
+/// A bar `width` cells wide, filled to `frac` (0 to 1) in eighths of a cell, so it grows smoothly
+/// rather than a cell at a time.
+#[must_use]
+pub fn bar(frac: f64, width: usize) -> String {
+    const EIGHTHS: [char; 8] = [
+        ' ', '\u{258f}', '\u{258e}', '\u{258d}', '\u{258c}', '\u{258b}', '\u{258a}', '\u{2589}',
+    ];
+    #[allow(
+        clippy::cast_precision_loss,
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss
+    )]
+    let eighths = (frac.clamp(0.0, 1.0) * (width * 8) as f64).round() as usize;
+    let (full, part) = (eighths / 8, eighths % 8);
+    let mut out = "\u{2588}".repeat(full);
+    if full < width {
+        out.push(EIGHTHS[part]);
+        out.push_str(&" ".repeat(width - full - 1));
+    }
+    out
+}
+
+/// The progress line: what, a bar, the share, the sizes and the speed. Without a known total the
+/// bar is left out and only what has arrived is said.
+#[must_use]
+pub fn progress_line(label: &str, done: u64, total: Option<u64>, per_sec: f64) -> String {
+    #[allow(
+        clippy::cast_precision_loss,
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss
+    )]
+    let speed = if per_sec >= 1.0 {
+        format!("  {}/s", human(per_sec as u64))
+    } else {
+        String::new()
+    };
+    match total.filter(|t| *t > 0) {
+        Some(t) => {
+            #[allow(clippy::cast_precision_loss)]
+            let frac = (done as f64 / t as f64).min(1.0);
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let pct = (frac * 100.0).round() as u32;
+            format!(
+                "{label}  \u{2595}{}\u{258f} {pct:>3}%  {} / {}{speed}",
+                bar(frac, 28),
+                human(done),
+                human(t)
+            )
+        }
+        None => format!("{label}  {}{speed}", human(done)),
+    }
+}
+
+/// Draws [`Event`]s on stderr: on a terminal one line that is redrawn as the download grows, else
+/// one plain line per step (a log or a pipe gets no control characters).
+pub struct Console {
+    tty: bool,
+    colour: bool,
+    drawn: bool,
+}
+
+impl Console {
+    #[must_use]
+    pub fn new(tty: bool, colour: bool) -> Console {
+        Console {
+            tty,
+            colour: tty && colour,
+            drawn: false,
+        }
+    }
+
+    pub fn event(&mut self, e: &Event) {
+        use std::io::Write;
+        let mut err = std::io::stderr();
+        match e {
+            Event::Step(what) => {
+                let _ = writeln!(err, "herdr-tui: {what}");
+            }
+            Event::Bytes {
+                label,
+                done,
+                total,
+                per_sec,
+            } if self.tty => {
+                let line = progress_line(label, *done, *total, *per_sec);
+                let (on, off) = if self.colour {
+                    ("\x1b[36m", "\x1b[0m")
+                } else {
+                    ("", "")
+                };
+                let _ = write!(err, "\r\x1b[2K{on}{line}{off}");
+                let _ = err.flush();
+                self.drawn = true;
+            }
+            Event::Bytes { .. } => {}
+            Event::Finished => {
+                if std::mem::take(&mut self.drawn) {
+                    let _ = writeln!(err);
+                }
+            }
+        }
+    }
+}
+
+/// The size the server says `url` has (after redirects), when it says.
+fn content_length(url: &str) -> Option<u64> {
+    let out = Command::new("curl")
+        .args(["-fsSIL", "--max-time", "20", url])
+        .stdin(Stdio::null())
+        .stderr(Stdio::null())
+        .output()
+        .ok()?;
+    String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .filter_map(|l| {
+            let (k, v) = l.split_once(':')?;
+            k.eq_ignore_ascii_case("content-length")
+                .then(|| v.trim().parse::<u64>().ok())
+                .flatten()
+        })
+        .next_back()
+}
+
+/// Downloads `url` to `to`, telling `report` how far it has got: curl runs on its own and the file
+/// it is writing is measured, so the screen never waits on the network. Without curl (wget) there
+/// is no measure, and it says so.
+fn download(
+    url: &str,
+    to: &Path,
+    label: &str,
+    report: &mut dyn FnMut(Event),
+) -> Result<(), String> {
+    if !have("curl") {
+        report(Event::Step(&format!(
+            "downloading {label} (no progress without curl)"
+        )));
+        return fetch(url, to);
+    }
+    let total = content_length(url);
+    let started = std::time::Instant::now();
+    let mut child = Command::new("curl")
+        .args(["-fsSL", "--max-time", "300", "-o"])
+        .arg(to)
+        .arg(url)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|e| format!("could not start curl ({e})"))?;
+    let measure = |done: u64| {
+        #[allow(clippy::cast_precision_loss)]
+        let per_sec = done as f64 / started.elapsed().as_secs_f64().max(0.001);
+        (done, per_sec)
+    };
+    let status = loop {
+        match child.try_wait() {
+            Ok(Some(s)) => break s,
+            Ok(None) => {
+                let (done, per_sec) = measure(std::fs::metadata(to).map_or(0, |m| m.len()));
+                report(Event::Bytes {
+                    label,
+                    done,
+                    total,
+                    per_sec,
+                });
+                std::thread::sleep(std::time::Duration::from_millis(60));
+            }
+            Err(e) => return Err(format!("could not wait for curl ({e})")),
+        }
+    };
+    if !status.success() {
+        report(Event::Finished);
+        return Err(format!(
+            "could not download {url} (a release has a desk client from 0.1.30 on; check the version and the network)"
+        ));
+    }
+    let size = std::fs::metadata(to).map_or(0, |m| m.len());
+    let (done, per_sec) = measure(size);
+    report(Event::Bytes {
+        label,
+        done,
+        total: Some(size),
+        per_sec,
+    });
+    report(Event::Finished);
+    Ok(())
+}
+
 /// The SHA-256 of a file, as lower-case hex, by `sha256sum` or `shasum`.
 fn sha256(file: &Path) -> Result<String, String> {
     let out = if have("sha256sum") {
@@ -178,6 +395,7 @@ pub fn run(
     base: &str,
     pinned: bool,
     check_only: bool,
+    report: &mut dyn FnMut(Event),
 ) -> Result<String, String> {
     let asset = asset().ok_or_else(|| {
         format!(
@@ -188,6 +406,11 @@ pub fn run(
     })?;
     let have_version = version_of(current).ok_or("this program does not know its own version")?;
     let scratch = Scratch::beside(exe)?;
+    report(Event::Step(if pinned {
+        "looking up that release"
+    } else {
+        "looking up the latest release"
+    }));
     let sums_file = scratch.0.join("sums");
     fetch(&format!("{base}/herdr-tui-SHA256SUMS"), &sums_file)?;
     let sums = std::fs::read_to_string(&sums_file).map_err(|e| e.to_string())?;
@@ -204,7 +427,8 @@ pub fn run(
         ));
     }
     let file = scratch.0.join(asset);
-    fetch(&format!("{base}/{asset}"), &file)?;
+    download(&format!("{base}/{asset}"), &file, asset, report)?;
+    report(Event::Step("checking the download"));
     let got = sha256(&file)?;
     if got != want {
         return Err(format!(
@@ -229,6 +453,7 @@ pub fn run(
             said.trim()
         )),
         Step::Install => {
+            report(Event::Step("installing"));
             // Renamed over the program, so one that is open keeps running its old file.
             std::fs::rename(&file, exe).map_err(|e| {
                 format!(
@@ -448,6 +673,48 @@ mod tests {
         assert_eq!(w.poll(), None, "said once, not on every look");
         std::fs::write(&exe, "not a program").expect("break it");
         assert_eq!(w.poll(), None, "a file that will not run is not offered");
+    }
+
+    #[test]
+    fn sizes_read_as_a_person_says_them() {
+        assert_eq!(human(812), "812 B");
+        assert_eq!(human(812_345), "812 KB");
+        assert_eq!(human(2_527_000), "2.5 MB");
+    }
+
+    #[test]
+    fn the_bar_fills_in_eighths_never_past_its_width_and_keeps_its_width() {
+        for width in [1, 10, 28] {
+            for step in 0..=40 {
+                let b = bar(f64::from(step) / 40.0, width);
+                assert_eq!(b.chars().count(), width, "{step}/40 of {width}: {b:?}");
+            }
+        }
+        assert_eq!(bar(0.0, 4), "    ");
+        assert_eq!(bar(1.0, 4), "\u{2588}\u{2588}\u{2588}\u{2588}");
+        assert_eq!(bar(0.5, 4), "\u{2588}\u{2588}  ");
+        assert_eq!(bar(0.375, 4), "\u{2588}\u{258c}  ");
+        assert_eq!(bar(7.0, 4), bar(1.0, 4), "over is full");
+        assert_eq!(bar(-1.0, 4), bar(0.0, 4));
+    }
+
+    #[test]
+    fn a_progress_line_says_the_share_the_sizes_and_the_speed_and_copes_without_a_total() {
+        let l = progress_line(
+            "herdr-tui-linux-x86_64",
+            1_300_000,
+            Some(2_600_000),
+            1_200_000.0,
+        );
+        assert!(
+            l.contains(" 50%") && l.contains("1.3 MB / 2.6 MB") && l.contains("1.2 MB/s"),
+            "{l}"
+        );
+        let done = progress_line("x", 9, Some(5), 0.0);
+        assert!(done.contains("100%"), "never past 100%: {done}");
+        let unknown = progress_line("x", 2_000, None, 0.0);
+        assert_eq!(unknown, "x  2 KB");
+        assert!(!progress_line("x", 0, Some(0), 0.0).contains("NaN"));
     }
 
     #[test]

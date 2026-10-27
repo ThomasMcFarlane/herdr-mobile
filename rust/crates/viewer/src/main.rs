@@ -200,7 +200,20 @@ fn main() {
             let exe = std::env::current_exe()
                 .unwrap_or_else(|e| die(keeper::exit::FAILED, &format!("no path to itself ({e})")));
             let base = update::base_url(|k| std::env::var(k).ok(), version.as_deref());
-            match update::run(&exe, cli::VERSION, &base, version.is_some(), check) {
+            use std::io::IsTerminal;
+            let mut console = update::Console::new(
+                std::io::stderr().is_terminal(),
+                std::env::var_os("NO_COLOR").is_none_or(|v| v.is_empty()),
+            );
+            let result = update::run(
+                &exe,
+                cli::VERSION,
+                &base,
+                version.is_some(),
+                check,
+                &mut |e| console.event(&e),
+            );
+            match result {
                 Ok(said) => {
                     let _ = writeln!(std::io::stdout(), "herdr-tui: {said}");
                 }

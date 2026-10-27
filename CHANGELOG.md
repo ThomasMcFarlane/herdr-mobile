@@ -4,6 +4,12 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [Unreleased]
+
+- `herdr-tui update` shows the download as a bar that fills, with the percent, the
+  sizes and the speed, then says what it is checking and installing. In a log or
+  a pipe it prints plain lines, and without `curl` there is no bar.
+
 ## [0.1.38] - 2026-10-27
 
 ### The desk client updates itself, and can go back
