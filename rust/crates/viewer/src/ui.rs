@@ -56,8 +56,175 @@ pub struct View {
     pub help: bool,
     /// Blocks that were just opened, by key, and the animation time they began: they grow into place.
     pub reveal: HashMap<u64, u64>,
+    /// The lines of the blocks, kept from one frame to the next, and the width they were built at.
+    line_cache: LineCache,
+    last_width: usize,
 }
 
+impl View {
+    /// What a block draws changed without its key changing (a block opened or closed, the
+    /// focus moved, the thoughts toggle flipped): the lines kept for it cannot be reused.
+    pub fn invalidate_lines(&mut self) {
+        self.line_cache.clear();
+    }
+
+    /// How many characters of block lines the cache is holding (the "low memory" gauge).
+    pub fn cache_chars(&self) -> usize {
+        self.line_cache.chars()
+    }
+}
+
+/// What a cache of block lines is keyed by: the block, the content revision of what it draws
+/// (a `One`'s item revision, a `Run`'s fold of its calls' — so a streaming edit moves the
+/// line), the width it was wrapped to, and a generation that is bumped whenever the look
+/// changes (a block opens or closes, the focus moves, the thoughts toggle flips). Bumping the
+/// generation clears the cache, so it only ever holds the lines for the current look: a scroll
+/// is all hits, a focus move is one rebuild. The content revision is the field that makes an
+/// in-place edit safe: it keeps the block's id, so the id alone would serve the old line.
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+struct LineKey {
+    block: u64,
+    rev: u64,
+    width: usize,
+    gen: u64,
+}
+
+/// What a cache entry costs, in the units the budget is measured in: the characters in its
+/// lines. A line is a handful of spans, so characters are a fair stand-in for its memory.
+fn line_size(l: &[Line<'static>]) -> usize {
+    l.iter()
+        .map(|r| {
+            r.spans
+                .iter()
+                .map(|s| s.content.chars().count())
+                .sum::<usize>()
+        })
+        .sum()
+}
+
+/// The lines of the blocks, kept from one frame to the next: a scroll, a keystroke or a frame
+/// that does not touch what a block draws costs a lookup, not a re-wrap. Bounded by characters
+/// the way the transcript is, so a viewer left open for days stays small: the oldest lines are
+/// dropped first, and a block that scrolls back into view is simply built again. Lived here,
+/// not in [`View`], because the look a block is drawn with borrows what the view keeps open.
+#[derive(Default)]
+struct LineCache {
+    lines: HashMap<LineKey, Vec<Line<'static>>>,
+    /// Insertion order, oldest first, for the eviction.
+    order: VecDeque<LineKey>,
+    chars: usize,
+    gen: u64,
+}
+
+/// How much of the conversation's lines the cache may keep: a few screens' worth, so a steady
+/// scroll is all hits and a long scroll only rebuilds what it walks back past.
+const CACHE_BUDGET: usize = 256 * 1024;
+
+impl LineCache {
+    /// The block's lines, built once and kept; a borrow into the cache, no copy.
+    fn ensure(
+        &mut self,
+        b: Block,
+        items: &VecDeque<Item>,
+        width: usize,
+        look: Look,
+    ) -> &Vec<Line<'static>> {
+        let key = LineKey {
+            block: fold::key(b, items),
+            rev: fold::revision(b, items),
+            width,
+            gen: self.gen,
+        };
+        if !self.lines.contains_key(&key) {
+            self.order.push_back(key);
+            let l = block_lines(b, items, width, look);
+            self.chars += line_size(&l);
+            self.lines.insert(key, l);
+            self.enforce();
+        }
+        self.lines.get(&key).expect("just inserted")
+    }
+
+    /// How many lines a block draws, without copying them: a scroll walks this per block,
+    /// so a long history costs a lookup each, not a clone.
+    fn count_for(&mut self, b: Block, items: &VecDeque<Item>, width: usize, look: Look) -> usize {
+        self.ensure(b, items, width, look).len()
+    }
+
+    /// What just opened: the lines it had before, for the unfold animation. Parked out of the
+    /// open blocks under its own key with the content revision set to `u64::MAX` (a value a real
+    /// revision never takes), so a second block mid-reveal reads its own height, not a neighbour's.
+    fn closed_lines(
+        &mut self,
+        b: Block,
+        items: &VecDeque<Item>,
+        width: usize,
+        expanded: &HashSet<u64>,
+        look: Look,
+    ) -> Vec<Line<'static>> {
+        let mut closed = expanded.clone();
+        let bkey = fold::key(b, items);
+        closed.remove(&bkey);
+        let was = match b {
+            Block::Run { start, end, .. } => Block::Run {
+                start,
+                end,
+                open: false,
+            },
+            one => one,
+        };
+        let key = LineKey {
+            block: bkey,
+            rev: u64::MAX,
+            width,
+            gen: self.gen,
+        };
+        if !self.lines.contains_key(&key) {
+            self.order.push_back(key);
+            let l = block_lines(
+                was,
+                items,
+                width,
+                Look {
+                    expanded: &closed,
+                    ..look
+                },
+            );
+            self.chars += line_size(&l);
+            self.lines.insert(key, l);
+            self.enforce();
+        }
+        self.lines.get(&key).expect("just inserted").clone()
+    }
+
+    /// The budget: drop the oldest lines until the cache fits. A block that is evicted is
+    /// rebuilt when it is needed again; its key is stable, so nothing stale is ever drawn.
+    fn enforce(&mut self) {
+        while self.chars > CACHE_BUDGET {
+            let Some(old) = self.order.pop_front() else {
+                break;
+            };
+            if let Some(gone) = self.lines.remove(&old) {
+                self.chars = self.chars.saturating_sub(line_size(&gone));
+            }
+        }
+    }
+
+    /// How many characters of lines the cache is holding.
+    fn chars(&self) -> usize {
+        self.chars
+    }
+
+    /// The "what is open" state changed (a block opened or closed, the focus moved, the
+    /// thoughts toggle flipped) or the width did: nothing drawn from the old state can be
+    /// reused.
+    fn clear(&mut self) {
+        self.gen = self.gen.wrapping_add(1);
+        self.lines.clear();
+        self.order.clear();
+        self.chars = 0;
+    }
+}
 /// What the footer says about the session.
 pub struct Header<'a> {
     pub agent: &'a str,
@@ -1192,13 +1359,12 @@ fn draw_history(
         theme,
     };
     let width = area.width as usize;
-    let mut rev: Vec<Line> = Vec::new();
-    let mut reached_start = true;
-    if items.is_empty() {
-        rev = welcome.into_iter().rev().collect();
+    if width != v.last_width {
+        v.last_width = width;
+        v.line_cache.clear();
     }
-    // Where the focused block sits among the lines, counted from the newest.
-    let mut found: Option<(usize, usize)> = None;
+    let h = area.height as usize;
+    let mut reached_start = true;
     let mut reveals: HashMap<u64, u64> = if motion {
         v.reveal.clone()
     } else {
@@ -1218,62 +1384,52 @@ fn draw_history(
             }
         }
     }
-    for (bi, b) in blocks.iter().enumerate().rev() {
-        let mut lines = block_lines(*b, items, width, look);
-        // A block that was just opened grows from the height it had to the height it has now,
-        // instead of jumping. The calls a run lists share the run's clock.
-        let bkey = fold::key(*b, items);
-        if let Some(&started) = reveals.get(&bkey) {
-            let elapsed = anim_ms.saturating_sub(started);
-            if elapsed < delight::REVEAL_MS {
-                let before = if v.reveal.contains_key(&bkey) {
-                    let mut closed = v.expanded.clone();
-                    closed.remove(&bkey);
-                    let was = match *b {
-                        Block::Run { start, end, .. } => Block::Run {
-                            start,
-                            end,
-                            open: false,
-                        },
-                        one => one,
+    // Pass 1, newest first: how many lines each block draws, and where, counted up from the
+    // newest. A scroll walks this per block, so a long history costs a lookup each, not a
+    // clone. The count of a block that is mid-unfold is the height it has at this moment.
+    let mut spans: Vec<(Block, usize, usize)> = Vec::new();
+    let mut found: Option<(usize, usize)> = None;
+    let total = if items.is_empty() {
+        welcome.len()
+    } else {
+        let mut count = 0usize;
+        for (bi, b) in blocks.iter().enumerate().rev() {
+            let bkey = fold::key(*b, items);
+            let mut n = v.line_cache.count_for(*b, items, width, look);
+            if let Some(&started) = reveals.get(&bkey) {
+                let elapsed = anim_ms.saturating_sub(started);
+                if elapsed < delight::REVEAL_MS {
+                    let before = if v.reveal.contains_key(&bkey) {
+                        v.line_cache
+                            .closed_lines(*b, items, width, &v.expanded, look)
+                            .len()
+                    } else {
+                        0
                     };
-                    block_lines(
-                        was,
-                        items,
-                        width,
-                        Look {
-                            expanded: &closed,
-                            ..look
-                        },
-                    )
-                    .len()
-                } else {
-                    0
-                };
-                lines.truncate(delight::reveal_rows(before, lines.len(), elapsed));
+                    // A block can shrink as it opens (a run folds from its calls to one line),
+                    // and the easing may ask for more rows than the block has now: cap at the
+                    // block's real height, so the pass-2 slice of its lines never runs off the end.
+                    n = delight::reveal_rows(before, n, elapsed).min(n);
+                }
+            }
+            if v.focus == Some(bkey) {
+                found = Some((count, count + n));
+            }
+            spans.push((*b, count, count + n));
+            count += n;
+            if count >= need && (!v.focus_dirty || found.is_some()) {
+                reached_start = bi == 0;
+                break;
             }
         }
-        lines.reverse();
-        let from = rev.len();
-        rev.extend(lines);
-        if v.focus == Some(fold::key(*b, items)) {
-            found = Some((from, rev.len()));
-        }
-        if rev.len() >= need && (!v.focus_dirty || found.is_some()) {
-            reached_start = bi == 0;
-            break;
-        }
-    }
-    if reached_start && tr.dropped() > 0 {
-        rev.push(Line::from(Span::styled(
-            format!("· {} earlier items are not shown", tr.dropped()),
-            theme.dim(),
-        )));
-    }
+        count
+    };
+    // The "not shown" line sits oldest, just past the last built line.
+    let has_drop = reached_start && tr.dropped() > 0;
+    let all = total + usize::from(has_drop);
     // Unfolds that have finished are forgotten, so the loop can go back to sleep.
     v.reveal
         .retain(|_, started| motion && anim_ms.saturating_sub(*started) < delight::REVEAL_MS);
-    let h = area.height as usize;
     // Keep the focused block in view: bring it to the edge it is past, never further than it needs.
     if v.focus_dirty {
         if let Some((from, to)) = found {
@@ -1286,15 +1442,41 @@ fn draw_history(
         }
         v.focus_dirty = false;
     }
-    // `rev` is newest line first. Do not scroll past the oldest line built.
-    v.scroll = v.scroll.min(rev.len().saturating_sub(h));
-    let end = (v.scroll + h).min(rev.len());
-    let mut lines: Vec<Line> = rev[v.scroll..end].to_vec();
-    lines.reverse();
+    // Do not scroll past the oldest line built.
+    v.scroll = v.scroll.min(all.saturating_sub(h));
+    let end = (v.scroll + h).min(all);
+    // Pass 2: the lines the window `v.scroll..end` shows, oldest first, and nothing else.
+    // A block spans newest-first index `from..to`, so the part the window shows, oldest
+    // first, is its own lines `to - hi .. to - lo`, where `lo..hi` is that overlap.
+    let mut out_window: Vec<Line> = Vec::new();
+    if items.is_empty() {
+        // The welcome is the whole of the history: index it newest-first the way the blocks
+        // are, then hand back the oldest-first slice the tail expects.
+        let mut w = welcome;
+        w.reverse();
+        let mut window = w[v.scroll..end].to_vec();
+        window.reverse();
+        out_window.extend(window);
+    } else {
+        if has_drop && total < end {
+            out_window.push(Line::from(Span::styled(
+                format!("· {} earlier items are not shown", tr.dropped()),
+                theme.dim(),
+            )));
+        }
+        for &(b, from, to) in spans.iter().rev() {
+            if to > v.scroll && from < end {
+                let lo = from.max(v.scroll);
+                let hi = to.min(end);
+                let lines = v.line_cache.ensure(b, items, width, look);
+                out_window.extend(lines[(to - hi)..(to - lo)].iter().cloned());
+            }
+        }
+    }
     // Bottom-align: short history sits just above the input.
-    let pad = h - lines.len().min(h);
+    let pad = h - out_window.len().min(h);
     let mut out = vec![Line::default(); pad];
-    out.extend(lines);
+    out.extend(out_window);
     f.render_widget(Paragraph::new(out), area);
 }
 
@@ -1330,6 +1512,39 @@ mod tests {
             turn: 0,
             anim_ms: 0,
             motion: false,
+        };
+        term.draw(|f| draw(f, &ctx, view)).expect("drawn");
+        term.backend().buffer().clone()
+    }
+
+    /// `draw_with`, with the unfold animation's clock and motion set, for the reveal tests.
+    #[allow(clippy::too_many_arguments)] // a test helper, like draw_with
+    fn draw_with_m(
+        tr: &Transcript,
+        session: &Session,
+        composer: &Composer,
+        theme: Theme,
+        w: u16,
+        h: u16,
+        view: &mut View,
+        motion: bool,
+        anim_ms: u64,
+    ) -> Buffer {
+        let mut term = Terminal::new(TestBackend::new(w, h)).expect("a test terminal");
+        let ctx = Frame_ {
+            transcript: tr,
+            session,
+            composer,
+            header: Header {
+                agent: "omp",
+                cwd: "/w",
+            },
+            theme,
+            hint: None,
+            working_secs: None,
+            turn: 0,
+            anim_ms,
+            motion,
         };
         term.draw(|f| draw(f, &ctx, view)).expect("drawn");
         term.backend().buffer().clone()
@@ -1394,6 +1609,224 @@ mod tests {
 
     fn agent(tr: &mut Transcript, id: &str, text: &str) {
         tr.apply(SessionUpdate::from_value(&json!({"sessionUpdate": "agent_message_chunk", "messageId": id, "content": {"type": "text", "text": text}})).expect("update"));
+    }
+
+    /// A conversation long enough to overflow the line cache, so a scroll sweep forces eviction.
+    fn big_transcript() -> Transcript {
+        let mut tr = Transcript::default();
+        for t in 0..600 {
+            tr.user(format!("turn {t}"));
+            let id = format!("m{t}");
+            agent(
+                &mut tr,
+                &id,
+                "a line of `code` and **bold**\n\n- one\n- two\n",
+            );
+            tr.apply(
+                SessionUpdate::from_value(
+                    &json!({"sessionUpdate": "tool_call", "toolCallId": format!("r{t}"), "title": "Read lib/sync.dart", "kind": "read", "status": "completed"}),
+                )
+                .expect("update"),
+            );
+        }
+        tr
+    }
+
+    #[test]
+    fn the_line_cache_never_changes_what_is_drawn() {
+        // The whole point of the cache: a scroll, and a scroll that evicts, must show exactly
+        // what a fresh build would. A warm view is swept across the conversation and compared,
+        // line for line, to a cold view at every offset.
+        let tr = big_transcript();
+        let session = ready_session();
+        let (w, h) = (100u16, 30u16);
+        let mut warm = View::default();
+        for scroll in (0..6000).step_by(37) {
+            warm.scroll = scroll;
+            let a = rows_of(&draw_with(
+                &tr,
+                &session,
+                &Composer::default(),
+                Theme::plain(),
+                w,
+                h,
+                &mut warm,
+            ));
+            let mut cold = View {
+                scroll,
+                ..View::default()
+            };
+            let b = rows_of(&draw_with(
+                &tr,
+                &session,
+                &Composer::default(),
+                Theme::plain(),
+                w,
+                h,
+                &mut cold,
+            ));
+            assert_eq!(a, b, "the cache changed what is drawn at scroll={scroll}");
+        }
+        // The sweep was long enough to have filled and evicted the cache.
+        assert!(
+            warm.cache_chars() <= 256 * 1024,
+            "the cache outgrew its budget"
+        );
+        assert!(warm.cache_chars() > 0, "the cache never held a line");
+    }
+    /// Three finished tool calls that fold into one run, and a line after, so the run is the
+    /// block that opens.
+    fn run_transcript() -> Transcript {
+        let mut tr = Transcript::default();
+        for (k, title) in ["Read a", "Read b", "Read c"].into_iter().enumerate() {
+            tr.apply(
+                SessionUpdate::from_value(
+                    &json!({"sessionUpdate": "tool_call", "toolCallId": format!("r{k}"), "title": title, "status": "completed"}),
+                )
+                .expect("update"),
+            );
+        }
+        agent(&mut tr, "after", "done with the reads");
+        tr
+    }
+
+    #[test]
+    fn opening_a_run_that_shrinks_never_runs_off_its_lines() {
+        // The crash: a run opens by folding from its calls to one line, so mid-reveal the easing
+        // can ask for more rows than the open run has. The count must cap at the block's real
+        // height, and the frame must match a cold build of the same moment.
+        let tr = run_transcript();
+        let session = ready_session();
+        let (w, h) = (100u16, 30u16);
+        let rk = tr.items()[0].id | (1u64 << 63); // the run key (the run starts at item 0)
+        let mut warm = View::default();
+        warm.expanded.insert(rk);
+        warm.reveal.insert(rk, 0);
+        // A few frames into the unfold, before it settles.
+        for anim_ms in [10u64, 40u64, 90u64] {
+            let a = rows_of(&draw_with_m(
+                &tr,
+                &session,
+                &Composer::default(),
+                Theme::plain(),
+                w,
+                h,
+                &mut warm,
+                true,
+                anim_ms,
+            ));
+            let mut cold = View {
+                expanded: HashSet::from([rk]),
+                reveal: HashMap::from([(rk, 0u64)]),
+                ..View::default()
+            };
+            let b = rows_of(&draw_with_m(
+                &tr,
+                &session,
+                &Composer::default(),
+                Theme::plain(),
+                w,
+                h,
+                &mut cold,
+                true,
+                anim_ms,
+            ));
+            assert_eq!(
+                a, b,
+                "the cache changed the reveal frame at anim_ms={anim_ms}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_streaming_message_is_not_frozen_at_its_first_chunk() {
+        // The cache must not serve a block's old line after its text grows in place: a message
+        // that streams shows its whole text, not the first chunk it was first built with.
+        let mut tr = Transcript::default();
+        agent(&mut tr, "m", "Hello");
+        let session = ready_session();
+        let (w, h) = (100u16, 30u16);
+        let mut view = View::default();
+        let first = rows_of(&draw_with(
+            &tr,
+            &session,
+            &Composer::default(),
+            Theme::plain(),
+            w,
+            h,
+            &mut view,
+        ));
+        assert!(first.iter().any(|r| r.contains("Hello")));
+        // The same message, same id, keeps streaming: the revision moves, the line must too.
+        agent(&mut tr, "m", " there, I am the agent");
+        let second = rows_of(&draw_with(
+            &tr,
+            &session,
+            &Composer::default(),
+            Theme::plain(),
+            w,
+            h,
+            &mut view,
+        ));
+        assert!(
+            second.iter().any(|r| r.contains("I am the agent")),
+            "the cache served the message's first chunk: {second:?}"
+        );
+    }
+
+    #[test]
+    fn closed_lines_are_kept_per_block_not_shared() {
+        // The unfold animation keeps "what the block had before it opened" for each opening
+        // block. That was once kept under one shared key, so a block that opened first parked
+        // its closed height there, and a second block read the first's. Each block must keep
+        // its own: run A has a failed call (taller closed height) than run B, so a block that
+        // read the neighbour's height would come back the wrong size.
+        let mut tr = Transcript::default();
+        for (id, title, status) in [
+            ("a0", "Read a", "completed"),
+            ("a1", "Read b", "failed"),
+            ("a2", "Read c", "completed"),
+        ] {
+            tr.apply(SessionUpdate::from_value(&json!({"sessionUpdate": "tool_call", "toolCallId": id, "title": title, "status": status})).expect("update"));
+        }
+        agent(&mut tr, "between", "a line between the two runs");
+        for (k, id) in ["b0", "b1", "b2"].into_iter().enumerate() {
+            tr.apply(SessionUpdate::from_value(&json!({"sessionUpdate": "tool_call", "toolCallId": id, "title": format!("B {k}"), "status": "completed"})).expect("update"));
+        }
+        let items = tr.items();
+        let run_a = Block::Run {
+            start: 0,
+            end: 3,
+            open: true,
+        };
+        let run_b = Block::Run {
+            start: 4,
+            end: 7,
+            open: true,
+        };
+        let mut cache = LineCache::default();
+        let look = Look {
+            expanded: &HashSet::new(),
+            focus: None,
+            thoughts: false,
+            theme: Theme::plain(),
+        };
+        let wa = cache.closed_lines(run_a, items, 100, &HashSet::new(), look);
+        let wb = cache.closed_lines(run_b, items, 100, &HashSet::new(), look);
+        assert_ne!(
+            wa.len(),
+            wb.len(),
+            "the two runs should have different closed heights: A={} B={}",
+            wa.len(),
+            wb.len()
+        );
+        // Reading A again must give A's height, not the B that was parked in between.
+        let wa2 = cache.closed_lines(run_a, items, 100, &HashSet::new(), look);
+        assert_eq!(
+            wa2.len(),
+            wa.len(),
+            "A read B's closed height after B opened"
+        );
     }
 
     #[test]
@@ -2583,7 +3016,12 @@ mod tests {
         ))
         .join("\n");
         assert!(text.contains("• Ready when you are."), "{text}");
-        assert!(text.contains("Tip:"));
+        let ready = text.find("Ready when you are.").expect("the greeting");
+        let tip = text.find("Tip:").expect("the tip");
+        assert!(
+            ready < tip,
+            "the greeting sits above the tip, not below it: {text}"
+        );
     }
 
     #[test]

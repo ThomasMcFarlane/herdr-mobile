@@ -173,13 +173,6 @@ impl Transcript {
         self.dropped
     }
     #[must_use]
-    #[cfg_attr(
-        not(test),
-        expect(
-            dead_code,
-            reason = "the memory check in the verification step reads it"
-        )
-    )]
     pub fn bytes(&self) -> usize {
         self.bytes
     }
