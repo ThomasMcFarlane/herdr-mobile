@@ -115,7 +115,7 @@ pub fn shimmer(len: usize, now_ms: u64) -> Vec<bool> {
 /// Whether the pulse is on its bright half.
 #[must_use]
 pub fn pulse(now_ms: u64) -> bool {
-    (now_ms / PULSE_MS) % 2 == 0
+    (now_ms / PULSE_MS).is_multiple_of(2)
 }
 
 /// How long the loop may sleep before it must draw again, given what is moving. `None`: until

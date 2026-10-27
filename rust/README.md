@@ -14,7 +14,7 @@ cargo build --release          # target/release/herdr-tui, about 1.2 MB, about 6
 cargo test --workspace         # 105 tests, python3 needed for the differential one (skipped without)
 ```
 
-Needs Rust 1.82 or newer. Build and install in one step (it also refreshes the keeper, and works while a
+Needs Rust 1.88 or newer. Build and install in one step (it also refreshes the keeper, and works while a
 session is open; that session keeps the old version):
 
 ```sh
