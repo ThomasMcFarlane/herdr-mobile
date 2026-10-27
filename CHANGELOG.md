@@ -4,6 +4,27 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [0.1.35] - 2026-10-27
+
+### The desk client scrolls a long session as fast as it follows it
+
+The desk client — the terminal app that runs an agent in a herdr pane — now
+walks back through a long session at the same speed it follows the newest
+output, and a viewer left open for days stays in the low megabytes.
+
+- It keeps only the lines on screen and rebuilds the rest when you reach them,
+  so a long history costs nothing until you scroll to it.
+- A full frame draws in a few tenths of a millisecond, a fraction of the
+  16 ms a smooth 60 fps frame has (desktop only; the feel on a phone is
+  unverified).
+
+**Fixed**
+
+- A message that streams in no longer freezes at its first few words: you see
+  it grow to the full text.
+- Opening a folded run of tool calls, with the motion on, can no longer stop
+  the viewer.
+
 ## [0.1.34] - 2026-10-27
 
 ### A new worktree's session opens in the tab you are looking at
