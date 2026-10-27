@@ -214,6 +214,7 @@ fn main() {
             turn: TURNS,
             anim_ms: 16,
             motion: true,
+            newer: None,
         };
         term.draw(|f| draw(f, &ctx, &mut view)).expect("drawn");
     }
@@ -250,6 +251,7 @@ fn main() {
             turn: TURNS,
             anim_ms: 16 * (n as u64 + 1),
             motion: true,
+            newer: None,
         };
         let t0 = std::time::Instant::now();
         term.draw(|f| draw(f, &ctx, &mut view)).expect("drawn");

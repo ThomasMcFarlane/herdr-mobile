@@ -11,6 +11,7 @@ usage:
   herdr-tui attach ID                  open a session that is already running
   herdr-tui ls [--all]                 list the sessions on this machine, what needs you first
   herdr-tui kill ID...                 end sessions for good (the agent and its keeper)
+  herdr-tui update [--check] [VERSION] install the latest release, or VERSION (0.1.30; older too)
   herdr-tui --help | --version
 
 A session keeps running when you leave it (Ctrl-D), and shows on your phone. Reopen it with
@@ -31,6 +32,12 @@ pub enum Cmd {
     },
     Kill {
         ids: Vec<String>,
+    },
+    /// Replace this program with the latest release, or with `version` (an older one too), or
+    /// only say whether that would change anything.
+    Update {
+        check: bool,
+        version: Option<String>,
     },
     Help,
     Version,
@@ -69,6 +76,22 @@ pub fn parse<I: IntoIterator<Item = String>>(args: I) -> Result<Cmd, String> {
                 }
                 return Ok(Cmd::Kill { ids });
             }
+            "update" => {
+                let mut check = false;
+                let mut version = None;
+                for a in args.by_ref() {
+                    if a == "--check" && !check {
+                        check = true;
+                    } else if version.is_none() && crate::update::version_of(&a).is_some() {
+                        version = Some(a);
+                    } else {
+                        return Err(format!(
+                            "update takes --check and a version like 0.1.30, not {a:?}"
+                        ));
+                    }
+                }
+                return Ok(Cmd::Update { check, version });
+            }
             "attach" => {
                 let id = value("attach")?;
                 if !keeper::records::is_valid_id(&id) {
@@ -95,6 +118,33 @@ mod tests {
 
     fn p(args: &[&str]) -> Result<Cmd, String> {
         parse(args.iter().map(|s| (*s).to_string()))
+    }
+
+    #[test]
+    fn update_takes_a_check_flag_and_a_version_in_either_form_and_nothing_else() {
+        assert_eq!(
+            p(&["update"]),
+            Ok(Cmd::Update {
+                check: false,
+                version: None
+            })
+        );
+        assert_eq!(
+            p(&["update", "--check", "v0.1.30"]),
+            Ok(Cmd::Update {
+                check: true,
+                version: Some("v0.1.30".into())
+            })
+        );
+        assert_eq!(
+            p(&["update", "0.1.30"]),
+            Ok(Cmd::Update {
+                check: false,
+                version: Some("0.1.30".into())
+            })
+        );
+        assert!(p(&["update", "latest"]).is_err());
+        assert!(p(&["update", "0.1.30", "0.1.31"]).is_err());
     }
 
     #[test]

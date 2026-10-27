@@ -26,7 +26,7 @@ use herdr_tui::session::{Effect, Event, Phase, Record, Refused, Session, Start};
 use herdr_tui::transcript::Transcript;
 use herdr_tui::ui;
 use herdr_tui::{
-    cli, delight, fold, herdr, highlight, host, input, lines, md, sessions, termbg, theme,
+    cli, delight, fold, herdr, highlight, host, input, lines, md, sessions, termbg, theme, update,
 };
 use keeper::records::StateDir;
 use std::io::{BufReader, Write};
@@ -78,6 +78,15 @@ struct App {
     /// The permission option a click last chose, and for which request: a second click on it
     /// answers.
     clicked: Option<(acp::Id, usize)>,
+    /// The file this program was started from, watched for being replaced by a newer one.
+    watch: update::Watch,
+    /// The version of a newer herdr-tui installed since this one started; `Ctrl-R` loads it.
+    newer: Option<String>,
+    /// When the file was last looked at (at most every few seconds, and only on something that
+    /// already woke the screen: no timer).
+    watched: Instant,
+    /// Leave to start the newer one in this session.
+    reload: bool,
     /// While a question waits the composer is its box: the person's own draft, set aside until
     /// the question goes.
     stash: Option<String>,
@@ -187,6 +196,18 @@ fn main() {
             return;
         }
         cli::Cmd::Kill { ids } => kill_sessions(&home, &ids),
+        cli::Cmd::Update { check, version } => {
+            let exe = std::env::current_exe()
+                .unwrap_or_else(|e| die(keeper::exit::FAILED, &format!("no path to itself ({e})")));
+            let base = update::base_url(|k| std::env::var(k).ok(), version.as_deref());
+            match update::run(&exe, cli::VERSION, &base, version.is_some(), check) {
+                Ok(said) => {
+                    let _ = writeln!(std::io::stdout(), "herdr-tui: {said}");
+                }
+                Err(why) => die(keeper::exit::FAILED, &why),
+            }
+            return;
+        }
         cli::Cmd::Attach { id } => (id, Start::Attach),
         cli::Cmd::New { agent, cwd } => {
             if keeper::routes::by_id(&agent).is_none() {
@@ -246,6 +267,10 @@ fn main() {
         last_title: String::new(),
         sel_for: None,
         clicked: None,
+        watch: update::Watch::new(&std::env::current_exe().unwrap_or_default(), cli::VERSION),
+        newer: None,
+        watched: Instant::now(),
+        reload: false,
         stash: None,
         boxed: None,
         repaint: false,
@@ -323,6 +348,7 @@ fn main() {
             turn: app.turns_done,
             anim_ms: app.now_ms(),
             motion: app.motion,
+            newer: app.newer.as_deref(),
         };
         if std::mem::take(&mut app.repaint) {
             let _ = term.clear();
@@ -363,6 +389,22 @@ fn main() {
     // The pane is no agent any more.
     if let Some(reporter) = app.reporter.take() {
         reporter.release();
+    }
+    // Load the newer herdr-tui into this session: the keeper holds everything, so the new one
+    // attaches and replays. Same terminal, same pane; this process becomes it.
+    if app.reload {
+        use std::os::unix::process::CommandExt;
+        let err = std::process::Command::new(app.watch.path())
+            .arg("attach")
+            .arg(&app.id)
+            .exec();
+        die(
+            keeper::exit::FAILED,
+            &format!(
+                "could not start the newer herdr-tui ({err}); the session is still running: herdr-tui attach {}",
+                app.id
+            ),
+        );
     }
     // Asked to end by a signal: the terminal is put back, then the exit status says so.
     if let Some(sig) = app.signal {
@@ -600,6 +642,31 @@ impl App {
             }
         }
         self.sync_box();
+        self.look_for_newer();
+    }
+
+    /// Looks at the installed file when something already woke the screen, and at most every few
+    /// seconds.
+    fn look_for_newer(&mut self) {
+        if self.watched.elapsed() < Duration::from_secs(3) {
+            return;
+        }
+        self.watched = Instant::now();
+        if let Some(v) = self.watch.poll() {
+            self.newer = Some(v);
+        }
+    }
+
+    /// `Ctrl-R`: load the newer herdr-tui into this session, when nothing would be lost.
+    fn load_newer(&mut self) {
+        if !self.composer.text.is_empty() {
+            self.hint = Some("Send or clear your message first, then Ctrl-R".to_string());
+        } else if !self.session.waiting().is_empty() {
+            self.hint = Some("Answer the request first, then Ctrl-R".to_string());
+        } else {
+            self.reload = true;
+            self.quit = true;
+        }
     }
 
     fn asking_question(&self) -> bool {
@@ -824,6 +891,7 @@ impl App {
             // Another program (an image viewer's warnings, a stray `echo`) can write on this
             // terminal behind our back; this puts the screen right.
             KeyCode::Char('l') if ctrl => self.repaint = true,
+            KeyCode::Char('r') if ctrl && self.newer.is_some() => self.load_newer(),
             KeyCode::Char('w') if ctrl => self.composer.kill_word(),
             KeyCode::Char('u') if ctrl => self.composer.clear(),
             KeyCode::Char('j') if ctrl => self.composer.insert('\n'),

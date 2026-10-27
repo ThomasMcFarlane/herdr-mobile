@@ -313,6 +313,7 @@ fn frame(
         turn: 0,
         anim_ms: 0,
         motion: false,
+        newer: None,
     };
     term.draw(|f| draw(f, &ctx, view)).expect("drawn");
     ansi(term.backend().buffer())

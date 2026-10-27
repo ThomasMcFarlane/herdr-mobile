@@ -23,6 +23,7 @@ pub mod termbg;
 pub mod theme;
 pub mod transcript;
 pub mod ui;
+pub mod update;
 
 #[cfg(test)]
 pub mod shots;

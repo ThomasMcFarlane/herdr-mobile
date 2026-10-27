@@ -33,6 +33,28 @@ curl -fsSL https://github.com/tuan3w/herdr-mobile/releases/latest/download/insta
 The script checks the download against the checksums before it installs to `~/.local/bin`
 (`BIN_DIR=` and `VERSION=` change that). Releases from before the desk client have no binary.
 
+Once installed, `herdr-tui` updates itself:
+
+```sh
+herdr-tui update --check      # says whether the latest release differs from this one; changes nothing
+herdr-tui update              # installs the latest release
+herdr-tui update 0.1.35       # installs that release, older ones too: the way back if a new one misbehaves
+```
+
+It downloads with `curl` (or `wget`), checks the file against the release's `herdr-tui-SHA256SUMS`
+(`sha256sum` or `shasum`), runs it once with `--version`, and only then renames it over the old one, so
+a failure at any step leaves what is installed as it was and sessions that are open keep running. The
+latest release is never a downgrade; a version you name is installed even if it is older. Releases
+before 0.1.30 have no desk client. A copy the app keeps for itself (`~/.herdr-mobile/bin/herdr-tui`) is
+replaced by the app when it updates, so update the one you installed.
+
+A `herdr-tui` that is open notices that its file was replaced (when something wakes the screen, at most
+every few seconds; there is no timer) and says so in the footer when idle: `↻ herdr-tui 0.1.38 is
+installed · Ctrl-R loads it`. `Ctrl-R` makes that process the new version in the same terminal and pane,
+attached to the same session (the keeper holds it, so nothing is lost). It waits when there is a message
+in the box or a request waiting, so nothing typed or asked is dropped. A `herdr-tui` older than 0.1.38
+does not look, so reopen those once with `herdr-tui attach ID`.
+
 ## The keeper
 
 Every session is owned by a small `keeper` process, so it survives closing the terminal. The binary
@@ -50,6 +72,7 @@ herdr-tui --agent codex --cwd ~/work/api
 herdr-tui attach abc123            # reopen a session that is still running
 herdr-tui ls [--all]               # sessions on this machine, what needs you first
 herdr-tui kill abc123 def456       # end sessions for good
+herdr-tui update [--check] [VER]   install the latest release, or VER (see Install)
 ```
 
 Leaving (`Ctrl-D`) does **not** stop the agent; it prints the id to come back with. To end a session
@@ -90,6 +113,7 @@ for good, `herdr-tui kill ID` (or stop it from the app).
 | `Esc` | browse: move among what the agent did and open or close it (below); with a request waiting, withdraw it, and decline a question |
 | `Ctrl-T` | open or close every thought at once |
 | `Ctrl-W` `Ctrl-U` | delete a word, clear the box |
+| `Ctrl-R` | when the footer says a newer herdr-tui is installed, load it into this session |
 | `Ctrl-L` | repaint the screen (also happens when the window regains focus), for when another program has written on the terminal |
 | `Ctrl-D` | leave (the session keeps running) |
 

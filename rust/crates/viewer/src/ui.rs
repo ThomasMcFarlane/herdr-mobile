@@ -318,6 +318,8 @@ pub struct Frame_<'a> {
     pub anim_ms: u64,
     /// Whether things move at all (`HERDR_TUI_MOTION=off` and friends turn it off).
     pub motion: bool,
+    /// The version of a newer herdr-tui that was installed while this one ran (`Ctrl-R` loads it).
+    pub newer: Option<&'a str>,
 }
 
 fn width_of(s: &str) -> usize {
@@ -1355,6 +1357,17 @@ fn footer_left(ctx: &Frame_, v: &View, asking: Option<String>) -> Vec<Span<'stat
         }
         return out;
     }
+    // Idle, and a newer herdr-tui has been installed: say so, and how to load it. Not while a
+    // turn runs or a request waits, when something else is the thing to look at.
+    if let Some(v) = ctx.newer {
+        return vec![
+            Span::styled("↻ ", theme.accent()),
+            Span::styled(
+                format!("herdr-tui {} is installed · Ctrl-R loads it", clean(v)),
+                theme.dim(),
+            ),
+        ];
+    }
     vec![Span::styled(
         "Enter send · Ctrl-J newline · ? keys",
         theme.dim(),
@@ -1778,6 +1791,7 @@ mod tests {
             turn: 0,
             anim_ms: 0,
             motion: false,
+            newer: None,
         };
         term.draw(|f| draw(f, &ctx, view)).expect("drawn");
         term.backend().buffer().clone()
@@ -1811,6 +1825,7 @@ mod tests {
             turn: 0,
             anim_ms,
             motion,
+            newer: None,
         };
         term.draw(|f| draw(f, &ctx, view)).expect("drawn");
         term.backend().buffer().clone()
@@ -3248,6 +3263,7 @@ mod tests {
             turn: 0,
             anim_ms: 0,
             motion: false,
+            newer: None,
         };
         term.draw(|f| draw(f, &ctx, &mut View::default()))
             .expect("drawn");
@@ -3315,6 +3331,7 @@ mod tests {
             turn: 0,
             anim_ms,
             motion,
+            newer: None,
         };
         term.draw(|f| draw(f, &ctx, view)).expect("drawn");
         term.backend().buffer().clone()
