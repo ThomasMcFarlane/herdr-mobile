@@ -4,6 +4,16 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [0.1.31] - 2026-10-27
+
+### herdr-tui says which release it is
+
+`herdr-tui --version` printed `0.1.0` next to a 0.1.30 release. It now prints the
+release's own version, so you can tell whether the desk client matches the app.
+
+- The version it announces to the agent when it connects is the same number.
+- The app is unchanged.
+
 ## [0.1.30] - 2026-10-27
 
 ### A terminal client for your sessions, at the desk
