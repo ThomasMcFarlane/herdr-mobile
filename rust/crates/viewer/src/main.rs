@@ -4,31 +4,10 @@
 //! No async runtime. Two threads feed one channel (socket, keyboard); the UI
 //! redraws only when something arrives, so it costs nothing at rest.
 //!
-//! This file is the only impure layer: it carries out the [`session::Effect`]s
+//! This file is the only impure layer: it carries out the [`herdr_tui::session::Effect`]s
 //! the pure session asks for.
 
-mod cli;
-mod composer;
-mod delight;
-mod diff;
-mod fold;
-mod herdr;
-mod host;
-mod input;
-mod lines;
-mod md;
-mod session;
-mod sessions;
-mod shell;
-#[cfg(test)]
-mod shots;
-mod termbg;
-mod theme;
-mod transcript;
-mod ui;
-
 use acp::Message;
-use composer::Composer;
 use crossterm::{
     event::{
         self, DisableBracketedPaste, DisableFocusChange, EnableBracketedPaste, EnableFocusChange,
@@ -37,14 +16,19 @@ use crossterm::{
     execute,
     terminal::{self, EnterAlternateScreen, LeaveAlternateScreen, SetTitle},
 };
+use herdr_tui::composer::Composer;
+use herdr_tui::{
+    cli, delight, fold, herdr, host, input, lines, md, sessions, termbg, theme,
+};
+use herdr_tui::session::{Effect, Event, Phase, Record, Refused, Session, Start};
+use herdr_tui::transcript::Transcript;
+use herdr_tui::ui;
 use keeper::records::StateDir;
-use session::{Effect, Event, Phase, Record, Refused, Session, Start};
 use std::io::{BufReader, Write};
 use std::os::unix::net::UnixStream;
 use std::path::PathBuf;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
-use transcript::Transcript;
 
 /// Lines one press of Up or Down (or one tick of the wheel) scrolls.
 const SCROLL_STEP: usize = 3;
@@ -178,7 +162,7 @@ fn main() {
             return;
         }
         cli::Cmd::Version => {
-            eprintln!("herdr-tui {}", crate::cli::VERSION);
+            eprintln!("herdr-tui {}", cli::VERSION);
             return;
         }
         cli::Cmd::Ls { all } => {
@@ -563,6 +547,7 @@ impl App {
     fn paste(&mut self, text: &str) {
         let (clean, cut) = input::clean_paste(text);
         self.view.focus = None;
+        self.view.invalidate_lines();
         self.composer.insert_str(&clean);
         self.hint = cut.then(|| format!("The paste was cut at {} KB", input::MAX_PASTE / 1024));
     }
@@ -574,6 +559,7 @@ impl App {
             Some(last) => {
                 self.view.focus = Some(*last);
                 self.view.focus_dirty = true;
+                self.view.invalidate_lines();
             }
             None => self.hint = Some("Nothing to fold yet".to_string()),
         }
@@ -591,6 +577,7 @@ impl App {
         let nav = match k.code {
             KeyCode::Esc | KeyCode::Char('i') => {
                 self.view.focus = None;
+                self.view.invalidate_lines();
                 return true;
             }
             KeyCode::Up | KeyCode::Char('k') => Nav::Prev,
@@ -603,6 +590,7 @@ impl App {
             // Any other letter was meant for the message: leave browsing and type it.
             KeyCode::Char(c) => {
                 self.view.focus = None;
+                self.view.invalidate_lines();
                 self.composer.insert(c);
                 return true;
             }
@@ -611,6 +599,7 @@ impl App {
         let keys = fold::focusable(self.transcript.items(), &self.view.expanded);
         let Some(&last) = keys.last() else {
             self.view.focus = None;
+            self.view.invalidate_lines();
             return true;
         };
         // What was focused may have been dropped to stay in budget.
@@ -623,6 +612,7 @@ impl App {
                 self.view.reveal.insert(key, now);
             }
         }
+        self.view.invalidate_lines();
         self.view.focus = Some(to);
         self.view.focus_dirty = true;
         true
@@ -665,7 +655,10 @@ impl App {
                     self.composer.clear();
                 }
             }
-            KeyCode::Char('t') if ctrl => self.view.thoughts = !self.view.thoughts,
+            KeyCode::Char('t') if ctrl => {
+                self.view.thoughts = !self.view.thoughts;
+                self.view.invalidate_lines();
+            }
             // Sent messages, as in a shell: Up and Down are for scrolling.
             KeyCode::Char('p') if ctrl => {
                 self.composer.older();

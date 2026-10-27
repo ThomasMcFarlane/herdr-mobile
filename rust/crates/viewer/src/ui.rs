@@ -56,8 +56,159 @@ pub struct View {
     pub help: bool,
     /// Blocks that were just opened, by key, and the animation time they began: they grow into place.
     pub reveal: HashMap<u64, u64>,
+    /// The lines of the blocks, kept from one frame to the next, and the width they were built at.
+    line_cache: LineCache,
+    last_width: usize,
 }
 
+impl View {
+    /// What a block draws changed without its key changing (a block opened or closed, the
+    /// focus moved, the thoughts toggle flipped): the lines kept for it cannot be reused.
+    pub fn invalidate_lines(&mut self) {
+        self.line_cache.clear();
+    }
+
+    /// How many characters of block lines the cache is holding (the "low memory" gauge).
+    pub fn cache_chars(&self) -> usize {
+        self.line_cache.chars()
+    }
+}
+
+/// What a cache of block lines is keyed by: the block, the width it was wrapped to, and a
+/// generation that is bumped whenever the look changes (a block opens or closes, the focus
+/// moves, the thoughts toggle flips, the width does). A block's own content changes with its
+/// item's revision, which is part of the block's key, so a stale entry is never drawn. Bumping
+/// the generation clears the cache, so it only ever holds the lines for the current look: a
+/// scroll is all hits, a focus move is one rebuild.
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+struct LineKey {
+    block: u64,
+    width: usize,
+    gen: u64,
+}
+
+/// What a cache entry costs, in the units the budget is measured in: the characters in its
+/// lines. A line is a handful of spans, so characters are a fair stand-in for its memory.
+fn line_size(l: &[Line<'static>]) -> usize {
+    l.iter()
+        .map(|r| r.spans.iter().map(|s| s.content.chars().count()).sum::<usize>())
+        .sum()
+}
+
+/// The lines of the blocks, kept from one frame to the next: a scroll, a keystroke or a frame
+/// that does not touch what a block draws costs a lookup, not a re-wrap. Bounded by characters
+/// the way the transcript is, so a viewer left open for days stays small: the oldest lines are
+/// dropped first, and a block that scrolls back into view is simply built again. Lived here,
+/// not in [`View`], because the look a block is drawn with borrows what the view keeps open.
+#[derive(Default)]
+pub struct LineCache {
+    lines: HashMap<LineKey, Vec<Line<'static>>>,
+    /// Insertion order, oldest first, for the eviction.
+    order: VecDeque<LineKey>,
+    chars: usize,
+    gen: u64,
+}
+
+/// How much of the conversation's lines the cache may keep: a few screens' worth, so a steady
+/// scroll is all hits and a long scroll only rebuilds what it walks back past.
+const CACHE_BUDGET: usize = 256 * 1024;
+
+impl LineCache {
+    /// The lines of a block, built once and kept.
+    fn lines_for(
+        &mut self,
+        b: Block,
+        items: &VecDeque<Item>,
+        width: usize,
+        look: Look,
+    ) -> Vec<Line<'static>> {
+        let key = LineKey {
+            block: fold::key(b, items),
+            width,
+            gen: self.gen,
+        };
+        if !self.lines.contains_key(&key) {
+            self.order.push_back(key);
+            let l = block_lines(b, items, width, look);
+            self.chars += line_size(&l);
+            self.lines.insert(key, l);
+            self.enforce();
+        }
+        self.lines.get(&key).expect("just inserted").clone()
+    }
+
+    /// What just opened: the lines it had before, for the unfold animation, kept out of the
+    /// cache under a key no block ever has.
+    fn closed_lines(
+        &mut self,
+        b: Block,
+        items: &VecDeque<Item>,
+        width: usize,
+        expanded: &HashSet<u64>,
+        look: Look,
+    ) -> Vec<Line<'static>> {
+        let mut closed = expanded.clone();
+        let bkey = fold::key(b, items);
+        closed.remove(&bkey);
+        let was = match b {
+            Block::Run { start, end, .. } => Block::Run {
+                start,
+                end,
+                open: false,
+            },
+            one => one,
+        };
+        let key = LineKey {
+            block: u64::MAX,
+            width,
+            gen: self.gen,
+        };
+        if !self.lines.contains_key(&key) {
+            self.order.push_back(key);
+            let l = block_lines(
+                was,
+                items,
+                width,
+                Look {
+                    expanded: &closed,
+                    ..look
+                },
+            );
+            self.chars += line_size(&l);
+            self.lines.insert(key, l);
+            self.enforce();
+        }
+        self.lines.get(&key).expect("just inserted").clone()
+    }
+
+    /// The budget: drop the oldest lines until the cache fits. A block that is evicted is
+    /// rebuilt when it is needed again; its key is stable, so nothing stale is ever drawn.
+    fn enforce(&mut self) {
+        while self.chars > CACHE_BUDGET {
+            let Some(old) = self.order.pop_front() else {
+                break;
+            };
+            if let Some(gone) = self.lines.remove(&old) {
+                self.chars = self.chars.saturating_sub(line_size(&gone));
+            }
+        }
+    }
+
+    /// How many characters of lines the cache is holding.
+    fn chars(&self) -> usize {
+        self.chars
+    }
+
+    /// The "what is open" state changed (a block opened or closed, the focus moved, the
+    /// thoughts toggle flipped) or the width did: nothing drawn from the old state can be
+    /// reused.
+    fn clear(&mut self) {
+        self.gen = self.gen.wrapping_add(1);
+        self.lines.clear();
+        self.order.clear();
+        self.chars = 0;
+    }
+}
 /// What the footer says about the session.
 pub struct Header<'a> {
     pub agent: &'a str,
@@ -1192,6 +1343,10 @@ fn draw_history(
         theme,
     };
     let width = area.width as usize;
+    if width != v.last_width {
+        v.last_width = width;
+        v.line_cache.clear();
+    }
     let mut rev: Vec<Line> = Vec::new();
     let mut reached_start = true;
     if items.is_empty() {
@@ -1219,7 +1374,7 @@ fn draw_history(
         }
     }
     for (bi, b) in blocks.iter().enumerate().rev() {
-        let mut lines = block_lines(*b, items, width, look);
+        let mut lines = v.line_cache.lines_for(*b, items, width, look);
         // A block that was just opened grows from the height it had to the height it has now,
         // instead of jumping. The calls a run lists share the run's clock.
         let bkey = fold::key(*b, items);
@@ -1227,26 +1382,9 @@ fn draw_history(
             let elapsed = anim_ms.saturating_sub(started);
             if elapsed < delight::REVEAL_MS {
                 let before = if v.reveal.contains_key(&bkey) {
-                    let mut closed = v.expanded.clone();
-                    closed.remove(&bkey);
-                    let was = match *b {
-                        Block::Run { start, end, .. } => Block::Run {
-                            start,
-                            end,
-                            open: false,
-                        },
-                        one => one,
-                    };
-                    block_lines(
-                        was,
-                        items,
-                        width,
-                        Look {
-                            expanded: &closed,
-                            ..look
-                        },
-                    )
-                    .len()
+                    v.line_cache
+                        .closed_lines(*b, items, width, &v.expanded, look)
+                        .len()
                 } else {
                     0
                 };
@@ -1394,6 +1532,63 @@ mod tests {
 
     fn agent(tr: &mut Transcript, id: &str, text: &str) {
         tr.apply(SessionUpdate::from_value(&json!({"sessionUpdate": "agent_message_chunk", "messageId": id, "content": {"type": "text", "text": text}})).expect("update"));
+    }
+
+    /// A conversation long enough to overflow the line cache, so a scroll sweep forces eviction.
+    fn big_transcript() -> Transcript {
+        let mut tr = Transcript::default();
+        for t in 0..600 {
+            tr.user(format!("turn {t}"));
+            let id = format!("m{t}");
+            agent(&mut tr, &id, "a line of `code` and **bold**\n\n- one\n- two\n");
+            tr.apply(
+                SessionUpdate::from_value(
+                    &json!({"sessionUpdate": "tool_call", "toolCallId": format!("r{t}"), "title": "Read lib/sync.dart", "kind": "read", "status": "completed"}),
+                )
+                .expect("update"),
+            );
+        }
+        tr
+    }
+
+    #[test]
+    fn the_line_cache_never_changes_what_is_drawn() {
+        // The whole point of the cache: a scroll, and a scroll that evicts, must show exactly
+        // what a fresh build would. A warm view is swept across the conversation and compared,
+        // line for line, to a cold view at every offset.
+        let tr = big_transcript();
+        let session = ready_session();
+        let (w, h) = (100u16, 30u16);
+        let mut warm = View::default();
+        for scroll in (0..6000).step_by(37) {
+            warm.scroll = scroll;
+            let a = rows_of(&draw_with(
+                &tr,
+                &session,
+                &Composer::default(),
+                Theme::plain(),
+                w,
+                h,
+                &mut warm,
+            ));
+            let mut cold = View {
+                scroll,
+                ..View::default()
+            };
+            let b = rows_of(&draw_with(
+                &tr,
+                &session,
+                &Composer::default(),
+                Theme::plain(),
+                w,
+                h,
+                &mut cold,
+            ));
+            assert_eq!(a, b, "the cache changed what is drawn at scroll={scroll}");
+        }
+        // The sweep was long enough to have filled and evicted the cache.
+        assert!(warm.cache_chars() <= 256 * 1024, "the cache outgrew its budget");
+        assert!(warm.cache_chars() > 0, "the cache never held a line");
     }
 
     #[test]
