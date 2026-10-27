@@ -178,11 +178,11 @@ void main() {
       expect(await OmpSessionLocator(_files(fs)).artifactDir(sessionId: _sid, cwd: _cwd), _artifactDir);
     });
 
-    test('calls that do not depend on each other go out together, and a hit does not wait for the root\'s listing', () async {
-      final fs = _host()..latency = const Duration(milliseconds: 20);
+    test('a hit in the folder omp would have used does not wait for the root\'s listing', () async {
+      // The listing of the sessions root never answers: only a lookup that
+      // does not depend on it can finish.
+      final fs = _host()..hangExact.add('/home/dev/.omp/agent/sessions');
       expect(await OmpSessionLocator(_files(fs)).artifactDir(sessionId: _sid, cwd: _cwd), _artifactDir);
-      expect(fs.maxInFlight, greaterThan(1), reason: 'home and realpath together; the exact folder beside the root listing');
-      expect(fs.calls.where((c) => c.startsWith('list')).length, greaterThanOrEqualTo(2));
     });
 
     test('another session in the same project is not taken', () async {

@@ -378,7 +378,7 @@ host`, plus `Earlier part not shown` when a cap cut the start). While that first
 read runs the summary has a `Loading…` line (`BusySpinner`); only a connection
 failure shows `Couldn't read the log · Tap to retry` (44 dp row); a log that is
 missing, unreadable, of an unknown version or not a conversation leaves the
-summary untouched and silent. The screen asks for the log only while it is open
+summary as it was, with no error line. The screen asks for the log only while it is open
 (`watchSubagentLog`). No composer. The request a
 subagent asks is answered from the same dock, above which one quiet line says
 `From subagent: Explore` (`OriginLine`; the hold rules are untouched, and the

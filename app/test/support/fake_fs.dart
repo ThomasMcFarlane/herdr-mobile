@@ -59,6 +59,9 @@ class FakeFs {
   /// Calls about these paths (and below) never answer.
   final Set<String> hang = {};
 
+  /// Calls about exactly these paths (not below them) never answer.
+  final Set<String> hangExact = {};
+
   /// Calls that have entered and not yet answered, and the most at once.
   int inFlight = 0;
   int maxInFlight = 0;
@@ -121,7 +124,7 @@ class FakeFs {
       if (fail != null) throw fail!;
       await gate?.future;
       final path = call.substring(call.indexOf(' ') + 1).split('@').first;
-      if (hang.any((h) => path == h || path.startsWith('$h/'))) await Completer<void>().future;
+      if (hang.any((h) => path == h || path.startsWith('$h/')) || hangExact.contains(path)) await Completer<void>().future;
       if (latency != null) await Future<void>.delayed(latency!);
     } finally {
       inFlight--;
