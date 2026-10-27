@@ -4,6 +4,54 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [0.1.36] - 2026-10-27
+
+### The desk client answers with the mouse and shows code in colour
+
+The desk client, the terminal app that runs an agent in a herdr pane, now
+opens and closes things with a click, answers a permission or a question with
+the arrows or the mouse, and draws tables and code so they are easy to read.
+
+> [!TIP]
+> Try it: in a pane running `herdr-tui`, click a folded `tool calls` line or
+> `… thinking` to open it, and click it again to close it.
+
+- A click opens or closes a tool call, a run of them or the thinking, and the
+  line you clicked stays where it was. Select text with Shift-drag;
+  `HERDR_TUI_MOUSE=off` gives the mouse back to the terminal. It was not
+  tried inside a herdr pane's own selection.
+- A permission is answered with `↑` `↓` or a click: a click chooses, and a
+  click on the chosen option answers with it, with the same guards as Enter.
+- An agent's question is answered in the terminal too, where it used to say
+  to answer on the phone: pick with the arrows, a number or a click, tick
+  boxes with Space, type text in the box, and the last Enter sends every
+  answer shown on the panel. Esc declines; what you were writing comes back.
+
+![A question from the agent in the desk client, with three numbered choices and the keys that answer it](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.36/0.1.36-question.png)
+
+### Tables and code are easier to read
+
+> [!TIP]
+> Try it: ask an agent for a table or a snippet in a pane running `herdr-tui`.
+
+- A table is a box of connected lines, with a line under the header and, when
+  a cell wraps, between rows. A column of figures lines up on the right and a
+  cell keeps its code and bold. A table still arriving shows one quiet line
+  until it is whole, instead of jumping as each row lands.
+- A fenced block in the agent's answer, and the added and removed lines of a
+  diff, are in colour by their language, on a faint green or red row for a
+  diff. The download grows from 1.6 to 2.6 MB for it, and about 1.5 MB of
+  memory per language shown (desktop, measured for Rust).
+- Scrolled back, what you are reading stays where it is while the agent
+  writes below, and the last row says how much is below; click it or press
+  `End` to go back.
+- A link shows where it goes after its label, numbered lists line up past 9,
+  and punctuation after code no longer starts a line on its own.
+
+![Coloured Rust and Python code in an answer, a numbered list from 8 to 10 and a link with its address](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.36/0.1.36-code.png)
+
+![A table in a box of connected lines whose cells wrap, with a line between rows](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.36/0.1.36-table.png)
+
 ## [0.1.35] - 2026-10-27
 
 ### The desk client scrolls a long session as fast as it follows it
