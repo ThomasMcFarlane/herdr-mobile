@@ -4,6 +4,23 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [0.1.37] - 2026-10-27
+
+### The desk client reaches every computer that runs a session
+
+A session you start from the phone now opens in the newest desk client,
+`herdr-tui` 0.1.37, which the computer downloads the first time and checks
+before it runs. Until now it fetched an older one.
+
+- That brings the clicks, the answers by arrows or mouse, the tables and the
+  coloured code of the last release to every computer, not only to one where
+  you installed it yourself.
+- A click on a permission's option only chooses it, even on the one already
+  marked; a second click on it answers. A tap that lands on a row the panel
+  just moved under your thumb can no longer approve.
+- An optional choice in an agent's question that you step past without picking
+  sends no answer for it, as the phone does. It used to send the first option.
+
 ## [0.1.36] - 2026-10-27
 
 ### The desk client answers with the mouse and shows code in colour

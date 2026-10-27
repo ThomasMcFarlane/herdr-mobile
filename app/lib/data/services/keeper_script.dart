@@ -989,7 +989,7 @@ def view_runnable(path):
 # in the same release as any change to herdr-tui or to the keeper that the older one cannot
 # follow (the wire, the record fields, the exit codes). A test keeps it from being newer than the
 # app itself, since no such release can exist yet.
-DESK_MIN = "0.1.31"
+DESK_MIN = "0.1.37"
 DESK_URL = "https://github.com/tuan3w/herdr-mobile/releases/download/v" + DESK_MIN
 DESK_MAX_BYTES = 64 * 1024 * 1024
 DESK_TIMEOUT = 8
