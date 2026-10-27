@@ -22,6 +22,10 @@ Use it to find a feature you missed when you updated.
   Dependabot alerts about a crate it never called in a risky way. The app pins `herdr-tui`
   0.1.31, so that fix reaches you with a later pin.
 
+![What’s new in Settings: every release up to the installed one, with its headline and date](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.33/0.1.33-history-list.png)
+
+![The notes of one release, with its tip card](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.33/0.1.33-history-notes.png)
+
 ## [0.1.32] - 2026-10-27
 
 ### A session opened from the phone shows up as herdr-tui on the computer
