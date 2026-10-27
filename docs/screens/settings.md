@@ -120,3 +120,16 @@ the terminal that was in front over, and deleted. Also,
 in private cache files and never in preferences, the last transcript of each
 agent session (`TranscriptCache`: it opens at once, as a saved copy, until the
 keeper has answered).
+
+**What's new** (`features/settings/release_history_screen.dart`, About). The release notes of every
+version the installed one knows, newest first: version (`Installed` on this one), the headline of the
+release and its date; a tap opens that release's notes in a sheet shaped like the update sheet (tips
+and the walkthrough poster included). Why: the update sheet shows only the newest release, and the
+person who updated has no way to read what the last few releases added or to find a tip they missed.
+Why bundled: the notes ship in the app (`assets/CHANGELOG.md`, a link to the repository's own
+`CHANGELOG.md`, so the app, GitHub and the file are one text and nothing is copied or synced), so it
+opens at once, offline, with no request and no rate limit; the cost is that it only knows releases up
+to the installed one (a newer one is the update sheet's). The only thing fetched is a walkthrough's
+poster, when that release's notes are opened. `test/release_history_test.dart` fails when the bundled
+file is not the repository's or its newest release is not `appVersion`, which is also what stops a
+release without its changelog section.

@@ -1,1 +1,0 @@
-A page behind a password now asks you to sign in. A dev server, or a reverse proxy in front of it, with Basic auth used to load nothing and give no way to enter a user name and password. Try it: tap a link to such a page and choose Open page; the Sign in sheet appears. A wrong password asks again, and what you type is not kept.

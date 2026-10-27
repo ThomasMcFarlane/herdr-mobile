@@ -1,6 +1,6 @@
 name: CI
 
-# Markdown, store text and the agent skills cannot change a test result, so a
+# Markdown and the agent skills cannot change a test result, so a
 # change that only touches them skips the run. Not docs/**: the tests read
 # docs/herdr-api.schema.json, and tool/ holds the design lint they import.
 # (If a branch rule requires the `check` job, a skipped run leaves it pending:
@@ -10,7 +10,6 @@ on:
     branches: [main]
     paths-ignore:
       - '**/*.md'
-      - 'fastlane/**'
       - 'LICENSE'
       - '.agents/**'
       - '.claude/**'
@@ -19,7 +18,6 @@ on:
   pull_request:
     paths-ignore:
       - '**/*.md'
-      - 'fastlane/**'
       - 'LICENSE'
       - '.agents/**'
       - '.claude/**'

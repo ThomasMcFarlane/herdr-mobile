@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Checks one section of CHANGELOG.md, and its Play text and media, before a commit.
+"""Checks one section of CHANGELOG.md, and its media, before a commit.
 
     python3 check_changelog.py <x.y.z | unreleased> [--remote] [--no-media=REASON]
 
@@ -20,8 +20,7 @@ Rules (release = a version argument; unreleased skips the release-only ones):
            or CamelCase widget names (outside backticks)
   tip      every `> [!TIP]` card's first line starts `> Try it:`; at most 3
   label    every backticked label in a tip is a quoted string in app/lib/**/*.dart
-  play     release: fastlane/metadata/android/en-US/changelogs/<N>.txt exists for
-           the +N in app/pubspec.yaml, <= 500 characters, plain text
+  version  release: app/pubspec.yaml is at the version being released
   media    release: the section starts with the walkthrough line
            [![label](<version>-whats-new.jpg)](<version>-whats-new.mp4); each
            headline block has one still (and at most one phone clip); all are
@@ -36,7 +35,6 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-PLAY_LIMIT = 500
 MAX_TIPS = 3
 STILL_MAX_BYTES = 1_500_000
 CLIP_MAX_BYTES = 30_000_000
@@ -191,25 +189,14 @@ def check_tips(body: list[tuple[int, str]], root: Path) -> list[str]:
     return out
 
 
-def check_play(root: Path, version: str) -> list[str]:
+def check_version(root: Path, version: str) -> list[str]:
     pubspec = (root / 'app' / 'pubspec.yaml').read_text()
     m = re.search(r'^version:\s*(\d+\.\d+\.\d+)\+(\d+)\s*$', pubspec, re.M)
     if not m:
-        return ['play: app/pubspec.yaml has no "version: x.y.z+N" line']
+        return ['version: app/pubspec.yaml has no "version: x.y.z+N" line']
     if m.group(1) != version:
-        return [f'play: app/pubspec.yaml is at {m.group(1)}+{m.group(2)}; bump it to {version} first (the Play file is named after its +N)']
-    rel = f'fastlane/metadata/android/en-US/changelogs/{m.group(2)}.txt'
-    path = root / rel
-    if not path.exists():
-        return [f'play: {rel} is missing; write the Play "What\'s new" text there']
-    text = path.read_text().strip()
-    out = []
-    if len(text) > PLAY_LIMIT:
-        out.append(f'play: {rel} has {len(text)} characters; Play allows {PLAY_LIMIT}')
-    for mark in ('#', '`', '**', '> ['):
-        if mark in text:
-            out.append(f'play: {rel} contains "{mark}"; Play shows plain text')
-    return out
+        return [f'version: app/pubspec.yaml is at {m.group(1)}+{m.group(2)}; bump it to {version} first']
+    return []
 
 
 WALKTHROUGH = re.compile(r'^\[!\[([^\]]+)\]\(([^)\s]+)\)\]\(([^)\s]+)\)\s*$')
@@ -307,7 +294,7 @@ def main() -> int:
     findings += check_jargon(body)
     findings += check_tips(body, root)
     if version != 'unreleased':
-        findings += check_play(root, version)
+        findings += check_version(root, version)
         if no_media is None:
             findings += check_media(body, root, version, remote)
         else:
