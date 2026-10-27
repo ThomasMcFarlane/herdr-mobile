@@ -678,6 +678,12 @@ elif args[:2] == ["workspace", "create"]:
 elif args[:2] == ["tab", "create"]:
     t, p = tab(arg("--workspace"), arg("--label") or "")
     out = {"type": "tab_created", "tab": t, "root_pane": p}
+elif args[:2] == ["tab", "list"]:
+    out = {"type": "tab_list", "tabs": st.get("tablist", {}).get(arg("--workspace"), [])}
+elif args[:2] == ["pane", "list"]:
+    out = {"type": "pane_list", "panes": st.get("panelist", {}).get(arg("--workspace"), [])}
+elif args[:2] == ["pane", "read"]:
+    sys.stdout.write(st.get("screens", {}).get(args[2], ""))
 with open(${jsonEncode(state)}, "w") as f:
     json.dump(st, f)
 if out is not None:

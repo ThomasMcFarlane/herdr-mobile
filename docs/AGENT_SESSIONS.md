@@ -484,6 +484,13 @@ coming from its side.
    desk lists a worktree as its own workspace, and a session in it that sat
    in `Phone sessions` left that workspace an empty shell. The main checkout's
    workspace is the person's own, so its sessions stay in `Phone sessions`.
+   A worktree workspace herdr just made has one tab with a bare shell. When the workspace has
+   exactly one tab with one pane, no agent in it, and a screen that is one shell prompt and
+   nothing else (not output, a half-typed command or a running program), the session takes that
+   tab: the command runs in its pane and the tab is renamed, so there is no second tab to switch
+   to. That tab is the person's own, so it is never closed with the session. Anything else gets a
+   tab of its own, created unfocused so a phone session never takes over the tab being typed in.
+   A herdr that cannot list tabs or read a pane gets the tab of its own as before.
    The tab runs the keeper's `desk` command, which runs `herdr-tui attach` (docs/TUI.md) and
    falls back to `view` when it cannot. `desk` runs in the pane, so the person sees what it
    does and the keeper never waits on it. A `herdr-tui` somebody installed is used as it is if it is at

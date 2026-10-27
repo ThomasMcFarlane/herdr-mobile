@@ -964,6 +964,18 @@ def checkout_workspace(workspaces, cwd):
     return best
 
 
+def untouched_shell(screen):
+    """True when [screen] (what `herdr pane read` printed) is a shell that was just opened and
+    left alone: one non-blank line, and that line is a prompt (ends with `$`, `%`, `#`, `>`, `❯`
+    or `➜`, ignoring a right-hand prompt after a gap of spaces). Anything else (output, a command
+    half typed, a program running) is somebody's and nothing may be typed into it."""
+    lines = [l for l in screen.splitlines() if l.strip()]
+    if len(lines) != 1:
+        return False
+    left = re.split(r"\s{2,}", lines[0].strip())[0]
+    return left.endswith(("$", "%", "#", ">", "\u276f", "\u279c"))
+
+
 def view_runnable(path):
     """True when `python3 '<path>' view ID` is safe to type into a shell: the
     path is one single-quoted word."""
@@ -2108,22 +2120,67 @@ class Keeper(object):
         # desk the person opens the worktree and finds its agent there, not
         # an empty shell beside a tab in `Phone sessions`.
         wid = checkout_workspace(spaces, self.cwd)
-        if wid is None:
-            for w in spaces:
-                if isinstance(w, dict) and w.get("label") == PANE_WORKSPACE and isinstance(w.get("workspace_id"), str):
-                    wid = w["workspace_id"]
-                    break
         if wid is not None:
+            # A worktree herdr just made has one tab: an empty shell. The session takes that
+            # one rather than sit in a second tab beside it (pane_tabs), else a tab of its own.
             self.herdr_call(
-                ["tab", "create", "--workspace", wid, "--cwd", self.cwd, "--label", self.pane_label(), "--no-focus"],
-                lambda o: self.pane_made(o, False),
+                ["tab", "list", "--workspace", wid],
+                lambda o: self.pane_tabs(o, wid),
+                fail=lambda: self.pane_new_tab(wid),
             )
             return
+        for w in spaces:
+            if isinstance(w, dict) and w.get("label") == PANE_WORKSPACE and isinstance(w.get("workspace_id"), str):
+                self.pane_new_tab(w["workspace_id"])
+                return
         # A new workspace comes with a tab and a pane: this session takes them.
         self.herdr_call(
             ["workspace", "create", "--label", PANE_WORKSPACE, "--cwd", self.cwd, "--no-focus"],
             lambda o: self.pane_made(o, True),
         )
+
+    def pane_new_tab(self, wid):
+        self.herdr_call(
+            ["tab", "create", "--workspace", wid, "--cwd", self.cwd, "--label", self.pane_label(), "--no-focus"],
+            lambda o: self.pane_made(o, False),
+        )
+
+    def pane_tabs(self, out, wid):
+        tabs = herdr_result(out).get("tabs")
+        if not (isinstance(tabs, list) and len(tabs) == 1 and isinstance(tabs[0], dict)):
+            return self.pane_new_tab(wid)
+        tab = tabs[0]
+        tid = tab.get("tab_id")
+        if tab.get("pane_count") != 1 or not isinstance(tid, str):
+            return self.pane_new_tab(wid)
+        self.herdr_call(
+            ["pane", "list", "--workspace", wid],
+            lambda o: self.pane_panes(o, wid, tid),
+            fail=lambda: self.pane_new_tab(wid),
+        )
+
+    def pane_panes(self, out, wid, tid):
+        panes = herdr_result(out).get("panes")
+        mine = [p for p in panes if isinstance(p, dict) and p.get("tab_id") == tid] if isinstance(panes, list) else []
+        pid = mine[0].get("pane_id") if len(mine) == 1 else None
+        if not isinstance(pid, str) or mine[0].get("agent") is not None:
+            return self.pane_new_tab(wid)
+        self.herdr_call(
+            ["pane", "read", pid, "--lines", "30"],
+            lambda o: self.pane_read(o, wid, tid, pid),
+            fail=lambda: self.pane_new_tab(wid),
+        )
+
+    def pane_read(self, out, wid, tid, pid):
+        if not untouched_shell(out.decode("utf-8", "replace")):
+            return self.pane_new_tab(wid)
+        # The tab is the person's own, so it is never closed with the session: only the rename
+        # and the command are ours. Not `pane_tab`, which the keeper closes.
+        self.herdr_call(["pane", "run", pid, self.pane_command()], lambda _o: self.herdr_call(["tab", "rename", tid, self.pane_label()], None))
+        self.dlog("herdr pane %s (tab %s, the worktree's empty shell) shows the session" % (pid, tid))
+
+    def pane_command(self):
+        return "python3 '%s' %s %s" % (SCRIPT, "view" if os.environ.get("HERDR_MOBILE_VIEW") == "python" else "desk", self.id)
 
     def pane_made(self, out, rename):
         res = herdr_result(out)
@@ -2135,13 +2192,12 @@ class Keeper(object):
             return
         self.pane_tab = tid
         after = (lambda _o: self.herdr_call(["tab", "rename", tid, self.pane_label()], None)) if rename else None
-        shown = "python3 '%s' %s %s" % (SCRIPT, "view" if os.environ.get("HERDR_MOBILE_VIEW") == "python" else "desk", self.id)
-        self.herdr_call(["pane", "run", pid, shown], after)
+        self.herdr_call(["pane", "run", pid, self.pane_command()], after)
         self.dlog("herdr pane %s (tab %s) shows the session" % (pid, tid))
 
-    def herdr_call(self, args, then, timeout=HERDR_TIMEOUT):
+    def herdr_call(self, args, then, timeout=HERDR_TIMEOUT, fail=None):
         """Starts one herdr command; tick calls [then] with its stdout when it
-        exits 0 (herdr_poll)."""
+        exits 0, else [fail] (herdr_poll)."""
         try:
             p = subprocess.Popen(
                 [self.herdr] + args, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -2152,7 +2208,7 @@ class Keeper(object):
             return
         for f in (p.stdout, p.stderr):
             os.set_blocking(f.fileno(), False)
-        self.herdr_job = {"p": p, "args": args, "then": then, "out": bytearray(), "err": bytearray(), "deadline": time.time() + timeout}
+        self.herdr_job = {"p": p, "args": args, "then": then, "fail": fail, "out": bytearray(), "err": bytearray(), "deadline": time.time() + timeout}
 
     def herdr_poll(self):
         job = self.herdr_job
@@ -2184,6 +2240,8 @@ class Keeper(object):
             self.dlog("%s failed (%d): %s" % (name, rc, trunc(bytes(job["err"]).decode("utf-8", "replace").strip(), 300)))
         elif job["then"] is not None:
             job["then"](bytes(job["out"]))
+        if (rc is None or rc != 0) and job.get("fail") is not None:
+            job["fail"]()
 
     def herdr_stop(self):
         """Ends the herdr command in flight (it was started by this keeper)."""
