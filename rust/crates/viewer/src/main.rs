@@ -1545,7 +1545,28 @@ impl App {
         let (id, what) = (opt.id.clone(), opt.name.clone());
         match slash::pick(opt, args) {
             slash::Pick::Open(p) => self.view.picker = Some(p),
-            slash::Pick::Apply { value, name } => self.apply_choice(&id, &what, &value, &name),
+            slash::Pick::Apply { value, name } => {
+                let current = opt.current.clone();
+                // A mode that lowers the guard is confirmed by choosing it again, and retyping the
+                // command clears that (any key but Enter does): the list opens on it instead, so
+                // Enter confirms.
+                let risky = opt.is("mode")
+                    && current.as_deref() != Some(value.as_str())
+                    && risk::assess(&value, &name) != risk::Risk::None;
+                if risky {
+                    if let slash::Pick::Open(mut p) = slash::pick(opt, "") {
+                        p.sel = p.rows.iter().position(|r| r.0 == value).unwrap_or(p.sel);
+                        self.hint = Some(format!(
+                            "{name} {} · choose it again to confirm",
+                            risk::why(risk::assess(&value, &name))
+                        ));
+                        self.mode_confirm = Some(value);
+                        self.view.picker = Some(p);
+                        return;
+                    }
+                }
+                self.apply_choice(&id, &what, &value, &name);
+            }
             slash::Pick::Nothing(why) => self.hint = Some(why),
         }
     }
