@@ -106,6 +106,7 @@ void main() {
       expect(find.text('Loading…'), findsOneWidget);
       expect(find.byType(BusySpinner), findsOneWidget);
       expect(find.byType(SubagentSummaryBody), findsOneWidget);
+      expect(_text('Summary only.'), findsNothing, reason: 'a conversation may be about to replace it');
     });
 
     testWidgets('a failed read offers a retry that is a real tap target', (tester) async {
@@ -113,6 +114,7 @@ void main() {
       await _pump(tester, _app(SubagentRunScreen(session: session, runId: _id)));
       expect(_text('Couldn’t read the log'), findsOneWidget);
       expect(find.byType(SubagentSummaryBody), findsOneWidget);
+      expect(_text('Summary only.'), findsNothing);
       expect(tester.getSize(find.byType(LogStatusLine)).height, greaterThanOrEqualTo(44));
       await tester.tap(_text('Couldn’t read the log'));
       await tester.pump();

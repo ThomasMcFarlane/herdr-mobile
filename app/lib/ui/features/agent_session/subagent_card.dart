@@ -10,12 +10,14 @@ import '../../../data/models/herdr_models.dart' show AgentStatus;
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/words/plural.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
+import 'asked_to.dart';
 import '../../render/markdown/markdown.dart';
 import '../../support/step_clock.dart';
 import 'agent_session_navigation.dart';
 import 'session_select.dart';
 import 'status_line.dart' show secondsClock, statusNow;
 import 'subagent_format.dart';
+import 'subagent_run_session.dart';
 import 'tool_rows.dart';
 import 'transcript_rows.dart';
 import '../../render/visible_text.dart';
@@ -204,7 +206,16 @@ class SubagentToolRow extends StatelessWidget {
     final runs = s.subagentsOfToolCall(id);
     final g = groupOf(id, s.state.items, s.subagentRuns);
     final heads = g != null && g.isGroup && g.firstToolCallId == id;
-    return _Snap(runs, heads ? g.runs : null, blockedRunIds(s.state), runsAreLive(s.state, linkLive: s.link == AgentLink.live));
+    // Inside a subagent's screen `s` is the child's view: its state holds no
+    // requests and its own link, so what waits and what is live come from the
+    // session that owns every run.
+    final owner = s is SubagentRunSession ? s.parent : s;
+    return _Snap(
+      runs,
+      heads ? g.runs : null,
+      blockedRunIds(owner.state),
+      runsAreLive(owner.state, linkLive: owner.link == AgentLink.live),
+    );
   }
 
   @override
@@ -397,10 +408,9 @@ class _SubagentCardState extends State<SubagentCard> {
             children: [
               if (assignment.isNotEmpty) ...[
                 _Label('Asked to'),
-                Text(
-                  visibleText(assignment),
+                AskedPreview(
+                  markdown: assignment,
                   maxLines: 5,
-                  overflow: TextOverflow.ellipsis,
                   style: Type.secondary.copyWith(color: ds.textSecondary),
                 ),
                 const SizedBox(height: Gap.sm),

@@ -81,13 +81,16 @@ Duration? runElapsed(SubagentRun run, DateTime now, {required bool live}) {
 ///    `retrying 2 of 5`);
 ///  * waiting for a request: `Needs you · 7 tools`;
 ///  * done: `Explore · done · 31s · 12 tools`; failed and cancelled likewise.
-String runLine(SubagentRun run, RunTone tone, {required DateTime now}) {
+///
+/// [withType] is false where the agent type is already said (the drill-in's
+/// bar subtitle).
+String runLine(SubagentRun run, RunTone tone, {required DateTime now, bool withType = true}) {
   final live = tone != RunTone.stale;
   final elapsed = runElapsed(run, now, live: live);
   final time = elapsed == null ? null : Elapsed.compact(elapsed);
   final tools = toolsWord(run.toolCount);
   final last = _lastTool(run);
-  final type = _clean(run.agentType);
+  final type = withType ? _clean(run.agentType) : null;
   final retry = run.retry;
   final parts = switch (tone) {
     RunTone.waitingForYou => ['Needs you', ?tools],
