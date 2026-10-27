@@ -74,15 +74,17 @@ impl View {
     }
 }
 
-/// What a cache of block lines is keyed by: the block, the width it was wrapped to, and a
-/// generation that is bumped whenever the look changes (a block opens or closes, the focus
-/// moves, the thoughts toggle flips, the width does). A block's own content changes with its
-/// item's revision, which is part of the block's key, so a stale entry is never drawn. Bumping
-/// the generation clears the cache, so it only ever holds the lines for the current look: a
-/// scroll is all hits, a focus move is one rebuild.
+/// What a cache of block lines is keyed by: the block, the content revision of what it draws
+/// (a `One`'s item revision, a `Run`'s fold of its calls' — so a streaming edit moves the
+/// line), the width it was wrapped to, and a generation that is bumped whenever the look
+/// changes (a block opens or closes, the focus moves, the thoughts toggle flips). Bumping the
+/// generation clears the cache, so it only ever holds the lines for the current look: a scroll
+/// is all hits, a focus move is one rebuild. The content revision is the field that makes an
+/// in-place edit safe: it keeps the block's id, so the id alone would serve the old line.
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 struct LineKey {
     block: u64,
+    rev: u64,
     width: usize,
     gen: u64,
 }
@@ -91,7 +93,12 @@ struct LineKey {
 /// lines. A line is a handful of spans, so characters are a fair stand-in for its memory.
 fn line_size(l: &[Line<'static>]) -> usize {
     l.iter()
-        .map(|r| r.spans.iter().map(|s| s.content.chars().count()).sum::<usize>())
+        .map(|r| {
+            r.spans
+                .iter()
+                .map(|s| s.content.chars().count())
+                .sum::<usize>()
+        })
         .sum()
 }
 
@@ -101,7 +108,7 @@ fn line_size(l: &[Line<'static>]) -> usize {
 /// dropped first, and a block that scrolls back into view is simply built again. Lived here,
 /// not in [`View`], because the look a block is drawn with borrows what the view keeps open.
 #[derive(Default)]
-pub struct LineCache {
+struct LineCache {
     lines: HashMap<LineKey, Vec<Line<'static>>>,
     /// Insertion order, oldest first, for the eviction.
     order: VecDeque<LineKey>,
@@ -124,6 +131,7 @@ impl LineCache {
     ) -> &Vec<Line<'static>> {
         let key = LineKey {
             block: fold::key(b, items),
+            rev: fold::revision(b, items),
             width,
             gen: self.gen,
         };
@@ -139,18 +147,13 @@ impl LineCache {
 
     /// How many lines a block draws, without copying them: a scroll walks this per block,
     /// so a long history costs a lookup each, not a clone.
-    fn count_for(
-        &mut self,
-        b: Block,
-        items: &VecDeque<Item>,
-        width: usize,
-        look: Look,
-    ) -> usize {
+    fn count_for(&mut self, b: Block, items: &VecDeque<Item>, width: usize, look: Look) -> usize {
         self.ensure(b, items, width, look).len()
     }
 
-    /// What just opened: the lines it had before, for the unfold animation, kept out of the
-    /// cache under a key no block ever has.
+    /// What just opened: the lines it had before, for the unfold animation. Parked out of the
+    /// open blocks under its own key with the content revision set to `u64::MAX` (a value a real
+    /// revision never takes), so a second block mid-reveal reads its own height, not a neighbour's.
     fn closed_lines(
         &mut self,
         b: Block,
@@ -171,7 +174,8 @@ impl LineCache {
             one => one,
         };
         let key = LineKey {
-            block: u64::MAX,
+            block: bkey,
+            rev: u64::MAX,
             width,
             gen: self.gen,
         };
@@ -1402,7 +1406,10 @@ fn draw_history(
                     } else {
                         0
                     };
-                    n = delight::reveal_rows(before, n, elapsed);
+                    // A block can shrink as it opens (a run folds from its calls to one line),
+                    // and the easing may ask for more rows than the block has now: cap at the
+                    // block's real height, so the pass-2 slice of its lines never runs off the end.
+                    n = delight::reveal_rows(before, n, elapsed).min(n);
                 }
             }
             if v.focus == Some(bkey) {
@@ -1510,6 +1517,39 @@ mod tests {
         term.backend().buffer().clone()
     }
 
+    /// `draw_with`, with the unfold animation's clock and motion set, for the reveal tests.
+    #[allow(clippy::too_many_arguments)] // a test helper, like draw_with
+    fn draw_with_m(
+        tr: &Transcript,
+        session: &Session,
+        composer: &Composer,
+        theme: Theme,
+        w: u16,
+        h: u16,
+        view: &mut View,
+        motion: bool,
+        anim_ms: u64,
+    ) -> Buffer {
+        let mut term = Terminal::new(TestBackend::new(w, h)).expect("a test terminal");
+        let ctx = Frame_ {
+            transcript: tr,
+            session,
+            composer,
+            header: Header {
+                agent: "omp",
+                cwd: "/w",
+            },
+            theme,
+            hint: None,
+            working_secs: None,
+            turn: 0,
+            anim_ms,
+            motion,
+        };
+        term.draw(|f| draw(f, &ctx, view)).expect("drawn");
+        term.backend().buffer().clone()
+    }
+
     fn rows_of(buf: &Buffer) -> Vec<String> {
         let a = buf.area;
         (0..a.height)
@@ -1577,7 +1617,11 @@ mod tests {
         for t in 0..600 {
             tr.user(format!("turn {t}"));
             let id = format!("m{t}");
-            agent(&mut tr, &id, "a line of `code` and **bold**\n\n- one\n- two\n");
+            agent(
+                &mut tr,
+                &id,
+                "a line of `code` and **bold**\n\n- one\n- two\n",
+            );
             tr.apply(
                 SessionUpdate::from_value(
                     &json!({"sessionUpdate": "tool_call", "toolCallId": format!("r{t}"), "title": "Read lib/sync.dart", "kind": "read", "status": "completed"}),
@@ -1624,8 +1668,165 @@ mod tests {
             assert_eq!(a, b, "the cache changed what is drawn at scroll={scroll}");
         }
         // The sweep was long enough to have filled and evicted the cache.
-        assert!(warm.cache_chars() <= 256 * 1024, "the cache outgrew its budget");
+        assert!(
+            warm.cache_chars() <= 256 * 1024,
+            "the cache outgrew its budget"
+        );
         assert!(warm.cache_chars() > 0, "the cache never held a line");
+    }
+    /// Three finished tool calls that fold into one run, and a line after, so the run is the
+    /// block that opens.
+    fn run_transcript() -> Transcript {
+        let mut tr = Transcript::default();
+        for (k, title) in ["Read a", "Read b", "Read c"].into_iter().enumerate() {
+            tr.apply(
+                SessionUpdate::from_value(
+                    &json!({"sessionUpdate": "tool_call", "toolCallId": format!("r{k}"), "title": title, "status": "completed"}),
+                )
+                .expect("update"),
+            );
+        }
+        agent(&mut tr, "after", "done with the reads");
+        tr
+    }
+
+    #[test]
+    fn opening_a_run_that_shrinks_never_runs_off_its_lines() {
+        // The crash: a run opens by folding from its calls to one line, so mid-reveal the easing
+        // can ask for more rows than the open run has. The count must cap at the block's real
+        // height, and the frame must match a cold build of the same moment.
+        let tr = run_transcript();
+        let session = ready_session();
+        let (w, h) = (100u16, 30u16);
+        let rk = tr.items()[0].id | (1u64 << 63); // the run key (the run starts at item 0)
+        let mut warm = View::default();
+        warm.expanded.insert(rk);
+        warm.reveal.insert(rk, 0);
+        // A few frames into the unfold, before it settles.
+        for anim_ms in [10u64, 40u64, 90u64] {
+            let a = rows_of(&draw_with_m(
+                &tr,
+                &session,
+                &Composer::default(),
+                Theme::plain(),
+                w,
+                h,
+                &mut warm,
+                true,
+                anim_ms,
+            ));
+            let mut cold = View {
+                expanded: HashSet::from([rk]),
+                reveal: HashMap::from([(rk, 0u64)]),
+                ..View::default()
+            };
+            let b = rows_of(&draw_with_m(
+                &tr,
+                &session,
+                &Composer::default(),
+                Theme::plain(),
+                w,
+                h,
+                &mut cold,
+                true,
+                anim_ms,
+            ));
+            assert_eq!(
+                a, b,
+                "the cache changed the reveal frame at anim_ms={anim_ms}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_streaming_message_is_not_frozen_at_its_first_chunk() {
+        // The cache must not serve a block's old line after its text grows in place: a message
+        // that streams shows its whole text, not the first chunk it was first built with.
+        let mut tr = Transcript::default();
+        agent(&mut tr, "m", "Hello");
+        let session = ready_session();
+        let (w, h) = (100u16, 30u16);
+        let mut view = View::default();
+        let first = rows_of(&draw_with(
+            &tr,
+            &session,
+            &Composer::default(),
+            Theme::plain(),
+            w,
+            h,
+            &mut view,
+        ));
+        assert!(first.iter().any(|r| r.contains("Hello")));
+        // The same message, same id, keeps streaming: the revision moves, the line must too.
+        agent(&mut tr, "m", " there, I am the agent");
+        let second = rows_of(&draw_with(
+            &tr,
+            &session,
+            &Composer::default(),
+            Theme::plain(),
+            w,
+            h,
+            &mut view,
+        ));
+        assert!(
+            second.iter().any(|r| r.contains("I am the agent")),
+            "the cache served the message's first chunk: {second:?}"
+        );
+    }
+
+    #[test]
+    fn closed_lines_are_kept_per_block_not_shared() {
+        // The unfold animation keeps "what the block had before it opened" for each opening
+        // block. That was once kept under one shared key, so a block that opened first parked
+        // its closed height there, and a second block read the first's. Each block must keep
+        // its own: run A has a failed call (taller closed height) than run B, so a block that
+        // read the neighbour's height would come back the wrong size.
+        let mut tr = Transcript::default();
+        for (id, title, status) in [
+            ("a0", "Read a", "completed"),
+            ("a1", "Read b", "failed"),
+            ("a2", "Read c", "completed"),
+        ] {
+            tr.apply(SessionUpdate::from_value(&json!({"sessionUpdate": "tool_call", "toolCallId": id, "title": title, "status": status})).expect("update"));
+        }
+        agent(&mut tr, "between", "a line between the two runs");
+        for (k, id) in ["b0", "b1", "b2"].into_iter().enumerate() {
+            tr.apply(SessionUpdate::from_value(&json!({"sessionUpdate": "tool_call", "toolCallId": id, "title": format!("B {k}"), "status": "completed"})).expect("update"));
+        }
+        let items = tr.items();
+        let run_a = Block::Run {
+            start: 0,
+            end: 3,
+            open: true,
+        };
+        let run_b = Block::Run {
+            start: 4,
+            end: 7,
+            open: true,
+        };
+        let mut cache = LineCache::default();
+        let look = Look {
+            expanded: &HashSet::new(),
+            focus: None,
+            thoughts: false,
+            theme: Theme::plain(),
+        };
+        let wa = cache.closed_lines(run_a, items, 100, &HashSet::new(), look);
+        let wb = cache.closed_lines(run_b, items, 100, &HashSet::new(), look);
+        assert_ne!(
+            wa.len(),
+            wb.len(),
+            "the two runs should have different closed heights: A={} B={}",
+            wa.len(),
+            wb.len()
+        );
+        // Reading A again must give A's height, not the B that was parked in between.
+        let wa2 = cache.closed_lines(run_a, items, 100, &HashSet::new(), look);
+        assert_eq!(
+            wa2.len(),
+            wa.len(),
+            "A read B's closed height after B opened"
+        );
     }
 
     #[test]
@@ -2817,7 +3018,10 @@ mod tests {
         assert!(text.contains("• Ready when you are."), "{text}");
         let ready = text.find("Ready when you are.").expect("the greeting");
         let tip = text.find("Tip:").expect("the tip");
-        assert!(ready < tip, "the greeting sits above the tip, not below it: {text}");
+        assert!(
+            ready < tip,
+            "the greeting sits above the tip, not below it: {text}"
+        );
     }
 
     #[test]

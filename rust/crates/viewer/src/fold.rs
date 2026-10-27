@@ -81,6 +81,24 @@ pub fn key(b: Block, items: &VecDeque<Item>) -> u64 {
     }
 }
 
+/// The content of a block, as a number that moves when what it draws changes. A `One` is its
+/// item's revision; a `Run` is a fold of its calls' revisions, so a call that streams output or
+/// flips its status moves the run's line. What the line cache keys on, next to the block's id:
+/// an in-place edit keeps the id, so the id alone would serve the old line.
+#[must_use]
+pub fn revision(b: Block, items: &VecDeque<Item>) -> u64 {
+    match b {
+        Block::One(i) => items[i].rev,
+        Block::Run { start, end, .. } => {
+            let mut h = 0u64;
+            for it in items.iter().take(end).skip(start) {
+                h = h.wrapping_mul(0x0000_0100_0000_01B3) ^ it.rev;
+            }
+            h
+        }
+    }
+}
+
 /// Whether the block has something to unfold.
 #[must_use]
 pub fn foldable(b: Block, items: &VecDeque<Item>) -> bool {

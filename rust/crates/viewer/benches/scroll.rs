@@ -8,12 +8,12 @@
 //! is the jank a person feels: how many times a scroll frame costs a follow
 //! frame.
 
+use acp::{Id, Message, SessionUpdate};
 use herdr_tui::composer::Composer;
 use herdr_tui::session::{Event, Record, Session, Start};
 use herdr_tui::theme::Theme;
 use herdr_tui::transcript::Transcript;
 use herdr_tui::ui::{draw, Frame_, Header, View};
-use acp::{Id, Message, SessionUpdate};
 use ratatui::{backend::TestBackend, buffer::Buffer, Terminal};
 use serde_json::{json, Value};
 
@@ -69,7 +69,10 @@ fn conversation() -> Transcript {
     ];
     for t in 0..TURNS {
         tr.user(ask[t % ask.len()]);
-        upd(&mut tr, &json!({"sessionUpdate": "state_update", "state": "running"}));
+        upd(
+            &mut tr,
+            &json!({"sessionUpdate": "state_update", "state": "running"}),
+        );
         upd(
             &mut tr,
             &json!({"sessionUpdate": "agent_thought_chunk", "messageId": format!("th{t}"), "content": {"type": "text", "text": "The test is flaky, so it probably races on a timer. I will read the file, find the delay, and make the queue awaitable."}}),

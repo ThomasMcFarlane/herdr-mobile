@@ -17,12 +17,10 @@ use crossterm::{
     terminal::{self, EnterAlternateScreen, LeaveAlternateScreen, SetTitle},
 };
 use herdr_tui::composer::Composer;
-use herdr_tui::{
-    cli, delight, fold, herdr, host, input, lines, md, sessions, termbg, theme,
-};
 use herdr_tui::session::{Effect, Event, Phase, Record, Refused, Session, Start};
 use herdr_tui::transcript::Transcript;
 use herdr_tui::ui;
+use herdr_tui::{cli, delight, fold, herdr, host, input, lines, md, sessions, termbg, theme};
 use keeper::records::StateDir;
 use std::io::{BufReader, Write};
 use std::os::unix::net::UnixStream;

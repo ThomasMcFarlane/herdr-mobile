@@ -22,4 +22,7 @@ pub mod theme;
 pub mod transcript;
 pub mod ui;
 
+#[cfg(test)]
+pub mod shots;
+
 pub mod cli;
