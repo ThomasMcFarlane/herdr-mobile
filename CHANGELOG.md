@@ -4,6 +4,24 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [0.1.34] - 2026-10-27
+
+### A new worktree's session opens in the tab you are looking at
+
+A session you start from the phone in a worktree that herdr just made now opens in that
+worktree's first tab, the empty shell, instead of in a second tab you had to switch to.
+
+> [!TIP]
+> Try it: from the phone, make a new worktree and start a session in it. On the computer, the
+> worktree's only tab runs the session.
+
+- Only a shell that was left alone is taken: one prompt and nothing else. A shell with output,
+  a command half typed, a running program, an agent, or a workspace with more than one tab
+  gets a tab of its own as before, so nothing is ever typed into something you are using.
+- That tab stays yours: ending the session does not close it.
+- Not verified on a real herdr: the keeper was tested against a stand-in for herdr, and the
+  prompt check against the shell of your worktree.
+
 ## [0.1.33] - 2026-10-27
 
 ### Read what earlier releases added

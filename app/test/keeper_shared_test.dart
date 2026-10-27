@@ -616,6 +616,71 @@ void main() {
       );
     });
 
+    group('a worktree workspace herdr just made', () {
+      // herdr gives a new worktree one tab with a bare shell. The session takes that tab when
+      // the shell is untouched, instead of opening a second tab beside it.
+      Future<(KeeperHost, String)> rig({
+        required String screen,
+        int tabs = 1,
+        Object? agent,
+      }) async {
+        final h = await newHost();
+        await h.useFakeHerdr();
+        final wt = '${h.work}/wt';
+        Directory(wt).createSync(recursive: true);
+        Map<String, Object?> tab(int n) => {'tab_id': 'w2:t$n', 'workspace_id': 'w2', 'number': n, 'label': '$n', 'focused': false, 'pane_count': 1, 'agent_status': 'unknown'};
+        Map<String, Object?> pane(int n) => {'pane_id': 'w2:p$n', 'tab_id': 'w2:t$n', 'workspace_id': 'w2', 'agent': agent, 'agent_status': 'unknown'};
+        File('${h.home.path}/herdr.state').writeAsStringSync(jsonEncode({
+          'tabs': 10,
+          'workspaces': [
+            {
+              'workspace_id': 'w2',
+              'number': 1,
+              'label': 'wt',
+              'focused': false,
+              'pane_count': tabs,
+              'tab_count': tabs,
+              'active_tab_id': 'w2:t1',
+              'agent_status': 'unknown',
+              'worktree': {'checkout_path': wt, 'is_linked_worktree': true, 'repo_key': h.work, 'repo_name': 'work', 'repo_root': h.work},
+            },
+          ],
+          'tablist': {'w2': [for (var i = 1; i <= tabs; i++) tab(i)]},
+          'panelist': {'w2': [for (var i = 1; i <= tabs; i++) pane(i)]},
+          'screens': {'w2:p1': screen},
+        }));
+        return (h, wt);
+      }
+
+      bool isCall(List<String> c, String a, String b) => c.length > 1 && c[0] == a && c[1] == b;
+
+      test('an untouched shell is taken: the command runs in it and its tab is renamed, no second tab', () async {
+        final (h, wt) = await rig(screen: 'tuan@host ~/wt\$                          worktree/x\n\n\n');
+        final s = await h.start(cwd: wt);
+        await eventually(() => h.herdrCalls().any((c) => isCall(c, 'tab', 'rename')), what: 'the tab to be renamed');
+        final calls = h.herdrCalls();
+        expect(calls.where((c) => isCall(c, 'tab', 'create')), isEmpty, reason: 'no second tab');
+        final run = calls.firstWhere((c) => isCall(c, 'pane', 'run'));
+        expect(run, ['pane', 'run', 'w2:p1', "python3 '${h.script}' desk ${s.id}"]);
+        expect(calls.firstWhere((c) => isCall(c, 'tab', 'rename')).sublist(0, 3), ['tab', 'rename', 'w2:t1']);
+      });
+
+      for (final (name, screen, tabs, agent) in <(String, String, int, Object?)>[
+        ('a shell with output on it', 'tuan@host ~/wt\$ git status\nOn branch x\ntuan@host ~/wt\$\n', 1, null),
+        ('a command half typed', 'tuan@host ~/wt\$ git commi\n', 1, null),
+        ('a program running', 'vim', 1, null),
+        ('a second tab already there', 'tuan@host ~/wt\$\n', 2, null),
+        ('an agent in the pane', 'tuan@host ~/wt\$\n', 1, 'claude'),
+      ]) {
+        test('$name is not touched: the session gets a tab of its own', () async {
+          final (h, wt) = await rig(screen: screen, tabs: tabs, agent: agent);
+          await h.start(cwd: wt);
+          await eventually(() => h.herdrCalls().any((c) => isCall(c, 'tab', 'create')), what: 'a tab of its own');
+          expect(h.herdrCalls().where((c) => isCall(c, 'pane', 'run') && c[2] == 'w2:p1'), isEmpty, reason: 'nothing typed into it');
+        });
+      }
+    });
+
     test('~/.herdr-mobile/no-panes keeps herdr out', () async {
       final h = await newHost();
       await h.useFakeHerdr();
