@@ -1,9 +1,12 @@
 //! The input box: multi-line text, a cursor, and sent-message recall.
 
+use unicode_segmentation::UnicodeSegmentation;
+
 #[derive(Default)]
 pub struct Composer {
     pub text: String,
-    /// Byte offset of the cursor, always on a char boundary.
+    /// Byte offset of the cursor, always on a grapheme cluster boundary (arrows and deletes move
+    /// by cluster, so it never sits inside a flag or a letter with its accent).
     pub cursor: usize,
     sent: Vec<String>,
     /// Index into [sent] while recalling; None when typing fresh text.
@@ -73,7 +76,7 @@ impl Composer {
         if start == 0 {
             return false;
         }
-        let col = self.text[start..self.cursor].chars().count();
+        let col = crate::width::of(&self.text[start..self.cursor]);
         let prev_start = self.text[..start - 1].rfind('\n').map_or(0, |i| i + 1);
         self.cursor = self.at_column(prev_start, start - 1, col);
         true
@@ -85,7 +88,7 @@ impl Composer {
             return false;
         };
         let start = self.text[..self.cursor].rfind('\n').map_or(0, |i| i + 1);
-        let col = self.text[start..self.cursor].chars().count();
+        let col = crate::width::of(&self.text[start..self.cursor]);
         let next_end = self.text[nl + 1..]
             .find('\n')
             .map_or(self.text.len(), |i| nl + 1 + i);
@@ -93,12 +96,17 @@ impl Composer {
         true
     }
 
-    /// Byte offset of column `col` within the line `start..end`, or its end when shorter.
+    /// Byte offset of display column `col` within the line `start..end` (the first cluster that
+    /// starts at or after it), or its end when shorter.
     fn at_column(&self, start: usize, end: usize, col: usize) -> usize {
-        self.text[start..end]
-            .char_indices()
-            .nth(col)
-            .map_or(end, |(i, _)| start + i)
+        let mut at = 0;
+        for (i, _, w) in crate::width::cluster_indices(&self.text[start..end]) {
+            if at >= col {
+                return start + i;
+            }
+            at += w;
+        }
+        end
     }
 
     /// Delete the word before the cursor (Ctrl-W).
@@ -172,11 +180,14 @@ impl Composer {
     }
 
     fn prev(&self, at: usize) -> Option<usize> {
-        self.text[..at].char_indices().next_back().map(|(i, _)| i)
+        self.text[..at]
+            .grapheme_indices(true)
+            .next_back()
+            .map(|(i, _)| i)
     }
 
     fn next(&self, at: usize) -> Option<usize> {
-        self.text[at..].chars().next().map(|c| at + c.len_utf8())
+        self.text[at..].graphemes(true).next().map(|g| at + g.len())
     }
 }
 
@@ -196,6 +207,38 @@ mod tests {
         c.home();
         c.delete();
         assert_eq!(c.text, "éb");
+    }
+
+    #[test]
+    fn the_cursor_and_deletes_move_by_whole_clusters() {
+        let mut c = Composer::default();
+        c.insert_str("a🇯🇵e\u{301}👍🏽");
+        c.left();
+        assert_eq!(&c.text[c.cursor..], "👍🏽");
+        c.left();
+        assert_eq!(&c.text[c.cursor..], "e\u{301}👍🏽");
+        c.backspace();
+        assert_eq!(c.text, "ae\u{301}👍🏽", "the flag went whole");
+        c.delete();
+        assert_eq!(c.text, "a👍🏽");
+        c.right();
+        c.backspace();
+        assert_eq!(c.text, "a");
+    }
+
+    #[test]
+    fn up_and_down_keep_the_display_column_not_the_char_count() {
+        let mut c = Composer::default();
+        c.insert_str("日本語\nabcdef\ne\u{301}e\u{301}x");
+        assert!(c.up(), "three columns in, the accents add none");
+        assert!(c.text[c.cursor..].starts_with("def\n"));
+        assert!(c.up());
+        assert!(
+            c.text[c.cursor..].starts_with("語\n"),
+            "column 4 is the third wide glyph"
+        );
+        assert!(c.down());
+        assert!(c.text[c.cursor..].starts_with("ef\n"));
     }
 
     #[test]
