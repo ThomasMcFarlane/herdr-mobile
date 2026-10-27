@@ -1622,9 +1622,16 @@ fn palette_lines(
         0
     };
     let end = (start + slash::MAX_ROWS).min(entries.len());
-    let name_w = entries[start..end]
+    // What the agent called its commands goes through `clean` like all its text: a name or a
+    // description can carry controls and joiners that would break the row.
+    let one_line = |s: &str| clean(s).split_whitespace().collect::<Vec<_>>().join(" ");
+    let names: Vec<String> = entries[start..end]
         .iter()
-        .map(|e| width_of(&e.name) + 1)
+        .map(|e| one_line(&e.name))
+        .collect();
+    let name_w = names
+        .iter()
+        .map(|n| width_of(n) + 1)
         .max()
         .unwrap_or(0)
         .min((width / 3).clamp(18, 30));
@@ -1640,14 +1647,15 @@ fn palette_lines(
             Style::default()
         };
         let what = match &e.reason {
-            Some(r) => r.clone(),
+            Some(r) => one_line(r),
             None => [e.hint.as_deref().unwrap_or(""), e.description.as_str()]
                 .into_iter()
+                .map(one_line)
                 .filter(|s| !s.is_empty())
                 .collect::<Vec<_>>()
                 .join("  "),
         };
-        let name = fit(&format!("/{}", e.name), name_w);
+        let name = fit(&format!("/{}", names[i]), name_w);
         let pad = " ".repeat((name_w + 3).saturating_sub(width_of(&name)));
         rows.push(Line::from(vec![
             Span::raw("  "),
@@ -3279,6 +3287,39 @@ mod tests {
         assert!(
             text.contains("› /cmd9") && !text.contains("/model") && !text.contains("more"),
             "{text}"
+        );
+    }
+
+    #[test]
+    fn what_the_agent_calls_its_commands_is_cleaned_before_it_is_drawn() {
+        let session = ready_session();
+        let tr = Transcript::default();
+        let agent = vec![acp::Command {
+            name: "de\u{9b}ploy".into(),
+            description: "ships\nit\u{1b}[2J now".into(),
+            hint: Some("[env]\t\u{9b}".into()),
+        }];
+        let mut view = View {
+            palette: slash::entries("/de", &agent, &tr, false),
+            ..View::default()
+        };
+        let rows = rows_of(&draw_with(
+            &tr,
+            &session,
+            &typed("/de"),
+            Theme::plain(),
+            70,
+            24,
+            &mut view,
+        ));
+        let text = rows.join("\n");
+        assert!(
+            text.contains("/deploy") && text.contains("[env]  ships it[2J now"),
+            "{text}"
+        );
+        assert!(
+            !text.contains('\u{9b}') && !text.contains('\u{1b}'),
+            "{text:?}"
         );
     }
 

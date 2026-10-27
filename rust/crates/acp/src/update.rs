@@ -210,7 +210,8 @@ impl Command {
         let name = safe(str_of(v, "name")?.trim_start_matches('/'))
             .trim()
             .to_string();
-        if name.is_empty() {
+        // A name is one word: one with a space in it could never be typed or run.
+        if name.is_empty() || name.chars().any(char::is_whitespace) {
             return None;
         }
         Some(Command {
@@ -387,6 +388,7 @@ mod tests {
             {"name": "/compact", "description": "Compact", "input": {"hint": "[focus]"}},
             {"name": ""},
             {"name": "skill:review"},
+            {"name": "two words"},
             {"name": "bad\u{1b}[2Jname", "description": "x\u{7}y"}]});
         let Some(SessionUpdate::Commands(c)) = SessionUpdate::from_value(&u) else {
             panic!("commands");
