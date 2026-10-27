@@ -4,6 +4,31 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [0.1.32] - 2026-10-27
+
+### A session opened from the phone shows up as herdr-tui on the computer
+
+The tab that herdr opens on the computer for a session you start from the phone
+runs `herdr-tui`, the desk client, instead of the old line-by-line view. The
+first time, the computer downloads it (1.5 MB) from this app's release and
+checks it before it runs; after that it opens offline.
+
+> [!TIP]
+> Try it: start a session from the phone with herdr running on the computer.
+> Its tab in herdr opens the new client.
+
+- Each app version names the `herdr-tui` release it works with, downloads
+  exactly that one, and never runs an older one. An update of the app that needs
+  a newer `herdr-tui` replaces the computer's copy the next time a session opens.
+- A `herdr-tui` you installed yourself is used as it is when it is new enough,
+  and never overwritten.
+- No network on the computer the first time, no build for its platform or a
+  download that does not match its checksum: the pane says so and opens the old
+  view, so a session always opens.
+- `HERDR_MOBILE_VIEW=python` on the computer keeps the old view.
+- Not verified on a phone: the download was run against the published
+  release on a computer, not through a session started from the app.
+
 ## [0.1.31] - 2026-10-27
 
 ### herdr-tui says which release it is
