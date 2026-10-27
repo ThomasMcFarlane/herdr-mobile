@@ -1,3 +1,6 @@
+@Tags(['timing'])
+library;
+
 import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' show Tristate;

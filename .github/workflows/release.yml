@@ -62,9 +62,19 @@ jobs:
           [ "$want" = "$have" ] || { echo "tag $want != pubspec $have"; exit 1; }
           tool/release-notes.sh "$want" > "$RUNNER_TEMP/notes.md"
 
+      # The tests tagged `timing` assert on real time and fail when the CPU is busy (two of them
+      # kept the 0.1.37 APK from being published), so they run apart, at half the jobs.
       - name: Analyze and test
         if: steps.sign.outputs.enabled == 'true'
+        env:
+          HERDR_TEST_ONLY: rest
         run: tool/check.sh
+
+      - name: Test (timing)
+        if: steps.sign.outputs.enabled == 'true'
+        env:
+          HERDR_TEST_ONLY: timing
+        run: tool/check.sh --tests
 
       - name: Restore signing key
         if: steps.sign.outputs.enabled == 'true'
