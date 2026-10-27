@@ -105,8 +105,46 @@ composer must not answer it). Digits answer only while the composer is empty.
 **Follow.** Streaming text appears line by line above the status line. Tool rows appear when a
 call finishes, folded; the status line names the running one.
 
-**Steer.** `Enter` sends, `Ctrl-J` / `Alt-Enter` newline, `Up` recalls, `Ctrl-C` stops a
-running turn and (idle, empty) leaves. Typed text survives a failed send.
+**Steer.** `Enter` sends, `Ctrl-J` / `Alt-Enter` newline, `Ctrl-P` recalls (Up scrolls), `Ctrl-C`
+stops a running turn and (idle, empty) leaves. Typed text survives a failed send.
+
+**Commands.** `/` opens a list above the input (this program's commands first, then the agent's
+from `available_commands_update`); `Tab` completes, `Enter` runs, `Esc` closes. `/model`,
+`/thinking`, `/mode` open a picker (or take a name: `/model opus`) and send
+`session/set_config_option`, as the phone does; refused while a turn runs. `/new` (alias `/clear`)
+starts a fresh keeper session of the same agent in the same folder in this pane and leaves the old
+one running. None of these is sent to the agent as chat: omp's ACP mode has no `/clear` or `/new`
+(only its own TUI does), so they would reach the model as a message and clear nothing. A `/word`
+the agent does not list is held once (Enter again sends it), as the phone's `UnknownCommandGuard`.
+
+`/plan` switches to the mode named plan (again: back to the mode it left, else `default`),
+Shift-Tab steps to the next mode, `/settings` lists every select option the agent reported that
+has a choice to make, `/info` (aliases `/version`, `/about`) writes the version, folder, program
+and session id into the conversation. In the list, skills (`skill:name`) follow the agent's
+commands and also answer to their name without `skill:`.
+
+**Files and pictures.** A path (or several, quoted or with `\ ` as terminals write a dropped file,
+or `file://`) pasted into an *empty* box is attached, as the phone's `@file`; up to 10 a message,
+listed as `+ name` on the row above the input. Pasted into text it stays text, since a person may
+mean the path. A file goes as a `resource_link` (`name` relative to the session's folder, the
+absolute `file://` `uri`, no title). A PNG, JPEG, GIF or WebP up to 5 MB goes as a picture (an
+`image` block, base64, read when the message is sent) when the agent's `initialize` says
+`promptCapabilities.image`; the list then says `· picture`, and the paste hint says `as a
+picture` or why it is a link (the agent takes none, or it is over 5 MB). Verified with omp: a
+picture from outside the session's folder, no tools allowed, was read correctly.
+
+Taking them off: Backspace on an empty box takes the last one off (a note says which), Ctrl-C takes
+all off, `/files` (aliases `/attachments`, `/detach`) opens a picker on the list and Enter takes the
+one chosen off. The row says the first two when the screen is wide enough. A refused send gives
+the text and the files back.
+
+**Updating.** `/update [check|VERSION]` runs `update::run` (the same code as `herdr-tui update`) on a
+thread, with the progress in the footer, so the session stays alive; the program file is replaced
+whole by a rename after its checksum matches, and the open copy keeps running its old file. When
+a new file is in place the conversation says so and `Ctrl-R` loads it (the same path as a copy
+installed by the app). On the list, Enter on `/update` only completes the name: a stray Enter never
+starts a download. Leaving during a download abandons it (the file is untouched; a scratch
+folder `.herdr-tui-update-<pid>` beside the program is left behind).
 
 **Something is wrong.** The keeper closed, the agent exited, the session did not open:
 a note in scrollback and a status line in words, with what to do (`herdr-tui` exits

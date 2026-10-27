@@ -5,6 +5,7 @@
 
 #![doc(hidden)]
 
+pub mod attach;
 pub mod composer;
 pub mod delight;
 pub mod diff;
@@ -19,6 +20,7 @@ pub mod question;
 pub mod session;
 pub mod sessions;
 pub mod shell;
+pub mod slash;
 pub mod termbg;
 pub mod theme;
 pub mod transcript;

@@ -132,6 +132,8 @@ pub struct Transcript {
     mode: Option<String>,
     context: Option<u8>,
     config: Vec<acp::ConfigOption>,
+    commands: Vec<acp::Command>,
+    plan: Vec<acp::PlanEntry>,
     /// Tool call id -> the id of the item that shows it, however long ago it began.
     tool_at: HashMap<String, u64>,
     /// Items whose tool call has not finished: the ones a turn's end must close.
@@ -158,6 +160,8 @@ impl Transcript {
             mode: None,
             context: None,
             config: Vec::new(),
+            commands: Vec::new(),
+            plan: Vec::new(),
             tool_at: HashMap::new(),
             open_tools: BTreeSet::new(),
         }
@@ -196,6 +200,32 @@ impl Transcript {
     pub fn thinking(&self) -> Option<&str> {
         self.config_value("thought_level")
             .or_else(|| self.config_value("thinking"))
+    }
+    /// The select option called `what` (by id or category), when the agent has reported it.
+    #[must_use]
+    pub fn option(&self, what: &str) -> Option<&acp::ConfigOption> {
+        self.config.iter().find(|o| o.is(what))
+    }
+    /// Every select option the agent has reported, in its order.
+    #[must_use]
+    pub fn options(&self) -> &[acp::ConfigOption] {
+        &self.config
+    }
+    /// The agent's plan, as a checklist, when it has made one.
+    #[must_use]
+    pub fn plan(&self) -> &[acp::PlanEntry] {
+        &self.plan
+    }
+    /// The slash commands the agent offers.
+    #[must_use]
+    pub fn commands(&self) -> &[acp::Command] {
+        &self.commands
+    }
+    /// Records the choice of option `id` before the agent has repeated its options.
+    pub fn set_current(&mut self, id: &str, value: &str) {
+        if let Some(o) = self.config.iter_mut().find(|o| o.id == id) {
+            o.current = Some(value.to_string());
+        }
     }
     fn config_value(&self, what: &str) -> Option<&str> {
         self.config
@@ -284,6 +314,8 @@ impl Transcript {
             } => self.turn_end(stop_reason.as_deref()),
             SessionUpdate::Mode(m) => self.mode = Some(m),
             SessionUpdate::Config(opts) => self.config = opts,
+            SessionUpdate::Commands(c) => self.commands = c,
+            SessionUpdate::Plan(p) => self.plan = p,
             SessionUpdate::Usage { used, size } => {
                 self.context =
                     Some(u8::try_from((used.saturating_mul(100) / size).min(100)).unwrap_or(100));
@@ -761,6 +793,55 @@ mod tests {
             (Some("Model A"), Some("high"), Some("act"))
         );
         t.apply(update(opts("b")));
+        assert_eq!(t.model(), Some("Model B"));
+        assert!(t.items().is_empty(), "state, not conversation");
+    }
+
+    #[test]
+    fn the_agents_plan_is_kept_whole_and_an_empty_update_clears_it() {
+        let mut t = Transcript::default();
+        let plan =
+            |entries: serde_json::Value| json!({"sessionUpdate": "plan", "entries": entries});
+        t.apply(update(plan(
+            json!([{"content": "a", "status": "in_progress"}, {"content": "b"}]),
+        )));
+        assert_eq!(t.plan().len(), 2);
+        t.apply(update(plan(
+            json!([{"content": "c", "status": "completed"}]),
+        )));
+        assert_eq!(
+            t.plan()
+                .iter()
+                .map(|e| e.content.as_str())
+                .collect::<Vec<_>>(),
+            ["c"]
+        );
+        t.apply(update(plan(json!([]))));
+        assert!(t.plan().is_empty());
+        assert!(t.items().is_empty(), "state, not conversation");
+    }
+
+    #[test]
+    fn the_command_list_is_replaced_whole_and_a_choice_is_recorded_before_the_agent_repeats_it() {
+        let mut t = Transcript::default();
+        let cmds = |names: &[&str]| {
+            json!({"sessionUpdate": "available_commands_update",
+                "availableCommands": names.iter().map(|n| json!({"name": n})).collect::<Vec<_>>()})
+        };
+        t.apply(update(cmds(&["a", "b"])));
+        t.apply(update(cmds(&["c"])));
+        assert_eq!(
+            t.commands()
+                .iter()
+                .map(|c| c.name.as_str())
+                .collect::<Vec<_>>(),
+            ["c"]
+        );
+        t.apply(update(json!({"sessionUpdate": "config_option_update", "configOptions": [
+            {"id": "model", "category": "model", "type": "select", "currentValue": "a", "options": [{"value": "a", "name": "Model A"}, {"value": "b", "name": "Model B"}]}]})));
+        assert!(t.option("model").is_some() && t.option("mode").is_none());
+        t.set_current("model", "b");
+        t.set_current("nothing", "x");
         assert_eq!(t.model(), Some("Model B"));
         assert!(t.items().is_empty(), "state, not conversation");
     }

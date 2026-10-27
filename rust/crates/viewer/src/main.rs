@@ -20,13 +20,15 @@ use crossterm::{
         LeaveAlternateScreen, SetTitle,
     },
 };
+use herdr_tui::attach;
 use herdr_tui::composer::Composer;
 use herdr_tui::question::{self, Act};
 use herdr_tui::session::{Effect, Event, Phase, Record, Refused, Session, Start};
 use herdr_tui::transcript::Transcript;
 use herdr_tui::ui;
 use herdr_tui::{
-    cli, delight, fold, herdr, highlight, host, input, lines, md, sessions, termbg, theme, update,
+    cli, delight, fold, herdr, highlight, host, input, lines, md, sessions, slash, termbg, theme,
+    update,
 };
 use keeper::records::StateDir;
 use std::io::{BufReader, Write};
@@ -52,6 +54,16 @@ enum Ev {
     /// Something outside wrote on the screen, or the window was away: draw everything again.
     Repaint,
     Session(Event),
+    /// An update (`/update`) reporting progress, or finished.
+    Update(UpdateMsg),
+}
+
+/// What the thread running an update tells the screen.
+enum UpdateMsg {
+    /// A line saying how far it has got.
+    Progress(String),
+    /// It ended: the sentence to show, or what went wrong.
+    Done(Result<String, String>),
 }
 
 struct App {
@@ -102,6 +114,24 @@ struct App {
     t0: Instant,
     tx: mpsc::Sender<Ev>,
     quit: bool,
+    /// Where the keeper script and the session records live (to start another session).
+    home: PathBuf,
+    /// The agent's id (`omp`), to start another session of the same kind.
+    agent_id: String,
+    /// Leave to start a fresh session of the same agent in the same folder (`/new`, `/clear`).
+    fresh: bool,
+    /// The line whose command list was closed with Esc.
+    dismissed: Option<String>,
+    /// The line held as a command the agent does not list; Enter again sends it as a message.
+    held: Option<String>,
+    /// The line the command list's chosen row belongs to.
+    palette_text: String,
+    /// Files to send with the next message: a path pasted into an empty box.
+    files: Vec<attach::Attachment>,
+    /// The mode `/plan` left, so that `/plan` again goes back to it.
+    before_plan: Option<String>,
+    /// An update is running; a second one waits for it.
+    updating: bool,
 }
 
 /// While this program owns the screen, a background job of the same terminal that tries to write
@@ -293,7 +323,25 @@ fn main() {
         t0: Instant::now(),
         tx: tx.clone(),
         quit: false,
+        home: home.clone(),
+        agent_id: info.as_ref().map_or_else(String::new, |i| i.agent.clone()),
+        fresh: false,
+        dismissed: None,
+        held: None,
+        palette_text: String::new(),
+        files: Vec::new(),
+        before_plan: None,
+        updating: false,
     };
+    // A fresh session started from another one (`/new`): say where the earlier one went.
+    if let Some(prev) = std::env::var("HERDR_TUI_PREVIOUS")
+        .ok()
+        .filter(|p| keeper::records::is_valid_id(p))
+    {
+        app.hint = Some(format!(
+            "Fresh session · the earlier one, {prev}, is still running"
+        ));
+    }
     app.run(first);
     app.reporter = herdr::Target::from_env(|k| std::env::var(k).ok()).map(|target| {
         let exe = std::env::current_exe().map_or_else(
@@ -403,18 +451,31 @@ fn main() {
     if let Some(reporter) = app.reporter.take() {
         reporter.release();
     }
-    // Load the newer herdr-tui into this session: the keeper holds everything, so the new one
-    // attaches and replays. Same terminal, same pane; this process becomes it.
-    if app.reload {
+    // Load the newer herdr-tui into this session (the keeper holds everything, so the new one
+    // attaches and replays), or start a fresh session of the same agent in the same folder
+    // (`/new`); the earlier session keeps running and stays on the phone. Same terminal, same
+    // pane; this process becomes the new one.
+    if app.reload || app.fresh {
         use std::os::unix::process::CommandExt;
-        let err = std::process::Command::new(app.watch.path())
-            .arg("attach")
-            .arg(&app.id)
-            .exec();
+        let mut cmd = std::process::Command::new(app.watch.path());
+        // Said once, by the program `/new` starts; a reload after it must not say it again.
+        cmd.env_remove("HERDR_TUI_PREVIOUS");
+        if app.fresh {
+            cmd.args(["--agent", &app.agent_id, "--cwd", &app.cwd])
+                .env("HERDR_TUI_PREVIOUS", &app.id);
+        } else {
+            cmd.arg("attach").arg(&app.id);
+        }
+        let err = cmd.exec();
         die(
             keeper::exit::FAILED,
             &format!(
-                "could not start the newer herdr-tui ({err}); the session is still running: herdr-tui attach {}",
+                "could not start {} ({err}); the session is still running: herdr-tui attach {}",
+                if app.fresh {
+                    "a new session"
+                } else {
+                    "the newer herdr-tui"
+                },
                 app.id
             ),
         );
@@ -597,6 +658,10 @@ impl App {
                 self.view.scroll = self.view.scroll.saturating_sub(SCROLL_STEP);
             }
             MouseEventKind::Down(MouseButton::Left) => {
+                // A click must not fall through to the transcript under the picker.
+                if self.view.picker.is_some() {
+                    return;
+                }
                 self.hint = None;
                 self.view.help = false;
                 if !self.session.waiting().is_empty() {
@@ -649,12 +714,15 @@ impl App {
                 self.signal = Some(sig);
                 self.quit = true;
             }
+            Ev::Update(UpdateMsg::Progress(line)) => self.view.update = Some(line),
+            Ev::Update(UpdateMsg::Done(result)) => self.update_done(result),
             Ev::Session(e) => {
                 let fx = self.session.handle(e, self.now_ms(), &mut self.transcript);
                 self.run(fx);
             }
         }
         self.sync_box();
+        self.sync_palette();
         self.look_for_newer();
     }
 
@@ -759,7 +827,12 @@ impl App {
                         let _ = tx.send(Ev::Session(Event::Retry));
                     });
                 }
-                Effect::RestoreInput(t) => self.composer.restore(t),
+                Effect::RestoreInput(t, files) => {
+                    self.composer.restore(t);
+                    if self.files.is_empty() {
+                        self.files = files;
+                    }
+                }
             }
         }
     }
@@ -775,6 +848,14 @@ impl App {
             .is_some_and(|q| !q.typed());
         if choosing {
             self.hint = Some(QUESTION_HINT.to_string());
+            return;
+        }
+        // A path (or several) pasted into an empty box is a file to send with the message,
+        // as the phone's `@file`. Pasted into text, it is text.
+        if self.composer.text.is_empty()
+            && self.session.waiting().is_empty()
+            && self.attach_paste(text)
+        {
             return;
         }
         let (clean, cut) = input::clean_paste(text);
@@ -870,6 +951,9 @@ impl App {
         if self.question_key(k) {
             return;
         }
+        if self.picker_key(k) || self.palette_key(k) {
+            return;
+        }
         let ctrl = k.modifiers.contains(KeyModifiers::CONTROL);
         let alt = k.modifiers.contains(KeyModifiers::ALT);
         match k.code {
@@ -884,6 +968,9 @@ impl App {
                 if self.transcript.running() || self.session.prompting() {
                     let fx = self.session.cancel(&mut self.transcript);
                     self.run(fx);
+                } else if self.composer.text.is_empty() && !self.files.is_empty() {
+                    self.files.clear();
+                    self.hint = Some("Took the files off".to_string());
                 } else if self.composer.text.is_empty() {
                     self.quit = true;
                 } else {
@@ -918,6 +1005,8 @@ impl App {
                 self.answer(self.view.sel);
             }
             KeyCode::Enter => self.send(),
+            // With nothing asking, Shift-Tab goes to the next mode (plan mode among them).
+            KeyCode::BackTab if self.session.waiting().is_empty() => self.cycle_mode(),
             KeyCode::Tab | KeyCode::BackTab if self.session.permission_waiting() => {
                 let n = self.session.waiting()[0]
                     .permission()
@@ -953,6 +1042,16 @@ impl App {
                 self.answer(c as usize - '1' as usize);
             }
             KeyCode::Char(c) if !ctrl && !alt => self.composer.insert(c),
+            // Nothing typed and files attached: Backspace takes the last one off.
+            KeyCode::Backspace
+                if self.composer.text.is_empty()
+                    && !self.files.is_empty()
+                    && self.session.waiting().is_empty() =>
+            {
+                if let Some(f) = self.files.pop() {
+                    self.hint = Some(format!("Took off {}", f.name));
+                }
+            }
             KeyCode::Backspace => self.composer.backspace(),
             KeyCode::Delete => self.composer.delete(),
             KeyCode::Left => self.composer.left(),
@@ -1103,18 +1202,496 @@ impl App {
 
     fn send(&mut self) {
         let text = self.composer.text.trim().to_string();
-        if text.is_empty() {
+        if text.is_empty() && self.files.is_empty() {
             return;
         }
-        match self.session.send(&text, &mut self.transcript) {
+        match slash::classify(&text, self.transcript.commands()) {
+            slash::Run::Local(local, args) => {
+                self.composer.take();
+                self.run_local(local, &args);
+                return;
+            }
+            // A typo would reach the model as a message and cost a turn: held once, and sent
+            // when Enter is pressed again on the same text.
+            slash::Run::Unknown(word) => {
+                if self.held.as_deref() == Some(text.as_str()) {
+                    self.held = None;
+                } else {
+                    self.hint = Some(format!(
+                        "/{word} is not a command of {} · Enter sends it as a message",
+                        self.agent
+                    ));
+                    self.held = Some(text);
+                    return;
+                }
+            }
+            slash::Run::Agent | slash::Run::Message => {}
+        }
+        // Pictures are read now, when the message goes, and not when they were pasted: a draft
+        // may never be sent.
+        if let Err(why) = self.load_pictures() {
+            self.hint = Some(why);
+            return;
+        }
+        match self.session.send(&text, &self.files, &mut self.transcript) {
             Ok(fx) => {
                 self.composer.take();
+                self.files.clear();
                 self.view.scroll = 0;
                 self.run(fx);
             }
             // The text stays in the box.
             Err(Refused::NotReady) => self.hint = Some("The session is not open yet".to_string()),
             Err(Refused::Busy) => self.hint = Some("The agent is working; not sent".to_string()),
+            Err(_) => {}
+        }
+    }
+
+    /// The command list and the picker follow what is typed. A request takes the panel, so a
+    /// picker still open when one arrives is dropped.
+    fn sync_palette(&mut self) {
+        if !self.session.waiting().is_empty() {
+            self.view.picker = None;
+        }
+        let text = self.composer.text.clone();
+        if self.dismissed.as_deref() != Some(text.as_str()) {
+            self.dismissed = None;
+        }
+        if self.held.as_deref() != Some(text.as_str()) {
+            self.held = None;
+        }
+        if text != self.palette_text {
+            self.view.palette_sel = 0;
+            self.palette_text.clone_from(&text);
+        }
+        let open = text.starts_with('/')
+            && self.session.waiting().is_empty()
+            && self.view.picker.is_none()
+            && self.view.focus.is_none()
+            && self.dismissed.is_none();
+        self.view.palette = if open {
+            slash::entries(
+                &text,
+                self.transcript.commands(),
+                &self.transcript,
+                self.can_fresh(),
+            )
+        } else {
+            Vec::new()
+        };
+        if let Some(last) = self.view.palette.len().checked_sub(1) {
+            self.view.palette_sel = self.view.palette_sel.min(last);
+        }
+        let pictures = self.session.accepts_pictures();
+        self.view.chips = self.files.iter().map(|f| f.label(pictures)).collect();
+    }
+
+    /// Whether `/new` can start another session of this one's kind: the agent and the folder are
+    /// known and still there, and a keeper is installed.
+    fn can_fresh(&self) -> bool {
+        !self.agent_id.is_empty()
+            && !self.cwd.is_empty()
+            && std::path::Path::new(&self.cwd).is_dir()
+            && keeper::routes::by_id(&self.agent_id).is_some()
+            && host::find_script(&self.home).is_some()
+    }
+
+    /// Keys for the picker of `/model` and the like. Ctrl and Alt chords go on to the usual
+    /// handling (Ctrl-C still stops a turn).
+    fn picker_key(&mut self, k: KeyEvent) -> bool {
+        if self.view.picker.is_none()
+            || k.modifiers
+                .intersects(KeyModifiers::CONTROL | KeyModifiers::ALT)
+        {
+            return false;
+        }
+        match k.code {
+            KeyCode::Up => {
+                if let Some(p) = self.view.picker.as_mut() {
+                    p.up();
+                }
+            }
+            KeyCode::Down => {
+                if let Some(p) = self.view.picker.as_mut() {
+                    p.down();
+                }
+            }
+            KeyCode::Esc => self.view.picker = None,
+            KeyCode::Enter => {
+                if let Some(p) = self.view.picker.take() {
+                    if let Some((value, name)) = p.chosen().cloned() {
+                        match p.kind {
+                            // The list of settings: on to the choices of the one chosen.
+                            slash::PickerKind::Settings => {
+                                let next = self
+                                    .transcript
+                                    .options()
+                                    .iter()
+                                    .find(|o| o.id == value)
+                                    .map(|o| slash::pick(o, ""));
+                                if let Some(slash::Pick::Open(next)) = next {
+                                    self.view.picker = Some(next);
+                                }
+                            }
+                            // The list of attached files: the one chosen comes off.
+                            slash::PickerKind::Files => {
+                                if let Some(i) = value
+                                    .parse::<usize>()
+                                    .ok()
+                                    .filter(|i| *i < self.files.len())
+                                {
+                                    let f = self.files.remove(i);
+                                    self.hint = Some(format!("Took off {}", f.name));
+                                }
+                            }
+                            slash::PickerKind::Choices => {
+                                self.apply_choice(&p.option_id, &p.title, &value, &name);
+                            }
+                        }
+                    }
+                }
+            }
+            KeyCode::PageUp | KeyCode::PageDown | KeyCode::Home | KeyCode::End => return false,
+            // Nothing typed here would land anywhere visible.
+            _ => {}
+        }
+        true
+    }
+
+    /// Keys for the command list while a `/` is typed. Anything else is typing.
+    fn palette_key(&mut self, k: KeyEvent) -> bool {
+        if self.view.palette.is_empty()
+            || k.modifiers
+                .intersects(KeyModifiers::CONTROL | KeyModifiers::ALT)
+        {
+            return false;
+        }
+        match k.code {
+            KeyCode::Up => self.view.palette_sel = self.view.palette_sel.saturating_sub(1),
+            KeyCode::Down => {
+                self.view.palette_sel =
+                    (self.view.palette_sel + 1).min(self.view.palette.len() - 1);
+            }
+            KeyCode::Tab => self.complete(),
+            KeyCode::Esc => self.dismissed = Some(self.composer.text.clone()),
+            KeyCode::Enter if !k.modifiers.contains(KeyModifiers::SHIFT) => self.run_entry(),
+            _ => return false,
+        }
+        true
+    }
+
+    /// Puts the chosen command's name in the box, with a space for what it takes.
+    fn complete(&mut self) {
+        let Some(e) = self.view.palette.get(self.view.palette_sel) else {
+            return;
+        };
+        let line = format!("/{} ", e.name);
+        self.composer.clear();
+        self.composer.insert_str(&line);
+    }
+
+    /// Enter on the chosen row: a command of this program runs; one of the agent's that takes
+    /// something waits for it; the rest are sent.
+    fn run_entry(&mut self) {
+        let Some(e) = self.view.palette.get(self.view.palette_sel).cloned() else {
+            return;
+        };
+        if let Some(why) = &e.reason {
+            self.hint = Some(format!("/{} is unavailable: {why}", e.name));
+            return;
+        }
+        let line = format!("/{}", e.name);
+        match e.kind {
+            // Replaces the program file: asked for twice (the name, then Enter), never by a
+            // stray Enter on the list.
+            slash::Kind::Local(slash::Local::Update) => self.complete(),
+            slash::Kind::Local(local) => {
+                self.composer.clear();
+                self.composer.insert_str(&line);
+                self.composer.take();
+                self.run_local(local, "");
+            }
+            slash::Kind::Agent | slash::Kind::Skill if e.hint.is_some() => self.complete(),
+            slash::Kind::Agent | slash::Kind::Skill => {
+                self.composer.clear();
+                self.composer.insert_str(&line);
+                self.send();
+            }
+        }
+    }
+
+    /// Carries out a command of this program. None of them is sent to the agent.
+    fn run_local(&mut self, local: slash::Local, args: &str) {
+        if !self.session.waiting().is_empty() {
+            self.hint = Some("Answer the request first".to_string());
+            return;
+        }
+        if let Some(why) = slash::unavailable(&self.transcript, local, self.can_fresh()) {
+            self.hint = Some(format!("Unavailable: {why}"));
+            return;
+        }
+        match local {
+            slash::Local::Fresh => {
+                self.fresh = true;
+                self.quit = true;
+                return;
+            }
+            slash::Local::Files => {
+                if self.files.is_empty() {
+                    self.hint = Some("Nothing is attached".to_string());
+                } else {
+                    let pictures = self.session.accepts_pictures();
+                    let labels: Vec<String> =
+                        self.files.iter().map(|f| f.label(pictures)).collect();
+                    self.view.picker = Some(slash::attached(&labels));
+                }
+                return;
+            }
+            slash::Local::Update => {
+                self.start_update(args);
+                return;
+            }
+            slash::Local::Info => {
+                self.info();
+                return;
+            }
+            slash::Local::Settings => {
+                self.view.picker = slash::settings(&self.transcript);
+                return;
+            }
+            slash::Local::Plan => {
+                self.plan();
+                return;
+            }
+            slash::Local::Model | slash::Local::Thinking | slash::Local::Mode => {}
+        }
+        let Some(opt) = slash::option_of(&self.transcript, local) else {
+            return;
+        };
+        let (id, what) = (opt.id.clone(), opt.name.clone());
+        match slash::pick(opt, args) {
+            slash::Pick::Open(p) => self.view.picker = Some(p),
+            slash::Pick::Apply { value, name } => self.apply_choice(&id, &what, &value, &name),
+            slash::Pick::Nothing(why) => self.hint = Some(why),
+        }
+    }
+
+    /// `/update [check|VERSION]`: installs a release (or only says whether that would change
+    /// anything) on a thread of its own, so the session stays alive while it downloads. The
+    /// program file is replaced whole (a rename) and checked first; a copy that is open keeps
+    /// running its old file until `Ctrl-R` loads the new one.
+    fn start_update(&mut self, args: &str) {
+        if self.updating {
+            self.hint = Some("An update is already running".to_string());
+            return;
+        }
+        let request = match update::request(args) {
+            Ok(r) => r,
+            Err(usage) => {
+                self.hint = Some(usage);
+                return;
+            }
+        };
+        let (version, check) = match &request {
+            update::Request::Latest => (None, false),
+            update::Request::Check => (None, true),
+            update::Request::Version(v) => (Some(v.clone()), false),
+        };
+        let base = update::base_url(|k| std::env::var(k).ok(), version.as_deref());
+        let exe = self.watch.path().to_path_buf();
+        let tx = self.tx.clone();
+        self.updating = true;
+        self.view.update = Some("starting".to_string());
+        std::thread::spawn(move || {
+            let result = update::run(
+                &exe,
+                cli::VERSION,
+                &base,
+                version.is_some(),
+                check,
+                &mut |e| {
+                    let line = match e {
+                        update::Event::Step(s) => s.to_string(),
+                        update::Event::Bytes {
+                            label,
+                            done,
+                            total,
+                            per_sec,
+                        } => update::progress_line(label, done, total, per_sec),
+                        update::Event::Finished => return,
+                    };
+                    let _ = tx.send(Ev::Update(UpdateMsg::Progress(line)));
+                },
+            );
+            let _ = tx.send(Ev::Update(UpdateMsg::Done(result)));
+        });
+    }
+
+    /// The update ended: say what it did in the conversation, and, when it put a new file in
+    /// place, that `Ctrl-R` loads it.
+    fn update_done(&mut self, result: Result<String, String>) {
+        self.updating = false;
+        self.view.update = None;
+        self.view.scroll = 0;
+        match result {
+            Ok(said) => {
+                self.transcript.note(said);
+                if let Some(v) = self.watch.poll() {
+                    self.transcript
+                        .note(format!("herdr-tui {v} is installed · Ctrl-R loads it"));
+                    self.newer = Some(v);
+                }
+            }
+            Err(why) => self.transcript.note(format!("Update failed: {why}")),
+        }
+    }
+
+    /// `/plan`: into plan mode, or back out of it to the mode it left.
+    fn plan(&mut self) {
+        let Some(opt) = self.transcript.option("mode") else {
+            return;
+        };
+        let (id, what, current) = (opt.id.clone(), opt.name.clone(), opt.current.clone());
+        match slash::plan_move(opt, self.before_plan.as_deref()) {
+            Ok(m) => {
+                if m.entering {
+                    self.before_plan = current;
+                }
+                self.apply_choice(&id, &what, &m.value, &m.name);
+            }
+            Err(why) => self.hint = Some(format!("Unavailable: {why}")),
+        }
+    }
+
+    /// Shift-Tab: the next mode.
+    fn cycle_mode(&mut self) {
+        if let Some(why) = slash::unavailable(&self.transcript, slash::Local::Mode, false) {
+            self.hint = Some(format!("Unavailable: {why}"));
+            return;
+        }
+        let Some(opt) = self.transcript.option("mode") else {
+            return;
+        };
+        let (id, what) = (opt.id.clone(), opt.name.clone());
+        if let Some((value, name)) = slash::next_choice(opt) {
+            self.apply_choice(&id, &what, &value, &name);
+        }
+    }
+
+    /// `/info`: which herdr-tui this is, and which session it shows, as notes in the conversation.
+    fn info(&mut self) {
+        self.transcript.note(format!(
+            "herdr-tui {} · {} · session {}",
+            cli::VERSION,
+            self.agent,
+            self.id
+        ));
+        self.transcript.note(format!("folder {}", self.cwd));
+        self.transcript
+            .note(format!("program {}", self.watch.path().display()));
+        self.transcript
+            .note(format!("reopen with: herdr-tui attach {}", self.id));
+        if let Some(v) = &self.newer {
+            self.transcript
+                .note(format!("herdr-tui {v} is installed · Ctrl-R loads it"));
+        }
+        self.view.scroll = 0;
+    }
+
+    /// A paste that is only paths to files that exist: attaches them, and says so. `false` when
+    /// it is anything else (it is then text).
+    fn attach_paste(&mut self, text: &str) -> bool {
+        let Some(paths) = attach::paths_in(text, &self.home.to_string_lossy()) else {
+            return false;
+        };
+        let mut found: Vec<attach::Attachment> = Vec::new();
+        for p in &paths {
+            let Ok(abs) = std::fs::canonicalize(p) else {
+                return false;
+            };
+            let Some(abs) = abs.to_str().filter(|_| abs.is_file()) else {
+                return false;
+            };
+            let mut a = attach::attachment(abs, &self.cwd);
+            a.size = std::fs::metadata(abs).map_or(0, |m| m.len());
+            if !self.files.iter().chain(&found).any(|f| f.uri == a.uri) {
+                found.push(a);
+            }
+        }
+        if self.files.len() + found.len() > attach::MAX_FILES {
+            self.hint = Some(format!(
+                "At most {} files go with a message",
+                attach::MAX_FILES
+            ));
+            return true;
+        }
+        let pictures = self.session.accepts_pictures();
+        self.hint = Some(match found.as_slice() {
+            [] => return true,
+            [one] => {
+                let how = if one.is_picture(pictures) {
+                    " as a picture"
+                } else if one.picture.is_some() && !pictures {
+                    " as a link (this agent takes no pictures)"
+                } else if one.picture.is_some() {
+                    " as a link (over 5 MB)"
+                } else {
+                    ""
+                };
+                format!(
+                    "Attached {}{how} · Backspace takes it off · /files picks",
+                    one.name
+                )
+            }
+            many => format!(
+                "Attached {} files · Backspace takes the last off · /files picks",
+                many.len()
+            ),
+        });
+        self.files.extend(found);
+        true
+    }
+
+    /// Reads the files that go as pictures into the prompt. A picture that has grown past the
+    /// limit since it was pasted goes as a link instead.
+    fn load_pictures(&mut self) -> Result<(), String> {
+        let takes = self.session.accepts_pictures();
+        for f in &mut self.files {
+            if f.is_picture(takes) && f.data.is_none() {
+                let bytes = std::fs::read(&f.path)
+                    .map_err(|e| format!("Could not read {}: {e}", f.name))?;
+                f.size = bytes.len() as u64;
+                if f.is_picture(takes) {
+                    f.data = Some(attach::base64(&bytes));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Asks the agent to change option `id` to `value`. Choosing what is already chosen sends
+    /// nothing.
+    fn apply_choice(&mut self, id: &str, what: &str, value: &str, name: &str) {
+        if self
+            .transcript
+            .option(id)
+            .and_then(|o| o.current.as_deref())
+            == Some(value)
+        {
+            return;
+        }
+        match self
+            .session
+            .set_config(id, value, what, name, &self.transcript)
+        {
+            Ok(fx) => {
+                self.view.scroll = 0;
+                self.run(fx);
+            }
+            Err(Refused::NotReady) => self.hint = Some("The session is not open yet".to_string()),
+            Err(Refused::Busy) => {
+                self.hint = Some("The agent is working; change it when the turn ends".to_string());
+            }
             Err(_) => {}
         }
     }

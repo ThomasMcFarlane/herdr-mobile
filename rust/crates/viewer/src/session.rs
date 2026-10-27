@@ -3,6 +3,7 @@
 //! come out, and the I/O layer carries them out. That keeps every rule here testable
 //! without a socket, a thread or a clock.
 
+use crate::attach::{self, Attachment};
 use crate::question::{self, Act, Form};
 use crate::transcript::Transcript;
 use acp::{code, method, Id, Message, PermissionRequest, RpcError, SessionUpdate};
@@ -46,8 +47,8 @@ pub enum Effect {
     ReadRecord,
     /// Answer with [`Event::Retry`] after this long.
     RetryIn(Duration),
-    /// Put this text back in the composer: it was not sent.
-    RestoreInput(String),
+    /// Put this text and these files back in the input: they were not sent.
+    RestoreInput(String, Vec<Attachment>),
 }
 
 /// What reached the session.
@@ -127,7 +128,18 @@ enum Call {
     Init,
     Load,
     New,
-    Prompt(String),
+    Prompt {
+        text: String,
+        files: Vec<Attachment>,
+    },
+    /// A change of one select option (the model, the thinking level, the mode): the option's
+    /// id and the value asked for, and the names the person sees, for the note.
+    SetConfig {
+        config_id: String,
+        value: String,
+        what: String,
+        choice: String,
+    },
 }
 
 #[derive(Debug)]
@@ -140,6 +152,8 @@ pub struct Session {
     waiting: Vec<Waiting>,
     /// The `_meta.herdr.pane` the keeper is told about, when run inside a herdr pane.
     pane: Option<String>,
+    /// The agent takes pictures in a prompt (`promptCapabilities.image`, from `initialize`).
+    images: bool,
 }
 
 impl Session {
@@ -154,6 +168,7 @@ impl Session {
             calls: HashMap::new(),
             waiting: Vec::new(),
             pane,
+            images: false,
         };
         let mut meta = json!({"viewer": true});
         if let Some(p) = &s.pane {
@@ -191,6 +206,11 @@ impl Session {
             .first()
             .is_some_and(|w| w.permission().is_some())
     }
+    /// Whether the agent takes pictures in a prompt.
+    #[must_use]
+    pub fn accepts_pictures(&self) -> bool {
+        self.images
+    }
     #[must_use]
     pub fn ready(&self) -> bool {
         self.phase == Phase::Ready
@@ -198,7 +218,9 @@ impl Session {
     /// Whether a prompt is in flight.
     #[must_use]
     pub fn prompting(&self) -> bool {
-        self.calls.values().any(|c| matches!(c, Call::Prompt(_)))
+        self.calls
+            .values()
+            .any(|c| matches!(c, Call::Prompt { .. }))
     }
 
     fn call(&mut self, call: Call, method: &str, params: Value) -> Effect {
@@ -298,20 +320,26 @@ impl Session {
                 self.end(format!("the keeper refused this terminal ({})", e.message));
                 Vec::new()
             }
-            (Call::Init, Ok(_)) => match self.start.clone() {
-                Start::Attach => {
-                    self.phase = Phase::WaitingForSession;
-                    vec![Effect::ReadRecord]
+            (Call::Init, Ok(init)) => {
+                // Present and not null counts, as on the phone (`{}` is a yes).
+                self.images = init
+                    .pointer("/agentCapabilities/promptCapabilities/image")
+                    .is_some_and(|v| !v.is_null() && *v != json!(false));
+                match self.start.clone() {
+                    Start::Attach => {
+                        self.phase = Phase::WaitingForSession;
+                        vec![Effect::ReadRecord]
+                    }
+                    Start::Create { cwd } => {
+                        self.phase = Phase::Opening;
+                        vec![self.call(
+                            Call::New,
+                            method::SESSION_NEW,
+                            json!({"cwd": cwd, "mcpServers": []}),
+                        )]
+                    }
                 }
-                Start::Create { cwd } => {
-                    self.phase = Phase::Opening;
-                    vec![self.call(
-                        Call::New,
-                        method::SESSION_NEW,
-                        json!({"cwd": cwd, "mcpServers": []}),
-                    )]
-                }
-            },
+            }
             (Call::Load, Err(e)) | (Call::New, Err(e)) => {
                 self.end(format!("the session did not open ({})", e.message));
                 Vec::new()
@@ -332,16 +360,45 @@ impl Session {
                 }
                 Vec::new()
             }
-            (Call::Prompt(sent), Err(e)) => {
+            (Call::Prompt { text, files }, Err(e)) => {
                 tr.note(if e.code == code::SESSION_BUSY {
                     "The agent is busy; not sent".to_string()
                 } else {
                     format!("Not sent: {}", e.message)
                 });
-                vec![Effect::RestoreInput(sent)]
+                vec![Effect::RestoreInput(text, files)]
             }
-            (Call::Prompt(_), Ok(result)) => {
+            (Call::Prompt { .. }, Ok(result)) => {
                 tr.turn_end(result.get("stopReason").and_then(Value::as_str));
+                Vec::new()
+            }
+            (
+                Call::SetConfig {
+                    config_id,
+                    value,
+                    what,
+                    choice,
+                },
+                Ok(result),
+            ) => {
+                // The answer carries every option as it stands now; an agent that sends none is
+                // taken at its word for the one that changed.
+                let opts =
+                    acp::parse_config_options(result.get("configOptions").unwrap_or(&Value::Null));
+                if opts.is_empty() {
+                    tr.set_current(&config_id, &value);
+                } else {
+                    tr.apply(SessionUpdate::Config(opts));
+                }
+                tr.note(format!("{what}: {choice}"));
+                Vec::new()
+            }
+            (Call::SetConfig { what, .. }, Err(e)) => {
+                tr.note(format!(
+                    "Could not change {}: {}",
+                    what.to_lowercase(),
+                    e.message
+                ));
                 Vec::new()
             }
         }
@@ -462,8 +519,13 @@ impl Session {
     ///
     /// # Errors
     /// [`Refused::NotReady`] before the session is open, [`Refused::Busy`] while a prompt is in flight.
-    /// The text is then still the caller's to keep.
-    pub fn send(&mut self, text: &str, tr: &mut Transcript) -> Result<Vec<Effect>, Refused> {
+    /// The text and the files are then still the caller's to keep.
+    pub fn send(
+        &mut self,
+        text: &str,
+        files: &[Attachment],
+        tr: &mut Transcript,
+    ) -> Result<Vec<Effect>, Refused> {
         if !self.ready() {
             return Err(Refused::NotReady);
         }
@@ -471,11 +533,46 @@ impl Session {
             return Err(Refused::Busy);
         }
         let sid = self.sid.clone().ok_or(Refused::NotReady)?;
-        tr.user(text);
+        tr.user(attach::echo(text, files));
         Ok(vec![self.call(
-            Call::Prompt(text.to_string()),
+            Call::Prompt {
+                text: text.to_string(),
+                files: files.to_vec(),
+            },
             method::SESSION_PROMPT,
-            json!({"sessionId": sid, "prompt": [{"type": "text", "text": text}]}),
+            json!({"sessionId": sid, "prompt": attach::blocks(text, files, self.images)}),
+        )])
+    }
+
+    /// The person changes one select option of the session (`session/set_config_option`, as the
+    /// phone does). `what` and `choice` are the names they saw, for the note that follows.
+    ///
+    /// # Errors
+    /// [`Refused::NotReady`] before the session is open, [`Refused::Busy`] while a turn runs.
+    pub fn set_config(
+        &mut self,
+        config_id: &str,
+        value: &str,
+        what: &str,
+        choice: &str,
+        tr: &Transcript,
+    ) -> Result<Vec<Effect>, Refused> {
+        if !self.ready() {
+            return Err(Refused::NotReady);
+        }
+        if self.prompting() || tr.running() {
+            return Err(Refused::Busy);
+        }
+        let sid = self.sid.clone().ok_or(Refused::NotReady)?;
+        Ok(vec![self.call(
+            Call::SetConfig {
+                config_id: config_id.to_string(),
+                value: value.to_string(),
+                what: what.to_string(),
+                choice: choice.to_string(),
+            },
+            method::SESSION_SET_CONFIG_OPTION,
+            json!({"sessionId": sid, "configId": config_id, "value": value}),
         )])
     }
 
@@ -785,7 +882,7 @@ mod tests {
     #[test]
     fn sending_shows_the_message_and_only_one_prompt_is_in_flight() {
         let (mut s, mut tr) = ready();
-        let fx = s.send("hello", &mut tr).expect("sent");
+        let fx = s.send("hello", &[], &mut tr).expect("sent");
         let [Effect::Send(Message::Request { method, params, .. })] = fx.as_slice() else {
             panic!("one request")
         };
@@ -794,7 +891,7 @@ mod tests {
             ("session/prompt", Some("hello"))
         );
         assert_eq!(tr.items().len(), 1);
-        assert_eq!(s.send("again", &mut tr), Err(Refused::Busy));
+        assert_eq!(s.send("again", &[], &mut tr), Err(Refused::Busy));
         assert_eq!(
             tr.items().len(),
             1,
@@ -806,7 +903,7 @@ mod tests {
     fn a_prompt_in_flight_counts_as_working_even_when_the_agent_never_says_so() {
         let (mut s, mut tr) = ready();
         assert!(!s.prompting());
-        s.send("hello", &mut tr).expect("sent");
+        s.send("hello", &[], &mut tr).expect("sent");
         assert!(s.prompting() && !tr.running());
         s.handle(ok(3, json!({"stopReason": "cancelled"})), 0, &mut tr);
         assert!(!s.prompting());
@@ -816,20 +913,20 @@ mod tests {
     fn nothing_is_sent_before_the_session_is_open() {
         let mut tr = Transcript::default();
         let (mut s, _) = Session::begin(Start::Attach, None);
-        assert_eq!(s.send("hi", &mut tr), Err(Refused::NotReady));
+        assert_eq!(s.send("hi", &[], &mut tr), Err(Refused::NotReady));
     }
 
     #[test]
     fn a_refused_prompt_gives_its_text_back_and_says_why() {
         let (mut s, mut tr) = ready();
-        s.send("hello", &mut tr).expect("sent");
+        s.send("hello", &[], &mut tr).expect("sent");
         let busy = Event::Message(Message::error(
             Id::Num(3),
             RpcError::new(code::SESSION_BUSY, "busy"),
         ));
         assert_eq!(
             s.handle(busy, 0, &mut tr),
-            [Effect::RestoreInput("hello".into())]
+            [Effect::RestoreInput("hello".into(), vec![])]
         );
         assert!(!s.prompting());
         assert!(
@@ -840,9 +937,35 @@ mod tests {
     #[test]
     fn a_finished_prompt_ends_the_turn_and_frees_the_next_send() {
         let (mut s, mut tr) = ready();
-        s.send("one", &mut tr).expect("sent");
+        s.send("one", &[], &mut tr).expect("sent");
         s.handle(ok(3, json!({"stopReason": "end_turn"})), 0, &mut tr);
-        assert!(s.send("two", &mut tr).is_ok());
+        assert!(s.send("two", &[], &mut tr).is_ok());
+    }
+
+    #[test]
+    fn attached_files_go_as_links_after_the_text_and_come_back_with_it_when_refused() {
+        let (mut s, mut tr) = ready();
+        let f = attach::attachment("/w/src/a.rs", "/w");
+        let fx = s
+            .send("look", std::slice::from_ref(&f), &mut tr)
+            .expect("sent");
+        let [Effect::Send(Message::Request { params, .. })] = fx.as_slice() else {
+            panic!("one request")
+        };
+        assert_eq!(
+            params["prompt"],
+            json!([{"type": "text", "text": "look"}, {"type": "resource_link", "uri": "file:///w/src/a.rs", "name": "src/a.rs"}])
+        );
+        assert!(matches!(&tr.items().back().expect("echo").entry,
+            crate::transcript::Entry::Message { text, .. } if text == "look\n@src/a.rs"));
+        let busy = Event::Message(Message::error(
+            Id::Num(3),
+            RpcError::new(code::SESSION_BUSY, "busy"),
+        ));
+        assert_eq!(
+            s.handle(busy, 0, &mut tr),
+            [Effect::RestoreInput("look".into(), vec![f])]
+        );
     }
 
     #[test]
@@ -953,7 +1076,7 @@ mod tests {
         s.handle(ok(2, json!({})), 0, &mut tr);
         s.handle(Event::Retry, 0, &mut tr);
         assert_eq!(s.phase(), &Phase::Ended("exit 3".into()));
-        assert_eq!(s.send("x", &mut tr), Err(Refused::NotReady));
+        assert_eq!(s.send("x", &[], &mut tr), Err(Refused::NotReady));
     }
 
     #[test]
@@ -1221,5 +1344,131 @@ mod tests {
         assert!(fx.is_empty(), "no answer: it would be the first and win");
         assert!(s.waiting().is_empty());
         assert_eq!(tr.items().len(), 1, "it is noted");
+    }
+
+    fn set_model(s: &mut Session, tr: &Transcript) -> (i64, Message) {
+        let fx = s
+            .set_config("model", "b", "Model", "Opus 4.1", tr)
+            .expect("asked");
+        let [Effect::Send(m @ Message::Request { id: Id::Num(n), .. })] = fx.as_slice() else {
+            panic!("one request")
+        };
+        (*n, m.clone())
+    }
+
+    #[test]
+    fn changing_an_option_asks_the_agent_as_the_phone_does_and_follows_its_answer() {
+        let (mut s, mut tr) = ready();
+        tr.apply(SessionUpdate::Config(acp::parse_config_options(&json!([
+            {"id": "model", "category": "model", "type": "select", "currentValue": "a", "options": [{"value": "a", "name": "Model A"}, {"value": "b", "name": "Opus 4.1"}]}
+        ]))));
+        let (n, m) = set_model(&mut s, &tr);
+        let Message::Request { method, params, .. } = m else {
+            panic!("request")
+        };
+        assert_eq!(method, "session/set_config_option");
+        assert_eq!(
+            params,
+            json!({"sessionId": "sess", "configId": "model", "value": "b"})
+        );
+        // The agent answers with every option as it stands.
+        s.handle(
+            ok(n, json!({"configOptions": [
+                {"id": "model", "category": "model", "type": "select", "currentValue": "b", "options": [{"value": "a", "name": "Model A"}, {"value": "b", "name": "Opus 4.1"}]}]})),
+            0,
+            &mut tr,
+        );
+        assert_eq!(tr.model(), Some("Opus 4.1"));
+        let (n2, _) = set_model(&mut s, &tr);
+        // An agent that answers with no options is taken at its word.
+        tr.set_current("model", "a");
+        s.handle(ok(n2, json!({})), 0, &mut tr);
+        assert_eq!(tr.model(), Some("Opus 4.1"));
+        assert!(matches!(
+            tr.items().back().map(|i| &i.entry),
+            Some(crate::transcript::Entry::Note(t)) if t == "Model: Opus 4.1"
+        ));
+    }
+
+    #[test]
+    fn a_refused_change_says_so_and_leaves_the_option_alone() {
+        let (mut s, mut tr) = ready();
+        tr.apply(SessionUpdate::Config(acp::parse_config_options(&json!([
+            {"id": "model", "category": "model", "type": "select", "currentValue": "a", "options": [{"value": "a", "name": "Model A"}, {"value": "b", "name": "Opus 4.1"}]}
+        ]))));
+        let (n, _) = set_model(&mut s, &tr);
+        s.handle(
+            Event::Message(Message::error(
+                Id::Num(n),
+                RpcError::new(-32602, "unknown model"),
+            )),
+            0,
+            &mut tr,
+        );
+        assert_eq!(tr.model(), Some("Model A"));
+        assert!(matches!(
+            tr.items().back().map(|i| &i.entry),
+            Some(crate::transcript::Entry::Note(t)) if t == "Could not change model: unknown model"
+        ));
+    }
+
+    #[test]
+    fn an_option_is_not_changed_while_a_turn_runs_or_before_the_session_is_open() {
+        let (mut s, mut tr) = ready();
+        s.send("hi", &[], &mut tr).expect("sent");
+        assert_eq!(
+            s.set_config("model", "b", "Model", "B", &tr),
+            Err(Refused::Busy)
+        );
+        let tr2 = Transcript::default();
+        let (mut fresh, _) = Session::begin(Start::Attach, None);
+        assert_eq!(
+            fresh.set_config("model", "b", "Model", "B", &tr2),
+            Err(Refused::NotReady)
+        );
+    }
+
+    #[test]
+    fn a_picture_goes_as_a_picture_only_to_an_agent_that_says_it_takes_them() {
+        let open = |caps: Value| {
+            let mut tr = Transcript::default();
+            let (mut s, _) = Session::begin(Start::Attach, None);
+            s.handle(ok(1, caps), 0, &mut tr);
+            s.handle(record(Some("sess")), 0, &mut tr);
+            s.handle(ok(2, json!({})), 0, &mut tr);
+            (s, tr)
+        };
+        let mut p = attach::attachment("/w/a.png", "/w");
+        p.size = 10;
+        p.data = Some(attach::base64(b"hi"));
+        let (mut s, mut tr) =
+            open(json!({"agentCapabilities": {"promptCapabilities": {"image": true}}}));
+        assert!(s.accepts_pictures());
+        let fx = s.send("", std::slice::from_ref(&p), &mut tr).expect("sent");
+        let [Effect::Send(Message::Request { params, .. })] = fx.as_slice() else {
+            panic!("one request")
+        };
+        assert_eq!(
+            params["prompt"],
+            json!([{"type": "image", "data": "aGk=", "mimeType": "image/png"}])
+        );
+        let (s, _) = open(json!({"agentCapabilities": {"promptCapabilities": {"image": {}}}}));
+        assert!(s.accepts_pictures(), "present and not null is a yes");
+        for no in [
+            json!({}),
+            json!({"agentCapabilities": {"promptCapabilities": {"image": false}}}),
+            json!({"agentCapabilities": {"promptCapabilities": {"image": null}}}),
+        ] {
+            let (mut s, mut tr) = open(no);
+            assert!(!s.accepts_pictures());
+            let fx = s.send("", std::slice::from_ref(&p), &mut tr).expect("sent");
+            let [Effect::Send(Message::Request { params, .. })] = fx.as_slice() else {
+                panic!("one request")
+            };
+            assert_eq!(
+                params["prompt"][0]["type"], "resource_link",
+                "a link instead"
+            );
+        }
     }
 }

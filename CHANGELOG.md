@@ -4,6 +4,15 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [Unreleased]
+
+- The desk client has slash commands: type `/` for the list (the agent's own commands too), `/model`, `/thinking` and `/mode` pick a new setting, and `/new` (also `/clear`) starts a fresh session in the same pane while the old one keeps running. Before, `/clear` was sent to the agent as a chat message and cleared nothing.
+- `/plan` goes into plan mode and, again, back to the mode it left; Shift-Tab steps through the modes. `/settings` lists every setting the agent lets you change, `/info` (also `/version`) says which herdr-tui and which session this is, and the command list puts the agent's skills after its commands.
+- Paste a file or picture path (or drop a file) into an empty box and it goes with your message, listed on a row above the input. A PNG, JPEG, GIF or WebP up to 5 MB goes as a picture the model sees (the list says `· picture`); anything else goes as a link to the file. Backspace takes the last one off, Ctrl-C all of them, and `/files` lets you pick one to take off. Pasted into text, a path stays text.
+- The desk client shows the agent's plan as a checklist above the input while steps are left (`✓` done, `●` doing, `○` to do), so you see how far it has got without scrolling. It hides when the plan is finished or the screen is short.
+- `/update` installs the latest herdr-tui without leaving the session (`/update check` only says whether it would change anything, `/update 0.1.35` installs that release). It downloads in the background with the progress in the footer, checks the file before replacing it, and then says `Ctrl-R loads it`; leaving during the download abandons it.
+- The desk client's tip said Up brings back your last message; it is Ctrl-P.
+
 ## [0.1.39] - 2026-10-27
 
 ### `herdr-tui update` shows the download
