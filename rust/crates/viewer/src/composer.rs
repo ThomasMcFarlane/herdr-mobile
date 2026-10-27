@@ -110,6 +110,21 @@ impl Composer {
         self.cursor = at;
     }
 
+    /// Removes the text `start..end` (byte offsets on character boundaries); the cursor keeps
+    /// its place in the text.
+    pub fn delete_range(&mut self, start: usize, end: usize) {
+        if start >= end || end > self.text.len() {
+            return;
+        }
+        self.text.drain(start..end);
+        self.cursor = if self.cursor >= end {
+            self.cursor - (end - start)
+        } else {
+            self.cursor.min(start)
+        };
+        self.recall = None;
+    }
+
     pub fn clear(&mut self) {
         self.text.clear();
         self.cursor = 0;
@@ -257,5 +272,29 @@ mod tests {
         "foo bar".chars().for_each(|ch| c.insert(ch));
         c.kill_word();
         assert_eq!(c.text, "foo ");
+    }
+
+    #[test]
+    fn deleting_a_range_keeps_the_cursor_in_the_same_place_in_the_text() {
+        let mut c = Composer::default();
+        "ab[x] cd".chars().for_each(|ch| c.insert(ch));
+        c.delete_range(2, 6);
+        assert_eq!(
+            (c.text.as_str(), c.cursor),
+            ("abcd", 4),
+            "after it: moves back"
+        );
+        c.cursor = 3;
+        c.delete_range(1, 3);
+        assert_eq!(
+            (c.text.as_str(), c.cursor),
+            ("ad", 1),
+            "inside it: to its start"
+        );
+        c.cursor = 0;
+        c.delete_range(1, 2);
+        assert_eq!((c.text.as_str(), c.cursor), ("a", 0), "before it: stays");
+        c.delete_range(5, 9);
+        assert_eq!(c.text, "a", "past the end: nothing");
     }
 }

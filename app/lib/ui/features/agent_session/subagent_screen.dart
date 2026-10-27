@@ -11,6 +11,7 @@ import '../../../data/words/plural.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import '../../render/markdown/markdown.dart';
 import 'agent_md_scope.dart';
+import 'asked_to.dart';
 import 'permission_dock.dart';
 import 'session_select.dart';
 import 'subagent_card.dart';
@@ -151,7 +152,8 @@ class _StripSnap {
 }
 
 /// The state of the run in one line under the bar: its shape, `running 42s ·
-/// Grep · 7 tools` or `Explore · done · 31s · 12 tools`.
+/// Grep · 7 tools` or `done · 31s · 12 tools`. The agent type is in the bar's
+/// subtitle, so the line does not repeat it.
 class RunStateStrip extends StatelessWidget {
   const RunStateStrip({super.key, required this.session, required this.runId});
 
@@ -182,7 +184,7 @@ class RunStateStrip extends StatelessWidget {
             run: run,
             tone: tone,
             builder: (context, now) {
-              final line = runLine(run, tone, now: now);
+              final line = runLine(run, tone, now: now, withType: false);
               return Row(
                 children: [
                   RunGlyph(tone: tone),
@@ -238,32 +240,28 @@ class _PinnedPromptState extends State<PinnedPrompt> {
       builder: (context, assignment) {
         final text = assignment?.trim() ?? '';
         if (text.isEmpty) return const SizedBox.shrink();
-        final shown = visibleText(text);
         final maxOpen = MediaQuery.sizeOf(context).height * 0.4;
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(Gap.lg, Gap.xs, Gap.lg, Gap.xs),
-          child: FoldPanel(
-            expanded: _open,
-            onToggle: (open) => setState(() => _open = open),
-            header: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Asked to', style: Type.captionStrong.copyWith(color: ds.textMuted)),
-                if (!_open) ...[
-                  const SizedBox(height: Gap.hair),
-                  Text(
-                    shown,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: Type.secondary.copyWith(color: ds.text),
-                  ),
+        // Outside the transcript's own scope: the prompt carries paths and links.
+        return AgentMdScope(
+          session: widget.session,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(Gap.lg, Gap.xs, Gap.lg, Gap.xs),
+            child: FoldPanel(
+              expanded: _open,
+              onToggle: (open) => setState(() => _open = open),
+              header: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Asked to', style: Type.captionStrong.copyWith(color: ds.textMuted)),
+                  if (!_open) ...[
+                    const SizedBox(height: Gap.hair),
+                    AskedPreview(markdown: text, maxLines: 3, style: Type.secondary.copyWith(color: ds.text)),
+                  ],
                 ],
-              ],
-            ),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: maxOpen),
-              child: SingleChildScrollView(
-                child: Text(shown, style: Type.secondary.copyWith(color: ds.text)),
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: maxOpen),
+                child: SingleChildScrollView(child: AskedMarkdown(markdown: text)),
               ),
             ),
           ),
@@ -315,9 +313,10 @@ class LogOriginNote extends StatelessWidget {
   }
 }
 
-/// Above a summary: that the subagent's log is being read, or could not be
-/// (the connection failed; tap to try again). Nothing once the log is shown,
-/// and nothing when there is no log to read: the summary stands on its own.
+/// Above a summary, the one line about where the conversation stands: that the
+/// subagent's log is being read, that it could not be (the connection failed;
+/// tap to try again), or, otherwise, that this is a summary only. One slot, so
+/// the summary does not move when a read ends without a log.
 class LogStatusLine extends StatelessWidget {
   const LogStatusLine({super.key, required this.session, required this.runId});
 
@@ -331,7 +330,9 @@ class LogStatusLine extends StatelessWidget {
       session: session,
       select: (s) => s.subagentLogStatus(runId),
       builder: (context, status) {
-        if (status != SubagentLogStatus.loading && status != SubagentLogStatus.failed) return const SizedBox.shrink();
+        if (status != SubagentLogStatus.loading && status != SubagentLogStatus.failed) {
+          return _SummaryNote(agent: session.agent);
+        }
         final failed = status == SubagentLogStatus.failed;
         if (!failed) {
           return Semantics(
@@ -375,17 +376,59 @@ class LogStatusLine extends StatelessWidget {
   }
 }
 
+/// `Summary only.` once, in the slot above the summary.
+class _SummaryNote extends StatelessWidget {
+  const _SummaryNote({required this.agent});
+
+  final String agent;
+
+  @override
+  Widget build(BuildContext context) {
+    final ds = context.ds;
+    return Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(minHeight: kMinTap),
+      padding: const EdgeInsets.symmetric(horizontal: Gap.lg, vertical: Gap.sm),
+      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: ds.hairline))),
+      child: Row(
+        children: [
+          Icon(LucideIcons.info, size: IconSize.row, color: ds.textSecondary),
+          const SizedBox(width: Gap.sm),
+          Expanded(
+            child: Text(
+              'Summary only. ${agentName(agent)} sends a summary of its subagents, not their conversation.',
+              style: Type.secondary.copyWith(color: ds.textSecondary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 final _resultDocs = Expando<MdDocument>('subagent summary result');
 
 /// The summary of a run the agent sends no conversation for (omp, Codex over
 /// ACP): what it was asked, the figures it reported, its latest tools and
 /// output (a few lines, mono), the note it left, why it failed, and what it
 /// handed back. The one place that says it is a summary, once.
-class SubagentSummaryBody extends StatelessWidget {
+class SubagentSummaryBody extends StatefulWidget {
   const SubagentSummaryBody({super.key, required this.session, required this.runId});
 
   final AgentSessionView session;
   final String runId;
+
+  @override
+  State<SubagentSummaryBody> createState() => _SubagentSummaryBodyState();
+}
+
+class _SubagentSummaryBodyState extends State<SubagentSummaryBody> {
+  /// The result blocks whose `Show all` is on, by index, in [_expandedFor].
+  final _expanded = <int>{};
+  MdDocument? _expandedFor;
+
+  AgentSessionView get session => widget.session;
+  String get runId => widget.runId;
 
   @override
   Widget build(BuildContext context) => AgentMdScope(
@@ -421,6 +464,10 @@ class SubagentSummaryBody extends StatelessWidget {
     final output = [for (final l in run.recentOutput) if (l.trim().isNotEmpty) _clip(visibleText(l), 300)];
     final result = run.result?.trim() ?? '';
     final doc = result.isEmpty ? null : (_resultDocs[run] ??= parseMd(result));
+    if (!identical(doc, _expandedFor)) {
+      _expanded.clear();
+      _expandedFor = doc;
+    }
     final why = failureText(run);
     final note = run.note?.trim();
     double gapBefore(int i) => mdBlockGap(i == 0 ? null : doc!.blocks[i - 1], doc!.blocks[i]);
@@ -432,21 +479,6 @@ class SubagentSummaryBody extends StatelessWidget {
       ),
     );
     return [
-      (c) => Panel(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(padding: const EdgeInsets.only(top: Gap.hair), child: Icon(LucideIcons.info, size: IconSize.row, color: ds.textSecondary)),
-            const SizedBox(width: Gap.sm),
-            Expanded(
-              child: Text(
-                'Summary only. ${agentName(session.agent)} sends a summary of its subagents, not their conversation.',
-                style: Type.secondary.copyWith(color: ds.textSecondary),
-              ),
-            ),
-          ],
-        ),
-      ),
       if (facts.isNotEmpty)
         (c) => Padding(
           padding: const EdgeInsets.only(top: Gap.md),
@@ -484,7 +516,7 @@ class SubagentSummaryBody extends StatelessWidget {
         ),
       if (assignment.isNotEmpty) ...[
         (c) => section('Asked to'),
-        (c) => Text(visibleText(assignment), style: Type.compact.copyWith(color: ds.text)),
+        (c) => AskedMarkdown(markdown: assignment),
       ],
       if (run.recentTools.isNotEmpty || (run.lastToolLine ?? '').isNotEmpty) ...[
         (c) => section(run.isActive ? 'Doing now' : 'Latest tools'),
@@ -524,7 +556,16 @@ class SubagentSummaryBody extends StatelessWidget {
         for (var i = 0; i < doc.blocks.length; i++)
           (c) => Padding(
             padding: EdgeInsets.only(top: gapBefore(i)),
-            child: MdToneScope(tone: MdTone.quiet, child: MdBlockView(block: doc.blocks[i])),
+            child: MdToneScope(
+              tone: MdTone.quiet,
+              child: MdBlockView(
+                block: doc.blocks[i],
+                expanded: _expanded.contains(i),
+                onToggleExpanded: () => setState(() {
+                  if (!_expanded.remove(i)) _expanded.add(i);
+                }),
+              ),
+            ),
           ),
       ],
     ];

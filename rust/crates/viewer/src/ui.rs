@@ -13,6 +13,7 @@ use crate::fold::{self, Block};
 use crate::md::{self, clean};
 use crate::session::{Ask, Phase, Session};
 use crate::shell;
+use crate::slash;
 use crate::theme::Theme;
 use crate::transcript::{Entry, Item, Role, Tool, Transcript};
 use crate::width;
@@ -54,6 +55,15 @@ pub struct View {
     pub focus_dirty: bool,
     /// The key list is open (`?`).
     pub help: bool,
+    /// The command list opened by typing `/`, and the row chosen on it.
+    pub palette: Vec<slash::Entry>,
+    pub palette_sel: usize,
+    /// The choices of the option being changed (`/model`), while its picker is open.
+    pub picker: Option<slash::Picker>,
+    /// The files attached to the next message, by name (one row above the input).
+    pub chips: Vec<String>,
+    /// How far `/update` has got, while one runs (the footer says it).
+    pub update: Option<String>,
     /// Blocks that were just opened, by key, and the animation time they began: they grow into place.
     pub reveal: HashMap<u64, u64>,
     /// The lines of the blocks, kept from one frame to the next, and the width they were built at.
@@ -1100,7 +1110,11 @@ pub fn draw(f: &mut Frame, ctx: &Frame_, v: &mut View) {
             option_rows = options;
             lines
         })
-        .or_else(|| v.help.then(|| help_lines(w, theme)));
+        .or_else(|| v.picker.as_ref().map(|p| picker_lines(p, w, theme)))
+        .or_else(|| v.help.then(|| help_lines(w, theme)))
+        .or_else(|| {
+            (!v.palette.is_empty()).then(|| palette_lines(&v.palette, v.palette_sel, w, theme))
+        });
     let panel_h = panel
         .as_ref()
         .map_or(0, |p| p.len() as u16)
@@ -1114,9 +1128,23 @@ pub fn draw(f: &mut Frame, ctx: &Frame_, v: &mut View) {
     // The rule above carries the session's title; a tinted input needs no rule unless there is one.
     let rule_h = u16::from(!(tinted.is_some() && title.is_none()));
     let zone_h = comp_h + if tinted.is_some() { 2 } else { 1 };
-    let [hist, perm, rule, zone, footer] = Layout::vertical([
+    let chips_h = u16::from(!v.chips.is_empty());
+    // The agent's plan, while it has steps left: a quiet checklist above the conversation's
+    // edge. It gives way to everything else (the panel, the input) on a short screen.
+    let mut plan_rows = plan_lines(ctx.transcript.plan(), w, theme);
+    let kept = usize::from(panel_h + chips_h + rule_h + zone_h + 1) + 8;
+    let room = usize::from(area.height).saturating_sub(kept);
+    if room < 3 {
+        plan_rows.clear();
+    } else {
+        plan_rows.truncate(room);
+    }
+    let plan_h = u16::try_from(plan_rows.len()).unwrap_or(u16::MAX);
+    let [hist, plan, perm, chips, rule, zone, footer] = Layout::vertical([
         Constraint::Min(1),
+        Constraint::Length(plan_h),
         Constraint::Length(panel_h),
+        Constraint::Length(chips_h),
         Constraint::Length(rule_h),
         Constraint::Length(zone_h),
         Constraint::Length(1),
@@ -1129,12 +1157,18 @@ pub fn draw(f: &mut Frame, ctx: &Frame_, v: &mut View) {
         Vec::new()
     };
     draw_history(f, hist, ctx, v, welcome);
+    if plan_h > 0 {
+        f.render_widget(Paragraph::new(plan_rows), plan);
+    }
     // Only the rows the panel had room for can be clicked.
     option_rows.truncate(usize::from(perm.height));
     v.option_rows = option_rows;
     v.option_top = perm.y;
     if let Some(rows) = panel {
         f.render_widget(Paragraph::new(rows), perm);
+    }
+    if chips_h > 0 {
+        f.render_widget(Paragraph::new(chips_line(&v.chips, w, theme)), chips);
     }
 
     if rule_h > 0 {
@@ -1287,6 +1321,74 @@ fn fit_spans(spans: Vec<Span<'static>>, width: usize) -> Vec<Span<'static>> {
     out
 }
 
+/// Steps of the agent's plan drawn at once.
+const PLAN_ROWS: usize = 6;
+
+/// The agent's plan as a checklist: `Plan · 2/5`, then the steps around the one in progress
+/// (`✓` done, `●` doing, `○` to do). Nothing when the plan is empty or finished: the end-of-turn
+/// line says what was done.
+fn plan_lines(plan: &[acp::PlanEntry], width: usize, theme: Theme) -> Vec<Line<'static>> {
+    use acp::PlanStatus::{Completed, InProgress};
+    let done = plan.iter().filter(|e| e.status == Completed).count();
+    if plan.is_empty() || done == plan.len() {
+        return Vec::new();
+    }
+    let first_open = plan.iter().position(|e| e.status != Completed).unwrap_or(0);
+    let start = first_open
+        .saturating_sub(1)
+        .min(plan.len().saturating_sub(PLAN_ROWS));
+    let end = (start + PLAN_ROWS).min(plan.len());
+    let mut rows = vec![Line::from(vec![
+        Span::raw("  "),
+        Span::styled("Plan", theme.bold()),
+        Span::styled(format!(" · {done}/{}", plan.len()), theme.dim()),
+    ])];
+    for e in &plan[start..end] {
+        let (mark, mark_style, text_style) = match e.status {
+            Completed => ("✓", theme.dim(), theme.dim()),
+            InProgress => ("●", theme.accent(), theme.bold()),
+            acp::PlanStatus::Pending => ("○", theme.dim(), Style::default()),
+        };
+        rows.push(Line::from(vec![
+            Span::raw("  "),
+            Span::styled(mark, mark_style),
+            Span::raw(" "),
+            Span::styled(
+                fit(&clean(&e.content), width.saturating_sub(GUTTER + 2)),
+                text_style,
+            ),
+        ]));
+    }
+    if end < plan.len() {
+        rows.push(Line::from(Span::styled(
+            format!("    … {} more", plan.len() - end),
+            theme.dim(),
+        )));
+    }
+    rows
+}
+
+/// The files attached to the next message, on one row: `+ name` for each, and, when there is
+/// room, how to take them off (the first thing a person asks).
+fn chips_line(names: &[String], width: usize, theme: Theme) -> Line<'static> {
+    const HOW: &str = "Backspace takes the last off · /files picks";
+    let mut spans = vec![Span::raw(" ".repeat(GUTTER))];
+    for (i, n) in names.iter().enumerate() {
+        if i > 0 {
+            spans.push(Span::raw("  "));
+        }
+        spans.push(Span::styled("+ ", theme.accent()));
+        spans.push(Span::raw(clean(n)));
+    }
+    let used = spans_width(&spans);
+    if used + 3 + width_of(HOW) + GUTTER <= width {
+        spans.push(Span::raw(" ".repeat(width - used - width_of(HOW) - GUTTER)));
+        spans.push(Span::styled(HOW, theme.dim()));
+        return Line::from(spans);
+    }
+    Line::from(fit_spans(spans, width))
+}
+
 /// What the left of the footer says, by what the person is doing. Only the keys needed to act now;
 /// the rest are behind `?`.
 fn footer_left(ctx: &Frame_, v: &View, asking: Option<String>) -> Vec<Span<'static>> {
@@ -1310,6 +1412,25 @@ fn footer_left(ctx: &Frame_, v: &View, asking: Option<String>) -> Vec<Span<'stat
             Span::styled(mark, theme.warn()),
             Span::styled(what, theme.warn()),
         ];
+    }
+    if let Some(u) = &v.update {
+        return vec![
+            Span::styled("↻ ", theme.accent()),
+            Span::styled(format!("updating · {}", clean(u)), theme.dim()),
+        ];
+    }
+    if let Some(p) = &v.picker {
+        let keys = match p.kind {
+            slash::PickerKind::Files => "↑↓ choose · Enter takes it off · Esc cancel",
+            _ => "↑↓ choose · Enter set · Esc cancel",
+        };
+        return vec![Span::styled(keys, theme.dim())];
+    }
+    if !v.palette.is_empty() {
+        return vec![Span::styled(
+            "↑↓ choose · Tab complete · Enter run · Esc close",
+            theme.dim(),
+        )];
     }
     if v.focus.is_some() {
         return vec![
@@ -1367,7 +1488,7 @@ fn footer_left(ctx: &Frame_, v: &View, asking: Option<String>) -> Vec<Span<'stat
         ];
     }
     vec![Span::styled(
-        "Enter send · Ctrl-J newline · ? keys",
+        "Enter send · / commands · ? keys",
         theme.dim(),
     )]
 }
@@ -1438,9 +1559,16 @@ fn footer_facts(ctx: &Frame_, theme: Theme) -> Vec<Vec<Span<'static>>> {
 
 /// The key list, opened with `?`: what is not worth a place in the footer.
 fn help_lines(width: usize, theme: Theme) -> Vec<Line<'static>> {
-    const KEYS: [(&str, &str); 15] = [
+    const KEYS: [(&str, &str); 19] = [
         ("Enter", "send"),
         ("Ctrl-J", "new line"),
+        ("/", "commands: model, plan, settings, info, new, skills"),
+        ("Shift-Tab", "next mode (plan, ...)"),
+        (
+            "paste a path",
+            "attach a file or picture; Backspace takes it off",
+        ),
+        ("Ctrl-V", "attach the screenshot on the clipboard"),
         ("↑ ↓  wheel", "scroll; with a request waiting, ↑ ↓ choose"),
         ("PgUp PgDn", "page"),
         ("Home  End", "oldest, newest"),
@@ -1469,6 +1597,146 @@ fn help_lines(width: usize, theme: Theme) -> Vec<Line<'static>> {
             Span::raw(pad),
             Span::raw(what),
         ]));
+    }
+    rows.push(Line::default());
+    match theme.band() {
+        Some(bg) => band(rows, width, bg),
+        None => rows,
+    }
+}
+
+/// The command list opened by typing `/`: a window of rows around the chosen one, each with the
+/// name, what it takes and what it does, or why it cannot be used now.
+fn palette_lines(
+    entries: &[slash::Entry],
+    sel: usize,
+    width: usize,
+    theme: Theme,
+) -> Vec<Line<'static>> {
+    let sel = sel.min(entries.len().saturating_sub(1));
+    let start = if sel >= slash::MAX_ROWS {
+        sel + 1 - slash::MAX_ROWS
+    } else {
+        0
+    };
+    let end = (start + slash::MAX_ROWS).min(entries.len());
+    // What the agent called its commands goes through `clean` like all its text: a name or a
+    // description can carry controls and joiners that would break the row.
+    let one_line = |s: &str| clean(s).split_whitespace().collect::<Vec<_>>().join(" ");
+    let names: Vec<String> = entries[start..end]
+        .iter()
+        .map(|e| one_line(&e.name))
+        .collect();
+    let name_w = names
+        .iter()
+        .map(|n| width_of(n) + 1)
+        .max()
+        .unwrap_or(0)
+        .min((width / 3).clamp(18, 30));
+    let room = width.saturating_sub(GUTTER + 2 + name_w + 3);
+    let mut rows = vec![Line::default()];
+    for (i, e) in entries[start..end].iter().enumerate() {
+        let chosen = start + i == sel;
+        let name_style = if e.reason.is_some() {
+            theme.dim()
+        } else if chosen {
+            theme.accent().add_modifier(Modifier::BOLD)
+        } else {
+            Style::default()
+        };
+        let what = match &e.reason {
+            Some(r) => one_line(r),
+            None => [e.hint.as_deref().unwrap_or(""), e.description.as_str()]
+                .into_iter()
+                .map(one_line)
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<_>>()
+                .join("  "),
+        };
+        let name = fit(&format!("/{}", names[i]), name_w);
+        let pad = " ".repeat((name_w + 3).saturating_sub(width_of(&name)));
+        rows.push(Line::from(vec![
+            Span::raw("  "),
+            Span::styled(if chosen { "›" } else { " " }, theme.accent()),
+            Span::raw(" "),
+            Span::styled(name, name_style),
+            Span::raw(pad),
+            Span::styled(fit(&what, room), theme.dim()),
+        ]));
+    }
+    if end < entries.len() {
+        rows.push(Line::from(Span::styled(
+            format!("    … {} more · keep typing", entries.len() - end),
+            theme.dim(),
+        )));
+    }
+    rows.push(Line::default());
+    match theme.band() {
+        Some(bg) => band(rows, width, bg),
+        None => rows,
+    }
+}
+
+/// Rows of the picker drawn at once.
+const PICKER_ROWS: usize = 8;
+
+/// The choices of one option (`/model`), the chosen one marked, the current one named.
+fn picker_lines(p: &slash::Picker, width: usize, theme: Theme) -> Vec<Line<'static>> {
+    let sel = p.sel.min(p.rows.len().saturating_sub(1));
+    let start = if sel >= PICKER_ROWS {
+        sel + 1 - PICKER_ROWS
+    } else {
+        0
+    };
+    let end = (start + PICKER_ROWS).min(p.rows.len());
+    let room = width.saturating_sub(GUTTER + 2);
+    let mut rows = vec![
+        Line::default(),
+        Line::from(vec![
+            Span::raw("  "),
+            Span::styled(clean(&p.title), theme.bold()),
+        ]),
+        Line::default(),
+    ];
+    for (i, (value, name)) in p.rows[start..end].iter().enumerate() {
+        let chosen = start + i == sel;
+        // Two choices may share a name (the same model from two providers): the value tells
+        // them apart.
+        let twin = p.rows.iter().filter(|(_, n)| n == name).count() > 1;
+        let tag = format!(
+            "{}{}",
+            if twin {
+                format!(" · {}", clean(value))
+            } else {
+                String::new()
+            },
+            if p.current.as_ref() == Some(value) {
+                " · current"
+            } else {
+                ""
+            }
+        );
+        let label = fit(&clean(name), room.saturating_sub(width_of(&tag)));
+        rows.push(Line::from(vec![
+            Span::raw("  "),
+            Span::styled(if chosen { "›" } else { " " }, theme.accent()),
+            Span::raw(" "),
+            Span::styled(
+                label,
+                if chosen {
+                    theme.accent().add_modifier(Modifier::BOLD)
+                } else {
+                    Style::default()
+                },
+            ),
+            Span::styled(tag, theme.dim()),
+        ]));
+    }
+    if end < p.rows.len() {
+        rows.push(Line::from(Span::styled(
+            format!("    … {} more", p.rows.len() - end),
+            theme.dim(),
+        )));
     }
     rows.push(Line::default());
     match theme.band() {
@@ -3052,6 +3320,489 @@ mod tests {
         };
         assert_eq!(view.option_at(row_of("3. blue")), Some(2), "a click lands");
         assert_eq!(view.option_at(row_of("1. red")), Some(0));
+    }
+
+    fn model_choices() -> Transcript {
+        let mut tr = Transcript::default();
+        tr.apply(SessionUpdate::from_value(&json!({"sessionUpdate": "config_option_update", "configOptions": [
+            {"id": "model", "name": "Model", "category": "model", "type": "select", "currentValue": "b", "options": [{"value": "a", "name": "Opus 4.1"}, {"value": "b", "name": "Sonnet 5.5"}]}]})).expect("update"));
+        tr
+    }
+
+    fn typed(text: &str) -> Composer {
+        let mut c = Composer::default();
+        c.insert_str(text);
+        c
+    }
+
+    #[test]
+    fn the_command_list_shows_six_rows_follows_the_chosen_one_and_counts_the_rest() {
+        let session = ready_session();
+        let tr = model_choices();
+        let agent: Vec<acp::Command> = (0..10)
+            .map(|i| acp::Command {
+                name: format!("cmd{i}"),
+                description: format!("does {i}"),
+                hint: None,
+            })
+            .collect();
+        let entries = slash::entries("/", &agent, &tr, true);
+        assert_eq!(entries.len(), 19);
+        let mut view = View {
+            palette: entries,
+            ..View::default()
+        };
+        let rows = rows_of(&draw_with(
+            &tr,
+            &session,
+            &typed("/"),
+            Theme::plain(),
+            70,
+            24,
+            &mut view,
+        ));
+        let text = rows.join("\n");
+        assert!(rows.iter().all(|r| width_of(r) <= 70), "{rows:#?}");
+        assert!(
+            text.contains("› /model") && text.contains("Switch model"),
+            "{text}"
+        );
+        assert!(text.contains("… 13 more · keep typing"), "{text}");
+        assert!(!text.contains("/cmd5"), "only six rows: {text}");
+        assert!(
+            rows.last().is_some_and(|r| r.contains("Tab complete")),
+            "{rows:#?}"
+        );
+        // Chosen far down, the window follows it and nothing is left to count.
+        view.palette_sel = 18;
+        let rows = rows_of(&draw_with(
+            &tr,
+            &session,
+            &typed("/"),
+            Theme::plain(),
+            70,
+            24,
+            &mut view,
+        ));
+        let text = rows.join("\n");
+        assert!(
+            text.contains("› /cmd9") && !text.contains("/model") && !text.contains("more"),
+            "{text}"
+        );
+    }
+
+    #[test]
+    fn what_the_agent_calls_its_commands_is_cleaned_before_it_is_drawn() {
+        let session = ready_session();
+        let tr = Transcript::default();
+        let agent = vec![acp::Command {
+            name: "de\u{9b}ploy".into(),
+            description: "ships\nit\u{1b}[2J now".into(),
+            hint: Some("[env]\t\u{9b}".into()),
+        }];
+        let mut view = View {
+            palette: slash::entries("/de", &agent, &tr, false),
+            ..View::default()
+        };
+        let rows = rows_of(&draw_with(
+            &tr,
+            &session,
+            &typed("/de"),
+            Theme::plain(),
+            70,
+            24,
+            &mut view,
+        ));
+        let text = rows.join("\n");
+        assert!(
+            text.contains("/deploy") && text.contains("[env]  ships it[2J now"),
+            "{text}"
+        );
+        assert!(
+            !text.contains('\u{9b}') && !text.contains('\u{1b}'),
+            "{text:?}"
+        );
+    }
+
+    #[test]
+    fn the_picker_marks_the_chosen_row_and_the_current_choice_and_a_request_takes_its_place() {
+        let mut session = ready_session();
+        let tr = model_choices();
+        let slash::Pick::Open(p) = slash::pick(tr.option("model").expect("model"), "") else {
+            panic!("a picker")
+        };
+        let mut view = View {
+            picker: Some(p),
+            ..View::default()
+        };
+        let rows = rows_of(&draw_with(
+            &tr,
+            &session,
+            &Composer::default(),
+            Theme::plain(),
+            60,
+            20,
+            &mut view,
+        ));
+        let text = rows.join("\n");
+        assert!(
+            text.contains("› Sonnet 5.5 · current"),
+            "opens on the current one: {text}"
+        );
+        assert!(
+            text.contains("  Opus 4.1") && text.contains("Enter set"),
+            "{text}"
+        );
+        // A permission arrives: it is what the panel shows.
+        let mut scratch = Transcript::default();
+        session.handle(crate::session::Event::Message(ask(json!([{"optionId": "a", "name": "Allow once", "kind": "allow_once"}, {"optionId": "r", "name": "Reject"}]))), 0, &mut scratch);
+        let rows = rows_of(&draw_with(
+            &tr,
+            &session,
+            &Composer::default(),
+            Theme::plain(),
+            60,
+            20,
+            &mut view,
+        ));
+        let text = rows.join("\n");
+        assert!(
+            text.contains("Needs you · Run it") && !text.contains("Opus 4.1"),
+            "{text}"
+        );
+    }
+
+    fn plan_of(statuses: &[&str]) -> Transcript {
+        let mut tr = Transcript::default();
+        let entries: Vec<serde_json::Value> = statuses
+            .iter()
+            .enumerate()
+            .map(|(i, s)| json!({"content": format!("step {}", i + 1), "status": s}))
+            .collect();
+        tr.apply(
+            SessionUpdate::from_value(&json!({"sessionUpdate": "plan", "entries": entries}))
+                .expect("update"),
+        );
+        tr
+    }
+
+    #[test]
+    fn the_plan_is_a_checklist_around_the_step_in_progress_and_gives_way_on_a_short_screen() {
+        let session = ready_session();
+        let tr = plan_of(&[
+            "completed",
+            "completed",
+            "completed",
+            "in_progress",
+            "pending",
+            "pending",
+            "pending",
+            "pending",
+        ]);
+        let mut view = View::default();
+        let rows = rows_of(&draw_with(
+            &tr,
+            &session,
+            &Composer::default(),
+            Theme::plain(),
+            60,
+            30,
+            &mut view,
+        ));
+        let text = rows.join("\n");
+        assert!(text.contains("Plan · 3/8"), "{text}");
+        assert!(
+            text.contains("✓ step 3") && text.contains("● step 4") && text.contains("○ step 8"),
+            "{text}"
+        );
+        assert!(
+            !text.contains("step 1") && !text.contains("more"),
+            "the finished steps scroll off, nothing is left to count: {text}"
+        );
+        // At the start, what does not fit is counted.
+        let long = plan_of(&[
+            "in_progress",
+            "pending",
+            "pending",
+            "pending",
+            "pending",
+            "pending",
+            "pending",
+            "pending",
+            "pending",
+        ]);
+        let text = rows_of(&draw_with(
+            &long,
+            &session,
+            &Composer::default(),
+            Theme::plain(),
+            60,
+            30,
+            &mut view,
+        ))
+        .join("\n");
+        assert!(
+            text.contains("● step 1") && text.contains("… 3 more") && !text.contains("step 7"),
+            "{text}"
+        );
+        // A short screen keeps the input and the conversation, not the plan.
+        let rows = rows_of(&draw_with(
+            &tr,
+            &session,
+            &Composer::default(),
+            Theme::plain(),
+            60,
+            12,
+            &mut view,
+        ));
+        assert!(!rows.join("\n").contains("Plan ·"), "{rows:#?}");
+        assert!(rows.iter().all(|r| width_of(r) <= 60));
+        // A finished plan says nothing: the end of the turn already did.
+        let done = plan_of(&["completed", "completed"]);
+        let text = rows_of(&draw_with(
+            &done,
+            &session,
+            &Composer::default(),
+            Theme::plain(),
+            60,
+            30,
+            &mut view,
+        ))
+        .join("\n");
+        assert!(
+            !text.contains("Plan ·") && !text.contains("step 1"),
+            "{text}"
+        );
+    }
+
+    #[test]
+    fn attached_files_show_on_one_row_above_the_input_and_never_overflow() {
+        let session = ready_session();
+        let tr = Transcript::default();
+        let mut view = View {
+            chips: vec![
+                "src/main.rs".into(),
+                "docs/TUI.md".into(),
+                "/etc/a-very-long-file-name-indeed.conf".into(),
+            ],
+            ..View::default()
+        };
+        for w in [80_u16, 30] {
+            let rows = rows_of(&draw_with(
+                &tr,
+                &session,
+                &Composer::default(),
+                Theme::plain(),
+                w,
+                14,
+                &mut view,
+            ));
+            assert!(
+                rows.iter().all(|r| width_of(r) <= usize::from(w)),
+                "{rows:#?}"
+            );
+            let at = rows
+                .iter()
+                .position(|r| r.contains("+ src/main.rs"))
+                .expect("the row");
+            assert!(
+                rows[at + 1].starts_with('─'),
+                "the rule is right below: {rows:#?}"
+            );
+        }
+        let rows = rows_of(&draw_with(
+            &tr,
+            &session,
+            &Composer::default(),
+            Theme::plain(),
+            80,
+            14,
+            &mut view,
+        ));
+        assert!(
+            rows.iter()
+                .any(|r| r.contains("+ docs/TUI.md  + /etc/a-very-long")),
+            "{rows:#?}"
+        );
+        view.chips.clear();
+        let rows = rows_of(&draw_with(
+            &tr,
+            &session,
+            &Composer::default(),
+            Theme::plain(),
+            80,
+            14,
+            &mut view,
+        ));
+        assert!(
+            !rows.iter().any(|r| r.contains("+ src/main.rs")),
+            "no files, no row"
+        );
+    }
+
+    #[test]
+    fn the_footer_says_how_far_an_update_has_got_and_a_request_still_comes_first() {
+        let mut session = ready_session();
+        let tr = Transcript::default();
+        let mut view = View {
+            update: Some("herdr-tui-linux-x86_64  ▕██████░░░▏  61%  3.1 MB / 5.1 MB".into()),
+            ..View::default()
+        };
+        let rows = rows_of(&draw_with(
+            &tr,
+            &session,
+            &Composer::default(),
+            Theme::plain(),
+            100,
+            14,
+            &mut view,
+        ));
+        let last = rows.last().expect("a footer");
+        assert!(
+            last.starts_with("  ↻ updating · herdr-tui-linux-x86_64") && last.contains("61%"),
+            "{last}"
+        );
+        let mut scratch = Transcript::default();
+        session.handle(crate::session::Event::Message(ask(json!([{"optionId": "a", "name": "Allow once", "kind": "allow_once"}, {"optionId": "r", "name": "Reject"}]))), 0, &mut scratch);
+        let rows = rows_of(&draw_with(
+            &tr,
+            &session,
+            &Composer::default(),
+            Theme::plain(),
+            100,
+            24,
+            &mut view,
+        ));
+        assert!(
+            rows.last()
+                .is_some_and(|r| r.contains("choose 1–2 and press Enter")),
+            "{rows:#?}"
+        );
+    }
+
+    #[test]
+    fn the_files_row_says_how_to_take_them_off_when_there_is_room_and_the_picker_lists_them() {
+        let session = ready_session();
+        let tr = Transcript::default();
+        let mut view = View {
+            chips: vec!["notes.md".into(), "shot.png · picture".into()],
+            ..View::default()
+        };
+        let rows = rows_of(&draw_with(
+            &tr,
+            &session,
+            &Composer::default(),
+            Theme::plain(),
+            100,
+            14,
+            &mut view,
+        ));
+        let row = rows
+            .iter()
+            .find(|r| r.contains("+ notes.md"))
+            .expect("the row");
+        assert!(row.contains("+ shot.png · picture"), "{row}");
+        assert!(
+            row.ends_with("Backspace takes the last off · /files picks"),
+            "{row}"
+        );
+        // Narrow: the names win over the hint.
+        let rows = rows_of(&draw_with(
+            &tr,
+            &session,
+            &Composer::default(),
+            Theme::plain(),
+            40,
+            14,
+            &mut view,
+        ));
+        let row = rows
+            .iter()
+            .find(|r| r.contains("+ notes.md"))
+            .expect("the row");
+        assert!(!row.contains("Backspace") && width_of(row) <= 40, "{row}");
+        // The picker: the last one is chosen, as Backspace would take it.
+        view.picker = Some(slash::attached(&view.chips));
+        let text = rows_of(&draw_with(
+            &tr,
+            &session,
+            &Composer::default(),
+            Theme::plain(),
+            100,
+            24,
+            &mut view,
+        ))
+        .join("\n");
+        assert!(
+            text.contains("Attached files")
+                && text.contains("› shot.png · picture")
+                && text.contains("  notes.md"),
+            "{text}"
+        );
+        assert!(text.contains("Enter takes it off"), "{text}");
+    }
+
+    #[test]
+    fn the_list_of_settings_shows_each_with_its_current_value() {
+        let session = ready_session();
+        let mut tr = model_choices();
+        tr.apply(SessionUpdate::from_value(&json!({"sessionUpdate": "config_option_update", "configOptions": [
+            {"id": "model", "name": "Model", "category": "model", "type": "select", "currentValue": "b", "options": [{"value": "a", "name": "Opus 4.1"}, {"value": "b", "name": "Sonnet 5.5"}]},
+            {"id": "mode", "name": "Mode", "category": "mode", "type": "select", "currentValue": "plan", "options": [{"value": "default", "name": "Default"}, {"value": "plan", "name": "Plan"}]}]})).expect("update"));
+        let mut view = View {
+            picker: slash::settings(&tr),
+            ..View::default()
+        };
+        let text = rows_of(&draw_with(
+            &tr,
+            &session,
+            &Composer::default(),
+            Theme::plain(),
+            60,
+            20,
+            &mut view,
+        ))
+        .join("\n");
+        assert!(
+            text.contains("Settings")
+                && text.contains("› Model · Sonnet 5.5")
+                && text.contains("  Mode · Plan"),
+            "{text}"
+        );
+    }
+
+    #[test]
+    fn choices_with_the_same_name_are_told_apart_by_their_value() {
+        let session = ready_session();
+        let mut tr = Transcript::default();
+        tr.apply(SessionUpdate::from_value(&json!({"sessionUpdate": "config_option_update", "configOptions": [
+            {"id": "model", "name": "Model", "category": "model", "type": "select", "currentValue": "x/opus", "options": [{"value": "x/opus", "name": "Opus"}, {"value": "y/opus", "name": "Opus"}, {"value": "z", "name": "Haiku"}]}]})).expect("update"));
+        let slash::Pick::Open(p) = slash::pick(tr.option("model").expect("model"), "") else {
+            panic!("a picker")
+        };
+        let mut view = View {
+            picker: Some(p),
+            ..View::default()
+        };
+        let rows = rows_of(&draw_with(
+            &tr,
+            &session,
+            &Composer::default(),
+            Theme::plain(),
+            60,
+            20,
+            &mut view,
+        ));
+        let text = rows.join("\n");
+        assert!(
+            text.contains("› Opus · x/opus · current") && text.contains("  Opus · y/opus"),
+            "{text}"
+        );
+        assert!(text.contains("  Haiku"), "{text}");
+        assert!(
+            !text.contains("Haiku · z"),
+            "a name that is alone needs no value: {text}"
+        );
     }
 
     #[test]

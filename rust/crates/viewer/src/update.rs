@@ -513,6 +513,41 @@ pub fn base_url(env: impl Fn(&str) -> Option<String>, version: Option<&str>) -> 
     }
 }
 
+/// What `/update` asks for.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Request {
+    /// Install the latest release.
+    Latest,
+    /// Only say whether that would change anything.
+    Check,
+    /// Install this release (`0.1.35`), older ones too.
+    Version(String),
+}
+
+/// Reads what followed `/update`: nothing, `check`, or a version (`0.1.35` or `v0.1.35`).
+///
+/// # Errors
+/// The usage, for anything else (the version ends up in a URL, so it is only ever digits).
+pub fn request(args: &str) -> Result<Request, String> {
+    let args = args.trim();
+    if args.is_empty() {
+        return Ok(Request::Latest);
+    }
+    if args.eq_ignore_ascii_case("check") {
+        return Ok(Request::Check);
+    }
+    let v = args.trim_start_matches('v');
+    let parts: Vec<&str> = v.split('.').collect();
+    if parts.len() == 3
+        && parts
+            .iter()
+            .all(|p| !p.is_empty() && p.len() <= 9 && p.bytes().all(|b| b.is_ascii_digit()))
+    {
+        return Ok(Request::Version(v.to_string()));
+    }
+    Err("usage: /update [check|VERSION], for example /update 0.1.35".to_string())
+}
+
 /// Notices that the file this program was started from has been replaced (by `herdr-tui update`,
 /// the install script, or the app), so a running session can offer to load the new one. It only
 /// looks at the file's size, owner-visible identity and time, and runs the new file with
@@ -734,5 +769,26 @@ mod tests {
             base_url(|_| None, Some("v0.1.30")),
             base_url(|_| None, Some("0.1.30"))
         );
+    }
+
+    #[test]
+    fn update_takes_nothing_check_or_a_plain_version_and_nothing_that_could_leave_the_url() {
+        assert_eq!(request(""), Ok(Request::Latest));
+        assert_eq!(request("  Check "), Ok(Request::Check));
+        assert_eq!(request("0.1.35"), Ok(Request::Version("0.1.35".into())));
+        assert_eq!(request("v0.1.35"), Ok(Request::Version("0.1.35".into())));
+        for bad in [
+            "latest",
+            "0.1",
+            "0.1.x",
+            "1.2.3.4",
+            "0.1.35/../../x",
+            "0.1.3 5",
+            "-0.1.3",
+            "0..3",
+            "0.1.1234567890",
+        ] {
+            assert!(request(bad).is_err(), "{bad:?}");
+        }
     }
 }

@@ -358,14 +358,17 @@ running`. A subagent is matched to its job by name (Claude: by the agent id of i
 (Codex, a synchronous omp `task`) has no stop control. Why: a swarm of 24 reviewers left the running ones at the
 bottom of 66 oldest-first rows.
 
-*Drill-in* is a pushed screen (`SubagentRunScreen`): a bar with the description,
-a state strip with the same live line, then either the **conversation** (Claude:
+*Drill-in* is a pushed screen (`SubagentRunScreen`): a bar with the description
+and `Subagent · <type>`, a state strip with the same live line (without the type,
+the bar has it), then either the **conversation** (Claude:
 the same `TranscriptView` over `SubagentRunSession`, an `AgentSessionView` over
 the run that is read-only and marks the run's transcript as a turn in progress
 while it runs; no fork of the transcript code) under the pinned prompt (`Asked
-to`, three lines, a tap shows all, bounded to 40% of the screen), or the
-**summary** (omp and Codex over ACP send no conversation): `Summary only.` once,
-the figures it reported (model, tokens, cost, progress), what it was asked,
+to`, `asked_to.dart`: Markdown flattened to three lines of prose, a tap shows it
+whole as Markdown with tappable paths and links, bounded to 40% of the screen), or the
+**summary** (omp and Codex over ACP send no conversation): one line above it
+says `Summary only.` (the same slot shows `Loading…` or the retry row, so
+nothing moves when a read ends without a log), the figures it reported (model, tokens, cost, progress), what it was asked (Markdown),
 what it is doing, its recent output (mono, 5 lines of 300 characters at most),
 the retry or note, why it stopped and its result. omp's run gets the
 conversation too when its own log on the host can be read (best effort, SFTP,
@@ -375,13 +378,22 @@ host`, plus `Earlier part not shown` when a cap cut the start). While that first
 read runs the summary has a `Loading…` line (`BusySpinner`); only a connection
 failure shows `Couldn't read the log · Tap to retry` (44 dp row); a log that is
 missing, unreadable, of an unknown version or not a conversation leaves the
-summary untouched and silent. The screen asks for the log only while it is open
+summary as it was, with no error line. The screen asks for the log only while it is open
 (`watchSubagentLog`). No composer. The request a
 subagent asks is answered from the same dock, above which one quiet line says
 `From subagent: Explore` (`OriginLine`; the hold rules are untouched, and the
 lead-in sentence is taken from the subagent's own transcript, not the main
 agent's); the run's own screen shows only its requests. Back returns to the
 scroll position the person left.
+
+The first frame of a conversation plans only its newest 120 items while the
+subagent runs (`firstFrameStart`): a subagent's conversation is ONE turn of up
+to 2000 items, so planning by turns could not skip any of it, and the open log
+parses every message. The rest is prepared in pieces of 120 items between frames
+(`PlanWarmup`, `live: true`) and joins without moving the view. A finished
+turn is never cut (its fold line would show wrong figures). Measured on the
+desktop only (2,001 items, JIT): 43-91 ms for the first frame before, 2.4-3.7 ms
+after; not measured on a phone.
 
 **Session overview** (`session_overview.dart`,
 `session_overview_model.dart`). A tap on the bar's title area, or `Session

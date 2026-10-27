@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import '../../../data/acp/acp_models.dart';
 import '../../../data/acp/session_state.dart';
@@ -23,6 +24,27 @@ int tailStart(List<TranscriptItem> items, int turns) {
     if (_startsTurn(items[i]) && ++seen == turns) return i;
   }
   return 0;
+}
+
+/// The index where the last turn begins (its user message), or 0.
+int lastTurnStart(List<TranscriptItem> items) {
+  for (var i = items.length - 1; i > 0; i--) {
+    if (_startsTurn(items[i])) return i;
+  }
+  return 0;
+}
+
+/// Where the plan of the first frame starts: [tailStart], and, when a turn runs
+/// ([live]) and it alone holds more than [planWholeUpTo] items, that many of its
+/// newest. A running turn's log is open (a row per item, every message parsed),
+/// and a subagent's conversation is one turn of up to 2000 items. A finished
+/// turn is never cut: it folds to one line, and a cut would give that line the
+/// wrong figures.
+int firstFrameStart(List<TranscriptItem> items, {required bool live}) {
+  final byTurns = tailStart(items, firstFrameTurns);
+  if (!live) return byTurns;
+  final byItems = items.length - planWholeUpTo;
+  return byItems > lastTurnStart(items) ? byItems : byTurns;
 }
 
 /// Gets the older turns of a long transcript ready while the reader looks at
@@ -54,24 +76,41 @@ class PlanWarmup {
 
   bool get running => _timer != null;
 
-  /// Prepares the turns of `items[0, end)`.
-  void start(List<TranscriptItem> items, int end, Set<String> waiting, void Function() done) {
+  /// Prepares the turns of `items[0, end)`. With [live] (a turn runs) and `end`
+  /// inside that turn, its head is prepared in pieces of [planWholeUpTo] items,
+  /// planned as a running turn so that their Markdown is parsed: one piece per
+  /// step, not the whole head in one.
+  void start(List<TranscriptItem> items, int end, Set<String> waiting, void Function() done, {bool live = false}) {
     cancel();
     final starts = <int>[
       for (var i = 0; i < end; i++)
         if (_startsTurn(items[i])) i,
     ];
     if (starts.isEmpty || starts.first != 0) starts.insert(0, 0);
-    var k = starts.length - 1;
+    final liveHead = live && end > lastTurnStart(items);
+    final units = <(int, int)>[];
+    var liveFrom = 1 << 30;
+    for (var i = 0; i < starts.length; i++) {
+      final from = starts[i];
+      final to = i + 1 < starts.length ? starts[i + 1] : end;
+      if (liveHead && i == starts.length - 1) {
+        liveFrom = units.length;
+        for (var a = from; a < to; a += planWholeUpTo) {
+          units.add((a, math.min(a + planWholeUpTo, to)));
+        }
+      } else {
+        units.add((from, to));
+      }
+    }
+    var k = units.length - 1;
 
     void step() {
       _timer = null;
       final clock = Stopwatch()..start();
-      // At least one turn per tick, whatever the budget: it always advances.
+      // At least one unit per tick, whatever the budget: it always advances.
       do {
-        final from = starts[k];
-        final to = k + 1 < starts.length ? starts[k + 1] : end;
-        TranscriptPlan(open: open, notes: notes).update(items.sublist(from, to), waiting: waiting);
+        final (from, to) = units[k];
+        TranscriptPlan(open: open, notes: notes).update(items.sublist(from, to), waiting: waiting, live: k >= liveFrom);
         k--;
       } while (k >= 0 && clock.elapsed < budget);
       if (k >= 0) {

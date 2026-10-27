@@ -8,6 +8,7 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/acp/session_state.dart';
+import 'package:herdr_mobile/data/acp/acp_models.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
 import 'package:herdr_mobile/ui/features/agent_session/plan_warmup.dart';
@@ -188,6 +189,56 @@ void main() {
       await tester.pump(const Duration(seconds: 3));
       final after = tester.getTopLeft(find.textContaining(label, findRichText: true).first);
       expect((after.dy - before.dy).abs(), lessThan(1), reason: 'the row the reader looks at stays where it was');
+    });
+  });
+
+  group('a running turn longer than a screenful of items', () {
+    // What a subagent's conversation is: one turn, no user message after the first.
+    List<TranscriptItem> running(int n) => [
+      userMsg('u0', 'go'),
+      for (var i = 0; i < n; i++) ...[
+        toolItem('t$i', title: 'Grep $i', kind: ToolKind.search),
+        agentMsg('a$i', 'Step $i narration.'),
+      ],
+    ];
+
+    test('the first frame plans its newest items only; a finished turn is never cut', () {
+      final items = running(250); // 501 items
+      expect(firstFrameStart(items, live: true), 501 - planWholeUpTo);
+      expect(firstFrameStart(items, live: false), 0, reason: 'a finished turn folds to one line: a cut would give it wrong figures');
+      expect(firstFrameStart(_turns(10), live: true), tailStart(_turns(10), firstFrameTurns), reason: 'a short last turn: the turns rule');
+      final small = [..._turns(20), userMsg('last', 'go'), for (var i = 0; i < 25; i++) toolItem('x$i')];
+      expect(firstFrameStart(small, live: true), tailStart(small, firstFrameTurns), reason: 'the last turn holds under $planWholeUpTo items');
+    });
+
+    test('the head is made ready in pieces, one per step', () {
+      fakeAsync((async) {
+        final items = running(250);
+        final end = firstFrameStart(items, live: true); // 381: four pieces of 120 items
+        final warm = PlanWarmup(open: {}, notes: {}, budget: Duration.zero, gap: const Duration(milliseconds: 2));
+        var done = 0;
+        warm.start(items, end, {}, () => done++, live: true);
+        async.elapse(const Duration(milliseconds: 7));
+        expect(done, 0, reason: 'three pieces ran, the fourth has not');
+        async.elapse(const Duration(milliseconds: 1));
+        expect(done, 1);
+        expect(warm.running, isFalse);
+      });
+    });
+
+    testWidgets('opens on its newest items; the older ones join later', (tester) async {
+      final session = FakeAgentSession(state: stateWith(items: running(250), turnActive: true));
+      await _open(tester, session);
+      await tester.pump();
+      expect(find.textContaining('Step 249 narration.', findRichText: true), findsOneWidget);
+
+      await _toTop(tester);
+      expect(find.textContaining('Step 0 narration.', findRichText: true), findsNothing, reason: 'not planned for the first frame');
+      expect(find.textContaining('Step 190 narration.', findRichText: true), findsOneWidget, reason: 'the oldest planned message (item 382)');
+
+      await tester.pump(const Duration(seconds: 3));
+      await _toTop(tester, find.textContaining('Step 0 narration.', findRichText: true));
+      expect(find.textContaining('Step 0 narration.', findRichText: true), findsOneWidget, reason: 'the plan is whole now');
     });
   });
 }

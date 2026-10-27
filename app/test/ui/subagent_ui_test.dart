@@ -418,6 +418,61 @@ void main() {
       await _pump(tester, _app(SubagentRunScreen(session: session, runId: 'nope')));
       expect(find.text('Subagent gone'), findsOneWidget);
     });
+
+    testWidgets('the prompt is Markdown: prose when clamped, structure when opened', (tester) async {
+      final session = FakeAgentSession(
+        state: play([
+          launch('t', type: 'Explore', prompt: '## Plan\n\n- first step\n- second step\n\nUse `lib/a.dart` today.', status: 'in_progress'),
+          childText('t', 'On it.'),
+        ]),
+      );
+      await _pump(tester, _app(SubagentRunScreen(session: session, runId: 't')));
+      expect(find.textContaining('##', findRichText: true), findsNothing);
+      expect(find.text('Plan\nfirst step\nsecond step\nUse lib/a.dart today.'), findsOneWidget, reason: 'the markers are gone, the lines stay');
+
+      await tester.tap(find.text('Asked to'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('first step', findRichText: true), findsOneWidget, reason: 'the list, drawn once: the preview folds away');
+      expect(find.textContaining('- first', findRichText: true), findsNothing);
+      expect(find.textContaining('##', findRichText: true), findsNothing);
+    });
+
+    testWidgets('a grandchild asking shows as waiting for you inside its parent\'s screen', (tester) async {
+      final s = play([
+        launch('t', type: 'Explore', status: 'in_progress'),
+        launch('g', description: 'Grandchild task', parent: 't', status: 'in_progress'),
+        childTool('gc', 'g'),
+      ]).withPending(PendingPermission(1, askFor('gc')));
+      final session = FakeAgentSession(state: s);
+      expect(s.subagents.map((r) => r.id), containsAll(['t', 'g']), reason: 'the fixture makes a nested run');
+      await _pump(tester, _app(SubagentRunScreen(session: session, runId: 't')));
+      expect(find.text('Grandchild task'), findsOneWidget);
+      expect(_text('Needs you'), findsWidgets, reason: 'the card reads what waits from the session that owns every run');
+    });
+  });
+
+  group('the summary result', () {
+    testWidgets('a long code block in it opens with Show all', (tester) async {
+      final code = [for (var i = 0; i < 70; i++) 'line $i'].join('\n');
+      final state = play(
+        ompTask(
+          'call',
+          [ompProgress(0, 'Alpha', 'completed')],
+          results: [
+            {'index': 0, 'id': 'Alpha', 'agent': 'explore', 'exitCode': 0, 'output': 'Found it:\n\n```\n$code\n```', 'durationMs': 9000},
+          ],
+          status: 'completed',
+        ),
+        active: false,
+      );
+      final session = FakeAgentSession(state: state);
+      await _pump(tester, _app(SubagentRunScreen(session: session, runId: 'call#0')));
+      await tester.ensureVisible(find.text('Show all'));
+      await tester.pump();
+      await tester.tap(find.text('Show all'));
+      await tester.pumpAndSettle();
+      expect(find.text('Show less'), findsOneWidget, reason: 'the row used to do nothing');
+    });
   });
 
   group('the chip and the roster', () {
