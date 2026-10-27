@@ -93,10 +93,13 @@ impl Field {
     }
 }
 
+/// `Slot::cursor` of an optional choice nothing has been picked in yet.
+const NONE: usize = usize::MAX;
+
 /// What the person has put into one field so far.
 #[derive(Clone, Debug, PartialEq)]
 struct Slot {
-    /// The row marked `›`. For an enum and Yes/No, the choice.
+    /// The row marked `›`. For an enum and Yes/No, the choice; `NONE` when nothing is marked.
     cursor: usize,
     ticked: Vec<bool>,
     text: String,
@@ -195,7 +198,8 @@ fn parse_field(name: &str, p: &Value, required: bool) -> (Field, Slot) {
             slot.cursor = options
                 .iter()
                 .position(|c| Some(&c.value) == default.as_ref())
-                .unwrap_or(0);
+                // As on the phone, an optional choice with no default starts with none chosen.
+                .unwrap_or(if required { 0 } else { NONE });
             Kind::One(options)
         }
         "string" => {
@@ -399,8 +403,14 @@ impl Form {
         };
         let last = rows.len().saturating_sub(1);
         match act {
-            Act::Up => slot.cursor = slot.cursor.saturating_sub(1),
-            Act::Down => slot.cursor = (slot.cursor + 1).min(last),
+            Act::Up => {
+                slot.cursor = if slot.cursor == NONE {
+                    0
+                } else {
+                    slot.cursor.saturating_sub(1)
+                }
+            }
+            Act::Down => slot.cursor = slot.cursor.wrapping_add(1).min(last),
             Act::Pick(i) | Act::Click(i) if i < rows.len() => {
                 let again = slot.cursor == i;
                 slot.cursor = i;
@@ -1028,7 +1038,7 @@ mod tests {
     #[test]
     fn omp_select_confirm_and_input_answer_value_as_the_phone_does() {
         let mut f = form(omp_select());
-        f.act(Act::Down, 0).expect("moved");
+        f.act(Act::Pick(1), 0).expect("moved");
         assert_eq!(
             enter(&mut f, ""),
             Ok(Some(
@@ -1123,6 +1133,37 @@ mod tests {
             json!({"requestedSchema": {"required": ["when"], "properties": {"when": {"type": "date"}}}}),
         );
         assert!(enter(&mut unknown, "").is_err());
+    }
+
+    #[test]
+    fn an_optional_choice_nobody_made_is_left_out_as_on_the_phone() {
+        let optional = json!({"requestedSchema": {"properties": {"pick": {"type": "string", "enum": ["a", "b"]}}}});
+        let mut f = form(optional.clone());
+        assert_eq!(f.said(0), "—");
+        assert_eq!(
+            enter(&mut f, ""),
+            Ok(Some(json!({"action": "accept", "content": {}})))
+        );
+        let mut f = form(optional.clone());
+        f.act(Act::Down, 0).expect("moved");
+        assert_eq!(f.said(0), "a");
+        assert_eq!(
+            enter(&mut f, ""),
+            Ok(Some(json!({"action": "accept", "content": {"pick": "a"}})))
+        );
+        let mut f = form(optional);
+        f.act(Act::Pick(1), 0).expect("picked");
+        assert_eq!(
+            enter(&mut f, ""),
+            Ok(Some(json!({"action": "accept", "content": {"pick": "b"}})))
+        );
+        let mut f = form(
+            json!({"requestedSchema": {"required": ["pick"], "properties": {"pick": {"type": "string", "enum": ["a", "b"]}}}}),
+        );
+        assert_eq!(
+            enter(&mut f, ""),
+            Ok(Some(json!({"action": "accept", "content": {"pick": "a"}})))
+        );
     }
 
     #[test]

@@ -75,6 +75,9 @@ struct App {
     last_title: String,
     /// The request the chosen option belongs to; a new one starts at the first option.
     sel_for: Option<acp::Id>,
+    /// The permission option a click last chose, and for which request: a second click on it
+    /// answers.
+    clicked: Option<(acp::Id, usize)>,
     /// While a question waits the composer is its box: the person's own draft, set aside until
     /// the question goes.
     stash: Option<String>,
@@ -242,6 +245,7 @@ fn main() {
         was_attention: false,
         last_title: String::new(),
         sel_for: None,
+        clicked: None,
         stash: None,
         boxed: None,
         repaint: false,
@@ -546,11 +550,18 @@ impl App {
                             self.ask(Act::Click(i));
                             return;
                         }
-                        if i == self.view.sel {
+                        // A first click only chooses, even on the option already marked (the
+                        // default is not a choice): the second click on it answers. A tap that
+                        // lands on a row the panel just moved under the thumb cannot approve.
+                        let armed = self.view.sel == i
+                            && matches!((&self.clicked, &self.sel_for),
+                                (Some((id, n)), Some(cur)) if id == cur && *n == i);
+                        if armed {
                             self.answer(i);
                         } else {
                             self.confirm = None;
                             self.view.sel = i;
+                            self.clicked = self.sel_for.clone().map(|id| (id, i));
                         }
                         return;
                     }
