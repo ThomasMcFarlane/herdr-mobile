@@ -144,7 +144,10 @@ void main() {
       );
       // The bytes are read and the picture decoded by the engine in real time; wait for the event, not a fixed 3 s.
       await pumpUntil(tester, () => find.byType(PhotoViewer).evaluate().isNotEmpty, limit: _patient);
-      await tester.pumpAndSettle();
+      // Not pumpAndSettle: the viewer's loading animation runs until the engine finishes decoding,
+      // which happens in real time, so "settled" timed out on a busy machine. Wait for the route
+      // change itself.
+      await pumpUntil(tester, () => find.byType(FileViewerScreen).evaluate().isEmpty, limit: _patient);
       expect(find.byType(PhotoViewer), findsOneWidget);
       expect(find.byType(FileViewerScreen), findsNothing, reason: 'replaced, so Back does not land on a blank page');
       final model = _modelOf(tester);
