@@ -278,7 +278,7 @@ class _TranscriptViewState extends State<TranscriptView> with TickerProviderStat
       // The divider arrived after the screen opened: it is placed, nothing moves.
       // Its turn must be planned: when it is older than the tail that was
       // planned for the first frame, the plan becomes whole now.
-      if (!_whole && _indexOf(_items, _dividerKey!) < tailStart(_items, firstFrameTurns)) _makeWhole();
+      if (!_whole && _indexOf(_items, _dividerKey!) < firstFrameStart(_items, live: _live)) _makeWhole();
       _replan();
       _syncLive();
       _center = math.min(_center, _rows.length);
@@ -325,10 +325,11 @@ class _TranscriptViewState extends State<TranscriptView> with TickerProviderStat
   }
 
   /// The items the plan covers: all of them, or, until the older turns are
-  /// ready, the last [firstFrameTurns] turns.
+  /// ready, the last [firstFrameTurns] turns (a running turn longer than
+  /// [planWholeUpTo] items: its newest ones, see [firstFrameStart]).
   List<TranscriptItem> get _planned {
     if (_whole) return _items;
-    final from = tailStart(_items, firstFrameTurns);
+    final from = firstFrameStart(_items, live: _live);
     return from == 0 ? _items : _items.sublist(from);
   }
 
@@ -359,7 +360,7 @@ class _TranscriptViewState extends State<TranscriptView> with TickerProviderStat
 
   void _prepareOlder() {
     final items = _items;
-    _warmup.start(items, tailStart(items, firstFrameTurns), _waiting, () {
+    _warmup.start(items, firstFrameStart(items, live: _live), _waiting, live: _live, () {
       // The history was replaced meanwhile: that preparation was for other
       // turns, and a new one has started.
       if (!mounted || _whole || items.isEmpty || _items.isEmpty || !identical(items.first, _items.first)) return;
