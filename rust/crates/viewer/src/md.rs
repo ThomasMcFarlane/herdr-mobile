@@ -55,14 +55,25 @@ fn prefix_width(p: &[Span]) -> usize {
     p.iter().map(|s| width_of(&s.content)).sum()
 }
 
-/// Wraps a flow to `width`, word by word, keeping each word's style.
+/// Wraps a flow to `width`, word by word, keeping each word's style. Never narrower than 8
+/// columns: prose squeezed thinner than that reads as noise.
 fn wrap_flow(flow: &Flow, width: usize) -> Vec<Line<'static>> {
-    let width = width.max(8);
+    wrap_flow_at(flow, width.max(8))
+}
+
+/// [`wrap_flow`] at exactly `width` columns (at least one), for a table cell.
+fn wrap_flow_at(flow: &Flow, width: usize) -> Vec<Line<'static>> {
+    let width = width.max(1);
     let mut lines: Vec<Line<'static>> = Vec::new();
     let mut cur: Vec<Span<'static>> = flow.first.clone();
     let mut w = prefix_width(&flow.first);
     let rest_w = prefix_width(&flow.rest);
     let mut at_start = true;
+    // Spans at the end of `cur` that make one word with no space between them (`code`, then a
+    // comma), and how many spans of `cur` are the row's prefix: a word is wrapped whole, so a
+    // comma never starts a row on its own.
+    let mut glued = 0usize;
+    let mut lead = flow.first.len();
     let newline = |cur: &mut Vec<Span<'static>>,
                    w: &mut usize,
                    lines: &mut Vec<Line<'static>>,
@@ -75,6 +86,8 @@ fn wrap_flow(flow: &Flow, width: usize) -> Vec<Line<'static>> {
         // A hard break is carried as a lone newline span.
         if span.content == "\n" {
             newline(&mut cur, &mut w, &mut lines, &mut at_start);
+            glued = 0;
+            lead = flow.rest.len();
             continue;
         }
         for token in split_keep_spaces(&span.content) {
@@ -85,9 +98,22 @@ fn wrap_flow(flow: &Flow, width: usize) -> Vec<Line<'static>> {
                     cur.push(Span::styled(token.to_string(), span.style));
                     w += tw;
                 }
+                glued = 0;
                 continue;
             }
             if w + tw > width && !at_start {
+                // The start of this word, when it began in an earlier span, moves down with it.
+                let mut carried = Vec::new();
+                if glued > 0 && cur.len() - glued > lead {
+                    let tail = cur.split_off(cur.len() - glued);
+                    let tail_w = prefix_width(&tail);
+                    if rest_w + tail_w + tw <= width {
+                        w -= tail_w;
+                        carried = tail;
+                    } else {
+                        cur.extend(tail);
+                    }
+                }
                 // Do not carry the space that ended the previous row.
                 if cur
                     .last()
@@ -96,6 +122,13 @@ fn wrap_flow(flow: &Flow, width: usize) -> Vec<Line<'static>> {
                     cur.pop();
                 }
                 newline(&mut cur, &mut w, &mut lines, &mut at_start);
+                lead = flow.rest.len();
+                glued = carried.len();
+                if !carried.is_empty() {
+                    w += prefix_width(&carried);
+                    cur.extend(carried);
+                    at_start = false;
+                }
             }
             if tw > width.saturating_sub(w) {
                 // A word longer than a row: cut it by display width.
@@ -113,9 +146,12 @@ fn wrap_flow(flow: &Flow, width: usize) -> Vec<Line<'static>> {
                 }
                 cur.push(Span::styled(piece, span.style));
                 w += pw;
+                glued = 1;
+                lead = cur.len() - 1;
             } else {
                 cur.push(Span::styled(token.to_string(), span.style));
                 w += tw;
+                glued += 1;
             }
             at_start = false;
         }
@@ -163,15 +199,98 @@ pub fn wrap_spans(
 
 struct ListCtx {
     next: Option<u64>,
+    /// Columns the widest number of an ordered list takes.
+    digits: usize,
 }
+
+/// How many items the list whose events start at `events` has (its own, not nested lists').
+fn items_in(events: &[Event]) -> usize {
+    let mut depth = 0usize;
+    let mut n = 0;
+    for ev in events {
+        match ev {
+            Event::Start(Tag::List(_)) => depth += 1,
+            Event::End(TagEnd::List(_)) if depth == 0 => break,
+            Event::End(TagEnd::List(_)) => depth -= 1,
+            Event::Start(Tag::Item) if depth == 0 => n += 1,
+            _ => {}
+        }
+    }
+    n
+}
+
+/// One table cell: its text, with the inline styles it was written with (code, bold, a link).
+type Cell = Vec<Span<'static>>;
 
 struct Table {
     aligns: Vec<Alignment>,
-    rows: Vec<Vec<String>>,
+    rows: Vec<Vec<Cell>>,
     head_rows: usize,
-    cell: String,
-    row: Vec<String>,
-    in_head: bool,
+    cell: Cell,
+    row: Vec<Cell>,
+}
+
+/// [`render`] for a message that is still arriving. A table is held back until it is whole: its
+/// header would first read as a line of pipes, and every row that lands would re-measure the
+/// columns and shift the box under the reader's eyes. In its place, one quiet line says it is
+/// coming and how far it has got. Everything else shows as it arrives.
+#[must_use]
+pub fn render_live(text: &str, width: usize, theme: Theme) -> Vec<Line<'static>> {
+    let Some((before, rows)) = table_in_progress(text) else {
+        return render(text, width, theme);
+    };
+    let mut out = render(before, width, theme);
+    if !out.is_empty() {
+        out.push(Line::default());
+    }
+    let what = match rows {
+        0 => "… a table".to_string(),
+        1 => "… a table, 1 row so far".to_string(),
+        n => format!("… a table, {n} rows so far"),
+    };
+    out.push(Line::from(Span::styled(what, theme.dim())));
+    out
+}
+
+fn is_table_line(line: &str) -> bool {
+    line.trim_start().starts_with('|')
+}
+
+fn is_fence(line: &str) -> bool {
+    let t = line.trim_start();
+    t.starts_with("```") || t.starts_with("~~~")
+}
+
+/// When `text` ends inside a table (its last line, finished or not, is a row: a table runs to a
+/// blank line), the text before the table and how many rows it has (the `|---|` line is not a
+/// row). Not inside a code block, where a `|` is only a character.
+fn table_in_progress(text: &str) -> Option<(&str, usize)> {
+    let lines: Vec<&str> = text.split_inclusive('\n').collect();
+    let last = lines.iter().rposition(|l| !l.trim().is_empty())?;
+    // A blank line after the last row ended the table.
+    if last + 1 < lines.len() {
+        return None;
+    }
+    if !is_table_line(lines[last]) {
+        return None;
+    }
+    let start = lines[..=last]
+        .iter()
+        .rposition(|l| !is_table_line(l))
+        .map_or(0, |i| i + 1);
+    if lines[..start].iter().filter(|l| is_fence(l)).count() % 2 == 1 {
+        return None;
+    }
+    let rows = lines[start..=last]
+        .iter()
+        .filter(|l| {
+            !l.chars()
+                .all(|c| matches!(c, '|' | '-' | ':' | ' ' | '\n' | '\t'))
+        })
+        .count()
+        .saturating_sub(1);
+    let at: usize = lines[..start].iter().map(|l| l.len()).sum();
+    Some((&text[..at], rows))
 }
 
 /// Renders markdown. Output lines are at most `width` columns wide.
@@ -191,6 +310,8 @@ pub fn render(text: &str, width: usize, theme: Theme) -> Vec<Line<'static>> {
     let mut heading: Option<HeadingLevel> = None;
     let mut code: Option<(String, String)> = None;
     let mut table: Option<Table> = None;
+    // The open links: where each goes, and where its label starts in `body`.
+    let mut links: Vec<(String, usize)> = Vec::new();
     let mut gap_pending = false;
 
     let quote_prefix = |depth: usize| -> Vec<Span<'static>> {
@@ -234,17 +355,39 @@ pub fn render(text: &str, width: usize, theme: Theme) -> Vec<Line<'static>> {
         }};
     }
 
-    for ev in Parser::new_ext(&text, opts) {
+    // Held whole so a list can look ahead to its last number; each event is taken out as it is
+    // handled (what is left behind is never read again), so nothing is copied.
+    let mut events: Vec<Event> = Parser::new_ext(&text, opts).collect();
+    for at in 0..events.len() {
+        let ev = std::mem::replace(&mut events[at], Event::Rule);
         if let Some(t) = table.as_mut() {
             match &ev {
-                Event::Text(s) | Event::Code(s) => t.cell.push_str(s),
-                Event::SoftBreak | Event::HardBreak => t.cell.push(' '),
-                Event::End(TagEnd::TableCell) => {
-                    t.row.push(std::mem::take(&mut t.cell).trim().to_string())
+                Event::Text(s) => t.cell.push(Span::styled(s.to_string(), top(&style_stack))),
+                Event::Code(s) => t.cell.push(Span::styled(
+                    s.to_string(),
+                    theme.code().patch(top(&style_stack)),
+                )),
+                Event::SoftBreak | Event::HardBreak => t.cell.push(Span::raw(" ")),
+                Event::Start(Tag::Emphasis) => {
+                    style_stack.push(top(&style_stack).add_modifier(Modifier::ITALIC))
                 }
+                Event::Start(Tag::Strong) => {
+                    style_stack.push(top(&style_stack).add_modifier(Modifier::BOLD))
+                }
+                Event::Start(Tag::Strikethrough) => {
+                    style_stack.push(top(&style_stack).add_modifier(Modifier::CROSSED_OUT))
+                }
+                Event::Start(Tag::Link { .. }) => {
+                    style_stack.push(top(&style_stack).add_modifier(Modifier::UNDERLINED))
+                }
+                Event::End(
+                    TagEnd::Emphasis | TagEnd::Strong | TagEnd::Strikethrough | TagEnd::Link,
+                ) => {
+                    style_stack.pop();
+                }
+                Event::End(TagEnd::TableCell) => t.row.push(trim_cell(std::mem::take(&mut t.cell))),
                 Event::End(TagEnd::TableHead) => {
                     t.rows.push(std::mem::take(&mut t.row));
-                    t.in_head = false;
                     t.head_rows = t.rows.len();
                 }
                 Event::End(TagEnd::TableRow) => t.rows.push(std::mem::take(&mut t.row)),
@@ -290,7 +433,16 @@ pub fn render(text: &str, width: usize, theme: Theme) -> Vec<Line<'static>> {
             }
             Event::Start(Tag::List(start)) => {
                 flush!();
-                lists.push(ListCtx { next: start });
+                // Numbers line up on the right, `9.` under `10.`, so every item's text starts in
+                // one column: the widest number the list reaches sets the width.
+                let digits = start.map_or(0, |n| {
+                    let last = n + items_in(&events[at + 1..]).saturating_sub(1) as u64;
+                    last.to_string().len()
+                });
+                lists.push(ListCtx {
+                    next: start,
+                    digits,
+                });
             }
             Event::End(TagEnd::List(_)) => {
                 flush!();
@@ -302,8 +454,11 @@ pub fn render(text: &str, width: usize, theme: Theme) -> Vec<Line<'static>> {
             Event::Start(Tag::Item) => {
                 flush!();
                 let marker = match lists.last_mut() {
-                    Some(ListCtx { next: Some(n) }) => {
-                        let m = format!("{n}. ");
+                    Some(ListCtx {
+                        next: Some(n),
+                        digits,
+                    }) => {
+                        let m = format!("{n:>w$}. ", w = *digits);
                         *n += 1;
                         m
                     }
@@ -338,9 +493,8 @@ pub fn render(text: &str, width: usize, theme: Theme) -> Vec<Line<'static>> {
                     aligns,
                     rows: Vec::new(),
                     head_rows: 0,
-                    cell: String::new(),
+                    cell: Vec::new(),
                     row: Vec::new(),
-                    in_head: false,
                 });
             }
             Event::Start(Tag::Emphasis) => {
@@ -352,12 +506,24 @@ pub fn render(text: &str, width: usize, theme: Theme) -> Vec<Line<'static>> {
             Event::Start(Tag::Strikethrough) => {
                 style_stack.push(top(&style_stack).add_modifier(Modifier::CROSSED_OUT))
             }
-            Event::Start(Tag::Link { .. }) => {
-                style_stack.push(top(&style_stack).add_modifier(Modifier::UNDERLINED))
+            Event::Start(Tag::Link { dest_url, .. }) => {
+                style_stack.push(top(&style_stack).add_modifier(Modifier::UNDERLINED));
+                links.push((dest_url.to_string(), body.len()));
             }
-            Event::End(
-                TagEnd::Emphasis | TagEnd::Strong | TagEnd::Strikethrough | TagEnd::Link,
-            ) => {
+            Event::End(TagEnd::Link) => {
+                style_stack.pop();
+                // A label never hides where it goes: the person can read or copy the address.
+                if let Some((dest, from)) = links.pop() {
+                    let label: String = body[from.min(body.len())..]
+                        .iter()
+                        .map(|s| s.content.as_ref())
+                        .collect();
+                    if shows_destination(&label, &dest) {
+                        body.push(Span::styled(format!(" ({dest})"), theme.dim()));
+                    }
+                }
+            }
+            Event::End(TagEnd::Emphasis | TagEnd::Strong | TagEnd::Strikethrough) => {
                 style_stack.pop();
             }
             Event::Text(s) => match code.as_mut() {
@@ -377,7 +543,7 @@ pub fn render(text: &str, width: usize, theme: Theme) -> Vec<Line<'static>> {
                 }
                 out.push(Line::from(Span::styled(
                     "─".repeat(width.min(48)),
-                    theme.dim(),
+                    theme.faint(),
                 )));
                 gap_pending = true;
             }
@@ -391,6 +557,18 @@ pub fn render(text: &str, width: usize, theme: Theme) -> Vec<Line<'static>> {
     let _ = heading;
     flush!();
     out
+}
+
+/// Whether a link's destination is worth printing after its label: not when the label already is
+/// the address (an autolink, a bare `mailto:`), nor for an anchor inside the same text.
+fn shows_destination(label: &str, dest: &str) -> bool {
+    let label = label.trim();
+    let bare = dest
+        .strip_prefix("mailto:")
+        .or_else(|| dest.strip_prefix("https://"))
+        .or_else(|| dest.strip_prefix("http://"))
+        .unwrap_or(dest);
+    !dest.is_empty() && !dest.starts_with('#') && label != dest && label != bare
 }
 
 fn top(stack: &[Style]) -> Style {
@@ -416,39 +594,87 @@ fn render_code(
             Span::styled(format!("{gutter}{lang}"), theme.dim()),
         ]));
     }
-    for raw in text.trim_end_matches('\n').split('\n') {
-        // Code is never reflowed; a line longer than the row continues on the next.
-        let raw = raw.replace('\t', "    ");
-        let mut piece = String::new();
-        let mut pw = 0;
-        let mut first = true;
-        let emit = |p: String, out: &mut Vec<Line<'static>>| {
-            out.push(Line::from(vec![
-                Span::styled(format!("{lead}{gutter}"), theme.dim()),
-                Span::styled(p, theme.code()),
-            ]));
-        };
-        for c in raw.chars() {
-            let cw = c.width().unwrap_or(0);
-            if pw + cw > inner {
-                emit(std::mem::take(&mut piece), &mut out);
-                first = false;
-                pw = 0;
+    // Tabs become four spaces; a line without one is borrowed, not copied.
+    let raw: Vec<std::borrow::Cow<str>> = text
+        .trim_end_matches('\n')
+        .split('\n')
+        .map(|l| {
+            if l.contains('\t') {
+                l.replace('\t', "    ").into()
+            } else {
+                l.into()
             }
-            piece.push(c);
-            pw += cw;
+        })
+        .collect();
+    let refs: Vec<&str> = raw.iter().map(AsRef::as_ref).collect();
+    let coloured = crate::highlight::lines(lang, &refs, theme).unwrap_or_else(|| {
+        refs.iter()
+            .map(|l| vec![Span::styled((*l).to_string(), theme.code())])
+            .collect()
+    });
+    let mark = format!("{lead}{gutter}");
+    for spans in coloured {
+        // Code is never reflowed; a line longer than the row continues on the next.
+        for row in cut_spans(spans, inner) {
+            let mut line = Vec::with_capacity(row.len() + 1);
+            line.push(Span::styled(mark.clone(), theme.dim()));
+            line.extend(row);
+            out.push(Line::from(line));
         }
-        let _ = first;
-        emit(piece, &mut out);
     }
     out
+}
+
+/// `spans` cut into rows of at most `width` columns, each piece keeping its style. An empty line
+/// is one empty row.
+pub fn cut_spans(spans: Vec<Span<'static>>, width: usize) -> Vec<Vec<Span<'static>>> {
+    let width = width.max(1);
+    let mut rows = vec![Vec::with_capacity(spans.len())];
+    let mut w = 0;
+    for span in spans {
+        // Most spans fit whole on the row they start on: kept as they are, nothing copied.
+        let sw = width_of(&span.content);
+        if w + sw <= width {
+            w += sw;
+            rows.last_mut().expect("a row").push(span);
+            continue;
+        }
+        let mut piece = String::new();
+        for c in span.content.chars() {
+            let cw = c.width().unwrap_or(0);
+            if w + cw > width {
+                if !piece.is_empty() {
+                    rows.last_mut()
+                        .expect("a row")
+                        .push(Span::styled(std::mem::take(&mut piece), span.style));
+                }
+                rows.push(Vec::new());
+                w = 0;
+            }
+            piece.push(c);
+            w += cw;
+        }
+        if !piece.is_empty() {
+            rows.last_mut()
+                .expect("a row")
+                .push(Span::styled(piece, span.style));
+        }
+    }
+    rows
 }
 
 /// Cells of a column this wide or less keep their natural width when the table is squeezed.
 const SHORT_CELL: usize = 10;
 /// Columns wider than that may wrap, but no narrower than this.
 const MIN_WRAPPED: usize = 4;
-const CELL_GAP: usize = 3;
+/// A column whose cells average this many words is prose, and never squeezed below PROSE_MIN.
+const PROSE_WORDS: usize = 4;
+const PROSE_MIN: usize = 16;
+/// Columns a table's box takes besides its cells: a bar and a space either side of every cell,
+/// with the bars between two cells shared.
+fn box_width(cols: usize) -> usize {
+    3 * cols + 1
+}
 /// A label column on a record card is never wider than this.
 const LABEL_MAX: usize = 16;
 
@@ -484,15 +710,87 @@ fn wrap_plain(text: &str, width: usize) -> Vec<String> {
     lines
 }
 
-/// Pads `text` to `width` by the column's alignment.
-fn align_cell(text: &str, width: usize, align: Option<&Alignment>) -> String {
-    let pad = width.saturating_sub(width_of(text));
+/// A cell without the blanks around its text.
+fn trim_cell(mut cell: Cell) -> Cell {
+    if let Some(first) = cell.first_mut() {
+        first.content = first.content.trim_start().to_string().into();
+    }
+    if let Some(last) = cell.last_mut() {
+        last.content = last.content.trim_end().to_string().into();
+    }
+    cell.retain(|s| !s.content.is_empty());
+    cell
+}
+
+fn plain(cell: &[Span]) -> String {
+    cell.iter().map(|s| s.content.as_ref()).collect()
+}
+
+/// Whether a cell reads as a number (`12`, `+6 -2`, `1.5%`, `$3`), so its column lines up on
+/// the right the way figures are compared.
+fn numeric(text: &str) -> bool {
+    text.chars().any(|c| c.is_ascii_digit())
+        && text
+            .chars()
+            .all(|c| c.is_ascii_digit() || " +-−.,%$€£×".contains(c))
+}
+
+/// The alignment each column is drawn with: what the table asked for, and on the right for a
+/// column of figures that asked for nothing.
+fn column_aligns(rows: &[Vec<Cell>], t: &Table, cols: usize) -> Vec<Alignment> {
+    (0..cols)
+        .map(|i| match t.aligns.get(i) {
+            Some(a) if *a != Alignment::None => *a,
+            _ => {
+                let mut body = rows.iter().skip(t.head_rows).map(|r| plain(&r[i]));
+                let mut any = false;
+                let figures = body.all(|c| {
+                    let c = c.trim();
+                    any |= !c.is_empty();
+                    c.is_empty() || numeric(c)
+                });
+                if figures && any {
+                    Alignment::Right
+                } else {
+                    Alignment::None
+                }
+            }
+        })
+        .collect()
+}
+
+/// A cell's styled text wrapped to its column, one row per line.
+fn wrap_cell(cell: &Cell, width: usize) -> Vec<Vec<Span<'static>>> {
+    wrap_flow_at(
+        &Flow {
+            first: Vec::new(),
+            rest: Vec::new(),
+            body: cell.clone(),
+        },
+        width,
+    )
+    .into_iter()
+    .map(|l| l.spans)
+    .collect()
+}
+
+/// `spans` padded to `width` by `align`.
+fn align_spans(spans: Vec<Span<'static>>, width: usize, align: Alignment) -> Vec<Span<'static>> {
+    let pad = width.saturating_sub(prefix_width(&spans));
     let (l, r) = match align {
-        Some(Alignment::Right) => (pad, 0),
-        Some(Alignment::Center) => (pad / 2, pad - pad / 2),
+        Alignment::Right => (pad, 0),
+        Alignment::Center => (pad / 2, pad - pad / 2),
         _ => (0, pad),
     };
-    format!("{}{}{}", " ".repeat(l), text, " ".repeat(r))
+    let mut out = Vec::with_capacity(spans.len() + 2);
+    if l > 0 {
+        out.push(Span::raw(" ".repeat(l)));
+    }
+    out.extend(spans);
+    if r > 0 {
+        out.push(Span::raw(" ".repeat(r)));
+    }
+    out
 }
 
 fn render_table(t: &Table, width: usize, theme: Theme) -> Vec<Line<'static>> {
@@ -500,7 +798,7 @@ fn render_table(t: &Table, width: usize, theme: Theme) -> Vec<Line<'static>> {
     if cols == 0 {
         return Vec::new();
     }
-    let rows: Vec<Vec<String>> = t
+    let rows: Vec<Vec<Cell>> = t
         .rows
         .iter()
         .map(|r| {
@@ -510,29 +808,43 @@ fn render_table(t: &Table, width: usize, theme: Theme) -> Vec<Line<'static>> {
         })
         .collect();
     let natural: Vec<usize> = (0..cols)
-        .map(|i| rows.iter().map(|r| width_of(&r[i])).max().unwrap_or(0))
+        .map(|i| rows.iter().map(|r| prefix_width(&r[i])).max().unwrap_or(0))
         .collect();
-    let gaps = CELL_GAP * (cols - 1);
-    if natural.iter().sum::<usize>() + gaps <= width {
-        return grid(&rows, t, &natural, theme);
+    let aligns = column_aligns(&rows, t, cols);
+    let chrome = box_width(cols);
+    if natural.iter().sum::<usize>() + chrome <= width {
+        return grid(&rows, t, &natural, &aligns, theme);
     }
-    // Squeezed: short columns keep their width, long ones may wrap down to their longest word.
+    // Squeezed: short columns keep their width, long ones may wrap down to their longest word,
+    // and a column of sentences no narrower than PROSE_MIN: prose a few words wide is a column of
+    // fragments, and reads better as one card per row.
     let min: Vec<usize> = (0..cols)
         .map(|i| {
             if natural[i] <= SHORT_CELL {
-                natural[i]
-            } else {
-                let word = rows
-                    .iter()
-                    .flat_map(|r| r[i].split_whitespace())
-                    .map(width_of)
-                    .max()
-                    .unwrap_or(0);
-                word.clamp(MIN_WRAPPED, 12).min(natural[i])
+                return natural[i];
             }
+            let texts: Vec<String> = rows
+                .iter()
+                .skip(t.head_rows)
+                .map(|r| plain(&r[i]))
+                .collect();
+            let word = rows
+                .iter()
+                .map(|r| plain(&r[i]))
+                .flat_map(|c| c.split_whitespace().map(width_of).collect::<Vec<_>>())
+                .max()
+                .unwrap_or(0);
+            let filled = texts.iter().filter(|c| !c.trim().is_empty()).count().max(1);
+            let words: usize = texts.iter().map(|c| c.split_whitespace().count()).sum();
+            let floor = if words >= PROSE_WORDS * filled {
+                PROSE_MIN
+            } else {
+                MIN_WRAPPED
+            };
+            word.clamp(floor, floor.max(12)).min(natural[i])
         })
         .collect();
-    let avail = width.saturating_sub(gaps);
+    let avail = width.saturating_sub(chrome);
     if min.iter().sum::<usize>() > avail {
         return cards(&rows, t, width, theme);
     }
@@ -549,65 +861,79 @@ fn render_table(t: &Table, width: usize, theme: Theme) -> Vec<Line<'static>> {
         widths[i] += 1;
         spare -= 1;
     }
-    grid(&rows, t, &widths, theme)
+    grid(&rows, t, &widths, &aligns, theme)
 }
 
-/// The table as an aligned grid; a cell wider than its column wraps within it.
-fn grid(rows: &[Vec<String>], t: &Table, widths: &[usize], theme: Theme) -> Vec<Line<'static>> {
-    let wrapped: Vec<Vec<Vec<String>>> = rows
+/// The table as a box of connected lines: rounded corners, a bar between columns, a rule under
+/// the header and, when a cell wraps, between rows (so a row's second line never reads as the next
+/// row). The lines are faint, so the box frames the text without competing with it.
+fn grid(
+    rows: &[Vec<Cell>],
+    t: &Table,
+    widths: &[usize],
+    aligns: &[Alignment],
+    theme: Theme,
+) -> Vec<Line<'static>> {
+    let wrapped: Vec<Vec<Vec<Vec<Span<'static>>>>> = rows
         .iter()
         .map(|r| {
             r.iter()
                 .enumerate()
-                .map(|(i, c)| wrap_plain(c, widths[i]))
+                .map(|(i, c)| wrap_cell(c, widths[i]))
                 .collect()
         })
         .collect();
-    let any_wrapped = wrapped.iter().any(|r| r.iter().any(|c| c.len() > 1));
-    let rule = |fill: &str, join: &str| -> Line<'static> {
-        Line::from(Span::styled(
-            widths
-                .iter()
-                .map(|w| fill.repeat(*w))
-                .collect::<Vec<_>>()
-                .join(join),
-            theme.dim(),
-        ))
+    let any_wrapped = wrapped
+        .iter()
+        .skip(t.head_rows)
+        .any(|r| r.iter().any(|c| c.len() > 1));
+    let line = theme.faint();
+    let rule = |left: &str, join: &str, right: &str| -> Line<'static> {
+        let mut s = String::from(left);
+        for (i, w) in widths.iter().enumerate() {
+            if i > 0 {
+                s.push_str(join);
+            }
+            s.push_str(&"─".repeat(w + 2));
+        }
+        s.push_str(right);
+        Line::from(Span::styled(s, line))
     };
-    let mut out = Vec::new();
+    let mut out = vec![rule("╭", "┬", "╮")];
     for (r, cells) in wrapped.iter().enumerate() {
         let height = cells.iter().map(Vec::len).max().unwrap_or(1);
-        let style = if r < t.head_rows {
-            theme.bold()
-        } else {
-            Style::default()
-        };
+        let head = r < t.head_rows;
         for k in 0..height {
-            let mut spans = Vec::new();
+            let mut spans = vec![Span::styled("│ ", line)];
             for (i, w) in widths.iter().enumerate() {
                 if i > 0 {
-                    spans.push(Span::styled(" │ ", theme.dim()));
+                    spans.push(Span::styled(" │ ", line));
                 }
-                let text = cells[i].get(k).map_or("", String::as_str);
-                spans.push(Span::styled(align_cell(text, *w, t.aligns.get(i)), style));
+                let mut text = cells[i].get(k).cloned().unwrap_or_default();
+                if head {
+                    for s in &mut text {
+                        s.style = s.style.patch(theme.bold());
+                    }
+                }
+                spans.extend(align_spans(text, *w, aligns[i]));
             }
+            spans.push(Span::styled(" │", line));
             out.push(Line::from(spans));
         }
-        if r + 1 == t.head_rows {
-            out.push(rule("─", "─┼─"));
-        } else if any_wrapped && r + 1 < wrapped.len() && r >= t.head_rows {
-            // Wrapped rows run together without a line between them.
-            out.push(rule("┄", "┄┼┄"));
+        let last = r + 1 == wrapped.len();
+        if !last && (r + 1 == t.head_rows || (any_wrapped && r >= t.head_rows)) {
+            out.push(rule("├", "┼", "┤"));
         }
     }
+    out.push(rule("╰", "┴", "╯"));
     out
 }
 
 /// Too many columns to fit at any size: one card per row, a `header  value` pair per line.
-fn cards(rows: &[Vec<String>], t: &Table, width: usize, theme: Theme) -> Vec<Line<'static>> {
+fn cards(rows: &[Vec<Cell>], t: &Table, width: usize, theme: Theme) -> Vec<Line<'static>> {
     let cols = rows.first().map_or(0, Vec::len);
     let headers: Vec<String> = if t.head_rows > 0 {
-        rows[0].clone()
+        rows[0].iter().map(|c| plain(c)).collect()
     } else {
         (1..=cols).map(|i| format!("col {i}")).collect()
     };
@@ -626,9 +952,9 @@ fn cards(rows: &[Vec<String>], t: &Table, width: usize, theme: Theme) -> Vec<Lin
         // A narrow first column (`#`, `No`) is a row number: the title is that and the next cell.
         let numbered = cols > 1 && width_of(&headers[0]) <= 2;
         let (title, first_field) = if numbered {
-            (format!("{} · {}", row[0], row[1]), 2)
+            (format!("{} · {}", plain(&row[0]), plain(&row[1])), 2)
         } else {
-            (row[0].clone(), 1)
+            (plain(&row[0]), 1)
         };
         out.extend(
             wrap_plain(&title, width)
@@ -639,18 +965,21 @@ fn cards(rows: &[Vec<String>], t: &Table, width: usize, theme: Theme) -> Vec<Lin
             if row[i].is_empty() {
                 continue;
             }
-            for (k, line) in wrap_plain(&row[i], value_w).into_iter().enumerate() {
+            for (k, line) in wrap_cell(&row[i], value_w).into_iter().enumerate() {
                 let label = if k == 0 {
-                    align_cell(&fit_label(&headers[i], label_w), label_w, None)
+                    let l = fit_label(&headers[i], label_w);
+                    let pad = label_w.saturating_sub(width_of(&l));
+                    format!("{l}{}", " ".repeat(pad))
                 } else {
                     " ".repeat(label_w)
                 };
-                out.push(Line::from(vec![
+                let mut spans = vec![
                     Span::raw("  "),
                     Span::styled(label, theme.dim()),
                     Span::raw("  "),
-                    Span::raw(line),
-                ]));
+                ];
+                spans.extend(line);
+                out.push(Line::from(spans));
             }
         }
         out.push(Line::default());
@@ -705,6 +1034,14 @@ mod tests {
     }
 
     #[test]
+    fn punctuation_after_code_wraps_with_its_word_never_alone() {
+        assert_eq!(
+            md("approve `cargo test`, waiting", 18),
+            ["approve cargo", "test, waiting"]
+        );
+    }
+
+    #[test]
     fn a_wrapped_list_item_hangs_under_its_text() {
         let got = md("- alpha beta gamma delta epsilon\n- second", 14);
         assert_eq!(
@@ -717,6 +1054,12 @@ mod tests {
     fn ordered_lists_count_and_nested_lists_indent() {
         let got = md("1. first\n2. second\n   - inner\n3. third", 40);
         assert_eq!(got, ["1. first", "2. second", "  • inner", "3. third"]);
+    }
+
+    #[test]
+    fn numbers_line_up_on_the_right_so_the_text_starts_in_one_column() {
+        let got = md("8. eight\n9. nine wraps here\n10. ten", 14);
+        assert_eq!(got, [" 8. eight", " 9. nine wraps", "    here", "10. ten"]);
     }
 
     #[test]
@@ -740,10 +1083,67 @@ mod tests {
         let t = "| name | n |\n|:-----|--:|\n| ab | 5 |\n| c | 10 |";
         assert_eq!(
             md(t, 40),
-            ["name │  n", "─────┼───", "ab   │  5", "c    │ 10"]
+            [
+                "╭──────┬────╮",
+                "│ name │  n │",
+                "├──────┼────┤",
+                "│ ab   │  5 │",
+                "│ c    │ 10 │",
+                "╰──────┴────╯",
+            ]
         );
         let long = "| a very long header cell | another long header cell |\n|--|--|\n| x | y |";
         assert!(md(long, 20).iter().all(|r| width_of(r) <= 20));
+    }
+
+    #[test]
+    fn a_column_of_figures_lines_up_on_the_right_unless_the_table_says_otherwise() {
+        let t = "| file | change |\n|--|--|\n| a.dart | +6 −2 |\n| b.dart | +120 −14 |";
+        assert_eq!(
+            md(t, 40),
+            [
+                "╭────────┬──────────╮",
+                "│ file   │   change │",
+                "├────────┼──────────┤",
+                "│ a.dart │    +6 −2 │",
+                "│ b.dart │ +120 −14 │",
+                "╰────────┴──────────╯",
+            ]
+        );
+        let left = "| file | change |\n|--|:--|\n| a | 5 |\n| b | 10 |";
+        assert_eq!(md(left, 40)[3], "│ a    │ 5      │");
+    }
+
+    #[test]
+    fn a_cell_keeps_its_inline_code_and_bold() {
+        let theme = Theme::banded((24, 24, 24));
+        let lines = render(
+            "| file | what |\n|--|--|\n| a.dart | calls `reconnect()` **twice** |",
+            60,
+            theme,
+        );
+        let spans: Vec<&Span> = lines.iter().flat_map(|l| l.spans.iter()).collect();
+        let code = spans
+            .iter()
+            .find(|s| s.content == "reconnect()")
+            .expect("the code is its own span");
+        assert_eq!(code.style.fg, theme.code().fg);
+        let strong = spans
+            .iter()
+            .find(|s| s.content == "twice")
+            .expect("the bold is its own span");
+        assert!(strong.style.add_modifier.contains(Modifier::BOLD));
+    }
+
+    #[test]
+    fn a_link_says_where_it_goes_unless_its_label_already_does() {
+        assert_eq!(
+            md("See [the docs](https://x.io/a) now.", 60),
+            ["See the docs (https://x.io/a) now."]
+        );
+        assert_eq!(md("<https://x.io/a>", 60), ["https://x.io/a"]);
+        assert_eq!(md("[x.io](https://x.io)", 60), ["x.io"]);
+        assert_eq!(md("[up](#top)", 60), ["up"]);
     }
 
     fn table_src(cols: usize, rows: usize) -> String {
@@ -770,7 +1170,7 @@ mod tests {
         let got = md(src, 36);
         assert!(got.iter().all(|r| width_of(r) <= 36), "{got:#?}");
         assert!(
-            got[0].starts_with("id │ name  │ notes"),
+            got[1].starts_with("│ id │ name  │ notes"),
             "short columns keep their width: {got:#?}"
         );
         let all = got.join(" ");
@@ -778,8 +1178,16 @@ mod tests {
             assert!(all.contains(word), "nothing is lost: {word} in {got:#?}");
         }
         assert!(
-            got.iter().any(|r| r.contains('┄')),
-            "wrapped rows are told apart: {got:#?}"
+            got.iter().filter(|r| r.starts_with('├')).count() >= 2,
+            "a rule under the header and between the wrapped rows: {got:#?}"
+        );
+        // One closed box: every row starts and ends on its lines, all the same width.
+        let w = width_of(&got[0]);
+        assert!(
+            got.iter().all(|r| width_of(r) == w
+                && r.starts_with(['╭', '│', '├', '╰'])
+                && r.ends_with(['╮', '│', '┤', '╯'])),
+            "{got:#?}"
         );
     }
 
@@ -839,6 +1247,25 @@ mod tests {
     fn quotes_wear_a_bar_and_rules_are_drawn() {
         assert_eq!(md("> hello there", 40), ["│ hello there"]);
         assert_eq!(md("a\n\n---\n\nb", 10), ["a", "", "──────────", "", "b"]);
+    }
+
+    #[test]
+    fn a_table_still_arriving_is_held_back_and_said_to_be_coming() {
+        let live = |s: &str| text(&render_live(s, 40, Theme::plain()));
+        assert_eq!(
+            live("Here:\n\n| a | b |\n|--|--|\n| 1 | 2 |\n| 3"),
+            ["Here:", "", "… a table, 2 rows so far"]
+        );
+        assert_eq!(live("| a | b"), ["… a table"]);
+        // A blank line ends it: drawn as the table it is.
+        let done = live("| a | b |\n|--|--|\n| 1 | 2 |\n\n");
+        assert_eq!(
+            done,
+            text(&render("| a | b |\n|--|--|\n| 1 | 2 |", 40, Theme::plain()))
+        );
+        // A pipe inside an open code block is only a character.
+        let code = live("```\n| not a table");
+        assert!(code.iter().any(|r| r.contains("| not a table")), "{code:?}");
     }
 
     #[test]

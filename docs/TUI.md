@@ -58,10 +58,30 @@ printing into scrollback, and the layout is ours to get right).
 - Wrapped lines are cached per (entry, width) and dropped on resize, so a redraw during
   streaming wraps only the entry that changed. Nothing is drawn when nothing changed, and
   the only timer is the 1 s elapsed counter while a turn runs.
-- The mouse is not captured: the wheel scrolls through the terminal's alternate-scroll mode
-  and the terminal's own selection keeps working. `Ctrl-Y` copies the last answer (OSC 52).
+- The mouse is taken for clicks and the wheel only (`?1000h` + SGR `?1006h`, never motion
+  `?1002`/`?1003`, which would wake the loop on every pointer move). A click opens or closes what
+  it is on and chooses a permission option; the terminal's own selection is Shift-drag.
+  `HERDR_TUI_MOUSE=off` hands the mouse back (alternate-scroll `?1007h` still turns the wheel into
+  Up and Down). Codex takes the mouse only in its own transcript view and draws its own
+  selection; we take it always and leave selection to the terminal, because a source-mapped
+  selection is its own subsystem and Shift-drag is the convention terminals already share.
+  Unverified: whether herdr passes Shift-drag through to its own selection.
 - Cost of choosing this over printing into scrollback (codex): no native scrollback after
-  exit, copy of a long answer needs `Ctrl-Y` or the terminal's selection of the visible part.
+  exit, and copying is limited to the terminal's selection of the visible part.
+- Tables are a box of connected lines (`╭┬╮ │ ├┼┤ ╰┴╯`), faint, with a rule under the header
+  and between rows only when a cell wraps. The owner tried codex's bar-less layout (whitespace
+  columns, a `━` under the header) and wanted connected lines back; what both replaced, the
+  dashed `┄┼┄` between rows, read as noise.
+- Streaming (from codex's `streaming/table_holdback.rs`): a table still arriving is held back
+  behind one quiet line until a blank line ends it, so the box never re-measures under the
+  reader. Codex's line-by-line commit queue is not copied: it exists because codex commits whole
+  lines into scrollback; here the unfinished line is drawn live, so a queue would only delay.
+- Scrolled back, the reading position is held by the block at the bottom edge, not by a count
+  from the bottom, so output arriving below never moves what is being read.
+- Code is coloured by syntect's default grammars (oniguruma: 3x faster than fancy-regex and
+  about 1.5 MB less memory per grammar, measured for Rust on this machine), with the scopes
+  mapped onto the palette in `theme.rs` rather than a bundled theme. A growing block resumes
+  from where its colouring stopped instead of re-reading itself on every chunk.
 
 ## Small touches (and why they are allowed)
 
@@ -105,10 +125,12 @@ removed) and here. Properties the person relies on, filled from each surface's c
 | Confirmation | haptic, then next card | note `Answered: …` | note in scrollback |
 | Failure path | honest, Retry | a failed write ends the view (`View.send`) | note, card stays, can retry |
 | Several waiting | walk them | "answer on the phone" | `1 of N`, answer in order |
-| Question (form) | answered in sheet | "answer on the phone" | **gap**, see below |
+| Question (form) | answered in sheet | "answer on the phone" | panel, a field at a time, answers in sight, last `Enter` sends; same 400 ms guard; `Esc` declines; a URL question is left to the phone |
 
-Open cells are findings, not silence: forms, and risky-hint rules (`mode_danger.dart`,
+Open cells are findings, not silence: risky-hint rules (`mode_danger.dart`,
 `permission_subject.dart` hold the phone's rules; do not re-derive them, port or share).
+A text field's `pattern` and `format` are not checked here (the phone checks `pattern`);
+the agent checks again.
 
 ## Plan
 

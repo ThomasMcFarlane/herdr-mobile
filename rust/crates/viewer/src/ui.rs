@@ -3,15 +3,15 @@
 //!
 //! The layout keeps one left gutter of two columns: what the person said sits in a tinted band
 //! behind a `›`, what the agent said hangs from a `•`, and every tool call, note and result
-//! opens with its mark in the same column. Below the conversation sit the permission panel
-//! (when one waits), the rule that carries the session's title, the input, a status line and
-//! one line of facts about the session.
+//! opens with its mark in the same column. Below the conversation sit the panel that asks (a
+//! permission or a question, when one waits), the rule that carries the session's title, the
+//! input, a status line and one line of facts about the session.
 
 use crate::composer::Composer;
 use crate::delight;
 use crate::fold::{self, Block};
 use crate::md::{self, clean};
-use crate::session::{Phase, Session, Waiting};
+use crate::session::{Ask, Phase, Session};
 use crate::shell;
 use crate::theme::Theme;
 use crate::transcript::{Entry, Item, Role, Tool, Transcript};
@@ -59,6 +59,31 @@ pub struct View {
     /// The lines of the blocks, kept from one frame to the next, and the width they were built at.
     line_cache: LineCache,
     last_width: usize,
+    /// What a click lands on, as last drawn: per screen row of the conversation, the key of the
+    /// block there when it folds; and the first row the conversation starts at.
+    fold_rows: Vec<Option<u64>>,
+    fold_top: u16,
+    /// Per screen row of the panel that asks (a permission or a question), the option drawn
+    /// there, and the panel's first row.
+    option_rows: Vec<Option<usize>>,
+    option_top: u16,
+    /// A block that was clicked open or closed, and the screen row its first line was on: it
+    /// stays there while it changes height, as far as showing what it opened allows.
+    anchor: Option<(u64, usize)>,
+    /// Scrolled back: the block at the bottom edge and how far into it, at the scroll it was
+    /// taken at. Output that arrives below then leaves what the person reads where it is.
+    hold: Option<Hold>,
+    /// The screen row of the "below · End" control, when it is drawn.
+    newest_row: Option<u16>,
+    /// The agent message that was still arriving when last drawn.
+    live: Option<u64>,
+}
+
+#[derive(Clone, Copy)]
+struct Hold {
+    key: u64,
+    off: usize,
+    at: usize,
 }
 
 impl View {
@@ -71,6 +96,51 @@ impl View {
     /// How many characters of block lines the cache is holding (the "low memory" gauge).
     pub fn cache_chars(&self) -> usize {
         self.line_cache.chars()
+    }
+
+    /// The option of the asking panel drawn on screen row `y`, as last drawn.
+    #[must_use]
+    pub fn option_at(&self, y: u16) -> Option<usize> {
+        let row = y.checked_sub(self.option_top)?;
+        self.option_rows.get(usize::from(row)).copied().flatten()
+    }
+
+    /// A click on screen row `y`: when it is on the "below · End" control, back to the newest.
+    pub fn click_newest(&mut self, y: u16) -> bool {
+        if self.newest_row != Some(y) {
+            return false;
+        }
+        self.scroll = 0;
+        true
+    }
+
+    /// A click on screen row `y`: opens or closes the block drawn there, when it folds, keeping
+    /// its first row where it was. `now_ms` starts the unfold animation (`None` without motion).
+    /// `true` when something opened or closed.
+    pub fn click_fold(&mut self, y: u16, now_ms: Option<u64>) -> bool {
+        let Some(row) = y.checked_sub(self.fold_top).map(usize::from) else {
+            return false;
+        };
+        let Some(key) = self.fold_rows.get(row).copied().flatten() else {
+            return false;
+        };
+        // Where the block's first line is now: the clicked row, less the block's rows above it.
+        let top = self.fold_rows[..row]
+            .iter()
+            .rev()
+            .take_while(|k| **k == Some(key))
+            .count();
+        if self.expanded.remove(&key) {
+            self.reveal.remove(&key);
+        } else {
+            self.expanded.insert(key);
+            if let Some(now) = now_ms {
+                self.reveal.insert(key, now);
+            }
+        }
+        self.anchor = Some((key, row - top));
+        self.invalidate_lines();
+        true
     }
 }
 
@@ -400,9 +470,16 @@ fn user_lines(text: &str, width: usize, theme: Theme) -> Vec<Line<'static>> {
     }
 }
 
-/// What the agent said: markdown hanging from a bullet.
-fn agent_lines(text: &str, width: usize, theme: Theme) -> Vec<Line<'static>> {
-    md::render(text, width.saturating_sub(GUTTER), theme)
+/// What the agent said: markdown hanging from a bullet. `live`: it is still arriving
+/// ([`md::render_live`]).
+fn agent_lines(text: &str, width: usize, theme: Theme, live: bool) -> Vec<Line<'static>> {
+    let inner = width.saturating_sub(GUTTER);
+    let lines = if live {
+        md::render_live(text, inner, theme)
+    } else {
+        md::render(text, inner, theme)
+    };
+    lines
         .into_iter()
         .enumerate()
         .map(|(i, mut l)| {
@@ -425,6 +502,8 @@ struct Look<'a> {
     /// Ctrl-T: every thought open.
     thoughts: bool,
     theme: Theme,
+    /// The agent message still arriving, if one is.
+    live: Option<u64>,
 }
 
 impl Look<'_> {
@@ -588,16 +667,66 @@ fn tool_lines(
         } else {
             fold::DIFF_FOLDED_ROWS
         };
-        for (mark, text) in rows.into_iter().take(show) {
+        let rows: Vec<(char, String)> = rows
+            .into_iter()
+            .take(show)
+            .map(|(m, t)| (m, clean(&t).replace('\t', "    ")))
+            .collect();
+        // Each side read as the file it is: the old side (context and removed lines) and the new
+        // side (context and added), so a string or comment open across lines stays one.
+        let lang = crate::highlight::for_path(&d.path);
+        let side = |keep: char| -> Vec<Option<Vec<Span<'static>>>> {
+            let picked: Vec<&str> = rows
+                .iter()
+                .filter(|(m, _)| *m == ' ' || *m == keep)
+                .map(|(_, t)| t.as_str())
+                .collect();
+            let mut coloured = lang
+                .and_then(|l| crate::highlight::lines(l, &picked, theme))
+                .map(Vec::into_iter);
+            rows.iter()
+                .map(|(m, _)| {
+                    if *m == ' ' || *m == keep {
+                        coloured.as_mut().and_then(Iterator::next)
+                    } else {
+                        None
+                    }
+                })
+                .collect()
+        };
+        let (old, new) = (side('-'), side('+'));
+        for (i, (mark, text)) in rows.into_iter().enumerate() {
             let style = match mark {
                 '+' => theme.ok(),
                 '-' => theme.bad(),
                 _ => theme.dim(),
             };
-            out.push(Line::from(vec![
-                Span::styled(format!("    {mark} "), style),
-                Span::styled(fit(&clean(&text), width.saturating_sub(6)), style),
-            ]));
+            // Where the background is known, a changed line sits on a tint of its colour to the
+            // right edge, and its text is coloured as code: told apart at a glance, read as code.
+            match (mark, theme.diff_row(mark == '+')) {
+                ('+' | '-', Some(bg)) => {
+                    let code = if mark == '+' { &new[i] } else { &old[i] };
+                    let spans = code
+                        .clone()
+                        .unwrap_or_else(|| vec![Span::raw(text)])
+                        .into_iter()
+                        .map(|s| Span::styled(s.content, s.style.patch(bg)))
+                        .collect();
+                    let body = fit_spans(spans, width.saturating_sub(6));
+                    let pad = width.saturating_sub(6 + spans_width(&body));
+                    let mut line = vec![
+                        Span::raw("    "),
+                        Span::styled(format!("{mark} "), style.patch(bg)),
+                    ];
+                    line.extend(body);
+                    line.push(Span::styled(" ".repeat(pad), bg));
+                    out.push(Line::from(line));
+                }
+                _ => out.push(Line::from(vec![
+                    Span::styled(format!("    {mark} "), style),
+                    Span::styled(fit(&text, width.saturating_sub(6)), style),
+                ])),
+            }
         }
         if total > show {
             out.push(dim_row(
@@ -731,7 +860,7 @@ fn item_lines(
             role: Role::Agent,
             text,
             ..
-        } => agent_lines(text, width, theme),
+        } => agent_lines(text, width, theme, look.live == Some(item.id)),
         Entry::Message {
             role: Role::Thought,
             text,
@@ -810,18 +939,19 @@ fn home_short(path: &str) -> String {
     }
 }
 
-/// The panel that asks the person: what, the command whole, the choices, how to answer.
+/// The panel that asks the person: what, the command whole, the choices, how to answer. With
+/// the lines, the option each row draws (what a click on that row chooses).
 fn panel_lines(
     lit: bool,
-    w: &Waiting,
+    request: &acp::PermissionRequest,
     total: usize,
     sel: usize,
     width: usize,
     max_subject: usize,
     theme: Theme,
-) -> Vec<Line<'static>> {
+) -> (Vec<Line<'static>>, Vec<Option<usize>>) {
     let inner = width.saturating_sub(GUTTER * 2);
-    let tc = w.request.tool_call.as_ref();
+    let tc = request.tool_call.as_ref();
     let title = tc.and_then(|t| t.title.as_deref()).unwrap_or("(no title)");
     let more = if total > 1 {
         format!("  ({} waiting)", total)
@@ -869,8 +999,9 @@ fn panel_lines(
         }
         rows.push(Line::default());
     }
-    for (i, o) in w.request.options.iter().enumerate() {
-        let chosen = i == sel.min(w.request.options.len().saturating_sub(1));
+    let mut options: Vec<Option<usize>> = Vec::new();
+    for (i, o) in request.options.iter().enumerate() {
+        let chosen = i == sel.min(request.options.len().saturating_sub(1));
         let (mark, style) = if chosen {
             ("› ", theme.accent().add_modifier(Modifier::BOLD))
         } else {
@@ -889,22 +1020,32 @@ fn panel_lines(
             body.push(Span::styled(format!("  · stays {word}"), theme.dim()));
         }
         // A long choice wraps under its own text, past the number.
-        rows.extend(md::wrap_spans(
+        let lines = md::wrap_spans(
             body,
             vec![Span::raw("  "), Span::styled(mark, style)],
             vec![Span::raw("       ")],
             width.saturating_sub(GUTTER),
-        ));
+        );
+        options.resize(rows.len(), None);
+        options.extend(std::iter::repeat_n(Some(i), lines.len()));
+        rows.extend(lines);
     }
     rows.push(Line::default());
     rows.push(Line::from(vec![
         Span::raw("  "),
         Span::styled(
-            "Tab chooses · Enter confirms · a number answers · Esc cancels",
+            "↑↓ choose · Enter confirms · a number answers · Esc cancels",
             theme.dim(),
         ),
     ]));
     rows.push(Line::default());
+    options.resize(rows.len(), None);
+    (tint(rows, width, theme), options)
+}
+
+/// A panel that needs the person, set apart: a tinted band where the terminal's background is
+/// known, else a bar down the left edge.
+fn tint(rows: Vec<Line<'static>>, width: usize, theme: Theme) -> Vec<Line<'static>> {
     match theme.band() {
         Some(bg) => band(rows, width, bg),
         None => rows
@@ -937,21 +1078,27 @@ pub fn draw(f: &mut Frame, ctx: &Frame_, v: &mut View) {
     // The cursor may be on a row after the last (a full row): make room for it.
     let comp_h = ranges.len().max(cur_row + 1).clamp(1, COMPOSER_MAX) as u16;
     let waiting = ctx.session.waiting();
+    let mut option_rows = Vec::new();
     let panel = waiting
         .first()
         .map(|first| {
             let max_subject =
                 ((area.height as usize / 2).saturating_sub(9)).clamp(2, SUBJECT_MAX_ROWS);
-            v.sel = v.sel.min(first.request.options.len().saturating_sub(1));
-            panel_lines(
-                !ctx.motion || delight::pulse(ctx.anim_ms),
-                first,
-                waiting.len(),
-                v.sel,
-                w,
-                max_subject,
-                theme,
-            )
+            let lit = !ctx.motion || delight::pulse(ctx.anim_ms);
+            let (lines, options) = match &first.ask {
+                Ask::Permission(request) => {
+                    v.sel = v.sel.min(request.options.len().saturating_sub(1));
+                    panel_lines(lit, request, waiting.len(), v.sel, w, max_subject, theme)
+                }
+                Ask::Question(form) => {
+                    let max_rows = usize::from(area.height.saturating_sub(7));
+                    let (rows, options) =
+                        form.lines(lit, waiting.len(), w, max_subject, max_rows, theme);
+                    (tint(rows, w, theme), options)
+                }
+            };
+            option_rows = options;
+            lines
         })
         .or_else(|| v.help.then(|| help_lines(w, theme)));
     let panel_h = panel
@@ -982,6 +1129,10 @@ pub fn draw(f: &mut Frame, ctx: &Frame_, v: &mut View) {
         Vec::new()
     };
     draw_history(f, hist, ctx, v, welcome);
+    // Only the rows the panel had room for can be clicked.
+    option_rows.truncate(usize::from(perm.height));
+    v.option_rows = option_rows;
+    v.option_top = perm.y;
     if let Some(rows) = panel {
         f.render_widget(Paragraph::new(rows), perm);
     }
@@ -1007,10 +1158,13 @@ pub fn draw(f: &mut Frame, ctx: &Frame_, v: &mut View) {
         .saturating_sub(usize::from(comp_h))
         .min(ranges.len().saturating_sub(usize::from(comp_h)));
     let lines: Vec<Line<'static>> = if text.is_empty() {
-        let hint = if ctx.session.ready() {
-            "Message the agent"
-        } else {
-            "Opening the session…"
+        // While a question waits the box is its own: it says so rather than invite a message.
+        let question = waiting.first().and_then(|w| w.question());
+        let hint = match question {
+            Some(q) if q.typed() => "Type your answer",
+            Some(_) => "Answer the question above",
+            None if ctx.session.ready() => "Message the agent",
+            None => "Opening the session…",
         };
         vec![Line::from(vec![
             Span::styled("› ", theme.accent()),
@@ -1077,17 +1231,15 @@ pub fn draw(f: &mut Frame, ctx: &Frame_, v: &mut View) {
 
     // The footer is one calm row: what to do on the left, the model and the context on the right,
     // both in the same two-column gutter as everything above, with a margin at the right edge.
-    let mut left = footer_left(
+    // Scrolled back, the way to the newest is on the conversation's last row, not here.
+    let left = footer_left(
         ctx,
         v,
-        !waiting.is_empty(),
-        waiting
-            .first()
-            .map_or(1, |w| w.request.options.len().max(1)),
+        waiting.first().map(|w| match &w.ask {
+            Ask::Permission(r) => format!("choose 1–{} and press Enter", r.options.len().max(1)),
+            Ask::Question(form) => form.footer(),
+        }),
     );
-    if v.scroll > 0 {
-        left.push(Span::styled("   ↓ End: newest", theme.dim()));
-    }
     let inner = w.saturating_sub(GUTTER * 2);
     // Whatever the left side is, it keeps at least this much before the facts take the room.
     let keep = spans_width(&left).min(16);
@@ -1137,7 +1289,7 @@ fn fit_spans(spans: Vec<Span<'static>>, width: usize) -> Vec<Span<'static>> {
 
 /// What the left of the footer says, by what the person is doing. Only the keys needed to act now;
 /// the rest are behind `?`.
-fn footer_left(ctx: &Frame_, v: &View, asking: bool, options: usize) -> Vec<Span<'static>> {
+fn footer_left(ctx: &Frame_, v: &View, asking: Option<String>) -> Vec<Span<'static>> {
     let theme = ctx.theme;
     if let Phase::Ended(e) = ctx.session.phase() {
         return vec![Span::styled(
@@ -1148,7 +1300,7 @@ fn footer_left(ctx: &Frame_, v: &View, asking: bool, options: usize) -> Vec<Span
     if let Some(h) = ctx.hint {
         return vec![Span::styled(h.to_string(), theme.warn())];
     }
-    if asking {
+    if let Some(what) = asking {
         let mark = if !ctx.motion || delight::pulse(ctx.anim_ms) {
             "▲ "
         } else {
@@ -1156,7 +1308,7 @@ fn footer_left(ctx: &Frame_, v: &View, asking: bool, options: usize) -> Vec<Span
         };
         return vec![
             Span::styled(mark, theme.warn()),
-            Span::styled(format!("choose 1–{options} and press Enter"), theme.warn()),
+            Span::styled(what, theme.warn()),
         ];
     }
     if v.focus.is_some() {
@@ -1275,12 +1427,15 @@ fn footer_facts(ctx: &Frame_, theme: Theme) -> Vec<Vec<Span<'static>>> {
 
 /// The key list, opened with `?`: what is not worth a place in the footer.
 fn help_lines(width: usize, theme: Theme) -> Vec<Line<'static>> {
-    const KEYS: [(&str, &str); 12] = [
+    const KEYS: [(&str, &str); 15] = [
         ("Enter", "send"),
         ("Ctrl-J", "new line"),
-        ("↑ ↓  wheel", "scroll"),
+        ("↑ ↓  wheel", "scroll; with a request waiting, ↑ ↓ choose"),
         ("PgUp PgDn", "page"),
         ("Home  End", "oldest, newest"),
+        ("click", "open or close a tool call or the thinking; choose"),
+        ("Space  Shift-Tab", "on a question: tick a box, back a step"),
+        ("Shift-drag", "select text to copy"),
         ("Esc", "browse what the agent did"),
         ("Ctrl-P  Ctrl-N", "earlier messages"),
         ("Ctrl-T", "show the thinking"),
@@ -1349,14 +1504,34 @@ fn draw_history(
 ) {
     let (tr, theme, anim_ms, motion) = (ctx.transcript, ctx.theme, ctx.anim_ms, ctx.motion);
     v.page = (area.height as usize).saturating_sub(2).max(1);
-    let need = (area.height as usize).saturating_add(v.scroll);
+    let mut need = (area.height as usize).saturating_add(v.scroll);
     let items = tr.items();
     let blocks = fold::blocks(items, &v.expanded);
+    // The agent message still arriving: the newest item, while a turn runs. When it settles the
+    // lines kept for it no longer show it as it is, so the cache starts over (once a turn).
+    let live = (tr.running() || ctx.session.prompting())
+        .then(|| items.back())
+        .flatten()
+        .filter(|i| {
+            matches!(
+                i.entry,
+                Entry::Message {
+                    role: Role::Agent,
+                    ..
+                }
+            )
+        })
+        .map(|i| i.id);
+    if live != v.live {
+        v.live = live;
+        v.line_cache.clear();
+    }
     let look = Look {
         expanded: &v.expanded,
         focus: v.focus,
         thoughts: v.thoughts,
         theme,
+        live,
     };
     let width = area.width as usize;
     if width != v.last_width {
@@ -1389,6 +1564,14 @@ fn draw_history(
     // clone. The count of a block that is mid-unfold is the height it has at this moment.
     let mut spans: Vec<(Block, usize, usize)> = Vec::new();
     let mut found: Option<(usize, usize)> = None;
+    let anchor_key = v.anchor.map(|(k, _)| k);
+    let mut anchored: Option<(usize, usize)> = None;
+    // Scrolled back and not moved since the last frame: what was at the bottom edge stays there,
+    // however much arrives below it.
+    let hold = v
+        .hold
+        .filter(|h| v.scroll > 0 && h.at == v.scroll && v.anchor.is_none() && !v.focus_dirty);
+    let mut held: Option<usize> = None;
     let total = if items.is_empty() {
         welcome.len()
     } else {
@@ -1415,9 +1598,25 @@ fn draw_history(
             if v.focus == Some(bkey) {
                 found = Some((count, count + n));
             }
+            if anchor_key == Some(bkey) {
+                anchored = Some((count, count + n));
+                // The window may move up to a screen above this block: build that far.
+                need = need.max(count + n + h);
+            }
+            if let Some(hd) = hold.filter(|hd| hd.key == bkey) {
+                // `off` counts from the block's first (oldest) line, so lines that stream in at
+                // its end leave the held line where it is.
+                let at = count + (n.saturating_sub(1) - hd.off.min(n.saturating_sub(1)));
+                held = Some(at);
+                need = need.max(at + h);
+            }
             spans.push((*b, count, count + n));
             count += n;
-            if count >= need && (!v.focus_dirty || found.is_some()) {
+            if count >= need
+                && (!v.focus_dirty || found.is_some())
+                && (anchor_key.is_none() || anchored.is_some())
+                && (hold.is_none() || held.is_some())
+            {
                 reached_start = bi == 0;
                 break;
             }
@@ -1442,13 +1641,40 @@ fn draw_history(
         }
         v.focus_dirty = false;
     }
+    if let Some(at) = held {
+        v.scroll = at;
+    }
+    // A block that was clicked keeps its first row where it was, unless what it opened would then
+    // fall off the bottom: then it rises as far as its first row can stay on screen.
+    if let Some((_, row)) = v.anchor {
+        if let Some((from, to)) = anchored {
+            let stay = (to + row).saturating_sub(h);
+            v.scroll = stay.min(from).max(to.saturating_sub(h));
+        }
+        if !anchor_key.is_some_and(|k| v.reveal.contains_key(&k)) {
+            v.anchor = None;
+        }
+    }
     // Do not scroll past the oldest line built.
     v.scroll = v.scroll.min(all.saturating_sub(h));
+    // What the bottom edge shows now, for the next frame to keep in place.
+    let scroll = v.scroll;
+    v.hold = spans
+        .iter()
+        .filter(|_| scroll > 0)
+        .find(|(_, from, to)| (*from..*to).contains(&scroll))
+        .map(|&(b, _, to)| Hold {
+            key: fold::key(b, items),
+            off: to - 1 - scroll,
+            at: scroll,
+        });
     let end = (v.scroll + h).min(all);
     // Pass 2: the lines the window `v.scroll..end` shows, oldest first, and nothing else.
     // A block spans newest-first index `from..to`, so the part the window shows, oldest
     // first, is its own lines `to - hi .. to - lo`, where `lo..hi` is that overlap.
     let mut out_window: Vec<Line> = Vec::new();
+    // What a click on each of those lines opens or closes.
+    let mut keys: Vec<Option<u64>> = Vec::new();
     if items.is_empty() {
         // The welcome is the whole of the history: index it newest-first the way the blocks
         // are, then hand back the oldest-first slice the tail expects.
@@ -1468,16 +1694,56 @@ fn draw_history(
             if to > v.scroll && from < end {
                 let lo = from.max(v.scroll);
                 let hi = to.min(end);
+                let key = fold::foldable(b, items).then(|| fold::key(b, items));
                 let lines = v.line_cache.ensure(b, items, width, look);
-                out_window.extend(lines[(to - hi)..(to - lo)].iter().cloned());
+                let last = lines.len().saturating_sub(1);
+                keys.resize(out_window.len(), None);
+                for (j, l) in lines.iter().enumerate().take(to - lo).skip(to - hi) {
+                    // The blank row after a block belongs to no block.
+                    let blank = j == last && l.spans.iter().all(|s| s.content.trim().is_empty());
+                    keys.push(if blank { None } else { key });
+                    out_window.push(l.clone());
+                }
             }
         }
     }
     // Bottom-align: short history sits just above the input.
     let pad = h - out_window.len().min(h);
+    keys.resize(out_window.len(), None);
+    let mut rows = vec![None; pad];
+    rows.extend(keys);
     let mut out = vec![Line::default(); pad];
     out.extend(out_window);
+    // Scrolled back: the last row says how much is below and is the way back (click or End).
+    v.newest_row = None;
+    if v.scroll > 0 && h > 1 {
+        if let (Some(last), Some(slot)) = (out.last_mut(), rows.last_mut()) {
+            let label = format!(" ↓ {} below · End ", lines_word(v.scroll));
+            let style = theme.band().map_or_else(
+                || theme.accent().add_modifier(Modifier::REVERSED),
+                |bg| theme.accent().patch(bg),
+            );
+            let lead = width.saturating_sub(width_of(&label)) / 2;
+            *last = Line::from(vec![
+                Span::raw(" ".repeat(lead)),
+                Span::styled(label, style),
+            ]);
+            *slot = None;
+            v.newest_row = Some(area.y + area.height - 1);
+        }
+    }
+    v.fold_rows = rows;
+    v.fold_top = area.y;
     f.render_widget(Paragraph::new(out), area);
+}
+
+/// `n lines`, or `1 line`.
+fn lines_word(n: usize) -> String {
+    if n == 1 {
+        "1 line".to_string()
+    } else {
+        format!("{n} lines")
+    }
 }
 
 #[cfg(test)]
@@ -1810,6 +2076,7 @@ mod tests {
             focus: None,
             thoughts: false,
             theme: Theme::plain(),
+            live: None,
         };
         let wa = cache.closed_lines(run_a, items, 100, &HashSet::new(), look);
         let wb = cache.closed_lines(run_b, items, 100, &HashSet::new(), look);
@@ -1927,7 +2194,12 @@ mod tests {
 
     #[test]
     fn the_agents_words_hang_from_a_bullet_in_the_gutter() {
-        let rows = agent_lines("one two three four five six seven", 14, Theme::plain());
+        let rows = agent_lines(
+            "one two three four five six seven",
+            14,
+            Theme::plain(),
+            false,
+        );
         let text: Vec<String> = rows
             .iter()
             .map(|l| l.spans.iter().map(|s| s.content.as_ref()).collect())
@@ -1935,6 +2207,100 @@ mod tests {
         assert!(text[0].starts_with("• "), "{text:?}");
         assert!(text[1..].iter().all(|r| r.starts_with("  ")), "{text:?}");
         assert!(text.iter().all(|r| width_of(r) <= 14));
+    }
+
+    #[test]
+    fn reading_inside_the_message_that_is_still_arriving_does_not_slide_as_it_grows() {
+        let mut tr = Transcript::default();
+        let paras = |n: usize| {
+            (1..=n)
+                .map(|i| format!("para {i}"))
+                .collect::<Vec<_>>()
+                .join("\n\n")
+        };
+        agent(&mut tr, "m", &paras(30));
+        let session = ready_session();
+        let mut view = View {
+            scroll: 20,
+            ..View::default()
+        };
+        let draw = |tr: &Transcript, view: &mut View| {
+            rows_of(&draw_with(
+                tr,
+                &session,
+                &Composer::default(),
+                Theme::plain(),
+                40,
+                12,
+                view,
+            ))
+        };
+        let reading = |rows: &[String]| -> Vec<String> {
+            rows.iter()
+                .filter(|r| r.contains("para "))
+                .cloned()
+                .collect()
+        };
+        let before = draw(&tr, &mut view);
+        // The same message grows at its end, as an agent's chunks do.
+        tr.apply(
+            SessionUpdate::from_value(&json!({"sessionUpdate": "agent_message_chunk", "messageId": "m", "content": {"type": "text", "text": "\n\npara 31\n\npara 32\n\npara 33\n\npara 34"}}))
+                .expect("update"),
+        );
+        let after = draw(&tr, &mut view);
+        assert!(!reading(&before).is_empty(), "{before:#?}");
+        assert_eq!(reading(&before), reading(&after), "{after:#?}");
+    }
+
+    #[test]
+    fn scrolled_back_what_you_read_stays_put_as_output_arrives_and_a_click_goes_back_down() {
+        let mut tr = Transcript::default();
+        let many = |tag: &str| {
+            (1..=30)
+                .map(|i| format!("{tag} {i}"))
+                .collect::<Vec<_>>()
+                .join("\n\n")
+        };
+        agent(&mut tr, "a", &many("old"));
+        let session = ready_session();
+        let mut view = View {
+            scroll: 20,
+            ..View::default()
+        };
+        let draw = |tr: &Transcript, view: &mut View| {
+            rows_of(&draw_with(
+                tr,
+                &session,
+                &Composer::default(),
+                Theme::plain(),
+                40,
+                16,
+                view,
+            ))
+        };
+        let before = draw(&tr, &mut view);
+        agent(&mut tr, "b", &many("new"));
+        let after = draw(&tr, &mut view);
+        let reading = |rows: &[String]| -> Vec<String> {
+            rows.iter()
+                .filter(|r| r.contains("old "))
+                .cloned()
+                .collect()
+        };
+        assert!(!reading(&before).is_empty(), "{before:#?}");
+        assert_eq!(
+            reading(&before),
+            reading(&after),
+            "the same lines, in the same rows: {after:#?}"
+        );
+        let control = after
+            .iter()
+            .position(|r| r.contains("below · End"))
+            .expect("the way back is shown");
+        assert!(view.click_newest(u16::try_from(control).expect("on screen")));
+        let bottom = draw(&tr, &mut view).join("\n");
+        assert!(bottom.contains("new 30"), "{bottom}");
+        assert!(!bottom.contains("below · End"), "{bottom}");
     }
 
     #[test]
@@ -2181,6 +2547,67 @@ mod tests {
     }
 
     #[test]
+    fn a_click_opens_and_closes_the_run_under_it_and_its_first_row_stays_put() {
+        let mut tr = Transcript::default();
+        for i in 0..6 {
+            agent(&mut tr, &format!("f{i}"), &format!("earlier answer {i}"));
+        }
+        finished_tools(
+            &mut tr,
+            &[
+                ("a", "Reading one", "completed"),
+                ("b", "Reading two", "completed"),
+                ("c", "Listing docs", "completed"),
+            ],
+        );
+        agent(
+            &mut tr,
+            "m",
+            "line one\n\nline two\n\nline three\n\nline four",
+        );
+        let session = ready_session();
+        let mut view = View::default();
+        let draw = |view: &mut View| {
+            rows_of(&draw_with(
+                &tr,
+                &session,
+                &Composer::default(),
+                Theme::plain(),
+                70,
+                20,
+                view,
+            ))
+        };
+        let rows = draw(&mut view);
+        let at = rows
+            .iter()
+            .position(|r| r.contains("▸ 3 tool calls"))
+            .expect("folded");
+        let y = u16::try_from(at).expect("on screen");
+        let answer = rows
+            .iter()
+            .position(|r| r.contains("line one"))
+            .expect("shown");
+        assert!(
+            !view.click_fold(u16::try_from(answer).expect("on screen"), None),
+            "an answer does not fold"
+        );
+
+        assert!(view.click_fold(y, None));
+        let rows = draw(&mut view);
+        assert!(
+            rows[at].contains("▾ 3 tool calls"),
+            "it stayed where it was clicked: {rows:#?}"
+        );
+        assert!(rows[at + 1].contains("Reading one"), "{rows:#?}");
+
+        assert!(view.click_fold(y, None));
+        let rows = draw(&mut view);
+        assert!(rows[at].contains("▸ 3 tool calls"), "{rows:#?}");
+        assert!(!rows.join("\n").contains("Reading one"), "{rows:#?}");
+    }
+
+    #[test]
     fn browse_mode_marks_the_focus_and_scrolls_it_into_view() {
         let mut tr = Transcript::default();
         tr.apply(SessionUpdate::from_value(&json!({"sessionUpdate": "agent_thought_chunk", "messageId": "t", "content": {"type": "text", "text": "pondering deeply"}})).expect("update"));
@@ -2245,6 +2672,40 @@ mod tests {
         );
         let mut view = View::default();
         view.expanded.insert(tr.items()[0].id);
+        let open = rows_of(&draw_with(
+            &tr,
+            &session,
+            &Composer::default(),
+            Theme::plain(),
+            50,
+            12,
+            &mut view,
+        ))
+        .join("\n");
+        assert!(open.contains("I should check the manifest first"), "{open}");
+    }
+
+    #[test]
+    fn a_click_on_the_folded_thinking_opens_it() {
+        let mut tr = Transcript::default();
+        tr.apply(SessionUpdate::from_value(&json!({"sessionUpdate": "agent_thought_chunk", "messageId": "t", "content": {"type": "text", "text": "I should check the manifest first"}})).expect("update"));
+        agent(&mut tr, "m", "done");
+        let session = ready_session();
+        let mut view = View::default();
+        let rows = rows_of(&draw_with(
+            &tr,
+            &session,
+            &Composer::default(),
+            Theme::plain(),
+            50,
+            12,
+            &mut view,
+        ));
+        let at = rows
+            .iter()
+            .position(|r| r.contains("… thinking"))
+            .expect("folded");
+        assert!(view.click_fold(u16::try_from(at).expect("on screen"), None));
         let open = rows_of(&draw_with(
             &tr,
             &session,
@@ -2356,7 +2817,125 @@ mod tests {
             text.contains("› 2. Reject"),
             "the chosen option is marked: {text}"
         );
-        assert!(text.contains("Tab chooses · Enter confirms"), "{text}");
+        // A click lands on the option drawn on its row, and nowhere else.
+        let row_of = |needle: &str| {
+            u16::try_from(rows.iter().position(|r| r.contains(needle)).expect(needle))
+                .expect("on screen")
+        };
+        assert_eq!(view.option_at(row_of("1. Allow once")), Some(0));
+        assert_eq!(view.option_at(row_of("2. Reject")), Some(1));
+        assert_eq!(view.option_at(row_of("Needs you")), None);
+    }
+
+    #[test]
+    fn a_question_is_drawn_as_a_panel_and_a_click_on_a_choice_row_picks_it() {
+        let mut session = ready_session();
+        let mut scratch = Transcript::default();
+        let q = acp::Message::request(
+            "kq",
+            "elicitation/create",
+            json!({"mode": "form", "message": "Which colour?", "requestedSchema": {"type": "object", "properties": {
+                "colour": {"type": "string", "enum": ["red", "green"]}, "fast": {"type": "boolean"}}}}),
+        );
+        session.handle(crate::session::Event::Message(q), 0, &mut scratch);
+        let mut view = View::default();
+        let draw = |session: &Session, view: &mut View| {
+            rows_of(&draw_with(
+                &scratch,
+                session,
+                &Composer::default(),
+                Theme::plain(),
+                70,
+                24,
+                view,
+            ))
+        };
+        let rows = draw(&session, &mut view);
+        let text = rows.join("\n");
+        assert!(
+            text.contains("Needs you · Question") && text.contains("Which colour?"),
+            "{text}"
+        );
+        let row_of = |rows: &[String], needle: &str| {
+            u16::try_from(rows.iter().position(|r| r.contains(needle)).expect(needle))
+                .expect("on screen")
+        };
+        let green = view
+            .option_at(row_of(&rows, "2. green"))
+            .expect("a choice row");
+        assert_eq!(view.option_at(row_of(&rows, "Which colour?")), None);
+        session
+            .question_for(
+                &acp::Id::from("kq"),
+                crate::question::Act::Click(green),
+                1000,
+                &mut Transcript::default(),
+            )
+            .expect("picked");
+        let rows = draw(&session, &mut view);
+        assert!(rows.iter().any(|r| r.contains("› 2. green")), "{rows:?}");
+    }
+
+    #[test]
+    fn a_long_form_on_a_short_screen_keeps_the_current_field_and_the_keys_in_view() {
+        let mut session = ready_session();
+        let mut scratch = Transcript::default();
+        let mut props = serde_json::Map::new();
+        for i in 0..9 {
+            props.insert(
+                format!("f{i}"),
+                json!({"type": "string", "title": format!("Step {i}"), "enum": ["yes", "no"]}),
+            );
+        }
+        props.insert(
+            "last".into(),
+            json!({"type": "string", "title": "Final choice",
+                   "description": "Pick the one that suits the release. It matters a great deal, so read every word of this long description before choosing, since it wraps over several rows of a narrow screen and has no other job here.",
+                   "enum": ["red", "green", "blue"]}),
+        );
+        let q = acp::Message::request(
+            "kq",
+            "elicitation/create",
+            json!({"mode": "form", "message": "A long questionnaire", "requestedSchema": {"type": "object", "properties": props}}),
+        );
+        session.handle(crate::session::Event::Message(q), 0, &mut scratch);
+        // Each Enter starts the next field's guard window: the clock moves on between them.
+        for step in 1..=9_u64 {
+            for act in [
+                crate::question::Act::Pick(0),
+                crate::question::Act::Enter(String::new()),
+            ] {
+                session
+                    .question_for(&acp::Id::from("kq"), act, step * 10_000, &mut scratch)
+                    .expect("walked");
+            }
+        }
+        let mut view = View::default();
+        let rows = rows_of(&draw_with(
+            &scratch,
+            &session,
+            &Composer::default(),
+            Theme::plain(),
+            80,
+            24,
+            &mut view,
+        ));
+        let text = rows.join("\n");
+        for needle in [
+            "Final choice",
+            "1. red",
+            "2. green",
+            "3. blue",
+            "Esc declines",
+        ] {
+            assert!(text.contains(needle), "{needle} is on screen:\n{text}");
+        }
+        let row_of = |needle: &str| {
+            u16::try_from(rows.iter().position(|r| r.contains(needle)).expect(needle))
+                .expect("on screen")
+        };
+        assert_eq!(view.option_at(row_of("3. blue")), Some(2), "a click lands");
+        assert_eq!(view.option_at(row_of("1. red")), Some(0));
     }
 
     #[test]

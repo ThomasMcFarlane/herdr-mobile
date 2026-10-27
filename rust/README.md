@@ -10,7 +10,7 @@ you leave it and shows up on your phone. Design: `docs/TUI.md`.
 
 ```sh
 cd rust
-cargo build --release          # target/release/herdr-tui, about 1.2 MB, about 6 MB of memory with a live session
+cargo build --release          # target/release/herdr-tui, about 2.6 MB (1 MB of it the code grammars); about 6 MB of memory with a live session before code is coloured, about 1.5 MB more per language coloured (desktop, measured for Rust)
 cargo test --workspace         # 105 tests, python3 needed for the differential one (skipped without)
 ```
 
@@ -68,28 +68,51 @@ for good, `herdr-tui kill ID` (or stop it from the app).
 - Every turn ends with one line of what it did: `✓ Done in 16s · 1 file +6 −2 · 5 tools · 1 failed`.
   The mark turns to `!` only when the last call failed and nothing put it right.
 - A new session says it is ready and offers two things to try.
-- When a permission arrives the terminal bell rings once and the window title becomes
+- When a permission or a question arrives the terminal bell rings once and the window title becomes
   `▲ omp needs you` (and `● omp working` while it works), so a pane in the background still calls you.
 
 ## Keys
 
 | Key | Does |
 | --- | --- |
-| `Enter` | send the message (or, with the box empty and a request waiting, confirm the chosen option) |
+| `Enter` | send the message (or, with the box empty and a request waiting, confirm the chosen option; on a question, confirm the field) |
 | `Ctrl-J` / `Alt-Enter` | new line in the message |
-| `↑` `↓` (and the mouse wheel) | scroll the conversation 3 lines; inside a multi-line message they move the cursor |
+| `↑` `↓` | scroll the conversation 3 lines; with a request waiting and the box empty, choose an option; inside a multi-line message they move the cursor |
+| mouse wheel | scroll the conversation 3 lines |
+| click | open or close a tool call, a run of them or the thinking; on the permission or question panel, choose an option, and click the chosen one again to answer with it (on a question's ticks, tick it) |
+| `Shift`-drag | select text to copy (the terminal's own selection; `Option`-drag in iTerm2) |
 | `PgUp` `PgDn` `Home` `End` | page, start of the conversation, back to the newest |
 | `Ctrl-P` / `Ctrl-N` | recall earlier sent messages |
-| `Tab` / `Shift-Tab` | choose an option on the permission panel |
-| `1`–`9` | answer a waiting request directly (box must be empty; ignored for 0.4 s after it appears) |
+| `Tab` / `Shift-Tab` | choose an option on the permission panel (wraps around); on a question, `Shift-Tab` goes back a field |
+| Space | on a question's ticks, tick or untick the marked one |
+| `1`–`9` | answer a waiting permission directly, or mark that choice on a question (box must be empty; ignored for 0.4 s after it appears) |
 | `Ctrl-C` | stop the running turn; with nothing running, clear the box, then leave |
-| `Esc` | browse: move among what the agent did and open or close it (below) |
+| `Esc` | browse: move among what the agent did and open or close it (below); with a request waiting, withdraw it, and decline a question |
 | `Ctrl-T` | open or close every thought at once |
 | `Ctrl-W` `Ctrl-U` | delete a word, clear the box |
 | `Ctrl-L` | repaint the screen (also happens when the window regains focus), for when another program has written on the terminal |
 | `Ctrl-D` | leave (the session keeps running) |
 
-An answer that stays allowed (*Always allow*) asks for the same number, or Enter, twice.
+An answer that stays allowed (*Always allow*) asks for the same number, Enter or click twice.
+
+The mouse is taken so a click can open things; the terminal still selects text with `Shift`-drag.
+`HERDR_TUI_MOUSE=off` gives the mouse back to the terminal: a plain drag selects, the wheel still scrolls
+(as Up and Down), and clicks do nothing.
+
+### Questions
+
+An agent's question (omp's `select`, `confirm` and `input`, Claude's AskUserQuestion, Codex's
+request_user_input) is answered on a tinted panel like a permission's: `▲ Needs you · Question`, the
+agent's words, then its fields one at a time (`2 of 3`). A choice is picked with `↑` `↓`, a number or a
+click, and confirmed with `Enter` or a second click; a yes/no is two choices; ticks toggle with Space, a
+number or a click. Text and numbers are typed in the box below, which belongs to the question while it
+waits: what you were writing is set aside and comes back when the question goes, so `Enter` never sends a
+message by accident. A wrong answer (a required field left empty, not a number, out of range) is named in
+the footer and what you typed stays. What you answered stays on the panel, one line per field, and the
+last `Enter` sends it all, as the phone would. `Shift-Tab` goes back a field; `Esc` declines. Nothing is
+chosen for you and nothing is sent on a timeout; a key in the first 0.4 s after the question (or the next
+field) appears does nothing. A question answered on the phone leaves the panel with a note saying so. A
+question this terminal cannot show (a URL to open) is noted and left to the phone.
 
 ## Browsing and folding
 
@@ -97,15 +120,23 @@ A finished run of three or more tool calls folds into one line (`▸ 4 tool call
 Listing`); a call that failed always stays in view under it. Thoughts fold to `… thinking`; long output and
 big diffs open to everything that was kept. `Esc` (with the box empty) starts browsing at the newest foldable
 thing: `↑` `↓` (or `k` `j`) move, `→` `Enter` Space (or `l`) open, `←` (or `h`) close, `a` opens all, `z` closes
-all, `Esc` or `i` goes back. Typing any other letter leaves browsing and types it.
+all, `Esc` or `i` goes back. Typing any other letter leaves browsing and types it. A click on any line of a
+foldable thing opens or closes it, and its first line stays where it was (unless the whole conversation fits
+on the screen, which is drawn from the bottom up).
 
 ## Look
 
 Hierarchy, loudest first: your message in its band and the permission panel; the agent's words; what the
 agent did (quiet, uncoloured once finished; commands are coloured only while running or failed); chrome
 (hints, status, the footer). Secondary text is computed to hold a 4.6:1 contrast against your terminal's
-background, and the colours are tuned for light or dark and tested against both. A table too wide to align
-shrinks and wraps its long cells; one with too many columns becomes a card per row.
+background, and the colours are tuned for light or dark and tested against both. A table is a faint box of
+connected lines, with a rule under the header and, when a cell wraps, between rows; a column of figures lines
+up on the right, a cell keeps its code and bold, and a table still arriving shows one quiet line until it is
+whole. Code is coloured by its language with the same palette (a fenced block, and the changed lines of a
+diff by its file's extension). A table too wide to align shrinks and
+wraps its long cells; one with too many columns, or whose sentences would be squeezed to a few words a
+line, becomes a card per row. A link shows where it goes after its label. An added or removed line of a
+diff sits on a faint green or red row.
 
 What you said sits in a tinted band behind a `›`; the agent's words hang from a `•`; tool calls, notes
 and results open in the same two-column gutter. A shell command is coloured (command names blue, flags
@@ -135,6 +166,9 @@ Each has a `-light` twin in `docs/tui/`, drawn from the real frames by `python3 
 | Done; scrolled back | `07-done`, `08-scrolled` |
 | Tables: too many columns, long cells | `09-wide-table`, `10-table-wraps` |
 | Browsing a folded run | `11-browse` |
+| Coloured code, numbered list past 9, a link | `12-code` |
+| A table still arriving | `13-streaming` |
+| An agent's question | `14-question` |
 
 ## Inside herdr
 
@@ -183,5 +217,5 @@ rust/crates/viewer   transcript, session state machine, markdown, UI  (the herdr
 
 ## Not yet
 
-Answering agent questions (forms) in the terminal; the Rust keeper daemon; reporting state to
-herdr panes; a session picker (`resume`); delivery of the binary to hosts from the GitHub release.
+The Rust keeper daemon; reporting state to herdr panes; a session picker (`resume`); delivery of the
+binary to hosts from the GitHub release.

@@ -11,16 +11,23 @@ use acp::Message;
 use crossterm::{
     event::{
         self, DisableBracketedPaste, DisableFocusChange, EnableBracketedPaste, EnableFocusChange,
-        Event as Term, KeyCode, KeyEvent, KeyEventKind, KeyModifiers,
+        Event as Term, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseButton, MouseEvent,
+        MouseEventKind,
     },
     execute,
-    terminal::{self, EnterAlternateScreen, LeaveAlternateScreen, SetTitle},
+    terminal::{
+        self, BeginSynchronizedUpdate, EndSynchronizedUpdate, EnterAlternateScreen,
+        LeaveAlternateScreen, SetTitle,
+    },
 };
 use herdr_tui::composer::Composer;
+use herdr_tui::question::{self, Act};
 use herdr_tui::session::{Effect, Event, Phase, Record, Refused, Session, Start};
 use herdr_tui::transcript::Transcript;
 use herdr_tui::ui;
-use herdr_tui::{cli, delight, fold, herdr, host, input, lines, md, sessions, termbg, theme};
+use herdr_tui::{
+    cli, delight, fold, herdr, highlight, host, input, lines, md, sessions, termbg, theme,
+};
 use keeper::records::StateDir;
 use std::io::{BufReader, Write};
 use std::os::unix::net::UnixStream;
@@ -30,9 +37,13 @@ use std::time::{Duration, Instant};
 
 /// Lines one press of Up or Down (or one tick of the wheel) scrolls.
 const SCROLL_STEP: usize = 3;
+/// Said when a key or a paste lands on a question's choices, where it would do nothing.
+const QUESTION_HINT: &str = "Answer on the panel: ↑↓ or a number, then Enter; Esc declines";
 
 enum Ev {
     Key(KeyEvent),
+    /// A click or a turn of the wheel, when the mouse is ours (`input::mouse_wanted`).
+    Mouse(MouseEvent),
     Resize,
     /// Text pasted (the terminal marks it, so it is one insertion and not a run of keys).
     Paste(String),
@@ -64,6 +75,11 @@ struct App {
     last_title: String,
     /// The request the chosen option belongs to; a new one starts at the first option.
     sel_for: Option<acp::Id>,
+    /// While a question waits the composer is its box: the person's own draft, set aside until
+    /// the question goes.
+    stash: Option<String>,
+    /// The question and field whose text the composer holds.
+    boxed: Option<(acp::Id, usize)>,
     repaint: bool,
     /// Whether things move: the spinner, the shimmer, the pulse and unfolds.
     motion: bool,
@@ -226,6 +242,8 @@ fn main() {
         was_attention: false,
         last_title: String::new(),
         sel_for: None,
+        stash: None,
+        boxed: None,
         repaint: false,
         motion: delight::motion_enabled(),
         signal: None,
@@ -249,7 +267,8 @@ fn main() {
 
     let mut term = ratatui::init();
     let _ = execute!(std::io::stdout(), EnterAlternateScreen, SetTitle("herdr"));
-    // Ask the terminal to send the wheel as Up and Down while we own the screen.
+    // Ask the terminal to send the wheel as Up and Down while we own the screen (what the wheel
+    // does when the mouse is not ours, below).
     let _ = std::io::stdout().write_all(b"\x1b[?1007h");
     let _ = execute!(std::io::stdout(), EnableFocusChange, EnableBracketedPaste);
     let _ = terminal::enable_raw_mode();
@@ -258,7 +277,14 @@ fn main() {
     // The tint behind messages is derived from the real background, so ask for it, once, now:
     // the keyboard thread is not reading yet.
     app.theme = theme::Theme::detect(termbg::query());
+    // Clicks and the wheel come to us (after the colour query, so no click lands in its reply):
+    // a click opens what it is on, and the terminal's own selection is Shift-drag.
+    if input::mouse_wanted(|k| std::env::var(k).ok()) {
+        let _ = std::io::stdout().write_all(input::MOUSE_ON);
+        let _ = std::io::stdout().flush();
+    }
     spawn_input(tx.clone());
+    highlight::warm();
     spawn_signals(tx);
 
     while !app.quit {
@@ -297,7 +323,10 @@ fn main() {
         if std::mem::take(&mut app.repaint) {
             let _ = term.clear();
         }
+        // One frame reaches the terminal whole: where it is supported, it shows nothing half-drawn.
+        let _ = execute!(std::io::stdout(), BeginSynchronizedUpdate);
         let _ = term.draw(|f| ui::draw(f, &ctx, &mut app.view));
+        let _ = execute!(std::io::stdout(), EndSynchronizedUpdate);
         // The loop sleeps until something happens, and wakes by itself only while something moves:
         // the elapsed counter every second, the shimmer and spinner every few frames, an unfold at
         // 60 Hz for the 160 ms it lasts. At rest nothing wakes it.
@@ -346,11 +375,20 @@ fn main() {
 }
 
 /// Puts back every terminal mode this program changed. Run on a normal exit and, through the panic
-/// hook, on a crash, so the terminal is never left with its wheel remapped or focus events on.
+/// hook, on a crash, so the terminal is never left with its wheel remapped, the mouse taken or
+/// focus events on.
 fn restore_modes() {
     let mut out = std::io::stdout();
+    let _ = out.write_all(input::MOUSE_OFF);
     let _ = out.write_all(b"\x1b[?1007l");
-    let _ = execute!(out, DisableBracketedPaste, DisableFocusChange, SetTitle(""));
+    // A panic between the begin and end of a frame must not leave the terminal holding output.
+    let _ = execute!(
+        out,
+        EndSynchronizedUpdate,
+        DisableBracketedPaste,
+        DisableFocusChange,
+        SetTitle("")
+    );
 }
 
 /// ratatui's panic hook restores raw mode and the alternate screen; this adds the rest.
@@ -377,6 +415,17 @@ fn spawn_input(tx: mpsc::Sender<Ev>) {
                 Ok(Term::Paste(text)) => Ev::Paste(text),
                 Ok(Term::Resize(..)) => Ev::Resize,
                 Ok(Term::FocusGained) => Ev::Repaint,
+                // Only what acts: a release, a drag or a move would wake the screen for nothing.
+                Ok(Term::Mouse(m))
+                    if matches!(
+                        m.kind,
+                        MouseEventKind::Down(MouseButton::Left)
+                            | MouseEventKind::ScrollUp
+                            | MouseEventKind::ScrollDown
+                    ) =>
+                {
+                    Ev::Mouse(m)
+                }
                 Ok(_) => continue,
                 Err(_) => return,
             };
@@ -477,6 +526,46 @@ impl App {
         u64::try_from(self.t0.elapsed().as_millis()).unwrap_or(u64::MAX)
     }
 
+    /// The wheel scrolls; a click on an option of the asking panel chooses it, and a click on
+    /// the option already chosen answers with it (the same guards as Enter; on a question's ticks
+    /// a click ticks); a click on a tool call, a run of them or the thinking opens or closes it.
+    fn mouse(&mut self, m: MouseEvent) {
+        match m.kind {
+            MouseEventKind::ScrollUp => {
+                self.view.scroll = self.view.scroll.saturating_add(SCROLL_STEP);
+            }
+            MouseEventKind::ScrollDown => {
+                self.view.scroll = self.view.scroll.saturating_sub(SCROLL_STEP);
+            }
+            MouseEventKind::Down(MouseButton::Left) => {
+                self.hint = None;
+                self.view.help = false;
+                if !self.session.waiting().is_empty() {
+                    if let Some(i) = self.view.option_at(m.row) {
+                        if self.asking_question() {
+                            self.ask(Act::Click(i));
+                            return;
+                        }
+                        if i == self.view.sel {
+                            self.answer(i);
+                        } else {
+                            self.confirm = None;
+                            self.view.sel = i;
+                        }
+                        return;
+                    }
+                }
+                self.confirm = None;
+                if self.view.click_newest(m.row) {
+                    return;
+                }
+                let now = self.motion.then(|| self.now_ms());
+                self.view.click_fold(m.row, now);
+            }
+            _ => {}
+        }
+    }
+
     fn handle(&mut self, ev: Ev) {
         match ev {
             Ev::Key(k) => {
@@ -486,6 +575,7 @@ impl App {
                 }
                 self.key(k);
             }
+            Ev::Mouse(m) => self.mouse(m),
             Ev::Resize => {}
             Ev::Repaint => self.repaint = true,
             Ev::Paste(text) => self.paste(&text),
@@ -498,6 +588,48 @@ impl App {
                 self.run(fx);
             }
         }
+        self.sync_box();
+    }
+
+    fn asking_question(&self) -> bool {
+        self.session
+            .waiting()
+            .first()
+            .is_some_and(|w| w.question().is_some())
+    }
+
+    /// While a question waits, the composer belongs to it: the person's own draft is set aside
+    /// (it comes back when the question goes), and on a typed field the box holds that field's
+    /// text, so Enter can never send a prompt by accident.
+    fn sync_box(&mut self) {
+        let head = self
+            .session
+            .waiting()
+            .first()
+            .and_then(|w| w.question().map(|q| (w.id.clone(), q.at())));
+        let Some(at) = head else {
+            self.boxed = None;
+            if let Some(draft) = self.stash.take() {
+                self.composer.clear();
+                self.composer.restore(draft);
+            }
+            return;
+        };
+        if self.stash.is_none() {
+            self.stash = Some(std::mem::take(&mut self.composer.text));
+            self.composer.clear();
+            self.boxed = None;
+        }
+        if self.boxed.as_ref() == Some(&at) {
+            return;
+        }
+        self.composer.clear();
+        if let Some(q) = self.session.waiting().first().and_then(|w| w.question()) {
+            if q.typed() {
+                self.composer.restore(q.text().to_string());
+            }
+        }
+        self.boxed = Some(at);
     }
 
     /// Carries out effects. Reading the record answers at once, so it may produce more.
@@ -543,6 +675,17 @@ impl App {
 
     /// A paste goes into the box whole: no line of it is sent, and nothing in it acts as a key.
     fn paste(&mut self, text: &str) {
+        // A question's choices are picked on the panel: a paste there would go nowhere.
+        let choosing = self
+            .session
+            .waiting()
+            .first()
+            .and_then(|w| w.question())
+            .is_some_and(|q| !q.typed());
+        if choosing {
+            self.hint = Some(QUESTION_HINT.to_string());
+            return;
+        }
         let (clean, cut) = input::clean_paste(text);
         self.view.focus = None;
         self.view.invalidate_lines();
@@ -633,6 +776,9 @@ impl App {
         if self.view.focus.is_some() && self.browse_key(k) {
             return;
         }
+        if self.question_key(k) {
+            return;
+        }
         let ctrl = k.modifiers.contains(KeyModifiers::CONTROL);
         let alt = k.modifiers.contains(KeyModifiers::ALT);
         match k.code {
@@ -680,12 +826,28 @@ impl App {
                 self.answer(self.view.sel);
             }
             KeyCode::Enter => self.send(),
-            KeyCode::Tab | KeyCode::BackTab if !self.session.waiting().is_empty() => {
-                let n = self.session.waiting()[0].request.options.len().max(1);
+            KeyCode::Tab | KeyCode::BackTab if self.session.permission_waiting() => {
+                let n = self.session.waiting()[0]
+                    .permission()
+                    .map_or(1, |r| r.options.len().max(1));
                 self.view.sel = if k.code == KeyCode::Tab {
                     (self.view.sel + 1) % n
                 } else {
                     (self.view.sel + n - 1) % n
+                };
+            }
+            // With a request waiting and nothing typed, Up and Down walk its options (and stop at
+            // the ends); the conversation still scrolls with PgUp, PgDn and the wheel.
+            KeyCode::Up | KeyCode::Down
+                if self.composer.text.is_empty() && self.session.permission_waiting() =>
+            {
+                let last = self.session.waiting()[0]
+                    .permission()
+                    .map_or(0, |r| r.options.len().saturating_sub(1));
+                self.view.sel = if k.code == KeyCode::Up {
+                    self.view.sel.saturating_sub(1)
+                } else {
+                    (self.view.sel + 1).min(last)
                 };
             }
             // A digit answers only with an empty box: one being typed into a
@@ -694,7 +856,7 @@ impl App {
                 if !ctrl
                     && !alt
                     && self.composer.text.is_empty()
-                    && !self.session.waiting().is_empty() =>
+                    && self.session.permission_waiting() =>
             {
                 self.answer(c as usize - '1' as usize);
             }
@@ -712,7 +874,7 @@ impl App {
             // conversation; they move within a message only when it has several lines.
             KeyCode::Up => {
                 if !(self.composer.text.contains('\n') && self.composer.up()) {
-                    self.view.scroll += SCROLL_STEP;
+                    self.view.scroll = self.view.scroll.saturating_add(SCROLL_STEP);
                 }
             }
             KeyCode::Down => {
@@ -720,10 +882,65 @@ impl App {
                     self.view.scroll = self.view.scroll.saturating_sub(SCROLL_STEP);
                 }
             }
-            KeyCode::PageUp => self.view.scroll += self.view.page,
+            KeyCode::PageUp => self.view.scroll = self.view.scroll.saturating_add(self.view.page),
             KeyCode::PageDown => self.view.scroll = self.view.scroll.saturating_sub(self.view.page),
             _ => {}
         }
+    }
+
+    /// Keys for the question on screen. `true` when the key was the question's: on a typed field
+    /// everything but Enter, Shift-Tab and Esc edits the box as usual.
+    fn question_key(&mut self, k: KeyEvent) -> bool {
+        let Some(typed) = self
+            .session
+            .waiting()
+            .first()
+            .and_then(|w| w.question())
+            .map(|q| q.typed())
+        else {
+            return false;
+        };
+        // Ctrl-C still stops the turn, Ctrl-U clears, Ctrl-J breaks a typed answer's line.
+        if k.modifiers
+            .intersects(KeyModifiers::CONTROL | KeyModifiers::ALT)
+        {
+            return false;
+        }
+        let act = match k.code {
+            KeyCode::Esc => {
+                if question::esc_declines(typed, &self.composer.text) {
+                    self.dismiss();
+                }
+                return true;
+            }
+            KeyCode::Enter if typed && k.modifiers.contains(KeyModifiers::SHIFT) => return false,
+            // The box is empty on a choice: only a typed field's text goes with it.
+            KeyCode::Enter => Act::Enter(self.composer.text.clone()),
+            KeyCode::BackTab => Act::Back(self.composer.text.clone()),
+            _ if typed => return false,
+            KeyCode::Up => Act::Up,
+            KeyCode::Down => Act::Down,
+            KeyCode::Char(' ') => Act::Toggle,
+            KeyCode::Char(c @ '1'..='9') => Act::Pick(c as usize - '1' as usize),
+            KeyCode::Char(_) | KeyCode::Tab | KeyCode::Backspace | KeyCode::Delete => {
+                self.hint = Some(QUESTION_HINT.to_string());
+                return true;
+            }
+            _ => return false,
+        };
+        self.ask(act);
+        true
+    }
+
+    fn ask(&mut self, act: Act) {
+        // As for a permission: the question the person is looking at, as last drawn.
+        let Some(shown) = self.sel_for.clone() else {
+            return;
+        };
+        let result = self
+            .session
+            .question_for(&shown, act, self.now_ms(), &mut self.transcript);
+        self.finish_answer(result);
     }
 
     fn answer(&mut self, index: usize) {
@@ -738,7 +955,8 @@ impl App {
             .waiting()
             .first()
             .filter(|w| w.id == shown)
-            .and_then(|w| w.request.options.get(index))
+            .and_then(|w| w.permission())
+            .and_then(|r| r.options.get(index))
             .is_some_and(|o| o.is_standing());
         if standing && self.confirm.as_ref() != Some(&(shown.clone(), index)) {
             self.confirm = Some((shown, index));
@@ -755,7 +973,8 @@ impl App {
         self.finish_answer(result);
     }
 
-    /// Esc on a request: withdraw it. The way out of one that offers nothing to choose.
+    /// Esc on a request: withdraw a permission (the way out of one that offers nothing to
+    /// choose), decline a question.
     fn dismiss(&mut self) {
         let Some(shown) = self.sel_for.clone() else {
             return;
@@ -769,7 +988,14 @@ impl App {
 
     fn finish_answer(&mut self, result: Result<Vec<Effect>, Refused>) {
         match result {
-            Ok(fx) => self.run(fx),
+            // The agent goes on from the answer: follow it. A mark or a move on a question sends
+            // nothing and leaves the conversation where the person had scrolled it.
+            Ok(fx) => {
+                if !fx.is_empty() {
+                    self.view.scroll = 0;
+                }
+                self.run(fx);
+            }
             // A key right after the card appeared was meant for something else.
             Err(Refused::TooSoon | Refused::NothingWaiting) => {}
             Err(Refused::Changed) => {
@@ -777,6 +1003,8 @@ impl App {
                     Some("That request was answered elsewhere; look at the next one".to_string())
             }
             Err(Refused::Ended) => self.hint = Some("The session is over".to_string()),
+            // The field keeps what was typed; the footer says what is wrong.
+            Err(Refused::Invalid(why)) => self.hint = Some(why),
             Err(_) => self.hint = Some("No such option".to_string()),
         }
     }

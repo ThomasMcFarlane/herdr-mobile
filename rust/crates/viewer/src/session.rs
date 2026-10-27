@@ -1,8 +1,9 @@
-//! The client side of one keeper session: handshake, load or create, prompts
-//! and permission requests. Pure: events and the time go in, [`Effect`]s come
-//! out, and the I/O layer carries them out. That keeps every rule here testable
+//! The client side of one keeper session: handshake, load or create, prompts,
+//! permission requests and questions. Pure: events and the time go in, [`Effect`]s
+//! come out, and the I/O layer carries them out. That keeps every rule here testable
 //! without a socket, a thread or a clock.
 
+use crate::question::{self, Act, Form};
 use crate::transcript::Transcript;
 use acp::{code, method, Id, Message, PermissionRequest, RpcError, SessionUpdate};
 use serde_json::{json, Value};
@@ -69,12 +70,37 @@ pub struct Record {
     pub exited: Option<String>,
 }
 
-/// A permission request waiting for the person.
+/// What a waiting request asks.
+#[derive(Clone, Debug, PartialEq)]
+pub enum Ask {
+    Permission(PermissionRequest),
+    /// A question in form mode, with the person's answers so far.
+    Question(Form),
+}
+
+/// A request waiting for the person.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Waiting {
     pub id: Id,
-    pub request: PermissionRequest,
+    pub ask: Ask,
     pub arrived_ms: u64,
+}
+
+impl Waiting {
+    #[must_use]
+    pub fn permission(&self) -> Option<&PermissionRequest> {
+        match &self.ask {
+            Ask::Permission(r) => Some(r),
+            Ask::Question(_) => None,
+        }
+    }
+    #[must_use]
+    pub fn question(&self) -> Option<&Form> {
+        match &self.ask {
+            Ask::Question(f) => Some(f),
+            Ask::Permission(_) => None,
+        }
+    }
 }
 
 /// Why the person's action did nothing.
@@ -92,6 +118,8 @@ pub enum Refused {
     Changed,
     /// The session is over; nothing can reach the agent.
     Ended,
+    /// The question's field does not take what was given, and why, in the person's words.
+    Invalid(String),
 }
 
 #[derive(Debug)]
@@ -153,6 +181,15 @@ impl Session {
     #[must_use]
     pub fn waiting(&self) -> &[Waiting] {
         &self.waiting
+    }
+    /// Whether the request on screen is a permission, the only kind that digits, Tab and the
+    /// arrows answer or walk. On a question they belong to the box (a typed field) or to the
+    /// question's own keys.
+    #[must_use]
+    pub fn permission_waiting(&self) -> bool {
+        self.waiting
+            .first()
+            .is_some_and(|w| w.permission().is_some())
     }
     #[must_use]
     pub fn ready(&self) -> bool {
@@ -378,18 +415,26 @@ impl Session {
     ) -> Vec<Effect> {
         match name {
             method::REQUEST_PERMISSION => {
-                if !self.waiting.iter().any(|w| w.id == id) {
-                    self.waiting.push(Waiting {
-                        id,
-                        request: PermissionRequest::from_params(p),
-                        arrived_ms: now_ms,
-                    });
-                }
+                self.hold(
+                    id,
+                    Ask::Permission(PermissionRequest::from_params(p)),
+                    now_ms,
+                );
                 Vec::new()
             }
             method::ELICITATION_CREATE => {
-                let q = p.get("message").and_then(Value::as_str).unwrap_or("");
-                tr.note(format!("Question: {q} (answer it on the phone)"));
+                match Form::parse(p, now_ms) {
+                    Some(form) => self.hold(id, Ask::Question(form), now_ms),
+                    // The keeper gives a question to every client and forwards the first answer
+                    // (`HELD` in keeper_script.dart), so this terminal is never the one expected to
+                    // answer. A refusal here (the phone's invalidParams) would be that first
+                    // answer and take the question from the phone, so a mode it cannot show is
+                    // only noted and left to the phone.
+                    None => {
+                        let q = p.get("message").and_then(Value::as_str).unwrap_or("");
+                        tr.note(format!("Question: {q} (answer it on the phone)"));
+                    }
+                }
                 Vec::new()
             }
             other => vec![Effect::Send(Message::error(
@@ -399,6 +444,17 @@ impl Session {
                     format!("A terminal view does not answer {other}."),
                 ),
             ))],
+        }
+    }
+
+    /// Queues a request, once: the keeper may give the same one again.
+    fn hold(&mut self, id: Id, ask: Ask, now_ms: u64) {
+        if !self.waiting.iter().any(|w| w.id == id) {
+            self.waiting.push(Waiting {
+                id,
+                ask,
+                arrived_ms: now_ms,
+            });
         }
     }
 
@@ -429,12 +485,18 @@ impl Session {
             return Vec::new();
         };
         tr.note("Asked the agent to stop");
-        // ACP: a client that cancels a turn answers every permission request still open as
-        // cancelled. Left asking, they could be approved after the person said stop.
+        // ACP: a client that cancels a turn answers every request still open as cancelled. Left
+        // asking, they could be approved after the person said stop.
         let mut effects: Vec<Effect> = self
             .waiting
             .drain(..)
-            .map(|w| Effect::Send(Message::result(w.id, acp::outcome_cancelled())))
+            .map(|w| {
+                let result = match w.ask {
+                    Ask::Permission(_) => acp::outcome_cancelled(),
+                    Ask::Question(_) => question::cancelled(),
+                };
+                Effect::Send(Message::result(w.id, result))
+            })
             .collect();
         effects.push(Effect::Send(Message::notification(
             method::SESSION_CANCEL,
@@ -461,7 +523,10 @@ impl Session {
         if now_ms.saturating_sub(w.arrived_ms) < ANSWER_GUARD_MS {
             return Err(Refused::TooSoon);
         }
-        let option = w.request.options.get(index).ok_or(Refused::NoSuchOption)?;
+        let option = w
+            .permission()
+            .and_then(|r| r.options.get(index))
+            .ok_or(Refused::NoSuchOption)?;
         let reply = Message::result(w.id.clone(), acp::outcome_selected(&option.id));
         tr.note(format!("Answered: {}", option.name));
         self.waiting.remove(0);
@@ -485,8 +550,8 @@ impl Session {
         self.answer(index, now_ms, tr)
     }
 
-    /// Withdraws the request on screen: the agent is told `cancelled`. The way out of a request
-    /// that offers nothing to choose.
+    /// Withdraws the request on screen: a permission is answered `cancelled` (the way out of one
+    /// that offers nothing to choose), a question is declined, as the phone's Decline does.
     ///
     /// # Errors
     /// As [`Session::answer_for`].
@@ -501,8 +566,51 @@ impl Session {
         if now_ms.saturating_sub(w.arrived_ms) < ANSWER_GUARD_MS {
             return Err(Refused::TooSoon);
         }
-        let reply = Message::result(w.id.clone(), acp::outcome_cancelled());
-        tr.note("Cancelled the request");
+        let (result, said) = match w.ask {
+            Ask::Permission(_) => (acp::outcome_cancelled(), "Cancelled the request"),
+            Ask::Question(_) => (question::declined(), "Declined the question"),
+        };
+        let reply = Message::result(w.id.clone(), result);
+        tr.note(said);
+        self.waiting.remove(0);
+        self.promote(None, now_ms);
+        Ok(vec![Effect::Send(reply)])
+    }
+
+    /// The person acts on the question `shown`, the one their screen last drew: moves the mark,
+    /// ticks, goes back, or confirms a field. Confirming the last sends the answers. A key this
+    /// soon after the question appeared, or a confirm this soon after the field did, was meant
+    /// for what was on screen before and does nothing.
+    ///
+    /// # Errors
+    /// As [`Session::answer_for`], [`Refused::Invalid`] with what is wrong with the field, and
+    /// [`Refused::NoSuchOption`] when the request on screen is not a question.
+    pub fn question_for(
+        &mut self,
+        shown: &Id,
+        act: Act,
+        now_ms: u64,
+        tr: &mut Transcript,
+    ) -> Result<Vec<Effect>, Refused> {
+        self.check_shown(shown)?;
+        let w = self.waiting.first_mut().ok_or(Refused::NothingWaiting)?;
+        let arrived = w.arrived_ms;
+        let Ask::Question(form) = &mut w.ask else {
+            return Err(Refused::NoSuchOption);
+        };
+        let since = if form.confirms(&act) {
+            arrived.max(form.since_ms())
+        } else {
+            arrived
+        };
+        if now_ms.saturating_sub(since) < ANSWER_GUARD_MS {
+            return Err(Refused::TooSoon);
+        }
+        let Some(result) = form.act(act, now_ms).map_err(Refused::Invalid)? else {
+            return Ok(Vec::new());
+        };
+        tr.note(format!("Answered: {}", form.summary()));
+        let reply = Message::result(w.id.clone(), result);
         self.waiting.remove(0);
         self.promote(None, now_ms);
         Ok(vec![Effect::Send(reply)])
@@ -946,5 +1054,172 @@ mod tests {
         assert!(
             matches!(fx.as_slice(), [Effect::Send(Message::Notification { method, params })] if method == "session/cancel" && params["sessionId"] == "sess")
         );
+    }
+
+    /// An omp-style form with an enum, a boolean and a string.
+    fn question(id: &str) -> Event {
+        Event::Message(Message::request(
+            id,
+            method::ELICITATION_CREATE,
+            json!({"sessionId": "sess", "mode": "form", "message": "Set up the run",
+                   "requestedSchema": {"type": "object", "required": ["colour"], "properties": {
+                       "colour": {"type": "string", "enum": ["red", "green", "blue"]},
+                       "fast": {"type": "boolean"},
+                       "note": {"type": "string"}}}}),
+        ))
+    }
+
+    fn sent(fx: &[Effect]) -> Option<(&Id, &Value)> {
+        match fx {
+            [Effect::Send(Message::Response { id, outcome: Ok(r) })] => Some((id, r)),
+            _ => None,
+        }
+    }
+
+    #[test]
+    fn a_question_is_walked_field_by_field_and_answered_with_what_was_chosen() {
+        let (mut s, mut tr) = ready();
+        s.handle(question("kq"), 10_000, &mut tr);
+        assert!(s.waiting()[0].question().is_some());
+        let q = Id::from("kq");
+        let t = 10_000 + ANSWER_GUARD_MS;
+        assert_eq!(
+            s.question_for(&q, Act::Down, t - 1, &mut tr),
+            Err(Refused::TooSoon),
+            "a key meant for the composer does not touch it"
+        );
+        s.question_for(&q, Act::Pick(2), t, &mut tr)
+            .expect("marked");
+        assert_eq!(
+            s.question_for(&q, Act::Enter(String::new()), t, &mut tr),
+            Ok(Vec::new())
+        );
+        // A second Enter at once was aimed at the field that just went.
+        assert_eq!(
+            s.question_for(&q, Act::Enter(String::new()), t + 1, &mut tr),
+            Err(Refused::TooSoon)
+        );
+        let t = t + ANSWER_GUARD_MS;
+        s.question_for(&q, Act::Up, t, &mut tr).expect("Yes");
+        s.question_for(&q, Act::Enter(String::new()), t, &mut tr)
+            .expect("next");
+        let t = t + ANSWER_GUARD_MS;
+        let fx = s
+            .question_for(&q, Act::Enter("ship it".into()), t, &mut tr)
+            .expect("sent");
+        assert_eq!(
+            sent(&fx),
+            Some((
+                &q,
+                &json!({"action": "accept", "content": {"colour": "blue", "fast": true, "note": "ship it"}})
+            ))
+        );
+        assert!(s.waiting().is_empty());
+        assert!(tr
+            .items()
+            .iter()
+            .any(|i| matches!(&i.entry, crate::transcript::Entry::Note(n) if n.contains("blue"))));
+    }
+
+    #[test]
+    fn a_wrong_answer_is_refused_with_its_reason_and_the_question_stays() {
+        let (mut s, mut tr) = ready();
+        s.handle(Event::Message(Message::request("kq", method::ELICITATION_CREATE,
+            json!({"mode": "form", "message": "How many?", "requestedSchema": {"type": "object", "required": ["n"], "properties": {"n": {"type": "integer"}}}}))), 0, &mut tr);
+        let q = Id::from("kq");
+        assert!(matches!(
+            s.question_for(&q, Act::Enter("lots".into()), 1000, &mut tr),
+            Err(Refused::Invalid(_))
+        ));
+        let form = s.waiting()[0].question().expect("still asking");
+        assert_eq!(form.text(), "lots", "the typed text is kept");
+        let fx = s
+            .question_for(&q, Act::Enter("3".into()), 2000, &mut tr)
+            .expect("sent");
+        assert_eq!(
+            sent(&fx).map(|(_, r)| &r["content"]),
+            Some(&json!({"n": 3}))
+        );
+    }
+
+    #[test]
+    fn a_question_answered_on_the_phone_leaves_and_a_key_meant_for_it_does_nothing() {
+        let (mut s, mut tr) = ready();
+        s.handle(question("A"), 0, &mut tr);
+        s.handle(permission("B"), 0, &mut tr);
+        s.handle(
+            note(
+                "_herdr/resolved",
+                json!({"requestId": "A", "by": "herdr mobile", "answer": "accept"}),
+            ),
+            9000,
+            &mut tr,
+        );
+        s.handle(
+            note("$/cancel_request", json!({"requestId": "A"})),
+            9000,
+            &mut tr,
+        );
+        assert_eq!(s.waiting().len(), 1);
+        assert_eq!(
+            s.question_for(&Id::from("A"), Act::Enter(String::new()), 9001, &mut tr),
+            Err(Refused::Changed)
+        );
+        assert_eq!(
+            s.answer_for(&Id::from("B"), 0, 9001, &mut tr),
+            Err(Refused::TooSoon),
+            "the permission behind it has only just appeared"
+        );
+    }
+
+    #[test]
+    fn esc_declines_a_question_and_stopping_the_turn_cancels_it() {
+        let (mut s, mut tr) = ready();
+        s.handle(question("A"), 0, &mut tr);
+        s.handle(question("B"), 0, &mut tr);
+        let fx = s
+            .dismiss_for(&Id::from("A"), 1000, &mut tr)
+            .expect("declined");
+        assert_eq!(
+            sent(&fx).map(|(_, r)| r),
+            Some(&json!({"action": "decline"}))
+        );
+        let fx = s.cancel(&mut tr);
+        assert!(
+            matches!(fx.first(), Some(Effect::Send(Message::Response { id, outcome: Ok(r) })) if id == &Id::from("B") && r == &json!({"action": "cancel"})),
+            "{fx:?}"
+        );
+    }
+
+    #[test]
+    fn only_a_permission_on_screen_takes_the_permission_keys() {
+        let (mut s, mut tr) = ready();
+        assert!(!s.permission_waiting(), "nothing is waiting");
+        s.handle(question("A"), 0, &mut tr);
+        s.handle(permission("B"), 0, &mut tr);
+        assert!(
+            !s.permission_waiting(),
+            "the question in front keeps its keys"
+        );
+        s.dismiss_for(&Id::from("A"), 1000, &mut tr)
+            .expect("declined");
+        assert!(s.permission_waiting());
+    }
+
+    #[test]
+    fn a_question_this_terminal_cannot_show_is_left_to_the_phone() {
+        let (mut s, mut tr) = ready();
+        let fx = s.handle(
+            Event::Message(Message::request(
+                "kq",
+                method::ELICITATION_CREATE,
+                json!({"mode": "url", "url": "https://example.com", "message": "Sign in"}),
+            )),
+            0,
+            &mut tr,
+        );
+        assert!(fx.is_empty(), "no answer: it would be the first and win");
+        assert!(s.waiting().is_empty());
+        assert_eq!(tr.items().len(), 1, "it is noted");
     }
 }

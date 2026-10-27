@@ -150,6 +150,11 @@ jobs:
           cargo test --workspace
       - name: Build
         working-directory: rust
+        # syntect's regex engine (oniguruma) is C: `cc` must be told which compiler builds it for
+        # a musl target (it only guesses `<arch>-linux-musl-gcc`, which musl-tools does not install).
+        env:
+          CC_x86_64_unknown_linux_musl: musl-gcc
+          CC_aarch64_unknown_linux_musl: musl-gcc
         run: cargo build --release --locked -p herdr-tui --target "${{ matrix.target }}"
       - name: Smoke test
         run: rust/target/${{ matrix.target }}/release/herdr-tui --version

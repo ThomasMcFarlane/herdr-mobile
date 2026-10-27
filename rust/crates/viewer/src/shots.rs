@@ -112,6 +112,22 @@ fn conversation(upto: &str) -> Transcript {
         tr.done(3);
         return tr;
     }
+    if upto == "code" {
+        tr.user("show me the retry helper and what to check");
+        say(&mut tr, "m", "Here is the helper, in `lib/retry.rs`:\n\n```rust\n/// Retries `op` with a doubling delay, at most `tries` times.\npub async fn retry<T, E>(tries: u32, mut op: impl FnMut() -> Result<T, E>) -> Result<T, E> {\n    let mut delay = Duration::from_millis(50);\n    for _ in 1..tries {\n        match op() {\n            Ok(v) => return Ok(v),\n            Err(_) => sleep(delay).await, // back off\n        }\n        delay *= 2;\n    }\n    op()\n}\n```\n\nAnd the same check in Python:\n\n```python\ndef healthy(host: str) -> bool:\n    \"\"\"True when the keeper answers within 2 s.\"\"\"\n    return ping(host, timeout=2.0) is not None\n```\n\n8. Run `cargo test retry`\n9. Check the [retry docs](https://docs.rs/tokio/latest/tokio/time/fn.sleep.html)\n10. Ship it\n");
+        tr.turn_end(Some("end_turn"));
+        tr.done(5);
+        return tr;
+    }
+    if upto == "streaming" {
+        tr.user("which machines need me?");
+        upd(
+            &mut tr,
+            &json!({"sessionUpdate": "state_update", "state": "running"}),
+        );
+        say(&mut tr, "m", "Two of them. Here is where each stands:\n\n| machine | agent | status | notes |\n|:--|:--|:--|:--|\n| dev-box | codex | blocked | asked to approve `cargo test` |\n| nas | omp | err");
+        return tr;
+    }
     tr.user("Fix the flaky sync test in test/sync_test.dart");
     upd(
         &mut tr,
@@ -381,6 +397,38 @@ fn shots() {
             None,
         ),
     );
+    let mut questioned = ready();
+    let mut scratch = Transcript::default();
+    questioned.handle(
+        Event::Message(Message::request(
+            "kq1",
+            "elicitation/create",
+            json!({"mode": "form", "message": "Where should the test results go?", "requestedSchema": {"type": "object",
+                "properties": {
+                    "target": {"type": "string", "title": "Report to", "oneOf": [
+                        {"const": "pr", "title": "A comment on the pull request"},
+                        {"const": "file", "title": "test-report.md in the repo"},
+                        {"const": "none", "title": "Nowhere, just tell me"}]},
+                    "notify": {"type": "boolean", "title": "Ping me when done"}},
+                "required": ["target"]}}),
+        )),
+        0,
+        &mut scratch,
+    );
+    write(
+        "14-question",
+        frame(
+            &conversation("permission"),
+            &questioned,
+            &none,
+            theme,
+            100,
+            36,
+            &mut new_view(),
+            None,
+            None,
+        ),
+    );
     let mut second = new_view();
     second.sel = 1;
     write(
@@ -492,6 +540,34 @@ fn shots() {
             36,
             &mut up,
             None,
+            None,
+        ),
+    );
+    write(
+        "12-code",
+        frame(
+            &conversation("code"),
+            &ready(),
+            &none,
+            theme,
+            100,
+            36,
+            &mut new_view(),
+            None,
+            None,
+        ),
+    );
+    write(
+        "13-streaming",
+        frame(
+            &conversation("streaming"),
+            &ready(),
+            &none,
+            theme,
+            80,
+            18,
+            &mut new_view(),
+            Some(4),
             None,
         ),
     );

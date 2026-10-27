@@ -10,7 +10,7 @@ use ratatui::style::{Color, Modifier, Style};
 
 pub type Rgb = (u8, u8, u8);
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Theme {
     color: bool,
     /// The terminal's background, when known.
@@ -64,6 +64,24 @@ pub fn tint(bg: Rgb) -> Rgb {
     };
     (mix(bg.0), mix(bg.1), mix(bg.2))
 }
+
+/// `from` moved toward `to` by `t` (0 is `from`, 1 is `to`), per channel.
+fn mix(from: Rgb, to: Rgb, t: f32) -> Rgb {
+    let m = |a: u8, b: u8| {
+        (f32::from(a) + (f32::from(b) - f32::from(a)) * t)
+            .round()
+            .clamp(0.0, 255.0) as u8
+    };
+    (m(from.0, to.0), m(from.1, to.1), m(from.2, to.2))
+}
+
+/// How far from the background toward the foreground a decorative rule sits: visible, never
+/// competing with the text it separates (codex's `TABLE_SEPARATOR_FG_ALPHA`).
+const FAINT: f32 = 0.2;
+/// How much of the semantic colour the row behind an added or removed line takes: enough to
+/// tell them apart at a glance, little enough that the text on it reads as plain text.
+const DIFF_TINT_DARK: f32 = 0.2;
+const DIFF_TINT_LIGHT: f32 = 0.12;
 
 /// The lightest (on light) or darkest (on dark) grey that still holds [`MIN_CONTRAST`] against
 /// the tint over `bg`, where it also has to be read (the input, the band behind a message), so
@@ -206,6 +224,40 @@ impl Theme {
             (true, Some(bg)) => Style::default().fg(Self::rgb(quiet_grey(bg))),
             (true, None) => Style::default().fg(Color::DarkGray),
         }
+    }
+    /// Whether colour is shown at all (`NO_COLOR` and a dumb terminal leave only bold and the like).
+    #[must_use]
+    pub fn colored(self) -> bool {
+        self.color
+    }
+    /// Decoration that only separates (table rules): a fifth of the way from the background to
+    /// the foreground, so it is seen without being read.
+    #[must_use]
+    pub fn faint(self) -> Style {
+        match (self.color, self.bg) {
+            (false, _) => Style::default().add_modifier(Modifier::DIM),
+            (true, Some(bg)) => {
+                let fg = if is_dark(bg) {
+                    (255, 255, 255)
+                } else {
+                    (0, 0, 0)
+                };
+                Style::default().fg(Self::rgb(mix(bg, fg, FAINT)))
+            }
+            (true, None) => Style::default().fg(Color::DarkGray),
+        }
+    }
+    /// The row behind an added (`true`) or removed line of a diff, where the background is known.
+    #[must_use]
+    pub fn diff_row(self, added: bool) -> Option<Style> {
+        let (bg, p) = (self.bg?, self.palette()?);
+        let t = if is_dark(bg) {
+            DIFF_TINT_DARK
+        } else {
+            DIFF_TINT_LIGHT
+        };
+        let c = mix(bg, if added { p.ok } else { p.bad }, t);
+        Some(Style::default().bg(Self::rgb(c)))
     }
     /// Where typing goes, and what the person said.
     #[must_use]

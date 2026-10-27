@@ -13,6 +13,14 @@ BOLD = "/home/tuannd12/.local/share/fonts/FiraCode/FiraCodeNerdFontMono-Bold.ttf
 SIZE = 17
 FALLBACK = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"
 FALLBACK_BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf"
+# Box-drawing characters drawn as lines, not glyphs: (left, right, up, down, thickness).
+BOX = {
+    "─": (1, 1, 0, 0, 1), "━": (1, 1, 0, 0, 2), "│": (0, 0, 1, 1, 1), "┃": (0, 0, 1, 1, 2),
+    "┌": (0, 1, 0, 1, 1), "┐": (1, 0, 0, 1, 1), "└": (0, 1, 1, 0, 1), "┘": (1, 0, 1, 0, 1),
+    "╭": (0, 1, 0, 1, 1), "╮": (1, 0, 0, 1, 1), "╰": (0, 1, 1, 0, 1), "╯": (1, 0, 1, 0, 1),
+    "├": (0, 1, 1, 1, 1), "┤": (1, 0, 1, 1, 1), "┬": (1, 1, 0, 1, 1), "┴": (1, 1, 1, 0, 1),
+    "┼": (1, 1, 1, 1, 1),
+}
 
 def cellw(ch):
     return 2 if unicodedata.east_asian_width(ch) in ("W", "F") else (0 if unicodedata.combining(ch) else 1)
@@ -108,7 +116,16 @@ def main():
             if rev: f, b = (b or pal["bg"]), (f)
             px, py = pad + x * cw, bar + pad + y * lh
             if b: d.rectangle([px, py, px + w * cw, py + lh], fill=b)
-            if ch != " ":
+            if ch in BOX:
+                # As a terminal does: from the cell's centre to its edges, so lines meet across
+                # cells and rows (a font's glyph stops short of the taller row and leaves gaps).
+                l, r, u, dn, t = BOX[ch]
+                cx, cy = int(px + cw / 2), py + lh // 2
+                if l: d.line([px, cy, cx, cy], fill=f, width=t)
+                if r: d.line([cx, cy, px + cw, cy], fill=f, width=t)
+                if u: d.line([cx, py, cx, cy], fill=f, width=t)
+                if dn: d.line([cx, cy, cx, py + lh], fill=f, width=t)
+            elif ch != " ":
                 d.text((px, py + 2), ch, font=pick(ch, bold), fill=f)
             if ul: d.line([px, py + lh - 3, px + w * cw, py + lh - 3], fill=f, width=1)
             if strike: d.line([px, py + lh // 2, px + w * cw, py + lh // 2], fill=f, width=1)
