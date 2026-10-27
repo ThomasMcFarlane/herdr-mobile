@@ -51,27 +51,40 @@ class OmpSessionLocator {
   /// [RemoteFileException] when the host cannot be read (no SFTP, link down).
   Future<String?> artifactDir({required String sessionId, required String cwd}) async {
     if (!_sessionId.hasMatch(sessionId) || !RemotePath.isAbsolute(cwd)) return null;
-    final home = await _files.home();
+    // Independent of each other: one round trip, not two.
+    final homeAsk = _settle(_files.home());
+    final realAsk = _settle(_files.realpath(cwd));
+    final home = (await homeAsk).valueOrThrow;
     var canonical = cwd;
-    try {
-      canonical = await _files.realpath(cwd);
-    } on RemoteFileException catch (e) {
-      if (!_missing(e)) rethrow;
+    final real = await realAsk;
+    if (real.error == null) {
+      canonical = real.value!;
+    } else if (!(real.error is RemoteFileException && _missing(real.error! as RemoteFileException))) {
+      throw real.error!;
     }
     final exact = projectFolderNames(canonical, home: home);
     final base = _safeSegment(RemotePath.basename(canonical));
     for (final root in ['$home/.omp/agent/sessions', '$home/.local/share/omp/sessions']) {
+      // The folders omp would have used are known without the listing of the
+      // root, so they are looked into at the same time as it: a hit does not
+      // wait for the root's (often long) list.
+      final rootAsk = _settle(_files.list(root));
+      final exactAsks = [for (final n in exact) _settle(_sessionFile('$root/$n', sessionId))];
+      for (final ask in exactAsks) {
+        final found = (await ask).valueOrThrow;
+        if (found != null) return found.substring(0, found.length - '.jsonl'.length);
+      }
+      final listed = await rootAsk;
       final List<RemoteEntry> folders;
-      try {
-        folders = await _files.list(root);
-      } on RemoteFileException catch (e) {
-        if (_missing(e)) continue;
-        rethrow;
+      if (listed.error == null) {
+        folders = listed.value!;
+      } else if (listed.error is RemoteFileException && _missing(listed.error! as RemoteFileException)) {
+        continue;
+      } else {
+        throw listed.error!;
       }
       final names = {for (final f in folders) if (f.isDirectory) f.name};
       final tries = [
-        for (final n in exact)
-          if (names.contains(n)) n,
         if (base.isNotEmpty)
           for (final n in names)
             if (!exact.contains(n) && n.contains(base)) n,
@@ -83,6 +96,11 @@ class OmpSessionLocator {
     }
     return null;
   }
+
+  /// [ask]'s outcome as a value, so that a call started early and awaited
+  /// later never leaves an unhandled error behind.
+  static Future<_Settled<T>> _settle<T>(Future<T> ask) =>
+      ask.then<_Settled<T>>((v) => _Settled(v, null), onError: (Object e) => _Settled<T>(null, e));
 
   Future<String?> _sessionFile(String folder, String sessionId) async {
     final List<RemoteEntry> entries;
@@ -130,6 +148,20 @@ class OmpSessionLocator {
     if (inHome != null) out.add(encode('-', inHome));
     out.add('--${_safeSegment(cwd.replaceFirst(RegExp(r'^[/\\]'), ''))}--');
     return out;
+  }
+}
+
+/// A call's result or its error, kept as a value ([OmpSessionLocator._settle]).
+class _Settled<T> {
+  const _Settled(this.value, this.error);
+
+  final T? value;
+  final Object? error;
+
+  T get valueOrThrow {
+    final e = error;
+    if (e != null) throw e;
+    return value as T;
   }
 }
 
@@ -299,13 +331,19 @@ class SubagentLogReader {
 
     var next = state;
     var n = 0;
+    // Yield every [sliceLines] lines, and sooner once a slice has held the UI
+    // isolate for [sliceBudget]: one tool result can be 256 KB of JSON.
+    final slice = Stopwatch()..start();
     for (final raw in use) {
       for (final u in _mapper.map(utf8.decode(raw, allowMalformed: true))) {
         next = next.apply(u);
       }
-      if (++n % sliceLines == 0) {
+      if (++n % sliceLines == 0 || slice.elapsed >= sliceBudget) {
         await Future<void>.delayed(Duration.zero);
         if (cancelled) return LogPoll.unchanged;
+        slice
+          ..reset()
+          ..start();
       }
     }
     final trimmed = next.keepingNewest(SubagentRun.maxItems);
@@ -320,6 +358,11 @@ class SubagentLogReader {
   }
 
   static const headBytes = 8192;
+
+  /// The most a slice of lines holds the UI isolate before it yields (the
+  /// same as the transcript plan's `Dwell.planBudget`; the data layer cannot
+  /// import `ui/core`).
+  static const sliceBudget = Duration(milliseconds: 4);
 
   /// Whether the header names a format and a parent this reader can show.
   /// [bytes] starts at the beginning of the file.

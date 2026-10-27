@@ -178,6 +178,13 @@ void main() {
       expect(await OmpSessionLocator(_files(fs)).artifactDir(sessionId: _sid, cwd: _cwd), _artifactDir);
     });
 
+    test('calls that do not depend on each other go out together, and a hit does not wait for the root\'s listing', () async {
+      final fs = _host()..latency = const Duration(milliseconds: 20);
+      expect(await OmpSessionLocator(_files(fs)).artifactDir(sessionId: _sid, cwd: _cwd), _artifactDir);
+      expect(fs.maxInFlight, greaterThan(1), reason: 'home and realpath together; the exact folder beside the root listing');
+      expect(fs.calls.where((c) => c.startsWith('list')).length, greaterThanOrEqualTo(2));
+    });
+
     test('another session in the same project is not taken', () async {
       final fs = FakeFs()..addFile('$_project/2026-10-05T07-00-00-000Z_other-session-id-1234.jsonl', '{}\n');
       expect(await OmpSessionLocator(_files(fs)).artifactDir(sessionId: _sid, cwd: _cwd), isNull);
