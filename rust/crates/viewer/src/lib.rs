@@ -5,6 +5,8 @@
 
 #![doc(hidden)]
 
+pub mod attach;
+pub mod clip;
 pub mod composer;
 pub mod delight;
 pub mod diff;
@@ -16,9 +18,11 @@ pub mod input;
 pub mod lines;
 pub mod md;
 pub mod question;
+pub mod risk;
 pub mod session;
 pub mod sessions;
 pub mod shell;
+pub mod slash;
 pub mod termbg;
 pub mod theme;
 pub mod transcript;

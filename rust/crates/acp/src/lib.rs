@@ -16,7 +16,8 @@ pub use config::{legacy_models, parse_config_options, ConfigOption};
 pub use permission::{outcome_cancelled, outcome_selected, PermissionOption, PermissionRequest};
 pub use rpc::{Id, Message, ParseError, RpcError};
 pub use update::{
-    is_unsafe_control, AgentState, Chunk, Content, SessionUpdate, ToolCall, ToolContent, ToolStatus,
+    is_unsafe_control, AgentState, Chunk, Command, Content, PlanEntry, PlanStatus, SessionUpdate,
+    ToolCall, ToolContent, ToolStatus,
 };
 
 /// Method names the keeper and clients exchange.
@@ -25,6 +26,7 @@ pub mod method {
     pub const SESSION_NEW: &str = "session/new";
     pub const SESSION_LOAD: &str = "session/load";
     pub const SESSION_PROMPT: &str = "session/prompt";
+    pub const SESSION_SET_CONFIG_OPTION: &str = "session/set_config_option";
     pub const SESSION_CANCEL: &str = "session/cancel";
     pub const SESSION_UPDATE: &str = "session/update";
     pub const REQUEST_PERMISSION: &str = "session/request_permission";

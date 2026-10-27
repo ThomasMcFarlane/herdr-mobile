@@ -75,6 +75,11 @@ pub enum SessionUpdate {
     Mode(String),
     /// The session's config options changed (the model, the mode, the thinking level).
     Config(Vec<crate::ConfigOption>),
+    /// The slash commands the agent offers; each update replaces the whole list.
+    Commands(Vec<Command>),
+    /// The agent's plan: a checklist it keeps up to date; each update replaces the whole list
+    /// (an empty one clears it).
+    Plan(Vec<PlanEntry>),
     /// How much of the context window is used.
     Usage {
         used: u64,
@@ -120,6 +125,21 @@ impl SessionUpdate {
             "config_option_update" => SessionUpdate::Config(crate::parse_config_options(
                 u.get("configOptions").unwrap_or(&Value::Null),
             )),
+            "plan" => SessionUpdate::Plan(plan_entries(u.get("entries"))),
+            "plan_update" => match u.get("plan") {
+                Some(p) if str_of(p, "type") == Some("items") => {
+                    SessionUpdate::Plan(plan_entries(p.get("entries")))
+                }
+                _ => SessionUpdate::Other(kind.to_string()),
+            },
+            "available_commands_update" => SessionUpdate::Commands(
+                u.get("availableCommands")
+                    .and_then(Value::as_array)
+                    .into_iter()
+                    .flatten()
+                    .filter_map(Command::from_value)
+                    .collect(),
+            ),
             "usage_update" => match (
                 u.get("used").and_then(Value::as_u64),
                 u.get("size").and_then(Value::as_u64),
@@ -132,6 +152,82 @@ impl SessionUpdate {
     }
 }
 
+/// Where one step of the agent's plan stands.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PlanStatus {
+    Pending,
+    InProgress,
+    Completed,
+}
+
+/// One step of the agent's plan.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PlanEntry {
+    pub content: String,
+    pub status: PlanStatus,
+}
+
+/// The steps in a plan's `entries`: control characters removed (the text goes to a terminal),
+/// steps with no text skipped.
+fn plan_entries(v: Option<&Value>) -> Vec<PlanEntry> {
+    v.and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|e| {
+            let content: String = str_of(e, "content")?
+                .chars()
+                .map(|c| if c == '\n' || c == '\t' { ' ' } else { c })
+                .filter(|c| !is_unsafe_control(*c))
+                .collect();
+            let content = content.trim().to_string();
+            (!content.is_empty()).then(|| PlanEntry {
+                content,
+                status: match str_of(e, "status") {
+                    Some("completed") => PlanStatus::Completed,
+                    Some("in_progress") => PlanStatus::InProgress,
+                    _ => PlanStatus::Pending,
+                },
+            })
+        })
+        .collect()
+}
+
+/// A slash command from `available_commands_update`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Command {
+    /// Without the leading slash; may contain `:` (`skill:review`).
+    pub name: String,
+    pub description: String,
+    /// What the argument looks like (`input.hint`), when the command takes one.
+    pub hint: Option<String>,
+}
+
+impl Command {
+    /// `None` for an entry with no usable name. The text goes to a terminal, so control
+    /// characters are removed from every field.
+    fn from_value(v: &Value) -> Option<Command> {
+        let safe = |s: &str| -> String { s.chars().filter(|c| !is_unsafe_control(*c)).collect() };
+        let name = safe(str_of(v, "name")?.trim_start_matches('/'))
+            .trim()
+            .to_string();
+        // A name is one word: one with a space in it could never be typed or run.
+        if name.is_empty() || name.chars().any(char::is_whitespace) {
+            return None;
+        }
+        Some(Command {
+            name,
+            description: safe(str_of(v, "description").unwrap_or(""))
+                .trim()
+                .to_string(),
+            hint: v
+                .get("input")
+                .and_then(|i| str_of(i, "hint"))
+                .map(|h| safe(h).trim().to_string())
+                .filter(|h| !h.is_empty()),
+        })
+    }
+}
+
 fn str_of<'v>(v: &'v Value, key: &str) -> Option<&'v str> {
     v.get(key)?.as_str()
 }
@@ -140,6 +236,18 @@ fn chunk(u: &Value) -> Option<Chunk> {
     let c = u.get("content")?;
     let content = match str_of(c, "type")? {
         "text" => Content::Text(str_of(c, "text").unwrap_or("").to_string()),
+        // A file the person attached (a `resource_link`): the way it is typed, on its own line.
+        "resource_link" => match str_of(c, "name")
+            .map(|n| {
+                n.chars()
+                    .filter(|c| !is_unsafe_control(*c))
+                    .collect::<String>()
+            })
+            .filter(|n| !n.trim().is_empty())
+        {
+            Some(name) => Content::Text(format!("\n@{name}")),
+            None => Content::Other("resource_link".to_string()),
+        },
         other => Content::Other(other.to_string()),
     };
     Some(Chunk {
@@ -275,6 +383,97 @@ mod tests {
     }
 
     #[test]
+    fn the_command_list_is_read_whole_with_hints_and_without_unusable_entries() {
+        let u = json!({"sessionUpdate": "available_commands_update", "availableCommands": [
+            {"name": "/compact", "description": "Compact", "input": {"hint": "[focus]"}},
+            {"name": ""},
+            {"name": "skill:review"},
+            {"name": "two words"},
+            {"name": "bad\u{1b}[2Jname", "description": "x\u{7}y"}]});
+        let Some(SessionUpdate::Commands(c)) = SessionUpdate::from_value(&u) else {
+            panic!("commands");
+        };
+        assert_eq!(c.len(), 3);
+        assert_eq!(
+            (c[0].name.as_str(), c[0].hint.as_deref()),
+            ("compact", Some("[focus]"))
+        );
+        assert_eq!(
+            (
+                c[1].name.as_str(),
+                c[1].description.as_str(),
+                c[1].hint.as_deref()
+            ),
+            ("skill:review", "", None)
+        );
+        assert_eq!(
+            (c[2].name.as_str(), c[2].description.as_str()),
+            ("bad[2Jname", "xy")
+        );
+        let none = json!({"sessionUpdate": "available_commands_update"});
+        assert_eq!(
+            SessionUpdate::from_value(&none),
+            Some(SessionUpdate::Commands(vec![]))
+        );
+    }
+
+    #[test]
+    fn the_plan_is_a_checklist_replaced_whole_and_an_empty_one_clears_it() {
+        let u = json!({"sessionUpdate": "plan", "entries": [
+            {"content": "Read the code", "priority": "medium", "status": "completed"},
+            {"content": "Fix\nthe \u{1b}bug", "status": "in_progress"},
+            {"content": "  "},
+            {"content": "Run tests", "status": "whatever"}]});
+        let Some(SessionUpdate::Plan(p)) = SessionUpdate::from_value(&u) else {
+            panic!("a plan")
+        };
+        assert_eq!(
+            p.iter()
+                .map(|e| (e.content.as_str(), e.status))
+                .collect::<Vec<_>>(),
+            [
+                ("Read the code", PlanStatus::Completed),
+                ("Fix the bug", PlanStatus::InProgress),
+                ("Run tests", PlanStatus::Pending)
+            ]
+        );
+        let nested = json!({"sessionUpdate": "plan_update", "plan": {"type": "items", "entries": [{"content": "a", "status": "pending"}]}});
+        assert!(
+            matches!(SessionUpdate::from_value(&nested), Some(SessionUpdate::Plan(p)) if p.len() == 1)
+        );
+        let other = json!({"sessionUpdate": "plan_update", "plan": {"type": "text"}});
+        assert!(matches!(
+            SessionUpdate::from_value(&other),
+            Some(SessionUpdate::Other(_))
+        ));
+        let cleared = json!({"sessionUpdate": "plan", "entries": []});
+        assert_eq!(
+            SessionUpdate::from_value(&cleared),
+            Some(SessionUpdate::Plan(vec![]))
+        );
+    }
+
+    #[test]
+    fn an_attached_file_in_a_message_reads_as_its_name() {
+        let u = json!({"sessionUpdate":"user_message_chunk","content":{"type":"resource_link","uri":"file:///w/a.rs","name":"src/a\u{1b}.rs"}});
+        assert_eq!(
+            SessionUpdate::from_value(&u),
+            Some(SessionUpdate::UserMessage(Chunk {
+                message_id: None,
+                content: Content::Text("\n@src/a.rs".into())
+            }))
+        );
+        let nameless = json!({"sessionUpdate":"user_message_chunk","content":{"type":"resource_link","uri":"file:///w/a.rs"}});
+        assert!(matches!(
+            SessionUpdate::from_value(&nameless),
+            Some(SessionUpdate::UserMessage(Chunk {
+                content: Content::Other(_),
+                ..
+            }))
+        ));
+    }
+
+    #[test]
     fn chunks_carry_their_message_id_and_kind_of_content() {
         let u = json!({"sessionUpdate":"agent_message_chunk","messageId":"m1","content":{"type":"text","text":"hi"}});
         assert_eq!(
@@ -320,8 +519,8 @@ mod tests {
     #[test]
     fn an_unknown_kind_is_kept_and_a_missing_kind_is_none() {
         assert_eq!(
-            SessionUpdate::from_value(&json!({"sessionUpdate":"plan"})),
-            Some(SessionUpdate::Other("plan".into()))
+            SessionUpdate::from_value(&json!({"sessionUpdate":"something_newer"})),
+            Some(SessionUpdate::Other("something_newer".into()))
         );
         assert_eq!(SessionUpdate::from_value(&json!({"foo":1})), None);
     }

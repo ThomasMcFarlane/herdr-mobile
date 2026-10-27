@@ -14,6 +14,9 @@ pub struct ConfigOption {
     pub current: Option<String>,
     /// `(value, name)` of every choice, groups flattened.
     pub choices: Vec<(String, String)>,
+    /// From the older `models` shape, which has no `session/set_config_option` contract: shown,
+    /// never changed from here.
+    pub legacy: bool,
 }
 
 impl ConfigOption {
@@ -67,6 +70,7 @@ pub fn parse_config_options(v: &Value) -> Vec<ConfigOption> {
                 current: s(o, "currentValue").map(str::to_string),
                 id,
                 choices: ch,
+                legacy: false,
             })
         })
         .collect()
@@ -97,6 +101,7 @@ pub fn legacy_models(result: &Value) -> Option<ConfigOption> {
         category: Some("model".into()),
         current: Some(current),
         choices,
+        legacy: true,
     })
 }
 
@@ -137,6 +142,9 @@ mod tests {
         assert!(o.is("model"));
         assert_eq!(o.current_name(), Some("Two"));
         assert!(legacy_models(&json!({})).is_none());
+        assert!(
+            o.legacy && !parse_config_options(&json!([{"id": "m", "type": "select"}]))[0].legacy
+        );
     }
 
     #[test]
