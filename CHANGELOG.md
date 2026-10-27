@@ -29,6 +29,10 @@ curl -fsSL https://github.com/tuan3w/herdr-mobile/releases/latest/download/insta
 - One file to install for Linux and macOS (x86_64 and arm64), checked against the release's
   `herdr-tui-SHA256SUMS`. It carries the keeper; `python3` is still needed.
 
+![herdr-tui asking permission to run a command, with the command shown whole and three numbered answers](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.30/0.1.30-permission.png)
+
+![herdr-tui after a finished turn: a diff, a table, and a one-line summary of what was done](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.30/0.1.30-finished-turn.png)
+
 ## [0.1.29] - 2026-10-22
 
 [![Watch what's new · 3 changes · 0:18 · 6.1 MB](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.29/0.1.29-whats-new.jpg)](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.29/0.1.29-whats-new.mp4)
