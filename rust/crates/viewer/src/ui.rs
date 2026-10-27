@@ -114,14 +114,14 @@ pub struct LineCache {
 const CACHE_BUDGET: usize = 256 * 1024;
 
 impl LineCache {
-    /// The lines of a block, built once and kept.
-    fn lines_for(
+    /// The block's lines, built once and kept; a borrow into the cache, no copy.
+    fn ensure(
         &mut self,
         b: Block,
         items: &VecDeque<Item>,
         width: usize,
         look: Look,
-    ) -> Vec<Line<'static>> {
+    ) -> &Vec<Line<'static>> {
         let key = LineKey {
             block: fold::key(b, items),
             width,
@@ -134,7 +134,30 @@ impl LineCache {
             self.lines.insert(key, l);
             self.enforce();
         }
-        self.lines.get(&key).expect("just inserted").clone()
+        self.lines.get(&key).expect("just inserted")
+    }
+
+    /// The lines of a block, built once and kept.
+    fn lines_for(
+        &mut self,
+        b: Block,
+        items: &VecDeque<Item>,
+        width: usize,
+        look: Look,
+    ) -> Vec<Line<'static>> {
+        self.ensure(b, items, width, look).clone()
+    }
+
+    /// How many lines a block draws, without copying them: a scroll walks this per block,
+    /// so a long history costs a lookup each, not a clone.
+    fn count_for(
+        &mut self,
+        b: Block,
+        items: &VecDeque<Item>,
+        width: usize,
+        look: Look,
+    ) -> usize {
+        self.ensure(b, items, width, look).len()
     }
 
     /// What just opened: the lines it had before, for the unfold animation, kept out of the
@@ -1347,13 +1370,8 @@ fn draw_history(
         v.last_width = width;
         v.line_cache.clear();
     }
-    let mut rev: Vec<Line> = Vec::new();
+    let h = area.height as usize;
     let mut reached_start = true;
-    if items.is_empty() {
-        rev = welcome.into_iter().rev().collect();
-    }
-    // Where the focused block sits among the lines, counted from the newest.
-    let mut found: Option<(usize, usize)> = None;
     let mut reveals: HashMap<u64, u64> = if motion {
         v.reveal.clone()
     } else {
@@ -1373,45 +1391,49 @@ fn draw_history(
             }
         }
     }
-    for (bi, b) in blocks.iter().enumerate().rev() {
-        let mut lines = v.line_cache.lines_for(*b, items, width, look);
-        // A block that was just opened grows from the height it had to the height it has now,
-        // instead of jumping. The calls a run lists share the run's clock.
-        let bkey = fold::key(*b, items);
-        if let Some(&started) = reveals.get(&bkey) {
-            let elapsed = anim_ms.saturating_sub(started);
-            if elapsed < delight::REVEAL_MS {
-                let before = if v.reveal.contains_key(&bkey) {
-                    v.line_cache
-                        .closed_lines(*b, items, width, &v.expanded, look)
-                        .len()
-                } else {
-                    0
-                };
-                lines.truncate(delight::reveal_rows(before, lines.len(), elapsed));
+    // Pass 1, newest first: how many lines each block draws, and where, counted up from the
+    // newest. A scroll walks this per block, so a long history costs a lookup each, not a
+    // clone. The count of a block that is mid-unfold is the height it has at this moment.
+    let mut spans: Vec<(Block, usize, usize)> = Vec::new();
+    let mut found: Option<(usize, usize)> = None;
+    let total = if items.is_empty() {
+        welcome.len()
+    } else {
+        let mut count = 0usize;
+        for (bi, b) in blocks.iter().enumerate().rev() {
+            let bkey = fold::key(*b, items);
+            let mut n = v.line_cache.count_for(*b, items, width, look);
+            if let Some(&started) = reveals.get(&bkey) {
+                let elapsed = anim_ms.saturating_sub(started);
+                if elapsed < delight::REVEAL_MS {
+                    let before = if v.reveal.contains_key(&bkey) {
+                        v.line_cache
+                            .closed_lines(*b, items, width, &v.expanded, look)
+                            .len()
+                    } else {
+                        0
+                    };
+                    n = delight::reveal_rows(before, n, elapsed);
+                }
+            }
+            if v.focus == Some(bkey) {
+                found = Some((count, count + n));
+            }
+            spans.push((*b, count, count + n));
+            count += n;
+            if count >= need && (!v.focus_dirty || found.is_some()) {
+                reached_start = bi == 0;
+                break;
             }
         }
-        lines.reverse();
-        let from = rev.len();
-        rev.extend(lines);
-        if v.focus == Some(fold::key(*b, items)) {
-            found = Some((from, rev.len()));
-        }
-        if rev.len() >= need && (!v.focus_dirty || found.is_some()) {
-            reached_start = bi == 0;
-            break;
-        }
-    }
-    if reached_start && tr.dropped() > 0 {
-        rev.push(Line::from(Span::styled(
-            format!("· {} earlier items are not shown", tr.dropped()),
-            theme.dim(),
-        )));
-    }
+        count
+    };
+    // The "not shown" line sits oldest, just past the last built line.
+    let has_drop = reached_start && tr.dropped() > 0;
+    let all = total + usize::from(has_drop);
     // Unfolds that have finished are forgotten, so the loop can go back to sleep.
     v.reveal
         .retain(|_, started| motion && anim_ms.saturating_sub(*started) < delight::REVEAL_MS);
-    let h = area.height as usize;
     // Keep the focused block in view: bring it to the edge it is past, never further than it needs.
     if v.focus_dirty {
         if let Some((from, to)) = found {
@@ -1424,15 +1446,37 @@ fn draw_history(
         }
         v.focus_dirty = false;
     }
-    // `rev` is newest line first. Do not scroll past the oldest line built.
-    v.scroll = v.scroll.min(rev.len().saturating_sub(h));
-    let end = (v.scroll + h).min(rev.len());
-    let mut lines: Vec<Line> = rev[v.scroll..end].to_vec();
-    lines.reverse();
+    // Do not scroll past the oldest line built.
+    v.scroll = v.scroll.min(all.saturating_sub(h));
+    let end = (v.scroll + h).min(all);
+    // Pass 2: the lines the window `v.scroll..end` shows, oldest first, and nothing else.
+    // A block spans newest-first index `from..to`, so the part the window shows, oldest
+    // first, is its own lines `to - hi .. to - lo`, where `lo..hi` is that overlap.
+    let mut out_window: Vec<Line> = Vec::new();
+    if items.is_empty() {
+        let mut w = welcome;
+        w.reverse();
+        out_window.extend(w[v.scroll..end].iter().cloned());
+    } else {
+        if has_drop && total < end {
+            out_window.push(Line::from(Span::styled(
+                format!("· {} earlier items are not shown", tr.dropped()),
+                theme.dim(),
+            )));
+        }
+        for &(b, from, to) in spans.iter().rev() {
+            if to > v.scroll && from < end {
+                let lo = from.max(v.scroll);
+                let hi = to.min(end);
+                let lines = v.line_cache.lines_for(b, items, width, look);
+                out_window.extend(lines[(to - hi)..(to - lo)].iter().cloned());
+            }
+        }
+    }
     // Bottom-align: short history sits just above the input.
-    let pad = h - lines.len().min(h);
+    let pad = h - out_window.len().min(h);
     let mut out = vec![Line::default(); pad];
-    out.extend(lines);
+    out.extend(out_window);
     f.render_widget(Paragraph::new(out), area);
 }
 
