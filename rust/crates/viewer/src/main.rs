@@ -178,7 +178,7 @@ fn main() {
             return;
         }
         cli::Cmd::Version => {
-            eprintln!("herdr-tui {}", env!("CARGO_PKG_VERSION"));
+            eprintln!("herdr-tui {}", crate::cli::VERSION);
             return;
         }
         cli::Cmd::Ls { all } => {

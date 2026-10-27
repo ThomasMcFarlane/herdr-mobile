@@ -1,5 +1,8 @@
 //! The command line.
 
+/// The release this binary belongs to (the app's version), set by build.rs.
+pub const VERSION: &str = env!("HERDR_TUI_VERSION");
+
 pub const USAGE: &str = "\
 herdr-tui: work with a coding agent in the terminal, as a herdr session
 
@@ -135,6 +138,23 @@ mod tests {
         assert!(p(&["attach", "../etc"]).is_err());
         assert!(p(&["--agent", "omp", "attach", "abc123"]).is_err());
         assert!(p(&["attach", "abc123", "extra"]).is_err());
+    }
+
+    #[test]
+    fn it_reports_the_release_version_the_app_has() {
+        let pubspec = std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../../app/pubspec.yaml"
+        ))
+        .expect("pubspec");
+        let line = pubspec
+            .lines()
+            .find(|l| l.starts_with("version: "))
+            .expect("version line");
+        assert!(
+            line.starts_with(&format!("version: {VERSION}+")),
+            "{line} vs {VERSION}"
+        );
     }
 
     #[test]

@@ -135,7 +135,7 @@ impl Session {
             Call::Init,
             method::INITIALIZE,
             json!({"protocolVersion": 1, "clientCapabilities": {},
-                   "clientInfo": {"name": "herdr-tui", "title": format!("Terminal on {}", crate::host::short_host()), "version": env!("CARGO_PKG_VERSION")},
+                   "clientInfo": {"name": "herdr-tui", "title": format!("Terminal on {}", crate::host::short_host()), "version": crate::cli::VERSION},
                    "_meta": {"herdr": meta}}),
         );
         (s, vec![init])
