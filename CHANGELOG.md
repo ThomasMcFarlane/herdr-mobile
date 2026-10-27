@@ -4,6 +4,32 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [0.1.38] - 2026-10-27
+
+### The desk client updates itself, and can go back
+
+`herdr-tui update` installs the latest release, and `herdr-tui update 0.1.35`
+installs a named one, older ones too, so a release that misbehaves is one
+command from the one before it.
+
+> [!TIP]
+> Try it: in a terminal, run `herdr-tui update --check` to see whether the
+> latest release differs from yours.
+
+- A desk client that is open notices the new one and says so in the footer;
+  `Ctrl-R` loads it into the same session, in the same terminal and pane,
+  without losing anything. It waits while there is a message in the box or a
+  request waiting. Sessions already open with an older desk client do not look:
+  reopen them once with `herdr-tui attach ID`.
+- The download is checked against the release's checksums and run once before
+  it replaces the old file, so a bad download or a failed step leaves what is
+  installed as it was; a session that is open keeps running.
+- The latest release is never a downgrade, only a version you name is. A
+  version without a desk client (before 0.1.30) says so and changes nothing.
+- It needs `curl` or `wget`, and `sha256sum` or `shasum`, as the install
+  script does. A release before this one has no `update`: install this one
+  with the install script first.
+
 ## [0.1.37] - 2026-10-27
 
 ### The desk client reaches every computer that runs a session
