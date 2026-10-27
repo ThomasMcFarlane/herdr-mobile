@@ -1,1 +1,0 @@
-This release changes how the GitHub build of herdr updates itself: its notes come first, then Download and Install. Nothing changes in the Play build; Play keeps updating it as before.

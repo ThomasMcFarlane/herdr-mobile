@@ -1,1 +1,0 @@
-A terminal client for your sessions, at the desk. herdr-tui is a separate download for the computer: it starts omp, Claude Code, Codex or pi as a session the phone also sees, lists them with herdr-tui ls and ends them with herdr-tui kill. This release changes nothing in the app itself. Try it: on the computer, run the install command from the release notes, then herdr-tui.

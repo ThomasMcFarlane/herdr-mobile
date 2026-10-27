@@ -1,6 +1,6 @@
 ---
 name: herdr-changelog
-description: Writes and checks herdr-mobile's release notes and makes their media. It writes the `## [Unreleased]` bullets for a feat or fix change; at release time it rewrites them into the `## [x.y.z]` section (headline, one-paragraph outcome, Try-it tip cards, short bullets, Fixed), writes the Play "What's new" text, renders a still of each new screen and records a portrait walkthrough clip of the whole change list on the real app, framed with HyperFrames, then uploads the media to the GitHub release. Use it whenever a release is being prepared, the version is bumped, a feat or fix commit lands, or someone asks for a changelog, release notes, what's new or patch notes, even if they don't name the skill.
+description: Writes and checks herdr-mobile's release notes and makes their media. It writes the `## [Unreleased]` bullets for a feat or fix change; at release time it rewrites them into the `## [x.y.z]` section (headline, one-paragraph outcome, Try-it tip cards, short bullets, Fixed), renders a still of each new screen and records a portrait walkthrough clip of the whole change list on the real app, framed with HyperFrames, then uploads the media to the GitHub release. Use it whenever a release is being prepared, the version is bumped, a feat or fix commit lands, or someone asks for a changelog, release notes, what's new or patch notes, even if they don't name the skill.
 ---
 
 # Writing herdr-mobile's release notes
@@ -16,7 +16,7 @@ elsewhere, with seconds of attention. They read the notes in three places:
   plays the clip inside the app), draws `> [!TIP]` as a card, and shows any
   other image only as a quiet "Image: alt · host" chip: the poster is the one
   picture it fetches;
-- Google Play's "What's new", plain text, 500 characters at most.
+- the in-app history (`What's new` under Settings > About), the whole file bundled with the app.
 
 They want to know what they will notice, and where to find it so they can try
 it. Never the commits: the `CHANGELOG.md` header says each section is "what
@@ -29,8 +29,7 @@ notices, not the commits".
   heading at the top if it is missing). One bullet per thing the person notices,
   written by the rules in section 4. No headline, no tips and no media yet.
 - **A release** rewrites `## [Unreleased]` into `## [x.y.z] - YYYY-MM-DD` in
-  the format of section 5, and makes the Play text (section 6) and the media
-  (section 7). The `### headline` is also the release commit's subject, in lower
+  the format of section 5, and makes the media (section 6). The `### headline` is also the release commit's subject, in lower
   case: `chore(release): x.y.z, <headline>`.
 
 ## 3. Gather (release moment)
@@ -133,8 +132,8 @@ back to one in the viewer or returning to a folder no longer downloads it.
 
 - `> [!TIP]` followed by `> Try it: <path>`. Both the in-app sheet and GitHub
   draw it as a card, so it is the one thing that stands out at a glance. Keep
-  the "Try it:" prefix: Play's plain text and any reader that drops the card
-  chrome still read it as a step.
+  the "Try it:" prefix: any reader that drops the card chrome still reads it
+  as a step.
 - Only for something new that the person has to find. A fix, a speed-up or a
   change they meet anyway gets none. At most 3 per release; more is a manual.
 - Put each card right after the fact it teaches (the first one right after the
@@ -147,23 +146,7 @@ back to one in the viewer or returning to a folder no longer downloads it.
   release renamed): the person cannot find it, and the label check cannot
   verify it.
 
-## 6. Play "What's new"
-
-Write `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt`, where
-`<versionCode>` is the `+N` of `version:` in `app/pubspec.yaml` (bump the
-version first). This is the path Play tooling (fastlane supply) and F-Droid
-read. Create the folders if they are missing.
-
-- Plain text: no Markdown, no backticks; Play shows the characters as typed.
-- At most 500 characters (Play's limit).
-- The headline as the first sentence, then the 2–3 changes the person will
-  notice most, then "Fixed: …" if a fix is worth it.
-- Leave out the in-app updater and anything about installing APKs: a Play build
-  cannot update itself (Play's Device and Network Abuse policy).
-- Labels without backticks, still spelled exactly: Try it: in Settings, open
-  Storage.
-
-## 7. Media: the walkthrough leads, a still per headline
+## 6. Media: the walkthrough leads, a still per headline
 
 - **The walkthrough leads the section.** Its line comes first, above the
   first `###`: a poster image that links to the clip,
@@ -299,7 +282,7 @@ type it was uploaded with. Images in the notes still show on the release page
 playing it. So the update sheet plays the clip itself (`clip_player.dart`), and
 on GitHub the poster is a link that downloads the clip.
 
-## 8. Check
+## 7. Check
 
 ```bash
 python3 .agents/skills/herdr-changelog/scripts/check_changelog.py <version>      # release
@@ -313,7 +296,7 @@ Fix every finding before committing. It checks:
   widget names;
 - `tip`: the "Try it:" prefix and at most 3 cards;
 - `label`: every backticked label in a tip is a quoted string in `app/lib`;
-- `play`: the file exists, is under 500 characters and is plain text;
+- `version`: `app/pubspec.yaml` is at the version being released;
 - `media`: the walkthrough line first with its poster and clip, one still per
   headline, at most one phone clip per headline, named right, text of 4 words
   or more, the poster under 80 KB, files present locally (`--remote`:
@@ -323,5 +306,4 @@ It cannot judge whether a bullet is true, whether every commit is covered, or
 whether a tip's path really works. Do those by reading (section 3) and by
 following each tip in the walkthrough script, which fails when a label is gone.
 
-Then commit `CHANGELOG.md`, the Play file and the version bump in the release
-commit. The media stay out of git.
+Then commit `CHANGELOG.md` and the version bump in the release commit. The media stay out of git.

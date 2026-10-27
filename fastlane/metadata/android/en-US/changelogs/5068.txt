@@ -1,1 +1,0 @@
-herdr-tui, the desk client, now reports the release it belongs to: herdr-tui --version said 0.1.0 next to a 0.1.30 release. The app is unchanged. Update the desk client with the install command from the release notes.

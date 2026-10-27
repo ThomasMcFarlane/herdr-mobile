@@ -107,7 +107,7 @@ class _UpdateSheet extends StatelessWidget {
                     child: Text('Update to ${release.version}', style: Type.title.copyWith(color: ds.text)),
                   ),
                 ),
-                if (clip != null) _ClipCard(clip, version: release.version),
+                if (clip != null) ClipCard(clip, version: release.version),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: _inset),
                   child: notes.isEmpty
@@ -200,8 +200,8 @@ class _Facts extends StatelessWidget {
 /// loads before that tap. The poster is the one picture fetched with the
 /// sheet: a small JPEG, from the release itself. If it cannot load, the card
 /// keeps its words and the play mark.
-class _ClipCard extends StatelessWidget {
-  const _ClipCard(this.clip, {required this.version});
+class ClipCard extends StatelessWidget {
+  const ClipCard(this.clip, {super.key, required this.version});
 
   final ReleaseClip clip;
   final String version;

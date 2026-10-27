@@ -20,6 +20,7 @@ import '../files/file_format.dart';
 import '../kit/kit_screen.dart';
 import 'font_size_control.dart';
 import 'quick_phrases_editor.dart';
+import 'release_history_screen.dart';
 import 'settings_group.dart';
 import 'update_group.dart';
 
@@ -568,6 +569,15 @@ class _AboutGroup extends StatelessWidget {
               : 'Talks to herdr over SSH. The only other place it contacts is GitHub, '
                   'to look for a new version and, when you tap Download, to fetch it. '
                   'Dictation uses your phone’s own speech service.',
+        ),
+        EntityRow(
+          id: 'whatsnew',
+          title: 'What’s new',
+          titleMaxLines: 1,
+          subtitle: 'The notes of every release up to $appVersion',
+          subtitleMaxLines: 2,
+          trailing: Icon(LucideIcons.chevronRight, size: IconSize.row, color: context.ds.textTertiary),
+          onTap: () => unawaited(openReleaseHistory(context)),
         ),
         EntityRow(
           id: 'source',

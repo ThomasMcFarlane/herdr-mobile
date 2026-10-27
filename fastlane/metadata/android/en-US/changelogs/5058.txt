@@ -1,1 +1,0 @@
-This release changes only the GitHub build: a release's clip in its update sheet plays inside herdr. Nothing changes in the Play build; Play keeps updating it as before.
