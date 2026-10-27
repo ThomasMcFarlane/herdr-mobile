@@ -8,6 +8,14 @@
 
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
+/// The variation selectors and the zero-width joiner: what turns a symbol into an emoji, or
+/// several into one glyph. Terminals disagree on what they do to the width, and ratatui draws
+/// a cell holding one with an extra update for its trailing column that can erase the glyph, so
+/// no text that reaches the screen carries them (see `md::clean`).
+#[must_use]
+pub fn is_joiner(c: char) -> bool {
+    matches!(c, '\u{fe0e}' | '\u{fe0f}' | '\u{200d}')
+}
 
 /// The columns `s` takes: the sum over its grapheme clusters.
 #[must_use]

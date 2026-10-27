@@ -24,7 +24,7 @@ use ratatui::{
 pub fn clean(text: &str) -> String {
     text.chars()
         .filter(|c| !is_unsafe_control(*c) || *c == '\n' || *c == '\t')
-        .filter(|c| !matches!(c, '\u{fe0e}' | '\u{fe0f}' | '\u{200d}'))
+        .filter(|c| !width::is_joiner(*c))
         .collect()
 }
 
@@ -247,11 +247,23 @@ pub fn render_live(text: &str, width: usize, theme: Theme) -> Vec<Line<'static>>
     if !out.is_empty() {
         out.push(Line::default());
     }
-    let what = match rows {
-        0 => "… a table".to_string(),
-        1 => "… a table, 1 row so far".to_string(),
-        n => format!("… a table, {n} rows so far"),
+    // The fullest wording that fits the row; a narrow pane gets less, never a row too wide.
+    let tries = match rows {
+        0 => vec!["… a table".to_string()],
+        1 => vec![
+            "… a table, 1 row so far".to_string(),
+            "… a table, 1 row".to_string(),
+        ],
+        n => vec![
+            format!("… a table, {n} rows so far"),
+            format!("… a table, {n} rows"),
+        ],
     };
+    let what = tries
+        .into_iter()
+        .chain(["… a table".to_string(), "…".to_string()])
+        .find(|t| width_of(t) <= width)
+        .unwrap_or_else(|| "…".to_string());
     out.push(Line::from(Span::styled(what, theme.dim())));
     out
 }
@@ -995,7 +1007,16 @@ fn fit_label(h: &str, width: usize) -> String {
     if width_of(h) <= width {
         return h.to_string();
     }
-    let mut out: String = h.chars().take(width.saturating_sub(1)).collect();
+    // By columns: a wide symbol is two, and an ellipsis after it must still fit.
+    let mut out = String::new();
+    let mut w = 0;
+    for (g, cw) in width::clusters(h) {
+        if w + cw + 1 > width {
+            break;
+        }
+        out.push_str(g);
+        w += cw;
+    }
     out.push('…');
     out
 }

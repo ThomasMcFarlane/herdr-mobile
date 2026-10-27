@@ -12,6 +12,9 @@ pub struct Composer {
 
 impl Composer {
     pub fn insert(&mut self, c: char) {
+        if crate::width::is_joiner(c) {
+            return;
+        }
         self.text.insert(self.cursor, c);
         self.cursor += c.len_utf8();
         self.recall = None;
@@ -19,7 +22,12 @@ impl Composer {
 
     /// Inserts a whole string at the cursor in one go (a paste).
     pub fn insert_str(&mut self, s: &str) {
-        self.text.insert_str(self.cursor, s);
+        let s: std::borrow::Cow<str> = if s.chars().any(crate::width::is_joiner) {
+            s.chars().filter(|c| !crate::width::is_joiner(*c)).collect()
+        } else {
+            s.into()
+        };
+        self.text.insert_str(self.cursor, &s);
         self.cursor += s.len();
         self.recall = None;
     }
@@ -188,6 +196,14 @@ mod tests {
         c.home();
         c.delete();
         assert_eq!(c.text, "éb");
+    }
+
+    #[test]
+    fn emoji_selectors_and_joiners_are_dropped_whether_typed_or_pasted() {
+        let mut c = Composer::default();
+        c.insert_str("ok ☑\u{fe0f} 👨\u{200d}👩 ");
+        "❤\u{fe0f}".chars().for_each(|ch| c.insert(ch));
+        assert_eq!(c.text, "ok ☑ 👨👩 ❤");
     }
 
     #[test]

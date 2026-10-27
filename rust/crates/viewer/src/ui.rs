@@ -766,13 +766,13 @@ fn run_lines(
         .count();
     let mut verbs: Vec<(String, usize)> = Vec::new();
     for t in &tools {
-        let verb = t
-            .title
-            .trim_start_matches("$ ")
-            .split_whitespace()
-            .next()
-            .unwrap_or("tool")
-            .to_string();
+        let verb = clean(
+            t.title
+                .trim_start_matches("$ ")
+                .split_whitespace()
+                .next()
+                .unwrap_or("tool"),
+        );
         match verbs.iter_mut().find(|(v, _)| *v == verb) {
             Some(slot) => slot.1 += 1,
             None => verbs.push((verb, 1)),
