@@ -141,6 +141,17 @@ carries 20 MB of pictures: the keeper refuses a line over 32 MiB). A picture is 
 is still a regular file (a pipe or device goes as a link). Verified with omp: a picture from
 outside the session's folder, no tools allowed, was read correctly.
 
+**Pointing at a picture.** Each picture that is attached leaves `[Image #n]` in the box at the
+cursor (a number it keeps while others come and go), so a message can say "the button in [Image #2]
+is wrong". On send the text goes as typed, and each picture is introduced by a text block with its
+placeholder (`[Image #2]`) followed by the picture (or its link), in order, so the words and the
+pictures line up for the agent; the conversation shows `[Image #2] name` under the text. A box
+with only placeholders still counts as empty for pasting a path. Backspace right after a
+placeholder takes it and its picture off together; taking a picture off any other way (Ctrl-C,
+`/files`) takes its placeholders out of the text; numbering starts again after a send. Verified
+with omp: with a blue picture as `[Image #1]` and a red one as `[Image #2]`, "which image number
+is red?" answered `2`.
+
 A screenshot on the clipboard: a terminal pastes text only, so `Ctrl-V` (and an empty paste, which
 is what a terminal that binds Ctrl-V sends when the clipboard holds a picture) reads it with
 `wl-paste`, `xclip` or `pngpaste` (`clip.rs`, on a thread, 4 s a tool), checks it starts like a

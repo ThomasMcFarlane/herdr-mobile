@@ -39,6 +39,10 @@ pub struct Attachment {
     /// Goes as a link even though it is a picture: the message already carries
     /// [`MAX_PICTURES_TOTAL`] bytes of pictures.
     pub link: bool,
+    /// The picture's number in this message (`[Image #2]`), 0 for a file that is no picture. It
+    /// stays with the picture when another is taken off, so what the person wrote about
+    /// `[Image #2]` stays true.
+    pub number: u32,
 }
 
 impl Attachment {
@@ -66,10 +70,15 @@ impl Attachment {
     /// How it is listed above the input: its short name, and `picture` when it goes as one.
     #[must_use]
     pub fn label(&self, agent_takes_pictures: bool) -> String {
-        if self.is_picture(agent_takes_pictures) {
-            format!("{} · picture", self.short())
+        let name = if self.number > 0 {
+            format!("#{} {}", self.number, self.short())
         } else {
             self.short().to_string()
+        };
+        if self.is_picture(agent_takes_pictures) {
+            format!("{name} · picture")
+        } else {
+            name
         }
     }
 }
@@ -124,6 +133,7 @@ pub fn attachment(abs: &str, cwd: &str) -> Attachment {
         size: 0,
         data: None,
         link: false,
+        number: 0,
     }
 }
 
@@ -251,35 +261,126 @@ pub fn paths_in(paste: &str, home: &str) -> Option<Vec<String>> {
     (!paths.is_empty()).then_some(paths)
 }
 
-/// The prompt's content blocks: the text (when there is any), then each file: a picture whose
-/// bytes were read, when the agent takes pictures, else a link.
+/// The prompt's content blocks: the text (when it says more than placeholders), then each file.
+/// A numbered picture is introduced by a text block with its placeholder (`[Image #2]`), so the
+/// words the person wrote about it point at it; then the picture itself when its bytes were read
+/// and the agent takes pictures, else a link.
 #[must_use]
 pub fn blocks(text: &str, files: &[Attachment], agent_takes_pictures: bool) -> Value {
     let mut out = Vec::new();
-    if !text.trim().is_empty() {
+    if !without_placeholders(text).trim().is_empty() {
         out.push(json!({"type": "text", "text": text}));
     }
-    out.extend(files.iter().map(|f| match (&f.data, f.picture) {
-        (Some(data), Some(mime)) if f.is_picture(agent_takes_pictures) => {
-            json!({"type": "image", "data": data, "mimeType": mime})
+    for f in files {
+        if f.number > 0 {
+            out.push(json!({"type": "text", "text": placeholder(f.number)}));
         }
-        _ => json!({"type": "resource_link", "uri": f.uri, "name": f.name}),
-    }));
+        out.push(match (&f.data, f.picture) {
+            (Some(data), Some(mime)) if f.is_picture(agent_takes_pictures) => {
+                json!({"type": "image", "data": data, "mimeType": mime})
+            }
+            _ => json!({"type": "resource_link", "uri": f.uri, "name": f.name}),
+        });
+    }
     Value::Array(out)
 }
 
-/// How the message is shown in the conversation: the text, then each file on its own line.
+/// How the message is shown in the conversation: the text, then each file on its own line
+/// (`[Image #1] name` for a numbered picture, `@name` for a file).
 #[must_use]
 pub fn echo(text: &str, files: &[Attachment]) -> String {
-    let mut out = text.to_string();
+    let mut out = if without_placeholders(text).trim().is_empty() {
+        String::new()
+    } else {
+        text.to_string()
+    };
     for f in files {
         if !out.is_empty() {
             out.push('\n');
         }
-        out.push('@');
-        out.push_str(&f.name);
+        if f.number > 0 {
+            out.push_str(&placeholder(f.number));
+            out.push(' ');
+            out.push_str(f.short());
+        } else {
+            out.push('@');
+            out.push_str(&f.name);
+        }
     }
     out
+}
+
+/// The text that stands for picture number `n` in a message.
+#[must_use]
+pub fn placeholder(n: u32) -> String {
+    format!("[Image #{n}]")
+}
+
+/// Where the placeholders sit in `text`: `(start, end, number)`, in order.
+#[must_use]
+pub fn tokens(text: &str) -> Vec<(usize, usize, u32)> {
+    const OPEN: &str = "[Image #";
+    text.match_indices(OPEN)
+        .filter_map(|(start, _)| {
+            let rest = &text[start + OPEN.len()..];
+            let digits = rest.bytes().take_while(u8::is_ascii_digit).count();
+            (digits > 0 && digits <= 9 && rest[digits..].starts_with(']')).then(|| {
+                (
+                    start,
+                    start + OPEN.len() + digits + 1,
+                    rest[..digits].parse().unwrap_or(0),
+                )
+            })
+        })
+        .collect()
+}
+
+/// `text` with every placeholder removed.
+#[must_use]
+pub fn without_placeholders(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut at = 0;
+    for (start, end, _) in tokens(text) {
+        out.push_str(&text[at..start]);
+        at = end;
+    }
+    out.push_str(&text[at..]);
+    out
+}
+
+/// Whether `text` says nothing but placeholders: such a box still counts as empty for pasting a
+/// path and for Backspace taking a file off.
+#[must_use]
+pub fn only_placeholders(text: &str) -> bool {
+    without_placeholders(text).trim().is_empty()
+}
+
+/// The span to delete for the placeholder that ends at `cursor` (or just before one space
+/// that ends there), and its number: what Backspace takes off as one piece.
+#[must_use]
+pub fn token_before(text: &str, cursor: usize) -> Option<(usize, usize, u32)> {
+    tokens(text).into_iter().find_map(|(s, e, n)| {
+        if e == cursor {
+            Some((s, e, n))
+        } else if e < cursor && &text[e..cursor] == " " {
+            Some((s, cursor, n))
+        } else {
+            None
+        }
+    })
+}
+
+/// The spans to delete to take picture `n` out of `text`: each of its placeholders, with the
+/// one space after it when there is one. Last first, so deleting them in order stays valid.
+#[must_use]
+pub fn spans_of(text: &str, n: u32) -> Vec<(usize, usize)> {
+    let mut spans: Vec<(usize, usize)> = tokens(text)
+        .into_iter()
+        .filter(|t| t.2 == n)
+        .map(|(s, e, _)| (s, if text[e..].starts_with(' ') { e + 1 } else { e }))
+        .collect();
+    spans.reverse();
+    spans
 }
 
 #[cfg(test)]
@@ -430,5 +531,67 @@ mod tests {
             "/home/me/.herdr-mobile/inbox/tui-x/clipboard-1-1.png"
         );
         assert_eq!(attachment("/w/src/a.rs", "/w").label(true), "src/a.rs");
+    }
+
+    #[test]
+    fn pictures_are_pointed_at_by_number_in_the_text_and_introduced_to_the_agent_the_same_way() {
+        let mut a = attachment("/w/a.png", "/w");
+        let mut b = attachment("/w/b.png", "/w");
+        let f = attachment("/w/notes.md", "/w");
+        a.number = 1;
+        b.number = 2;
+        let files = [a, b, f];
+        assert_eq!(
+            blocks("compare [Image #1] with [Image #2]", &files, false),
+            json!([
+                {"type": "text", "text": "compare [Image #1] with [Image #2]"},
+                {"type": "text", "text": "[Image #1]"},
+                {"type": "resource_link", "uri": "file:///w/a.png", "name": "a.png"},
+                {"type": "text", "text": "[Image #2]"},
+                {"type": "resource_link", "uri": "file:///w/b.png", "name": "b.png"},
+                {"type": "resource_link", "uri": "file:///w/notes.md", "name": "notes.md"}
+            ])
+        );
+        // Only placeholders typed: the words say nothing, so there is no text block at all.
+        assert_eq!(
+            blocks("[Image #1] ", &files[..1], false)[0]["text"],
+            "[Image #1]"
+        );
+        assert_eq!(
+            blocks("[Image #1] ", &files[..1], false)
+                .as_array()
+                .map(Vec::len),
+            Some(2)
+        );
+        assert_eq!(
+            echo("compare [Image #1] with [Image #2]", &files),
+            "compare [Image #1] with [Image #2]\n[Image #1] a.png\n[Image #2] b.png\n@notes.md"
+        );
+        assert_eq!(echo("[Image #1] ", &files[..1]), "[Image #1] a.png");
+        assert_eq!(files[1].label(false), "#2 b.png");
+    }
+
+    #[test]
+    fn placeholders_are_found_taken_off_in_one_piece_and_never_confused_with_other_brackets() {
+        let t = "a [Image #1] b [Image #12] [Image #x] [Image 3] [Image #1]";
+        assert_eq!(
+            tokens(t).iter().map(|x| x.2).collect::<Vec<_>>(),
+            [1, 12, 1]
+        );
+        assert_eq!(without_placeholders(t), "a  b  [Image #x] [Image 3] ");
+        assert!(only_placeholders("[Image #1] [Image #2]  ") && only_placeholders(""));
+        assert!(!only_placeholders("[Image #1] hi"));
+        // Backspace right after the token, or after the one space that follows it.
+        let s = "look [Image #1] ";
+        assert_eq!(token_before(s, 15), Some((5, 15, 1)));
+        assert_eq!(token_before(s, 16), Some((5, 16, 1)));
+        assert_eq!(token_before(s, 14), None);
+        assert_eq!(token_before("hi [Image #1]x", 14), None);
+        // Taking picture 1 out of the text: each placeholder with its space, last first.
+        let mut text = "[Image #1] and [Image #2] then [Image #1]".to_string();
+        for (a, b) in spans_of(&text.clone(), 1) {
+            text.replace_range(a..b, "");
+        }
+        assert_eq!(text, "and [Image #2] then ");
     }
 }

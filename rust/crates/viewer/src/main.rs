@@ -141,6 +141,8 @@ struct App {
     mode_confirm: Option<String>,
     /// A clipboard picture is being read; a second Ctrl-V waits for it.
     clipping: bool,
+    /// The number the last picture of this message was given (`[Image #n]`); 0 with none.
+    next_picture: u32,
 }
 
 /// While this program owns the screen, a background job of the same terminal that tries to write
@@ -344,6 +346,7 @@ fn main() {
         fresh_ok: false,
         mode_confirm: None,
         clipping: false,
+        next_picture: 0,
     };
     // A fresh session started from another one (`/new`): say where the earlier one went.
     if let Some(prev) = std::env::var("HERDR_TUI_PREVIOUS")
@@ -860,6 +863,7 @@ impl App {
                 Effect::RestoreInput(t, files) => {
                     self.composer.restore(t);
                     if self.files.is_empty() {
+                        self.next_picture = files.iter().map(|f| f.number).max().unwrap_or(0);
                         self.files = files;
                     }
                 }
@@ -888,7 +892,7 @@ impl App {
         }
         // A path (or several) pasted into an empty box is a file to send with the message,
         // as the phone's `@file`. Pasted into text, it is text.
-        if self.composer.text.is_empty()
+        if attach::only_placeholders(&self.composer.text)
             && self.session.waiting().is_empty()
             && self.attach_paste(text)
         {
@@ -1008,8 +1012,8 @@ impl App {
                 if self.transcript.running() || self.session.prompting() {
                     let fx = self.session.cancel(&mut self.transcript);
                     self.run(fx);
-                } else if self.composer.text.is_empty() && !self.files.is_empty() {
-                    self.files.clear();
+                } else if attach::only_placeholders(&self.composer.text) && !self.files.is_empty() {
+                    self.take_all_files();
                     self.hint = Some("Took the files off".to_string());
                 } else if self.composer.text.is_empty() {
                     self.quit = true;
@@ -1084,13 +1088,17 @@ impl App {
                 self.answer(c as usize - '1' as usize);
             }
             KeyCode::Char(c) if !ctrl && !alt => self.composer.insert(c),
+            // Right after a picture's placeholder: Backspace takes the whole of it, and the
+            // picture, off.
+            KeyCode::Backspace if self.take_placeholder() => {}
             // Nothing typed and files attached: Backspace takes the last one off.
             KeyCode::Backspace
-                if self.composer.text.is_empty()
+                if attach::only_placeholders(&self.composer.text)
                     && !self.files.is_empty()
                     && self.session.waiting().is_empty() =>
             {
-                if let Some(f) = self.files.pop() {
+                if !self.files.is_empty() {
+                    let f = self.take_file(self.files.len() - 1);
                     self.hint = Some(format!("Took off {}", f.short()));
                 }
             }
@@ -1285,6 +1293,7 @@ impl App {
             Ok(fx) => {
                 self.composer.take();
                 self.files.clear();
+                self.next_picture = 0;
                 self.held = None;
                 self.view.scroll = 0;
                 self.run(fx);
@@ -1401,7 +1410,7 @@ impl App {
                                     .ok()
                                     .filter(|i| *i < self.files.len())
                                 {
-                                    let f = self.files.remove(i);
+                                    let f = self.take_file(i);
                                     self.hint = Some(format!("Took off {}", f.short()));
                                 }
                             }
@@ -1776,7 +1785,54 @@ impl App {
                 many.len()
             ),
         });
+        // A numbered picture leaves its placeholder in the text, at the cursor, for the person
+        // to point at it: "the button in [Image #2] is wrong".
+        for a in &mut found {
+            if a.picture.is_some() {
+                self.next_picture += 1;
+                a.number = self.next_picture;
+                self.composer
+                    .insert_str(&format!("{} ", attach::placeholder(a.number)));
+            }
+        }
         self.files.extend(found);
+        true
+    }
+
+    /// Takes file `i` off, and its placeholders out of the text; numbering starts again when
+    /// none is left.
+    fn take_file(&mut self, i: usize) -> attach::Attachment {
+        let f = self.files.remove(i);
+        if f.number > 0 {
+            for (a, b) in attach::spans_of(&self.composer.text.clone(), f.number) {
+                self.composer.delete_range(a, b);
+            }
+        }
+        if self.files.is_empty() {
+            self.next_picture = 0;
+        }
+        f
+    }
+
+    fn take_all_files(&mut self) {
+        while !self.files.is_empty() {
+            self.take_file(0);
+        }
+        self.hint = Some("Took the files off".to_string());
+    }
+
+    /// Backspace right after a placeholder (or the space after it): the placeholder goes whole,
+    /// and the picture it stands for with it. `false` when the cursor is not after one.
+    fn take_placeholder(&mut self) -> bool {
+        let Some((start, end, n)) = attach::token_before(&self.composer.text, self.composer.cursor)
+        else {
+            return false;
+        };
+        self.composer.delete_range(start, end);
+        if let Some(i) = self.files.iter().position(|f| f.number == n) {
+            let f = self.take_file(i);
+            self.hint = Some(format!("Took off {}", f.short()));
+        }
         true
     }
 
