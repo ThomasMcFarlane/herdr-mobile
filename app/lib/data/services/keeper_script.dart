@@ -971,6 +971,137 @@ def view_runnable(path):
 
 
 
+# The herdr-tui release this keeper (this app version) works with: the oldest one it accepts, and
+# the one it downloads, by its exact tag, so an app version always meets a herdr-tui it was
+# released with and a newer herdr-tui with a breaking change never reaches an older app. Raise it
+# in the same release as any change to herdr-tui or to the keeper that the older one cannot
+# follow (the wire, the record fields, the exit codes). A test keeps it from being newer than the
+# app itself, since no such release can exist yet.
+DESK_MIN = "0.1.31"
+DESK_URL = "https://github.com/tuan3w/herdr-mobile/releases/download/v" + DESK_MIN
+DESK_MAX_BYTES = 64 * 1024 * 1024
+DESK_TIMEOUT = 8
+
+
+def desk_asset():
+    """The release file for this computer (`herdr-tui-linux-x86_64`, ...), or None."""
+    import platform
+    system, machine = platform.system(), platform.machine().lower()
+    if system == "Linux" and machine in ("x86_64", "amd64"):
+        return "herdr-tui-linux-x86_64"
+    if system == "Linux" and machine in ("aarch64", "arm64"):
+        return "herdr-tui-linux-aarch64"
+    if system == "Darwin" and machine == "arm64":
+        return "herdr-tui-macos-arm64"
+    if system == "Darwin" and machine in ("x86_64", "amd64"):
+        return "herdr-tui-macos-x86_64"
+    return None
+
+
+def version_tuple(text):
+    m = re.search(r"(\d+)\.(\d+)\.(\d+)", text or "")
+    return tuple(int(x) for x in m.groups()) if m else None
+
+
+def desk_version(exe):
+    """The version a herdr-tui reports (`herdr-tui 0.1.31`) as a tuple, or None when it cannot
+    be run or says nothing a version can be read from."""
+    try:
+        p = subprocess.run([exe, "--version"], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=5)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return version_tuple(p.stdout.decode("utf-8", "replace"))
+
+
+def desk_new_enough(exe):
+    v = desk_version(exe)
+    return v is not None and v >= version_tuple(DESK_MIN)
+
+
+def desk_fetch(base, name, limit):
+    import urllib.request
+    with urllib.request.urlopen(base + "/" + name, timeout=DESK_TIMEOUT) as r:
+        data = r.read(limit + 1)
+    if len(data) > limit:
+        raise ValueError("%s is larger than %d bytes" % (name, limit))
+    return data
+
+
+def desk_ensure(dirs, say):
+    """The `herdr-tui` to run in a pane (docs/TUI.md), or None for the python `view`.
+
+    Any copy at DESK_MIN or newer is run as it is. One somebody installed (a package, a build of
+    their own) is theirs and never touched: below DESK_MIN it is not run. Else the keeper's own
+    copy is `~/.herdr-mobile/bin/herdr-tui`: fetched the first time, and replaced when it falls
+    below DESK_MIN (the app was updated), as the release named by DESK_MIN, checked against that
+    release's checksums and installed by a rename, so a copy that is running is never torn.
+    Nothing is looked up while a copy is good, so a pane opens with no network. Every failure
+    (no network, no build for this computer, a wrong checksum) is [say]-d and gives the python
+    view."""
+    if os.environ.get("HERDR_MOBILE_VIEW") == "python":
+        return None
+    own = which("herdr-tui", dirs)
+    if own:
+        if desk_new_enough(own):
+            return own
+        say("%s is older than this app needs (herdr-tui %s); update it or remove it. Using the python view" % (own, DESK_MIN))
+        return None
+    folder = os.path.join(home_dir(), ".herdr-mobile", "bin")
+    exe = os.path.join(folder, "herdr-tui")
+    if os.path.isfile(exe) and os.access(exe, os.X_OK) and desk_new_enough(exe):
+        return exe
+    asset = desk_asset()
+    if asset is None:
+        say("no build of herdr-tui for this computer; using the python view")
+        return None
+    base = os.environ.get("HERDR_MOBILE_DESK_URL") or DESK_URL
+    try:
+        sums = desk_fetch(base, "herdr-tui-SHA256SUMS", 64 * 1024).decode("utf-8", "replace")
+        want = None
+        for line in sums.splitlines():
+            parts = line.split()
+            if len(parts) == 2 and parts[1].lstrip("*") == asset and re.match(r"^[0-9a-f]{64}$", parts[0]):
+                want = parts[0]
+        if want is None:
+            raise ValueError("the checksums do not list %s" % asset)
+        say("installing herdr-tui %s..." % DESK_MIN)
+        data = desk_fetch(base, asset, DESK_MAX_BYTES)
+        if hashlib.sha256(data).hexdigest() != want:
+            raise ValueError("checksum mismatch for %s; nothing was installed" % asset)
+        os.makedirs(folder, 0o700, exist_ok=True)
+        os.chmod(folder, 0o700)
+        tmp = "%s.%d.tmp" % (exe, os.getpid())
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o700)
+        with os.fdopen(fd, "wb") as f:
+            f.write(data)
+        os.chmod(tmp, 0o700)
+        if not desk_new_enough(tmp):
+            os.unlink(tmp)
+            raise ValueError("the release is older than this app needs (herdr-tui %s)" % DESK_MIN)
+        os.replace(tmp, exe)
+        return exe
+    except Exception as e:  # no network, a refusal, a bad file: the pane must still open
+        say("%s; using the python view" % e)
+        return None
+
+
+def cmd_desk(kid):
+    """What a pane runs: `herdr-tui attach ID` (fetched or updated first, see desk_ensure), else
+    the python `view`. It runs in the pane, so the person sees what it does and nothing in the
+    keeper waits for a download."""
+    def say(msg):
+        sys.stderr.write("herdr-mobile: %s\n" % msg)
+        sys.stderr.flush()
+    check_id(kid)
+    exe = desk_ensure(search_dirs(), say)
+    if exe:
+        try:
+            os.execv(exe, [exe, "attach", kid])
+        except OSError as e:
+            say("could not start %s: %s; using the python view" % (exe, e))
+    cmd_view(kid)
+
+
 class Chan(object):
     """A file descriptor the selector watches, with a write buffer."""
 
@@ -1952,7 +2083,8 @@ class Keeper(object):
         holds the session's folder, else in `Phone sessions` (made when
         missing, never focused), running `view`, which reports the session to
         herdr. A chain of herdr commands that tick polls, never waited for; no
-        herdr, no server or any failure: logged, and nothing else changes."""
+        herdr, no server or any failure: logged, and nothing else changes. The pane
+        runs `desk`: herdr-tui when it can be had, else `view`."""
         if os.environ.get("HERDR_MOBILE_NO_PANE") == "1" or os.path.exists(os.path.join(home_dir(), ".herdr-mobile", "no-panes")):
             return
         herdr = os.environ.get("HERDR_MOBILE_HERDR") or which("herdr", self.dirs)
@@ -2003,7 +2135,8 @@ class Keeper(object):
             return
         self.pane_tab = tid
         after = (lambda _o: self.herdr_call(["tab", "rename", tid, self.pane_label()], None)) if rename else None
-        self.herdr_call(["pane", "run", pid, "python3 '%s' view %s" % (SCRIPT, self.id)], after)
+        shown = "python3 '%s' %s %s" % (SCRIPT, "view" if os.environ.get("HERDR_MOBILE_VIEW") == "python" else "desk", self.id)
+        self.herdr_call(["pane", "run", pid, shown], after)
         self.dlog("herdr pane %s (tab %s) shows the session" % (pid, tid))
 
     def herdr_call(self, args, then, timeout=HERDR_TIMEOUT):
@@ -4300,7 +4433,7 @@ def cmd_blob(path, start, h):
 
 def main(argv):
     if not argv:
-        fail(EX_USAGE, "usage: probe | list | start --agent ID --cwd DIR | attach ID [--z] | kill ID | view ID | follow PATH [--z] [--from N] [--to N] [--digest] [--poll-ms N] [--idle-exit S] [--tail-bytes N] | blob PATH START HASH | history AGENT [CWD]")
+        fail(EX_USAGE, "usage: probe | list | start --agent ID --cwd DIR | attach ID [--z] | kill ID | view ID | desk ID | follow PATH [--z] [--from N] [--to N] [--digest] [--poll-ms N] [--idle-exit S] [--tail-bytes N] | blob PATH START HASH | history AGENT [CWD]")
     cmd, rest = argv[0], argv[1:]
     if cmd not in ("follow", "blob"):
         load_daemon_modules()
@@ -4352,6 +4485,8 @@ def main(argv):
             cmd_kill(rest[0])
         elif cmd == "view" and len(rest) == 1:
             cmd_view(rest[0])
+        elif cmd == "desk" and len(rest) == 1:
+            cmd_desk(rest[0])
         elif cmd == "daemon" and len(rest) == 4 and rest[0] == "--agent" and rest[2] == "--cwd":
             cmd_daemon(rest[1], rest[3])
         else:

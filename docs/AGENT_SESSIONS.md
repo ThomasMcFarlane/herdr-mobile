@@ -484,7 +484,20 @@ coming from its side.
    desk lists a worktree as its own workspace, and a session in it that sat
    in `Phone sessions` left that workspace an empty shell. The main checkout's
    workspace is the person's own, so its sessions stay in `Phone sessions`.
-   The tab runs the keeper's `view` command in it. `view` is a line-oriented client of the
+   The tab runs the keeper's `desk` command, which runs `herdr-tui attach` (docs/TUI.md) and
+   falls back to `view` when it cannot. `desk` runs in the pane, so the person sees what it
+   does and the keeper never waits on it. A `herdr-tui` somebody installed is used as it is if it is at
+   `DESK_MIN` or newer (never touched, never used below it); else the keeper's own copy,
+   `~/.herdr-mobile/bin/herdr-tui`, is fetched the first time from the release tagged `v<DESK_MIN>`,
+   checked against that release's `herdr-tui-SHA256SUMS` and installed by a rename, and replaced
+   when an app update raises `DESK_MIN`. Nothing is looked up while a copy is good, so a pane opens
+   offline. No network, no build for the platform, a wrong checksum: said in the pane, and the
+   python `view` opens. `HERDR_MOBILE_VIEW=python` keeps `view` on purpose.
+   **`DESK_MIN` (in `keeper_script.dart`) is a compatibility pin: raise it in the same release as
+   any change to herdr-tui or to the keeper that the older one cannot follow** (the wire, the record
+   fields, the exit codes). A test fails when it is newer than the app. The other direction,
+   a herdr-tui that needs a newer keeper than the app's, is not checked yet.
+   `view` is a line-oriented client of the
    keeper: it prints the conversation, takes a typed line as a prompt and a
    number as the answer to a waiting permission (the card shows the call's
    command or path whole, from `rawInput`), and reports the session's

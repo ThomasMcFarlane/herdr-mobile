@@ -1,0 +1,1 @@
+A session you start from the phone now opens as herdr-tui, the desk client, in its herdr tab on the computer. The computer downloads it once (1.5 MB) from this release, checks it, and falls back to the old view if it cannot. Try it: start a session from the phone with herdr running on the computer.

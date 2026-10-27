@@ -163,6 +163,11 @@ runs the real keeper with a scripted agent (hermetic: its own home, no herdr, ne
 `replay_differential.rs` compares the replay log with the python one on seeded sessions. A change in the
 app that breaks the viewer fails there, so the viewer is updated in the same change.
 
+The app pins the other direction: `DESK_MIN` in `keeper_script.dart` is the herdr-tui release an app version
+works with (it downloads exactly that tag, and never runs a `herdr-tui` below it). A change to herdr-tui or the
+keeper that an older herdr-tui cannot follow raises `DESK_MIN` in the same release. `herdr-tui --version` is the
+release's version (from `app/pubspec.yaml`), which is what `DESK_MIN` is compared with.
+
 ## Exit codes
 
 `0` left normally · `64` bad arguments · `66` no such session or folder · `67` the agent exited ·
