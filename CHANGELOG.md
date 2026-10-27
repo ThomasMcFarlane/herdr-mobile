@@ -4,6 +4,24 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [0.1.33] - 2026-10-27
+
+### Read what earlier releases added
+
+`What’s new` in Settings, under `About`, lists every release of herdr mobile up to the one
+you have: its headline and date, and a tap opens its notes with the tips and the walkthrough.
+Use it to find a feature you missed when you updated.
+
+> [!TIP]
+> Try it: open Settings, then `About`, then `What’s new`.
+
+- It is part of the app, so it opens at once, offline, and asks nobody for anything. Newer
+  versions are still offered by `Update available`.
+- A walkthrough's poster is the one thing that loads, when you open that release's notes.
+- The desk client `herdr-tui` has its terminal library updated, closing two low-severity
+  Dependabot alerts about a crate it never called in a risky way. The app pins `herdr-tui`
+  0.1.31, so that fix reaches you with a later pin.
+
 ## [0.1.32] - 2026-10-27
 
 ### A session opened from the phone shows up as herdr-tui on the computer
