@@ -20,6 +20,10 @@ pub fn is_joiner(c: char) -> bool {
 /// The columns `s` takes: the sum over its grapheme clusters.
 #[must_use]
 pub fn of(s: &str) -> usize {
+    // Plain printable ASCII is the common case on the draw path: a column a byte, no segmenting.
+    if s.bytes().all(|b| (0x20..0x7f).contains(&b)) {
+        return s.len();
+    }
     s.graphemes(true).map(UnicodeWidthStr::width).sum()
 }
 
@@ -50,6 +54,7 @@ mod tests {
         assert_eq!(of("e\u{301}"), 1, "a letter and its accent");
         assert_eq!(of("日本"), 4);
         assert_eq!(of(""), 0);
+        assert_eq!(of("plain ~text"), 11);
     }
 
     #[test]
