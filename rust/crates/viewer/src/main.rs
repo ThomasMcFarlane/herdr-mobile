@@ -27,8 +27,8 @@ use herdr_tui::session::{Effect, Event, Phase, Record, Refused, Session, Start};
 use herdr_tui::transcript::Transcript;
 use herdr_tui::ui;
 use herdr_tui::{
-    cli, delight, fold, herdr, highlight, host, input, lines, md, risk, sessions, slash, termbg,
-    theme, update,
+    cli, clip, delight, fold, herdr, highlight, host, input, lines, md, risk, sessions, slash,
+    termbg, theme, update,
 };
 use keeper::records::StateDir;
 use std::io::{BufReader, Write};
@@ -56,6 +56,8 @@ enum Ev {
     Session(Event),
     /// An update (`/update`) reporting progress, or finished.
     Update(UpdateMsg),
+    /// The picture read from the clipboard (saved in the inbox), or why there is none.
+    Clip(Result<PathBuf, String>),
 }
 
 /// What the thread running an update tells the screen.
@@ -137,6 +139,8 @@ struct App {
     fresh_ok: bool,
     /// The risky mode the person chose once and is asked to choose again.
     mode_confirm: Option<String>,
+    /// A clipboard picture is being read; a second Ctrl-V waits for it.
+    clipping: bool,
 }
 
 /// While this program owns the screen, a background job of the same terminal that tries to write
@@ -339,6 +343,7 @@ fn main() {
         updating: false,
         fresh_ok: false,
         mode_confirm: None,
+        clipping: false,
     };
     // A fresh session started from another one (`/new`): say where the earlier one went.
     if let Some(prev) = std::env::var("HERDR_TUI_PREVIOUS")
@@ -727,6 +732,17 @@ impl App {
             }
             Ev::Update(UpdateMsg::Progress(line)) => self.view.update = Some(line),
             Ev::Update(UpdateMsg::Done(result)) => self.update_done(result),
+            Ev::Clip(Ok(path)) => {
+                self.clipping = false;
+                let path = path.to_string_lossy().into_owned();
+                if !self.attach_paths(&[path]) {
+                    self.hint = Some("Could not attach the picture from the clipboard".to_string());
+                }
+            }
+            Ev::Clip(Err(why)) => {
+                self.clipping = false;
+                self.hint = Some(why);
+            }
             Ev::Session(e) => {
                 let fx = self.session.handle(e, self.now_ms(), &mut self.transcript);
                 self.run(fx);
@@ -862,6 +878,12 @@ impl App {
             .is_some_and(|q| !q.typed());
         if choosing {
             self.hint = Some(QUESTION_HINT.to_string());
+            return;
+        }
+        // A paste with no text in it: a terminal that binds Ctrl-V to paste sends exactly that
+        // when the clipboard holds a picture (a screenshot). Look for one.
+        if text.is_empty() && self.session.waiting().is_empty() {
+            self.paste_picture();
             return;
         }
         // A path (or several) pasted into an empty box is a file to send with the message,
@@ -1009,6 +1031,8 @@ impl App {
             // Another program (an image viewer's warnings, a stray `echo`) can write on this
             // terminal behind our back; this puts the screen right.
             KeyCode::Char('l') if ctrl => self.repaint = true,
+            // A picture on the clipboard (a screenshot) is attached: a terminal cannot paste one.
+            KeyCode::Char('v') if ctrl && self.session.waiting().is_empty() => self.paste_picture(),
             KeyCode::Char('r') if ctrl && self.newer.is_some() => self.load_newer(),
             KeyCode::Char('w') if ctrl => self.composer.kill_word(),
             KeyCode::Char('u') if ctrl => self.composer.clear(),
@@ -1067,7 +1091,7 @@ impl App {
                     && self.session.waiting().is_empty() =>
             {
                 if let Some(f) = self.files.pop() {
-                    self.hint = Some(format!("Took off {}", f.name));
+                    self.hint = Some(format!("Took off {}", f.short()));
                 }
             }
             KeyCode::Backspace => self.composer.backspace(),
@@ -1378,7 +1402,7 @@ impl App {
                                     .filter(|i| *i < self.files.len())
                                 {
                                     let f = self.files.remove(i);
-                                    self.hint = Some(format!("Took off {}", f.name));
+                                    self.hint = Some(format!("Took off {}", f.short()));
                                 }
                             }
                             slash::PickerKind::Choices => {
@@ -1652,6 +1676,32 @@ impl App {
         let Some(paths) = attach::paths_in(text, &self.home.to_string_lossy()) else {
             return false;
         };
+        self.attach_paths(&paths)
+    }
+
+    /// Reads the picture on the clipboard on a thread (a tool that hangs must not hold the
+    /// screen), saves it in the host inbox (`~/.herdr-mobile/inbox/tui-<session>/`, owner-only)
+    /// and attaches it, as a pasted path would be.
+    fn paste_picture(&mut self) {
+        if self.clipping {
+            return;
+        }
+        self.clipping = true;
+        self.hint = Some("Reading the clipboard…".to_string());
+        let dir = self
+            .home
+            .join(".herdr-mobile/inbox")
+            .join(format!("tui-{}", self.id));
+        let tx = self.tx.clone();
+        std::thread::spawn(move || {
+            let result = clip::read(&clip::tools(), &dir).map_err(|n| n.say());
+            let _ = tx.send(Ev::Clip(result));
+        });
+    }
+
+    /// Attaches these paths (absolute, as pasted): `false` when one is not a file that exists (the
+    /// caller then treats the paste as text).
+    fn attach_paths(&mut self, paths: &[String]) -> bool {
         // A long list is no list of files to attach, and nothing on the disk is looked at for it.
         if paths.len() > attach::MAX_FILES {
             self.hint = Some(format!(
@@ -1669,7 +1719,7 @@ impl App {
             .sum();
         let mut found: Vec<attach::Attachment> = Vec::new();
         let mut twice = 0;
-        for p in &paths {
+        for p in paths {
             let Ok(abs) = std::fs::canonicalize(p) else {
                 return false;
             };
@@ -1718,7 +1768,7 @@ impl App {
                 };
                 format!(
                     "Attached {}{how} · Backspace takes it off · /files picks",
-                    one.name
+                    one.short()
                 )
             }
             many => format!(
@@ -1740,7 +1790,7 @@ impl App {
                     Ok(Some(bytes)) => f.data = Some(attach::base64(&bytes)),
                     // No longer a regular file, or grown past the limit: it goes as a link.
                     Ok(None) => f.link = true,
-                    Err(e) => return Err(format!("Could not read {}: {e}", f.name)),
+                    Err(e) => return Err(format!("Could not read {}: {e}", f.short())),
                 }
             }
         }

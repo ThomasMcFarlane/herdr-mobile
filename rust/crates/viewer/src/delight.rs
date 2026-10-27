@@ -19,7 +19,7 @@ const VERBS: [&str; 14] = [
     "Almost there",
 ];
 
-const TIPS: [&str; 10] = [
+const TIPS: [&str; 11] = [
     "Ctrl-T shows what the agent is thinking",
     "Ctrl-J adds a line without sending",
     "Ctrl-P brings back your last message",
@@ -29,6 +29,7 @@ const TIPS: [&str; 10] = [
     "/ lists commands · /model switches the model",
     "Shift-Tab changes the mode; /plan goes straight to plan mode",
     "Paste a file or picture path into an empty box to attach it",
+    "Ctrl-V attaches the screenshot you just copied",
     "/info says which herdr-tui and which session this is",
 ];
 

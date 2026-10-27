@@ -52,13 +52,24 @@ impl Attachment {
             && self.size <= MAX_PICTURE_BYTES
     }
 
-    /// How it is listed above the input: its name, and `picture` when it goes as one.
+    /// What it is called above the input: its name, or just the file's own name when it lies
+    /// outside the session's folder (the full path is in what the agent is told).
+    #[must_use]
+    pub fn short(&self) -> &str {
+        if self.name.starts_with('/') {
+            self.name.rsplit('/').next().unwrap_or(&self.name)
+        } else {
+            &self.name
+        }
+    }
+
+    /// How it is listed above the input: its short name, and `picture` when it goes as one.
     #[must_use]
     pub fn label(&self, agent_takes_pictures: bool) -> String {
         if self.is_picture(agent_takes_pictures) {
-            format!("{} · picture", self.name)
+            format!("{} · picture", self.short())
         } else {
-            self.name.clone()
+            self.short().to_string()
         }
     }
 }
@@ -406,5 +417,18 @@ mod tests {
         );
         assert_eq!(read_picture("/dev/zero"), Ok(None), "a device never ends");
         assert!(read_picture(&dir.path().join("gone.png").to_string_lossy()).is_err());
+    }
+
+    #[test]
+    fn a_file_outside_the_folder_is_listed_by_its_own_name_and_told_to_the_agent_in_full() {
+        let mut p = attachment("/home/me/.herdr-mobile/inbox/tui-x/clipboard-1-1.png", "/w");
+        p.size = 10;
+        assert_eq!(p.label(true), "clipboard-1-1.png · picture");
+        assert_eq!(p.label(false), "clipboard-1-1.png");
+        assert_eq!(
+            p.name,
+            "/home/me/.herdr-mobile/inbox/tui-x/clipboard-1-1.png"
+        );
+        assert_eq!(attachment("/w/src/a.rs", "/w").label(true), "src/a.rs");
     }
 }

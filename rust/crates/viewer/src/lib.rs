@@ -6,6 +6,7 @@
 #![doc(hidden)]
 
 pub mod attach;
+pub mod clip;
 pub mod composer;
 pub mod delight;
 pub mod diff;

@@ -141,6 +141,15 @@ carries 20 MB of pictures: the keeper refuses a line over 32 MiB). A picture is 
 is still a regular file (a pipe or device goes as a link). Verified with omp: a picture from
 outside the session's folder, no tools allowed, was read correctly.
 
+A screenshot on the clipboard: a terminal pastes text only, so `Ctrl-V` (and an empty paste, which
+is what a terminal that binds Ctrl-V sends when the clipboard holds a picture) reads it with
+`wl-paste`, `xclip` or `pngpaste` (`clip.rs`, on a thread, 4 s a tool), checks it starts like a
+PNG, JPEG, GIF or WebP, saves it as `~/.herdr-mobile/inbox/tui-<session>/clipboard-<secs>-<n>.<ext>`
+(the phone's inbox: folders 0700, files 0600) and attaches it as any file. Each Ctrl-V adds one:
+up to 10 files and 20 MB of pictures a message; the list shows them by file name. Verified with
+omp and a stand-in `xclip` (two pictures, red then blue, no tools allowed: "First: red. Second:
+blue."). Not verified: a real Wayland or X11 clipboard, macOS `pngpaste`.
+
 Taking them off: Backspace on an empty box takes the last one off (a note says which), Ctrl-C takes
 all off, `/files` (aliases `/attachments`, `/detach`) opens a picker on the list and Enter takes the
 one chosen off. The row says the first two when the screen is wide enough. A refused send gives

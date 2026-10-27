@@ -1561,7 +1561,7 @@ fn footer_facts(ctx: &Frame_, theme: Theme) -> Vec<Vec<Span<'static>>> {
 
 /// The key list, opened with `?`: what is not worth a place in the footer.
 fn help_lines(width: usize, theme: Theme) -> Vec<Line<'static>> {
-    const KEYS: [(&str, &str); 18] = [
+    const KEYS: [(&str, &str); 19] = [
         ("Enter", "send"),
         ("Ctrl-J", "new line"),
         ("/", "commands: model, plan, settings, info, new, skills"),
@@ -1570,6 +1570,7 @@ fn help_lines(width: usize, theme: Theme) -> Vec<Line<'static>> {
             "paste a path",
             "attach a file or picture; Backspace takes it off",
         ),
+        ("Ctrl-V", "attach the screenshot on the clipboard"),
         ("↑ ↓  wheel", "scroll; with a request waiting, ↑ ↓ choose"),
         ("PgUp PgDn", "page"),
         ("Home  End", "oldest, newest"),
