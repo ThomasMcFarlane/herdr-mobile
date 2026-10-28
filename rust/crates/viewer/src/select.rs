@@ -10,6 +10,7 @@
 //! The copy leaves as an OSC 52 write, which herdr (and any terminal that allows it) puts on the
 //! clipboard of the machine the person sits at, over SSH too.
 
+use crate::theme::Theme;
 use ratatui::{buffer::Buffer, style::Modifier};
 use unicode_width::UnicodeWidthStr;
 
@@ -83,15 +84,23 @@ fn row_span(buf: &Buffer, range: (Cell, Cell), row: u16) -> (u16, u16) {
     (from, to.min(text_end(buf, row)))
 }
 
-/// Shows the selection: its cells swap foreground and background.
-pub fn paint(buf: &mut Buffer, range: (Cell, Cell)) {
+/// Shows the selection: its cells get the theme's selection background and keep their text colour,
+/// so what is selected reads as it did and the band is seen on a light terminal as on a dark one.
+/// Where the terminal's background is not known (or colour is off) the cells swap foreground and
+/// background instead.
+pub fn paint(buf: &mut Buffer, range: (Cell, Cell), theme: Theme) {
+    let band = theme.selection();
     let last = buf.area.height.saturating_sub(1);
     for row in range.0 .1.min(last)..=range.1 .1.min(last) {
         let (from, to) = row_span(buf, range, row);
         for x in from..to {
             if let Some(cell) = buf.cell_mut((x, row)) {
-                // A cell the screen already draws reversed would vanish into its neighbours.
-                if cell.modifier.contains(Modifier::REVERSED) {
+                if let Some(bg) = band {
+                    // Reversed, the band would become the text colour.
+                    cell.modifier.remove(Modifier::REVERSED);
+                    cell.bg = bg;
+                } else if cell.modifier.contains(Modifier::REVERSED) {
+                    // A cell the screen already draws reversed would vanish into its neighbours.
                     cell.modifier.remove(Modifier::REVERSED);
                 } else {
                     cell.modifier.insert(Modifier::REVERSED);
@@ -226,7 +235,7 @@ mod tests {
         let mut buf = screen(&["ab", "", "cd"]);
         // The drag ends far to the right of the text.
         assert_eq!(text(&buf, ((0, 0), (30, 2))), "ab\n\ncd");
-        paint(&mut buf, ((0, 0), (30, 2)));
+        paint(&mut buf, ((0, 0), (30, 2)), Theme::plain());
         assert!(buf
             .cell((1, 0))
             .expect("in range")
@@ -266,13 +275,37 @@ mod tests {
     }
 
     #[test]
-    fn what_is_painted_twice_is_back_as_it_was() {
+    fn without_a_known_background_what_is_painted_twice_is_back_as_it_was() {
         let mut buf = screen(&["abc"]);
         let was = buf.clone();
-        paint(&mut buf, ((0, 0), (2, 0)));
+        paint(&mut buf, ((0, 0), (2, 0)), Theme::plain());
         assert_ne!(buf, was);
-        paint(&mut buf, ((0, 0), (2, 0)));
+        paint(&mut buf, ((0, 0), (2, 0)), Theme::plain());
         assert_eq!(buf, was);
+    }
+
+    #[test]
+    fn with_a_known_background_the_band_replaces_it_and_the_text_keeps_its_colour() {
+        let theme = Theme::banded((255, 255, 255));
+        let mut buf = Buffer::empty(ratatui::layout::Rect::new(0, 0, 6, 1));
+        buf.set_string(
+            0,
+            0,
+            "abc",
+            Style::default()
+                .fg(ratatui::style::Color::Rgb(26, 127, 55))
+                .bg(ratatui::style::Color::Rgb(1, 2, 3)),
+        );
+        paint(&mut buf, ((0, 0), (2, 0)), theme);
+        let cell = buf.cell((1, 0)).expect("in range");
+        assert_eq!(Some(cell.bg), theme.selection());
+        assert_eq!(cell.fg, ratatui::style::Color::Rgb(26, 127, 55));
+        assert!(!cell.modifier.contains(Modifier::REVERSED));
+        assert_ne!(
+            buf.cell((4, 0)).expect("in range").bg,
+            cell.bg,
+            "past the text nothing is painted"
+        );
     }
 
     #[test]

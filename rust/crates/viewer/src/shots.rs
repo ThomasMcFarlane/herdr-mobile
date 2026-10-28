@@ -572,4 +572,23 @@ fn shots() {
             None,
         ),
     );
+    // A drag over the code: the selection band on real output, in whichever theme is asked for.
+    let mut selecting = View::default();
+    let mut drag = crate::select::Selection::begin((4, 6));
+    drag.drag((70, 16));
+    selecting.select = Some(drag);
+    write(
+        "15-selected",
+        frame(
+            &conversation("code"),
+            &ready(),
+            &none,
+            theme,
+            100,
+            30,
+            &mut selecting,
+            None,
+            None,
+        ),
+    );
 }

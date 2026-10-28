@@ -68,7 +68,10 @@ printing into scrollback, and the layout is ours to get right).
   selects nothing itself: herdr forwards the drag to the pane instead of copying it, and
   Shift-drag in the outer terminal cuts a rectangle across herdr's sidebar and the other panes
   (0.1.36, the first release with clicks, left no way to select in a herdr pane). So a drag
-  swaps the colours of the cells it covers, and on release the text of those cells (rows as
+  puts a band behind the cells it covers (`Theme::selection`: the terminal's own background
+  moved toward the palette's blue, the text keeping its colour, so it reads on light and dark;
+  a plain swap of foreground and background was white on near-black on a light terminal; where
+  the background is unknown, or with `NO_COLOR`, it still swaps them), and on release the text of those cells (rows as
   drawn, nothing trailing, the screen's two-column margin taken off) goes out as an OSC 52
   write, which herdr hands to the clipboard of the machine the person sits at and most
   terminals allow. The footer says `Copied N characters`. Any key, click, wheel turn or new

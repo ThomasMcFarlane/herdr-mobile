@@ -22,9 +22,10 @@ flutter pub get >/dev/null
 
 if [ "${1:-}" != "--tests" ]; then
   # Width is pinned in app/analysis_options.yaml (formatter.page_width). A file
-  # it would change is listed; `dart format .` in app/ fixes them.
+  # it would change is listed; `dart format <file>` fixes it. Only tracked files:
+  # the test runner writes generated Dart under app/build/, which is nobody's code.
   echo "==> dart format"
-  dart format -o none --set-exit-if-changed . ../tool
+  git ls-files -z -- '*.dart' '../tool/*.dart' | xargs -0 dart format -o none --set-exit-if-changed
 
   echo "==> flutter analyze"
   flutter analyze

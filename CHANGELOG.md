@@ -4,6 +4,20 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [0.1.43] - 2026-10-28
+
+### Selected text in the desk client is easy to read
+
+Drag over text in `herdr-tui` and it gets a light band behind it, in its
+own colours. On a light terminal it used to turn white on near-black.
+
+> [!TIP]
+> Try it: in a `herdr-tui` session, drag over some of the output.
+
+- It needs the terminal to say what its background is. Where it does not, the
+  old swap of colours stays; `HERDR_TUI_THEME=light` or `dark` tells
+  `herdr-tui` which.
+
 ## [0.1.42] - 2026-10-28
 
 [![Watch what's new · 1 change · 0:07 · 2.3 MB](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.42/0.1.42-whats-new.jpg)](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.42/0.1.42-whats-new.mp4)
