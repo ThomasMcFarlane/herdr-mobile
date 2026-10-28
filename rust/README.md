@@ -104,7 +104,7 @@ for good, `herdr-tui kill ID` (or stop it from the app).
 | `↑` `↓` | scroll the conversation 3 lines; with a request waiting and the box empty, choose an option; inside a multi-line message they move the cursor |
 | mouse wheel | scroll the conversation 3 lines |
 | click | open or close a tool call, a run of them or the thinking; on the permission or question panel, choose an option, and click the chosen one again to answer with it (on a question's ticks, tick it) |
-| `Shift`-drag | select text to copy (the terminal's own selection; `Option`-drag in iTerm2) |
+| drag | select text on the screen and copy it (the footer says how many characters); any key or click drops the highlight |
 | `PgUp` `PgDn` `Home` `End` | page, start of the conversation, back to the newest |
 | `Ctrl-P` / `Ctrl-N` | recall earlier sent messages |
 | `Tab` / `Shift-Tab` | choose an option on the permission panel (wraps around); on a question, `Shift-Tab` goes back a field |
@@ -120,9 +120,10 @@ for good, `herdr-tui kill ID` (or stop it from the app).
 
 An answer that stays allowed (*Always allow*) asks for the same number, Enter or click twice.
 
-The mouse is taken so a click can open things; the terminal still selects text with `Shift`-drag.
-`HERDR_TUI_MOUSE=off` gives the mouse back to the terminal: a plain drag selects, the wheel still scrolls
-(as Up and Down), and clicks do nothing.
+The mouse is taken so a click can open things and a drag can select text. The copy leaves as an OSC 52
+write, which herdr and most terminals pass to the clipboard (inside tmux, set `set-clipboard on`).
+`HERDR_TUI_MOUSE=off` gives the mouse back to the terminal: a plain drag (`Option`-drag in iTerm2) is then
+the terminal's own selection, the wheel still scrolls (as Up and Down), and clicks do nothing.
 
 ### Questions
 

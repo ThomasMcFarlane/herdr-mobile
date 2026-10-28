@@ -16,9 +16,9 @@ class PhotoExportException implements Exception {
   String toString() => message;
 }
 
-/// What the person can do with a picture outside the app: keep a copy in the
-/// phone's gallery, or hand it to another app. A small interface so a test
-/// checks what the viewer asks for without a platform channel.
+/// What the person can do with a picture or a video outside the app: keep a
+/// copy in the phone's gallery, or hand it to another app. A small interface so
+/// a test checks what the viewer asks for without a platform channel.
 abstract interface class PhotoExport {
   /// Puts the picture in the gallery, album `herdr` (Pictures/herdr on
   /// Android). Throws [PhotoExportException].
@@ -27,6 +27,16 @@ abstract interface class PhotoExport {
   /// Opens the system share sheet with the picture as a file called [name].
   /// Throws [PhotoExportException].
   Future<void> share(Uint8List bytes, {required String name});
+
+  /// Puts a video file in the gallery, album `herdr` (Pictures/herdr on
+  /// Android). The file stays where it is. Throws [PhotoExportException].
+  Future<void> saveVideoToGallery(File file);
+
+  /// Opens the system share sheet with a file that is already on the phone. The
+  /// file is not removed, but on Android `share_plus` first copies it into its
+  /// own cache folder, so a big file needs its size free once more until the
+  /// next share. Throws [PhotoExportException].
+  Future<void> shareFile(File file);
 
   /// Shares a file too big to hold in memory: [read] is asked for pieces of at
   /// most [chunk] bytes, which are appended to a file in the cache directory
@@ -53,12 +63,22 @@ class DevicePhotoExport implements PhotoExport {
   const DevicePhotoExport();
 
   @override
-  Future<void> saveToGallery(Uint8List bytes, {required String name}) async {
+  Future<void> saveToGallery(Uint8List bytes, {required String name}) =>
+      _intoGallery('picture', () => Gal.putImageBytes(bytes, album: photoAlbum, name: _stem(name)));
+
+  @override
+  Future<void> saveVideoToGallery(File file) =>
+      _intoGallery('video', () => Gal.putVideo(file.path, album: photoAlbum));
+
+  /// Asks for the gallery (the album, so on Android 10+ no permission is
+  /// needed), runs [put], and says in words what went wrong. [thing] is
+  /// "picture" or "video".
+  static Future<void> _intoGallery(String thing, Future<void> Function() put) async {
     try {
       if (!await Gal.hasAccess(toAlbum: true) && !await Gal.requestAccess(toAlbum: true)) {
         throw const PhotoExportException('Saving needs access to your photos. Allow it in the phone\u2019s settings.');
       }
-      await Gal.putImageBytes(bytes, album: photoAlbum, name: _stem(name));
+      await put();
     } on PhotoExportException {
       rethrow;
     } on GalException catch (e) {
@@ -66,11 +86,20 @@ class DevicePhotoExport implements PhotoExport {
         GalExceptionType.accessDenied =>
           'Saving needs access to your photos. Allow it in the phone\u2019s settings.',
         GalExceptionType.notEnoughSpace => 'The phone is out of space.',
-        GalExceptionType.notSupportedFormat => 'The gallery cannot keep this kind of picture.',
-        GalExceptionType.unexpected => 'The picture could not be saved.',
+        GalExceptionType.notSupportedFormat => 'The gallery cannot keep this kind of $thing.',
+        GalExceptionType.unexpected => 'The $thing could not be saved.',
       });
     } on Object {
-      throw const PhotoExportException('The picture could not be saved.');
+      throw PhotoExportException('The $thing could not be saved.');
+    }
+  }
+
+  @override
+  Future<void> shareFile(File file) async {
+    try {
+      await _send(file);
+    } on Object {
+      throw const PhotoExportException('The share sheet could not be opened.');
     }
   }
 

@@ -66,11 +66,11 @@ impl OscFilter {
     }
 }
 
-/// Asks the terminal for clicks and the wheel (button events, SGR coordinates). Not motion
-/// (`?1002`, `?1003`): a moving pointer would wake the screen for nothing. While it is on, the
-/// terminal's own selection is Shift-drag (Option-drag in iTerm2).
-pub const MOUSE_ON: &[u8] = b"\x1b[?1000h\x1b[?1006h";
-pub const MOUSE_OFF: &[u8] = b"\x1b[?1006l\x1b[?1000l";
+/// Asks the terminal for clicks, the wheel and drags (button events, SGR coordinates). Not plain
+/// motion (`?1003`): a moving pointer would wake the screen for nothing. `?1002` reports motion
+/// only while a button is held, which is a drag, and a drag is what selects text (`select.rs`).
+pub const MOUSE_ON: &[u8] = b"\x1b[?1002h\x1b[?1006h";
+pub const MOUSE_OFF: &[u8] = b"\x1b[?1006l\x1b[?1002l\x1b[?1000l";
 
 /// Whether to take the mouse: yes, unless `HERDR_TUI_MOUSE` says `off`, `0` or `false` (then the
 /// wheel arrives as Up and Down, and a plain drag selects, as before clicks did anything).

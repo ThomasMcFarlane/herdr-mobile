@@ -177,7 +177,7 @@ class FileViewerViewModel extends ChangeNotifier {
             await _setPretty(true, epoch);
             if (!_current(epoch)) return;
           }
-        case FileKind.image || FileKind.svg || FileKind.pdf || FileKind.binary:
+        case FileKind.image || FileKind.svg || FileKind.pdf || FileKind.binary || FileKind.video:
           _head = Uint8List.sublistView(head, 0, head.length < viewerHexBytes ? head.length : viewerHexBytes);
       }
       _phase = ViewerPhase.ready;

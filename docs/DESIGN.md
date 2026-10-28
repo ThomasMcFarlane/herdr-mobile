@@ -288,6 +288,8 @@ change. Status: **stable** = a catalog entry, a semantics test and this row.
 | `showToast`, `Toaster`, `ToastShelf`, `ToastCard` | `toast.dart` | the one transient message (`ToastCard` is its picture, for the catalog) | `SnackBar` |
 | `copyText` | `clipboard.dart` | the one way to copy (below) | ten copy sites |
 | `BusySpinner`, `LoadingRow`, `Skeleton` | `spinner.dart`, `loading_row.dart`, `skeleton.dart` | waiting | |
+| `ProgressLine` | `progress_line.dart` | how far a transfer of known size is (a picture or a video being copied to the phone); it fills and nothing else | the photo loader's own bar |
+| `VideoStage`, `VideoSeekBar` | `video_stage.dart` | the one place a video is shown: tap pauses, the end offers Play again, marks only while paused; the seek bar and the time | the release clip's own stage |
 | `AppRefresh` | `refresh.dart` | pull to refresh (a 2 px ring, no disc) | |
 | `FormSection`, `FormPanel`, `FormActionBar` | `form_sections.dart` | forms | |
 | `DrawCheck`, `BrandMark` | `draw_check.dart`, `brand_mark.dart` | the two rare drawn moments | |

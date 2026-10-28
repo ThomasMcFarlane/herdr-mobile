@@ -19,6 +19,7 @@ pub mod lines;
 pub mod md;
 pub mod question;
 pub mod risk;
+pub mod select;
 pub mod session;
 pub mod sessions;
 pub mod shell;

@@ -11,6 +11,7 @@ use crate::composer::Composer;
 use crate::delight;
 use crate::fold::{self, Block};
 use crate::md::{self, clean};
+use crate::select::{self, Selection};
 use crate::session::{Ask, Phase, Session};
 use crate::shell;
 use crate::slash;
@@ -87,6 +88,9 @@ pub struct View {
     newest_row: Option<u16>,
     /// The agent message that was still arriving when last drawn.
     live: Option<u64>,
+    /// What the pointer is selecting, or selected when the button last went up. Cells of the
+    /// screen as drawn, so it is dropped as soon as the person does something else.
+    pub select: Option<Selection>,
 }
 
 #[derive(Clone, Copy)]
@@ -1297,6 +1301,10 @@ pub fn draw(f: &mut Frame, ctx: &Frame_, v: &mut View) {
     row.push(Span::raw(" ".repeat(pad)));
     row.extend(facts);
     f.render_widget(Paragraph::new(Line::from(row)), footer);
+    // Last, over everything drawn: the selection swaps the colours of the cells it covers.
+    if let Some(range) = v.select.as_ref().and_then(Selection::range) {
+        select::paint(f.buffer_mut(), range);
+    }
 }
 
 /// Columns kept between the two sides of the footer.
@@ -1579,7 +1587,7 @@ fn help_lines(width: usize, theme: Theme) -> Vec<Line<'static>> {
         ("Home  End", "oldest, newest"),
         ("click", "open or close a tool call or the thinking; choose"),
         ("Space  Shift-Tab", "on a question: tick a box, back a step"),
-        ("Shift-drag", "select text to copy"),
+        ("drag", "select text and copy it"),
         ("Esc", "browse what the agent did"),
         ("Ctrl-P  Ctrl-N", "earlier messages"),
         ("Ctrl-T", "show the thinking"),
@@ -3072,6 +3080,63 @@ mod tests {
         ))
         .join("\n");
         assert!(open.contains("I should check the manifest first"), "{open}");
+    }
+
+    #[test]
+    fn a_drag_over_the_conversation_swaps_the_colours_it_covers_and_copies_what_it_shows() {
+        let mut tr = Transcript::default();
+        agent(&mut tr, "m", "first line\n\nsecond line");
+        let session = ready_session();
+        let mut view = View::default();
+        let screen = |view: &mut View| {
+            draw_with(
+                &tr,
+                &session,
+                &Composer::default(),
+                Theme::plain(),
+                40,
+                12,
+                view,
+            )
+        };
+        let plain = screen(&mut view);
+        let rows = rows_of(&plain);
+        let top = u16::try_from(
+            rows.iter()
+                .position(|r| r.contains("first line"))
+                .expect("shown"),
+        )
+        .expect("a small screen");
+        let row = &rows[usize::from(top)];
+        // Columns, not bytes: the row starts with a bullet.
+        let col = u16::try_from(row[..row.find("first").expect("there")].chars().count())
+            .expect("narrow");
+
+        // From "first" to the "d" of "second", two rows down.
+        let mut s = Selection::begin((col, top));
+        s.drag((col + 5, top + 2));
+        view.select = Some(s);
+        let marked = screen(&mut view);
+        let reversed = |buf: &Buffer, x: u16, y: u16| {
+            buf[(x, y)]
+                .modifier
+                .contains(ratatui::style::Modifier::REVERSED)
+        };
+        assert!(reversed(&marked, col, top), "the first cell is covered");
+        assert!(reversed(&marked, col + 4, top + 2), "and the last");
+        assert!(
+            !reversed(&marked, col + 7, top + 2),
+            "nothing past the end of the drag"
+        );
+        assert!(
+            !reversed(&plain, col, top),
+            "the screen without a selection is untouched"
+        );
+        assert_eq!(
+            select::text(&marked, s.range().expect("dragged")),
+            "first line\n\nsecond",
+            "the copy is the text on screen, not the colours"
+        );
     }
 
     #[test]
