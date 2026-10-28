@@ -4,12 +4,19 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
-## [Unreleased]
+## [0.1.43] - 2026-10-28
 
-- Text you select in `herdr-tui` by dragging shows as a light band behind the text, in its own
-  colours, where it was a swap of foreground and background: white on near-black on a light
-  terminal. It needs the terminal to tell its background colour; where it does not, the old swap
-  stays (`HERDR_TUI_THEME=light` or `dark` says which).
+### Selected text in the desk client is easy to read
+
+Drag over text in `herdr-tui` and it gets a light band behind it, in its
+own colours. On a light terminal it used to turn white on near-black.
+
+> [!TIP]
+> Try it: in a `herdr-tui` session, drag over some of the output.
+
+- It needs the terminal to say what its background is. Where it does not, the
+  old swap of colours stays; `HERDR_TUI_THEME=light` or `dark` tells
+  `herdr-tui` which.
 
 ## [0.1.42] - 2026-10-28
 
