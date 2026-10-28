@@ -4,6 +4,20 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [Unreleased]
+
+- Select text in `herdr-tui` by dragging over it, in a herdr pane too: the selection is
+  highlighted, copied when you let go, and the footer says how much. Since 0.1.36 a drag did
+  nothing there, because the mouse belonged to clicks. A click still opens a tool call, now
+  when you let go, so a drag that starts on one selects its text instead.
+- Videos in the file viewer play: `mp4`, `mov`, `mkv`, `webm`, `avi`, `m4v` and `3gp` show a
+  card with their size and `Play`, copy to the phone with a bar and `Cancel`, then play with a
+  bar to drag. One up to 24 MB starts by itself. `Save to gallery` keeps it in Pictures/herdr.
+  Before, these opened as a hex dump.
+- `Share or save…` on any file in the viewer (on the card of a file it cannot show, and in
+  `File options`): the file is copied to the phone and handed to the share sheet, so it can go
+  to Drive, Files or another app.
+
 ## [0.1.39] - 2026-10-27
 
 ### `herdr-tui update` shows the download

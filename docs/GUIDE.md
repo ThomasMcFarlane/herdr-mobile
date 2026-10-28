@@ -528,12 +528,21 @@ shows recent changes in this folder only. Sorting, `Folders first` and
 
 - Code and text with line numbers, `Wrap`.
 - Markdown as `Rendered` or `Source`; JSON with `Pretty`.
+- Video (`mp4`, `mov`, `mkv`, `webm`, `avi`, `m4v`, `3gp`) plays in the app,
+  with a bar to drag along it. The phone's player opens files, so the video is
+  copied to the phone first: one up to 24 MB starts by itself, a bigger one
+  shows its size and waits for `Play`, then a bar shows how much has been
+  copied, with `Cancel`. When Android cannot play the format, the card says so
+  and `Share or save…` hands it to a player that can. Only the last copy is
+  kept on the phone, and it is cleared when you open another file.
 - Other files: size, dates, permissions and a hex view of the first bytes,
-  with `Show as text`.
+  with `Show as text` and `Share or save…`.
 - The viewer notices when the file changes on disk (`Changed on disk`); tap
   to reload.
 - The bar has `Show as page` for an HTML or SVG file and `File options`
-  (`⋯`), which holds `Copy contents` and `Copy path`. From Android 13 the
+  (`⋯`), which holds `Copy contents`, `Save to gallery` (a video: it goes to
+  Pictures/herdr), `Share or save…` (any file: it is copied to the phone, then the
+  share sheet lists the apps and folders that keep it) and `Copy path`. From Android 13 the
   phone itself confirms a copy, so the app says nothing more unless only part
   was copied.
 

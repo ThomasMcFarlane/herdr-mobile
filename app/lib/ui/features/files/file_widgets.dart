@@ -15,7 +15,6 @@ const _codeExt = {
 
 const _archiveExt = {'zip', 'tar', 'gz', 'tgz', 'bz2', 'xz', '7z', 'rar', 'zst', 'jar', 'war', 'apk', 'deb', 'rpm', 'iso', 'dmg'};
 const _audioExt = {'mp3', 'wav', 'flac', 'ogg', 'm4a'};
-const _videoExt = {'mp4', 'mov', 'mkv', 'webm', 'avi'};
 const _codeNames = {'makefile', 'dockerfile', 'rakefile', 'gemfile', 'justfile', 'cmakelists.txt'};
 
 /// The Lucide glyph for a file called [name].
@@ -27,9 +26,9 @@ IconData fileIconForName(String name) {
   if (_codeExt.contains(ext)) return LucideIcons.fileCode;
   if (_archiveExt.contains(ext)) return LucideIcons.fileArchive;
   if (_audioExt.contains(ext)) return LucideIcons.fileMusic;
-  if (_videoExt.contains(ext)) return LucideIcons.fileVideo;
   return switch (typeForName(name).kind) {
     FileKind.image || FileKind.svg => LucideIcons.fileImage,
+    FileKind.video => LucideIcons.fileVideo,
     FileKind.json => LucideIcons.fileBraces,
     FileKind.markdown || FileKind.pdf || FileKind.text => LucideIcons.fileText,
     FileKind.binary => LucideIcons.file,

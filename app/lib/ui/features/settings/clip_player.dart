@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../../data/models/release_info.dart';
@@ -103,65 +102,12 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen> {
                     ? _Failed(onRetry: () => unawaited(_load()))
                     : video == null || !video.value.isInitialized
                         ? const Center(child: BusySpinner(size: IconSize.lead))
-                        : _Stage(video: video, onTap: () => _toggle(video)),
+                        : VideoStage(video: video, onTap: () => _toggle(video)),
               ),
             ),
           ],
         ),
       ),
-    );
-  }
-}
-
-/// The video, whole, with the pause and replay marks drawn only when it is
-/// not playing: nothing moves over a playing clip.
-class _Stage extends StatelessWidget {
-  const _Stage({required this.video, required this.onTap});
-
-  final VideoPlayerController video;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ds = context.ds;
-    return ValueListenableBuilder<VideoPlayerValue>(
-      valueListenable: video,
-      builder: (context, v, _) {
-        final ended = v.isCompleted || (v.duration > Duration.zero && v.position >= v.duration);
-        return Semantics(
-          button: true,
-          label: ended ? 'Play again' : (v.isPlaying ? 'Pause' : 'Play'),
-          excludeSemantics: true,
-          child: PressBuilder(
-            onTap: onTap,
-            builder: (context, _) => Center(
-              child: AspectRatio(
-                aspectRatio: v.aspectRatio,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(Radii.md),
-                  child: Stack(fit: StackFit.expand, children: [
-                    VideoPlayer(video),
-                    if (!v.isPlaying)
-                      Center(
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(color: ds.inverseSurface, borderRadius: BorderRadius.circular(Radii.pill)),
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(Gap.sm, Gap.xs, Gap.md, Gap.xs),
-                            child: Row(mainAxisSize: MainAxisSize.min, children: [
-                              Icon(ended ? LucideIcons.rotateCcw : LucideIcons.play, size: IconSize.inline, color: ds.onInverse),
-                              const SizedBox(width: Gap.xs),
-                              Text(ended ? 'Play again' : 'Play', style: Type.labelStrong.copyWith(color: ds.onInverse)),
-                            ]),
-                          ),
-                        ),
-                      ),
-                  ]),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 }

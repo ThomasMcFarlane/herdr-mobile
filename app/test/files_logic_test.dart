@@ -37,6 +37,32 @@ void main() {
       expect(detectType('x', _b([0x50, 0x4B, 3, 4, 0, 0])).label, 'ZIP archive');
     });
 
+    test('videos are known by name and by their container, and a name only decides when the bytes do not say', () {
+      expect(typeForName('Clip.MP4'), const FileType(FileKind.video, 'MP4 video'));
+      for (final name in ['a.mov', 'a.mkv', 'a.webm', 'a.avi', 'a.m4v', 'a.3gp']) {
+        expect(typeForName(name).kind, FileKind.video, reason: name);
+      }
+      expect(typeForName('song.m4a').kind, FileKind.binary, reason: 'audio is not played here');
+      expect(typeForName('routes.ts').kind, FileKind.text, reason: 'ts is TypeScript before it is a transport stream');
+
+      Uint8List ftyp(String brand) => _b([0, 0, 0, 0x18, ...'ftyp'.codeUnits, ...brand.codeUnits, 0, 0, 0, 0]);
+      expect(detectType('mystery', ftyp('isom')), const FileType(FileKind.video, 'MP4 video'));
+      expect(detectType('mystery', ftyp('qt  ')).label, 'QuickTime video');
+      expect(detectType('mystery', ftyp('3gp5')).label, '3GP video');
+      expect(detectType('x.dat', _b([0x1A, 0x45, 0xDF, 0xA3, 0x9F, 0x42])).kind, FileKind.video);
+      expect(detectType('x', _b([...'RIFF'.codeUnits, 1, 2, 3, 4, ...'AVI '.codeUnits])).label, 'AVI video');
+      expect(detectType('x.bin', ftyp('isom')).kind, FileKind.video, reason: 'the bytes beat the name');
+
+      // The same box holds pictures and audio: not videos.
+      expect(detectType('x', ftyp('heic')).kind, isNot(FileKind.video));
+      expect(detectType('x', ftyp('M4A ')).kind, isNot(FileKind.video));
+      expect(detectType('memo.m4a', ftyp('mp42')).kind, FileKind.binary, reason: 'a voice recording in an MP4 box is audio');
+
+      // A video name over a container nothing here knows is still tried by the player; over text it is text.
+      expect(detectType('x.mp4', _b([9, 9, 0, 1, 2, 3])).kind, FileKind.video);
+      expect(detectType('x.mp4', _s('<html>Not Found</html>')).kind, FileKind.text);
+    });
+
     test('"BM" at the start of a text file is not a bitmap', () {
       expect(detectType('notes.txt', _s('BM is a prefix of many words, nothing more')).kind, FileKind.text);
       final bmp = _b([0x42, 0x4D, 0x36, 0, 0, 0, 0, 0, 0, 0, 0x36, 0, 0, 0]);
