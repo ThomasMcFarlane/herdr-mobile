@@ -1301,9 +1301,9 @@ pub fn draw(f: &mut Frame, ctx: &Frame_, v: &mut View) {
     row.push(Span::raw(" ".repeat(pad)));
     row.extend(facts);
     f.render_widget(Paragraph::new(Line::from(row)), footer);
-    // Last, over everything drawn: the selection swaps the colours of the cells it covers.
+    // Last, over everything drawn: the selection puts its band behind the cells it covers.
     if let Some(range) = v.select.as_ref().and_then(Selection::range) {
-        select::paint(f.buffer_mut(), range);
+        select::paint(f.buffer_mut(), range, ctx.theme);
     }
 }
 

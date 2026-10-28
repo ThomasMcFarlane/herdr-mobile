@@ -82,6 +82,12 @@ const FAINT: f32 = 0.2;
 /// tell them apart at a glance, little enough that the text on it reads as plain text.
 const DIFF_TINT_DARK: f32 = 0.2;
 const DIFF_TINT_LIGHT: f32 = 0.12;
+/// How far toward the blue of the palette the background moves for selected text. The text
+/// keeps its own colour, so the band only has to be seen: it is a clear step from the tint
+/// behind a message, and every colour in the palette still reads on it (checked in the tests).
+/// A reversed cell, the old selection, was white on near-black on a light terminal.
+const SELECTION_DARK: f32 = 0.22;
+const SELECTION_LIGHT: f32 = 0.16;
 
 /// The lightest (on light) or darkest (on dark) grey that still holds [`MIN_CONTRAST`] against
 /// the tint over `bg`, where it also has to be read (the input, the band behind a message), so
@@ -259,6 +265,19 @@ impl Theme {
         let c = mix(bg, if added { p.ok } else { p.bad }, t);
         Some(Style::default().bg(Self::rgb(c)))
     }
+    /// The background of selected text, where the terminal's background is known: its own colour
+    /// moved toward the palette's blue, so it is seen on light and dark alike and the text on it
+    /// keeps its colour. `None` leaves the caller to swap foreground and background.
+    #[must_use]
+    pub fn selection(self) -> Option<Color> {
+        let (bg, p) = (self.bg?, self.palette()?);
+        let t = if is_dark(bg) {
+            SELECTION_DARK
+        } else {
+            SELECTION_LIGHT
+        };
+        Some(Self::rgb(mix(bg, p.cmd, t)))
+    }
     /// Where typing goes, and what the person said.
     #[must_use]
     pub fn accent(self) -> Style {
@@ -388,6 +407,49 @@ mod tests {
                 contrast(quiet_grey(bg), tint(bg))
             );
         }
+    }
+
+    #[test]
+    fn selected_text_is_a_clear_step_from_the_tint_and_every_colour_still_reads_on_it() {
+        let sel = |bg: Rgb| match Theme::banded(bg).selection() {
+            Some(Color::Rgb(r, g, b)) => (r, g, b),
+            other => panic!("{bg:?}: {other:?}"),
+        };
+        for (palette, backgrounds, name, text) in [
+            (&LIGHT, &BACKGROUNDS[..3], "light", (0, 0, 0)),
+            (&DARK, &BACKGROUNDS[3..], "dark", (255, 255, 255)),
+        ] {
+            for bg in backgrounds {
+                let s = sel(*bg);
+                assert!(
+                    contrast(s, *bg) >= 1.15 && contrast(s, tint(*bg)) >= 1.1,
+                    "{name} {bg:?}: selection {s:?} is not seen against the page and the tint"
+                );
+                assert!(
+                    contrast(text, s) >= 7.0,
+                    "{name} {bg:?}: plain text on {s:?}: {:.2}",
+                    contrast(text, s)
+                );
+                for c in [
+                    palette.ok,
+                    palette.bad,
+                    palette.warn,
+                    palette.accent,
+                    palette.cmd,
+                    palette.flag,
+                    palette.string,
+                    palette.var,
+                    quiet_grey(*bg),
+                ] {
+                    assert!(
+                        contrast(c, s) >= 3.0,
+                        "{name} {bg:?}: {c:?} on selection {s:?}: {:.2}",
+                        contrast(c, s)
+                    );
+                }
+            }
+        }
+        assert_eq!(Theme::plain().selection(), None, "no colour, no band");
     }
 
     #[test]

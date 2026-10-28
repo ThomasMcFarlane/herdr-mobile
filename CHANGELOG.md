@@ -4,6 +4,13 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [Unreleased]
+
+- Text you select in `herdr-tui` by dragging shows as a light band behind the text, in its own
+  colours, where it was a swap of foreground and background: white on near-black on a light
+  terminal. It needs the terminal to tell its background colour; where it does not, the old swap
+  stays (`HERDR_TUI_THEME=light` or `dark` says which).
+
 ## [0.1.42] - 2026-10-28
 
 [![Watch what's new · 1 change · 0:07 · 2.3 MB](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.42/0.1.42-whats-new.jpg)](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.42/0.1.42-whats-new.mp4)
