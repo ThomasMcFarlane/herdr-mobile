@@ -4,6 +4,13 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [Unreleased]
+
+- `herdr-tui update`'s progress line fits the terminal, so on a narrow screen it stays one line instead of wrapping into many.
+- Ctrl-C during `herdr-tui update` stops cleanly: nothing is installed and no leftover folder stays beside the program.
+- A failed `herdr-tui update` download says whether the network or the version is the problem, and a slow link that keeps delivering is no longer cut off after five minutes.
+- The "newer herdr-tui is installed · Ctrl-R" hint goes away when the file is rolled back, broken or removed.
+
 ## [0.1.39] - 2026-10-27
 
 ### `herdr-tui update` shows the download
