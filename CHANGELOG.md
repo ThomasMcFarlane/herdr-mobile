@@ -4,19 +4,48 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
-## [Unreleased]
+## [0.1.41] - 2026-10-28
 
-- Select text in `herdr-tui` by dragging over it, in a herdr pane too: the selection is
-  highlighted, copied when you let go, and the footer says how much. Since 0.1.36 a drag did
-  nothing there, because the mouse belonged to clicks. A click still opens a tool call, now
-  when you let go, so a drag that starts on one selects its text instead.
-- Videos in the file viewer play: `mp4`, `mov`, `mkv`, `webm`, `avi`, `m4v` and `3gp` show a
-  card with their size and `Play`, copy to the phone with a bar and `Cancel`, then play with a
-  bar to drag. One up to 24 MB starts by itself. `Save to gallery` keeps it in Pictures/herdr.
-  Before, these opened as a hex dump.
-- `Share or save…` on any file in the viewer (on the card of a file it cannot show, and in
-  `File options`): the file is copied to the phone and handed to the share sheet, so it can go
-  to Drive, Files or another app.
+### Videos play in the file viewer, and any file can be shared
+
+A video in a folder opens as a card with its size and `Play`, copies to the
+phone with a bar and plays with a bar to drag. Before, it opened as a hex
+dump. Any file can also be handed to another app.
+
+> [!TIP]
+> Try it: in Files, open a video (an `mp4` will do) and tap `Play`.
+
+> [!TIP]
+> Try it: on any file, open `File options` and choose `Share or save…`.
+
+- `mp4`, `mov`, `mkv`, `webm`, `avi`, `m4v` and `3gp` are videos. One up to
+  24 MB starts by itself; `Cancel` stops the copy. `Save to gallery` keeps it
+  in Pictures/herdr.
+- `Share or save…` copies the file to the phone and hands it to the share
+  sheet, so it can go to Drive, Files or another app. It is on the card of a
+  file the viewer cannot show, and in `File options`.
+
+### Select text in `herdr-tui` by dragging
+
+Drag over text in a `herdr-tui` session, in a herdr pane too: the selection is
+highlighted, copied when you let go, and the footer says how much. Since
+0.1.36 a drag did nothing there, because the mouse belonged to clicks. A click
+still opens a tool call, now when you let go, so a drag that starts on one
+selects its text instead.
+
+> [!TIP]
+> Try it: in a `herdr-tui` session, drag across a few words of the reply.
+
+- `herdr-tui update` keeps its progress on one line however narrow the
+  terminal, so on a phone-width screen it no longer wraps into many lines.
+- Ctrl-C during `herdr-tui update` stops cleanly: nothing is installed and no
+  leftover folder stays beside the program.
+- A failed `herdr-tui update` download says whether the network or the version
+  is the problem, and a slow link that keeps delivering is no longer cut off
+  after five minutes.
+- The "newer herdr-tui is installed · Ctrl-R" hint goes away when the file is
+  rolled back, broken or removed. Checked in a pty on Linux; macOS and the
+  `wget` path were not tried.
 
 ## [0.1.40] - 2026-10-27
 

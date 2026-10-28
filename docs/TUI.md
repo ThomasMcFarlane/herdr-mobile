@@ -213,6 +213,27 @@ Open cells are findings, not silence: risky-hint rules (`mode_danger.dart`,
 A text field's `pattern` and `format` are not checked here (the phone checks `pattern`);
 the agent checks again.
 
+## Updating, and what every release must keep
+
+An installed `herdr-tui` updates itself by asking GitHub for files **by name**, and the oldest copy
+in the field keeps doing so for as long as it runs. Every release therefore keeps:
+
+- the files `herdr-tui-linux-x86_64`, `herdr-tui-linux-aarch64`, `herdr-tui-macos-arm64` and
+  `herdr-tui-macos-x86_64`, and `herdr-tui-SHA256SUMS` listing them (`<hex>  <name>`);
+- the URL layout `github.com/tuan3w/herdr-mobile/releases/{latest/download,download/vX.Y.Z}/<file>`;
+- `herdr-tui --version` printing `herdr-tui X.Y.Z`, with no session and no arguments needed.
+
+Four places name the files: `update/release.rs` (the client), `tool/install-tui.sh`, the `herdr-tui`
+job in `.github/workflows/release.yml`, and `desk_asset` in `keeper_script.dart`. A test in
+`release.rs` reads the other three and fails when they disagree. Add a platform in all four in one
+change; renaming a file strands every installed client older than the rename (it says "could not
+download" and keeps running), and `install.sh` is then the only way back.
+
+Who can update itself: before 0.1.30 there is no binary; 0.1.30 to 0.1.37 have no `update` (run
+`install.sh` again); 0.1.38 and later have `herdr-tui update`. A session older than 0.1.38 does not
+notice a replaced file, so reopen it with `herdr-tui attach ID`. The keeper's own copy is replaced
+when an app update raises `DESK_MIN` (docs/AGENT_SESSIONS.md).
+
 ## Plan
 
 | Step | Today (v0) | Problem | Change |

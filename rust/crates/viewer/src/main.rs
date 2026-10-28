@@ -246,18 +246,39 @@ fn main() {
                 .unwrap_or_else(|e| die(keeper::exit::FAILED, &format!("no path to itself ({e})")));
             let base = update::base_url(|k| std::env::var(k).ok(), version.as_deref());
             use std::io::IsTerminal;
-            let mut console = update::Console::new(
-                std::io::stderr().is_terminal(),
-                std::env::var_os("NO_COLOR").is_none_or(|v| v.is_empty()),
-            );
-            let result = update::run(
-                &exe,
-                cli::VERSION,
-                &base,
-                version.is_some(),
-                check,
-                &mut |e| console.event(&e),
-            );
+            let output = if std::io::stderr().is_terminal() {
+                update::Output::Terminal {
+                    colour: std::env::var_os("NO_COLOR").is_none_or(|v| v.is_empty()),
+                }
+            } else {
+                update::Output::Plain
+            };
+            let mut console = update::Console::new(output);
+            // A signal only raises a flag: the update stops at its next step, curl is stopped and
+            // the folder it made beside the program is removed (a default SIGINT would leave it).
+            let cancel = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+            for sig in [
+                signal_hook::consts::SIGINT,
+                signal_hook::consts::SIGTERM,
+                signal_hook::consts::SIGHUP,
+            ] {
+                let _ = signal_hook::flag::register(sig, std::sync::Arc::clone(&cancel));
+            }
+            let plan = update::Plan {
+                base: &base,
+                target: if version.is_some() {
+                    update::Target::Pinned
+                } else {
+                    update::Target::Latest
+                },
+                action: if check {
+                    update::Action::Check
+                } else {
+                    update::Action::Install
+                },
+                cancel: &cancel,
+            };
+            let result = update::run(&exe, cli::VERSION, &plan, &mut |e| console.event(&e));
             match result {
                 Ok(said) => {
                     let _ = writeln!(std::io::stdout(), "herdr-tui: {said}");
@@ -845,8 +866,16 @@ impl App {
             return;
         }
         self.watched = Instant::now();
-        if let Some(v) = self.watch.poll() {
-            self.newer = Some(v);
+        self.refresh_newer();
+    }
+
+    /// Reads what the installed file holds now: an offer when it is another version than this
+    /// one, none when it is the same, broken or gone, so a hint never outlives what it said.
+    fn refresh_newer(&mut self) {
+        match self.watch.poll() {
+            update::Change::Offer(v) => self.newer = Some(v),
+            update::Change::Withdraw => self.newer = None,
+            update::Change::Unchanged => {}
         }
     }
 
@@ -1669,10 +1698,15 @@ impl App {
                 return;
             }
         };
-        let (version, check) = match &request {
-            update::Request::Latest => (None, false),
-            update::Request::Check => (None, true),
-            update::Request::Version(v) => (Some(v.clone()), false),
+        let (version, action) = match &request {
+            update::Request::Latest => (None, update::Action::Install),
+            update::Request::Check => (None, update::Action::Check),
+            update::Request::Version(v) => (Some(v.clone()), update::Action::Install),
+        };
+        let target = if version.is_some() {
+            update::Target::Pinned
+        } else {
+            update::Target::Latest
         };
         let base = update::base_url(|k| std::env::var(k).ok(), version.as_deref());
         let exe = self.watch.path().to_path_buf();
@@ -1680,26 +1714,31 @@ impl App {
         self.updating = true;
         self.view.update = Some("starting".to_string());
         std::thread::spawn(move || {
-            let result = update::run(
-                &exe,
-                cli::VERSION,
-                &base,
-                version.is_some(),
-                check,
-                &mut |e| {
-                    let line = match e {
-                        update::Event::Step(s) => s.to_string(),
-                        update::Event::Bytes {
-                            label,
-                            done,
-                            total,
-                            per_sec,
-                        } => update::progress_line(label, done, total, per_sec),
-                        update::Event::Finished => return,
-                    };
-                    let _ = tx.send(Ev::Update(UpdateMsg::Progress(line)));
-                },
-            );
+            // No signal reaches this flag: the session ends the whole process itself.
+            let cancel = std::sync::atomic::AtomicBool::new(false);
+            let plan = update::Plan {
+                base: &base,
+                target,
+                action,
+                cancel: &cancel,
+            };
+            let result = update::run(&exe, cli::VERSION, &plan, &mut |e| {
+                let line = match e {
+                    update::Event::Step(s) => s.to_string(),
+                    update::Event::Bytes {
+                        label,
+                        done,
+                        total,
+                        per_sec,
+                    } => {
+                        // The footer shows it after "↻ updating · ", so leave room for that.
+                        let width = terminal::size().map_or(80, |(w, _)| usize::from(w));
+                        update::progress_line(label, done, total, per_sec, width.saturating_sub(16))
+                    }
+                    update::Event::Finished => return,
+                };
+                let _ = tx.send(Ev::Update(UpdateMsg::Progress(line)));
+            });
             let _ = tx.send(Ev::Update(UpdateMsg::Done(result)));
         });
     }
@@ -1713,10 +1752,10 @@ impl App {
         match result {
             Ok(said) => {
                 self.transcript.note(said);
-                if let Some(v) = self.watch.poll().or_else(|| self.newer.clone()) {
+                self.refresh_newer();
+                if let Some(v) = &self.newer {
                     self.transcript
                         .note(format!("herdr-tui {v} is installed · Ctrl-R loads it"));
-                    self.newer = Some(v);
                 }
             }
             Err(why) => self.transcript.note(format!("Update failed: {why}")),

@@ -183,4 +183,28 @@ mod update {
         assert!(out.status.success(), "{out:?}");
         assert_eq!(version(&r.installed), "herdr-tui 0.0.1");
     }
+
+    #[test]
+    fn a_release_that_is_not_there_says_so_and_leaves_the_file_and_the_folder_alone() {
+        let Some(r) = rig("99.0.0") else { return };
+        let before = version(&r.installed);
+        std::fs::remove_file(r.mirror.join("herdr-tui-SHA256SUMS")).expect("remove sums");
+        let out = update(&r, &[]);
+        assert!(!out.status.success(), "{out:?}");
+        assert!(
+            String::from_utf8_lossy(&out.stderr).contains("no such file"),
+            "{out:?}"
+        );
+        assert_eq!(version(&r.installed), before);
+        assert!(
+            std::fs::read_dir(r.installed.parent().expect("a folder"))
+                .expect("readable")
+                .all(|e| !e
+                    .expect("an entry")
+                    .file_name()
+                    .to_string_lossy()
+                    .starts_with(".herdr-tui-update")),
+            "the scratch folder is removed on failure"
+        );
+    }
 }
