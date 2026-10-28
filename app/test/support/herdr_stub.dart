@@ -13,10 +13,7 @@ class HerdrStub extends FakeTransport {
   final Map<String, FutureOr<Map<String, dynamic>> Function(Map<String, dynamic> params)> on = {};
 
   @override
-  Future<Map<String, dynamic>> request(
-    String method, [
-    Map<String, dynamic> params = const {},
-  ]) async {
+  Future<Map<String, dynamic>> request(String method, [Map<String, dynamic> params = const {}]) async {
     final handler = on[method];
     if (handler == null) return super.request(method, params);
     calls.add((method, params));
@@ -25,59 +22,56 @@ class HerdrStub extends FakeTransport {
   }
 
   /// The params of every call to [method], in order.
-  List<Map<String, dynamic>> paramsOf(String method) =>
-      [for (final c in calls) if (c.$1 == method) c.$2];
+  List<Map<String, dynamic>> paramsOf(String method) => [
+    for (final c in calls)
+      if (c.$1 == method) c.$2,
+  ];
 
   /// Names of every call, in order. The snapshot, ping, the agent list
   /// (fetched in the background by the form) and pane reads (by an open pane
   /// screen) are left out.
   List<String> get methods => [
-        for (final c in calls)
-          if (!const {'session.snapshot', 'ping', 'server.agent_manifests', 'pane.read'}.contains(c.$1)) c.$1,
-      ];
+    for (final c in calls)
+      if (!const {'session.snapshot', 'ping', 'server.agent_manifests', 'pane.read'}.contains(c.$1)) c.$1,
+  ];
 }
 
 /// herdr's answer to a method it does not know (verified on a live 0.8.2).
 HerdrApiException unknownMethod(String method) => HerdrApiException(
-      'invalid_request',
-      'invalid request: unknown variant `$method`, expected one of `ping`, `server.stop`',
-    );
+  'invalid_request',
+  'invalid request: unknown variant `$method`, expected one of `ping`, `server.stop`',
+);
 
 /// A `workspace_created` result, the shape herdr returns.
-Map<String, dynamic> workspaceCreated({
-  String workspace = 'wN',
-  String? cwd = '/work/app',
-  String? label,
-}) =>
-    {
-      'type': 'workspace_created',
-      'workspace': {
-        'workspace_id': workspace,
-        'number': 2,
-        'label': label ?? '',
-        'focused': false,
-        'pane_count': 1,
-        'tab_count': 1,
-        'agent_status': 'unknown',
-      },
-      'tab': {
-        'tab_id': '$workspace:t1',
-        'workspace_id': workspace,
-        'number': 1,
-        'label': '1',
-        'focused': false,
-        'pane_count': 1,
-        'agent_status': 'unknown',
-      },
-      'root_pane': {
-        'pane_id': '$workspace:p1',
-        'workspace_id': workspace,
-        'tab_id': '$workspace:t1',
-        'focused': false,
-        'cwd': ?cwd,
-        'agent_status': 'unknown',
-      },
-    };
+Map<String, dynamic> workspaceCreated({String workspace = 'wN', String? cwd = '/work/app', String? label}) => {
+  'type': 'workspace_created',
+  'workspace': {
+    'workspace_id': workspace,
+    'number': 2,
+    'label': label ?? '',
+    'focused': false,
+    'pane_count': 1,
+    'tab_count': 1,
+    'agent_status': 'unknown',
+  },
+  'tab': {
+    'tab_id': '$workspace:t1',
+    'workspace_id': workspace,
+    'number': 1,
+    'label': '1',
+    'focused': false,
+    'pane_count': 1,
+    'agent_status': 'unknown',
+  },
+  'root_pane': {
+    'pane_id': '$workspace:p1',
+    'workspace_id': workspace,
+    'tab_id': '$workspace:t1',
+    'focused': false,
+    'cwd': ?cwd,
+    'agent_status': 'unknown',
+  },
+};
 
 /// Adds a workspace with one pane to a `session.snapshot` payload, as herdr
 /// would after `workspace.create`.

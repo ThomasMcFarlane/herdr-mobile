@@ -80,25 +80,16 @@ abstract final class KeyGenerator {
       if (pairs.isEmpty) return (line: null, failure: KeyReadFailure.unreadable);
       return (line: publicKeyLine(pairs.first), failure: null);
     } on SSHKeyDecryptError {
-      return (
-        line: null,
-        failure: encrypted ? KeyReadFailure.wrongPassphrase : KeyReadFailure.unreadable,
-      );
+      return (line: null, failure: encrypted ? KeyReadFailure.wrongPassphrase : KeyReadFailure.unreadable);
     } on UnsupportedError {
       return (line: null, failure: KeyReadFailure.unreadable);
     } on Object {
       // A wrong passphrase decrypts to noise that can fail in odd places.
-      return (
-        line: null,
-        failure: encrypted ? KeyReadFailure.wrongPassphrase : KeyReadFailure.unreadable,
-      );
+      return (line: null, failure: encrypted ? KeyReadFailure.wrongPassphrase : KeyReadFailure.unreadable);
     }
   }
 
-  static final _privateKeyBlock = RegExp(
-    r'-----BEGIN ([A-Z0-9 ]*PRIVATE KEY)-----(.*?)-----END \1-----',
-    dotAll: true,
-  );
+  static final _privateKeyBlock = RegExp(r'-----BEGIN ([A-Z0-9 ]*PRIVATE KEY)-----(.*?)-----END \1-----', dotAll: true);
   static const _pemWidth = 70;
 
   /// [text] as pasted into the key field, put back into the shape
@@ -127,8 +118,7 @@ abstract final class KeyGenerator {
     } else {
       final joined = lines.join().replaceAll(RegExp(r'\s+'), '');
       body = [
-        for (var i = 0; i < joined.length; i += _pemWidth)
-          joined.substring(i, min(i + _pemWidth, joined.length)),
+        for (var i = 0; i < joined.length; i += _pemWidth) joined.substring(i, min(i + _pemWidth, joined.length)),
       ];
     }
     return ['-----BEGIN $label-----', ...body, '-----END $label-----'].join('\n');
@@ -168,9 +158,7 @@ abstract final class KeyGenerator {
   }
 
   static String _label(String raw) {
-    final cleaned = raw
-        .replaceAll(RegExp(r'[^A-Za-z0-9._-]+'), '-')
-        .replaceAll(RegExp(r'^-+|-+$'), '');
+    final cleaned = raw.replaceAll(RegExp(r'[^A-Za-z0-9._-]+'), '-').replaceAll(RegExp(r'^-+|-+$'), '');
     final cut = cleaned.length > _maxLabel ? cleaned.substring(0, _maxLabel) : cleaned;
     final trimmed = cut.replaceAll(RegExp(r'-+$'), '');
     return trimmed.isEmpty ? _fallbackLabel : trimmed;

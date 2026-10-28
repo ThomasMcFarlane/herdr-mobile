@@ -79,11 +79,7 @@ class FloatingPill extends StatefulWidget {
 }
 
 class _FloatingPillState extends State<FloatingPill> with SingleTickerProviderStateMixin {
-  late final _controller = AnimationController(
-    vsync: this,
-    duration: Motion.release,
-    value: widget.visible ? 1 : 0,
-  );
+  late final _controller = AnimationController(vsync: this, duration: Motion.release, value: widget.visible ? 1 : 0);
   late final _curve = Motion.curved(_controller);
   late final _scale = Tween<double>(begin: Motion.enterScale, end: 1).animate(_curve);
 
@@ -138,7 +134,12 @@ class _FloatingPillState extends State<FloatingPill> with SingleTickerProviderSt
     final detail = w.detail;
     final round = label == null && w.leading == null && w.trailing == null;
     final style = Type.labelStrong.copyWith(color: ds.text, fontFeatures: Type.tabular);
-    final tail = detail == null ? null : TextSpan(text: ' · $detail', style: Type.label.copyWith(color: ds.textSecondary));
+    final tail = detail == null
+        ? null
+        : TextSpan(
+            text: ' · $detail',
+            style: Type.label.copyWith(color: ds.textSecondary),
+          );
     final parts = <Widget>[
       if (w.icon != null) Icon(w.icon, size: round ? IconSize.bar : IconSize.row, color: ds.textSecondary),
       ?w.leading,

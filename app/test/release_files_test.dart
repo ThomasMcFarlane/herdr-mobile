@@ -34,63 +34,65 @@ class _Server {
 
   Future<void> start() async {
     http = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-    unawaited(http.forEach((req) async {
-      final res = req.response;
-      if (req.uri.path.endsWith('SHA256SUMS')) {
-        res.write('${sha256.convert(apk)}  herdr-mobile-0.1.7.apk\n');
+    unawaited(
+      http.forEach((req) async {
+        final res = req.response;
+        if (req.uri.path.endsWith('SHA256SUMS')) {
+          res.write('${sha256.convert(apk)}  herdr-mobile-0.1.7.apk\n');
+          await res.close();
+          return;
+        }
+        final range = req.headers.value(HttpHeaders.rangeHeader);
+        ranges.add(range);
+        if (redirectTo != null) {
+          res.statusCode = HttpStatus.found;
+          res.headers.set(HttpHeaders.locationHeader, redirectTo!);
+          await res.close();
+          return;
+        }
+        var from = 0;
+        if (range != null && refuseRange) {
+          res.statusCode = HttpStatus.requestedRangeNotSatisfiable;
+          await res.close();
+          return;
+        }
+        if (range != null && !ignoreRange) {
+          from = int.parse(RegExp(r'bytes=(\d+)-').firstMatch(range)![1]!);
+          res.statusCode = HttpStatus.partialContent;
+          res.headers.set(HttpHeaders.contentRangeHeader, 'bytes $from-${apk.length - 1}/${apk.length}');
+        }
+        final body = [...apk.sublist(from), ...List<int>.filled(extra, 0)];
+        res.contentLength = body.length;
+        final cut = breakAfter;
+        if (cut != null) {
+          breakAfter = null;
+          final socket = await res.detachSocket();
+          socket.add(body.sublist(0, cut));
+          await socket.flush();
+          socket.destroy();
+          return;
+        }
+        final quiet = goQuietAfter;
+        if (quiet != null) {
+          res.add(body.sublist(0, quiet));
+          await res.flush();
+          return; // never closed: the connection stalls
+        }
+        res.add(body);
         await res.close();
-        return;
-      }
-      final range = req.headers.value(HttpHeaders.rangeHeader);
-      ranges.add(range);
-      if (redirectTo != null) {
-        res.statusCode = HttpStatus.found;
-        res.headers.set(HttpHeaders.locationHeader, redirectTo!);
-        await res.close();
-        return;
-      }
-      var from = 0;
-      if (range != null && refuseRange) {
-        res.statusCode = HttpStatus.requestedRangeNotSatisfiable;
-        await res.close();
-        return;
-      }
-      if (range != null && !ignoreRange) {
-        from = int.parse(RegExp(r'bytes=(\d+)-').firstMatch(range)![1]!);
-        res.statusCode = HttpStatus.partialContent;
-        res.headers.set(HttpHeaders.contentRangeHeader, 'bytes $from-${apk.length - 1}/${apk.length}');
-      }
-      final body = [...apk.sublist(from), ...List<int>.filled(extra, 0)];
-      res.contentLength = body.length;
-      final cut = breakAfter;
-      if (cut != null) {
-        breakAfter = null;
-        final socket = await res.detachSocket();
-        socket.add(body.sublist(0, cut));
-        await socket.flush();
-        socket.destroy();
-        return;
-      }
-      final quiet = goQuietAfter;
-      if (quiet != null) {
-        res.add(body.sublist(0, quiet));
-        await res.flush();
-        return; // never closed: the connection stalls
-      }
-      res.add(body);
-      await res.close();
-    }));
+      }),
+    );
   }
 
   ReleaseInfo release({String? sha}) => ReleaseInfo(
-        version: '0.1.7',
-        apkUrl: 'http://127.0.0.1:${http.port}/herdr-mobile-0.1.7.apk',
-        size: apk.length,
-        pageUrl: 'https://github.com/tuan3w/herdr-mobile/releases/tag/v0.1.7',
-        notes: '',
-        sha256: sha,
-        sumsUrl: sha == null ? 'http://127.0.0.1:${http.port}/SHA256SUMS' : null,
-      );
+    version: '0.1.7',
+    apkUrl: 'http://127.0.0.1:${http.port}/herdr-mobile-0.1.7.apk',
+    size: apk.length,
+    pageUrl: 'https://github.com/tuan3w/herdr-mobile/releases/tag/v0.1.7',
+    notes: '',
+    sha256: sha,
+    sumsUrl: sha == null ? 'http://127.0.0.1:${http.port}/SHA256SUMS' : null,
+  );
 }
 
 void main() {

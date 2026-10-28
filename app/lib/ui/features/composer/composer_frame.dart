@@ -290,9 +290,7 @@ class ComposerRoundButton extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: ready
-                  ? (quiet
-                        ? (pressed ? ds.fillPressed : ds.fill)
-                        : (pressed ? ds.accentPressed : ds.accent))
+                  ? (quiet ? (pressed ? ds.fillPressed : ds.fill) : (pressed ? ds.accentPressed : ds.accent))
                   : ds.fill,
             ),
             alignment: Alignment.center,

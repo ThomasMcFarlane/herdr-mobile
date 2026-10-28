@@ -20,8 +20,13 @@ Map<String, Object?> _chunk(String kind, String id, String text) => {
   'content': {'type': 'text', 'text': text},
 };
 
-Map<String, Object?> _tool(String id, String status) =>
-    {'sessionUpdate': 'tool_call', 'toolCallId': id, 'title': 'Run ls', 'kind': 'execute', 'status': status};
+Map<String, Object?> _tool(String id, String status) => {
+  'sessionUpdate': 'tool_call',
+  'toolCallId': id,
+  'title': 'Run ls',
+  'kind': 'execute',
+  'status': status,
+};
 
 AgentSessionState _play(List<Map<String, Object?>> updates) {
   var state = AgentSessionState('s');
@@ -39,7 +44,9 @@ Future<void> _pump(WidgetTester tester, AgentSessionState state) async {
   await tester.pumpWidget(
     MaterialApp(
       theme: AppTheme.light(),
-      home: Scaffold(body: TranscriptView(session: FakeAgentSession(state: state))),
+      home: Scaffold(
+        body: TranscriptView(session: FakeAgentSession(state: state)),
+      ),
     ),
   );
   await tester.pump(const Duration(milliseconds: 200));
@@ -58,35 +65,48 @@ Future<void> _openEverything(WidgetTester tester) async {
 void main() {
   group('the live message is not always the last row', () {
     testWidgets('a call that failed before the answer, text streaming while the turn is not running', (tester) async {
-      await _pump(tester, _play([
-        _chunk('user_message_chunk', 'u', 'go'),
-        _tool('c1', 'failed'),
-        _chunk('agent_message_chunk', 'm1', 'That failed, so '),
-      ]));
+      await _pump(
+        tester,
+        _play([
+          _chunk('user_message_chunk', 'u', 'go'),
+          _tool('c1', 'failed'),
+          _chunk('agent_message_chunk', 'm1', 'That failed, so '),
+        ]),
+      );
       expect(tester.takeException(), isNull);
       expect(find.textContaining('That failed, so'), findsOneWidget);
     });
 
-    testWidgets('text after Stop: the cancelled call breaks out below the answer that is still arriving', (tester) async {
-      await _pump(tester, _play([
-        _chunk('user_message_chunk', 'u', 'go'),
-        {'sessionUpdate': 'state_update', 'state': 'running'},
-        _tool('c1', 'in_progress'),
-        {'sessionUpdate': 'tool_call_update', 'toolCallId': 'c1', 'status': 'cancelled'},
-        {'sessionUpdate': 'state_update', 'state': 'idle', 'stopReason': 'cancelled'},
-        _chunk('agent_message_chunk', 'm1', 'Stopped, but '),
-      ]));
+    testWidgets('text after Stop: the cancelled call breaks out below the answer that is still arriving', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        _play([
+          _chunk('user_message_chunk', 'u', 'go'),
+          {'sessionUpdate': 'state_update', 'state': 'running'},
+          _tool('c1', 'in_progress'),
+          {'sessionUpdate': 'tool_call_update', 'toolCallId': 'c1', 'status': 'cancelled'},
+          {'sessionUpdate': 'state_update', 'state': 'idle', 'stopReason': 'cancelled'},
+          _chunk('agent_message_chunk', 'm1', 'Stopped, but '),
+        ]),
+      );
       expect(tester.takeException(), isNull);
       expect(find.textContaining('Stopped, but'), findsOneWidget);
     });
 
-    testWidgets('two messages whose chunks alternate: opening the fold brings the live one into the plan', (tester) async {
-      await _pump(tester, _play([
-        _chunk('user_message_chunk', 'u', 'go'),
-        _chunk('agent_message_chunk', 'm1', 'first part'),
-        _chunk('agent_message_chunk', 'm2', 'second part'),
-        _chunk('agent_message_chunk', 'm1', ' and more'),
-      ]));
+    testWidgets('two messages whose chunks alternate: opening the fold brings the live one into the plan', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        _play([
+          _chunk('user_message_chunk', 'u', 'go'),
+          _chunk('agent_message_chunk', 'm1', 'first part'),
+          _chunk('agent_message_chunk', 'm2', 'second part'),
+          _chunk('agent_message_chunk', 'm1', ' and more'),
+        ]),
+      );
       await _openEverything(tester);
       expect(tester.takeException(), isNull);
     });
@@ -95,31 +115,36 @@ void main() {
   group('text that is not well-formed UTF-16', () {
     final lone = '\u{1F680}'.substring(0, 1); // half of an emoji
 
-    testWidgets('in a message, a prompt, a thought, a tool title and an embedded file: drawn, with the half marked', (tester) async {
-      await _pump(tester, _play([
-        _chunk('user_message_chunk', 'u', 'what is $lone this'),
-        _chunk('agent_thought_chunk', 't', 'thinking $lone'),
-        {
-          'sessionUpdate': 'tool_call',
-          'toolCallId': 'c1',
-          'title': 'Run $lone',
-          'kind': 'execute',
-          'status': 'completed',
-          'rawOutput': 'out $lone',
-          'content': [
-            {
-              'type': 'content',
-              'content': {
-                'type': 'resource',
-                'resource': {'uri': 'file:///a.txt', 'mimeType': 'text/plain', 'text': 'file $lone\nline two'},
+    testWidgets('in a message, a prompt, a thought, a tool title and an embedded file: drawn, with the half marked', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        _play([
+          _chunk('user_message_chunk', 'u', 'what is $lone this'),
+          _chunk('agent_thought_chunk', 't', 'thinking $lone'),
+          {
+            'sessionUpdate': 'tool_call',
+            'toolCallId': 'c1',
+            'title': 'Run $lone',
+            'kind': 'execute',
+            'status': 'completed',
+            'rawOutput': 'out $lone',
+            'content': [
+              {
+                'type': 'content',
+                'content': {
+                  'type': 'resource',
+                  'resource': {'uri': 'file:///a.txt', 'mimeType': 'text/plain', 'text': 'file $lone\nline two'},
+                },
               },
-            },
-            {'type': 'diff', 'path': 'a.dart', 'oldText': 'a $lone', 'newText': 'b $lone'},
-          ],
-        },
-        _chunk('agent_message_chunk', 'm1', 'answer $lone here\n\n```\ncode $lone\n```'),
-        {'sessionUpdate': 'state_update', 'state': 'idle', 'stopReason': 'end_turn'},
-      ]));
+              {'type': 'diff', 'path': 'a.dart', 'oldText': 'a $lone', 'newText': 'b $lone'},
+            ],
+          },
+          _chunk('agent_message_chunk', 'm1', 'answer $lone here\n\n```\ncode $lone\n```'),
+          {'sessionUpdate': 'state_update', 'state': 'idle', 'stopReason': 'end_turn'},
+        ]),
+      );
       await _openEverything(tester);
       expect(tester.takeException(), isNull);
     });

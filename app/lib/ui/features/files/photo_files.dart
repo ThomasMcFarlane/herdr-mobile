@@ -19,11 +19,8 @@ bool isPhotoName(String name) => typeForName(name).kind == FileKind.image;
 /// (case-insensitive natural order: `IMG_2` before `IMG_10`). Folders, links
 /// that lead to folders and everything that is not a picture are left out.
 List<RemoteEntry> photoEntries(Iterable<RemoteEntry> entries) =>
-    FileListing(entries.where((e) => e.isFile && isPhotoName(e.name))).view(
-      sort: FileSort.name,
-      foldersFirst: true,
-      showHidden: true,
-    );
+    FileListing(entries.where((e) => e.isFile && isPhotoName(e.name)))
+        .view(sort: FileSort.name, foldersFirst: true, showHidden: true);
 
 /// One picture file as the viewer shows it. The thumbnail the folder grid
 /// already made (if any) stands in while the picture is read.
@@ -64,16 +61,8 @@ Future<List<PhotoItem>> siblingPhotoItems(RemoteFiles files, RemoteStat opened) 
 
 /// Opens the viewer on the pictures of one folder, [images] (from
 /// [photoEntries]) starting at [index]. The viewer pages through exactly these.
-Future<void> openFolderPhotos(
-  BuildContext context,
-  MachineConnection machine,
-  List<RemoteEntry> images,
-  int index,
-) => openPhotoViewer(
-  context,
-  items: [for (final e in images) remotePhotoItemOf(machine.files, e)],
-  initialIndex: index,
-);
+Future<void> openFolderPhotos(BuildContext context, MachineConnection machine, List<RemoteEntry> images, int index) =>
+    openPhotoViewer(context, items: [for (final e in images) remotePhotoItemOf(machine.files, e)], initialIndex: index);
 
 /// The photo viewer's route for the picture at [stat]. The folder's other
 /// pictures are [siblings] when the caller has the listing already, else they
@@ -102,11 +91,9 @@ Route<T> photoRoute<T>(
 /// The route for the file at [stat]: the immersive photo viewer for a picture
 /// (see [photoRoute]), the file viewer for everything else. [line] is the line
 /// of a text file to show.
-Route<T> fileViewerRoute<T>(
-  MachineConnection machine,
-  RemoteStat stat, {
-  int? line,
-  List<RemoteEntry>? siblings,
-}) => isPhotoName(stat.name)
+Route<T> fileViewerRoute<T>(MachineConnection machine, RemoteStat stat, {int? line, List<RemoteEntry>? siblings}) =>
+    isPhotoName(stat.name)
     ? photoRoute<T>(machine, stat, siblings: siblings)
-    : MaterialPageRoute<T>(builder: (_) => FileViewerScreen(machine: machine, stat: stat, line: line));
+    : MaterialPageRoute<T>(
+        builder: (_) => FileViewerScreen(machine: machine, stat: stat, line: line),
+      );

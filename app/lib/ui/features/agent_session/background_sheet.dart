@@ -7,7 +7,9 @@ import '../../../data/acp/background/background_work.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/words/elapsed.dart';
 import '../../../data/repositories/observed_session.dart' show ObservedAgentSession;
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../support/step_clock.dart';
 import 'agent_session_navigation.dart';
 import 'background_controls.dart';
@@ -38,7 +40,6 @@ Future<void> showBackgroundWork(BuildContext context, AgentSessionView session) 
 /// is showing.
 void showBackgroundToast(BuildContext context, String text, {required VoidCallback onView}) =>
     showToast(context, text, action: ToastAction('Open', onView), duration: Dwell.toastAction);
-
 
 sealed class _Item {
   const _Item();
@@ -156,7 +157,10 @@ class _BackgroundSheetState extends State<BackgroundSheet> {
       final ds = context.ds;
       final items = _items(work);
       final sentence = work.running.isEmpty ? null : wakeSentence(work);
-      final stopAll = live && work.stoppable.length >= 2 && work.stoppable.any((t) => _stopper.stops[t.key]?.phase != StopPhase.stopping);
+      final stopAll =
+          live &&
+          work.stoppable.length >= 2 &&
+          work.stoppable.any((t) => _stopper.stops[t.key]?.phase != StopPhase.stopping);
       final summary = _stopper.summary;
       final routeMessage = work.running.any((t) => t.stop == StopRoute.message);
       final agent = _session.agentLabel;
@@ -174,7 +178,8 @@ class _BackgroundSheetState extends State<BackgroundSheet> {
             child: StopAllChip(
               count: work.stoppable.length,
               primed: _stopper.primed == BackgroundStopper.all,
-              onTap: () => _stopper.primed == BackgroundStopper.all ? _stopAll() : _stopper.prime(BackgroundStopper.all),
+              onTap: () =>
+                  _stopper.primed == BackgroundStopper.all ? _stopAll() : _stopper.prime(BackgroundStopper.all),
               onHeld: _stopAll,
             ),
           ),
@@ -196,32 +201,32 @@ class _BackgroundSheetState extends State<BackgroundSheet> {
           ),
       ];
       Widget item(BuildContext context, int i) => switch (items[i]) {
-          _Head(:final title, :final count) => SectionHead(title, count),
-          _TaskItem(:final task) => _TaskRow(
-            key: ValueKey(task.key),
-            task: task,
-            agentLabel: _session.agentLabel,
-            live: live,
-            expanded: _open.contains(task.key),
-            readAll: _readAll.contains(task.key),
-            stop: _stopper.stops[task.key],
-            primed: _stopper.primed == task.key,
-            opensSubagent: _opensSubagent(task),
-            onTap: () => _opensSubagent(task) ? _openSubagent(task) : _toggle(task),
-            onReadAll: () => setState(() => _readAll.add(task.key)),
-            onActivate: () => _stopper.activate(task),
-            onHold: () => _stopper.stop(task),
-            onRetry: () => _stopper.stop(task),
-          ),
-          _More(:final hidden, :final open) => ShowMoreRow(
-            hidden: hidden,
-            open: open,
-            onTap: () => setState(() => _moreFinished = !_moreFinished),
-          ),
-          _Note(:final text) => Padding(
-            padding: const EdgeInsets.fromLTRB(Gap.md, Gap.xs, Gap.md, Gap.sm),
-            child: Text(text, style: Type.secondary.copyWith(color: ds.textMuted)),
-          ),
+        _Head(:final title, :final count) => SectionHead(title, count),
+        _TaskItem(:final task) => _TaskRow(
+          key: ValueKey(task.key),
+          task: task,
+          agentLabel: _session.agentLabel,
+          live: live,
+          expanded: _open.contains(task.key),
+          readAll: _readAll.contains(task.key),
+          stop: _stopper.stops[task.key],
+          primed: _stopper.primed == task.key,
+          opensSubagent: _opensSubagent(task),
+          onTap: () => _opensSubagent(task) ? _openSubagent(task) : _toggle(task),
+          onReadAll: () => setState(() => _readAll.add(task.key)),
+          onActivate: () => _stopper.activate(task),
+          onHold: () => _stopper.stop(task),
+          onRetry: () => _stopper.stop(task),
+        ),
+        _More(:final hidden, :final open) => ShowMoreRow(
+          hidden: hidden,
+          open: open,
+          onTap: () => setState(() => _moreFinished = !_moreFinished),
+        ),
+        _Note(:final text) => Padding(
+          padding: const EdgeInsets.fromLTRB(Gap.md, Gap.xs, Gap.md, Gap.sm),
+          child: Text(text, style: Type.secondary.copyWith(color: ds.textMuted)),
+        ),
       };
       return SheetScaffold(
         title: work.runningCount == 0 ? 'Background work' : 'Background work · ${work.runningCount}',
@@ -344,7 +349,10 @@ class _TaskRow extends StatelessWidget {
           TextSpan(text: parts.join(' · ')),
           if (word != null) ...[
             const TextSpan(text: ' · '),
-            TextSpan(text: word, style: Type.captionStrong.copyWith(color: tone, fontFeatures: Type.tabular)),
+            TextSpan(
+              text: word,
+              style: Type.captionStrong.copyWith(color: tone, fontFeatures: Type.tabular),
+            ),
           ],
         ],
       ),
@@ -386,52 +394,56 @@ class _TaskRow extends StatelessWidget {
           child: PressRow(
             onTap: onTap,
             padding: const EdgeInsets.only(left: Gap.md - PressRow.inset, top: Gap.sm, bottom: Gap.sm),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: RowMetrics.leadingExtent,
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: Gap.hair),
-                      child: Align(
-                        alignment: Alignment.topLeft,
-                        child: Icon(_icon(task.kind), size: IconSize.bar, color: live ? ds.textSecondary : ds.textMuted),
-                      ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: RowMetrics.leadingExtent,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: Gap.hair),
+                    child: Align(
+                      alignment: Alignment.topLeft,
+                      child: Icon(_icon(task.kind), size: IconSize.bar, color: live ? ds.textSecondary : ds.textMuted),
                     ),
                   ),
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (expanded)
-                          // Read all comes last: its touch area stays out of the words.
-                          _OpenText(
-                            text: full,
-                            style: Mono.input.copyWith(color: textColor),
-                            all: readAll,
-                            onReadAll: onReadAll,
-                            after: [meta, ?noteLine],
-                          )
-                        else ...[
-                          Text(
-                            visibleText(firstLine(raw)).isEmpty ? visibleText(task.id) : visibleText(firstLine(raw)),
-                            maxLines: 1,
-                            softWrap: false,
-                            overflow: TextOverflow.ellipsis,
-                            style: Mono.input.copyWith(color: textColor),
-                          ),
-                          meta,
-                          ?noteLine,
-                        ],
+                ),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (expanded)
+                        // Read all comes last: its touch area stays out of the words.
+                        _OpenText(
+                          text: full,
+                          style: Mono.input.copyWith(color: textColor),
+                          all: readAll,
+                          onReadAll: onReadAll,
+                          after: [meta, ?noteLine],
+                        )
+                      else ...[
+                        Text(
+                          visibleText(firstLine(raw)).isEmpty ? visibleText(task.id) : visibleText(firstLine(raw)),
+                          maxLines: 1,
+                          softWrap: false,
+                          overflow: TextOverflow.ellipsis,
+                          style: Mono.input.copyWith(color: textColor),
+                        ),
+                        meta,
+                        ?noteLine,
                       ],
-                    ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
+            ),
           ),
         ),
-        if (trailing != null) Padding(padding: const EdgeInsets.only(top: Gap.sm, right: Gap.sm), child: trailing),
+        if (trailing != null)
+          Padding(
+            padding: const EdgeInsets.only(top: Gap.sm, right: Gap.sm),
+            child: trailing,
+          ),
       ],
     );
   }
@@ -479,8 +491,7 @@ class _OpenText extends StatelessWidget {
               style: style,
             ),
             ...after,
-            if (cut)
-              TextAction(label: 'Read all', onTap: onReadAll),
+            if (cut) TextAction(label: 'Read all', onTap: onReadAll),
           ],
         );
       },

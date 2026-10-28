@@ -31,11 +31,7 @@ Future<void> advance(WidgetTester tester, Duration time) async {
 
 /// A whole hold: down, [time] (a hold is ~700 ms; the default is a little over
 /// it), up, and a moment for the fill to go back.
-Future<void> holdFor(
-  WidgetTester tester,
-  Finder finder, [
-  Duration time = const Duration(milliseconds: 900),
-]) async {
+Future<void> holdFor(WidgetTester tester, Finder finder, [Duration time = const Duration(milliseconds: 900)]) async {
   final gesture = await pressAndHold(tester, finder, time);
   await gesture.up();
   await advance(tester, const Duration(milliseconds: 250));

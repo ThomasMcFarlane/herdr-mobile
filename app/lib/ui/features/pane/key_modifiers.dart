@@ -51,10 +51,10 @@ class StickyModifiers extends ChangeNotifier {
 
   /// The herdr name of a typed character, e.g. `r`, `space`, `plus`.
   static String keyName(String char) => switch (char) {
-        ' ' => 'space',
-        '+' => 'plus',
-        _ => char.toLowerCase(),
-      };
+    ' ' => 'space',
+    '+' => 'plus',
+    _ => char.toLowerCase(),
+  };
 }
 
 /// Turns the next typed character into a chord while a modifier is armed: the
@@ -70,10 +70,7 @@ class ModifierTypingFormatter extends TextInputFormatter {
   final ValueChanged<String> onChord;
 
   @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
     if (!modifiers.armed) return newValue;
     final char = insertedChar(oldValue.text, newValue.text);
     if (char == null) return newValue;

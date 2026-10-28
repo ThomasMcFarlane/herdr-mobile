@@ -17,8 +17,7 @@ class PaneName {
   String get shown => fromPrompt ? '\u201C$text\u201D' : text;
 
   @override
-  bool operator ==(Object other) =>
-      other is PaneName && other.text == text && other.fromPrompt == fromPrompt;
+  bool operator ==(Object other) => other is PaneName && other.text == text && other.fromPrompt == fromPrompt;
 
   @override
   int get hashCode => Object.hash(text, fromPrompt);
@@ -39,12 +38,7 @@ String paneFolder(String? cwd) {
 /// empty, the agent's own name, `terminal`, or the folder or workspace it runs
 /// in. omp titles its terminal `π > <session title>` and, before it has a
 /// title, `π > <folder>`, so a board of such panes reads as one name repeated.
-bool isGenericPaneTitle(
-  String title, {
-  String? agent,
-  String? folder,
-  String? workspace,
-}) {
+bool isGenericPaneTitle(String title, {String? agent, String? folder, String? workspace}) {
   final t = title.trim().toLowerCase();
   if (t.isEmpty || t == 'terminal') return true;
   bool same(String? other) => other != null && other.trim().isNotEmpty && other.trim().toLowerCase() == t;

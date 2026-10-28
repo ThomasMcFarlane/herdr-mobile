@@ -6,22 +6,24 @@ import 'package:herdr_mobile/data/observed/omp_session_name.dart';
 
 String _line(Map<String, Object?> m) => '${jsonEncode(m)}\n';
 
-String _user(Object content) =>
-    _line({'type': 'message', 'message': {'role': 'user', 'content': content}});
+String _user(Object content) => _line({
+  'type': 'message',
+  'message': {'role': 'user', 'content': content},
+});
 
 String _assistant(String text) => _line({
-      'type': 'message',
-      'message': {
-        'role': 'assistant',
-        'content': [
-          {'type': 'text', 'text': text},
-        ],
-      },
-    });
+  'type': 'message',
+  'message': {
+    'role': 'assistant',
+    'content': [
+      {'type': 'text', 'text': text},
+    ],
+  },
+});
 
 List<Map<String, String>> _text(String s) => [
-      {'type': 'text', 'text': s},
-    ];
+  {'type': 'text', 'text': s},
+];
 
 void main() {
   group('title', () {
@@ -56,14 +58,16 @@ void main() {
 
   group('last prompt', () {
     test('is the first line of the person\'s last message with text', () {
-      final tail = _user(_text('Fix the retry test\nand explain why it was flaky')) +
+      final tail =
+          _user(_text('Fix the retry test\nand explain why it was flaky')) +
           _assistant('Done.') +
           _user(_text('Now  add a   regression test\nfor the parser'));
       expect(parseOmpSessionName(head: '', tail: tail).lastPrompt, 'Now add a regression test');
     });
 
     test('accepts a plain string and skips images and the agent\'s own messages', () {
-      final tail = _user('Rotate the staging certificates') +
+      final tail =
+          _user('Rotate the staging certificates') +
           _user([
             {'type': 'image', 'data': 'AAAA'},
           ]) +
@@ -72,7 +76,8 @@ void main() {
     });
 
     test('a slash command or a system note says nothing about the work: the one before stays', () {
-      final tail = _user(_text('Profile the training step')) +
+      final tail =
+          _user(_text('Profile the training step')) +
           _user(_text('/compact')) +
           _user(_text('<system-reminder>be brief</system-reminder>'));
       expect(parseOmpSessionName(head: '', tail: tail).lastPrompt, 'Profile the training step');

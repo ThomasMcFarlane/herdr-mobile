@@ -6,31 +6,14 @@ import 'package:herdr_mobile/ui/render/markdown/md_text.dart';
 import 'package:herdr_mobile/ui/render/terminal/terminal_links.dart';
 
 /// What a link must be: kind, displayed text, target, line and column.
-typedef _Link = ({
-  TerminalLinkKind kind,
-  String text,
-  String target,
-  int? line,
-  int? column,
-});
+typedef _Link = ({TerminalLinkKind kind, String text, String target, int? line, int? column});
 
 /// A path link displayed as [text]; [target] defaults to [text], so a case
 /// with a position suffix names its target.
-_Link _p(String text, {String? target, int? line, int? col}) => (
-  kind: TerminalLinkKind.path,
-  text: text,
-  target: target ?? text,
-  line: line,
-  column: col,
-);
+_Link _p(String text, {String? target, int? line, int? col}) =>
+    (kind: TerminalLinkKind.path, text: text, target: target ?? text, line: line, column: col);
 
-_Link _u(String url) => (
-  kind: TerminalLinkKind.url,
-  text: url,
-  target: url,
-  line: null,
-  column: null,
-);
+_Link _u(String url) => (kind: TerminalLinkKind.url, text: url, target: url, line: null, column: null);
 
 /// A line of terminal output or agent text and the links it must give, in
 /// order. `[]` means the line must stay plain: every entry that expects
@@ -39,38 +22,16 @@ typedef _Case = (String input, List<_Link> links);
 
 final List<_Case> _cases = [
   // -- compiler errors, stack traces, test runners ----------------------------
-  (
-    "lib/a.dart:12:5: error: Undefined name 'x'.",
-    [_p('lib/a.dart:12:5', target: 'lib/a.dart', line: 12, col: 5)],
-  ),
-  (
-    '    at Foo (src/x.ts:10:3)',
-    [_p('src/x.ts:10:3', target: 'src/x.ts', line: 10, col: 3)],
-  ),
+  ("lib/a.dart:12:5: error: Undefined name 'x'.", [_p('lib/a.dart:12:5', target: 'lib/a.dart', line: 12, col: 5)]),
+  ('    at Foo (src/x.ts:10:3)', [_p('src/x.ts:10:3', target: 'src/x.ts', line: 10, col: 3)]),
   (
     '    at Object.<anonymous> (/home/me/app/index.js:5:9)',
-    [
-      _p(
-        '/home/me/app/index.js:5:9',
-        target: '/home/me/app/index.js',
-        line: 5,
-        col: 9,
-      ),
-    ],
+    [_p('/home/me/app/index.js:5:9', target: '/home/me/app/index.js', line: 5, col: 9)],
   ),
   ('    at async Promise.all (index 0)', []),
-  (
-    '    at com.foo.Bar.run(Bar.java:42)',
-    [_p('Bar.java:42', target: 'Bar.java', line: 42)],
-  ),
-  (
-    ' --> src/main.rs:4:5',
-    [_p('src/main.rs:4:5', target: 'src/main.rs', line: 4, col: 5)],
-  ),
-  (
-    './main.go:10:2: undefined: foo',
-    [_p('./main.go:10:2', target: './main.go', line: 10, col: 2)],
-  ),
+  ('    at com.foo.Bar.run(Bar.java:42)', [_p('Bar.java:42', target: 'Bar.java', line: 42)]),
+  (' --> src/main.rs:4:5', [_p('src/main.rs:4:5', target: 'src/main.rs', line: 4, col: 5)]),
+  ('./main.go:10:2: undefined: foo', [_p('./main.go:10:2', target: './main.go', line: 10, col: 2)]),
   (
     "src/app.ts(10,3): error TS2304: Cannot find name 'x'.",
     [_p('src/app.ts(10,3)', target: 'src/app.ts', line: 10, col: 3)],
@@ -80,33 +41,15 @@ final List<_Case> _cases = [
     "error • Undefined name 'x' • lib/a.dart:12:5 • undefined_identifier",
     [_p('lib/a.dart:12:5', target: 'lib/a.dart', line: 12, col: 5)],
   ),
-  (
-    '  error - lib/a.dart:12:5 - msg - rule',
-    [_p('lib/a.dart:12:5', target: 'lib/a.dart', line: 12, col: 5)],
-  ),
-  (
-    'FAIL test/a_test.dart: loading test/a_test.dart',
-    [_p('test/a_test.dart'), _p('test/a_test.dart')],
-  ),
-  (
-    "thread 'main' panicked at src/main.rs:4:5:",
-    [_p('src/main.rs:4:5', target: 'src/main.rs', line: 4, col: 5)],
-  ),
+  ('  error - lib/a.dart:12:5 - msg - rule', [_p('lib/a.dart:12:5', target: 'lib/a.dart', line: 12, col: 5)]),
+  ('FAIL test/a_test.dart: loading test/a_test.dart', [_p('test/a_test.dart'), _p('test/a_test.dart')]),
+  ("thread 'main' panicked at src/main.rs:4:5:", [_p('src/main.rs:4:5', target: 'src/main.rs', line: 4, col: 5)]),
   (
     '\t/usr/local/go/src/runtime/panic.go:770 +0x118',
-    [
-      _p(
-        '/usr/local/go/src/runtime/panic.go:770',
-        target: '/usr/local/go/src/runtime/panic.go',
-        line: 770,
-      ),
-    ],
+    [_p('/usr/local/go/src/runtime/panic.go:770', target: '/usr/local/go/src/runtime/panic.go', line: 770)],
   ),
   ('tests/test_a.py::test_x FAILED', [_p('tests/test_a.py')]),
-  (
-    'tests/test_a.py:12: AssertionError',
-    [_p('tests/test_a.py:12', target: 'tests/test_a.py', line: 12)],
-  ),
+  ('tests/test_a.py:12: AssertionError', [_p('tests/test_a.py:12', target: 'tests/test_a.py', line: 12)]),
   ('/home/me/app/src/a.js', [_p('/home/me/app/src/a.js')]),
   ('TODO(me): fix lib/a.dart', [_p('lib/a.dart')]),
   ('Wrote build/app.apk (12.3MB)', [_p('build/app.apk')]),
@@ -128,10 +71,7 @@ final List<_Case> _cases = [
   ('+++ b/lib/x.dart', [_p('b/lib/x.dart', target: 'lib/x.dart')]),
   (
     'diff --git a/lib/x.dart b/lib/y.dart',
-    [
-      _p('a/lib/x.dart', target: 'lib/x.dart'),
-      _p('b/lib/y.dart', target: 'lib/y.dart'),
-    ],
+    [_p('a/lib/x.dart', target: 'lib/x.dart'), _p('b/lib/y.dart', target: 'lib/y.dart')],
   ),
   ('--- /dev/null', []),
   ('+++ b/new.txt', [_p('b/new.txt', target: 'new.txt')]),
@@ -142,15 +82,9 @@ final List<_Case> _cases = [
   ('-rw-r--r--  1 me me  1234 Jan  5 09:00 notes.md', [_p('notes.md')]),
   ('drwxr-xr-x  2 me me  4096 Jan  5 09:00 src', []),
   ('drwxr-xr-x  2 me me  4096 Jan  5 09:00 lib', []),
-  (
-    'lrwxrwxrwx  1 me me    11 Jan  5 09:00 link -> target.txt',
-    [_p('target.txt')],
-  ),
+  ('lrwxrwxrwx  1 me me    11 Jan  5 09:00 link -> target.txt', [_p('target.txt')]),
   ('-rwxr-xr-x  1 me me   100 Jan  5 09:00 run.sh', [_p('run.sh')]),
-  (
-    'lib  test  build  pubspec.yaml  README.md',
-    [_p('pubspec.yaml'), _p('README.md')],
-  ),
+  ('lib  test  build  pubspec.yaml  README.md', [_p('pubspec.yaml'), _p('README.md')]),
   ('total 48', []),
   ('src/  docs/  tests/', []),
   ('README.md  39B', [_p('README.md')]),
@@ -178,37 +112,19 @@ final List<_Case> _cases = [
   ('cat file.txt > out.txt', [_p('file.txt'), _p('out.txt')]),
   ('--out=build/app.apk', [_p('build/app.apk')]),
   ('│ src/a.dart │', [_p('src/a.dart')]),
-  (
-    '[path/to/results.tsv] [--format text|json|md]',
-    [_p('path/to/results.tsv')],
-  ),
+  ('[path/to/results.tsv] [--format text|json|md]', [_p('path/to/results.tsv')]),
   ('<img src="assets/logo.png"/>', [_p('assets/logo.png')]),
   ('x-foo/bar.txt', [_p('x-foo/bar.txt')]),
   // -- positions --------------------------------------------------------------
   ('a.dart:12', [_p('a.dart:12', target: 'a.dart', line: 12)]),
-  (
-    'lib/a.dart:12:5.',
-    [_p('lib/a.dart:12:5', target: 'lib/a.dart', line: 12, col: 5)],
-  ),
-  (
-    'lib/a.dart:12-20',
-    [_p('lib/a.dart:12-20', target: 'lib/a.dart', line: 12)],
-  ),
-  (
-    'lib/a.dart:12:5-9',
-    [_p('lib/a.dart:12:5-9', target: 'lib/a.dart', line: 12, col: 5)],
-  ),
+  ('lib/a.dart:12:5.', [_p('lib/a.dart:12:5', target: 'lib/a.dart', line: 12, col: 5)]),
+  ('lib/a.dart:12-20', [_p('lib/a.dart:12-20', target: 'lib/a.dart', line: 12)]),
+  ('lib/a.dart:12:5-9', [_p('lib/a.dart:12:5-9', target: 'lib/a.dart', line: 12, col: 5)]),
   ('lib/a.dart (line 12)', [_p('lib/a.dart', line: 12)]),
   ('lib/a.dart (lines 12-20)', [_p('lib/a.dart', line: 12)]),
   ('lib/a.dart#L12', [_p('lib/a.dart#L12', target: 'lib/a.dart', line: 12)]),
-  (
-    'lib/a.dart#L12-L20',
-    [_p('lib/a.dart#L12-L20', target: 'lib/a.dart', line: 12)],
-  ),
-  (
-    'lib/a.dart#L12C3',
-    [_p('lib/a.dart#L12C3', target: 'lib/a.dart', line: 12, col: 3)],
-  ),
+  ('lib/a.dart#L12-L20', [_p('lib/a.dart#L12-L20', target: 'lib/a.dart', line: 12)]),
+  ('lib/a.dart#L12C3', [_p('lib/a.dart#L12C3', target: 'lib/a.dart', line: 12, col: 3)]),
   ('lib/a.dart (12)', [_p('lib/a.dart')]),
   ('lib/a.dart:x', [_p('lib/a.dart')]),
   ('lib/a.dart:12345678', [_p('lib/a.dart')]),
@@ -261,10 +177,7 @@ final List<_Case> _cases = [
   ('(https://x.dev/a)', [_u('https://x.dev/a')]),
   ('[docs](https://x.dev/a)', [_u('https://x.dev/a')]),
   ('http://localhost:3000/health', [_u('http://localhost:3000/health')]),
-  (
-    'https://github.com/foo/bar/blob/main/lib/a.dart#L10',
-    [_u('https://github.com/foo/bar/blob/main/lib/a.dart#L10')],
-  ),
+  ('https://github.com/foo/bar/blob/main/lib/a.dart#L10', [_u('https://github.com/foo/bar/blob/main/lib/a.dart#L10')]),
   ('https://x.dev/a lib/b.dart', [_u('https://x.dev/a'), _p('lib/b.dart')]),
   // -- slash commands are never paths -----------------------------------------
   ('/model', []),
@@ -375,14 +288,7 @@ final List<_Case> _cases = [
 
 /// Links of [text] the way the tests compare them.
 List<_Link> _found(String text) => [
-  for (final l in detectLinks(text))
-    (
-      kind: l.kind,
-      text: l.text,
-      target: l.target,
-      line: l.line,
-      column: l.column,
-    ),
+  for (final l in detectLinks(text)) (kind: l.kind, text: l.text, target: l.target, line: l.line, column: l.column),
 ];
 
 /// Every `(line, link)` the table expects or the detector produced, to count
@@ -393,11 +299,7 @@ List<_Link> _found(String text) => [
     final got = [..._found(input)];
     for (final e in expected) {
       final at = got.indexWhere(
-        (g) =>
-            g.kind == e.kind &&
-            g.target == e.target &&
-            g.line == e.line &&
-            g.column == e.column,
+        (g) => g.kind == e.kind && g.target == e.target && g.line == e.line && g.column == e.column,
       );
       if (at >= 0) {
         tp++;
@@ -411,9 +313,7 @@ List<_Link> _found(String text) => [
   return (tp: tp, fp: fp, fn: fn, lines: _cases.length);
 }
 
-final RegExp _ansi = RegExp(
-  r'\x1b\[[0-9;?]*[A-Za-z]|\x1b\][^\x07\x1b]*(\x07|\x1b\\)',
-);
+final RegExp _ansi = RegExp(r'\x1b\[[0-9;?]*[A-Za-z]|\x1b\][^\x07\x1b]*(\x07|\x1b\\)');
 
 void _collectStrings(Object? v, Set<String> out) {
   if (v is String) {
@@ -435,9 +335,7 @@ void _collectStrings(Object? v, Set<String> out) {
 /// string in the recorded sessions (`traces`, `omp_logs`).
 Set<String> _fixtureLines() {
   final lines = <String>{};
-  for (final f in Directory(
-    'test/fixtures',
-  ).listSync(recursive: true).whereType<File>()) {
+  for (final f in Directory('test/fixtures').listSync(recursive: true).whereType<File>()) {
     if (f.path.endsWith('.txt')) {
       for (final l in f.readAsLinesSync()) {
         if (l.startsWith('#')) continue;
@@ -485,10 +383,7 @@ void main() {
   test('the table is big enough to mean something', () {
     expect(_cases.length, greaterThanOrEqualTo(120));
     expect(_cases.where((c) => c.$2.isEmpty).length, greaterThanOrEqualTo(50));
-    expect(
-      _cases.where((c) => c.$2.isNotEmpty).length,
-      greaterThanOrEqualTo(80),
-    );
+    expect(_cases.where((c) => c.$2.isNotEmpty).length, greaterThanOrEqualTo(80));
   });
 
   test('precision and recall on the table', () {
@@ -522,9 +417,7 @@ void main() {
         }
       }
       // ignore: avoid_print
-      print(
-        'link-sense fixtures: ${lines.length} lines, $links links, ${noise.length} noisy',
-      );
+      print('link-sense fixtures: ${lines.length} lines, $links links, ${noise.length} noisy');
       expect(noise, isEmpty);
     });
 
@@ -536,14 +429,7 @@ void main() {
       };
       expect(
         targets,
-        containsAll([
-          'hello.txt',
-          'notes.txt',
-          'src/main.py',
-          'README.md',
-          'AGENTS.md',
-          '/work/proj/new.txt',
-        ]),
+        containsAll(['hello.txt', 'notes.txt', 'src/main.py', 'README.md', 'AGENTS.md', '/work/proj/new.txt']),
       );
       expect(targets, isNot(contains('/model')));
       expect(targets, isNot(contains('/resume')));
@@ -570,9 +456,7 @@ void main() {
     ];
 
     test('5,000 realistic lines are scanned well under the budget', () {
-      final lines = [
-        for (var i = 0; i < 5000; i++) realistic[i % realistic.length],
-      ];
+      final lines = [for (var i = 0; i < 5000; i++) realistic[i % realistic.length]];
       detectLinks(lines.first); // warm the regexes
       final watch = Stopwatch()..start();
       var links = 0;
@@ -581,9 +465,7 @@ void main() {
       }
       watch.stop();
       // ignore: avoid_print
-      print(
-        'link-sense speed: 5000 lines, $links links, ${watch.elapsedMilliseconds} ms',
-      );
+      print('link-sense speed: 5000 lines, $links links, ${watch.elapsedMilliseconds} ms');
       expect(links, greaterThan(300));
       expect(watch.elapsedMilliseconds, lessThan(300));
     });

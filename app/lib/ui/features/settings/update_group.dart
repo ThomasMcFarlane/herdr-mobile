@@ -6,7 +6,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/app_info.dart';
 import '../../../data/models/release_info.dart';
 import '../../../data/repositories/app_update.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../render/markdown/markdown.dart';
 import '../../support/open_link.dart';
 import 'clip_player.dart';
@@ -31,39 +33,40 @@ class UpdateGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-        listenable: update,
-        builder: (context, _) {
-          final release = update.release;
-          if (release == null) return const SizedBox.shrink();
-          final summary = switch (update.stage) {
-            UpdateStage.downloading => 'Downloading ${megabytes(update.received)} of ${megabytes(release.size)}',
-            UpdateStage.ready => 'Ready to install',
-            // The sentence itself (red, whole) is in the sheet; a row's line
-            // is a summary.
-            _ => update.problem != null
-                ? 'Update failed, open to see why'
-                : '${release.version} \u00b7 ${megabytes(release.size)}',
-          };
-          return SettingsGroup(
-            icon: HerdrIcons.update,
-            title: 'Update available',
-            summary: summary,
-            tint: context.ds.accent,
-            // Ready, or stopped: news a screen reader says even with the
-            // sheet put away.
-            announce: update.stage == UpdateStage.ready || update.problem != null,
-            open: false,
-            onToggle: onOpen,
-            footer: update.stage == UpdateStage.downloading
-                ? Padding(
-                    padding: const EdgeInsets.only(left: Gap.gutter, right: Gap.gutter, bottom: Gap.md),
-                    child: _ProgressBar(update.received / release.size),
-                  )
-                : null,
-            rows: const [],
-          );
-        },
+    listenable: update,
+    builder: (context, _) {
+      final release = update.release;
+      if (release == null) return const SizedBox.shrink();
+      final summary = switch (update.stage) {
+        UpdateStage.downloading => 'Downloading ${megabytes(update.received)} of ${megabytes(release.size)}',
+        UpdateStage.ready => 'Ready to install',
+        // The sentence itself (red, whole) is in the sheet; a row's line
+        // is a summary.
+        _ =>
+          update.problem != null
+              ? 'Update failed, open to see why'
+              : '${release.version} \u00b7 ${megabytes(release.size)}',
+      };
+      return SettingsGroup(
+        icon: HerdrIcons.update,
+        title: 'Update available',
+        summary: summary,
+        tint: context.ds.accent,
+        // Ready, or stopped: news a screen reader says even with the
+        // sheet put away.
+        announce: update.stage == UpdateStage.ready || update.problem != null,
+        open: false,
+        onToggle: onOpen,
+        footer: update.stage == UpdateStage.downloading
+            ? Padding(
+                padding: const EdgeInsets.only(left: Gap.gutter, right: Gap.gutter, bottom: Gap.md),
+                child: _ProgressBar(update.received / release.size),
+              )
+            : null,
+        rows: const [],
       );
+    },
+  );
 }
 
 /// The update in one sheet: the release's walkthrough clip when it has one,
@@ -86,77 +89,80 @@ class _UpdateSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-        listenable: update,
-        builder: (context, _) {
-          final release = update.release;
-          // Installed, or withdrawn while the sheet was open: nothing to offer.
-          if (release == null) return const SizedBox.shrink();
-          final ds = context.ds;
-          final clip = release.clip;
-          final notes = clip == null ? release.notes : clip.without(release.notes);
-          return SheetScaffold(
-            kind: SheetKind.list,
-            actions: [_Facts(update: update, release: release), ..._steps(context, release)],
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(_inset, Gap.md, _inset, Gap.sm),
-                  child: Semantics(
-                    header: true,
-                    child: Text('Update to ${release.version}', style: Type.title.copyWith(color: ds.text)),
-                  ),
-                ),
-                if (clip != null) ClipCard(clip, version: release.version),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: _inset),
-                  child: notes.isEmpty
-                      ? _NoNotes(release: release)
-                      : MdDocumentView(document: parseMd(notes, softBreaksAsNewlines: false)),
-                ),
-              ],
+    listenable: update,
+    builder: (context, _) {
+      final release = update.release;
+      // Installed, or withdrawn while the sheet was open: nothing to offer.
+      if (release == null) return const SizedBox.shrink();
+      final ds = context.ds;
+      final clip = release.clip;
+      final notes = clip == null ? release.notes : clip.without(release.notes);
+      return SheetScaffold(
+        kind: SheetKind.list,
+        actions: [
+          _Facts(update: update, release: release),
+          ..._steps(context, release),
+        ],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(_inset, Gap.md, _inset, Gap.sm),
+              child: Semantics(
+                header: true,
+                child: Text('Update to ${release.version}', style: Type.title.copyWith(color: ds.text)),
+              ),
             ),
-          );
-        },
+            if (clip != null) ClipCard(clip, version: release.version),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: _inset),
+              child: notes.isEmpty
+                  ? _NoNotes(release: release)
+                  : MdDocumentView(document: parseMd(notes, softBreaksAsNewlines: false)),
+            ),
+          ],
+        ),
       );
+    },
+  );
 
   List<Widget> _steps(BuildContext context, ReleaseInfo release) {
     final ds = context.ds;
     final caption = Type.caption.copyWith(color: ds.textMuted);
     return switch (update.stage) {
       UpdateStage.downloading => [
-          _ProgressBar(update.received / release.size),
-          Text(
-            'Downloading ${megabytes(update.received)} of ${megabytes(release.size)}',
-            style: Type.secondary.copyWith(color: ds.textSecondary, fontFeatures: Type.tabular),
-          ),
-          AppButton(label: 'Cancel', kind: AppButtonKind.secondary, expand: true, onPressed: update.cancelDownload),
-        ],
+        _ProgressBar(update.received / release.size),
+        Text(
+          'Downloading ${megabytes(update.received)} of ${megabytes(release.size)}',
+          style: Type.secondary.copyWith(color: ds.textSecondary, fontFeatures: Type.tabular),
+        ),
+        AppButton(label: 'Cancel', kind: AppButtonKind.secondary, expand: true, onPressed: update.cancelDownload),
+      ],
       UpdateStage.ready => [
-          if (update.needsInstallPermission)
-            const _Note(
-              'Allow herdr under \u201cInstall unknown apps\u201d on the Android page that opened, '
-              'then come back and tap Install.',
-            ),
-          AppButton(
-            label: 'Install ${release.version}',
-            icon: LucideIcons.packageCheck,
-            expand: true,
-            onPressed: () => unawaited(update.install()),
+        if (update.needsInstallPermission)
+          const _Note(
+            'Allow herdr under \u201cInstall unknown apps\u201d on the Android page that opened, '
+            'then come back and tap Install.',
           ),
-          Text('Android asks before it installs.', style: caption, textAlign: TextAlign.center),
-        ],
+        AppButton(
+          label: 'Install ${release.version}',
+          icon: LucideIcons.packageCheck,
+          expand: true,
+          onPressed: () => unawaited(update.install()),
+        ),
+        Text('Android asks before it installs.', style: caption, textAlign: TextAlign.center),
+      ],
       _ => [
-          if (update.problem case final problem?) _Note(problem, failed: true),
-          AppButton(
-            label: update.problem != null ? 'Retry' : 'Download ${megabytes(release.size)}',
-            icon: LucideIcons.download,
-            expand: true,
-            // A check that runs meanwhile (after a failed download) keeps the
-            // button until it is back.
-            onPressed: update.stage == UpdateStage.idle ? () => unawaited(update.download()) : null,
-          ),
-        ],
+        if (update.problem case final problem?) _Note(problem, failed: true),
+        AppButton(
+          label: update.problem != null ? 'Retry' : 'Download ${megabytes(release.size)}',
+          icon: LucideIcons.download,
+          expand: true,
+          // A check that runs meanwhile (after a failed download) keeps the
+          // button until it is back.
+          onPressed: update.stage == UpdateStage.idle ? () => unawaited(update.download()) : null,
+        ),
+      ],
     };
   }
 }
@@ -183,11 +189,13 @@ class _Facts extends StatelessWidget {
         const Hairline(),
         const SizedBox(height: Gap.md),
         if (update.stage == UpdateStage.ready)
-          Row(children: [
-            Icon(LucideIcons.badgeCheck, size: IconSize.inline, color: ds.done),
-            const SizedBox(width: Gap.xs),
-            Expanded(child: Text('Checksum matched: the file the release lists', style: caption)),
-          ])
+          Row(
+            children: [
+              Icon(LucideIcons.badgeCheck, size: IconSize.inline, color: ds.done),
+              const SizedBox(width: Gap.xs),
+              Expanded(child: Text('Checksum matched: the file the release lists', style: caption)),
+            ],
+          )
         else
           Text('From github.com/$appRepository \u00b7 you have $appVersion', style: caption),
       ],
@@ -215,11 +223,14 @@ class ClipCard extends StatelessWidget {
       decoration: BoxDecoration(color: ds.inverseSurface, borderRadius: BorderRadius.circular(Radii.pill)),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(Gap.sm, Gap.xs, Gap.md, Gap.xs),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(LucideIcons.play, size: IconSize.inline, color: ds.onInverse),
-          const SizedBox(width: Gap.xs),
-          Text('Play', style: Type.labelStrong.copyWith(color: ds.onInverse)),
-        ]),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(LucideIcons.play, size: IconSize.inline, color: ds.onInverse),
+            const SizedBox(width: Gap.xs),
+            Text('Play', style: Type.labelStrong.copyWith(color: ds.onInverse)),
+          ],
+        ),
       ),
     );
     return Padding(
@@ -244,18 +255,21 @@ class ClipCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(Radii.md),
                   child: SizedBox(
                     height: _posterHeight,
-                    child: Stack(fit: StackFit.expand, children: [
-                      ColoredBox(color: ds.fill),
-                      Image.network(
-                        clip.poster,
-                        fit: BoxFit.cover,
-                        alignment: Alignment.topCenter,
-                        gaplessPlayback: true,
-                        errorBuilder: (context, error, stack) => const SizedBox.shrink(),
-                      ),
-                      if (pressed) ColoredBox(color: ds.pressTint),
-                      Center(child: play),
-                    ]),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        ColoredBox(color: ds.fill),
+                        Image.network(
+                          clip.poster,
+                          fit: BoxFit.cover,
+                          alignment: Alignment.topCenter,
+                          gaplessPlayback: true,
+                          errorBuilder: (context, error, stack) => const SizedBox.shrink(),
+                        ),
+                        if (pressed) ColoredBox(color: ds.pressTint),
+                        Center(child: play),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -313,10 +327,7 @@ class _Note extends StatelessWidget {
     final ds = context.ds;
     return Semantics(
       liveRegion: true,
-      child: Text(
-        text,
-        style: Type.secondary.copyWith(color: failed ? ds.dangerText : ds.textSecondary),
-      ),
+      child: Text(text, style: Type.secondary.copyWith(color: failed ? ds.dangerText : ds.textSecondary)),
     );
   }
 }

@@ -124,15 +124,17 @@ void main() {
     });
 
     test('a prompt renders its question, subject and one line per reply', () {
-      final text = renderPrompt(const PromptInfo(
-        question: 'Run it?\nTwo lines',
-        subject: 'git push\nPush it',
-        replies: [
-          QuickReply(label: '1. Yes', keys: ['1', 'enter'], needsConfirm: true, risk: 'pushes to a remote'),
-          QuickReply(label: '2. No', keys: ['esc'], needsConfirm: true),
-          QuickReply(label: '3. Maybe', keys: ['3']),
-        ],
-      ));
+      final text = renderPrompt(
+        const PromptInfo(
+          question: 'Run it?\nTwo lines',
+          subject: 'git push\nPush it',
+          replies: [
+            QuickReply(label: '1. Yes', keys: ['1', 'enter'], needsConfirm: true, risk: 'pushes to a remote'),
+            QuickReply(label: '2. No', keys: ['esc'], needsConfirm: true),
+            QuickReply(label: '3. Maybe', keys: ['3']),
+          ],
+        ),
+      );
 
       expect(
         text,
@@ -148,7 +150,14 @@ void main() {
         '  3. Maybe | keys: 3 | confirm: no\n',
       );
       expect(
-        renderPrompt(const PromptInfo(question: 'q', replies: [QuickReply(label: 'a', keys: ['1'])])),
+        renderPrompt(
+          const PromptInfo(
+            question: 'q',
+            replies: [
+              QuickReply(label: 'a', keys: ['1']),
+            ],
+          ),
+        ),
         'question:\n  q\nreplies:\n  a | keys: 1 | confirm: no\n',
         reason: 'no subject, no subject section',
       );

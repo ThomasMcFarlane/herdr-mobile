@@ -63,9 +63,9 @@ void main() {
   });
 
   List<Object?> sentKeys() => [
-        for (final (m, p) in transport.calls)
-          if (m == 'pane.send_keys') p['keys'],
-      ];
+    for (final (m, p) in transport.calls)
+      if (m == 'pane.send_keys') p['keys'],
+  ];
 
   group('a one-tap chip that became a gated answer', () {
     testWidgets('is not sent: the person never confirmed it', (tester) async {

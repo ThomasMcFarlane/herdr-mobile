@@ -21,7 +21,8 @@ Pane _pane({String agent = 'claude', AgentSessionRef? session, String cwd = '/wo
   session: session,
 );
 
-AgentSessionRef _ref(String agent, String kind, String value) => AgentSessionRef(agent: agent, kind: kind, value: value);
+AgentSessionRef _ref(String agent, String kind, String value) =>
+    AgentSessionRef(agent: agent, kind: kind, value: value);
 
 RemoteFiles _files(FakeFs fs) => RemoteFiles(FakeTransport()..fs = fs);
 
@@ -56,7 +57,11 @@ void main() {
 
     test('a path with .. or a control character is refused, not followed', () async {
       for (final bad in ['/home/dev/../etc/x.jsonl', '/home/dev/a\nb.jsonl', 'relative.jsonl']) {
-        final found = await locator.locateWith(_files(FakeFs()), _noProcesses, _pane(session: _ref('claude', 'path', bad)));
+        final found = await locator.locateWith(
+          _files(FakeFs()),
+          _noProcesses,
+          _pane(session: _ref('claude', 'path', bad)),
+        );
         expect(found, isA<Unlinked>(), reason: bad);
       }
     });
@@ -67,7 +72,10 @@ void main() {
       final fs = FakeFs()
         ..addFile(stale, '{}\n')
         ..addFile(inCwd, '{}\n')
-        ..addFile('/home/dev/.claude/sessions/4242.json', '{"pid":4242,"sessionId":"$_sid","cwd":"/work/app","kind":"interactive"}');
+        ..addFile(
+          '/home/dev/.claude/sessions/4242.json',
+          '{"pid":4242,"sessionId":"$_sid","cwd":"/work/app","kind":"interactive"}',
+        );
 
       final found = await locator.locateWith(
         _files(fs),
@@ -80,7 +88,11 @@ void main() {
 
     test('with no process to ask, the reported session is used', () async {
       final fs = FakeFs()..addFile(inCwd, '{}\n');
-      final found = await locator.locateWith(_files(fs), (_) => throw HerdrUnsupportedException('pane.process_info'), _pane(session: _ref('claude', 'path', inCwd)));
+      final found = await locator.locateWith(
+        _files(fs),
+        (_) => throw HerdrUnsupportedException('pane.process_info'),
+        _pane(session: _ref('claude', 'path', inCwd)),
+      );
       expect((found as Located).path, inCwd);
     });
 
@@ -106,14 +118,22 @@ void main() {
 
     test('without a session reference the running claude process names its session', () async {
       final fs = FakeFs()
-        ..addFile('/home/dev/.claude/sessions/4242.json', '{"pid":4242,"sessionId":"$_sid","cwd":"/work/app","kind":"interactive"}')
+        ..addFile(
+          '/home/dev/.claude/sessions/4242.json',
+          '{"pid":4242,"sessionId":"$_sid","cwd":"/work/app","kind":"interactive"}',
+        )
         ..addFile(inCwd, '{}\n');
       final found = await locator.locateWith(
         _files(fs),
         (_) async => [
           const PaneProcess(pid: 1, name: 'zsh'),
           // An MCP helper with .claude in its path, and Claude itself, whose name herdr gives as the version.
-          const PaneProcess(pid: 99, name: 'node', argv0: 'node', cmdline: 'node /home/dev/.claude/plugins/x/server.js'),
+          const PaneProcess(
+            pid: 99,
+            name: 'node',
+            argv0: 'node',
+            cmdline: 'node /home/dev/.claude/plugins/x/server.js',
+          ),
           const PaneProcess(pid: 4242, name: '2.1.293', argv0: 'claude', cmdline: 'claude --resume'),
         ],
         _pane(),
@@ -131,22 +151,33 @@ void main() {
     });
 
     test('an old herdr without pane.process_info is unlinked, not an error', () async {
-      final found = await locator.locateWith(_files(FakeFs()), (_) => throw HerdrUnsupportedException('pane.process_info'), _pane());
+      final found = await locator.locateWith(
+        _files(FakeFs()),
+        (_) => throw HerdrUnsupportedException('pane.process_info'),
+        _pane(),
+      );
       expect(found, isA<Unlinked>());
     });
 
-    test('a pid file that is not an interactive session, belongs to another pid, or has a bad id, is not used', () async {
-      for (final body in [
-        '{"pid":7,"sessionId":"$_sid","cwd":"/work/app","kind":"interactive"}',
-        '{"pid":4242,"sessionId":"$_sid","cwd":"/work/app","kind":"sdk"}',
-        '{"pid":4242,"sessionId":"../../x","cwd":"/work/app","kind":"interactive"}',
-        'not json',
-      ]) {
-        final fs = FakeFs()..addFile('/home/dev/.claude/sessions/4242.json', body);
-        final found = await locator.locateWith(_files(fs), (_) async => [const PaneProcess(pid: 4242, name: 'claude')], _pane());
-        expect(found, isA<Unlinked>(), reason: body);
-      }
-    });
+    test(
+      'a pid file that is not an interactive session, belongs to another pid, or has a bad id, is not used',
+      () async {
+        for (final body in [
+          '{"pid":7,"sessionId":"$_sid","cwd":"/work/app","kind":"interactive"}',
+          '{"pid":4242,"sessionId":"$_sid","cwd":"/work/app","kind":"sdk"}',
+          '{"pid":4242,"sessionId":"../../x","cwd":"/work/app","kind":"interactive"}',
+          'not json',
+        ]) {
+          final fs = FakeFs()..addFile('/home/dev/.claude/sessions/4242.json', body);
+          final found = await locator.locateWith(
+            _files(fs),
+            (_) async => [const PaneProcess(pid: 4242, name: 'claude')],
+            _pane(),
+          );
+          expect(found, isA<Unlinked>(), reason: body);
+        }
+      },
+    );
 
     test('the board offers the chat for any claude pane', () {
       expect(locator.mayLocate(_pane()), isTrue);
@@ -170,30 +201,44 @@ void main() {
 
     test('and in the next day folder when the host clock is ahead of UTC', () async {
       final fs = FakeFs()..addFile('/home/dev/.codex/sessions/2026/09/07/${rollout('2026-09-07T05-03-17')}', '{}\n');
-      final found = await CodexLocator().locateWith(_files(fs), _pane(agent: 'codex', session: _ref('codex', 'id', id)));
+      final found = await CodexLocator().locateWith(
+        _files(fs),
+        _pane(agent: 'codex', session: _ref('codex', 'id', id)),
+      );
       expect(found, isA<Located>());
     });
 
     test('an id that is not v7 is found by walking the date folders, newest first, within 40 listings', () async {
       const old = '00000000-0000-4000-8000-0123456789ab';
-      final fs = FakeFs()..addFile('/home/dev/.codex/sessions/2025/03/02/rollout-2025-03-02T10-00-00-$old.jsonl', '{}\n');
+      final fs = FakeFs()
+        ..addFile('/home/dev/.codex/sessions/2025/03/02/rollout-2025-03-02T10-00-00-$old.jsonl', '{}\n');
       for (var d = 1; d <= 9; d++) {
         fs.addFile('/home/dev/.codex/sessions/2026/09/0$d/rollout-2026-09-0$d-other.jsonl', '{}\n');
       }
-      final found = await CodexLocator().locateWith(_files(fs), _pane(agent: 'codex', session: _ref('codex', 'id', old)));
+      final found = await CodexLocator().locateWith(
+        _files(fs),
+        _pane(agent: 'codex', session: _ref('codex', 'id', old)),
+      );
       expect(found, isA<Located>());
       expect(fs.calls.where((c) => c.startsWith('list')).length, lessThanOrEqualTo(CodexLocator.maxLists));
     });
 
     test('a session only found compressed says to resume it', () async {
-      final fs = FakeFs()..addFile('/home/dev/.codex/sessions/2026/09/06/${rollout('2026-09-06T21-03-17', 'jsonl.zst')}', 'x');
-      final found = await CodexLocator().locateWith(_files(fs), _pane(agent: 'codex', session: _ref('codex', 'id', id)));
+      final fs = FakeFs()
+        ..addFile('/home/dev/.codex/sessions/2026/09/06/${rollout('2026-09-06T21-03-17', 'jsonl.zst')}', 'x');
+      final found = await CodexLocator().locateWith(
+        _files(fs),
+        _pane(agent: 'codex', session: _ref('codex', 'id', id)),
+      );
       expect((found as Unlinked).why, contains('Resume it in Codex'));
     });
 
     test('nothing yet is "not yet": Codex writes the file with the first prompt', () async {
       final fs = FakeFs()..addDir('/home/dev/.codex/sessions');
-      final found = await CodexLocator().locateWith(_files(fs), _pane(agent: 'codex', session: _ref('codex', 'id', id)));
+      final found = await CodexLocator().locateWith(
+        _files(fs),
+        _pane(agent: 'codex', session: _ref('codex', 'id', id)),
+      );
       expect(found, isA<NotYet>());
     });
 
@@ -206,7 +251,10 @@ void main() {
 
     test('an id that is not a uuid never reaches a path', () async {
       final fs = FakeFs();
-      final found = await CodexLocator().locateWith(_files(fs), _pane(agent: 'codex', session: _ref('codex', 'id', '../../etc/passwd')));
+      final found = await CodexLocator().locateWith(
+        _files(fs),
+        _pane(agent: 'codex', session: _ref('codex', 'id', '../../etc/passwd')),
+      );
       expect(found, isA<NotYet>());
       expect(fs.calls, isEmpty);
     });

@@ -206,10 +206,23 @@ PR's assets once it is merged (`gh release delete-asset pr-screenshots NAME`).
 In `.omp/hooks/`:
 
 - `post/dart-analyze.ts` — after `edit`/`write`/`ast_edit` touches a `.dart`
-  file under `app/`, runs `dart analyze` on it and feeds findings back as
-  context. Silent when clean. Never formats (would break edit anchors). Uses
-  the `dart` of the SDK `tool/flutter-bin.sh` picks (asked once per process);
-  logs a warning and reports nothing when no SDK fits.
+  file under `app/`, runs `dart analyze` and `dart format --set-exit-if-changed`
+  on it and feeds findings back as context: the issues, and the files that
+  need `dart format`. Silent when clean. Never formats by itself (it moves
+  lines, which would break the edit anchors of a file the agent is still
+  working on); the agent runs `dart format` when its edits are done and
+  re-reads. Uses the `dart` of the SDK `tool/flutter-bin.sh` picks (asked once
+  per process); logs a warning and reports nothing when no SDK fits.
+
+## Formatting
+
+`dart format .` in `app/` (and `../tool`) formats everything; `tool/check.sh`
+and so CI fail on a file it would change. The width is 120, pinned in
+`app/analysis_options.yaml` (`formatter.page_width`) so every `dart format`
+agrees. Why: the code was written to about 120 columns, and the 80 default
+rewrote 763 of 817 files. A design-lint `allow(...)` comment covers the line
+below it, so after formatting check it still sits directly above the line the
+lint reports (the formatter can split an expression under it).
 
 ## Android release build
 

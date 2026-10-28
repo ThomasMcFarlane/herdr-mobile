@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/repositories/agent_session.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// Starts attaching to a session the moment a finger goes DOWN on its row,

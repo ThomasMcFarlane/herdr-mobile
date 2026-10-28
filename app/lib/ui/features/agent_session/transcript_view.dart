@@ -11,7 +11,9 @@ import '../../../data/acp/turns/turns.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/app_settings.dart';
 import '../../../data/repositories/last_seen.dart' show SinceLeft;
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../render/markdown/markdown.dart';
 import 'agent_md_scope.dart';
 import 'content_copy.dart' show ContentSelectionArea;
@@ -464,7 +466,10 @@ class _TranscriptViewState extends State<TranscriptView> with TickerProviderStat
       // Read on when the older rows came and the top is still in sight.
       WidgetsBinding.instance.addPostFrameCallback((_) => _nearTop());
     }
-    if (identical(items, _items) && live == _live && waiting.length == _waiting.length && waiting.containsAll(_waiting)) {
+    if (identical(items, _items) &&
+        live == _live &&
+        waiting.length == _waiting.length &&
+        waiting.containsAll(_waiting)) {
       return;
     }
     // The history itself was replaced by another copy of it (the replay took
@@ -671,7 +676,13 @@ class _TranscriptViewState extends State<TranscriptView> with TickerProviderStat
         onToggle: _toggle,
         nested: row.nested,
       ),
-      TranscriptRowKind.group => GroupRow(rowKey: row.key, group: row.group!, gap: row.gap, open: open, onToggle: _toggle),
+      TranscriptRowKind.group => GroupRow(
+        rowKey: row.key,
+        group: row.group!,
+        gap: row.gap,
+        open: open,
+        onToggle: _toggle,
+      ),
       TranscriptRowKind.text => AgentTextRow(
         rowKey: row.key,
         block: row.part as MdBlock,
@@ -699,11 +710,7 @@ class _TranscriptViewState extends State<TranscriptView> with TickerProviderStat
       ),
       TranscriptRowKind.changedMore => ChangedMoreRow(rowKey: row.key, count: row.count, all: open, onToggle: _toggle),
       TranscriptRowKind.divider => SinceDivider(rowKey: row.key, label: row.label ?? 'New', gap: row.gap),
-      TranscriptRowKind.stop => StopNoteRow(
-        rowKey: row.key,
-        reason: (item as TranscriptStop).reason,
-        gap: row.gap,
-      ),
+      TranscriptRowKind.stop => StopNoteRow(rowKey: row.key, reason: (item as TranscriptStop).reason, gap: row.gap),
       TranscriptRowKind.note => TranscriptNoteRow(rowKey: row.key, text: (item as TranscriptNote).text, gap: row.gap),
     };
     return _Reveal(key: key, animate: _entering.contains(row.key), reduced: _reducedMotion, child: child);
@@ -762,7 +769,9 @@ class _TranscriptViewState extends State<TranscriptView> with TickerProviderStat
           if (mounted && _rows.isEmpty) widget.session.loadEarlier();
         });
       }
-      return Center(child: EarlierRow(earlier: _earlier, onLoad: widget.session.loadEarlier));
+      return Center(
+        child: EarlierRow(earlier: _earlier, onLoad: widget.session.loadEarlier),
+      );
     }
     final center = _center;
     final index = _plan.index;
@@ -920,7 +929,10 @@ class _RevealState extends State<_Reveal> with SingleTickerProviderStateMixin {
     final curve = _curve;
     // At rest the row is bare: no fade or slide layer left at 1.
     if (curve == null) return child;
-    return FadeTransition(opacity: curve, child: SlideTransition(position: _from.animate(curve), child: child));
+    return FadeTransition(
+      opacity: curve,
+      child: SlideTransition(position: _from.animate(curve), child: child),
+    );
   }
 }
 
@@ -974,12 +986,9 @@ class _StickyController extends ScrollController {
   final bool follow;
 
   @override
-  ScrollPosition createScrollPosition(
-    ScrollPhysics physics,
-    ScrollContext context,
-    ScrollPosition? oldPosition,
-  ) => _StickyPosition(physics: physics, context: context, oldPosition: oldPosition, debugLabel: debugLabel)
-    .._following = follow;
+  ScrollPosition createScrollPosition(ScrollPhysics physics, ScrollContext context, ScrollPosition? oldPosition) =>
+      _StickyPosition(physics: physics, context: context, oldPosition: oldPosition, debugLabel: debugLabel)
+        .._following = follow;
 }
 
 /// A list position that stays glued to the end.

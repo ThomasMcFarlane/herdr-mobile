@@ -217,7 +217,11 @@ void main() {
       expect(todos, hasLength(3));
       expect(todos.map((t) => t.kind), everyElement(ToolKind.think));
       expect(todos.map((t) => t.status), everyElement(ToolStatus.completed));
-      expect(todos.map((t) => t.title), ['Initialize plan with Work phase', 'Mark write code completed', 'Mark run tests in progress']);
+      expect(todos.map((t) => t.title), [
+        'Initialize plan with Work phase',
+        'Mark write code completed',
+        'Mark run tests in progress',
+      ]);
       expect(_messages(s).any((x) => x.text.contains('system-reminder')), isFalse);
       expect(m.openToolCalls, isEmpty);
     });
@@ -225,24 +229,30 @@ void main() {
     test('a todo whose abandoned and blocked tasks map to cancelled and pending', () {
       final m = OmpLogMapper();
       final s = _feed(m, [
-        _result('r1', 'c1', 'todo', 'ok', details: {
-          'phases': [
-            {
-              'name': 'A',
-              'tasks': [
-                {'content': 'x', 'status': 'abandoned'},
-                {'content': 'y', 'status': 'blocked'},
-                {'content': '', 'status': 'pending'},
-              ],
-            },
-            {
-              'name': 'B',
-              'tasks': [
-                {'content': 'z'},
-              ],
-            },
-          ],
-        }),
+        _result(
+          'r1',
+          'c1',
+          'todo',
+          'ok',
+          details: {
+            'phases': [
+              {
+                'name': 'A',
+                'tasks': [
+                  {'content': 'x', 'status': 'abandoned'},
+                  {'content': 'y', 'status': 'blocked'},
+                  {'content': '', 'status': 'pending'},
+                ],
+              },
+              {
+                'name': 'B',
+                'tasks': [
+                  {'content': 'z'},
+                ],
+              },
+            ],
+          },
+        ),
       ]);
       expect(s.plan.map((p) => (p.content, p.status)), [
         ('x', PlanStatus.cancelled),
@@ -254,16 +264,23 @@ void main() {
     test('a todo result that failed leaves the plan alone', () {
       final m = OmpLogMapper();
       final s = _feed(m, [
-        _result('r1', 'c1', 'todo', 'nope', error: true, details: {
-          'phases': [
-            {
-              'name': 'A',
-              'tasks': [
-                {'content': 'x', 'status': 'pending'},
-              ],
-            },
-          ],
-        }),
+        _result(
+          'r1',
+          'c1',
+          'todo',
+          'nope',
+          error: true,
+          details: {
+            'phases': [
+              {
+                'name': 'A',
+                'tasks': [
+                  {'content': 'x', 'status': 'pending'},
+                ],
+              },
+            ],
+          },
+        ),
       ]);
       expect(s.plan, isEmpty);
     });
@@ -423,7 +440,12 @@ void main() {
             'questions': [
               {
                 'question': 'Pick',
-                'options': ['A', 'B', 7, {'nolabel': true}],
+                'options': [
+                  'A',
+                  'B',
+                  7,
+                  {'nolabel': true},
+                ],
                 'recommended': 9,
               },
               {
@@ -443,7 +465,11 @@ void main() {
       expect(ask.questions.map((q) => q.recommended), [null, null]);
 
       final empty = OmpLogMapper();
-      empty.map(_assistant('a2', [_call('c2', 'ask', {'questions': []})]));
+      empty.map(
+        _assistant('a2', [
+          _call('c2', 'ask', {'questions': []}),
+        ]),
+      );
       expect(empty.pendingAsk, isNull);
       expect(empty.openToolCalls, {'c2'}, reason: 'the row still runs');
     });
@@ -474,7 +500,9 @@ void main() {
       final m = OmpLogMapper();
       var s = _feed(m, [
         _user('u1', 'go'),
-        _assistant('a1', [_call('c1', 'wait', {'i': 'Waiting for reviewers'})], stop: 'toolUse'),
+        _assistant('a1', [
+          _call('c1', 'wait', {'i': 'Waiting for reviewers'}),
+        ], stop: 'toolUse'),
         _result(
           'r1',
           'c1',
@@ -483,9 +511,19 @@ void main() {
           details: {'__interrupted': true, 'source': 'interrupt_skipped', 'execution': 'started'},
           error: true,
         ),
-        _assistant('a2', [_call('c2', 'wait', {'i': 'Waiting for fix agents'})], stop: 'toolUse'),
-        _result('r2', 'c2', 'wait', 'Nothing to wait for: no background job or service you started is running.', error: true),
-        _assistant('a2b', [_call('c5', 'write', {'path': 'a.md', 'content': 'x'})], stop: 'toolUse'),
+        _assistant('a2', [
+          _call('c2', 'wait', {'i': 'Waiting for fix agents'}),
+        ], stop: 'toolUse'),
+        _result(
+          'r2',
+          'c2',
+          'wait',
+          'Nothing to wait for: no background job or service you started is running.',
+          error: true,
+        ),
+        _assistant('a2b', [
+          _call('c5', 'write', {'path': 'a.md', 'content': 'x'}),
+        ], stop: 'toolUse'),
         _result(
           'r5',
           'c5',
@@ -494,7 +532,9 @@ void main() {
           details: {'__synthetic': true, 'source': 'interrupt_skipped', 'executed': false},
           error: true,
         ),
-        _assistant('a3', [_call('c3', 'bash', {'command': 'false'})], stop: 'toolUse'),
+        _assistant('a3', [
+          _call('c3', 'bash', {'command': 'false'}),
+        ], stop: 'toolUse'),
         _result('r3', 'c3', 'bash', 'exit 1', error: true),
         _assistant('a4', [
           {'type': 'text', 'text': 'Done.'},
@@ -507,23 +547,33 @@ void main() {
       expect(calls['c2']!.status, ToolStatus.completed);
       expect(calls['c3']!.status, ToolStatus.failed, reason: 'a real error is still one');
       final turn = turnsOf(s.items).single;
-      expect([for (final i in turn.breakouts()) (i as TranscriptTool).call.toolCallId], ['c3'], reason: 'only the call that failed stays out of the fold');
+      expect(
+        [for (final i in turn.breakouts()) (i as TranscriptTool).call.toolCallId],
+        ['c3'],
+        reason: 'only the call that failed stays out of the fold',
+      );
       expect(turn.cancelledCount, 0);
       expect(turn.failedCount, 1);
-      expect(_toolText(calls['c1']!), contains('Skipped due to a queued background completion'), reason: 'the row says what happened');
-    });
-
-    test('compaction and branch summary are quiet notes; a clear drops what came before it; the header title shows', () {
-      final (s, _) = _run('compaction_branch');
-      expect(s.title, 'Long running work');
-      expect(_texts(s, MessageRole.user), ['After the clear']);
-      expect(_texts(s, MessageRole.agent), ['The conversation was cleared on the machine']);
       expect(
-        s.items.map((i) => i is TranscriptMessage ? i.role.name : 't').toList(),
-        ['agent', 'user'],
-        reason: 'the note opens the new conversation, nothing from before it stays',
+        _toolText(calls['c1']!),
+        contains('Skipped due to a queued background completion'),
+        reason: 'the row says what happened',
       );
     });
+
+    test(
+      'compaction and branch summary are quiet notes; a clear drops what came before it; the header title shows',
+      () {
+        final (s, _) = _run('compaction_branch');
+        expect(s.title, 'Long running work');
+        expect(_texts(s, MessageRole.user), ['After the clear']);
+        expect(_texts(s, MessageRole.agent), ['The conversation was cleared on the machine']);
+        expect(s.items.map((i) => i is TranscriptMessage ? i.role.name : 't').toList(), [
+          'agent',
+          'user',
+        ], reason: 'the note opens the new conversation, nothing from before it stays');
+      },
+    );
 
     test('compaction and branch summary notes sit where they happened', () {
       final m = OmpLogMapper();
@@ -692,7 +742,10 @@ void main() {
 
       final rep = s.toolCall('call_rep')!;
       final rd = _diffs(rep).single;
-      expect((rd.path, rd.oldText, rd.newText), ('/work/proj/src/b.dart', 'int x = 1;\nint y = 0;', 'int x = 2;\nint y = 0;'));
+      expect(
+        (rd.path, rd.oldText, rd.newText),
+        ('/work/proj/src/b.dart', 'int x = 1;\nint y = 0;', 'int x = 2;\nint y = 0;'),
+      );
       expect(rep.locations.single.path, '/work/proj/src/b.dart');
 
       final multi = s.toolCall('call_multi')!;
@@ -702,7 +755,10 @@ void main() {
         ('/work/proj/src/c.dart', 'zero\n', 'one\n'),
         ('/work/proj/src/e.dart', null, 'brand new\n'),
       ], reason: 'the pruned file has no snapshot, so no diff');
-      expect(multi.locations.map((l) => l.path), containsAll(['/work/proj/src/c.dart', '/work/proj/src/d.dart', '/work/proj/src/e.dart']));
+      expect(
+        multi.locations.map((l) => l.path),
+        containsAll(['/work/proj/src/c.dart', '/work/proj/src/d.dart', '/work/proj/src/e.dart']),
+      );
 
       final wr = s.toolCall('call_wr')!;
       expect(wr.status, ToolStatus.failed);
@@ -769,7 +825,11 @@ void main() {
         final once = transcriptFingerprint(_feed(OmpLogMapper(), lines));
 
         final twiceSameMapper = OmpLogMapper();
-        expect(transcriptFingerprint(_feed(twiceSameMapper, [...lines, ...lines])), once, reason: 'replayed log, same mapper');
+        expect(
+          transcriptFingerprint(_feed(twiceSameMapper, [...lines, ...lines])),
+          once,
+          reason: 'replayed log, same mapper',
+        );
 
         final freshMapper = _feed(OmpLogMapper(), lines);
         // A clear drops the old rows, so a replay into the same state shows the
@@ -783,7 +843,9 @@ void main() {
           reason: 'replayed log, new mapper',
         );
 
-        final doubled = _feed(OmpLogMapper(), [for (final l in lines) ...[l, l]]);
+        final doubled = _feed(OmpLogMapper(), [
+          for (final l in lines) ...[l, l],
+        ]);
         expect(transcriptFingerprint(doubled), once, reason: 'every line twice');
 
         // A resume that overlaps: the last few lines come again.
@@ -880,14 +942,18 @@ void main() {
       var n = 0;
       while (lines.length < 5000) {
         lines.add(_user('u$n', 'question $n'));
-        lines.add(_assistant('a$n', [
-          {'type': 'thinking', 'thinking': 'thinking about $n'},
-          _call('call$n', 'bash', {'command': 'echo $n', 'i': 'Echoing $n'}),
-        ], stop: 'toolUse'));
+        lines.add(
+          _assistant('a$n', [
+            {'type': 'thinking', 'thinking': 'thinking about $n'},
+            _call('call$n', 'bash', {'command': 'echo $n', 'i': 'Echoing $n'}),
+          ], stop: 'toolUse'),
+        );
         lines.add(_result('r$n', 'call$n', 'bash', 'output $n\n${'line\n' * 20}'));
-        lines.add(_assistant('b$n', [
-          {'type': 'text', 'text': 'answer $n'},
-        ]));
+        lines.add(
+          _assistant('b$n', [
+            {'type': 'text', 'text': 'answer $n'},
+          ]),
+        );
         n++;
       }
       final m = OmpLogMapper();
@@ -929,7 +995,11 @@ void main() {
         _result('r1', 'w', 'write', big),
         _result('r2', 'b', 'bash', big, error: true),
         _result('r3', 'e', 'edit', 'ok', details: {'path': 'big.txt', 'oldText': big, 'newText': big}),
-        _assistant('a2', [], stop: 'error').replaceFirst('"stopReason":"error"', '"stopReason":"error","errorMessage":"${'e' * 2000000}"'),
+        _assistant(
+          'a2',
+          [],
+          stop: 'error',
+        ).replaceFirst('"stopReason":"error"', '"stopReason":"error","errorMessage":"${'e' * 2000000}"'),
       ];
       final m = OmpLogMapper();
       final sw = Stopwatch()..start();
@@ -998,7 +1068,10 @@ void main() {
         final m = OmpLogMapper();
         _feed(m, lines.take(2));
         final t = m.backgroundTasks.single;
-        expect((t.key, t.kind, t.status, t.stop), ('0/bg_1', BackgroundKind.shell, BackgroundStatus.running, StopRoute.message));
+        expect(
+          (t.key, t.kind, t.status, t.stop),
+          ('0/bg_1', BackgroundKind.shell, BackgroundStatus.running, StopRoute.message),
+        );
         expect(t.title, startsWith('export RSRCH_MODEL=claude-opus-5-5 RSRCH_AGENT=claude-code; ./rsrch paper'));
         expect(t.title.length, lessThanOrEqualTo(120));
         expect(t.detail, contains('nvidia-smi'));
@@ -1029,7 +1102,11 @@ void main() {
         expect((rl.kind, rl.title, rl.stop), (BackgroundKind.agent, 'RLFrameworks', StopRoute.message));
         expect(rl.detail, startsWith('# Target'));
         expect(rl.detail!.length, lessThanOrEqualTo(400));
-        expect(m.subagents.map((s) => s.name), ['RLFrameworks', 'SFTStacks', 'PapersUse'], reason: 'still a subagent too');
+        expect(m.subagents.map((s) => s.name), [
+          'RLFrameworks',
+          'SFTStacks',
+          'PapersUse',
+        ], reason: 'still a subagent too');
 
         _feed(m, lines.skip(5).take(1));
         expect(statuses(m)['0/PapersUse'], BackgroundStatus.finished);
@@ -1088,34 +1165,53 @@ void main() {
     // Hand-written entries in the shapes the real log has.
     const t0 = '2026-10-05T10:00:00.000Z';
 
-    String call(String id, String callId, String name, Json args) => _assistant(id, [_call(callId, name, args)], stop: 'toolUse');
+    String call(String id, String callId, String name, Json args) =>
+        _assistant(id, [_call(callId, name, args)], stop: 'toolUse');
 
-    String start(String id, String callId, String job, {String tool = 'bash', String type = 'bash', Object? timeout, String? at = t0, List<String>? agents}) =>
-        _entry({
-          'type': 'message',
-          'id': id,
-          'timestamp': ?at,
-          'message': {
-            'role': 'toolResult',
-            'toolCallId': callId,
-            'toolName': tool,
-            'content': [
-              {'type': 'text', 'text': 'Backgrounded as job $job'},
+    String start(
+      String id,
+      String callId,
+      String job, {
+      String tool = 'bash',
+      String type = 'bash',
+      Object? timeout,
+      String? at = t0,
+      List<String>? agents,
+    }) => _entry({
+      'type': 'message',
+      'id': id,
+      'timestamp': ?at,
+      'message': {
+        'role': 'toolResult',
+        'toolCallId': callId,
+        'toolName': tool,
+        'content': [
+          {'type': 'text', 'text': 'Backgrounded as job $job'},
+        ],
+        'details': {
+          'async': {'state': 'running', 'jobId': job, 'type': type},
+          'timeoutSeconds': ?timeout,
+          if (agents != null)
+            'progress': [
+              for (final a in agents) {'id': a, 'status': 'pending'},
             ],
-            'details': {
-              'async': {'state': 'running', 'jobId': job, 'type': type},
-              'timeoutSeconds': ?timeout,
-              if (agents != null) 'progress': [for (final a in agents) {'id': a, 'status': 'pending'}],
-            },
-            'isError': false,
-          },
-        });
+        },
+        'isError': false,
+      },
+    });
 
-    String finished(String id, List<String> jobs, {String text = 'done', String? at, Map<String, String> status = const {}}) => _entry({
+    String finished(
+      String id,
+      List<String> jobs, {
+      String text = 'done',
+      String? at,
+      Map<String, String> status = const {},
+    }) => _entry({
       'type': 'custom_message',
       'id': id,
       'customType': 'async-result',
-      'content': '<system-notice>\n${jobs.length == 1 ? 'Background job ${jobs.single} has completed.' : '${jobs.length} background jobs have completed.'}\n$text\n</system-notice>',
+      'content':
+          '<system-notice>\n${jobs.length == 1 ? 'Background job ${jobs.single} has completed.' : '${jobs.length} background jobs have completed.'}\n$text\n</system-notice>',
       'details': {
         'jobs': [
           for (final j in jobs) {'jobId': j, 'type': 'bash', 'label': j, 'durationMs': 5, 'status': ?status[j]},
@@ -1131,7 +1227,9 @@ void main() {
       '## Completed',
       details: {
         'op': 'wait',
-        'jobs': [for (final e in jobs.entries) {'id': e.key, 'type': 'bash', 'status': e.value}],
+        'jobs': [
+          for (final e in jobs.entries) {'id': e.key, 'type': 'bash', 'status': e.value},
+        ],
       },
     );
 
@@ -1173,7 +1271,13 @@ void main() {
       _feed(m, [
         call('a1', 'c1', 'bash', {'command': 'first'}),
         start('r1', 'c1', 'bg_1'),
-        _entry({'type': 'custom', 'customType': 'session_exit', 'id': 'x1', 'timestamp': t0, 'data': {'reason': 'sighup'}}),
+        _entry({
+          'type': 'custom',
+          'customType': 'session_exit',
+          'id': 'x1',
+          'timestamp': t0,
+          'data': {'reason': 'sighup'},
+        }),
         call('a2', 'c2', 'bash', {'command': 'second'}),
         start('r2', 'c2', 'bg_1'),
       ]);
@@ -1181,8 +1285,13 @@ void main() {
         ('0/bg_1', 'first', BackgroundStatus.stopped),
         ('1/bg_1', 'second', BackgroundStatus.running),
       ]);
-      _feed(m, [finished('f1', ['bg_1'])]);
-      expect(statuses(m), {'0/bg_1': BackgroundStatus.stopped, '1/bg_1': BackgroundStatus.finished}, reason: 'the notice is for the new process');
+      _feed(m, [
+        finished('f1', ['bg_1']),
+      ]);
+      expect(statuses(m), {
+        '0/bg_1': BackgroundStatus.stopped,
+        '1/bg_1': BackgroundStatus.finished,
+      }, reason: 'the notice is for the new process');
     });
 
     test('a kill the model issued: details.proc.cancelled, and the text when the details are missing', () {
@@ -1219,27 +1328,42 @@ void main() {
       expect(m.backgroundTasks.first.stop, StopRoute.none);
     });
 
-    test('a stop that found the job done is finished, not stopped; a read of proc:// does not settle a running one', () {
-      final m = OmpLogMapper();
-      _feed(m, [
-        start('r1', 'c1', 'bg_1'),
-        start('r2', 'c2', 'bg_2'),
-        _result('k1', 'k1c', 'write', 'x', details: {
-          'proc': {
-            'cancelled': [
-              {'id': 'bg_1', 'status': 'already_completed'},
-              {'id': 'bg_zzz', 'status': 'not_found'},
-            ],
-          },
-        }),
-        _result('p1', 'p1c', 'read', 'x', details: {
-          'proc': {
-            'job': {'id': 'bg_2', 'status': 'running'},
-          },
-        }),
-      ]);
-      expect(statuses(m), {'0/bg_1': BackgroundStatus.finished, '0/bg_2': BackgroundStatus.running});
-    });
+    test(
+      'a stop that found the job done is finished, not stopped; a read of proc:// does not settle a running one',
+      () {
+        final m = OmpLogMapper();
+        _feed(m, [
+          start('r1', 'c1', 'bg_1'),
+          start('r2', 'c2', 'bg_2'),
+          _result(
+            'k1',
+            'k1c',
+            'write',
+            'x',
+            details: {
+              'proc': {
+                'cancelled': [
+                  {'id': 'bg_1', 'status': 'already_completed'},
+                  {'id': 'bg_zzz', 'status': 'not_found'},
+                ],
+              },
+            },
+          ),
+          _result(
+            'p1',
+            'p1c',
+            'read',
+            'x',
+            details: {
+              'proc': {
+                'job': {'id': 'bg_2', 'status': 'running'},
+              },
+            },
+          ),
+        ]);
+        expect(statuses(m), {'0/bg_1': BackgroundStatus.finished, '0/bg_2': BackgroundStatus.running});
+      },
+    );
 
     test('wait results settle with the status they carry; running ones and unknown ids change nothing', () {
       final m = OmpLogMapper();
@@ -1256,7 +1380,9 @@ void main() {
         '0/bg_3': BackgroundStatus.running,
         '0/bg_4': BackgroundStatus.running,
       });
-      _feed(m, [wait('w2', {'bg_3': 'completed'}, tool: 'read')]);
+      _feed(m, [
+        wait('w2', {'bg_3': 'completed'}, tool: 'read'),
+      ]);
       expect(statuses(m)['0/bg_3'], BackgroundStatus.finished);
     });
 
@@ -1271,8 +1397,7 @@ void main() {
           'type': 'custom_message',
           'id': 'f4',
           'customType': 'async-result',
-          'content':
-              '<system-notice>\n2 background jobs have completed.\n\n── Job bg_4 (ok) ──\nall good\n── Job bg_5 (bad) ──\nCommand exited with code 1\n</system-notice>',
+          'content': '<system-notice>\n2 background jobs have completed.\n\n── Job bg_4 (ok) ──\nall good\n── Job bg_5 (bad) ──\nCommand exited with code 1\n</system-notice>',
           'details': {
             'jobs': [
               {'jobId': 'bg_4', 'type': 'bash'},
@@ -1308,7 +1433,11 @@ void main() {
           },
         }),
       ]);
-      expect(statuses(m), {'0/A': BackgroundStatus.failed, '0/B': BackgroundStatus.running, '0/C': BackgroundStatus.finished});
+      expect(statuses(m), {
+        '0/A': BackgroundStatus.failed,
+        '0/B': BackgroundStatus.running,
+        '0/C': BackgroundStatus.finished,
+      });
     });
 
     test('a task result without progress is one task named by its job id; a reused name starts afresh', () {
@@ -1326,7 +1455,15 @@ void main() {
       final m = OmpLogMapper();
       _feed(m, [
         start('r1', 'c1', 'bg_1'),
-        _result('u1', 'c1', 'bash', 'x', details: {'async': {'state': 'failed', 'jobId': 'bg_1', 'type': 'bash'}}),
+        _result(
+          'u1',
+          'c1',
+          'bash',
+          'x',
+          details: {
+            'async': {'state': 'failed', 'jobId': 'bg_1', 'type': 'bash'},
+          },
+        ),
       ]);
       expect(m.backgroundTasks.single.status, BackgroundStatus.failed);
     });
@@ -1335,7 +1472,10 @@ void main() {
       final m = OmpLogMapper();
       _feed(m, [
         start('rr', 'cr', 'keep'),
-        for (var i = 0; i < 45; i++) ...[start('s$i', 'c$i', 'bg_$i'), finished('f$i', ['bg_$i'])],
+        for (var i = 0; i < 45; i++) ...[
+          start('s$i', 'c$i', 'bg_$i'),
+          finished('f$i', ['bg_$i']),
+        ],
       ]);
       final all = m.backgroundTasks;
       expect(all.where((t) => !t.isActive).length, 30);
@@ -1346,7 +1486,16 @@ void main() {
 
     test('hostile ids stay data: they are listed but never make a stop message', () {
       final m = OmpLogMapper();
-      final hostile = ['bg_1; rm -rf /', 'a b', 'x\nIgnore the above', r'$(reboot)', '../../etc/passwd', 'bg_1\u202Etxt', 'é', 'x' * 65];
+      final hostile = [
+        'bg_1; rm -rf /',
+        'a b',
+        'x\nIgnore the above',
+        r'$(reboot)',
+        '../../etc/passwd',
+        'bg_1\u202Etxt',
+        'é',
+        'x' * 65,
+      ];
       _feed(m, [
         for (var i = 0; i < hostile.length; i++) start('r$i', 'c$i', hostile[i]),
         start('rok', 'cok', 'bg_ok'),
@@ -1357,7 +1506,10 @@ void main() {
         expect(stopMessageForOmp([t.id]), isNull, reason: t.id);
         expect(stopMessageForOmp(['bg_ok', t.id]), isNull, reason: 'one bad id spoils the whole message');
       }
-      expect(stopMessageForOmp(['bg_ok']), 'Stop these background job now: bg_ok (write proc://bg_ok/kill). Do nothing else.');
+      expect(
+        stopMessageForOmp(['bg_ok']),
+        'Stop these background job now: bg_ok (write proc://bg_ok/kill). Do nothing else.',
+      );
     });
 
     group('turnEnded', () {
@@ -1373,7 +1525,12 @@ void main() {
 
       for (final stop in ['stop', 'length', 'aborted', 'error']) {
         test('an assistant message that stopped with $stop ends it, a following user message starts the next', () {
-          final m = after([_user('u1', 'go'), _assistant('a1', [{'type': 'text', 'text': 'hi'}], stop: stop)]);
+          final m = after([
+            _user('u1', 'go'),
+            _assistant('a1', [
+              {'type': 'text', 'text': 'hi'},
+            ], stop: stop),
+          ]);
           expect(m.turnEnded, isTrue);
           _feed(m, [_user('u2', 'again')]);
           expect(m.turnEnded, isFalse);
@@ -1381,19 +1538,36 @@ void main() {
       }
 
       test('toolUse, a tool call without a result, and a tool result are not the end', () {
-        final m = after([_user('u1', 'go'), _assistant('a1', [_call('c1', 'bash', {'command': 'ls'})], stop: 'toolUse')]);
+        final m = after([
+          _user('u1', 'go'),
+          _assistant('a1', [
+            _call('c1', 'bash', {'command': 'ls'}),
+          ], stop: 'toolUse'),
+        ]);
         expect(m.turnEnded, isFalse);
         _feed(m, [_result('r1', 'c1', 'bash', 'out')]);
         expect(m.turnEnded, isFalse);
-        _feed(m, [_assistant('a2', [{'type': 'text', 'text': 'done'}])]);
+        _feed(m, [
+          _assistant('a2', [
+            {'type': 'text', 'text': 'done'},
+          ]),
+        ]);
         expect(m.turnEnded, isTrue);
       });
 
       test('a stop with a call still open is not the end; an abort cancels the call and is', () {
-        final open = after([_assistant('a1', [_call('c1', 'bash', {'command': 'ls'})])]);
+        final open = after([
+          _assistant('a1', [
+            _call('c1', 'bash', {'command': 'ls'}),
+          ]),
+        ]);
         expect(open.openToolCalls, {'c1'});
         expect(open.turnEnded, isFalse);
-        final aborted = after([_assistant('a1', [_call('c1', 'bash', {'command': 'ls'})], stop: 'aborted')]);
+        final aborted = after([
+          _assistant('a1', [
+            _call('c1', 'bash', {'command': 'ls'}),
+          ], stop: 'aborted'),
+        ]);
         expect(aborted.openToolCalls, isEmpty);
         expect(aborted.turnEnded, isTrue);
       });
@@ -1401,29 +1575,60 @@ void main() {
       test('an async-result starts a turn; the assistant message after it ends that one', () {
         final m = after([
           start('r1', 'c1', 'bg_1'),
-          _assistant('a1', [{'type': 'text', 'text': 'waiting for bg_1'}]),
+          _assistant('a1', [
+            {'type': 'text', 'text': 'waiting for bg_1'},
+          ]),
         ]);
         expect(m.turnEnded, isTrue);
-        _feed(m, [finished('f1', ['bg_1'])]);
+        _feed(m, [
+          finished('f1', ['bg_1']),
+        ]);
         expect(m.turnEnded, isFalse);
-        _feed(m, [_assistant('a2', [{'type': 'text', 'text': 'it finished'}])]);
+        _feed(m, [
+          _assistant('a2', [
+            {'type': 'text', 'text': 'it finished'},
+          ]),
+        ]);
         expect(m.turnEnded, isTrue);
       });
 
       test('a skill prompt the person started begins a turn; a nudge for the model does not', () {
-        final m = after([_assistant('a1', [{'type': 'text', 'text': 'ok'}])]);
+        final m = after([
+          _assistant('a1', [
+            {'type': 'text', 'text': 'ok'},
+          ]),
+        ]);
         _feed(m, [
-          _entry({'type': 'custom_message', 'id': 'n1', 'customType': 'mid-run-todo-nudge', 'content': 'x', 'display': false}),
+          _entry({
+            'type': 'custom_message',
+            'id': 'n1',
+            'customType': 'mid-run-todo-nudge',
+            'content': 'x',
+            'display': false,
+          }),
         ]);
         expect(m.turnEnded, isTrue);
         _feed(m, [
-          _entry({'type': 'custom_message', 'id': 'n2', 'customType': 'skill-prompt', 'content': 'go', 'display': true, 'attribution': 'user', 'details': {'name': 'tdd'}}),
+          _entry({
+            'type': 'custom_message',
+            'id': 'n2',
+            'customType': 'skill-prompt',
+            'content': 'go',
+            'display': true,
+            'attribution': 'user',
+            'details': {'name': 'tdd'},
+          }),
         ]);
         expect(m.turnEnded, isFalse);
       });
 
       test('a replayed older line does not flip it back', () {
-        final lines = [_user('u1', 'go'), _assistant('a1', [{'type': 'text', 'text': 'hi'}])];
+        final lines = [
+          _user('u1', 'go'),
+          _assistant('a1', [
+            {'type': 'text', 'text': 'hi'},
+          ]),
+        ];
         final m = after(lines);
         _feed(m, [lines.first]);
         expect(m.turnEnded, isTrue);
@@ -1457,7 +1662,9 @@ void main() {
     test('a message from the person, a new turn or leaving plan mode ends it', () {
       for (final answer in [
         _user('u9', 'refine: add a docstring'),
-        _assistant('a9', [{'type': 'text', 'text': 'Starting.'}]),
+        _assistant('a9', [
+          {'type': 'text', 'text': 'Starting.'},
+        ]),
         _entry({'type': 'mode_change', 'id': 'm9', 'timestamp': '2026-10-20T00:22:00.000Z', 'mode': 'default'}),
       ]) {
         final m = OmpLogMapper();

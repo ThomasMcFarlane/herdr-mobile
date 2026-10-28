@@ -6,6 +6,7 @@ import 'package:flutter/physics.dart';
 import 'package:flutter/scheduler.dart';
 
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'photo_math.dart';
 import 'photo_pictures.dart';
 import 'photo_viewer_view_model.dart';
@@ -77,13 +78,7 @@ enum _Mode {
 }
 
 class _Gesture {
-  _Gesture({
-    required this.mode,
-    required this.pose,
-    required this.focal,
-    required this.geometry,
-    required this.index,
-  });
+  _Gesture({required this.mode, required this.pose, required this.focal, required this.geometry, required this.index});
 
   final _Mode mode;
   final PhotoPose pose;
@@ -297,7 +292,11 @@ class PhotoStageState extends State<PhotoStage> with SingleTickerProviderStateMi
     }
   }
 
-  _Track _springTrack(double from, double to, double velocity, void Function(double) apply, {
+  _Track _springTrack(
+    double from,
+    double to,
+    double velocity,
+    void Function(double) apply, {
     SpringDescription? spring,
     Tolerance tolerance = Springs.pixel,
   }) => _Track(SpringSimulation(spring ?? Springs.settle, from, to, velocity, tolerance: tolerance), apply, end: to);
@@ -454,8 +453,13 @@ class PhotoStageState extends State<PhotoStage> with SingleTickerProviderStateMi
         carry = velocity;
       case _Mode.page || _Mode.pan:
         if (pose.pageDx != 0) {
-          final dir = pageDecision(pose.pageDx, velocity.dx, w,
-              hasPrevious: _model.hasPrevious, hasNext: _model.hasNext);
+          final dir = pageDecision(
+            pose.pageDx,
+            velocity.dx,
+            w,
+            hasPrevious: _model.hasPrevious,
+            hasNext: _model.hasNext,
+          );
           if (dir != 0) {
             pose = _flip(dir, pose);
             geo = _geometry(_model.index);
@@ -464,7 +468,15 @@ class PhotoStageState extends State<PhotoStage> with SingleTickerProviderStateMi
       case _Mode.zoom:
         break;
     }
-    _settle(pose, velocity, geometry: geo, focal: g.lastFocal, scaleVelocity: scaleVelocity, carry: carry, mode: g.mode);
+    _settle(
+      pose,
+      velocity,
+      geometry: geo,
+      focal: g.lastFocal,
+      scaleVelocity: scaleVelocity,
+      carry: carry,
+      mode: g.mode,
+    );
   }
 
   /// Moves to the neighbour in direction [dir] (1 = next) and returns the pose
@@ -501,9 +513,15 @@ class PhotoStageState extends State<PhotoStage> with SingleTickerProviderStateMi
       scale,
     );
     if (scale != pose.scale) {
-      tracks.add(_springTrack(pose.scale, scale, scaleVelocity.isFinite ? scaleVelocity : 0,
+      tracks.add(
+        _springTrack(
+          pose.scale,
+          scale,
+          scaleVelocity.isFinite ? scaleVelocity : 0,
           (v) => _set(_pose.value.copyWith(scale: v)),
-          tolerance: Springs.scale));
+          tolerance: Springs.scale,
+        ),
+      );
     }
     final limit = geo.panLimit(scale);
     final fling = mode == _Mode.pan || mode == _Mode.zoom;
@@ -515,22 +533,22 @@ class PhotoStageState extends State<PhotoStage> with SingleTickerProviderStateMi
       final v = x ? (pose.pageDx != 0 ? 0.0 : velocity.dx) : velocity.dy;
       final lim = x ? limit.dx : limit.dy;
       void apply(double value) => _set(
-        _pose.value.copyWith(
-          offset: x ? Offset(value, _pose.value.offset.dy) : Offset(_pose.value.offset.dx, value),
-        ),
+        _pose.value.copyWith(offset: x ? Offset(value, _pose.value.offset.dy) : Offset(_pose.value.offset.dx, value)),
       );
       if (fling && lim > 0 && scale == pose.scale && v.abs() > 50) {
-        tracks.add(_Track(
-          BouncingScrollSimulation(
-            position: from,
-            velocity: v,
-            leadingExtent: -lim,
-            trailingExtent: lim,
-            spring: Springs.carry,
-            tolerance: Springs.pixel,
+        tracks.add(
+          _Track(
+            BouncingScrollSimulation(
+              position: from,
+              velocity: v,
+              leadingExtent: -lim,
+              trailingExtent: lim,
+              spring: Springs.carry,
+              tolerance: Springs.pixel,
+            ),
+            apply,
           ),
-          apply,
-        ));
+        );
       } else if (from != to) {
         tracks.add(_springTrack(from, to, scale == pose.scale ? v : 0, apply));
       }
@@ -541,13 +559,23 @@ class PhotoStageState extends State<PhotoStage> with SingleTickerProviderStateMi
         final from = x ? pose.drag.dx : pose.drag.dy;
         if (from == 0) continue;
         final v = x ? carry.dx : carry.dy;
-        tracks.add(_springTrack(from, 0, v, (value) => _set(_pose.value.copyWith(
-          drag: x ? Offset(value, _pose.value.drag.dy) : Offset(_pose.value.drag.dx, value),
-        )), spring: Springs.carry));
+        tracks.add(
+          _springTrack(
+            from,
+            0,
+            v,
+            (value) => _set(
+              _pose.value.copyWith(drag: x ? Offset(value, _pose.value.drag.dy) : Offset(_pose.value.drag.dx, value)),
+            ),
+            spring: Springs.carry,
+          ),
+        );
       }
     }
     if (pose.pageDx != 0) {
-      tracks.add(_springTrack(pose.pageDx, 0, velocity.dx, (v) => _set(_pose.value.copyWith(pageDx: v)), spring: Springs.carry));
+      tracks.add(
+        _springTrack(pose.pageDx, 0, velocity.dx, (v) => _set(_pose.value.copyWith(pageDx: v)), spring: Springs.carry),
+      );
     }
     _set(pose);
     _run(tracks);
@@ -582,11 +610,19 @@ class PhotoStageState extends State<PhotoStage> with SingleTickerProviderStateMi
     final tracks = <_Track>[
       _springTrack(pose.scale, target.scale, 0, (v) => _set(_pose.value.copyWith(scale: v)), tolerance: Springs.scale),
       if (pose.offset.dx != target.offset.dx)
-        _springTrack(pose.offset.dx, target.offset.dx, 0,
-            (v) => _set(_pose.value.copyWith(offset: Offset(v, _pose.value.offset.dy)))),
+        _springTrack(
+          pose.offset.dx,
+          target.offset.dx,
+          0,
+          (v) => _set(_pose.value.copyWith(offset: Offset(v, _pose.value.offset.dy))),
+        ),
       if (pose.offset.dy != target.offset.dy)
-        _springTrack(pose.offset.dy, target.offset.dy, 0,
-            (v) => _set(_pose.value.copyWith(offset: Offset(_pose.value.offset.dx, v)))),
+        _springTrack(
+          pose.offset.dy,
+          target.offset.dy,
+          0,
+          (v) => _set(_pose.value.copyWith(offset: Offset(_pose.value.offset.dx, v))),
+        ),
     ];
     _run(tracks);
   }
@@ -686,9 +722,7 @@ class PhotoStageState extends State<PhotoStage> with SingleTickerProviderStateMi
       if (entry == null) continue;
       final isOpen = r == 0;
       final leaving = _leaving;
-      final shown = isOpen
-          ? pose
-          : (leaving != null && leaving.index == i ? leaving.pose : PhotoPose.rest);
+      final shown = isOpen ? pose : (leaving != null && leaving.index == i ? leaving.pose : PhotoPose.rest);
       final slide = r * _pitch + pose.pageDx;
       if (slide.abs() >= _viewport.width + 1 && !isOpen) continue;
       children.add(

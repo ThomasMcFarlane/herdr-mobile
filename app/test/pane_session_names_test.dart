@@ -59,33 +59,25 @@ void main() {
     String? path = _log,
     String? label,
     String sessionAgent = 'omp',
-  }) =>
-      models.Pane(
-        id: id,
-        workspaceId: 'w1',
-        tabId: 'w1:t1',
-        focused: false,
-        cwd: '/src/app',
-        title: label ?? title,
-        label: label,
-        agent: agent,
-        status: status,
-        session: path == null
-            ? null
-            : AgentSessionRef(agent: sessionAgent, kind: 'path', value: path),
-      );
+  }) => models.Pane(
+    id: id,
+    workspaceId: 'w1',
+    tabId: 'w1:t1',
+    focused: false,
+    cwd: '/src/app',
+    title: label ?? title,
+    label: label,
+    agent: agent,
+    status: status,
+    session: path == null ? null : AgentSessionRef(agent: sessionAgent, kind: 'path', value: path),
+  );
 
   FleetAgent agentOf(models.Pane p) => FleetAgent(machine: machine, pane: p, workspace: null);
 
   setUp(() async {
     h = await UiHarness.create([
       (
-        profile: MachineProfile(
-          id: 'a',
-          label: 'studio',
-          host: 'a.example',
-          username: 'dev',
-        ),
+        profile: MachineProfile(id: 'a', label: 'studio', host: 'a.example', username: 'dev'),
         snapshot: snapshotWith(const []),
       ),
     ]);
@@ -338,7 +330,9 @@ void main() {
   test('at most maxConcurrent reads run at once; the rest wait their turn', () async {
     gate = Completer<void>();
     answer = (_) => _slices(title: 'T');
-    agents = [for (final i in [1, 2, 3, 4]) agentOf(pane('p$i', path: '/home/dev/s$i.jsonl'))];
+    agents = [
+      for (final i in [1, 2, 3, 4]) agentOf(pane('p$i', path: '/home/dev/s$i.jsonl')),
+    ];
 
     names.sync();
     await settle();

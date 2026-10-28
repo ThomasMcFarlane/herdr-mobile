@@ -56,10 +56,10 @@ void main() {
 
   test('createTab targets the workspace and returns the tab and its pane', () async {
     t.on['tab.create'] = (_) => {
-          'type': 'tab_created',
-          'tab': {'tab_id': 'w1:t2'},
-          'root_pane': {'pane_id': 'w1:p4'},
-        };
+      'type': 'tab_created',
+      'tab': {'tab_id': 'w1:t2'},
+      'root_pane': {'pane_id': 'w1:p4'},
+    };
     final r = await api.createTab(workspaceId: 'w1', cwd: '/srv', label: 'logs');
 
     expect(t.paramsOf('tab.create'), [
@@ -70,9 +70,9 @@ void main() {
 
   test('splitPane names the target and direction and returns the new pane', () async {
     t.on['pane.split'] = (_) => {
-          'type': 'pane_info',
-          'pane': {'pane_id': 'w1:p9'},
-        };
+      'type': 'pane_info',
+      'pane': {'pane_id': 'w1:p9'},
+    };
     final id = await api.splitPane(
       targetPaneId: 'w1:p1',
       workspaceId: 'w1',
@@ -98,22 +98,18 @@ void main() {
     await api.renameTab('w1:t2', 'logs');
     await api.renamePane('w1:p3', 'build');
 
-    expect(t.methods, [
-      'workspace.close',
-      'tab.close',
-      'pane.close',
-      'workspace.rename',
-      'tab.rename',
-      'pane.rename',
-    ]);
-    expect([for (final c in t.calls) c.$2], [
-      {'workspace_id': 'w1'},
-      {'tab_id': 'w1:t2'},
-      {'pane_id': 'w1:p3'},
-      {'workspace_id': 'w1', 'label': 'api'},
-      {'tab_id': 'w1:t2', 'label': 'logs'},
-      {'pane_id': 'w1:p3', 'label': 'build'},
-    ]);
+    expect(t.methods, ['workspace.close', 'tab.close', 'pane.close', 'workspace.rename', 'tab.rename', 'pane.rename']);
+    expect(
+      [for (final c in t.calls) c.$2],
+      [
+        {'workspace_id': 'w1'},
+        {'tab_id': 'w1:t2'},
+        {'pane_id': 'w1:p3'},
+        {'workspace_id': 'w1', 'label': 'api'},
+        {'tab_id': 'w1:t2', 'label': 'logs'},
+        {'pane_id': 'w1:p3', 'label': 'build'},
+      ],
+    );
   });
 
   test('an empty pane name clears it (herdr takes null)', () async {
@@ -125,16 +121,16 @@ void main() {
   group('paneProcessInfo', () {
     test('lists the foreground processes of the pane', () async {
       t.on['pane.process_info'] = (_) => {
-            'type': 'pane_process_info',
-            'process_info': {
-              'pane_id': 'w1:p3',
-              'shell_pid': 10,
-              'foreground_processes': [
-                {'pid': 4242, 'name': 'claude', 'argv0': 'claude', 'cmdline': 'claude --resume', 'cwd': '/work/app'},
-                {'pid': 'x', 'name': 'broken'},
-              ],
-            },
-          };
+        'type': 'pane_process_info',
+        'process_info': {
+          'pane_id': 'w1:p3',
+          'shell_pid': 10,
+          'foreground_processes': [
+            {'pid': 4242, 'name': 'claude', 'argv0': 'claude', 'cmdline': 'claude --resume', 'cwd': '/work/app'},
+            {'pid': 'x', 'name': 'broken'},
+          ],
+        },
+      };
 
       final rows = await api.paneProcessInfo('w1:p3');
 
@@ -152,12 +148,12 @@ void main() {
   group('installIntegration', () {
     test('sends the target and returns what herdr says', () async {
       t.on['integration.install'] = (_) => {
-            'type': 'integration_install',
-            'target': 'claude',
-            'details': {
-              'messages': ['installed hook', 7, 'restart claude'],
-            },
-          };
+        'type': 'integration_install',
+        'target': 'claude',
+        'details': {
+          'messages': ['installed hook', 7, 'restart claude'],
+        },
+      };
 
       expect(await api.installIntegration('claude'), ['installed hook', 'restart claude']);
       expect(t.paramsOf('integration.install').single, {'target': 'claude'});
@@ -173,13 +169,13 @@ void main() {
   group('agentManifests', () {
     test('lists the agent kinds in herdr order', () async {
       t.on['server.agent_manifests'] = (_) => {
-            'type': 'agent_manifest_status',
-            'manifests': [
-              {'agent': 'pi', 'source_kind': 'remote'},
-              {'agent': 'claude'},
-              {'source_kind': 'broken'},
-            ],
-          };
+        'type': 'agent_manifest_status',
+        'manifests': [
+          {'agent': 'pi', 'source_kind': 'remote'},
+          {'agent': 'claude'},
+          {'source_kind': 'broken'},
+        ],
+      };
 
       expect(await api.agentManifests(), ['pi', 'claude']);
     });
@@ -203,29 +199,28 @@ void main() {
 
       await expectLater(
         api.createWorkspace(cwd: '/x'),
-        throwsA(isA<HerdrUnsupportedException>()
-            .having((e) => e.method, 'method', 'workspace.create')
-            .having((e) => e, 'is api exception', isA<HerdrApiException>())),
+        throwsA(
+          isA<HerdrUnsupportedException>()
+              .having((e) => e.method, 'method', 'workspace.create')
+              .having((e) => e, 'is api exception', isA<HerdrApiException>()),
+        ),
       );
     });
 
     test('a parameter the server does not know is unsupported too', () async {
       t.on['tab.create'] = (_) => throw const HerdrApiException(
-            'invalid_request',
-            'invalid request: unknown field `env`, expected one of `workspace_id`',
-          );
-
-      await expectLater(
-        api.createTab(workspaceId: 'w1', env: {'A': '1'}),
-        throwsA(isA<HerdrUnsupportedException>()),
+        'invalid_request',
+        'invalid request: unknown field `env`, expected one of `workspace_id`',
       );
+
+      await expectLater(api.createTab(workspaceId: 'w1', env: {'A': '1'}), throwsA(isA<HerdrUnsupportedException>()));
     });
 
     test('a bad value is a plain API error, not "unsupported"', () async {
       t.on['pane.split'] = (_) => throw const HerdrApiException(
-            'invalid_request',
-            'invalid request: unknown variant `left`, expected `right` or `down`',
-          );
+        'invalid_request',
+        'invalid request: unknown variant `left`, expected `right` or `down`',
+      );
 
       await expectLater(
         api.splitPane(targetPaneId: 'p'),
@@ -242,25 +237,32 @@ void main() {
   });
 
   group('worktrees', () {
-    Map<String, dynamic> info(String path, {String? branch, bool linked = true, String? open, bool bare = false, bool prunable = false}) => {
-          'path': path,
-          'branch': branch,
-          'label': 'app',
-          'is_linked_worktree': linked,
-          'is_detached': branch == null,
-          'is_bare': bare,
-          'is_prunable': prunable,
-          'open_workspace_id': open,
-        };
+    Map<String, dynamic> info(
+      String path, {
+      String? branch,
+      bool linked = true,
+      String? open,
+      bool bare = false,
+      bool prunable = false,
+    }) => {
+      'path': path,
+      'branch': branch,
+      'label': 'app',
+      'is_linked_worktree': linked,
+      'is_detached': branch == null,
+      'is_bare': bare,
+      'is_prunable': prunable,
+      'open_workspace_id': open,
+    };
 
     test('create sends only cwd and focus:false without a branch, and adds the branch when given', () async {
       t.on['worktree.create'] = (_) => {
-            'type': 'worktree_created',
-            'workspace': {'workspace_id': 'wW'},
-            'tab': {'tab_id': 'wW:t1'},
-            'root_pane': {'pane_id': 'wW:p1'},
-            'worktree': info('/wt/app-x', branch: 'worktree/x', open: 'wW'),
-          };
+        'type': 'worktree_created',
+        'workspace': {'workspace_id': 'wW'},
+        'tab': {'tab_id': 'wW:t1'},
+        'root_pane': {'pane_id': 'wW:p1'},
+        'worktree': info('/wt/app-x', branch: 'worktree/x', open: 'wW'),
+      };
 
       final r = await api.createWorktree(cwd: '/r', branch: '');
       await api.createWorktree(cwd: '/r', branch: 'fix/x');
@@ -269,15 +271,18 @@ void main() {
         {'cwd': '/r', 'focus': false},
         {'cwd': '/r', 'branch': 'fix/x', 'focus': false},
       ]);
-      expect((r.workspaceId, r.tabId, r.rootPaneId, r.worktree.path, r.worktree.branch), ('wW', 'wW:t1', 'wW:p1', '/wt/app-x', 'worktree/x'));
+      expect(
+        (r.workspaceId, r.tabId, r.rootPaneId, r.worktree.path, r.worktree.branch),
+        ('wW', 'wW:t1', 'wW:p1', '/wt/app-x', 'worktree/x'),
+      );
     });
 
     test('a create answer without the worktree is a transport error', () async {
       t.on['worktree.create'] = (_) => {
-            'workspace': {'workspace_id': 'wW'},
-            'tab': {'tab_id': 'wW:t1'},
-            'root_pane': {'pane_id': 'wW:p1'},
-          };
+        'workspace': {'workspace_id': 'wW'},
+        'tab': {'tab_id': 'wW:t1'},
+        'root_pane': {'pane_id': 'wW:p1'},
+      };
 
       await expectLater(api.createWorktree(cwd: '/r'), throwsA(isA<HerdrTransportException>()));
     });
@@ -293,15 +298,15 @@ void main() {
 
     test('list drops bare and prunable checkouts and keeps one herdr has not opened', () async {
       t.on['worktree.list'] = (_) => {
-            'type': 'worktree_list',
-            'worktrees': [
-              info('/r/app', branch: 'main', linked: false, open: 'w1'),
-              info('/wt/gone', branch: 'x', prunable: true),
-              info('/r/app.git', bare: true),
-              info('/wt/closed', branch: 'feat'),
-              {'label': 'no path'},
-            ],
-          };
+        'type': 'worktree_list',
+        'worktrees': [
+          info('/r/app', branch: 'main', linked: false, open: 'w1'),
+          info('/wt/gone', branch: 'x', prunable: true),
+          info('/r/app.git', bare: true),
+          info('/wt/closed', branch: 'feat'),
+          {'label': 'no path'},
+        ],
+      };
 
       final list = await api.listWorktrees(cwd: '/r/app');
 

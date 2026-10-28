@@ -39,15 +39,15 @@ Future<void> _settle(WidgetTester tester) async {
 }
 
 FileViewerScreen _viewer(FakeFs fs, String path, {int? line}) => FileViewerScreen(
-      machine: machineWithFiles(fs),
-      stat: RemoteStat(
-        path: path,
-        kind: RemoteEntryKind.file,
-        size: fs.nodes[path]!.bytes.length,
-        modified: fs.nodes[path]!.modified,
-      ),
-      line: line,
-    );
+  machine: machineWithFiles(fs),
+  stat: RemoteStat(
+    path: path,
+    kind: RemoteEntryKind.file,
+    size: fs.nodes[path]!.bytes.length,
+    modified: fs.nodes[path]!.modified,
+  ),
+  line: line,
+);
 
 /// Captures what the app puts on the clipboard.
 List<String> _captureClipboard(WidgetTester tester) {
@@ -179,7 +179,9 @@ void main() {
       expect(find.text('.env'), findsOneWidget);
     });
 
-    testWidgets('permission denied, missing folder and no-SFTP each get their own message; Retry recovers', (tester) async {
+    testWidgets('permission denied, missing folder and no-SFTP each get their own message; Retry recovers', (
+      tester,
+    ) async {
       final fs = projectFs()
         ..addDir('/home/dev/secret')
         ..deny.add('/home/dev/secret');
@@ -221,7 +223,10 @@ void main() {
     });
 
     testWidgets('long names and Vietnamese / CJK names fit on one line each, without overflow errors', (tester) async {
-      await _pump(tester, FileBrowserScreen(machine: machineWithFiles(projectFs()), path: '/home/dev/herdr-mobile/docs'));
+      await _pump(
+        tester,
+        FileBrowserScreen(machine: machineWithFiles(projectFs()), path: '/home/dev/herdr-mobile/docs'),
+      );
       await _settle(tester);
 
       expect(find.text('Thiết kế giao diện.md'), findsOneWidget);
@@ -308,7 +313,11 @@ void main() {
 
     testWidgets('openRemoteFile: a relative path resolves against the pane cwd', (tester) async {
       final machine = machineWithFiles(projectFs());
-      await host(tester, machine, (c) => openRemoteFile(c, machine, 'lib/main.dart', cwd: '/home/dev/herdr-mobile/app', line: 3));
+      await host(
+        tester,
+        machine,
+        (c) => openRemoteFile(c, machine, 'lib/main.dart', cwd: '/home/dev/herdr-mobile/app', line: 3),
+      );
 
       await tester.tap(find.text('go'));
       await _settle(tester);
@@ -318,7 +327,11 @@ void main() {
 
     testWidgets('openRemoteFile: a path named from the project root is found above the pane cwd', (tester) async {
       final machine = machineWithFiles(projectFs());
-      await host(tester, machine, (c) => openRemoteFile(c, machine, 'lib/main.dart:7', cwd: '/home/dev/herdr-mobile/app/lib'));
+      await host(
+        tester,
+        machine,
+        (c) => openRemoteFile(c, machine, 'lib/main.dart:7', cwd: '/home/dev/herdr-mobile/app/lib'),
+      );
 
       await tester.tap(find.text('go'));
       await _settle(tester);
@@ -327,9 +340,15 @@ void main() {
       expect(tester.widget<CodeView>(find.byType(CodeView)).highlightLine, 7);
     });
 
-    testWidgets("openRemoteFile: git's a/ and b/ prefix is dropped when the file is not under that name", (tester) async {
+    testWidgets("openRemoteFile: git's a/ and b/ prefix is dropped when the file is not under that name", (
+      tester,
+    ) async {
       final machine = machineWithFiles(projectFs());
-      await host(tester, machine, (c) => openRemoteFile(c, machine, 'b/lib/main.dart', cwd: '/home/dev/herdr-mobile/app'));
+      await host(
+        tester,
+        machine,
+        (c) => openRemoteFile(c, machine, 'b/lib/main.dart', cwd: '/home/dev/herdr-mobile/app'),
+      );
 
       await tester.tap(find.text('go'));
       await _settle(tester);
@@ -339,7 +358,11 @@ void main() {
 
     testWidgets('openRemoteFile: an explicit ./ path is not searched for elsewhere', (tester) async {
       final machine = machineWithFiles(projectFs());
-      await host(tester, machine, (c) => openRemoteFile(c, machine, './lib/main.dart', cwd: '/home/dev/herdr-mobile/app/docs'));
+      await host(
+        tester,
+        machine,
+        (c) => openRemoteFile(c, machine, './lib/main.dart', cwd: '/home/dev/herdr-mobile/app/docs'),
+      );
 
       await tester.tap(find.text('go'));
       await _settle(tester);
@@ -364,7 +387,9 @@ void main() {
       ]);
       expect(lookupAttempts('lib/a.dart'), [(text: 'lib/a.dart', cwd: null, literal: false)]);
       for (final explicit in ['/x/a.dart', '~/a.dart', './a.dart', '../a.dart']) {
-        expect(lookupAttempts(explicit, cwd: '/w/p/app'), [(text: explicit, cwd: '/w/p/app', literal: false)], reason: explicit);
+        expect(lookupAttempts(explicit, cwd: '/w/p/app'), [
+          (text: explicit, cwd: '/w/p/app', literal: false),
+        ], reason: explicit);
       }
     });
 
@@ -391,7 +416,9 @@ void main() {
       expect(tester.widget<CodeView>(find.byType(CodeView)).highlightLine, isNull);
     });
 
-    testWidgets('openRemoteFile: not found and permission are said on the screen that opened; no files is a toast', (tester) async {
+    testWidgets('openRemoteFile: not found and permission are said on the screen that opened; no files is a toast', (
+      tester,
+    ) async {
       final fs = projectFs()
         ..addFile('/home/dev/locked.txt', 'x')
         ..deny.add('/home/dev/locked.txt');
@@ -486,9 +513,9 @@ void main() {
       await _settle(tester);
       expect(find.textContaining('END'), findsOneWidget);
       final scroller = find.descendant(of: find.byType(CodeView), matching: find.byType(SingleChildScrollView)).first;
-      final position = tester.state<ScrollableState>(
-        find.descendant(of: scroller, matching: find.byType(Scrollable)).first,
-      ).position;
+      final position = tester
+          .state<ScrollableState>(find.descendant(of: scroller, matching: find.byType(Scrollable)).first)
+          .position;
       expect(position.maxScrollExtent, greaterThan(1000), reason: '303 columns of mono text');
 
       position.jumpTo(position.maxScrollExtent);
@@ -659,7 +686,10 @@ void main() {
 
     testWidgets('a binary file is an info card with a hex preview and no text chrome', (tester) async {
       final fs = FakeFs()
-        ..addFile('/h/tool', Uint8List.fromList([0x7F, 0x45, 0x4C, 0x46, 2, 1, 1, 0, ...List.generate(1000, (i) => i % 256)]));
+        ..addFile(
+          '/h/tool',
+          Uint8List.fromList([0x7F, 0x45, 0x4C, 0x46, 2, 1, 1, 0, ...List.generate(1000, (i) => i % 256)]),
+        );
       await _pump(tester, _viewer(fs, '/h/tool'));
       await _settle(tester);
 
@@ -703,10 +733,12 @@ void main() {
       }
       addTearDown(tester.view.reset);
 
-      await tester.pumpWidget(MaterialApp(
-        theme: AppTheme.light(),
-        home: FileBrowserScreen(machine: machineWithFiles(fs), path: '/home/dev/herdr-mobile'),
-      ));
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: FileBrowserScreen(machine: machineWithFiles(fs), path: '/home/dev/herdr-mobile'),
+        ),
+      );
       await _settle(tester);
       expect(tester.takeException(), isNull);
     });

@@ -12,22 +12,22 @@ import 'support/fake_transport.dart';
 import 'support/worktree_fixtures.dart';
 
 Pane _pane(String title) => Pane.fromJson({
-      'pane_id': 'w1:p1',
-      'workspace_id': 'w1',
-      'tab_id': 'w1:t1',
-      'agent': 'omp',
-      'agent_status': 'working',
-      'terminal_title_stripped': title,
-    });
+  'pane_id': 'w1:p1',
+  'workspace_id': 'w1',
+  'tab_id': 'w1:t1',
+  'agent': 'omp',
+  'agent_status': 'working',
+  'terminal_title_stripped': title,
+});
 
 Map<String, dynamic> _wirePane([Object? session = _absent]) => {
-      'pane_id': 'w1:p1',
-      'workspace_id': 'w1',
-      'tab_id': 'w1:t1',
-      'agent': 'omp',
-      'agent_status': 'idle',
-      if (!identical(session, _absent)) 'agent_session': session,
-    };
+  'pane_id': 'w1:p1',
+  'workspace_id': 'w1',
+  'tab_id': 'w1:t1',
+  'agent': 'omp',
+  'agent_status': 'idle',
+  if (!identical(session, _absent)) 'agent_session': session,
+};
 
 const Object _absent = Object();
 
@@ -55,8 +55,7 @@ void main() {
     });
 
     test('agent chrome is stripped, content kept', () {
-      expect(cleanTerminalTitle('π ⠼ Merge Branch To Master Push'),
-          'Merge Branch To Master Push');
+      expect(cleanTerminalTitle('π ⠼ Merge Branch To Master Push'), 'Merge Branch To Master Push');
       expect(cleanTerminalTitle('✳ Refactor webhook retry'), 'Refactor webhook retry');
       expect(cleanTerminalTitle('重构支付网关 🚀'), '重构支付网关 🚀');
       expect(cleanTerminalTitle('⠋'), '');
@@ -73,7 +72,8 @@ void main() {
     const path = '/home/u/.omp/agent/sessions/--work--/2026-01-01_abc.jsonl';
 
     test('reads the agent, kind, value and source herdr reports', () {
-      final s = Pane.fromJson(_wirePane({'agent': 'omp', 'kind': 'path', 'value': path, 'source': 'herdr:omp'})).session!;
+      final s = Pane.fromJson(_wirePane({'agent': 'omp', 'kind': 'path', 'value': path, 'source': 'herdr:omp'}))
+          .session!;
 
       expect((s.agent, s.kind, s.value, s.source), ('omp', 'path', path, 'herdr:omp'));
     });
@@ -91,7 +91,9 @@ void main() {
         {'value': null},
         {'value': 7},
         {'value': ''},
-        {'value': ['x']},
+        {
+          'value': ['x'],
+        },
       ]) {
         expect(Pane.fromJson(_wirePane(bad)).session, isNull, reason: '$bad');
       }
@@ -99,7 +101,13 @@ void main() {
     });
 
     test('the other fields are tolerated when odd', () {
-      final s = AgentSessionRef.tryParse({'agent': 3, 'kind': null, 'value': 'x', 'source': [1], 'extra': {}})!;
+      final s = AgentSessionRef.tryParse({
+        'agent': 3,
+        'kind': null,
+        'value': 'x',
+        'source': [1],
+        'extra': {},
+      })!;
 
       expect((s.agent, s.kind, s.value, s.source), ('', '', 'x', null));
     });
@@ -119,7 +127,9 @@ void main() {
         'version': '1',
         'workspaces': <Object?>[],
         'tabs': <Object?>[],
-        'panes': [_wirePane({'agent': 'omp', 'kind': 'path', 'value': path})],
+        'panes': [
+          _wirePane({'agent': 'omp', 'kind': 'path', 'value': path}),
+        ],
       });
 
       expect(snap.panes.single.session!.value, path);
@@ -159,18 +169,19 @@ void main() {
         'agents': [agents],
       });
 
-      for (final (name, spy) in [
-        ('workspaces', workspaces),
-        ('tabs', tabs),
-        ('panes', panes),
-        ('agents', agents),
-      ]) {
+      for (final (name, spy) in [('workspaces', workspaces), ('tabs', tabs), ('panes', panes), ('agents', agents)]) {
         final wire = (snapshotWireFields[name]! as Map).keys.toSet();
-        expect(wire.containsAll(spy.read), isTrue,
-            reason: '$name reads ${spy.read.difference(wire)} which is not on the wire');
+        expect(
+          wire.containsAll(spy.read),
+          isTrue,
+          reason: '$name reads ${spy.read.difference(wire)} which is not on the wire',
+        );
         // ...and nothing is listed that no model reads.
-        expect(spy.read.containsAll(wire), isTrue,
-            reason: '$name lists ${wire.difference(spy.read)} but never reads it');
+        expect(
+          spy.read.containsAll(wire),
+          isTrue,
+          reason: '$name lists ${wire.difference(spy.read)} but never reads it',
+        );
       }
     });
 

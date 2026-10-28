@@ -41,7 +41,8 @@ class Simulation {
   final double notice;
   final int seed;
 
-  double keyCost(String char) => style == Style.telex ? telexKeys(char).toDouble() : 1;
+  double keyCost(String char) =>
+      style == Style.telex ? telexKeys(char).toDouble() : 1;
 }
 
 /// Counts over many messages. Everything per message is summed; ratios are
@@ -86,7 +87,8 @@ class Tally {
   /// Share of key presses not needed.
   double get ksr => baseKeys == 0 ? 0 : 1 - keys / baseKeys;
   double per100Words(int n) => words == 0 ? 0 : 100 * n / words;
-  double get chipsOnScreen => positions == 0 ? 0 : positionsWithChips / positions;
+  double get chipsOnScreen =>
+      positions == 0 ? 0 : positionsWithChips / positions;
 }
 
 /// Types [truth] one character at a time into [predictor], tapping a chip the
@@ -143,7 +145,10 @@ Tally typeMessage(
       t.positionsWithChips++;
       shown.add(word);
       final signature = chips.first.signature;
-      if (lastWord == word && lastSignature != null && lastSignature != signature) t.flips++;
+      if (lastWord == word &&
+          lastSignature != null &&
+          lastSignature != signature)
+        t.flips++;
       lastSignature = signature;
       lastWord = word;
     }
@@ -154,8 +159,8 @@ Tally typeMessage(
       final r = typed.substring(0, from) + chip.insert;
       final right = bare
           ? r.length <= truth.length &&
-              truthFolded.startsWith(foldVietnamese(r)) &&
-              truth.startsWith(chip.insert, from)
+                truthFolded.startsWith(foldVietnamese(r)) &&
+                truth.startsWith(chip.insert, from)
           : truth.startsWith(r);
       if (!right || r.length <= pos) continue;
 

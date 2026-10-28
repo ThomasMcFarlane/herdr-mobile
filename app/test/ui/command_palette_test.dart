@@ -41,23 +41,18 @@ const _pane = 'w1:p1';
 
 class _PaneTransport extends FakeTransport {
   _PaneTransport({String agent = 'omp'})
-      : super(snapshotJson(
-          panes: [(id: _pane, ws: 'w1', agent: agent, status: 'idle')],
-        ));
+    : super(snapshotJson(panes: [(id: _pane, ws: 'w1', agent: agent, status: 'idle')]));
 
   /// Fails every `pane.send_input` with this while set.
   Object? sendFailure;
 
   List<String> get sent => [
-        for (final (method, params) in calls)
-          if (method == 'pane.send_input') params['text']! as String,
-      ];
+    for (final (method, params) in calls)
+      if (method == 'pane.send_input') params['text']! as String,
+  ];
 
   @override
-  Future<Map<String, dynamic>> request(
-    String method, [
-    Map<String, dynamic> params = const {},
-  ]) {
+  Future<Map<String, dynamic>> request(String method, [Map<String, dynamic> params = const {}]) {
     if (method == 'pane.send_input' && sendFailure != null) {
       calls.add((method, params));
       return Future.error(sendFailure!);
@@ -106,11 +101,7 @@ void main() {
           home: Scaffold(
             body: Align(
               alignment: Alignment.bottomCenter,
-              child: CommandPalette(
-                input: input,
-                model: model,
-                onPick: (c) => picked.add(c.name),
-              ),
+              child: CommandPalette(input: input, model: model, onPick: (c) => picked.add(c.name)),
             ),
           ),
         ),
@@ -220,16 +211,9 @@ void main() {
     });
 
     Future<void> pumpPane(WidgetTester tester) async {
-      final repo = MachineRepository(
-        profiles: MemoryProfileStore(),
-        secrets: MemorySecretStore(),
-      );
+      final repo = MachineRepository(profiles: MemoryProfileStore(), secrets: MemorySecretStore());
       await repo.load();
-      fleet = FleetRepository(
-        machines: repo,
-        network: FakeNetwork(),
-        connect: (profile, secrets) => machine,
-      );
+      fleet = FleetRepository(machines: repo, network: FakeNetwork(), connect: (profile, secrets) => machine);
       await repo.save(machine.profile, secrets: const MachineSecrets(password: 'x'));
       await fleet.settled();
       screens = AgentScreens();
@@ -268,8 +252,7 @@ void main() {
       await _settle(tester);
     }
 
-    testWidgets('a command sent to an agent without a table is remembered and offered on a slash',
-        (tester) async {
+    testWidgets('a command sent to an agent without a table is remembered and offered on a slash', (tester) async {
       final semantics = tester.ensureSemantics();
       await pumpPane(tester);
       await tester.enterText(composer(), '/');
@@ -306,8 +289,11 @@ void main() {
       transport.sendFailure = const HerdrTransportException('link down');
       await send(tester, '/deploy now');
       expect(usage.used('omp'), isEmpty, reason: 'the agent never got it');
-      expect(tester.widget<TextField>(composer()).controller!.text, '/deploy now',
-          reason: 'a failed send keeps what was typed');
+      expect(
+        tester.widget<TextField>(composer()).controller!.text,
+        '/deploy now',
+        reason: 'a failed send keeps what was typed',
+      );
       semantics.dispose();
       await teardown(tester);
     });
@@ -340,7 +326,9 @@ void main() {
       await teardown(tester);
     });
 
-    testWidgets('with a Codex agent a dollar lists its skills and a slash only its commands; pins stay apart', (tester) async {
+    testWidgets('with a Codex agent a dollar lists its skills and a slash only its commands; pins stay apart', (
+      tester,
+    ) async {
       final semantics = tester.ensureSemantics();
       transport.snapshot = snapshotJson(panes: [(id: _pane, ws: 'w1', agent: 'codex', status: 'idle')]);
       transport.fs = FakeFs()..addFile('/work/w1/.agents/skills/ship/SKILL.md', '---\ndescription: Ship it\n---\n');

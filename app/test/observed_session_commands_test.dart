@@ -114,7 +114,11 @@ void main() {
     rig.source.push([
       jsonEncode({
         'type': 'attachment',
-        'attachment': {'type': 'skill_listing', 'isInitial': false, 'names': ['late']},
+        'attachment': {
+          'type': 'skill_listing',
+          'isInitial': false,
+          'names': ['late'],
+        },
       }),
     ]);
     await eventually(() => session.slashCommands.any((c) => c.name == 'late'), reason: 'a later listing');

@@ -79,9 +79,11 @@ void main() {
     await job.done;
     final secs = sw.elapsedMicroseconds / 1e6;
     // ignore: avoid_print
-    print('REAL 50 MB upload: ${(size / (1 << 20) / secs).toStringAsFixed(1)} MB/s in '
-        '${secs.toStringAsFixed(2)} s; ${seen.length} progress callbacks; '
-        'listing during upload: ${lat.isEmpty ? 'n/a' : lat.join('/')} ms');
+    print(
+      'REAL 50 MB upload: ${(size / (1 << 20) / secs).toStringAsFixed(1)} MB/s in '
+      '${secs.toStringAsFixed(2)} s; ${seen.length} progress callbacks; '
+      'listing during upload: ${lat.isEmpty ? 'n/a' : lat.join('/')} ms',
+    );
     final stored = File('$remoteDir/50mb.bin');
     expect(stored.lengthSync(), size);
     expect(stored.statSync().mode & 0x1FF, 384, reason: 'file is 0600');

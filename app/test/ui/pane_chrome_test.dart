@@ -29,37 +29,26 @@ String _id(int i) => 'w1:p$i';
 /// `machine/pane`, as the previews and the app key a pane.
 String _key(int i) => '$_machine/${_id(i)}';
 
-Pane _pane(int i, String status) =>
-    (id: _id(i), ws: 'w1', agent: 'claude', status: status);
+Pane _pane(int i, String status) => (id: _id(i), ws: 'w1', agent: 'claude', status: status);
 
 String _title(String id) => 'task ${id.split('p').last}';
 
-Map<String, dynamic> _snapshot(List<Pane> panes) =>
-    snapshotWith(panes, title: _title);
+Map<String, dynamic> _snapshot(List<Pane> panes) => snapshotWith(panes, title: _title);
 
-QuickReply _reply(String label) =>
-    QuickReply(label: label, keys: [label.substring(0, 1), 'enter']);
+QuickReply _reply(String label) => QuickReply(label: label, keys: [label.substring(0, 1), 'enter']);
 
 PromptInfo _prompt({
   String question = 'Do you want to run this command?',
   String subject = '',
   List<String> options = const ['1. Yes', '2. No'],
-}) =>
-    PromptInfo(question: question, subject: subject, replies: [for (final o in options) _reply(o)]);
+}) => PromptInfo(question: question, subject: subject, replies: [for (final o in options) _reply(o)]);
 
 /// A fleet of one machine with [statuses] as its panes' states (pane 1, 2…).
 Future<BoardHarness> _harness(List<String> statuses) async {
   final h = await BoardHarness.create([
     (
-      profile: MachineProfile(
-        id: _machine,
-        label: 'box',
-        host: 'h',
-        username: 'u',
-      ),
-      snapshot: _snapshot([
-        for (final (i, s) in statuses.indexed) _pane(i + 1, s),
-      ]),
+      profile: MachineProfile(id: _machine, label: 'box', host: 'h', username: 'u'),
+      snapshot: _snapshot([for (final (i, s) in statuses.indexed) _pane(i + 1, s)]),
     ),
   ]);
   h.transports[_machine]!.paneText = 'hello from the pane';
@@ -112,8 +101,7 @@ Future<void> _tearDown(WidgetTester tester, BoardHarness h) async {
   h.dispose();
 }
 
-Finder _barText(String text) =>
-    find.descendant(of: find.byType(PaneTopBar), matching: find.text(text));
+Finder _barText(String text) => find.descendant(of: find.byType(PaneTopBar), matching: find.text(text));
 
 /// `pane.send_keys` the machine received, as `a+b`.
 List<String> _keysSent(BoardHarness h) => [
@@ -122,14 +110,8 @@ List<String> _keysSent(BoardHarness h) => [
 ];
 
 /// Moves the panes to [statuses] the way a snapshot change does.
-Future<void> _setStatuses(
-  WidgetTester tester,
-  BoardHarness h,
-  List<String> statuses,
-) async {
-  await h.changeStatuses(tester, _machine, [
-    for (final (i, s) in statuses.indexed) _pane(i + 1, s),
-  ], title: _title);
+Future<void> _setStatuses(WidgetTester tester, BoardHarness h, List<String> statuses) async {
+  await h.changeStatuses(tester, _machine, [for (final (i, s) in statuses.indexed) _pane(i + 1, s)], title: _title);
   await tester.pump(const Duration(seconds: 1));
 }
 
@@ -137,20 +119,17 @@ void main() {
   setUpAll(loadAppFonts);
 
   group('the bar', () {
-    testWidgets(
-      'is one 56dp bar that names the pane once and shows no pane id',
-      (tester) async {
-        final h = await _harness(['idle']);
-        await _pump(tester, h);
+    testWidgets('is one 56dp bar that names the pane once and shows no pane id', (tester) async {
+      final h = await _harness(['idle']);
+      await _pump(tester, h);
 
-        expect(find.byType(PaneTopBar), findsOneWidget);
-        expect(tester.getSize(find.byType(PaneTopBar)).height, 56);
-        expect(find.text('task 1'), findsOneWidget, reason: 'the title is on screen once');
-        expect(_barText('Claude Code · box'), findsOneWidget);
-        expect(find.textContaining(_id(1)), findsNothing);
-        await _tearDown(tester, h);
-      },
-    );
+      expect(find.byType(PaneTopBar), findsOneWidget);
+      expect(tester.getSize(find.byType(PaneTopBar)).height, 56);
+      expect(find.text('task 1'), findsOneWidget, reason: 'the title is on screen once');
+      expect(_barText('Claude Code · box'), findsOneWidget);
+      expect(find.textContaining(_id(1)), findsNothing);
+      await _tearDown(tester, h);
+    });
 
     testWidgets('the terminal starts at least 40dp higher than under the old '
         'bar and strip (60dp bar + 44dp strip)', (tester) async {
@@ -177,9 +156,7 @@ void main() {
       await _tearDown(tester, h);
     });
 
-    testWidgets('a short screen gets a 52dp bar and keeps its buttons', (
-      tester,
-    ) async {
+    testWidgets('a short screen gets a 52dp bar and keeps its buttons', (tester) async {
       final h = await _harness(['idle']);
       await _pump(tester, h, size: const Size(740, 360));
 
@@ -192,8 +169,7 @@ void main() {
   });
 
   group('docked answers', () {
-    Finder dockText(String text) =>
-        find.descendant(of: find.byType(AnswerDock), matching: find.text(text));
+    Finder dockText(String text) => find.descendant(of: find.byType(AnswerDock), matching: find.text(text));
 
     testWidgets('a blocked pane with an understood prompt shows the question '
         'and its chips directly above the key row', (tester) async {
@@ -208,10 +184,7 @@ void main() {
       final keys = tester.getRect(find.byType(QuickKeys));
       expect(dock.bottom, lessThanOrEqualTo(keys.top));
       expect(keys.top - dock.bottom, lessThan(12), reason: 'directly above');
-      expect(
-        tester.getSize(find.byType(ReplyChips)).height,
-        ReplyChips.heightFor(2),
-      );
+      expect(tester.getSize(find.byType(ReplyChips)).height, ReplyChips.heightFor(2));
       await _tearDown(tester, h);
     });
 
@@ -270,9 +243,7 @@ void main() {
       await settle(tester);
 
       expect(_keysSent(h), ['1+enter']);
-      final sent = h.transports[_machine]!.calls
-          .where((c) => c.$1 == 'pane.send_keys')
-          .single;
+      final sent = h.transports[_machine]!.calls.where((c) => c.$1 == 'pane.send_keys').single;
       expect(sent.$2['pane_id'], _id(1));
       expect(dockText('Sent: 1. Yes'), findsOneWidget);
 
@@ -303,11 +274,9 @@ void main() {
       expect(dockText('Sent: 1. Yes'), findsOneWidget);
 
       // The agent asks again in the same pane: new answers, under the same thumb.
-      h.previews.set(
-        _key(1),
-        ['q2'],
-        prompt: _prompt(question: 'Overwrite lib/main.dart?', options: ['1. Overwrite', '2. Skip']),
-      );
+      h.previews.set(_key(1), [
+        'q2',
+      ], prompt: _prompt(question: 'Overwrite lib/main.dart?', options: ['1. Overwrite', '2. Skip']));
       await tester.pump();
       await tester.tap(dockText('2. Skip'));
       await tester.pump(const Duration(milliseconds: 50));
@@ -326,10 +295,7 @@ void main() {
       final h = await _harness(['blocked']);
       h.previews.set(_key(1), ['q'], prompt: _prompt());
       await _pump(tester, h);
-      final enter = find.descendant(
-        of: find.byType(QuickKeys),
-        matching: find.byIcon(LucideIcons.cornerDownLeft),
-      );
+      final enter = find.descendant(of: find.byType(QuickKeys), matching: find.byIcon(LucideIcons.cornerDownLeft));
 
       await tester.tap(enter);
       await settle(tester);
@@ -346,9 +312,7 @@ void main() {
       await _tearDown(tester, h);
     });
 
-    testWidgets('goes when the prompt goes, and comes back with the next one', (
-      tester,
-    ) async {
+    testWidgets('goes when the prompt goes, and comes back with the next one', (tester) async {
       final h = await _harness(['blocked']);
       h.previews.set(_key(1), ['q'], prompt: _prompt());
       await _pump(tester, h);
@@ -359,20 +323,16 @@ void main() {
       expect(find.byType(ReplyChips), findsNothing);
       expect(tester.getSize(find.byType(AnswerDock)), Size.zero);
 
-      h.previews.set(
-        _key(1),
-        ['q2'],
-        prompt: _prompt(question: 'Overwrite lib/main.dart?', options: ['1. Overwrite', '2. Skip']),
-      );
+      h.previews.set(_key(1), [
+        'q2',
+      ], prompt: _prompt(question: 'Overwrite lib/main.dart?', options: ['1. Overwrite', '2. Skip']));
       await tester.pump();
       expect(dockText('Overwrite lib/main.dart?'), findsOneWidget);
       expect(dockText('2. Skip'), findsOneWidget);
       await _tearDown(tester, h);
     });
 
-    testWidgets('a pane that is not blocked has no dock and reads nothing for it', (
-      tester,
-    ) async {
+    testWidgets('a pane that is not blocked has no dock and reads nothing for it', (tester) async {
       final h = await _harness(['working']);
       h.previews.set(_key(1), ['q'], prompt: _prompt());
       await _pump(tester, h);
@@ -383,9 +343,7 @@ void main() {
       await _tearDown(tester, h);
     });
 
-    testWidgets('a blocked pane whose prompt is not understood has none either', (
-      tester,
-    ) async {
+    testWidgets('a blocked pane whose prompt is not understood has none either', (tester) async {
       final h = await _harness(['blocked']);
       h.previews.set(_key(1), ['some free text']);
       await _pump(tester, h);
@@ -395,9 +353,7 @@ void main() {
       await _tearDown(tester, h);
     });
 
-    testWidgets('follows the pane: watched while blocked, released once it is not', (
-      tester,
-    ) async {
+    testWidgets('follows the pane: watched while blocked, released once it is not', (tester) async {
       final h = await _harness(['working']);
       h.previews.set(_key(1), ['q'], prompt: _prompt());
       await _pump(tester, h);
@@ -430,15 +386,11 @@ void main() {
       await _tearDown(tester, h);
     });
 
-    testWidgets('shows three answers and a "more" chip that opens the reply sheet', (
-      tester,
-    ) async {
+    testWidgets('shows three answers and a "more" chip that opens the reply sheet', (tester) async {
       final h = await _harness(['blocked']);
-      h.previews.set(
-        _key(1),
-        ['q'],
-        prompt: _prompt(options: ['1. One', '2. Two', '3. Three', '4. Four', '5. Five', '6. Six']),
-      );
+      h.previews.set(_key(1), [
+        'q',
+      ], prompt: _prompt(options: ['1. One', '2. Two', '3. Three', '4. Four', '5. Five', '6. Six']));
       await _pump(tester, h);
 
       expect(dockText('1. One'), findsOneWidget);
@@ -446,10 +398,7 @@ void main() {
       expect(dockText('3. Three'), findsOneWidget);
       expect(dockText('4. Four'), findsNothing);
       expect(dockText('3 more…'), findsOneWidget);
-      expect(
-        tester.getSize(find.byType(ReplyChips)).height,
-        ReplyChips.heightFor(dockChipLimit),
-      );
+      expect(tester.getSize(find.byType(ReplyChips)).height, ReplyChips.heightFor(dockChipLimit));
 
       await tester.tap(dockText('3 more…'));
       await settle(tester);
@@ -473,9 +422,7 @@ void main() {
     });
 
     testWidgets('is hidden when the layout is compact (landscape with the '
-        'keyboard), and on a short screen, where it would eat the terminal', (
-      tester,
-    ) async {
+        'keyboard), and on a short screen, where it would eat the terminal', (tester) async {
       final h = await _harness(['blocked']);
       h.previews.set(_key(1), ['q'], prompt: _prompt());
       tester.view.viewInsets = const FakeViewPadding(bottom: 200);
@@ -529,10 +476,7 @@ void main() {
       expect(terminal.height, terminalBefore.height - 300);
       expect(tester.getSize(find.byType(AnswerDock)), dockBefore);
       expect(tester.getSize(find.byType(ReplyChips)), chipsBefore);
-      expect(
-        rebuilt.where({'AnswerDock', '_Dock', 'ReplyChips', '_PaneView', '_TerminalPanel'}.contains),
-        isEmpty,
-      );
+      expect(rebuilt.where({'AnswerDock', '_Dock', 'ReplyChips', '_PaneView', '_TerminalPanel'}.contains), isEmpty);
       expect(keyedRebuilds, 0, reason: 'no row of the terminal rebuilt');
 
       tester.view.viewInsets = FakeViewPadding.zero;

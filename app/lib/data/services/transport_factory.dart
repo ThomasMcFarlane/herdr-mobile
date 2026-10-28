@@ -29,27 +29,21 @@ HerdrTransport createSshTransportLater(
   Future<MachineSecrets> Function() secrets,
   void Function(String fingerprint) onPinHostKey,
   void Function(String banner) onNotice,
-) =>
-    IsolateTransport(
-      builder: _buildSsh,
-      config: () => sshWorkerConfig(profile(), secrets),
-      onPin: onPinHostKey,
-      onNotice: onNotice,
-    );
+) => IsolateTransport(
+  builder: _buildSsh,
+  config: () => sshWorkerConfig(profile(), secrets),
+  onPin: onPinHostKey,
+  onNotice: onNotice,
+);
 
 /// What a worker is built from: [profile] (with its pinned host key) and the
 /// credentials [secrets] answers with.
-Future<Map<String, Object?>> sshWorkerConfig(
-  MachineProfile profile,
-  Future<MachineSecrets> Function() secrets,
-) async {
+Future<Map<String, Object?>> sshWorkerConfig(MachineProfile profile, Future<MachineSecrets> Function() secrets) async {
   final MachineSecrets s;
   try {
     s = await secrets();
   } on Object {
-    throw const HerdrTransportException(
-      "Couldn't read the saved credentials from the keychain.",
-    );
+    throw const HerdrTransportException("Couldn't read the saved credentials from the keychain.");
   }
   return {
     'profile': profile.toJson(),
@@ -60,16 +54,10 @@ Future<Map<String, Object?>> sshWorkerConfig(
 }
 
 /// Runs inside the worker isolate.
-HerdrTransport _buildSsh(
-  Object? config,
-  void Function(String) onPin,
-  void Function(String) onNotice,
-) {
+HerdrTransport _buildSsh(Object? config, void Function(String) onPin, void Function(String) onNotice) {
   final c = config! as Map<Object?, Object?>;
   return SshTransport(
-    profile: MachineProfile.fromJson(
-      Map<String, dynamic>.from(c['profile']! as Map),
-    ),
+    profile: MachineProfile.fromJson(Map<String, dynamic>.from(c['profile']! as Map)),
     secrets: MachineSecrets(
       privateKeyPem: c['privateKeyPem'] as String?,
       passphrase: c['passphrase'] as String?,

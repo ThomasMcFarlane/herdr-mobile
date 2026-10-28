@@ -86,7 +86,10 @@ List<ReplayTurn> turnsOf(List<Json> updates) {
 /// `_meta.herdr` of the answer to `session/load`: what the keeper gave up.
 Map<String, Object?> herdrMeta(Json loadResponse) => asJson(asJson(asJson(loadResponse['result'])['_meta'])['herdr']);
 
-bool isTrimmed(Json update) => update['_meta'] is Map && asJson(update['_meta'])['herdr'] is Map && asJson(asJson(update['_meta'])['herdr'])['trimmed'] == true;
+bool isTrimmed(Json update) =>
+    update['_meta'] is Map &&
+    asJson(update['_meta'])['herdr'] is Map &&
+    asJson(asJson(update['_meta'])['herdr'])['trimmed'] == true;
 
 /// Loads the keeper script as a module and exercises `ReplayLog.remove`, the
 /// way the keeper takes back the message of a prompt the agent refused.
@@ -432,7 +435,10 @@ class KeeperHost {
   /// Installs the keeper script the way the app does before its first command:
   /// the command, with the script written to its stdin.
   Future<void> install({String? script}) async {
-    final r = await run(keeperInstallCommand(script: script), input: keeperInstallPayload(script: script));
+    final r = await run(
+      keeperInstallCommand(script: script),
+      input: keeperInstallPayload(script: script),
+    );
     expect(r.code, 0, reason: r.err);
     expect(r.out.trim(), '{"ok":true}');
   }
@@ -603,7 +609,10 @@ class KeeperAttach {
   Future<Json> newSession(KeeperHost h) => request('session/new', {'cwd': h.work, 'mcpServers': <Object?>[]});
 
   Future<Json> load(KeeperHost h, {String sessionId = 'sess-1', Duration timeout = const Duration(seconds: 30)}) =>
-      response(post('session/load', {'sessionId': sessionId, 'cwd': h.work, 'mcpServers': <Object?>[]}), timeout: timeout);
+      response(
+        post('session/load', {'sessionId': sessionId, 'cwd': h.work, 'mcpServers': <Object?>[]}),
+        timeout: timeout,
+      );
 
   int prompt(String text) => post('session/prompt', {
     'sessionId': 'sess-1',
@@ -647,7 +656,8 @@ class KeeperView {
   void type(String line) => process.stdin.writeln(line);
 }
 
-String _fakeHerdr(String log, String state) => '''
+String _fakeHerdr(String log, String state) =>
+    '''
 #!/usr/bin/env python3
 import json, os, sys
 args = sys.argv[1:]

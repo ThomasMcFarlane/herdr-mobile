@@ -44,7 +44,14 @@ Map<String, Object?> _thought(String text, {String id = 'th'}) => {
   'content': {'type': 'text', 'text': text},
 };
 
-Map<String, Object?> _tool(String id, String status, {String kind = 'execute', String title = 'tool', Object? content, Object? rawInput}) => {
+Map<String, Object?> _tool(
+  String id,
+  String status, {
+  String kind = 'execute',
+  String title = 'tool',
+  Object? content,
+  Object? rawInput,
+}) => {
   'sessionUpdate': 'tool_call',
   'toolCallId': id,
   'kind': kind,
@@ -135,21 +142,46 @@ void main() {
     test('diffs of one path are grouped, codex hunks included; failed and pending edits count nothing', () {
       final r = _Run('refactor')
         // codex: one call, one diff per hunk, title "Editing files"
-        ..add(_tool('e1', 'completed', kind: 'edit', title: 'Editing files', content: [
-          _diff('/w/lib/a.dart', 'one\ntwo', 'one\n2'),
-          _diff('/w/lib/a.dart', 'ten', 'ten\neleven\ntwelve'),
-          _diff('/w/lib/b.dart', null, 'p\nq\nr\n'),
-        ]))
+        ..add(
+          _tool(
+            'e1',
+            'completed',
+            kind: 'edit',
+            title: 'Editing files',
+            content: [
+              _diff('/w/lib/a.dart', 'one\ntwo', 'one\n2'),
+              _diff('/w/lib/a.dart', 'ten', 'ten\neleven\ntwelve'),
+              _diff('/w/lib/b.dart', null, 'p\nq\nr\n'),
+            ],
+          ),
+        )
         // an edit that starts from what the last one ended with is one change
-        ..add(_tool('e2', 'completed', kind: 'edit', content: [_diff('/w/lib/a.dart', 'ten\neleven\ntwelve', 'ten\neleven\nTWELVE')]))
+        ..add(
+          _tool(
+            'e2',
+            'completed',
+            kind: 'edit',
+            content: [_diff('/w/lib/a.dart', 'ten\neleven\ntwelve', 'ten\neleven\nTWELVE')],
+          ),
+        )
         ..add(_tool('e3', 'failed', kind: 'edit', content: [_diff('/w/lib/never.dart', 'x', 'y')]))
         ..add(_tool('e4', 'pending', kind: 'edit', content: [_diff('/w/lib/later.dart', 'x', 'y')]))
         ..add(_tool('d1', 'completed', kind: 'delete', title: 'Delete', content: const []))
-        ..add({'sessionUpdate': 'tool_call_update', 'toolCallId': 'd1', 'locations': [{'path': '/w/old.txt'}]});
+        ..add({
+          'sessionUpdate': 'tool_call_update',
+          'toolCallId': 'd1',
+          'locations': [
+            {'path': '/w/old.txt'},
+          ],
+        });
       final changed = r.turn.changed;
       expect(changed.map((f) => f.path), ['/w/lib/a.dart', '/w/lib/b.dart', '/w/old.txt']);
       final a = changed[0];
-      expect((a.added, a.removed), (3, 1), reason: 'hunk one +1 -1, then hunk two and the next edit as one net change +2');
+      expect(
+        (a.added, a.removed),
+        (3, 1),
+        reason: 'hunk one +1 -1, then hunk two and the next edit as one net change +2',
+      );
       expect(a.isNew, isFalse);
       expect(a.diffs, hasLength(3));
       final b = changed[1];
@@ -175,61 +207,170 @@ void main() {
 
   group('toolSummary', () {
     test('read: file name and directory hint', () {
-      final claude = toolSummary(_call({
-        'kind': 'read',
-        'title': 'Read notes.txt',
-        'rawInput': {'file_path': '/tmp/scratch/notes.txt'},
-        'locations': [{'path': '/tmp/scratch/notes.txt', 'line': 1}],
-      }));
+      final claude = toolSummary(
+        _call({
+          'kind': 'read',
+          'title': 'Read notes.txt',
+          'rawInput': {'file_path': '/tmp/scratch/notes.txt'},
+          'locations': [
+            {'path': '/tmp/scratch/notes.txt', 'line': 1},
+          ],
+        }),
+      );
       expect((claude.kind, claude.text, claude.hint), (ToolKind.read, 'notes.txt', 'tmp/scratch'));
       expect(claude.plain, 'notes.txt (tmp/scratch)');
-      final omp = toolSummary(_call({'kind': 'read', 'title': 'Reading notes file', 'rawInput': {'path': 'notes.txt'}}));
+      final omp = toolSummary(
+        _call({
+          'kind': 'read',
+          'title': 'Reading notes file',
+          'rawInput': {'path': 'notes.txt'},
+        }),
+      );
       expect((omp.text, omp.hint), ('notes.txt', null));
       expect(toolSummary(_call({'kind': 'read', 'title': 'Reading config'})).text, 'Reading config');
-      final vi = toolSummary(_call({'kind': 'read', 'locations': [{'path': '/dự-án/Hà Nội/tệp mới.dart'}]}));
+      final vi = toolSummary(
+        _call({
+          'kind': 'read',
+          'locations': [
+            {'path': '/dự-án/Hà Nội/tệp mới.dart'},
+          ],
+        }),
+      );
       expect((vi.text, vi.hint), ('tệp mới.dart', 'dự-án/Hà Nội'));
-      final win = toolSummary(_call({'kind': 'read', 'rawInput': {'path': r'C:\proj\lib\a.dart'}}));
+      final win = toolSummary(
+        _call({
+          'kind': 'read',
+          'rawInput': {'path': r'C:\proj\lib\a.dart'},
+        }),
+      );
       expect((win.text, win.hint), ('a.dart', 'proj/lib'));
     });
 
     test('edit: file name and +added −removed', () {
-      final s = toolSummary(_call({
-        'kind': 'edit',
-        'title': 'Edit parse.dart',
-        'status': 'completed',
-        'content': [_diff('/w/lib/parse.dart', 'a\nb\nc', 'a\nB\nc\nd')],
-      }));
+      final s = toolSummary(
+        _call({
+          'kind': 'edit',
+          'title': 'Edit parse.dart',
+          'status': 'completed',
+          'content': [_diff('/w/lib/parse.dart', 'a\nb\nc', 'a\nB\nc\nd')],
+        }),
+      );
       expect((s.text, s.hint, s.added, s.removed, s.fileCount), ('parse.dart', 'w/lib', 2, 1, 1));
       expect(s.plain, 'parse.dart · +2 \u22121');
-      final created = toolSummary(_call({'kind': 'edit', 'content': [_diff('/w/x.dart', null, '1\n2\n3\n')]}));
+      final created = toolSummary(
+        _call({
+          'kind': 'edit',
+          'content': [_diff('/w/x.dart', null, '1\n2\n3\n')],
+        }),
+      );
       expect((created.added, created.removed), (3, 0));
       expect(created.plain, 'x.dart · +3');
-      final many = toolSummary(_call({
-        'kind': 'edit',
-        'title': 'Editing files',
-        'content': [_diff('/w/a.dart', 'x', 'y'), _diff('/w/b.dart', 'x', 'y\nz')],
-      }));
+      final many = toolSummary(
+        _call({
+          'kind': 'edit',
+          'title': 'Editing files',
+          'content': [_diff('/w/a.dart', 'x', 'y'), _diff('/w/b.dart', 'x', 'y\nz')],
+        }),
+      );
       expect((many.text, many.fileCount, many.added, many.removed), ('a.dart', 2, 3, 2));
-      final pending = toolSummary(_call({'kind': 'edit', 'title': 'Edit', 'rawInput': {'file_path': '/w/lib/c.dart'}}));
+      final pending = toolSummary(
+        _call({
+          'kind': 'edit',
+          'title': 'Edit',
+          'rawInput': {'file_path': '/w/lib/c.dart'},
+        }),
+      );
       expect((pending.text, pending.added, pending.removed), ('c.dart', null, null));
-      final nothing = toolSummary(_call({'kind': 'edit', 'content': [_diff('/w/d.dart', 'same', 'same')]}));
+      final nothing = toolSummary(
+        _call({
+          'kind': 'edit',
+          'content': [_diff('/w/d.dart', 'same', 'same')],
+        }),
+      );
       expect((nothing.text, nothing.added, nothing.removed), ('d.dart', null, null));
     });
 
     test('delete and move', () {
-      expect(toolSummary(_call({'kind': 'delete', 'locations': [{'path': '/w/old.txt'}]})).text, 'old.txt');
+      expect(
+        toolSummary(
+          _call({
+            'kind': 'delete',
+            'locations': [
+              {'path': '/w/old.txt'},
+            ],
+          }),
+        ).text,
+        'old.txt',
+      );
       expect(toolSummary(_call({'kind': 'move', 'title': 'Move a.dart to b.dart'})).text, 'Move a.dart to b.dart');
     });
 
     test('execute: the command, wherever the agent put it', () {
-      expect(toolSummary(_call({'kind': 'execute', 'title': 'echo hello', 'rawInput': {'command': 'echo hello', 'description': 'Echo'}})).text, 'echo hello');
-      expect(toolSummary(_call({'kind': 'execute', 'title': r'$ echo hi', 'rawInput': {'command': 'echo hi'}})).text, 'echo hi');
-      expect(toolSummary(_call({'kind': 'execute', 'title': r'$ mkdir x'})).text, 'mkdir x', reason: r'omp titles come as "$ cmd"');
-      expect(toolSummary(_call({'kind': 'execute', 'title': 'Terminal'})).text, 'Terminal', reason: 'Claude before its input arrives');
-      expect(toolSummary(_call({'kind': 'execute', 'rawInput': {'command': ['ls', '-la']}})).text, 'ls -la');
-      expect(toolSummary(_call({'kind': 'execute', 'rawInput': {'command': "/usr/bin/zsh -lc 'cat notes.txt'"}})).text, 'cat notes.txt');
-      expect(toolSummary(_call({'kind': 'execute', 'rawInput': {'command': 'bash -c "ls -la"'}})).text, 'ls -la');
-      final script = toolSummary(_call({'kind': 'execute', 'rawInput': {'command': 'set -e\nflutter test\necho done'}}));
+      expect(
+        toolSummary(
+          _call({
+            'kind': 'execute',
+            'title': 'echo hello',
+            'rawInput': {'command': 'echo hello', 'description': 'Echo'},
+          }),
+        ).text,
+        'echo hello',
+      );
+      expect(
+        toolSummary(
+          _call({
+            'kind': 'execute',
+            'title': r'$ echo hi',
+            'rawInput': {'command': 'echo hi'},
+          }),
+        ).text,
+        'echo hi',
+      );
+      expect(
+        toolSummary(_call({'kind': 'execute', 'title': r'$ mkdir x'})).text,
+        'mkdir x',
+        reason: r'omp titles come as "$ cmd"',
+      );
+      expect(
+        toolSummary(_call({'kind': 'execute', 'title': 'Terminal'})).text,
+        'Terminal',
+        reason: 'Claude before its input arrives',
+      );
+      expect(
+        toolSummary(
+          _call({
+            'kind': 'execute',
+            'rawInput': {
+              'command': ['ls', '-la'],
+            },
+          }),
+        ).text,
+        'ls -la',
+      );
+      expect(
+        toolSummary(
+          _call({
+            'kind': 'execute',
+            'rawInput': {'command': "/usr/bin/zsh -lc 'cat notes.txt'"},
+          }),
+        ).text,
+        'cat notes.txt',
+      );
+      expect(
+        toolSummary(
+          _call({
+            'kind': 'execute',
+            'rawInput': {'command': 'bash -c "ls -la"'},
+          }),
+        ).text,
+        'ls -la',
+      );
+      final script = toolSummary(
+        _call({
+          'kind': 'execute',
+          'rawInput': {'command': 'set -e\nflutter test\necho done'},
+        }),
+      );
       expect((script.text, script.extraLines), ('set -e', 2));
     });
 
@@ -240,66 +381,205 @@ void main() {
           'terminal_exit': {'exit_code': code, 'signal': signal, 'terminal_id': 'x'},
         },
       };
-      final ok = toolSummary(_call({'kind': 'execute', 'status': 'completed', 'rawInput': {'command': 'dart test'}, ...meta(0, 'all fine\n')}));
+      final ok = toolSummary(
+        _call({
+          'kind': 'execute',
+          'status': 'completed',
+          'rawInput': {'command': 'dart test'},
+          ...meta(0, 'all fine\n'),
+        }),
+      );
       expect((ok.failure, ok.exitCode, ok.signal), (null, null, null));
-      final failed = toolSummary(_call({'kind': 'execute', 'status': 'failed', 'rawInput': {'command': 'flutter test'}, ...meta(1, 'running\n1 failed\n')}));
+      final failed = toolSummary(
+        _call({
+          'kind': 'execute',
+          'status': 'failed',
+          'rawInput': {'command': 'flutter test'},
+          ...meta(1, 'running\n1 failed\n'),
+        }),
+      );
       expect((failed.failure, failed.exitCode), ('1 failed', 1));
       expect(failed.plain, 'flutter test · exit 1 · 1 failed');
-      final silent = toolSummary(_call({'kind': 'execute', 'status': 'completed', 'rawInput': {'command': 'make'}, ...meta(2, 'x\n')}));
+      final silent = toolSummary(
+        _call({
+          'kind': 'execute',
+          'status': 'completed',
+          'rawInput': {'command': 'make'},
+          ...meta(2, 'x\n'),
+        }),
+      );
       expect(silent.exitCode, 2, reason: 'a non-zero exit is a failure whatever the status says');
-      final killed = toolSummary(_call({'kind': 'execute', 'status': 'failed', 'rawInput': {'command': 'sleep 9'}, ...meta(0, 'zzz\n', signal: 'SIGTERM')}));
+      final killed = toolSummary(
+        _call({
+          'kind': 'execute',
+          'status': 'failed',
+          'rawInput': {'command': 'sleep 9'},
+          ...meta(0, 'zzz\n', signal: 'SIGTERM'),
+        }),
+      );
       expect((killed.signal, killed.plain), ('SIGTERM', 'sleep 9 · signal SIGTERM · zzz'));
-      final colour = toolSummary(_call({'kind': 'execute', 'status': 'failed', 'rawInput': {'command': 'x'}, ...meta(1, '\x1B[31merror: boom\x1B[0m\n')}));
+      final colour = toolSummary(
+        _call({
+          'kind': 'execute',
+          'status': 'failed',
+          'rawInput': {'command': 'x'},
+          ...meta(1, '\x1B[31merror: boom\x1B[0m\n'),
+        }),
+      );
       expect(colour.failure, 'error: boom');
       // Claude: the code is in the text, the output in rawOutput.
-      final claude = toolSummary(_call({
-        'kind': 'execute',
-        'status': 'failed',
-        'rawInput': {'command': 'foo'},
-        'rawOutput': 'Exit code 2\nsh: foo: command not found',
-      }));
+      final claude = toolSummary(
+        _call({
+          'kind': 'execute',
+          'status': 'failed',
+          'rawInput': {'command': 'foo'},
+          'rawOutput': 'Exit code 2\nsh: foo: command not found',
+        }),
+      );
       expect((claude.exitCode, claude.failure), (2, 'sh: foo: command not found'));
       // omp: a "Wall time" footer is not output.
-      final omp = toolSummary(_call({
-        'kind': 'execute',
-        'status': 'failed',
-        'rawInput': {'command': 'x'},
-        'rawOutput': {
-          'content': [{'type': 'text', 'text': 'oops\n\n\nWall time: 0.02 seconds'}],
-        },
-      }));
+      final omp = toolSummary(
+        _call({
+          'kind': 'execute',
+          'status': 'failed',
+          'rawInput': {'command': 'x'},
+          'rawOutput': {
+            'content': [
+              {'type': 'text', 'text': 'oops\n\n\nWall time: 0.02 seconds'},
+            ],
+          },
+        }),
+      );
       expect(omp.failure, 'oops');
-      final fenced = toolSummary(_call({
-        'kind': 'execute',
-        'status': 'failed',
-        'rawInput': {'command': 'x'},
-        'content': [{'type': 'content', 'content': {'type': 'text', 'text': '```console\nboom\n```'}}],
-      }));
+      final fenced = toolSummary(
+        _call({
+          'kind': 'execute',
+          'status': 'failed',
+          'rawInput': {'command': 'x'},
+          'content': [
+            {
+              'type': 'content',
+              'content': {'type': 'text', 'text': '```console\nboom\n```'},
+            },
+          ],
+        }),
+      );
       expect(fenced.failure, 'boom');
-      expect(toolSummary(_call({'kind': 'execute', 'status': 'in_progress', 'rawInput': {'command': 'x'}})).failure, isNull);
+      expect(
+        toolSummary(
+          _call({
+            'kind': 'execute',
+            'status': 'in_progress',
+            'rawInput': {'command': 'x'},
+          }),
+        ).failure,
+        isNull,
+      );
     });
 
     test('search: the pattern and the hit count the output states', () {
-      final counted = toolSummary(_call({
-        'kind': 'search',
-        'rawInput': {'pattern': 'TODO', 'path': 'lib'},
-        'rawOutput': {'totalMatches': 7},
-      }));
+      final counted = toolSummary(
+        _call({
+          'kind': 'search',
+          'rawInput': {'pattern': 'TODO', 'path': 'lib'},
+          'rawOutput': {'totalMatches': 7},
+        }),
+      );
       expect((counted.text, counted.hits, counted.plain), ('TODO', 7, 'TODO · 7 matches'));
-      expect(toolSummary(_call({'kind': 'search', 'rawInput': {'query': 'x'}, 'rawOutput': {'matches': [1, 2, 3]}})).hits, 3);
-      expect(toolSummary(_call({'kind': 'search', 'rawInput': {'pattern': 'x'}, 'rawOutput': 'Found 3 files\nlib/a.dart\nlib/b.dart'})).hits, 3);
-      expect(toolSummary(_call({'kind': 'search', 'rawInput': {'pattern': 'x'}, 'rawOutput': 'No matches found'})).hits, 0);
-      expect(toolSummary(_call({'kind': 'search', 'rawInput': {'pattern': 'x'}, 'rawOutput': 'lib/a.dart:1\nlib/b.dart:2'})).hits, isNull,
-          reason: 'a count is never guessed from the size of the text');
-      expect(toolSummary(_call({'kind': 'search', 'rawInput': {'pattern': 'x'}})).hits, isNull);
+      expect(
+        toolSummary(
+          _call({
+            'kind': 'search',
+            'rawInput': {'query': 'x'},
+            'rawOutput': {
+              'matches': [1, 2, 3],
+            },
+          }),
+        ).hits,
+        3,
+      );
+      expect(
+        toolSummary(
+          _call({
+            'kind': 'search',
+            'rawInput': {'pattern': 'x'},
+            'rawOutput': 'Found 3 files\nlib/a.dart\nlib/b.dart',
+          }),
+        ).hits,
+        3,
+      );
+      expect(
+        toolSummary(
+          _call({
+            'kind': 'search',
+            'rawInput': {'pattern': 'x'},
+            'rawOutput': 'No matches found',
+          }),
+        ).hits,
+        0,
+      );
+      expect(
+        toolSummary(
+          _call({
+            'kind': 'search',
+            'rawInput': {'pattern': 'x'},
+            'rawOutput': 'lib/a.dart:1\nlib/b.dart:2',
+          }),
+        ).hits,
+        isNull,
+        reason: 'a count is never guessed from the size of the text',
+      );
+      expect(
+        toolSummary(
+          _call({
+            'kind': 'search',
+            'rawInput': {'pattern': 'x'},
+          }),
+        ).hits,
+        isNull,
+      );
       expect(toolSummary(_call({'kind': 'search', 'title': 'Searching the code'})).text, 'Searching the code');
-      expect(toolSummary(_call({'kind': 'search', 'rawInput': {'pattern': 'a\nb'}})).text, 'a');
+      expect(
+        toolSummary(
+          _call({
+            'kind': 'search',
+            'rawInput': {'pattern': 'a\nb'},
+          }),
+        ).text,
+        'a',
+      );
     });
 
     test('fetch: the host', () {
-      expect(toolSummary(_call({'kind': 'fetch', 'rawInput': {'url': 'https://docs.flutter.dev/ui/layout?x=1'}})).text, 'docs.flutter.dev');
-      expect(toolSummary(_call({'kind': 'fetch', 'rawInput': {'url': 'example.com/path'}})).text, 'example.com');
-      expect(toolSummary(_call({'kind': 'fetch', 'rawInput': {'urls': ['https://a.test/x']}})).text, 'a.test');
+      expect(
+        toolSummary(
+          _call({
+            'kind': 'fetch',
+            'rawInput': {'url': 'https://docs.flutter.dev/ui/layout?x=1'},
+          }),
+        ).text,
+        'docs.flutter.dev',
+      );
+      expect(
+        toolSummary(
+          _call({
+            'kind': 'fetch',
+            'rawInput': {'url': 'example.com/path'},
+          }),
+        ).text,
+        'example.com',
+      );
+      expect(
+        toolSummary(
+          _call({
+            'kind': 'fetch',
+            'rawInput': {
+              'urls': ['https://a.test/x'],
+            },
+          }),
+        ).text,
+        'a.test',
+      );
       expect(toolSummary(_call({'kind': 'fetch', 'title': 'Fetch page'})).text, 'Fetch page');
     });
 
@@ -316,7 +596,10 @@ void main() {
     });
 
     test('is memoized per call object', () {
-      final c = _call({'kind': 'read', 'rawInput': {'path': 'a'}});
+      final c = _call({
+        'kind': 'read',
+        'rawInput': {'path': 'a'},
+      });
       expect(identical(toolSummary(c), toolSummary(c)), isTrue);
     });
 
@@ -358,7 +641,12 @@ void main() {
 
   group('groupTools', () {
     TranscriptTool tool(String id, String kind, String status, {String? path}) => TranscriptTool(
-      _call({'toolCallId': id, 'kind': kind, 'status': status, if (path != null) 'rawInput': {'path': path}}),
+      _call({
+        'toolCallId': id,
+        'kind': kind,
+        'status': status,
+        if (path != null) 'rawInput': {'path': path},
+      }),
     );
 
     test('adjacent completed reads and searches collapse; nothing else joins', () {
@@ -494,7 +782,9 @@ void main() {
     });
 
     test('a thought as the last item means no answer; thoughts are work', () {
-      final r = _Run()..add(_agentText('part', id: 'a'))..add(_thought('hmm'));
+      final r = _Run()
+        ..add(_agentText('part', id: 'a'))
+        ..add(_thought('hmm'));
       expect(r.turn.answer, isNull);
       expect(r.turn.thoughts.single.text, 'hmm');
       expect(r.turn.work.map((i) => i.key), [r.state.items[1].key, r.state.items[2].key]);
@@ -534,13 +824,21 @@ void main() {
         ..add(_tool('x2', 'failed', kind: 'execute'))
         ..add({
           ..._tool('x3', 'completed', kind: 'execute'),
-          '_meta': {'terminal_exit': {'exit_code': 2}},
+          '_meta': {
+            'terminal_exit': {'exit_code': 2},
+          },
         })
         ..add(_tool('s1', 'cancelled', kind: 'search'))
         ..add(_tool('t1', 'in_progress', kind: 'think'))
         ..add(_tool('t2', 'pending', kind: 'other'));
       final t = r.turn;
-      expect(t.toolCounts, {ToolKind.read: 2, ToolKind.execute: 3, ToolKind.search: 1, ToolKind.think: 1, ToolKind.other: 1});
+      expect(t.toolCounts, {
+        ToolKind.read: 2,
+        ToolKind.execute: 3,
+        ToolKind.search: 1,
+        ToolKind.think: 1,
+        ToolKind.other: 1,
+      });
       expect(t.failedCount, 2, reason: 'a failed status, and a command that exited with 2');
       expect(t.cancelledCount, 1);
       expect(t.unfinishedCount, 2);
@@ -564,7 +862,11 @@ void main() {
       expect(turn.breakouts().map((i) => i.key), ['tool:bad', 'tool:cut', r.state.items.last.key]);
       expect(turn.breakouts({'wait'}).map((i) => i.key), ['tool:bad', 'tool:cut', 'tool:wait', r.state.items.last.key]);
       expect(turn.needsAttention(), isTrue);
-      expect(turnsOf(const [TranscriptTool(ToolCall(toolCallId: 'a', status: ToolStatus.completed))]).single.needsAttention(), isFalse);
+      expect(
+        turnsOf(const [TranscriptTool(ToolCall(toolCallId: 'a', status: ToolStatus.completed))]).single
+            .needsAttention(),
+        isFalse,
+      );
     });
 
     test('memoized by list identity; streaming into the live message costs no rebuild; unchanged turns are the same object', () {
@@ -648,7 +950,13 @@ void main() {
       }
       // Started in a replay, finished live.
       var s = AgentSessionState('s', replaying: true);
-      s = s.apply(_u({'sessionUpdate': 'user_message_chunk', 'content': {'type': 'text', 'text': 'old'}}), at: _at(1));
+      s = s.apply(
+        _u({
+          'sessionUpdate': 'user_message_chunk',
+          'content': {'type': 'text', 'text': 'old'},
+        }),
+        at: _at(1),
+      );
       s = s.apply(_u(_tool('t', 'in_progress')), at: _at(2));
       s = s.withSetup(const AcpSessionSetup());
       s = s.apply(_u({'sessionUpdate': 'tool_call_update', 'toolCallId': 't', 'status': 'completed'}), at: _at(90));
@@ -660,7 +968,13 @@ void main() {
 
     test('a turn after a replay is timed', () {
       var s = AgentSessionState('s', replaying: true);
-      s = s.apply(_u({'sessionUpdate': 'user_message_chunk', 'content': {'type': 'text', 'text': 'old'}}), at: _at(1));
+      s = s.apply(
+        _u({
+          'sessionUpdate': 'user_message_chunk',
+          'content': {'type': 'text', 'text': 'old'},
+        }),
+        at: _at(1),
+      );
       s = s.apply(_u(_agentText('old answer')), at: _at(2)).withSetup(const AcpSessionSetup());
       s = s.withUserMessage([const TextBlock('new')], at: _at(60)).withTurnStarted();
       s = s.apply(_u(_agentText('new answer', id: 'n')), at: _at(65)).withTurnEnded(StopReason.endTurn, at: _at(70));
@@ -757,7 +1071,10 @@ void main() {
       final turn = turnsOf(stateOfTrace('claude', 'subagent').items).single;
       expect(turn.narration, hasLength(1));
       expect(turn.thoughts, hasLength(3));
-      expect(turn.toolCounts, {ToolKind.other: 1, ToolKind.think: 1}, reason: 'the subagent\'s own Bash call is in its run');
+      expect(turn.toolCounts, {
+        ToolKind.other: 1,
+        ToolKind.think: 1,
+      }, reason: 'the subagent\'s own Bash call is in its run');
       expect(turn.work.whereType<TranscriptMessage>().where((m) => m.role == MessageRole.agent), hasLength(1));
       expect(turn.answer, isNot(same(turn.narration.single)));
       expect(turn.items.indexOf(turn.narration.single), lessThan(turn.items.indexOf(turn.tools.first)));
@@ -789,7 +1106,11 @@ void main() {
       expect(waiting, startsWith('toolu_017D'), reason: 'still named, for whoever shows the request');
       final turn = turnsOf(state.items, live: state.turnActive).single;
       expect(turn.live, isTrue);
-      expect(turn.tools.map((t) => t.call.toolCallId), isNot(contains(waiting)), reason: 'it sits in the subagent\'s transcript');
+      expect(
+        turn.tools.map((t) => t.call.toolCallId),
+        isNot(contains(waiting)),
+        reason: 'it sits in the subagent\'s transcript',
+      );
       expect(turn.breakouts(state.waitingToolIds), isEmpty);
       expect(state.pending.single.origin!.id, startsWith('toolu_01Up'));
       final activity = activityOf(state, now: _at(0))!;
@@ -835,7 +1156,9 @@ void main() {
     });
 
     test('no duration when the turn is not timed or ran under a second', () {
-      final untimed = AgentSessionState('s').withUserMessage([const TextBlock('go')]).apply(_u(_tool('c', 'completed')));
+      final untimed = AgentSessionState('s')
+          .withUserMessage([const TextBlock('go')])
+          .apply(_u(_tool('c', 'completed')));
       expect(workSummaryLine(turnsOf(untimed.items).single), 'Worked \u00b7 1 command');
       var s = const AgentSessionState('s').withUserMessage([const TextBlock('go')], at: _at(0));
       s = s.apply(_u(_tool('c', 'completed')), at: _t0.add(const Duration(milliseconds: 400)));
@@ -846,7 +1169,11 @@ void main() {
 
   group('text helpers are safe for any script', () {
     test('clip never splits a letter from its marks', () {
-      for (final text in ['Tiếng Việt: Hà Nội, Đà Nẵng', 'Tie\u0302\u0301ng Vie\u0323\u0302t', '👨‍👩‍👧‍👦 family 🇻🇳 flag']) {
+      for (final text in [
+        'Tiếng Việt: Hà Nội, Đà Nẵng',
+        'Tie\u0302\u0301ng Vie\u0323\u0302t',
+        '👨‍👩‍👧‍👦 family 🇻🇳 flag',
+      ]) {
         final graphemes = text.characters.toList();
         for (var n = 1; n <= graphemes.length; n++) {
           final clipped = clip(text, n);
@@ -903,7 +1230,10 @@ void main() {
 
     test('the latest running tool, with its summary and when it started', () {
       var s = running();
-      s = s.apply(_u(_tool('r', 'completed', kind: 'read', title: 'Read a')), at: _at(1));
+      s = s.apply(
+        _u(_tool('r', 'completed', kind: 'read', title: 'Read a')),
+        at: _at(1),
+      );
       s = s.apply(_u(_tool('x', 'in_progress', rawInput: {'command': 'flutter test'})), at: _at(2));
       final a = activityOf(s, now: _at(14))!;
       expect(a.kind, ActivityKind.tool);
@@ -912,7 +1242,10 @@ void main() {
       expect(a.since, _at(2));
       expect(a.elapsed(_at(14)), const Duration(seconds: 12));
       // Claude never says in_progress: pending counts as running; the latest wins.
-      s = s.apply(_u(_tool('y', 'pending', kind: 'read', rawInput: {'file_path': '/w/lib/a.dart'})), at: _at(3));
+      s = s.apply(
+        _u(_tool('y', 'pending', kind: 'read', rawInput: {'file_path': '/w/lib/a.dart'})),
+        at: _at(3),
+      );
       expect(activityOf(s, now: _at(4))!.text, 'a.dart (w/lib)');
       // It ends: back to what is left.
       s = s.apply(_u({'sessionUpdate': 'tool_call_update', 'toolCallId': 'y', 'status': 'completed'}), at: _at(4));

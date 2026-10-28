@@ -465,10 +465,26 @@ bool _isLatinEnd(int c) => c == 0x2E || c == 0x21 || c == 0x3F || c == 0x2026;
 /// Sentence ends that need no space after them: CJK, fullwidth, Arabic
 /// question mark, Devanagari danda.
 bool _isWideEnd(int c) =>
-    c == 0x3002 || c == 0xFF01 || c == 0xFF1F || c == 0xFF0E || c == 0xFF61 || c == 0x061F || c == 0x0964 || c == 0x203C;
+    c == 0x3002 ||
+    c == 0xFF01 ||
+    c == 0xFF1F ||
+    c == 0xFF0E ||
+    c == 0xFF61 ||
+    c == 0x061F ||
+    c == 0x0964 ||
+    c == 0x203C;
 
 bool _isCloser(int c) =>
-    c == 0x29 || c == 0x5D || c == 0x22 || c == 0x27 || c == 0x201D || c == 0x2019 || c == 0xBB || c == 0x300D || c == 0x300F || c == 0xFF09;
+    c == 0x29 ||
+    c == 0x5D ||
+    c == 0x22 ||
+    c == 0x27 ||
+    c == 0x201D ||
+    c == 0x2019 ||
+    c == 0xBB ||
+    c == 0x300D ||
+    c == 0x300F ||
+    c == 0xFF09;
 
 const _abbreviations = {'e.g', 'i.e', 'vs', 'cf', 'dr', 'mr', 'mrs', 'ms', 'prof', 'no', 'approx', 'fig', 'st'};
 

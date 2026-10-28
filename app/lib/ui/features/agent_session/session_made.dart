@@ -12,7 +12,9 @@ import '../../../data/models/remote_file.dart';
 import '../../../data/models/web_bridge.dart' show sensitiveServiceOf;
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/machine_connection.dart' show LinkState;
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../../data/words/elapsed.dart';
 import '../../../data/words/plural.dart';
 import '../files/files_navigation.dart' show machineSupportsFiles, openRemoteFile;
@@ -51,8 +53,10 @@ bool _same(_Snap a, _Snap b) =>
 ///
 /// [opener] is the screen the sheet was opened from: a viewer is only pushed
 /// while it is still there.
-Future<void> showSessionMade(BuildContext opener, AgentSessionView session) =>
-    showAppSheet<void>(opener, builder: (ctx) => SessionMadeSheet(session: session, opener: opener));
+Future<void> showSessionMade(BuildContext opener, AgentSessionView session) => showAppSheet<void>(
+  opener,
+  builder: (ctx) => SessionMadeSheet(session: session, opener: opener),
+);
 
 /// The tab each session was last left on, so the sheet opens where the person
 /// was. Only the choice is kept (not what was on the tab): a kind that is no
@@ -172,15 +176,18 @@ class _SessionMadeSheetState extends State<SessionMadeSheet> {
   int _limit(MadeKind kind) => (kind == MadeKind.picture ? _gridStep : _listStep) * (1 + (_more[kind] ?? 0));
 
   void _open(MadeAsset asset) => unawaited(
-        _openMade(
-          context,
-          widget.opener,
-          widget.session,
-          asset,
-          loader: _entries,
-          pictures: [for (final a in _shown) if (a.kind == MadeKind.picture) a],
-        ),
-      );
+    _openMade(
+      context,
+      widget.opener,
+      widget.session,
+      asset,
+      loader: _entries,
+      pictures: [
+        for (final a in _shown)
+          if (a.kind == MadeKind.picture) a,
+      ],
+    ),
+  );
 
   /// [items] of one kind (not apps) as rows: the first [_limit] of them and a
   /// `N more` row when there are others.
@@ -245,7 +252,10 @@ class _SessionMadeSheetState extends State<SessionMadeSheet> {
     double line(TextStyle s) => scaler.scale(s.fontSize!) * s.height!;
     // A row: its padding, a title line and a line under it, and the hairline.
     final row = math.max(56.0, 24 + line(Type.row) + 2 + line(Type.secondary)) + 1;
-    final tile = (width - (_PictureGrid.columns - 1) * _PictureGrid.gap) / _PictureGrid.columns * 3 / 4 + Gap.xs + line(Type.caption);
+    final tile =
+        (width - (_PictureGrid.columns - 1) * _PictureGrid.gap) / _PictureGrid.columns * 3 / 4 +
+        Gap.xs +
+        line(Type.caption);
     var tallest = 0.0;
     for (final kind in kinds) {
       final n = shown.where((a) => a.kind == kind).length;
@@ -261,7 +271,8 @@ class _SessionMadeSheetState extends State<SessionMadeSheet> {
         final withPages = apps.take(_listStep).where((a) => a.pages.isNotEmpty).length;
         tallest = math.max(
           tallest,
-          (math.min(apps.length, _listStep) + (apps.length > _listStep ? 1 : 0)) * row + withPages * (AppChip.height + Gap.sm),
+          (math.min(apps.length, _listStep) + (apps.length > _listStep ? 1 : 0)) * row +
+              withPages * (AppChip.height + Gap.sm),
         );
       } else {
         tallest = math.max(tallest, (math.min(n, _listStep) + (n > _listStep ? 1 : 0)) * row);
@@ -284,13 +295,22 @@ class _SessionMadeSheetState extends State<SessionMadeSheet> {
           // the ones shown, so they join at the end. Nothing already here moves.
           _orderHistory = history;
           final known = _order?.toSet() ?? const <String>{};
-          if (_order != null) _order = [..._order!, for (final a in assets) if (!known.contains(a.key)) a.key];
+          if (_order != null) {
+            _order = [
+              ..._order!,
+              for (final a in assets)
+                if (!known.contains(a.key)) a.key,
+            ];
+          }
         }
         final shown = _stable(assets);
         _shown = shown;
         final ds = context.ds;
         final files = machineSupportsFiles(session.machine);
-        final kinds = [for (final k in _tabKinds) if (shown.any((a) => a.kind == k)) k];
+        final kinds = [
+          for (final k in _tabKinds)
+            if (shown.any((a) => a.kind == k)) k,
+        ];
         // The kind the person chose if it is still here, else the newest made
         // (servers only when nothing else exists).
         final newest = shown.where((a) => a.kind != MadeKind.server).firstOrNull?.kind ?? MadeKind.server;
@@ -307,37 +327,52 @@ class _SessionMadeSheetState extends State<SessionMadeSheet> {
             });
           }
         }
-        final apps = madeAppsOf([for (final a in shown) if (a.kind == MadeKind.server) a]);
-        final running = shown.any((a) => a.kind == MadeKind.server && serverStateOf(a, tasks, live: live) == ServerState.running);
+        final apps = madeAppsOf([
+          for (final a in shown)
+            if (a.kind == MadeKind.server) a,
+        ]);
+        final running = shown.any(
+          (a) => a.kind == MadeKind.server && serverStateOf(a, tasks, live: live) == ServerState.running,
+        );
         final scaler = MediaQuery.textScalerOf(context);
         // One kind's list or grid. Each starts at its top (a page that was
         // scrolled away is built again).
         Widget scroller(MadeKind kind) => CustomScrollView(
-              key: ValueKey(kind),
-              // About a row of pictures past the edge, not the default
-              // 250 dp: every tile built is a read of up to 2 MiB over
-              // the radio, and on a phone that is a third of the grid.
-              scrollCacheExtent: const ScrollCacheExtent.pixels(120),
-              slivers: [
-                if (kind == MadeKind.picture)
-                  _PictureGrid(
-                    assets: [for (final a in shown) if (a.kind == kind) a],
-                    limit: _limit(MadeKind.picture),
-                    files: files,
-                    loader: _entries,
-                    onOpen: _open,
-                    onMore: () => _showMore(MadeKind.picture),
-                  )
-                else
-                  SliverToBoxAdapter(
-                    child: Column(
-                      children: kind == MadeKind.server
-                          ? _appRows(apps, tasks: tasks, live: live)
-                          : _rows([for (final a in shown) if (a.kind == kind) a], kind, files: files),
-                    ),
-                  ),
-              ],
-            );
+          key: ValueKey(kind),
+          // About a row of pictures past the edge, not the default
+          // 250 dp: every tile built is a read of up to 2 MiB over
+          // the radio, and on a phone that is a third of the grid.
+          scrollCacheExtent: const ScrollCacheExtent.pixels(120),
+          slivers: [
+            if (kind == MadeKind.picture)
+              _PictureGrid(
+                assets: [
+                  for (final a in shown)
+                    if (a.kind == kind) a,
+                ],
+                limit: _limit(MadeKind.picture),
+                files: files,
+                loader: _entries,
+                onOpen: _open,
+                onMore: () => _showMore(MadeKind.picture),
+              )
+            else
+              SliverToBoxAdapter(
+                child: Column(
+                  children: kind == MadeKind.server
+                      ? _appRows(apps, tasks: tasks, live: live)
+                      : _rows(
+                          [
+                            for (final a in shown)
+                              if (a.kind == kind) a,
+                          ],
+                          kind,
+                          files: files,
+                        ),
+                ),
+              ),
+          ],
+        );
         return SheetScaffold(
           title: 'Made in this session',
           kind: SheetKind.list,
@@ -434,11 +469,11 @@ class _EarlierNote extends StatelessWidget {
 }
 
 String _tabLabel(MadeKind kind) => switch (kind) {
-      MadeKind.page => 'Pages',
-      MadeKind.picture => 'Pictures',
-      MadeKind.doc => 'Docs',
-      MadeKind.server => 'Apps',
-    };
+  MadeKind.page => 'Pages',
+  MadeKind.picture => 'Pictures',
+  MadeKind.doc => 'Docs',
+  MadeKind.server => 'Apps',
+};
 
 /// The switch between what was made: the app's one `Segmented`, a cell per kind
 /// with its count, a live dot on Apps while one runs. The sheet only says
@@ -454,24 +489,24 @@ class _KindTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        // The title row already leaves Gap.sm above.
-        padding: const EdgeInsets.only(bottom: Gap.xs),
-        child: Segmented<MadeKind>(
-          options: [
-            for (final (kind, label, count, running) in tabs)
-              SegmentOption(
-                kind,
-                label,
-                count: count,
-                leading: running ? const LinkDot(state: LinkState.online) : null,
-                // The dot is all a sighted person gets of "running"; say it.
-                semanticLabel: running ? '$label, $count, running' : null,
-              ),
-          ],
-          value: selected,
-          onChanged: onChanged,
-        ),
-      );
+    // The title row already leaves Gap.sm above.
+    padding: const EdgeInsets.only(bottom: Gap.xs),
+    child: Segmented<MadeKind>(
+      options: [
+        for (final (kind, label, count, running) in tabs)
+          SegmentOption(
+            kind,
+            label,
+            count: count,
+            leading: running ? const LinkDot(state: LinkState.online) : null,
+            // The dot is all a sighted person gets of "running"; say it.
+            semanticLabel: running ? '$label, $count, running' : null,
+          ),
+      ],
+      value: selected,
+      onChanged: onChanged,
+    ),
+  );
 }
 
 /// `12 more`: shows the next batch of a list.
@@ -483,11 +518,11 @@ class _MoreRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListRow(
-        leading: const IconTile(icon: LucideIcons.chevronDown),
-        leadingOnTitle: false,
-        title: '$count more',
-        onTap: onTap,
-      );
+    leading: const IconTile(icon: LucideIcons.chevronDown),
+    leadingOnTitle: false,
+    title: '$count more',
+    onTap: onTap,
+  );
 }
 
 /// Rows being opened, so a second tap while the connection is made does not
@@ -643,9 +678,7 @@ class _AppRow extends StatelessWidget {
               padding: EdgeInsets.only(left: ListRow.textIndent(), right: Gap.md, bottom: Gap.xs),
               child: Wrap(
                 spacing: Gap.sm,
-                children: [
-                  for (final p in app.pages) AppChip(label: visibleText(p.route), onTap: () => onOpen(p)),
-                ],
+                children: [for (final p in app.pages) AppChip(label: visibleText(p.route), onTap: () => onOpen(p))],
               ),
             ),
           ),
@@ -658,12 +691,7 @@ class _AppRow extends StatelessWidget {
 /// A page or a document: its name, and under it the folder and time (or why it
 /// cannot be opened on this machine).
 class _FileRow extends StatelessWidget {
-  const _FileRow({
-    required this.asset,
-    required this.filesAvailable,
-    required this.divider,
-    required this.onTap,
-  });
+  const _FileRow({required this.asset, required this.filesAvailable, required this.divider, required this.onTap});
 
   final MadeAsset asset;
   final bool filesAvailable;
@@ -698,7 +726,10 @@ class _FileRow extends StatelessWidget {
     if (!divider) return row;
     return Column(
       mainAxisSize: MainAxisSize.min,
-      children: [row, Hairline(indent: ListRow.textIndent())],
+      children: [
+        row,
+        Hairline(indent: ListRow.textIndent()),
+      ],
     );
   }
 }
@@ -853,10 +884,7 @@ class _PictureGrid extends StatelessWidget {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.only(bottom: Gap.md),
-                child: Text(
-                  _noFiles,
-                  style: Type.secondary.copyWith(color: ds.textSecondary),
-                ),
+                child: Text(_noFiles, style: Type.secondary.copyWith(color: ds.textSecondary)),
               ),
             ),
           if (files) rows else SliverOpacity(opacity: 0.55, sliver: rows),
@@ -870,7 +898,13 @@ class _PictureGrid extends StatelessWidget {
 /// glyph until then, a crossed one when the file is gone, and a tile that asks
 /// again when tapped when the machine could not be asked.
 class _PictureTile extends StatefulWidget {
-  const _PictureTile({super.key, required this.asset, required this.loader, required this.enabled, required this.onTap});
+  const _PictureTile({
+    super.key,
+    required this.asset,
+    required this.loader,
+    required this.enabled,
+    required this.onTap,
+  });
 
   final MadeAsset asset;
   final _EntryLoader loader;
@@ -895,7 +929,9 @@ class _PictureTileState extends State<_PictureTile> {
   }
 
   void _ask() => unawaited(
-        widget.loader.of(widget.asset).then(
+    widget.loader
+        .of(widget.asset)
+        .then(
           (entry) {
             if (!mounted) return;
             setState(() {
@@ -908,7 +944,7 @@ class _PictureTileState extends State<_PictureTile> {
             if (mounted) setState(() => _face = _Face.unknown);
           },
         ),
-      );
+  );
 
   void _retry() {
     setState(() => _face = _Face.loading);
@@ -942,7 +978,12 @@ class _PictureTileState extends State<_PictureTile> {
                       faint: _face == _Face.loading,
                       pressed: pressed,
                     )
-                  : PhotoThumbFace(files: widget.loader._session.machine.files, entry: entry, thumbs: PhotoThumbs.shared, pressed: pressed),
+                  : PhotoThumbFace(
+                      files: widget.loader._session.machine.files,
+                      entry: entry,
+                      thumbs: PhotoThumbs.shared,
+                      pressed: pressed,
+                    ),
             ),
           ),
           Padding(
@@ -1008,16 +1049,16 @@ class _MoreTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => PressBuilder(
-        onTap: onTap,
-        haptic: true,
-        builder: (context, pressed) => AspectRatio(
-          aspectRatio: 4 / 3,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(Radii.sm),
-            child: _QuietTile(icon: LucideIcons.chevronDown, pressed: pressed, text: '$count more'),
-          ),
-        ),
-      );
+    onTap: onTap,
+    haptic: true,
+    builder: (context, pressed) => AspectRatio(
+      aspectRatio: 4 / 3,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(Radii.sm),
+        child: _QuietTile(icon: LucideIcons.chevronDown, pressed: pressed, text: '$count more'),
+      ),
+    ),
+  );
 }
 
 /// `Made 3` beside the subagents chip under the session's title: the number of
@@ -1030,31 +1071,33 @@ class MadeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SessionSelect<(List<MadeAsset>, bool, MadeReach)>(
-        session: session,
-        select: (s) => (
-          madeAssetsOf(s.state.items, cwd: s.cwd, history: s.madeHistory),
-          s.subagents.isNotEmpty || s.subagentSummary.total > 0,
-          s.madeReach,
+    session: session,
+    select: (s) => (
+      madeAssetsOf(s.state.items, cwd: s.cwd, history: s.madeHistory),
+      s.subagents.isNotEmpty || s.subagentSummary.total > 0,
+      s.madeReach,
+    ),
+    same: (a, b) => sameMadeAssets(a.$1, b.$1) && a.$2 == b.$2 && a.$3 == b.$3,
+    builder: (context, v) {
+      final (assets, besideSubagents, reach) = v;
+      final partial = reach != MadeReach.whole;
+      if (assets.isEmpty && !partial) return const SizedBox.shrink();
+      // `9+`: the rows are the newest ones, the earlier part is not read yet.
+      return Padding(
+        // The bar's row places the chips; this one follows the subagents chip.
+        padding: besideSubagents
+            ? const EdgeInsets.only(left: Gap.sm, bottom: Gap.hair)
+            : const EdgeInsets.only(bottom: Gap.hair),
+        child: AppChip(
+          label: partial ? (assets.isEmpty ? 'Made' : 'Made ${madeCountOf(assets)}+') : 'Made',
+          count: partial ? null : madeCountOf(assets),
+          semanticLabel: partial
+              ? '${countOf(madeCountOf(assets), 'item')} made so far, earlier history not read'
+              : '${countOf(madeCountOf(assets), 'item')} made',
+          leading: Icon(HerdrIcons.made, size: IconSize.inline, color: context.ds.textSecondary),
+          onTap: () => unawaited(showSessionMade(context, session)),
         ),
-        same: (a, b) => sameMadeAssets(a.$1, b.$1) && a.$2 == b.$2 && a.$3 == b.$3,
-        builder: (context, v) {
-          final (assets, besideSubagents, reach) = v;
-          final partial = reach != MadeReach.whole;
-          if (assets.isEmpty && !partial) return const SizedBox.shrink();
-          // `9+`: the rows are the newest ones, the earlier part is not read yet.
-          return Padding(
-            // The bar's row places the chips; this one follows the subagents chip.
-            padding: besideSubagents ? const EdgeInsets.only(left: Gap.sm, bottom: Gap.hair) : const EdgeInsets.only(bottom: Gap.hair),
-            child: AppChip(
-              label: partial ? (assets.isEmpty ? 'Made' : 'Made ${madeCountOf(assets)}+') : 'Made',
-              count: partial ? null : madeCountOf(assets),
-              semanticLabel: partial
-                  ? '${countOf(madeCountOf(assets), 'item')} made so far, earlier history not read'
-                  : '${countOf(madeCountOf(assets), 'item')} made',
-              leading: Icon(HerdrIcons.made, size: IconSize.inline, color: context.ds.textSecondary),
-              onTap: () => unawaited(showSessionMade(context, session)),
-            ),
-          );
-        },
       );
+    },
+  );
 }

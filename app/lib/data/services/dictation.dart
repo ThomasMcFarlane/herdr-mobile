@@ -19,7 +19,10 @@ class DictationLanguage {
 abstract interface class SpeechEngine {
   /// Asks for the microphone on the first call and prepares the recognizer.
   /// False when it is denied or the phone has no speech service.
-  Future<bool> initialize({required void Function(String error, bool permanent) onError, required void Function(bool listening) onListening});
+  Future<bool> initialize({
+    required void Function(String error, bool permanent) onError,
+    required void Function(bool listening) onListening,
+  });
 
   Future<List<DictationLanguage>> languages();
 
@@ -39,16 +42,18 @@ class PluginSpeechEngine implements SpeechEngine {
   final _speech = SpeechToText();
 
   @override
-  Future<bool> initialize({required void Function(String error, bool permanent) onError, required void Function(bool listening) onListening}) =>
-      _speech.initialize(
-        onError: (SpeechRecognitionError e) => onError(e.errorMsg, e.permanent),
-        onStatus: (status) => onListening(status == 'listening'),
-      );
+  Future<bool> initialize({
+    required void Function(String error, bool permanent) onError,
+    required void Function(bool listening) onListening,
+  }) => _speech.initialize(
+    onError: (SpeechRecognitionError e) => onError(e.errorMsg, e.permanent),
+    onStatus: (status) => onListening(status == 'listening'),
+  );
 
   @override
   Future<List<DictationLanguage>> languages() async => [
-        for (final l in await _speech.locales()) DictationLanguage(l.localeId, l.name),
-      ];
+    for (final l in await _speech.locales()) DictationLanguage(l.localeId, l.name),
+  ];
 
   @override
   Future<bool> hasPermission() => _speech.hasPermission;
@@ -195,9 +200,9 @@ class Dictation extends ChangeNotifier {
     }
 
     return [...all]..sort((a, b) {
-        final r = rank(a).compareTo(rank(b));
-        return r != 0 ? r : a.name.compareTo(b.name);
-      });
+      final r = rank(a).compareTo(rank(b));
+      return r != 0 ? r : a.name.compareTo(b.name);
+    });
   }
 
   Future<void> setLanguage(String? id) async {

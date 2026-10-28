@@ -64,13 +64,7 @@ abstract final class BrandGeometry {
   /// [crookDrawn], [shoulderDrawn] and [dotIn] run 0..1 for the draw-in; 1 is
   /// the finished mark. [mono] paints every part in one colour (themed
   /// launcher icon, notification icon).
-  static void paint(
-    Canvas canvas, {
-    Color? mono,
-    double crookDrawn = 1,
-    double shoulderDrawn = 1,
-    double dotIn = 1,
-  }) {
+  static void paint(Canvas canvas, {Color? mono, double crookDrawn = 1, double shoulderDrawn = 1, double dotIn = 1}) {
     final line = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = stroke
@@ -81,11 +75,7 @@ abstract final class BrandGeometry {
     _stroke(canvas, shoulder, shoulderDrawn, line);
     if (dotIn > 0) {
       final color = mono ?? needsYou;
-      canvas.drawCircle(
-        dot,
-        dotRadius,
-        Paint()..color = Ds.fade(color, dotIn),
-      );
+      canvas.drawCircle(dot, dotRadius, Paint()..color = Ds.fade(color, dotIn));
     }
   }
 
@@ -143,13 +133,10 @@ class _BrandMarkState extends State<BrandMark> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) => ExcludeSemantics(
-        child: RepaintBoundary(
-          child: CustomPaint(
-            size: Size.square(widget.size),
-            painter: _BrandMarkPainter(_controller),
-          ),
-        ),
-      );
+    child: RepaintBoundary(
+      child: CustomPaint(size: Size.square(widget.size), painter: _BrandMarkPainter(_controller)),
+    ),
+  );
 }
 
 class _BrandMarkPainter extends CustomPainter {

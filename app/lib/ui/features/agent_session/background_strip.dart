@@ -6,7 +6,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/acp/session_state.dart' show AgentPhase;
 import '../../../data/acp/background/background_work.dart';
 import '../../../data/repositories/agent_session.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'background_format.dart';
 import 'background_sheet.dart';
 import 'composer.dart' show HideWhenCompact;

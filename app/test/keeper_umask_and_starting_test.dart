@@ -36,7 +36,11 @@ void main() {
       expect(r.code, 0, reason: r.err);
       final id = asJson(jsonDecode(r.out))['id']! as String;
 
-      expect(mode(written), 0x1a0, reason: '0666 with umask 027 is 0640: the agent is not stuck with the keeper\'s 077'); // 0640
+      expect(
+        mode(written),
+        0x1a0,
+        reason: '0666 with umask 027 is 0640: the agent is not stuck with the keeper\'s 077',
+      ); // 0640
       for (final ext in ['sock', 'json', 'log']) {
         expect(mode('${h.keepers}/$id.$ext'), 0x180, reason: ext); // 0600
       }
@@ -84,7 +88,10 @@ void main() {
 
         final k = await h.run(keeperKillCommand(id));
         expect(k.code, 0, reason: k.err);
-        await eventually(() async => !await processAlive(keeperPid) && !await processAlive(agentPid), what: 'keeper and agent to stop');
+        await eventually(
+          () async => !await processAlive(keeperPid) && !await processAlive(agentPid),
+          what: 'keeper and agent to stop',
+        );
         expect((await start.finished).code, 70);
         expect(await h.list(), isEmpty);
       });

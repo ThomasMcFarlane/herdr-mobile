@@ -20,12 +20,7 @@ Future<void> loadAppFonts() async {
     await loader.load();
   }
 
-  await load('Inter', const [
-    'Inter-Regular.ttf',
-    'Inter-Medium.ttf',
-    'Inter-SemiBold.ttf',
-    'Inter-Bold.ttf',
-  ]);
+  await load('Inter', const ['Inter-Regular.ttf', 'Inter-Medium.ttf', 'Inter-SemiBold.ttf', 'Inter-Bold.ttf']);
   await load('JetBrainsMono', const [
     'JetBrainsMono-Regular.ttf',
     'JetBrainsMono-Bold.ttf',
@@ -35,16 +30,15 @@ Future<void> loadAppFonts() async {
   await load('HerdrIcons', const ['HerdrIcons.ttf']);
 
   // Icon font from the lucide package (no asset path of our own).
-  final config = jsonDecode(await File('.dart_tool/package_config.json').readAsString())
-      as Map<String, dynamic>;
-  final root = (config['packages'] as List)
-      .cast<Map<String, dynamic>>()
-      .firstWhere((p) => p['name'] == 'lucide_icons_flutter')['rootUri'] as String;
+  final config = jsonDecode(await File('.dart_tool/package_config.json').readAsString()) as Map<String, dynamic>;
+  final root =
+      (config['packages'] as List).cast<Map<String, dynamic>>().firstWhere(
+            (p) => p['name'] == 'lucide_icons_flutter',
+          )['rootUri']
+          as String;
   final fontFile = File.fromUri(Uri.parse('${root.endsWith('/') ? root : '$root/'}assets/lucide.ttf'));
   final lucide = FontLoader('packages/lucide_icons_flutter/Lucide');
-  lucide.addFont(
-    fontFile.readAsBytes().then((b) => ByteData.sublistView(Uint8List.fromList(b))),
-  );
+  lucide.addFont(fontFile.readAsBytes().then((b) => ByteData.sublistView(Uint8List.fromList(b))));
   await lucide.load();
 }
 

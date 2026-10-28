@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:mermaid_flutter/mermaid_flutter.dart' show ScenePainter;
 
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'mermaid_layout.dart';
 import 'mermaid_theme.dart';
 
@@ -58,7 +59,12 @@ class MermaidCache {
       _results[key] = hit;
       return hit.done.future;
     }
-    final job = MermaidJob(source: source, theme: mermaidThemeOf(ds), darkText: mermaidDarkText, lightText: mermaidLightText);
+    final job = MermaidJob(
+      source: source,
+      theme: mermaidThemeOf(ds),
+      darkText: mermaidDarkText,
+      lightText: mermaidLightText,
+    );
     final entry = _Layout();
     _results[key] = entry;
     while (_results.length > _resultsKept) {

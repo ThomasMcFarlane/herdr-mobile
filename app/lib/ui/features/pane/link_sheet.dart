@@ -6,7 +6,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/models/web_bridge.dart';
 import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/web_preview.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../support/open_link.dart';
 import '../web/web_preview_screen.dart';
 
@@ -39,7 +41,9 @@ Future<void> showLinkSheet(BuildContext context, String url, {MachineConnection?
 
       Future<void> open() async {
         Navigator.of(ctx).pop();
-        if (!await openTappedLink(url)) toast('Couldn’t open on this phone: no browser could open it.', kind: ToastKind.failed);
+        if (!await openTappedLink(url)) {
+          toast('Couldn’t open on this phone: no browser could open it.', kind: ToastKind.failed);
+        }
       }
 
       // The sheet goes first, then the page's screen, which asks the
@@ -50,40 +54,30 @@ Future<void> showLinkSheet(BuildContext context, String url, {MachineConnection?
       }
 
       Widget note(IconData icon, String text) => Padding(
-            padding: const EdgeInsets.only(top: Gap.md),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: Gap.hair),
-                  child: Icon(icon, size: IconSize.row, color: ds.textSecondary),
-                ),
-                const SizedBox(width: Gap.sm),
-                Expanded(
-                  child: Text(text, style: Type.secondary.copyWith(color: ds.textSecondary)),
-                ),
-              ],
+        padding: const EdgeInsets.only(top: Gap.md),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: Gap.hair),
+              child: Icon(icon, size: IconSize.row, color: ds.textSecondary),
             ),
-          );
+            const SizedBox(width: Gap.sm),
+            Expanded(
+              child: Text(text, style: Type.secondary.copyWith(color: ds.textSecondary)),
+            ),
+          ],
+        ),
+      );
 
       return SheetScaffold(
         title: host.isEmpty ? 'Link' : host,
         kind: SheetKind.message,
         actions: [
           if (!local)
-            AppButton(
-              label: 'Open in browser',
-              icon: LucideIcons.externalLink,
-              expand: true,
-              onPressed: open,
-            )
+            AppButton(label: 'Open in browser', icon: LucideIcons.externalLink, expand: true, onPressed: open)
           else if (previewable)
-            AppButton(
-              label: 'Open page',
-              icon: LucideIcons.smartphone,
-              expand: true,
-              onPressed: openOnPhone,
-            ),
+            AppButton(label: 'Open page', icon: LucideIcons.smartphone, expand: true, onPressed: openOnPhone),
           AppButton(
             label: 'Copy link',
             icon: LucideIcons.copy,

@@ -7,19 +7,27 @@ import 'package:markdown/markdown.dart' as md;
 import '../../../app/test/markdown/support/dump_writer.dart';
 
 final _doc = md.Document(
-  extensionSet: md.ExtensionSet(
-    [...md.ExtensionSet.gitHubFlavored.blockSyntaxes, const md.AlertBlockSyntax()],
-    md.ExtensionSet.gitHubFlavored.inlineSyntaxes,
-  ),
+  extensionSet: md.ExtensionSet([
+    ...md.ExtensionSet.gitHubFlavored.blockSyntaxes,
+    const md.AlertBlockSyntax(),
+  ], md.ExtensionSet.gitHubFlavored.inlineSyntaxes),
   encodeHtml: false,
 );
 
 List<md.Node> parseC(String text) =>
     _doc.parseLines(text.replaceAll('\r\n', '\n').split('\n'));
 
-void _inline(md.Node n, int flags, String? link, List<DInline> out, bool softSpace) {
+void _inline(
+  md.Node n,
+  int flags,
+  String? link,
+  List<DInline> out,
+  bool softSpace,
+) {
   if (n is md.Text) {
-    final t = flags & dumpCode == 0 && softSpace ? n.text.replaceAll('\n', ' ') : n.text;
+    final t = flags & dumpCode == 0 && softSpace
+        ? n.text.replaceAll('\n', ' ')
+        : n.text;
     out.add(DRun(t, flags: flags, link: link));
     return;
   }
@@ -30,7 +38,8 @@ void _inline(md.Node n, int flags, String? link, List<DInline> out, bool softSpa
     case 'img':
       out.add(DImage(e.attributes['src'] ?? '', e.attributes['alt'] ?? ''));
     default:
-      final f = flags |
+      final f =
+          flags |
           switch (e.tag) {
             'strong' => dumpBold,
             'em' => dumpItalic,
@@ -55,11 +64,26 @@ List<DInline> _inlines(Iterable<md.Node> nodes, bool softSpace) {
 
 String _rawText(md.Node n) => n is md.Text
     ? n.text
-    : [for (final c in (n as md.Element).children ?? const <md.Node>[]) _rawText(c)].join();
+    : [
+        for (final c in (n as md.Element).children ?? const <md.Node>[])
+          _rawText(c),
+      ].join();
 
 const _blockTags = {
-  'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre', 'blockquote', 'ul', 'ol',
-  'hr', 'table', 'div',
+  'p',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'pre',
+  'blockquote',
+  'ul',
+  'ol',
+  'hr',
+  'table',
+  'div',
 };
 
 void _blocks(DumpOut out, int depth, List<md.Node> nodes, bool softSpace) {
@@ -121,17 +145,24 @@ void _block(DumpOut out, int depth, md.Element e, bool softSpace) {
       _blocks(out, depth + 1, kids.skip(1).toList(), softSpace);
     case 'ul' || 'ol':
       // Loose when any item holds a paragraph element.
-      final loose = kids.any((li) =>
-          li is md.Element &&
-          (li.children ?? const <md.Node>[]).any((c) => c is md.Element && c.tag == 'p'));
+      final loose = kids.any(
+        (li) =>
+            li is md.Element &&
+            (li.children ?? const <md.Node>[]).any(
+              (c) => c is md.Element && c.tag == 'p',
+            ),
+      );
       final start = e.tag == 'ol' ? ' ${e.attributes['start'] ?? '1'}' : '';
       out.add(depth, '${e.tag}$start ${loose ? 'loose' : 'tight'}');
       for (final li in kids.whereType<md.Element>()) {
         final input = (li.children ?? const <md.Node>[])
             .whereType<md.Element>()
-            .followedBy((li.children ?? const <md.Node>[])
-                .whereType<md.Element>()
-                .expand((p) => p.children?.whereType<md.Element>() ?? const <md.Element>[]))
+            .followedBy(
+              (li.children ?? const <md.Node>[]).whereType<md.Element>().expand(
+                (p) =>
+                    p.children?.whereType<md.Element>() ?? const <md.Element>[],
+              ),
+            )
             .where((c) => c.tag == 'input')
             .firstOrNull;
         final task = input == null
@@ -150,12 +181,13 @@ void _block(DumpOut out, int depth, md.Element e, bool softSpace) {
       out.add(depth, 'table ${cells.map(_align).join(',')}');
       for (final (section, r) in rows) {
         out.add(
-            depth + 1,
-            section == 'thead' ? 'th' : 'tr',
-            dumpCells([
-              for (final c in r.children!.whereType<md.Element>())
-                _inlines(c.children ?? const <md.Node>[], softSpace)
-            ]));
+          depth + 1,
+          section == 'thead' ? 'th' : 'tr',
+          dumpCells([
+            for (final c in r.children!.whereType<md.Element>())
+              _inlines(c.children ?? const <md.Node>[], softSpace),
+          ]),
+        );
       }
   }
 }

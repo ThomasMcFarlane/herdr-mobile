@@ -29,7 +29,10 @@ Future<FakeKit> openSheet(WidgetTester tester, {int photos = 400, bool reduced =
   await tester.pumpWidget(
     MaterialApp(
       theme: AppTheme.light(),
-      builder: (context, child) => MediaQuery(data: MediaQuery.of(context).copyWith(disableAnimations: reduced), child: child!),
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(disableAnimations: reduced),
+        child: child!,
+      ),
       home: AgentSessionScreen(key: ObjectKey(session), session: session, attachKit: fake.kit),
     ),
   );
@@ -41,8 +44,9 @@ Future<FakeKit> openSheet(WidgetTester tester, {int photos = 400, bool reduced =
 }
 
 /// The grid's scrollable (not the transcript's behind the sheet).
-ScrollableState grid(WidgetTester tester) =>
-    tester.state<ScrollableState>(find.descendant(of: find.byType(GalleryTab), matching: find.byType(Scrollable)).first);
+ScrollableState grid(WidgetTester tester) => tester.state<ScrollableState>(
+  find.descendant(of: find.byType(GalleryTab), matching: find.byType(Scrollable)).first,
+);
 
 /// Top edge of the album chip (header): moves with the sheet.
 double sheetTop(WidgetTester tester) => tester.getTopLeft(find.text('Recent')).dy;
@@ -142,7 +146,9 @@ void main() {
     testWidgets('follows the finger 1:1 and lays the grid out once', (tester) async {
       await openSheet(tester);
       final before = sheetTop(tester);
-      final gridSize = tester.getSize(find.descendant(of: find.byType(GalleryTab), matching: find.byType(CustomScrollView)));
+      final gridSize = tester.getSize(
+        find.descendant(of: find.byType(GalleryTab), matching: find.byType(CustomScrollView)),
+      );
       final built = <String, int>{};
       debugRegionBuilt = (r) => built[r] = (built[r] ?? 0) + 1;
       final g = await tester.startGesture(Offset(206, before - 40));
@@ -157,7 +163,11 @@ void main() {
         last = now;
       }
       expect(sheetTop(tester) - before, greaterThan(90));
-      expect(tester.getSize(find.descendant(of: find.byType(GalleryTab), matching: find.byType(CustomScrollView))), gridSize, reason: 'the grid is translated, never resized');
+      expect(
+        tester.getSize(find.descendant(of: find.byType(GalleryTab), matching: find.byType(CustomScrollView))),
+        gridSize,
+        reason: 'the grid is translated, never resized',
+      );
       expect(built['attach:grid'], isNull, reason: 'no rebuild of the grid during the drag');
       expect(built['attach:tile'], isNull, reason: 'nor of one tile');
       await g.up();
@@ -180,7 +190,9 @@ void main() {
       expect(find.byType(AttachTabBar), findsNothing);
     });
 
-    testWidgets('a flick up expands to full height; then the grid scrolls; at the top a pull brings the sheet down', (tester) async {
+    testWidgets('a flick up expands to full height; then the grid scrolls; at the top a pull brings the sheet down', (
+      tester,
+    ) async {
       await openSheet(tester);
       final half = sheetTop(tester);
       await tester.fling(find.text('Recent'), const Offset(0, -300), 2500);
@@ -190,13 +202,20 @@ void main() {
       expect(full, lessThan(half - 300), reason: 'now at full height');
       // The grid scrolls now.
       final scroll = grid(tester);
-      await tester.drag(find.descendant(of: find.byType(GalleryTab), matching: find.byType(CustomScrollView)), const Offset(0, -400));
+      await tester.drag(
+        find.descendant(of: find.byType(GalleryTab), matching: find.byType(CustomScrollView)),
+        const Offset(0, -400),
+      );
       await tester.pump();
       expect(scroll.position.pixels, greaterThan(100));
       // Back to the top, then pull down: the sheet follows and goes to half.
       scroll.position.jumpTo(0);
       await tester.pump();
-      await tester.fling(find.descendant(of: find.byType(GalleryTab), matching: find.byType(CustomScrollView)), const Offset(0, 320), 2200);
+      await tester.fling(
+        find.descendant(of: find.byType(GalleryTab), matching: find.byType(CustomScrollView)),
+        const Offset(0, 320),
+        2200,
+      );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 700));
       expect(sheetTop(tester), closeTo(half, 40), reason: 'half height again, not closed');
@@ -211,7 +230,9 @@ void main() {
       expect(scroll.position.pixels, 0);
     });
 
-    testWidgets('focusing the search field on the Machine tab lifts the sheet to full height for the keyboard', (tester) async {
+    testWidgets('focusing the search field on the Machine tab lifts the sheet to full height for the keyboard', (
+      tester,
+    ) async {
       await openSheet(tester);
       await tester.tap(find.byKey(AttachTabBar.tabKey(AttachTab.host)));
       await tester.pump();
@@ -221,7 +242,11 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
       expect(tester.getTopLeft(find.textContaining('Find in')).dy, lessThan(half - 150));
-      expect(find.byKey(AttachTabBar.tabKey(AttachTab.gallery)), findsNothing, reason: 'the keyboard has the room, the tab bar steps aside');
+      expect(
+        find.byKey(AttachTabBar.tabKey(AttachTab.gallery)),
+        findsNothing,
+        reason: 'the keyboard has the room, the tab bar steps aside',
+      );
     });
 
     testWidgets('reduced motion: a release lands on its stop at once', (tester) async {

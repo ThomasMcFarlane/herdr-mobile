@@ -12,17 +12,10 @@ Future<String?> showRenameSheet(
   String initial = '',
   String? helper,
   bool allowEmpty = false,
-}) =>
-    showAppSheet<String>(
-      context,
-      builder: (ctx) => _RenameBody(
-        title: title,
-        label: label,
-        initial: initial,
-        helper: helper,
-        allowEmpty: allowEmpty,
-      ),
-    );
+}) => showAppSheet<String>(
+  context,
+  builder: (ctx) => _RenameBody(title: title, label: label, initial: initial, helper: helper, allowEmpty: allowEmpty),
+);
 
 class _RenameBody extends StatefulWidget {
   const _RenameBody({
@@ -61,20 +54,20 @@ class _RenameBodyState extends State<_RenameBody> {
 
   @override
   Widget build(BuildContext context) => SheetScaffold(
-        title: widget.title,
-        kind: SheetKind.form,
-        actions: [AppButton(label: 'Save', expand: true, onPressed: _valid ? _save : null)],
-        child: Padding(
-          padding: const EdgeInsets.only(top: Gap.sm),
-          child: LabeledField(
-            label: widget.label,
-            controller: _controller,
-            helper: widget.helper,
-            autofocus: true,
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => _save(),
-            onChanged: (_) => setState(() {}),
-          ),
-        ),
-      );
+    title: widget.title,
+    kind: SheetKind.form,
+    actions: [AppButton(label: 'Save', expand: true, onPressed: _valid ? _save : null)],
+    child: Padding(
+      padding: const EdgeInsets.only(top: Gap.sm),
+      child: LabeledField(
+        label: widget.label,
+        controller: _controller,
+        helper: widget.helper,
+        autofocus: true,
+        textInputAction: TextInputAction.done,
+        onSubmitted: (_) => _save(),
+        onChanged: (_) => setState(() {}),
+      ),
+    ),
+  );
 }

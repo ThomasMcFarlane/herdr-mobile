@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 
 import '../../../data/models/remote_file.dart';
 import '../../../data/services/remote_files.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'file_format.dart';
 import 'photo_thumbs.dart';
 
@@ -17,13 +19,7 @@ import 'photo_thumbs.dart';
 /// reads of tiles nobody sees. [entries] are the pictures in display order
 /// (see `photoEntries`); [onOpen] hears the index of the tile tapped.
 class PhotoGrid extends StatelessWidget {
-  const PhotoGrid({
-    super.key,
-    required this.files,
-    required this.entries,
-    required this.onOpen,
-    this.thumbs,
-  });
+  const PhotoGrid({super.key, required this.files, required this.entries, required this.onOpen, this.thumbs});
 
   /// Tiles per row.
   static const columns = 3;
@@ -63,13 +59,7 @@ class PhotoGrid extends StatelessWidget {
 }
 
 class _PhotoTile extends StatelessWidget {
-  const _PhotoTile({
-    super.key,
-    required this.files,
-    required this.entry,
-    required this.thumbs,
-    required this.onTap,
-  });
+  const _PhotoTile({super.key, required this.files, required this.entry, required this.thumbs, required this.onTap});
 
   final RemoteFiles files;
   final RemoteEntry entry;
@@ -203,9 +193,7 @@ class _PhotoThumbFaceState extends State<PhotoThumbFace> with SingleTickerProvid
           },
         ),
         if (image != null)
-          _fade == null
-              ? _Picture(image)
-              : FadeTransition(opacity: Motion.curved(_fade!), child: _Picture(image)),
+          _fade == null ? _Picture(image) : FadeTransition(opacity: Motion.curved(_fade!), child: _Picture(image)),
         if (widget.pressed) ColoredBox(color: ds.pressTint),
       ],
     );
@@ -220,11 +208,8 @@ class _Picture extends StatelessWidget {
   final ui.Image image;
 
   @override
-  Widget build(BuildContext context) => RawImage(
-        image: image.clone(),
-        fit: BoxFit.cover,
-        filterQuality: FilterQuality.medium,
-      );
+  Widget build(BuildContext context) =>
+      RawImage(image: image.clone(), fit: BoxFit.cover, filterQuality: FilterQuality.medium);
 }
 
 /// A glyph (and a size) on a quiet tile: a picture on its way, one too big to

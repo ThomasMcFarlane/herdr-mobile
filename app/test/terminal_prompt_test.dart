@@ -48,7 +48,10 @@ class _Timed extends FakeTransport {
 void main() {
   group('terminalPrompt', () {
     test('a picture is pasted alone and the text follows with a leading space', () {
-      final p = terminalPrompt([const TextBlock('what is this?'), _link('/home/dev/.herdr-mobile/inbox/ab/IMG_1.jpg')])!;
+      final p = terminalPrompt([
+        const TextBlock('what is this?'),
+        _link('/home/dev/.herdr-mobile/inbox/ab/IMG_1.jpg'),
+      ])!;
       expect(p.pastes, ['/home/dev/.herdr-mobile/inbox/ab/IMG_1.jpg']);
       expect(p.line, ' what is this?');
     });
@@ -70,10 +73,7 @@ void main() {
     });
 
     test('a path with whitespace is quoted after the @', () {
-      final p = terminalPrompt([
-        _link('/work/a b/c.txt', name: 'a b/c.txt'),
-        _link('/x y/z'),
-      ])!;
+      final p = terminalPrompt([_link('/work/a b/c.txt', name: 'a b/c.txt'), _link('/x y/z')])!;
       expect(p.line, '@"a b/c.txt" @"/x y/z"');
     });
 
@@ -97,7 +97,11 @@ void main() {
 
     test('a name no mention can carry is refused whole: a quote, a newline, a control character', () {
       for (final name in ['say "hi".txt', 'a\nb.txt', 'a\tb.txt', 'a\u0007b.txt']) {
-        expect(terminalPrompt([const TextBlock('read'), _link('/work/x.txt', name: name)]), isNull, reason: name.codeUnits.toString());
+        expect(
+          terminalPrompt([const TextBlock('read'), _link('/work/x.txt', name: name)]),
+          isNull,
+          reason: name.codeUnits.toString(),
+        );
       }
       // A picture's path is pasted: the same rule on the path itself.
       expect(terminalPrompt([_link('/i/a\nb.jpg')]), isNull);
@@ -123,7 +127,11 @@ void main() {
 
       expect(t.calls.map((c) => c.$1), ['pane.send_input', 'pane.send_input']);
       expect(t.calls[0].$2, {'pane_id': 'w1:p1', 'text': '/i/a.jpg'}, reason: 'no keys: a paste, not a line');
-      expect(t.calls[1].$2, {'pane_id': 'w1:p1', 'text': ' look', 'keys': ['enter']});
+      expect(t.calls[1].$2, {
+        'pane_id': 'w1:p1',
+        'text': ' look',
+        'keys': ['enter'],
+      });
       expect(t.stamps[1] - t.stamps[0], greaterThanOrEqualTo(settle));
     });
 
@@ -135,14 +143,21 @@ void main() {
         const TerminalPrompt(pastes: ['/i/a.jpg'], line: ''),
         settle: Duration.zero,
       );
-      expect(t.calls[1].$2, {'pane_id': 'w1:p1', 'keys': ['enter']});
+      expect(t.calls[1].$2, {
+        'pane_id': 'w1:p1',
+        'keys': ['enter'],
+      });
     });
 
     test('text alone is one call and no delay', () async {
       final t = _Timed();
       await sendTerminalPrompt(HerdrApi(t), 'w1:p1', const TerminalPrompt(line: 'hello'));
       expect(t.calls, hasLength(1));
-      expect(t.calls.single.$2, {'pane_id': 'w1:p1', 'text': 'hello', 'keys': ['enter']});
+      expect(t.calls.single.$2, {
+        'pane_id': 'w1:p1',
+        'text': 'hello',
+        'keys': ['enter'],
+      });
     });
   });
 }

@@ -184,7 +184,10 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 600));
     // From the grabber, just above the search field.
-    await tester.dragFrom(Offset(size.width / 2, tester.getTopLeft(find.textContaining('Find in')).dy - 30), Offset(0, -size.height * 0.4));
+    await tester.dragFrom(
+      Offset(size.width / 2, tester.getTopLeft(find.textContaining('Find in')).dy - 30),
+      Offset(0, -size.height * 0.4),
+    );
     await tester.pump(const Duration(milliseconds: 600));
     await tester.tap(find.text('Show all files'));
     await tester.pump();
@@ -214,8 +217,10 @@ void main() {
     'sheet': (tester, b, size, scale, kb) => shoot(
       tester,
       'sheet-no-images',
-      FakeAgentSession(state: stateWith(items: _history()), machine: machineWithFiles(projectFs()))
-        ..imagesAccepted = false,
+      FakeAgentSession(
+        state: stateWith(items: _history()),
+        machine: machineWithFiles(projectFs()),
+      )..imagesAccepted = false,
       size,
       b,
       scale: scale,
@@ -256,7 +261,10 @@ void main() {
         scale: scale,
         keyboard: kb,
         then: () async {
-          await queue(tester, 'Sau đó chạy toàn bộ test và gửi cho tôi kết quả, kèm theo cả những test bị bỏ qua nữa nhé');
+          await queue(
+            tester,
+            'Sau đó chạy toàn bộ test và gửi cho tôi kết quả, kèm theo cả những test bị bỏ qua nữa nhé',
+          );
           session.cancel();
           session.update((s) => s.withTurnStarted());
           await tester.pump();
@@ -275,10 +283,7 @@ void main() {
         b,
         scale: scale,
         keyboard: kb,
-        picker: _Picker([
-          _photo('IMG_2031.jpg', 0),
-          _photo('Ảnh chụp màn hình đăng nhập sau khi sửa.jpg', 90),
-        ]),
+        picker: _Picker([_photo('IMG_2031.jpg', 0), _photo('Ảnh chụp màn hình đăng nhập sau khi sửa.jpg', 90)]),
         then: () async {
           await tapAttach(tester, 'Photo library');
           await tapAttach(tester, 'Photo library');

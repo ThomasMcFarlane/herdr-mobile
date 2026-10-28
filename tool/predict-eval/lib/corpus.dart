@@ -9,13 +9,13 @@ class Message {
 
 /// corpus/messages.jsonl (see extract_corpus.py), oldest first.
 List<Message> loadMessages(String path) => [
-      for (final line in File(path).readAsLinesSync())
-        if (line.trim().isNotEmpty)
-          () {
-            final json = jsonDecode(line) as Map<String, dynamic>;
-            return Message((json['t'] as num).toDouble(), json['text'] as String);
-          }(),
-    ];
+  for (final line in File(path).readAsLinesSync())
+    if (line.trim().isNotEmpty)
+      () {
+        final json = jsonDecode(line) as Map<String, dynamic>;
+        return Message((json['t'] as num).toDouble(), json['text'] as String);
+      }(),
+];
 
 /// `word count` lines, most frequent first, as probabilities summing to 1.
 /// Empty when the file is missing: the prior is then simply absent.

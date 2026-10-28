@@ -46,13 +46,11 @@ class _ExecProbe implements HerdrTransport {
     final FakeExecChannel channel;
     switch (parts[0]) {
       case 'burst':
-        channel = FakeExecChannel.run(
-          stdout: [for (var i = 0; i < int.parse(parts[1]); i++) 'line-$i'],
-        );
+        channel = FakeExecChannel.run(stdout: [for (var i = 0; i < int.parse(parts[1]); i++) 'line-$i']);
       case 'wide':
-        channel = FakeExecChannel.run(stdout: [
-          for (var i = 0; i < int.parse(parts[1]); i++) '$i:'.padRight(1000, 'w'),
-        ]);
+        channel = FakeExecChannel.run(
+          stdout: [for (var i = 0; i < int.parse(parts[1]); i++) '$i:'.padRight(1000, 'w')],
+        );
       case 'ticker':
         // Lines from a timer, so two channels really are live at once.
         channel = FakeExecChannel();
@@ -89,21 +87,16 @@ class _ExecProbe implements HerdrTransport {
   }
 
   @override
-  Future<Map<String, dynamic>> request(
-    String method, [
-    Map<String, dynamic> params = const {},
-  ]) async =>
-      {
-        'closed': closed,
-        'closeCalls': [for (final c in channels) c.closeCalls],
-      };
+  Future<Map<String, dynamic>> request(String method, [Map<String, dynamic> params = const {}]) async => {
+    'closed': closed,
+    'closeCalls': [for (final c in channels) c.closeCalls],
+  };
 
   @override
   Future<void> close() async => closed = true;
 
   @override
-  Stream<Map<String, dynamic>> events(List<Map<String, dynamic>> subscriptions) =>
-      throw UnsupportedError('events');
+  Stream<Map<String, dynamic>> events(List<Map<String, dynamic>> subscriptions) => throw UnsupportedError('events');
 
   @override
   void setBackground(bool background) {}
@@ -144,12 +137,7 @@ class _ExecProbe implements HerdrTransport {
   Future<WebBridgeInfo> openWebBridge(WebBridgeSpec spec) => throw UnimplementedError();
 }
 
-HerdrTransport _build(
-  Object? config,
-  void Function(String) onPin,
-  void Function(String) onNotice,
-) =>
-    _ExecProbe();
+HerdrTransport _build(Object? config, void Function(String) onPin, void Function(String) onNotice) => _ExecProbe();
 
 /// What a channel delivered until it ended.
 class _Drained {
@@ -160,11 +148,7 @@ class _Drained {
 Future<_Drained> _drain(ExecChannel channel) {
   final out = _Drained();
   final done = Completer<_Drained>();
-  channel.lines.listen(
-    out.lines.add,
-    onError: out.errors.add,
-    onDone: () => done.complete(out),
-  );
+  channel.lines.listen(out.lines.add, onError: out.errors.add, onDone: () => done.complete(out));
   return done.future.timeout(const Duration(seconds: 10));
 }
 
@@ -255,9 +239,11 @@ void main() {
   test('a channel that cannot be opened keeps the error and its fatal flag', () async {
     await expectLater(
       t.openExec('refuse'),
-      throwsA(isA<HerdrTransportException>()
-          .having((e) => e.fatal, 'fatal', isTrue)
-          .having((e) => e.message, 'message', 'no free channel')),
+      throwsA(
+        isA<HerdrTransportException>()
+            .having((e) => e.fatal, 'fatal', isTrue)
+            .having((e) => e.message, 'message', 'no free channel'),
+      ),
     );
   });
 

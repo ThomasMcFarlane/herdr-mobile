@@ -168,7 +168,9 @@ class Turn {
   /// Calls that failed ([toolFailed]), were cancelled, and are not finished
   /// (pending or running).
   late final int failedCount = tools.where((t) => toolFailed(t.call)).length;
-  late final int cancelledCount = tools.where((t) => t.call.status == ToolStatus.cancelled && !toolSkipped(t.call)).length;
+  late final int cancelledCount = tools
+      .where((t) => t.call.status == ToolStatus.cancelled && !toolSkipped(t.call))
+      .length;
   late final int unfinishedCount = tools.where((t) => !t.call.status.isFinished).length;
 
   /// The files changed by the turn's completed edit and delete calls, one per
@@ -245,8 +247,7 @@ class Turn {
   /// the notes are visible anyway and not listed.
   List<TranscriptItem> breakouts([Set<String> waiting = const {}]) => [
     for (final item in items)
-      if ((item is TranscriptTool && toolBreaksOut(item.call, waiting)) || item is TranscriptStop)
-        item,
+      if ((item is TranscriptTool && toolBreaksOut(item.call, waiting)) || item is TranscriptStop) item,
   ];
 
   /// A tool call of the turn needs a look: [breakouts] is not empty.

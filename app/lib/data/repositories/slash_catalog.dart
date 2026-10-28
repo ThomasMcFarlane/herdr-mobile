@@ -32,10 +32,7 @@ class SlashCatalog {
   Future<List<SlashCommand>> load({required String agent, String? cwd}) async {
     final key = agent.toLowerCase();
     final home = await _home();
-    var found = <SlashCommand>[
-      ...await _project(key, cwd, home),
-      ...await _user(key, home),
-    ];
+    var found = <SlashCommand>[...await _project(key, cwd, home), ...await _user(key, home)];
     // Codex looks in several folders: the first of a name is the one it uses.
     if (key == 'codex') {
       final seen = <String>{};
@@ -84,16 +81,17 @@ class SlashCatalog {
     if (cwd == null || cwd.isEmpty) return const [];
     return switch (agent) {
       'claude' => [
-          ...await _commandFiles('$cwd/.claude/commands', SlashSource.project, nested: true),
-          ...await _skills('$cwd/.claude/skills', SlashSource.project),
-        ],
+        ...await _commandFiles('$cwd/.claude/commands', SlashSource.project, nested: true),
+        ...await _skills('$cwd/.claude/skills', SlashSource.project),
+      ],
       'codex' => [
-          for (final dir in _folders(cwd, home)) ...await _skills('$dir/.agents/skills', SlashSource.project, trigger: r'$'),
-        ],
+        for (final dir in _folders(cwd, home))
+          ...await _skills('$dir/.agents/skills', SlashSource.project, trigger: r'$'),
+      ],
       'opencode' => [
-          ...await _commandFiles('$cwd/.opencode/command', SlashSource.project),
-          ...await _commandFiles('$cwd/.opencode/commands', SlashSource.project),
-        ],
+        ...await _commandFiles('$cwd/.opencode/command', SlashSource.project),
+        ...await _commandFiles('$cwd/.opencode/commands', SlashSource.project),
+      ],
       _ => const [],
     };
   }
@@ -102,17 +100,17 @@ class SlashCatalog {
     if (home == null) return const [];
     return switch (agent) {
       'claude' => [
-          ...await _commandFiles('$home/.claude/commands', SlashSource.user, nested: true),
-          ...await _skills('$home/.claude/skills', SlashSource.user),
-        ],
+        ...await _commandFiles('$home/.claude/commands', SlashSource.user, nested: true),
+        ...await _skills('$home/.claude/skills', SlashSource.user),
+      ],
       'codex' => [
-          ...await _skills('$home/.agents/skills', SlashSource.user, trigger: r'$'),
-          ...await _skills('$home/.codex/skills', SlashSource.user, trigger: r'$'),
-        ],
+        ...await _skills('$home/.agents/skills', SlashSource.user, trigger: r'$'),
+        ...await _skills('$home/.codex/skills', SlashSource.user, trigger: r'$'),
+      ],
       'opencode' => [
-          ...await _commandFiles('$home/.config/opencode/command', SlashSource.user),
-          ...await _commandFiles('$home/.config/opencode/commands', SlashSource.user),
-        ],
+        ...await _commandFiles('$home/.config/opencode/command', SlashSource.user),
+        ...await _commandFiles('$home/.config/opencode/commands', SlashSource.user),
+      ],
       _ => const [],
     };
   }
@@ -133,25 +131,21 @@ class SlashCatalog {
       if (e.isHidden) continue;
       if (e.isDirectory) {
         if (nested && depth < 3) {
-          out.addAll(await _commandFiles(
-            e.path,
-            source,
-            nested: true,
-            prefix: '$prefix${e.name}:',
-            depth: depth + 1,
-          ));
+          out.addAll(await _commandFiles(e.path, source, nested: true, prefix: '$prefix${e.name}:', depth: depth + 1));
         }
       } else if (e.isFile && e.name.endsWith('.md')) {
         files.add(e);
       }
     }
     files.sort((a, b) => a.name.compareTo(b.name));
-    out.addAll(await _describeAll(
-      files.take(maxFilesPerFolder).toList(),
-      (e) => '$prefix${e.name.substring(0, e.name.length - 3)}',
-      (e) => e.path,
-      source,
-    ));
+    out.addAll(
+      await _describeAll(
+        files.take(maxFilesPerFolder).toList(),
+        (e) => '$prefix${e.name.substring(0, e.name.length - 3)}',
+        (e) => e.path,
+        source,
+      ),
+    );
     return out;
   }
 
@@ -180,9 +174,7 @@ class SlashCatalog {
     final out = <SlashCommand>[];
     for (var i = 0; i < entries.length; i += _parallel) {
       final batch = entries.skip(i).take(_parallel).toList();
-      final described = await Future.wait([
-        for (final e in batch) _describe(file(e)),
-      ]);
+      final described = await Future.wait([for (final e in batch) _describe(file(e))]);
       for (var j = 0; j < batch.length; j++) {
         final text = described[j];
         // A skill folder without a SKILL.md is not a skill.
@@ -245,8 +237,7 @@ class SlashCatalog {
   static final _description = RegExp(r'^description:\s*(.*)$');
 
   static String _unquote(String v) {
-    if (v.length >= 2 &&
-        ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'")))) {
+    if (v.length >= 2 && ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'")))) {
       return v.substring(1, v.length - 1);
     }
     return v;
@@ -255,8 +246,7 @@ class SlashCatalog {
   static String _clip(String v) => v.length <= 140 ? v : '${v.substring(0, 139)}…';
 }
 
-SlashCommand _b(String name, String description) =>
-    SlashCommand(name, description, SlashSource.builtIn);
+SlashCommand _b(String name, String description) => SlashCommand(name, description, SlashSource.builtIn);
 
 /// By herdr's agent label.
 final Map<String, List<SlashCommand>> builtInSlashCommands = {

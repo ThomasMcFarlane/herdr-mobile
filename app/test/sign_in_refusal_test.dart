@@ -2,14 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/machine_profile.dart';
 import 'package:herdr_mobile/data/services/ssh_transport.dart';
 
-MachineProfile _machine(SshAuth auth) => MachineProfile(
-      id: 'a',
-      label: 'Box',
-      host: 'box',
-      port: 22,
-      username: 'dev',
-      auth: auth,
-    );
+MachineProfile _machine(SshAuth auth) =>
+    MachineProfile(id: 'a', label: 'Box', host: 'box', port: 22, username: 'dev', auth: auth);
 
 void main() {
   _wrongServerTests();
@@ -17,10 +11,7 @@ void main() {
   // banner, then closes the login. The person can only fix what they can read.
   group('a refused sign-in', () {
     test('names the machine\'s reason, for Tailscale and for a key or password', () {
-      final policy = signInRefused(
-        _machine(SshAuth.none),
-        'tailnet policy does not permit you to SSH as user "dev"',
-      );
+      final policy = signInRefused(_machine(SshAuth.none), 'tailnet policy does not permit you to SSH as user "dev"');
       expect(policy.message, contains('tailnet policy does not permit you to SSH as user "dev"'));
 
       final key = signInRefused(_machine(SshAuth.key), 'Access denied');

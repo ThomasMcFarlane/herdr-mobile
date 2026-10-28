@@ -21,11 +21,18 @@ import 'package:herdr_mobile/ui/render/mermaid/mermaid_layout.dart';
 import 'package:herdr_mobile/ui/render/mermaid/mermaid_source.dart';
 import 'package:mermaid_core/mermaid_core.dart' as core;
 
-const _floors = <String, double>{'flowchart': 0.975, 'sequence': 0.985, 'state': 1.0, 'er': 0.95, 'classDiagram': 0.94};
+const _floors = <String, double>{
+  'flowchart': 0.975,
+  'sequence': 0.985,
+  'state': 1.0,
+  'er': 0.95,
+  'classDiagram': 0.94,
+};
 
 final _elided = RegExp(r'^\s*(…|\.{3,})\s*$', multiLine: true);
 
-double _pct(List<double> sorted, double p) => sorted.isEmpty ? 0 : sorted[((sorted.length - 1) * p).round()];
+double _pct(List<double> sorted, double p) =>
+    sorted.isEmpty ? 0 : sorted[((sorted.length - 1) * p).round()];
 
 void main(List<String> args) {
   final floors = {..._floors};
@@ -43,17 +50,31 @@ void main(List<String> args) {
     }
   }
 
-  final dir = Directory(Platform.environment['MERMAID_CORPUS'] ?? '/tmp/mermaid_corpus');
+  final dir = Directory(
+    Platform.environment['MERMAID_CORPUS'] ?? '/tmp/mermaid_corpus',
+  );
   if (!dir.existsSync()) {
-    stderr.writeln('no corpus at ${dir.path}: python3 tool/mermaid-bench/extract_corpus.py ${dir.path} <roots>');
+    stderr.writeln(
+      'no corpus at ${dir.path}: python3 tool/mermaid-bench/extract_corpus.py ${dir.path} <roots>',
+    );
     exit(2);
   }
-  final files = dir.listSync().whereType<File>().where((f) => f.path.endsWith('.mmd')).toList()..sort((a, b) => a.path.compareTo(b.path));
+  final files =
+      dir
+          .listSync()
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.mmd'))
+          .toList()
+        ..sort((a, b) => a.path.compareTo(b.path));
 
-  final theme = core.MermaidTheme.defaultTheme.copyWith(fontFamily: 'Inter', fontSize: 13);
+  final theme = core.MermaidTheme.defaultTheme.copyWith(
+    fontFamily: 'Inter',
+    fontSize: 13,
+  );
   const dark = core.Color(0xFF37352F);
   const light = core.Color(0xFFECEDEF);
-  MermaidJob job(String s) => MermaidJob(source: s, theme: theme, darkText: dark, lightText: light);
+  MermaidJob job(String s) =>
+      MermaidJob(source: s, theme: theme, darkText: dark, lightText: light);
 
   final times = <String, List<double>>{};
   final widths = <String, List<double>>{};
@@ -108,10 +129,16 @@ void main(List<String> args) {
   }
   File('fails.tsv').writeAsStringSync(fails.join('\n'));
 
-  stdout.writeln('${files.length} blocks: ${skipped} templates or elided, $other of kinds the app does not draw, $tooLarge over ${mermaidMaxSource} chars.');
+  stdout.writeln(
+    '${files.length} blocks: ${skipped} templates or elided, $other of kinds the app does not draw, $tooLarge over ${mermaidMaxSource} chars.',
+  );
   stdout.writeln();
-  stdout.writeln('| kind | n | drew | ok | median ms | p95 ms | max ms | width p50 | width p90 | wider than 410 | turned |');
-  stdout.writeln('| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |');
+  stdout.writeln(
+    '| kind | n | drew | ok | median ms | p95 ms | max ms | width p50 | width p90 | wider than 410 | turned |',
+  );
+  stdout.writeln(
+    '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
+  );
   var failed = false;
   for (final kind in floors.keys) {
     final n = total[kind] ?? 0;
@@ -135,10 +162,15 @@ void main(List<String> args) {
   stdout.writeln();
   final reasons = <String, int>{};
   for (final f in fails) {
-    final reason = f.split('\t').last.replaceAll(RegExp(r'line \d+'), 'line N').replaceAll(RegExp(r'"[^"]*"'), '"…"');
+    final reason = f
+        .split('\t')
+        .last
+        .replaceAll(RegExp(r'line \d+'), 'line N')
+        .replaceAll(RegExp(r'"[^"]*"'), '"…"');
     reasons[reason] = (reasons[reason] ?? 0) + 1;
   }
-  final top = reasons.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+  final top = reasons.entries.toList()
+    ..sort((a, b) => b.value.compareTo(a.value));
   stdout.writeln('Failures (${fails.length}, details in fails.tsv):');
   for (final e in top.take(12)) {
     stdout.writeln('  ${e.value.toString().padLeft(4)}  ${e.key}');

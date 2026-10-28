@@ -13,12 +13,9 @@ import 'board_support.dart';
 import 'ui_harness.dart';
 
 ({MachineProfile profile, Map<String, dynamic> snapshot}) _machine() => (
-      profile: const MachineProfile(id: 'a', label: 'box-a', host: 'a.example', username: 'dev'),
-      snapshot: snapshotWith(
-        [(id: 'w1:p1', ws: 'w1', agent: 'claude', status: 'blocked')],
-        title: (_) => 'task 1',
-      ),
-    );
+  profile: const MachineProfile(id: 'a', label: 'box-a', host: 'a.example', username: 'dev'),
+  snapshot: snapshotWith([(id: 'w1:p1', ws: 'w1', agent: 'claude', status: 'blocked')], title: (_) => 'task 1'),
+);
 
 const _prompt = PromptInfo(
   question: 'Do you want to proceed?',
@@ -38,9 +35,9 @@ Future<BoardHarness> _sheet(WidgetTester tester, {PromptInfo? prompt}) async {
 }
 
 List<Object?> _sentKeys(BoardHarness h) => [
-      for (final (m, p) in h.transports['a']!.calls)
-        if (m == 'pane.send_keys') p['keys'],
-    ];
+  for (final (m, p) in h.transports['a']!.calls)
+    if (m == 'pane.send_keys') p['keys'],
+];
 
 Future<void> _imeSend(WidgetTester tester) async {
   await tester.tap(find.descendant(of: find.byType(ReplySheet), matching: find.byType(TextField)));
@@ -77,8 +74,9 @@ void main() {
     await teardownBoard(tester, h);
   });
 
-  testWidgets('with nothing asked, Send on an empty field still presses Enter, once the sheet has settled',
-      (tester) async {
+  testWidgets('with nothing asked, Send on an empty field still presses Enter, once the sheet has settled', (
+    tester,
+  ) async {
     final h = await _sheet(tester);
 
     // Just opened: the guard that holds the Enter key button holds this too.

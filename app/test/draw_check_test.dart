@@ -3,12 +3,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 
 Widget _app({bool reduced = false}) => MaterialApp(
-      builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(context).copyWith(disableAnimations: reduced),
-        child: child!,
-      ),
-      home: const Center(child: DrawCheck(color: Colors.green)),
-    );
+  builder: (context, child) => MediaQuery(
+    data: MediaQuery.of(context).copyWith(disableAnimations: reduced),
+    child: child!,
+  ),
+  home: const Center(child: DrawCheck(color: Colors.green)),
+);
 
 Finder get _paint => find.descendant(of: find.byType(DrawCheck), matching: find.byType(CustomPaint));
 
@@ -21,17 +21,35 @@ void main() {
     await tester.pump(const Duration(milliseconds: 20));
     await tester.pump(const Duration(milliseconds: 20));
     expect(_paint, paints..path(), reason: 'the circle starts');
-    expect(_paint, isNot(paints..path()..path()), reason: 'the check waits for the circle');
+    expect(
+      _paint,
+      isNot(
+        paints
+          ..path()
+          ..path(),
+      ),
+      reason: 'the check waits for the circle',
+    );
 
     await tester.pump(Motion.draw);
-    expect(_paint, paints..path()..path());
+    expect(
+      _paint,
+      paints
+        ..path()
+        ..path(),
+    );
     expect(tester.binding.transientCallbackCount, 0, reason: 'no loop: the ticker is done');
   });
 
   testWidgets('with reduced motion the finished mark is there at once', (tester) async {
     await tester.pumpWidget(_app(reduced: true));
 
-    expect(_paint, paints..path()..path());
+    expect(
+      _paint,
+      paints
+        ..path()
+        ..path(),
+    );
     expect(tester.binding.transientCallbackCount, 0);
   });
 }

@@ -42,8 +42,7 @@ double _top(WidgetTester tester, Finder f) => tester.getTopLeft(f).dy;
 Finder _section(String label) => find.byWidgetPredicate((w) => w is SectionLabel && w.label == label);
 
 void main() {
-  testWidgets(
-      'a blocked pane, a blocked session, a blocked pane offline and a done session: every surface says 2, '
+  testWidgets('a blocked pane, a blocked session, a blocked pane offline and a done session: every surface says 2, '
       'and the triage walks the board\'s order', (tester) async {
     final semantics = tester.ensureSemantics();
     final h = await BoardHarness.create([
@@ -125,8 +124,11 @@ void main() {
     await _settle(tester);
     expect(find.text('2 of 2 need you'), findsOneWidget);
     expect(find.descendant(of: find.byType(ReplySheet), matching: find.text('Deploy')), findsOneWidget);
-    expect(find.descendant(of: find.byType(ReplySheet), matching: find.text('npm run deploy')), findsOneWidget,
-        reason: 'what the session asks, as the board says it');
+    expect(
+      find.descendant(of: find.byType(ReplySheet), matching: find.text('npm run deploy')),
+      findsOneWidget,
+      reason: 'what the session asks, as the board says it',
+    );
     expect(find.text('All clear'), findsNothing, reason: 'a session still waits');
     Navigator.of(tester.element(find.byType(ReplySheet))).pop();
     await _settle(tester);
@@ -135,8 +137,11 @@ void main() {
     await tester.tap(find.byKey(FloatingTabBar.tabKey('Machines')));
     await _settle(tester);
     expect(find.bySemanticsLabel(RegExp(r'^studio-mac, .*, 2 need you$')), findsOneWidget);
-    expect(find.bySemanticsLabel(RegExp(r'^old-box, .*need you')), findsNothing,
-        reason: 'its last-known wait cannot be answered; the row says offline');
+    expect(
+      find.bySemanticsLabel(RegExp(r'^old-box, .*need you')),
+      findsNothing,
+      reason: 'its last-known wait cannot be answered; the row says offline',
+    );
 
     semantics.dispose();
     await tester.pumpWidget(const SizedBox());
@@ -147,8 +152,7 @@ void main() {
     h.dispose();
   });
 
-  testWidgets('a handover empties the set and fills it with the same keys: they stay known as waiting',
-      (tester) async {
+  testWidgets('a handover empties the set and fills it with the same keys: they stay known as waiting', (tester) async {
     final h = await BoardHarness.create([
       (profile: _profile('a', 'studio-mac'), snapshot: snapshotWith([_pane(1, 'blocked')], title: _title)),
     ]);

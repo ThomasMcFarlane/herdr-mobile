@@ -29,16 +29,8 @@ final class AnsiRun {
   final bool strike;
 
   /// This run's style on other [text].
-  AnsiRun withText(String text) => AnsiRun(
-        text,
-        fg: fg,
-        bg: bg,
-        bold: bold,
-        dim: dim,
-        italic: italic,
-        underline: underline,
-        strike: strike,
-      );
+  AnsiRun withText(String text) =>
+      AnsiRun(text, fg: fg, bg: bg, bold: bold, dim: dim, italic: italic, underline: underline, strike: strike);
 
   bool _sameStyle(AnsiRun o) =>
       fg == o.fg &&
@@ -94,8 +86,7 @@ AnsiDocument parseAnsi(String text) {
 /// Parses one line (no line feed in [line]) that starts in the SGR state
 /// [start]. No escape sequence spans a line feed, so the result depends on
 /// nothing but these two arguments.
-AnsiLine parseAnsiLine(String line, AnsiState start) =>
-    _Parser(line, start).parse();
+AnsiLine parseAnsiLine(String line, AnsiState start) => _Parser(line, start).parse();
 
 /// One parsed line.
 final class AnsiLine {
@@ -150,21 +141,20 @@ final class AnsiState {
       reverse == other.reverse;
 
   @override
-  int get hashCode =>
-      Object.hash(fg, bg, bold, dim, italic, underline, strike, reverse);
+  int get hashCode => Object.hash(fg, bg, bold, dim, italic, underline, strike, reverse);
 }
 
 /// Parses one line (no line feed in [_s]) starting in a given SGR state.
 final class _Parser {
   _Parser(this._s, AnsiState start)
-      : _fg = start.fg,
-        _bg = start.bg,
-        _bold = start.bold,
-        _dim = start.dim,
-        _italic = start.italic,
-        _underline = start.underline,
-        _strike = start.strike,
-        _reverse = start.reverse;
+    : _fg = start.fg,
+      _bg = start.bg,
+      _bold = start.bold,
+      _dim = start.dim,
+      _italic = start.italic,
+      _underline = start.underline,
+      _strike = start.strike,
+      _reverse = start.reverse;
 
   final String _s;
   final _line = <AnsiRun>[];
@@ -228,12 +218,7 @@ final class _Parser {
     );
     // The common state (a reset at the end of the line) is the shared
     // constant, so callers can compare states by identity first.
-    return AnsiLine(
-      _line,
-      columns,
-      _hasText,
-      end == AnsiState.initial ? AnsiState.initial : end,
-    );
+    return AnsiLine(_line, columns, _hasText, end == AnsiState.initial ? AnsiState.initial : end);
   }
 
   void _text(int start, int end) {
@@ -308,9 +293,7 @@ final class _Parser {
       while (j < n && _s.codeUnitAt(j) >= 0x20 && _s.codeUnitAt(j) <= 0x2f) {
         j++;
       }
-      return j < n && _s.codeUnitAt(j) >= 0x30 && _s.codeUnitAt(j) <= 0x7e
-          ? j + 1
-          : j;
+      return j < n && _s.codeUnitAt(j) >= 0x30 && _s.codeUnitAt(j) <= 0x7e ? j + 1 : j;
     }
     if (c >= 0x30 && c <= 0x7e) return i + 1;
     // ESC before a control character or another ESC: drop only the lone ESC.
@@ -395,7 +378,13 @@ final class _Parser {
           // `38;5;n` / `38;2;r;g;b`: the arguments are separate parameters.
           final mode = k + 1 < values.length ? values[k + 1] : -1;
           end = math.min(
-            k + 2 + (mode == 5 ? 1 : mode == 2 ? 3 : 0),
+            k +
+                2 +
+                (mode == 5
+                    ? 1
+                    : mode == 2
+                    ? 3
+                    : 0),
             values.length,
           );
         }

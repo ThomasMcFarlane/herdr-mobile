@@ -46,7 +46,9 @@ FakeAgentSession _replay(HistoryEnv e, String id) => FakeAgentSession(
 
 void main() {
   group('the list', () {
-    testWidgets('shows title, folder, when and how long; a session without a title or a count still reads', (tester) async {
+    testWidgets('shows title, folder, when and how long; a session without a title or a count still reads', (
+      tester,
+    ) async {
       final e = await historyEnv();
       e.sessions.answers['omp'] = remembered([
         past('s1', title: 'Fix the parser'),
@@ -166,7 +168,9 @@ void main() {
   });
 
   group('bringing one back', () {
-    testWidgets('the tap resumes that session in its folder, shows a spinner on the row, then opens the chat', (tester) async {
+    testWidgets('the tap resumes that session in its folder, shows a spinner on the row, then opens the chat', (
+      tester,
+    ) async {
       final e = await historyEnv();
       e.sessions.answers['omp'] = remembered([
         past('s1', title: 'Fix the parser', cwd: '/home/dev/payments-api'),
@@ -226,19 +230,22 @@ void main() {
       await e.tearDown(tester);
     });
 
-    testWidgets('a session a keeper holds already says Open and shows that chat instead of loading it twice', (tester) async {
+    testWidgets('a session a keeper holds already says Open and shows that chat instead of loading it twice', (
+      tester,
+    ) async {
       final e = await historyEnv();
-      e.sessions.answers['omp'] = remembered([
-        past('held', title: 'Already open'),
-        past('gone', title: 'Ended one'),
-      ]);
+      e.sessions.answers['omp'] = remembered([past('held', title: 'Already open'), past('gone', title: 'Ended one')]);
       e.sessions
         ..hold(_held(e, 'held'))
         ..hold(_held(e, 'gone', link: AgentLink.ended, key: 'a/k8'));
       await pumpPast(tester, e);
 
       expect(_inRow('Already open', 'Open'), findsOneWidget);
-      expect(find.descendant(of: _row('Ended one'), matching: find.text('Open')), findsNothing, reason: 'ended: not held');
+      expect(
+        find.descendant(of: _row('Ended one'), matching: find.text('Open')),
+        findsNothing,
+        reason: 'ended: not held',
+      );
 
       await tester.tap(_row('Already open'));
       await settleHistory(tester, 8);
@@ -328,7 +335,9 @@ void main() {
       await e.tearDown(tester);
     });
 
-    testWidgets('while the agent is asked, a quiet line with a spinner; more than the host read is said', (tester) async {
+    testWidgets('while the agent is asked, a quiet line with a spinner; more than the host read is said', (
+      tester,
+    ) async {
       final e = await historyEnv();
       final gate = Completer<void>();
       e.sessions
@@ -384,7 +393,9 @@ void main() {
   });
 
   group('worst case', () {
-    testWidgets('200 long Vietnamese titles with a direction override, a 300-character folder, 320 wide at 1.6x', (tester) async {
+    testWidgets('200 long Vietnamese titles with a direction override, a 300-character folder, 320 wide at 1.6x', (
+      tester,
+    ) async {
       final e = await historyEnv();
       final long = 'Sửa lỗi đồng bộ dữ liệu người dùng \u202Eexe.txt ${'rất dài '.padRight(400, 'ệ')}';
       e.sessions.answers['omp'] = remembered([

@@ -11,14 +11,7 @@ BackgroundTask task(
   BackgroundStatus status = BackgroundStatus.running,
   DateTime? startedAt,
   DateTime? endedAt,
-}) => BackgroundTask(
-  id: id,
-  kind: kind,
-  status: status,
-  title: 'run $id',
-  startedAt: startedAt,
-  endedAt: endedAt,
-);
+}) => BackgroundTask(id: id, kind: kind, status: status, title: 'run $id', startedAt: startedAt, endedAt: endedAt);
 
 BackgroundWork work(List<BackgroundTask> tasks, {bool wakes = false, String? label, bool unknown = false}) =>
     BackgroundWork(tasks: tasks, wakes: wakes, wakeLabel: label, unknownRunning: unknown);
@@ -28,7 +21,11 @@ void main() {
     test('jobs, singular and plural', () {
       expect(nounPhrase([task('bg_1')]), '1 job');
       expect(nounPhrase([task('bg_1'), task('bg_2')]), '2 jobs');
-      expect(nounPhrase([task('bg_1'), task('e', kind: BackgroundKind.eval)]), '2 jobs', reason: 'bash and eval are both jobs');
+      expect(
+        nounPhrase([task('bg_1'), task('e', kind: BackgroundKind.eval)]),
+        '2 jobs',
+        reason: 'bash and eval are both jobs',
+      );
     });
 
     test('terminals are jobs too', () {
@@ -57,10 +54,7 @@ void main() {
     test('names what is still running, singular and plural', () {
       expect(stoppedToast(work([task('bg_6')])), 'Turn stopped \u00b7 1 job still running');
       expect(stoppedToast(work([task('bg_6'), task('bg_7')])), 'Turn stopped \u00b7 2 jobs still running');
-      expect(
-        stoppedToast(work([task('t', kind: BackgroundKind.terminal)])),
-        'Turn stopped \u00b7 1 job still running',
-      );
+      expect(stoppedToast(work([task('t', kind: BackgroundKind.terminal)])), 'Turn stopped \u00b7 1 job still running');
       expect(
         stoppedToast(work([task('bg_6'), task('t', kind: BackgroundKind.terminal)])),
         'Turn stopped \u00b7 2 jobs still running',
@@ -97,7 +91,11 @@ void main() {
         const StripText('1 running in background', 'omp continues by itself when it finishes'),
       );
       expect(
-        stripText(work([task('a'), task('b')], wakes: true, label: 'Claude'), waiting: true, turnRunning: false)!.secondary,
+        stripText(
+          work([task('a'), task('b')], wakes: true, label: 'Claude'),
+          waiting: true,
+          turnRunning: false,
+        )!.secondary,
         'Claude continues by itself when one finishes',
       );
     });
@@ -169,8 +167,14 @@ void main() {
 
   group('the sheet words', () {
     test('the consequence sentence, once; none for an agent that does not wake', () {
-      expect(wakeSentence(work([task('a')], wakes: true, label: 'omp')), 'omp continues by itself when a job finishes.');
-      expect(wakeSentence(work([task('a')], wakes: true, label: 'Claude')), 'Claude continues by itself when a job finishes.');
+      expect(
+        wakeSentence(work([task('a')], wakes: true, label: 'omp')),
+        'omp continues by itself when a job finishes.',
+      );
+      expect(
+        wakeSentence(work([task('a')], wakes: true, label: 'Claude')),
+        'Claude continues by itself when a job finishes.',
+      );
       expect(wakeSentence(work([task('a')])), isNull);
     });
 

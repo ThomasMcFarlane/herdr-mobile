@@ -10,7 +10,9 @@ import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/machine_repository.dart';
 import '../../../data/words/plural.dart';
 import 'approval_button.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'machine_form_screen.dart';
 import 'machine_screen.dart';
 
@@ -58,7 +60,8 @@ class MachinesScreen extends StatelessWidget {
                       child: EmptyState(
                         icon: HerdrIcons.machines,
                         title: 'No machines yet',
-                        message: 'Add a machine that runs herdr. You can connect as many as '
+                        message:
+                            'Add a machine that runs herdr. You can connect as many as '
                             'you like and see them all together.',
                         action: AppButton(
                           label: 'Add machine',
@@ -71,10 +74,8 @@ class MachinesScreen extends StatelessWidget {
                 else ...[
                   SliverList.builder(
                     itemCount: count,
-                    itemBuilder: (_, i) => _MachineRow(
-                      key: ValueKey(connections[i].profile.id),
-                      machine: connections[i],
-                    ),
+                    itemBuilder: (_, i) =>
+                        _MachineRow(key: ValueKey(connections[i].profile.id), machine: connections[i]),
                   ),
                   SliverToBoxAdapter(child: SizedBox(height: FloatingBar.listEnd(context))),
                 ],
@@ -99,16 +100,16 @@ class _MachineRow extends StatelessWidget {
   static const _gap = RowMetrics.gap;
   static const _inset = PressRow.inset;
 
-  void _open(BuildContext context) => Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => MachineScreen(machine: machine)),
-      );
+  void _open(BuildContext context) =>
+      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => MachineScreen(machine: machine)));
 
   Future<void> _remove(BuildContext context, MachineRepository repo) async {
     final p = machine.profile;
     final ok = await showConfirmSheet(
       context,
       title: 'Remove ${p.label}?',
-      message: 'The saved connection and its credentials are deleted from this '
+      message:
+          'The saved connection and its credentials are deleted from this '
           'phone. Agents on the machine keep running.',
       confirmLabel: 'Remove',
     );
@@ -132,12 +133,7 @@ class _MachineRow extends StatelessWidget {
           icon: p.enabled ? LucideIcons.powerOff : LucideIcons.power,
           onTap: () => repo.save(p.copyWith(enabled: !p.enabled)),
         ),
-        SheetAction(
-          label: 'Remove',
-          icon: LucideIcons.trash2,
-          destructive: true,
-          onTap: () => _remove(context, repo),
-        ),
+        SheetAction(label: 'Remove', icon: LucideIcons.trash2, destructive: true, onTap: () => _remove(context, repo)),
       ],
     );
   }
@@ -158,16 +154,11 @@ class _MachineRow extends StatelessWidget {
     final approval = machine.approvalUrl;
     final indent = Gap.gutter + _tile + _gap;
 
-    final semantic = [
-      p.label,
-      state.label,
-      if (waiting > 0) needYou(waiting),
-    ].join(', ');
+    final semantic = [p.label, state.label, if (waiting > 0) needYou(waiting)].join(', ');
 
     // "Enable" sits beside the text when there is room, under it on a narrow
     // phone or with large system text (it would squeeze the name to nothing).
-    final roomy = MediaQuery.sizeOf(context).width >= 340 &&
-        MediaQuery.textScalerOf(context).scale(14) <= 18;
+    final roomy = MediaQuery.sizeOf(context).width >= 340 && MediaQuery.textScalerOf(context).scale(14) <= 18;
     final enable = AppButton(
       label: 'Enable',
       kind: AppButtonKind.secondary,
@@ -185,51 +176,54 @@ class _MachineRow extends StatelessWidget {
           onLongPress: () => _menu(context),
           semanticLabel: semantic,
           padding: const EdgeInsets.fromLTRB(Gap.gutter - _inset, Gap.md, Gap.gutter - _inset - Gap.sm, Gap.md),
-              child: Row(
-                children: [
-                  // The link state is the one thing that tells machines apart
-                  // at a glance, so it leads the row.
-                  SizedBox(width: _tile, child: Center(child: LinkDot(state: state))),
-                  const SizedBox(width: _gap),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          p.label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          // A machine that is switched off is quiet, not broken:
-                          // a softer title, no warning colour, no dimming.
-                          style: Type.row.copyWith(color: p.enabled ? ds.text : ds.textSecondary),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(top: Gap.hair),
-                          child: _Subtitle(machine: machine),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Status as a shape first: the needs-you glyph with its count,
-                  // as on the board's filter chip (a bare number read as unread).
-                  if (waiting > 0) ...[
-                    const SizedBox(width: Gap.sm),
-                    const StatusGlyph(status: AgentStatus.blocked, size: IconSize.inline),
-                    const SizedBox(width: Gap.xs),
-                    Text(waiting > 99 ? '99+' : '$waiting', style: Type.count.copyWith(color: ds.blockedText)),
-                  ],
-                  if (!p.enabled && roomy) ...[const SizedBox(width: Gap.sm), enable],
-                  const SizedBox(width: Gap.xs),
-                  CircleButton(
-                    icon: LucideIcons.ellipsis,
-                    tooltip: 'More',
-                    filled: false,
-                    size: CircleButton.compact,
-                    onPressed: () => _menu(context),
-                  ),
-                ],
+          child: Row(
+            children: [
+              // The link state is the one thing that tells machines apart
+              // at a glance, so it leads the row.
+              SizedBox(
+                width: _tile,
+                child: Center(child: LinkDot(state: state)),
               ),
+              const SizedBox(width: _gap),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      p.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      // A machine that is switched off is quiet, not broken:
+                      // a softer title, no warning colour, no dimming.
+                      style: Type.row.copyWith(color: p.enabled ? ds.text : ds.textSecondary),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(top: Gap.hair),
+                      child: _Subtitle(machine: machine),
+                    ),
+                  ],
+                ),
+              ),
+              // Status as a shape first: the needs-you glyph with its count,
+              // as on the board's filter chip (a bare number read as unread).
+              if (waiting > 0) ...[
+                const SizedBox(width: Gap.sm),
+                const StatusGlyph(status: AgentStatus.blocked, size: IconSize.inline),
+                const SizedBox(width: Gap.xs),
+                Text(waiting > 99 ? '99+' : '$waiting', style: Type.count.copyWith(color: ds.blockedText)),
+              ],
+              if (!p.enabled && roomy) ...[const SizedBox(width: Gap.sm), enable],
+              const SizedBox(width: Gap.xs),
+              CircleButton(
+                icon: LucideIcons.ellipsis,
+                tooltip: 'More',
+                filled: false,
+                size: CircleButton.compact,
+                onPressed: () => _menu(context),
+              ),
+            ],
+          ),
         ),
         if (!p.enabled && !roomy)
           Padding(
@@ -257,7 +251,10 @@ class _MachineRow extends StatelessWidget {
             child: StatusPanel(
               color: ds.blocked,
               message: 'Tailscale needs you to approve this sign-in.',
-              footer: Align(alignment: Alignment.centerLeft, child: ApprovalButton(url: approval)),
+              footer: Align(
+                alignment: Alignment.centerLeft,
+                child: ApprovalButton(url: approval),
+              ),
             ),
           ),
         Hairline(indent: indent),
@@ -308,7 +305,13 @@ class _Subtitle extends StatelessWidget {
             Text(lead, maxLines: 1, style: leadStyle),
             Text(' · ', maxLines: 1, style: style),
             Flexible(
-              child: Text(address.substring(0, cut), maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis, style: style),
+              child: Text(
+                address.substring(0, cut),
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.ellipsis,
+                style: style,
+              ),
             ),
             Text(tail, maxLines: 1, softWrap: false, style: style),
           ],

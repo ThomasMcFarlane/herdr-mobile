@@ -30,8 +30,7 @@ const _finishedChannel = AndroidNotificationChannel(
 const _watchingChannel = AndroidNotificationChannel(
   watchingChannelId,
   'Watching',
-  description:
-      'A quiet notice while agents work or a page from a machine is open, so Android keeps the connection to your machines alive.',
+  description: 'A quiet notice while agents work or a page from a machine is open, so Android keeps the connection to your machines alive.',
   importance: Importance.min,
   playSound: false,
   enableVibration: false,
@@ -65,35 +64,33 @@ AndroidNotificationDetails _details(
   Color? accent,
   List<AndroidNotificationAction>? actions,
   StyleInformation? style,
-}) =>
-    AndroidNotificationDetails(
-      channel.id,
-      channel.name,
-      channelDescription: channel.description,
-      importance: channel.importance,
-      priority: loud ? Priority.high : Priority.defaultPriority,
-      playSound: channel.playSound,
-      enableVibration: channel.enableVibration,
-      icon: _smallIcon,
-      color: accent,
-      groupKey: 'agents',
-      autoCancel: true,
-      onlyAlertOnce: true,
-      when: DateTime.now().millisecondsSinceEpoch,
-      actions: actions,
-      styleInformation: style,
-    );
+}) => AndroidNotificationDetails(
+  channel.id,
+  channel.name,
+  channelDescription: channel.description,
+  importance: channel.importance,
+  priority: loud ? Priority.high : Priority.defaultPriority,
+  playSound: channel.playSound,
+  enableVibration: channel.enableVibration,
+  icon: _smallIcon,
+  color: accent,
+  groupKey: 'agents',
+  autoCancel: true,
+  onlyAlertOnce: true,
+  when: DateTime.now().millisecondsSinceEpoch,
+  actions: actions,
+  styleInformation: style,
+);
 
 /// Says that an answer was not sent, under the notification's own id, with the
 /// agent's link as its tap.
-Future<void> _postNotSent(AndroidFlutterLocalNotificationsPlugin android, int id, String? link) =>
-    android.show(
-      id: id,
-      title: answerNotSentTitle,
-      body: _notSentBody,
-      payload: link,
-      notificationDetails: _details(_needsYouChannel, loud: true),
-    );
+Future<void> _postNotSent(AndroidFlutterLocalNotificationsPlugin android, int id, String? link) => android.show(
+  id: id,
+  title: answerNotSentTitle,
+  body: _notSentBody,
+  payload: link,
+  notificationDetails: _details(_needsYouChannel, loud: true),
+);
 
 /// Runs in the plugin's background isolate when an answer button is pressed
 /// (the app's main isolate is not the one that hears of it). Forwards the press

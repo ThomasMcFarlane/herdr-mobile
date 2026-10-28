@@ -198,9 +198,7 @@ void main() {
   });
 
   test('the version shown in About is the one in pubspec.yaml', () {
-    final line = File('pubspec.yaml')
-        .readAsLinesSync()
-        .firstWhere((l) => l.startsWith('version:'));
+    final line = File('pubspec.yaml').readAsLinesSync().firstWhere((l) => l.startsWith('version:'));
     final name = line.substring('version:'.length).trim().split('+').first;
     expect(appVersion, name, reason: 'bump lib/data/app_info.dart with pubspec.yaml');
   });

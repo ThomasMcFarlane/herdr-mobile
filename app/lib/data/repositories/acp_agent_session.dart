@@ -92,10 +92,10 @@ class AcpAgentSession extends ChangeNotifier implements AgentSessionView {
     FlushScheduler? flush,
     this._onDemand,
     this._cache,
-  })  : _flush = flush ?? TimerFlush(notifyEvery),
-        _info = info,
-        _sessionId = (info.sessionId ?? '').isEmpty ? null : info.sessionId,
-        _state = AgentSessionState(info.sessionId ?? '') {
+  }) : _flush = flush ?? TimerFlush(notifyEvery),
+       _info = info,
+       _sessionId = (info.sessionId ?? '').isEmpty ? null : info.sessionId,
+       _state = AgentSessionState(info.sessionId ?? '') {
     _phaseSince = _clock();
     _handler = _SessionHandler(this);
     if (info.state == KeeperState.exited) {
@@ -342,10 +342,10 @@ class AcpAgentSession extends ChangeNotifier implements AgentSessionView {
   }
 
   static int _urgency(AgentPhase p) => switch (p) {
-        AgentPhase.blockedOnPermission || AgentPhase.blockedOnQuestion => 2,
-        AgentPhase.working => 1,
-        AgentPhase.idle => 0,
-      };
+    AgentPhase.blockedOnPermission || AgentPhase.blockedOnQuestion => 2,
+    AgentPhase.working => 1,
+    AgentPhase.idle => 0,
+  };
 
   @override
   DateTime get phaseSince => _phaseSince;
@@ -363,8 +363,7 @@ class AcpAgentSession extends ChangeNotifier implements AgentSessionView {
   /// comparable between sessions of one machine): for ranking which sessions
   /// deserve a channel. A keeper that said neither when it last did anything
   /// nor when it started ranks as the oldest.
-  DateTime get activityAt =>
-      _info.lastEventAt ?? _info.startedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+  DateTime get activityAt => _info.lastEventAt ?? _info.startedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
   @override
   DateTime? get cachedAsOf => _cachedAsOf;
@@ -568,19 +567,27 @@ class AcpAgentSession extends ChangeNotifier implements AgentSessionView {
 
   @override
   Future<BackgroundStopResult> stopAllBackground({BackgroundKind? only}) async {
-    final stoppable = [for (final t in backgroundWork.stoppable) if (only == null || t.kind == only) t];
+    final stoppable = [
+      for (final t in backgroundWork.stoppable)
+        if (only == null || t.kind == only) t,
+    ];
     if (stoppable.isEmpty) return const BackgroundNotStoppable();
     final results = <BackgroundStopResult>[
       for (final t in stoppable.where((t) => t.stop == StopRoute.direct)) await _stopDirect(t.id),
       if (stoppable.any((t) => t.stop == StopRoute.message))
-        await _stopByMessage([for (final t in stoppable) if (t.stop == StopRoute.message) t.id]),
+        await _stopByMessage([
+          for (final t in stoppable)
+            if (t.stop == StopRoute.message) t.id,
+        ]),
     ];
     final worked = results.whereType<BackgroundStopped>().toList();
     if (worked.isNotEmpty) return BackgroundStopped(asked: worked.any((r) => r.asked));
     for (final r in results) {
       if (r is BackgroundStopFailed) return r;
     }
-    return results.any((r) => r is BackgroundAlreadyDone) ? const BackgroundAlreadyDone() : const BackgroundNotStoppable();
+    return results.any((r) => r is BackgroundAlreadyDone)
+        ? const BackgroundAlreadyDone()
+        : const BackgroundNotStoppable();
   }
 
   Future<BackgroundStopResult> _stopDirect(String taskId) async {
@@ -823,11 +830,14 @@ class AcpAgentSession extends ChangeNotifier implements AgentSessionView {
       final heldLines = held == null
           ? const <String>[]
           : (_carriedLines ??
-              (_recorder.isEmpty ? (_cachedCopy == null ? const <String>[] : cachedLines(_cachedCopy!)) : _recorder.lines));
+                (_recorder.isEmpty
+                    ? (_cachedCopy == null ? const <String>[] : cachedLines(_cachedCopy!))
+                    : _recorder.lines));
       // A held copy with a line missing from the middle (a picture too large to
       // keep) is no prefix of the keeper's log: a replay cut from it would lose
       // what that line held, so such a copy is replayed in full.
-      final heldGap = held != null &&
+      final heldGap =
+          held != null &&
           (_carriedLines != null ? false : (_recorder.isEmpty ? (_cachedCopy?.gap ?? false) : _recorder.gap));
       // The keeper sends the whole log again: what is kept for the cache
       // starts over with it.
@@ -945,7 +955,14 @@ class AcpAgentSession extends ChangeNotifier implements AgentSessionView {
     // The keeper tells every agent it can load; one that cannot answers
     // "method not found" to the first request for a session it does not hold.
     try {
-      return await client.loadSession(sid, cwd: _info.cwd, meta: meta, merge: merge, pipelined: !_reopening, since: since);
+      return await client.loadSession(
+        sid,
+        cwd: _info.cwd,
+        meta: meta,
+        merge: merge,
+        pipelined: !_reopening,
+        since: since,
+      );
     } on JsonRpcException catch (e) {
       if (_reopening && e.code == JsonRpcCode.methodNotFound) return resumeOnly(await init);
       rethrow;
@@ -1445,12 +1462,7 @@ class AcpAgentSession extends ChangeNotifier implements AgentSessionView {
   /// [AgentSessionView.sendBlocks]): true at once when the turn has started,
   /// else, when the prompt has failed, true if it waits held. The turn itself
   /// is not waited for.
-  Future<bool> _promptNow(
-    AcpClient client,
-    String sid,
-    List<ContentBlock> blocks, {
-    String? fromQueue,
-  }) {
+  Future<bool> _promptNow(AcpClient client, String sid, List<ContentBlock> blocks, {String? fromQueue}) {
     final before = client.state(sid);
     var started = false;
     var kept = false;
@@ -1575,7 +1587,8 @@ class AcpAgentSession extends ChangeNotifier implements AgentSessionView {
       !_state.disconnected &&
       _state.phase == AgentPhase.idle;
 
-  static const _silentTurn = 'The agent ended the turn without an answer. '
+  static const _silentTurn =
+      'The agent ended the turn without an answer. '
       'If this keeps happening, its login on the machine may have expired.';
 
   /// Whether the agent did anything visible since [before]: a message or a
@@ -1730,10 +1743,12 @@ class AcpAgentSession extends ChangeNotifier implements AgentSessionView {
   Future<PermissionOutcome> _requestPermission(PermissionRequest request, Future<void> cancelled) {
     final waiter = Completer<PermissionOutcome>();
     _permissions[request] = waiter;
-    unawaited(cancelled.then((_) {
-      _permissions.remove(request);
-      if (!waiter.isCompleted) waiter.complete(const PermissionCancelled());
-    }));
+    unawaited(
+      cancelled.then((_) {
+        _permissions.remove(request);
+        if (!waiter.isCompleted) waiter.complete(const PermissionCancelled());
+      }),
+    );
     return waiter.future;
   }
 
@@ -1742,10 +1757,12 @@ class AcpAgentSession extends ChangeNotifier implements AgentSessionView {
     if (request.sessionId == null) return Future.value(const ElicitationCancel());
     final waiter = Completer<ElicitationResponse>();
     _questions[request] = waiter;
-    unawaited(cancelled.then((_) {
-      _questions.remove(request);
-      if (!waiter.isCompleted) waiter.complete(const ElicitationCancel());
-    }));
+    unawaited(
+      cancelled.then((_) {
+        _questions.remove(request);
+        if (!waiter.isCompleted) waiter.complete(const ElicitationCancel());
+      }),
+    );
     return waiter.future;
   }
 
@@ -1794,7 +1811,8 @@ class AcpAgentSession extends ChangeNotifier implements AgentSessionView {
         if (held != null) _queue.holdAll(held);
       }
     }
-    final requests = prev.pending.length != next.pending.length ||
+    final requests =
+        prev.pending.length != next.pending.length ||
         (next.pending.isNotEmpty && prev.pending.first.id != next.pending.first.id);
     _changed(urgent: _shownPhase != before || requests || finished || prev.disconnected != next.disconnected);
     _pump();
@@ -1872,8 +1890,8 @@ class AcpAgentSession extends ChangeNotifier implements AgentSessionView {
     _cancelFlush = slow
         ? _flush.after(backgroundNotifyEvery, _flushDue)
         : _quiet
-            ? _flush.after(notifyEvery, _flushDue)
-            : _flush.nextFrame(_flushDue);
+        ? _flush.after(notifyEvery, _flushDue)
+        : _flush.nextFrame(_flushDue);
   }
 
   /// The flush: the text that grew in place is announced to its row, then the
@@ -1908,15 +1926,15 @@ class AcpAgentSession extends ChangeNotifier implements AgentSessionView {
   }
 
   static String _words(Object e) => switch (e) {
-        AcpProtocolException(:final message) => message,
-        JsonRpcException(:final message) when message.toLowerCase().contains('does not support image') =>
-          '$message. Send it without the picture, or pick another model.',
-        JsonRpcException(:final message) => message,
-        AgentHostException(:final message) => message,
-        JsonRpcClosedException() => 'The connection dropped.',
-        TimeoutException() => 'The agent did not answer in time.',
-        _ => '$e',
-      };
+    AcpProtocolException(:final message) => message,
+    JsonRpcException(:final message) when message.toLowerCase().contains('does not support image') =>
+      '$message. Send it without the picture, or pick another model.',
+    JsonRpcException(:final message) => message,
+    AgentHostException(:final message) => message,
+    JsonRpcClosedException() => 'The connection dropped.',
+    TimeoutException() => 'The agent did not answer in time.',
+    _ => '$e',
+  };
 
   static String _folderName(String cwd, {required String fallback}) {
     var v = cwd.trim();

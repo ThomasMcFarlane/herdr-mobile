@@ -188,9 +188,7 @@ class GalleryModel extends ChangeNotifier {
     await _loadPage(0);
     _loadingFirst = false;
     if (!_disposed) notifyListeners();
-    final warm = <GalleryAsset>[
-      for (var i = 0; i < galleryWarmThumbs; i++) ?at(i),
-    ];
+    final warm = <GalleryAsset>[for (var i = 0; i < galleryWarmThumbs; i++) ?at(i)];
     if (warm.isNotEmpty) thumbs.prefetch(warm);
   }
 
@@ -238,7 +236,8 @@ class GalleryModel extends ChangeNotifier {
     }
     final head = await _gallery.assets(fresh.id, start: 0, count: galleryPage);
     if (_disposed || epoch != _epoch) return;
-    final same = fresh.count == _assets.length &&
+    final same =
+        fresh.count == _assets.length &&
         head.length == (fresh.count < galleryPage ? fresh.count : galleryPage) &&
         [for (var i = 0; i < head.length; i++) head[i].id == _assets[i]?.id].every((s) => s);
     if (same) return;

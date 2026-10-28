@@ -46,10 +46,10 @@ enum PhraseProblem {
   full;
 
   String get message => switch (this) {
-        PhraseProblem.empty => 'Write something to say',
-        PhraseProblem.duplicate => 'Already in the list',
-        PhraseProblem.full => 'The list is full (${QuickPhrases.maxCount} phrases)',
-      };
+    PhraseProblem.empty => 'Write something to say',
+    PhraseProblem.duplicate => 'Already in the list',
+    PhraseProblem.full => 'The list is full (${QuickPhrases.maxCount} phrases)',
+  };
 }
 
 /// Short lines the person types to an agent over and over, offered as one-tap
@@ -68,12 +68,7 @@ class QuickPhrases extends ChangeNotifier {
   /// Longest phrase, in characters.
   static const maxLength = 80;
 
-  static const defaults = [
-    'continue',
-    'yes, go ahead',
-    'run the tests',
-    'explain what you changed',
-  ];
+  static const defaults = ['continue', 'yes, go ahead', 'run the tests', 'explain what you changed'];
 
   final QuickPhrasesStore _store;
   List<String> _phrases = defaults;

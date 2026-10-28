@@ -326,9 +326,9 @@ class AttentionNotifier {
   /// came back. A machine that needs the person (`attention`), is disabled or
   /// waits for a sign-in is not coming back by itself.
   static bool _recoverable(MachineConnection c) => switch (c.state) {
-        LinkState.online || LinkState.connecting || LinkState.reconnecting || LinkState.offline => true,
-        LinkState.attention || LinkState.disabled || LinkState.approval => false,
-      };
+    LinkState.online || LinkState.connecting || LinkState.reconnecting || LinkState.offline => true,
+    LinkState.attention || LinkState.disabled || LinkState.approval => false,
+  };
 
   /// Agents to watch (working or blocked, terminal and session, on a machine
   /// whose link is up or coming back; a session reconnecting there is still
@@ -358,26 +358,32 @@ class AttentionNotifier {
       final machine = a.machine.profile;
       final key = '${machine.id}/${pane.id}';
       if (pane.status == AgentStatus.blocked) {
-        items.add(_Item(
-          key,
-          NotifyKind.needsYou,
-          reachable: !a.stale,
-          id: () => notificationIdFor(key),
-          title: () => _title(a.betterTitle ?? pane.title, _folder(a.machine.places, pane.cwd), agentName(pane.agent)),
-          body: () => 'needs you · ${whereLine(agent: agentName(pane.agent), machine: machine.label)}',
-          link: () => agentLinkFor(machine.id, pane.id),
-          pane: (machineId: machine.id, paneId: pane.id),
-        ));
+        items.add(
+          _Item(
+            key,
+            NotifyKind.needsYou,
+            reachable: !a.stale,
+            id: () => notificationIdFor(key),
+            title: () =>
+                _title(a.betterTitle ?? pane.title, _folder(a.machine.places, pane.cwd), agentName(pane.agent)),
+            body: () => 'needs you · ${whereLine(agent: agentName(pane.agent), machine: machine.label)}',
+            link: () => agentLinkFor(machine.id, pane.id),
+            pane: (machineId: machine.id, paneId: pane.id),
+          ),
+        );
       } else if (a.toReview && _alsoDone) {
-        items.add(_Item(
-          key,
-          NotifyKind.finished,
-          reachable: !a.stale,
-          id: () => notificationIdFor(key),
-          title: () => _title(a.betterTitle ?? pane.title, _folder(a.machine.places, pane.cwd), agentName(pane.agent)),
-          body: () => 'done · ${whereLine(agent: agentName(pane.agent), machine: machine.label)}',
-          link: () => agentLinkFor(machine.id, pane.id),
-        ));
+        items.add(
+          _Item(
+            key,
+            NotifyKind.finished,
+            reachable: !a.stale,
+            id: () => notificationIdFor(key),
+            title: () =>
+                _title(a.betterTitle ?? pane.title, _folder(a.machine.places, pane.cwd), agentName(pane.agent)),
+            body: () => 'done · ${whereLine(agent: agentName(pane.agent), machine: machine.label)}',
+            link: () => agentLinkFor(machine.id, pane.id),
+          ),
+        );
       }
     }
     for (final s in _sessions?.sessions ?? const <AgentSessionView>[]) {
@@ -385,30 +391,34 @@ class AttentionNotifier {
       final machine = s.machine.profile;
       final key = 'session/${s.key}';
       if (AttentionSet.sessionBlocked(s)) {
-        items.add(_Item(
-          key,
-          NotifyKind.needsYou,
-          reachable: reachable,
-          id: () => notificationIdFor(key),
-          title: () => _title(s.title, '', s.agentLabel),
-          body: () => 'needs you · ${whereLine(agent: s.agentLabel, machine: machine.label)}',
-          link: () => sessionLinkOf(s),
-        ));
+        items.add(
+          _Item(
+            key,
+            NotifyKind.needsYou,
+            reachable: reachable,
+            id: () => notificationIdFor(key),
+            title: () => _title(s.title, '', s.agentLabel),
+            body: () => 'needs you · ${whereLine(agent: s.agentLabel, machine: machine.label)}',
+            link: () => sessionLinkOf(s),
+          ),
+        );
       } else if (s.link == AgentLink.connecting || s.link == AgentLink.reconnecting) {
         // Attaching (again): what it shows says nothing about whether the
         // request is still there. Only a live state, or an ended or failed
         // session, is a verdict.
         unknown.add(key);
       } else if (AttentionSet.sessionToReview(s) && _alsoDone) {
-        items.add(_Item(
-          key,
-          NotifyKind.finished,
-          reachable: reachable,
-          id: () => notificationIdFor(key),
-          title: () => _title(s.title, '', s.agentLabel),
-          body: () => 'done · ${whereLine(agent: s.agentLabel, machine: machine.label)}',
-          link: () => sessionLinkOf(s),
-        ));
+        items.add(
+          _Item(
+            key,
+            NotifyKind.finished,
+            reachable: reachable,
+            id: () => notificationIdFor(key),
+            title: () => _title(s.title, '', s.agentLabel),
+            body: () => 'done · ${whereLine(agent: s.agentLabel, machine: machine.label)}',
+            link: () => sessionLinkOf(s),
+          ),
+        );
       }
     }
     return (items: items, unknown: unknown);
@@ -572,14 +582,16 @@ class AttentionNotifier {
       for (final (i, reply) in prompt.replies.indexed) {
         if (buttons.length == maxNotificationAnswers) break;
         if (!answerableFromNotification(reply)) continue;
-        buttons.add(NotificationAnswer(
-          machineId: pane.machineId,
-          paneId: pane.paneId,
-          digest: promptDigest(prompt),
-          index: i,
-          nonce: nonce,
-          label: _cut(visible(reply.label), notifyButtonLength),
-        ));
+        buttons.add(
+          NotificationAnswer(
+            machineId: pane.machineId,
+            paneId: pane.paneId,
+            digest: promptDigest(prompt),
+            index: i,
+            nonce: nonce,
+            label: _cut(visible(reply.label), notifyButtonLength),
+          ),
+        );
       }
     }
     return AgentNotification(

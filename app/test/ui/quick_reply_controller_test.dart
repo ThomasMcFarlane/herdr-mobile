@@ -58,14 +58,19 @@ void main() {
     machine.dispose();
   });
 
-  List<Map<String, dynamic>> sent(String method) =>
-      [for (final (m, p) in transport.calls) if (m == method) p];
+  List<Map<String, dynamic>> sent(String method) => [
+    for (final (m, p) in transport.calls)
+      if (m == method) p,
+  ];
 
   testWidgets('a chip sends exactly its own keys to its own pane, once', (tester) async {
     expect(await reply.choose(_no, asked: _asked), isTrue);
 
     expect(sent('pane.send_keys'), [
-      {'pane_id': 'w1:p1', 'keys': ['3', 'enter']},
+      {
+        'pane_id': 'w1:p1',
+        'keys': ['3', 'enter'],
+      },
     ]);
     expect(reply.phase, ReplyPhase.sent);
     expect(reply.sentLabel, '3. No');
@@ -125,8 +130,7 @@ void main() {
       reply.cancelConfirm();
     });
 
-    testWidgets('tapping a different chip drops the question and sends that chip',
-        (tester) async {
+    testWidgets('tapping a different chip drops the question and sends that chip', (tester) async {
       await reply.choose(_delete, asked: _asked);
       expect(await reply.choose(_yes, asked: _asked), isTrue);
       expect(sent('pane.send_keys').single['keys'], ['1', 'enter'], reason: 'never the risky one');
@@ -187,28 +191,30 @@ void main() {
       await tester.pump(const Duration(seconds: 4));
     });
 
-    testWidgets('answered on the desktop and asking something else: nothing is sent, and the chip under the thumb says so',
-        (tester) async {
-      const next = PromptInfo(
-        question: 'Push to origin?',
-        replies: [
-          QuickReply(label: '1. Push', keys: ['1', 'enter']),
-          QuickReply(label: '2. Not now', keys: ['2', 'enter']),
-        ],
-      );
-      screen.now = next;
+    testWidgets(
+      'answered on the desktop and asking something else: nothing is sent, and the chip under the thumb says so',
+      (tester) async {
+        const next = PromptInfo(
+          question: 'Push to origin?',
+          replies: [
+            QuickReply(label: '1. Push', keys: ['1', 'enter']),
+            QuickReply(label: '2. Not now', keys: ['2', 'enter']),
+          ],
+        );
+        screen.now = next;
 
-      expect(await reply.choose(_yes, asked: _asked), isFalse);
-      expect(sent('pane.send_keys'), isEmpty, reason: 'the keys were meant for the old question');
-      expect(reply.phase, ReplyPhase.changed);
-      expect(reply.subject, next.replies.first, reason: 'said on the new chip where the tapped one was');
+        expect(await reply.choose(_yes, asked: _asked), isFalse);
+        expect(sent('pane.send_keys'), isEmpty, reason: 'the keys were meant for the old question');
+        expect(reply.phase, ReplyPhase.changed);
+        expect(reply.subject, next.replies.first, reason: 'said on the new chip where the tapped one was');
 
-      await tester.pump(const Duration(milliseconds: 1600));
-      expect(reply.phase, ReplyPhase.idle, reason: 'then the chip shows its option again');
-      expect(await reply.choose(next.replies.first, asked: next), isTrue);
-      expect(sent('pane.send_keys').single['keys'], ['1', 'enter']);
-      await tester.pump(const Duration(seconds: 4));
-    });
+        await tester.pump(const Duration(milliseconds: 1600));
+        expect(reply.phase, ReplyPhase.idle, reason: 'then the chip shows its option again');
+        expect(await reply.choose(next.replies.first, asked: next), isTrue);
+        expect(sent('pane.send_keys').single['keys'], ['1', 'enter']);
+        await tester.pump(const Duration(seconds: 4));
+      },
+    );
 
     testWidgets('a pane that asks nothing any more gets nothing', (tester) async {
       screen.now = null;
@@ -243,8 +249,7 @@ void main() {
   });
 
   group('text and keys', () {
-    testWidgets('a line is typed and entered; whitespace alone only presses enter',
-        (tester) async {
+    testWidgets('a line is typed and entered; whitespace alone only presses enter', (tester) async {
       expect(await reply.sendLine('use the staging db'), isTrue);
       expect(sent('pane.send_input').single, {
         'pane_id': 'w1:p1',
@@ -262,8 +267,7 @@ void main() {
       await tester.pump(const Duration(seconds: 4));
     });
 
-    testWidgets('a long reply is clipped in its confirmation, not in what is sent',
-        (tester) async {
+    testWidgets('a long reply is clipped in its confirmation, not in what is sent', (tester) async {
       final text = 'word ' * 30;
       await reply.sendLine(text);
       expect(sent('pane.send_input').single['text'], text);
@@ -281,10 +285,13 @@ void main() {
       await reply.sendKey('down');
       expect(reply.phase, ReplyPhase.idle, reason: 'arrow keys are not an answer');
       expect(await reply.choose(_yes, asked: _asked), isTrue, reason: 'down, then tap: must not wait three seconds');
-      expect([for (final c in sent('pane.send_keys')) c['keys']], [
-        ['down'],
-        ['1', 'enter'],
-      ]);
+      expect(
+        [for (final c in sent('pane.send_keys')) c['keys']],
+        [
+          ['down'],
+          ['1', 'enter'],
+        ],
+      );
       await tester.pump(const Duration(seconds: 4));
     });
   });

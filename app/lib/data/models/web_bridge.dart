@@ -44,8 +44,7 @@ final class PortForward extends WebBridgeSpec {
 /// Where a listener answers and the secret that opens it.
 class WebBridgeInfo {
   /// [entryPort] defaults to [port]: a static site answers its own entry URL.
-  const WebBridgeInfo({required this.port, required this.token, int? entryPort})
-      : entryPort = entryPort ?? port;
+  const WebBridgeInfo({required this.port, required this.token, int? entryPort}) : entryPort = entryPort ?? port;
 
   /// The loopback port on the phone.
   final int port;
@@ -63,10 +62,7 @@ class WebBridgeInfo {
 
   @override
   bool operator ==(Object other) =>
-      other is WebBridgeInfo &&
-      other.port == port &&
-      other.token == token &&
-      other.entryPort == entryPort;
+      other is WebBridgeInfo && other.port == port && other.token == token && other.entryPort == entryPort;
 
   @override
   int get hashCode => Object.hash(port, token, entryPort);

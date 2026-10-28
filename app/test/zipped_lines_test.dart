@@ -30,7 +30,10 @@ Future<List<String>> _read(Iterable<String> lines) => zippedLines(Stream.fromIte
 void main() {
   test('plain lines pass, zipped ones come out as the lines they hold, in order', () async {
     final z = _Zipper();
-    final big = List.generate(40, (i) => '{"jsonrpc":"2.0","method":"session/update","params":{"n":$i,"pad":"${'x' * 60}"}}');
+    final big = List.generate(
+      40,
+      (i) => '{"jsonrpc":"2.0","method":"session/update","params":{"n":$i,"pad":"${'x' * 60}"}}',
+    );
     final out = await _read([
       '{"id":1}',
       z.piece('${big.take(20).join('\n')}\n'),
@@ -77,11 +80,14 @@ void main() {
     final z = _Zipper();
     final events = <Object>[];
     final done = Completer<void>();
-    zippedLines(Stream.fromIterable(['{"id":1}', 'Z${base64.encode([1, 2, 3, 4])}', '{"id":2}', z.piece('{"id":3}\n')])).listen(
-      events.add,
-      onError: events.add,
-      onDone: done.complete,
-    );
+    zippedLines(
+      Stream.fromIterable([
+        '{"id":1}',
+        'Z${base64.encode([1, 2, 3, 4])}',
+        '{"id":2}',
+        z.piece('{"id":3}\n'),
+      ]),
+    ).listen(events.add, onError: events.add, onDone: done.complete);
     await done.future;
     expect(events.first, '{"id":1}');
     expect(events[1], isA<CorruptZippedLines>());

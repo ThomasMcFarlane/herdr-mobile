@@ -14,22 +14,22 @@ import '../support/herdr_stub.dart';
 import 'ui_harness.dart' show snapshotWith;
 
 Map<String, dynamic> _worktree(String path, {bool linked = false, String? branch, String? open}) => {
-      'path': path,
-      'label': path.split('/').last,
-      'is_linked_worktree': linked,
-      'branch': ?branch,
-      'open_workspace_id': ?open,
-    };
+  'path': path,
+  'label': path.split('/').last,
+  'is_linked_worktree': linked,
+  'branch': ?branch,
+  'open_workspace_id': ?open,
+};
 
 Map<String, dynamic> _list(List<Map<String, dynamic>> worktrees) => {'type': 'worktree_list', 'worktrees': worktrees};
 
 Map<String, dynamic> _created(String path) => {
-      'type': 'worktree_created',
-      'workspace': {'workspace_id': 'w9'},
-      'tab': {'tab_id': 'w9:1'},
-      'root_pane': {'pane_id': 'p9'},
-      'worktree': _worktree(path, linked: true, branch: 'worktree/quiet-stone'),
-    };
+  'type': 'worktree_created',
+  'workspace': {'workspace_id': 'w9'},
+  'tab': {'tab_id': 'w9:1'},
+  'root_pane': {'pane_id': 'p9'},
+  'worktree': _worktree(path, linked: true, branch: 'worktree/quiet-stone'),
+};
 
 class _Env {
   _Env(this.h, this.vm, this.stub, this.host);
@@ -48,12 +48,7 @@ class _Env {
 Future<_Env> _env() async {
   final h = await CreateHarness.create([(profile: profileOf('a', 'studio-mac'), snapshot: snapshotWith(const []))]);
   final host = h.hosts.putIfAbsent('a', FakeAgentHost.new);
-  final vm = NewAgentSessionViewModel(
-    fleet: h.fleet,
-    sessions: h.agents,
-    settings: h.agentSettings,
-    machineId: 'a',
-  );
+  final vm = NewAgentSessionViewModel(fleet: h.fleet, sessions: h.agents, settings: h.agentSettings, machineId: 'a');
   return _Env(h, vm, h.stubs['a']!, host);
 }
 
@@ -129,9 +124,9 @@ void main() {
     e = await _env();
     var made = false;
     e.stub.on['worktree.list'] = (_) => _list([
-          _worktree('/r/app', branch: 'main'),
-          if (made) _worktree('/r/worktree-slow-hook', linked: true, branch: 'worktree/slow-hook'),
-        ]);
+      _worktree('/r/app', branch: 'main'),
+      if (made) _worktree('/r/worktree-slow-hook', linked: true, branch: 'worktree/slow-hook'),
+    ]);
     // herdr finishes the worktree (its hooks are slow) after the request timed out.
     e.stub.on['worktree.create'] = (_) {
       made = true;
@@ -166,7 +161,8 @@ void main() {
   test('a herdr without worktrees says so and offers This folder', () async {
     e = await _env();
     e.stub.on['worktree.list'] = (_) => _list([_worktree('/r/app')]);
-    e.stub.on['worktree.create'] = (_) => throw HerdrApiException('invalid_request', 'unknown variant `worktree.create`');
+    e.stub.on['worktree.create'] = (_) =>
+        throw HerdrApiException('invalid_request', 'unknown variant `worktree.create`');
     await e.vm.lookUp('/r/app');
 
     e.vm.chooseCheckout(const NewWorktree());

@@ -128,9 +128,7 @@ class SessionCommandSource extends ChangeNotifier implements CommandSource {
     final advertised = _session.state.commands;
     if (identical(advertised, _mappedFrom)) return _commands;
     _mappedFrom = advertised;
-    return [
-      for (final c in advertised) SlashCommand(c.name, c.description, SlashSource.builtIn, hint: c.inputHint),
-    ];
+    return [for (final c in advertised) SlashCommand(c.name, c.description, SlashSource.builtIn, hint: c.inputHint)];
   }
 
   void _onSession() {

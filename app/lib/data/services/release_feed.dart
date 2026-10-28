@@ -21,10 +21,7 @@ const _unreadable = UpdateException('GitHub sent something herdr could not read.
 /// stopped.
 UpdateException updateFailure(Object error, {String doing = 'reach GitHub'}) {
   if (error is UpdateException) return error;
-  if (error is TimeoutException ||
-      error is SocketException ||
-      error is HandshakeException ||
-      error is HttpException) {
+  if (error is TimeoutException || error is SocketException || error is HandshakeException || error is HttpException) {
     return UpdateException('Could not $doing. Check the connection and try again.');
   }
   if (error is FileSystemException) {
@@ -36,10 +33,10 @@ UpdateException updateFailure(Object error, {String doing = 'reach GitHub'}) {
 
 /// The one HTTP failure message for a status the code does not expect.
 UpdateException httpFailure(int status) => switch (status) {
-      403 || 429 => const UpdateException('GitHub is limiting requests from this network. Try again later.'),
-      404 => const UpdateException('That release is no longer on GitHub. Check for updates again.'),
-      _ => UpdateException('GitHub answered $status. Try again later.'),
-    };
+  403 || 429 => const UpdateException('GitHub is limiting requests from this network. Try again later.'),
+  404 => const UpdateException('That release is no longer on GitHub. Check for updates again.'),
+  _ => UpdateException('GitHub answered $status. Try again later.'),
+};
 
 /// Where a redirect may lead: GitHub, and the hosts it serves release files
 /// from (`objects.githubusercontent.com`, `release-assets.githubusercontent.com`),
@@ -54,7 +51,7 @@ bool _trustedRedirect(Uri uri) =>
 /// asking: the app's name and version, and nothing else of its own.
 Future<HttpClientResponse> openGet(HttpClient client, Uri uri, {Map<String, String> headers = const {}}) async {
   var url = uri;
-  for (var hops = 0;; hops++) {
+  for (var hops = 0; ; hops++) {
     final request = await client.getUrl(url);
     request.followRedirects = false;
     request.headers.set(HttpHeaders.userAgentHeader, 'herdr-mobile/$appVersion');
@@ -75,13 +72,13 @@ Future<HttpClientResponse> openGet(HttpClient client, Uri uri, {Map<String, Stri
 /// went quiet (a handover between Wi-Fi and mobile data) must fail, not sit
 /// at "downloading" for ever.
 Stream<List<int>> failWhenStalled(Stream<List<int>> body, Duration idle) => body.timeout(
-      idle,
-      onTimeout: (sink) {
-        sink
-          ..addError(TimeoutException('no data for $idle'))
-          ..close();
-      },
-    );
+  idle,
+  onTimeout: (sink) {
+    sink
+      ..addError(TimeoutException('no data for $idle'))
+      ..close();
+  },
+);
 
 /// All of [body] as text, or [_unreadable] when it is longer than [limit].
 Future<String> readLimited(Stream<List<int>> body, int limit) async {
@@ -100,8 +97,8 @@ Future<String> readLimited(Stream<List<int>> body, int limit) async {
 /// carries nothing but the app's name and version in the User-Agent.
 class GitHubReleaseFeed implements ReleaseFeed {
   GitHubReleaseFeed({HttpClient Function()? client, Uri? url})
-      : _client = client ?? HttpClient.new,
-        _url = url ?? Uri.parse('https://api.github.com/repos/$appRepository/releases/latest');
+    : _client = client ?? HttpClient.new,
+      _url = url ?? Uri.parse('https://api.github.com/repos/$appRepository/releases/latest');
 
   final HttpClient Function() _client;
   final Uri _url;

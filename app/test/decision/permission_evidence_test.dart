@@ -13,7 +13,8 @@ TranscriptTool _tool(String id) => TranscriptTool(ToolCall(toolCallId: id, title
 PermissionRequest _request(Json toolCall, {List<Json>? options}) => PermissionRequest.parse({
   'sessionId': 's',
   'toolCall': toolCall,
-  'options': options ??
+  'options':
+      options ??
       [
         {'optionId': 'allow', 'name': 'Yes', 'kind': 'allow_once'},
         {'optionId': 'reject', 'name': 'No', 'kind': 'reject_once'},
@@ -78,26 +79,29 @@ void main() {
   });
 
   group('plans', () {
-    test('Claude ExitPlanMode: rawInput.plan, kind switch_mode, content text (claude-agent-acp ExitPlanModeReporter)', () {
-      final e = permissionEvidence(
-        _request({
-          'toolCallId': 'tp',
-          'title': 'Approve Plan',
-          'kind': 'switch_mode',
-          'rawInput': {'plan': '# Plan\n\n1. Add the flag.\n2. Wire it.'},
-          'content': [
-            {
-              'type': 'content',
-              'content': {'type': 'text', 'text': '# Plan\n\n1. Add the flag.\n2. Wire it.'},
-            },
-          ],
-        }),
-      );
-      expect(e.planMarkdown, '# Plan\n\n1. Add the flag.\n2. Wire it.');
-      expect(e.planCutChars, 0);
-      expect(e.planIsPreview, isFalse);
-      expect(e.hasPlan, isTrue);
-    });
+    test(
+      'Claude ExitPlanMode: rawInput.plan, kind switch_mode, content text (claude-agent-acp ExitPlanModeReporter)',
+      () {
+        final e = permissionEvidence(
+          _request({
+            'toolCallId': 'tp',
+            'title': 'Approve Plan',
+            'kind': 'switch_mode',
+            'rawInput': {'plan': '# Plan\n\n1. Add the flag.\n2. Wire it.'},
+            'content': [
+              {
+                'type': 'content',
+                'content': {'type': 'text', 'text': '# Plan\n\n1. Add the flag.\n2. Wire it.'},
+              },
+            ],
+          }),
+        );
+        expect(e.planMarkdown, '# Plan\n\n1. Add the flag.\n2. Wire it.');
+        expect(e.planCutChars, 0);
+        expect(e.planIsPreview, isFalse);
+        expect(e.hasPlan, isTrue);
+      },
+    );
 
     test('Claude without rawInput.plan falls back to the first content text of a switch_mode call', () {
       final e = permissionEvidence(
@@ -167,7 +171,9 @@ void main() {
         {'plan': '   \n'},
         {'plan': 42},
         {'plan': null},
-        {'plan': ['a']},
+        {
+          'plan': ['a'],
+        },
       ]) {
         final e = permissionEvidence(_request({'toolCallId': 't', 'kind': 'switch_mode', 'rawInput': input}));
         expect(e.planMarkdown, isNull, reason: '$input');
@@ -179,7 +185,13 @@ void main() {
       final plan = line * (2 * 1024 * 1024 ~/ line.length);
       expect(plan.length, greaterThan(2 * 1000 * 1000));
       final watch = Stopwatch()..start();
-      final e = permissionEvidence(_request({'toolCallId': 't', 'kind': 'switch_mode', 'rawInput': {'plan': plan}}));
+      final e = permissionEvidence(
+        _request({
+          'toolCallId': 't',
+          'kind': 'switch_mode',
+          'rawInput': {'plan': plan},
+        }),
+      );
       watch.stop();
       final md = e.planMarkdown!;
       expect(md.length, lessThan(planCharLimit + 100));
@@ -191,7 +203,13 @@ void main() {
 
     test('a cut inside a code fence closes the fence before the note', () {
       final plan = '```dart\n${'int a = 1;\n' * 6000}```\n';
-      final e = permissionEvidence(_request({'toolCallId': 't', 'kind': 'switch_mode', 'rawInput': {'plan': plan}}));
+      final e = permissionEvidence(
+        _request({
+          'toolCallId': 't',
+          'kind': 'switch_mode',
+          'rawInput': {'plan': plan},
+        }),
+      );
       final md = e.planMarkdown!;
       expect(md, contains('\n```\n\n\u2026'));
       expect('```'.allMatches(md).length.isEven, isTrue);
@@ -199,7 +217,13 @@ void main() {
 
     test('a cut never ends inside a surrogate pair', () {
       final plan = '${'a' * (planCharLimit - 1)}\u{1F600}\u{1F600}';
-      final e = permissionEvidence(_request({'toolCallId': 't', 'kind': 'switch_mode', 'rawInput': {'plan': plan}}));
+      final e = permissionEvidence(
+        _request({
+          'toolCallId': 't',
+          'kind': 'switch_mode',
+          'rawInput': {'plan': plan},
+        }),
+      );
       final md = e.planMarkdown!;
       final body = md.substring(0, md.indexOf('\n\n\u2026'));
       expect(body.codeUnits.last, isNot(inInclusiveRange(0xD800, 0xDBFF)));
@@ -213,12 +237,21 @@ void main() {
           'rawInput': {'plan': 'Run \u202Etxt.exe\u202C \x1B[31mnow\x1B[0m\u0000 ok\u200B'},
         }),
       );
-      expect(e.planMarkdown, 'Run \u2039U+202E\u203atxt.exe\u2039U+202C\u203a now\u2039U+0000\u203a ok\u2039U+200B\u203a');
+      expect(
+        e.planMarkdown,
+        'Run \u2039U+202E\u203atxt.exe\u2039U+202C\u203a now\u2039U+0000\u203a ok\u2039U+200B\u203a',
+      );
     });
 
     test('Vietnamese and CJK plans read as written', () {
       const plan = '# Kế hoạch\n\n1. Thêm cờ `--verbose`.\n2. 运行测试。';
-      final e = permissionEvidence(_request({'toolCallId': 't', 'kind': 'switch_mode', 'rawInput': {'plan': plan}}));
+      final e = permissionEvidence(
+        _request({
+          'toolCallId': 't',
+          'kind': 'switch_mode',
+          'rawInput': {'plan': plan},
+        }),
+      );
       expect(e.planMarkdown, plan);
     });
 
@@ -428,7 +461,10 @@ void main() {
 
   group('lastAgentSentence', () {
     test('the last sentence of the last agent message', () {
-      expect(_sentence('I will look at the build folder. Then I will delete it. May I run rm -rf build?'), 'May I run rm -rf build?');
+      expect(
+        _sentence('I will look at the build folder. Then I will delete it. May I run rm -rf build?'),
+        'May I run rm -rf build?',
+      );
       expect(_sentence('Checking the config. Next I will rewrite it'), 'Next I will rewrite it');
     });
 
@@ -445,7 +481,10 @@ void main() {
 
     test('paths, versions, abbreviations and list numbers do not split', () {
       expect(_sentence('I edit src/main.py and bump to 3.5.1 now'), 'I edit src/main.py and bump to 3.5.1 now');
-      expect(_sentence('First read it. Then edit src/main.py, e.g. the flag parser'), 'Then edit src/main.py, e.g. the flag parser');
+      expect(
+        _sentence('First read it. Then edit src/main.py, e.g. the flag parser'),
+        'Then edit src/main.py, e.g. the flag parser',
+      );
       expect(_sentence('Ask Dr. Smith about it'), 'Ask Dr. Smith about it');
       expect(_sentence('1. Install the package'), 'Install the package');
     });
@@ -456,7 +495,10 @@ void main() {
     });
 
     test('Markdown is reduced to words', () {
-      expect(_sentence('Next I will run **`rm -rf build`** in [the docs](https://x.y/z).'), 'Next I will run rm -rf build in the docs.');
+      expect(
+        _sentence('Next I will run **`rm -rf build`** in [the docs](https://x.y/z).'),
+        'Next I will run rm -rf build in the docs.',
+      );
       expect(_sentence('Plan:\n\n- read the file\n- rewrite `main.py`'), 'rewrite main.py');
       expect(_sentence('## Deleting the folder'), 'Deleting the folder');
     });
@@ -467,7 +509,10 @@ void main() {
     });
 
     test('a wrapped paragraph is one paragraph', () {
-      expect(_sentence('I will remove the build\nfolder before the rebuild'), 'I will remove the build folder before the rebuild');
+      expect(
+        _sentence('I will remove the build\nfolder before the rebuild'),
+        'I will remove the build folder before the rebuild',
+      );
     });
 
     test('ANSI, controls and direction marks are removed', () {
@@ -510,7 +555,11 @@ void main() {
     });
 
     test('a message with no words falls back to the one before it', () {
-      final items = <TranscriptItem>[_say('First said.', key: 'a'), _say('```\ncode only\n```', key: 'b'), _say('...', key: 'c')];
+      final items = <TranscriptItem>[
+        _say('First said.', key: 'a'),
+        _say('```\ncode only\n```', key: 'b'),
+        _say('...', key: 'c'),
+      ];
       expect(lastAgentSentence(items), 'First said.');
     });
 
@@ -524,8 +573,14 @@ void main() {
 
     test('a live message is read like any other', () {
       final state = [
-        {'sessionUpdate': 'agent_message_chunk', 'content': {'type': 'text', 'text': 'Starting. I will delete'}},
-        {'sessionUpdate': 'agent_message_chunk', 'content': {'type': 'text', 'text': ' the cache now.'}},
+        {
+          'sessionUpdate': 'agent_message_chunk',
+          'content': {'type': 'text', 'text': 'Starting. I will delete'},
+        },
+        {
+          'sessionUpdate': 'agent_message_chunk',
+          'content': {'type': 'text', 'text': ' the cache now.'},
+        },
       ].fold(const AgentSessionState('s'), (s, u) => s.apply(SessionUpdate.parse(u)));
       expect(state.liveMessage, isNotNull);
       expect(lastAgentSentence(state.items), 'I will delete the cache now.');

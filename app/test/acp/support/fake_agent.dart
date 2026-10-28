@@ -87,7 +87,8 @@ class FakeAgent {
   final problems = <String>[];
 
   /// A `session/update` notification.
-  void update(String sessionId, Json update) => rpc.notify('session/update', {'sessionId': sessionId, 'update': update});
+  void update(String sessionId, Json update) =>
+      rpc.notify('session/update', {'sessionId': sessionId, 'update': update});
 
   /// The agent calls the client.
   JsonRpcCall ask(String method, Object? params) => rpc.call(method, params);

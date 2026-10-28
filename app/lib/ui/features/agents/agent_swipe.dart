@@ -7,7 +7,9 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter/widgets.dart';
 
 import '../../../data/repositories/agent_screens.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../photos/photo_math.dart' show rubberBand;
 import 'agent_navigation.dart';
 import 'agent_peek.dart';
@@ -26,20 +28,22 @@ class AgentSwipe extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Semantics(
-        container: true,
-        customSemanticsActions: {
-          _next: () => swipeToAgent(context, agent, 1),
-          _previous: () => swipeToAgent(context, agent, -1),
-        },
-        child: AgentSwipeDetector(peek: (step) => _peek(context, step), child: child),
-      );
+    container: true,
+    customSemanticsActions: {
+      _next: () => swipeToAgent(context, agent, 1),
+      _previous: () => swipeToAgent(context, agent, -1),
+    },
+    child: AgentSwipeDetector(peek: (step) => _peek(context, step), child: child),
+  );
 
   /// Looked up once, when the swipe is recognised: letting go goes to the
   /// agent the card showed, even if the order changed while the finger moved.
   SwipePeek _peek(BuildContext context, int step) {
     final to = neighbourOf(context, agent, step);
     if (to == null) {
-      return SwipePeek(card: AgentPeekEnd(next: step > 0, listed: agentsInBoardOrder(context).contains(agent)));
+      return SwipePeek(
+        card: AgentPeekEnd(next: step > 0, listed: agentsInBoardOrder(context).contains(agent)),
+      );
     }
     return SwipePeek(
       card: AgentPeekCard(item: to, fromLeft: step < 0),
@@ -333,8 +337,8 @@ class _AgentSwipeDetectorState extends State<AgentSwipeDetector> with TickerProv
     _travel
         .animateWith(SpringSimulation(Springs.settle, _travel.value, 0, velocity, tolerance: Springs.swipe))
         .whenCompleteOrCancel(() {
-      if (mounted && generation == _generation) _clear();
-    });
+          if (mounted && generation == _generation) _clear();
+        });
   }
 
   void _clear() {
@@ -440,47 +444,47 @@ class _PeekLayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MediaQuery.withClampedTextScaling(
-        maxScaleFactor: kBarTextScale,
-        child: LayoutBuilder(
-          builder: (context, box) => AnimatedBuilder(
-            animation: Listenable.merge([travel, fade]),
-            child: child,
-            builder: (context, child) {
-              final t = travel.value;
-              final armed = !end && t >= armAt - Springs.pixel.distance;
-              final full = armAt;
-              var opacity = fade.value;
-              if (reduced || end) opacity *= (t / full).clamp(0.0, 1.0);
-              final card = PeekFrame(armed: armed, child: child!);
-              Widget placed;
-              if (end) {
-                final out = reduced ? 0.0 : Motion.travel - t;
-                placed = Align(
-                  alignment: fromLeft ? Alignment.centerLeft : Alignment.centerRight,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: Gap.md),
-                    child: Transform.translate(offset: Offset(fromLeft ? -out : out, 0), child: card),
-                  ),
-                );
-              } else {
-                final rest = width + Gap.md;
-                final inside = reduced ? rest : t;
-                placed = Stack(
-                  children: [
-                    Positioned(
-                      left: fromLeft ? inside - width : box.maxWidth - inside,
-                      width: width,
-                      top: 0,
-                      bottom: 0,
-                      child: Center(child: card),
-                    ),
-                  ],
-                );
-              }
-              if (opacity >= 1) return placed;
-              return Opacity(opacity: opacity.clamp(0.0, 1.0), child: placed);
-            },
-          ),
-        ),
-      );
+    maxScaleFactor: kBarTextScale,
+    child: LayoutBuilder(
+      builder: (context, box) => AnimatedBuilder(
+        animation: Listenable.merge([travel, fade]),
+        child: child,
+        builder: (context, child) {
+          final t = travel.value;
+          final armed = !end && t >= armAt - Springs.pixel.distance;
+          final full = armAt;
+          var opacity = fade.value;
+          if (reduced || end) opacity *= (t / full).clamp(0.0, 1.0);
+          final card = PeekFrame(armed: armed, child: child!);
+          Widget placed;
+          if (end) {
+            final out = reduced ? 0.0 : Motion.travel - t;
+            placed = Align(
+              alignment: fromLeft ? Alignment.centerLeft : Alignment.centerRight,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: Gap.md),
+                child: Transform.translate(offset: Offset(fromLeft ? -out : out, 0), child: card),
+              ),
+            );
+          } else {
+            final rest = width + Gap.md;
+            final inside = reduced ? rest : t;
+            placed = Stack(
+              children: [
+                Positioned(
+                  left: fromLeft ? inside - width : box.maxWidth - inside,
+                  width: width,
+                  top: 0,
+                  bottom: 0,
+                  child: Center(child: card),
+                ),
+              ],
+            );
+          }
+          if (opacity >= 1) return placed;
+          return Opacity(opacity: opacity.clamp(0.0, 1.0), child: placed);
+        },
+      ),
+    ),
+  );
 }

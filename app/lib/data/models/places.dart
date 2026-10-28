@@ -54,13 +54,15 @@ class PlaceIndex {
       final wt = w.worktree;
       if (wt == null) continue;
       byRepo.putIfAbsent(wt.repoKey, () => []).add(w);
-      places.add(Place(
-        repoKey: wt.repoKey,
-        repoName: wt.repoName,
-        checkoutPath: _trimSlash(wt.checkoutPath),
-        workspaceId: w.id,
-        isLinked: wt.isLinked,
-      ));
+      places.add(
+        Place(
+          repoKey: wt.repoKey,
+          repoName: wt.repoName,
+          checkoutPath: _trimSlash(wt.checkoutPath),
+          workspaceId: w.id,
+          isLinked: wt.isLinked,
+        ),
+      );
     }
     final repos = <RepoGroup>[];
     final groupOf = <String, RepoGroup>{};
@@ -70,10 +72,7 @@ class PlaceIndex {
       final group = RepoGroup(
         repoKey: entry.key,
         repoName: ws.first.worktree!.repoName,
-        checkouts: [
-          ...ws.where((w) => !w.worktree!.isLinked),
-          ...ws.where((w) => w.worktree!.isLinked),
-        ],
+        checkouts: [...ws.where((w) => !w.worktree!.isLinked), ...ws.where((w) => w.worktree!.isLinked)],
       );
       repos.add(group);
       for (final w in ws) {

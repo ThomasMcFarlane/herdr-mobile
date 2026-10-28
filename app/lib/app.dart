@@ -35,7 +35,9 @@ import 'data/services/transport_factory.dart';
 import 'ui/support/deep_link.dart';
 import 'ui/support/home_tabs.dart';
 import 'ui/support/keyboard_frames.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'ui/features/agents/agent_navigation.dart' show openAgentFromLink, resumeAgent;
 import 'ui/features/machines/machine_form_view_model.dart' show TransportFactory;
 import 'ui/features/photos/mermaid_viewer.dart' show openDiagramViewer;
@@ -44,10 +46,7 @@ import 'ui/shell/home_shell.dart';
 
 /// How the app opens a connection to a saved machine: over SSH, with the
 /// credentials read from the keychain only when the transport starts.
-ConnectionFactory sshConnectionFactory({
-  required MachineRepository machines,
-  required SnapshotCache snapshotCache,
-}) {
+ConnectionFactory sshConnectionFactory({required MachineRepository machines, required SnapshotCache snapshotCache}) {
   // Sweeps old phone uploads from each host's inbox once a day, in the
   // background, the first time that host is online in a run.
   final inboxJanitor = InboxJanitor(PrefsInboxCleanupLog());
@@ -183,23 +182,18 @@ class HerdrMobileApp extends StatefulWidget {
   State<HerdrMobileApp> createState() => _HerdrMobileAppState();
 }
 
-class _HerdrMobileAppState extends State<HerdrMobileApp>
-    with WidgetsBindingObserver {
-  late final FleetRepository _fleet = widget.fleet ??
+class _HerdrMobileAppState extends State<HerdrMobileApp> with WidgetsBindingObserver {
+  late final FleetRepository _fleet =
+      widget.fleet ??
       FleetRepository(
         machines: widget.machines,
-        connect: widget.connect ??
-            sshConnectionFactory(
-              machines: widget.machines,
-              snapshotCache: widget.snapshotCache,
-            ),
+        connect: widget.connect ?? sshConnectionFactory(machines: widget.machines, snapshotCache: widget.snapshotCache),
         network: widget.network,
         screens: widget.agentScreens,
       );
 
   /// Live terminal previews for the agent cards and the answer dock.
-  late final PanePreviews _previews =
-      widget.previews ?? PanePreviews(changes: _fleet, connection: _fleet.connection);
+  late final PanePreviews _previews = widget.previews ?? PanePreviews(changes: _fleet, connection: _fleet.connection);
 
   /// What needs the person and what is to review, computed once per change
   /// for the badge, the board, the triage, the Machines tab and the cue.
@@ -292,72 +286,68 @@ class _HerdrMobileAppState extends State<HerdrMobileApp>
 
   @override
   Widget build(BuildContext context) => MultiProvider(
-        providers: [
-          ChangeNotifierProvider.value(value: widget.machines),
-          ChangeNotifierProvider.value(value: _fleet),
-          ChangeNotifierProvider.value(value: widget.terminalSettings),
-          if (widget.slashUsage case final usage?) ChangeNotifierProvider.value(value: usage),
-          if (widget.quickPhrases case final phrases?) ChangeNotifierProvider.value(value: phrases),
-          if (widget.dictation case final dictation?) ChangeNotifierProvider.value(value: dictation),
-          if (widget.sentPhrases case final sent?) ChangeNotifierProvider.value(value: sent),
-          ChangeNotifierProvider.value(value: widget.appSettings),
-          ChangeNotifierProvider.value(value: widget.agentScreens),
-          if (widget.lastSeen case final seen?) Provider<LastSeen>.value(value: seen),
-          Provider<PanePreviews>.value(value: _previews),
-          if (widget.observedSessions case final observed?) Provider<ObservedSessions>.value(value: observed),
-          Provider<TransportFactory>.value(value: createSshTransport),
-          if (widget.agentSessions case final sessions?) ListenableProvider<AgentSessions>.value(value: sessions),
-          ChangeNotifierProvider.value(value: _attentionSet),
-          if (widget.agentSessionSettings case final settings?) ChangeNotifierProvider.value(value: settings),
-          ChangeNotifierProvider.value(value: _notificationSettings),
-          Provider<Notifier>.value(value: _notifier),
-        ],
-        child: ListenableBuilder(
-          listenable: widget.appSettings,
-          builder: (context, _) => MaterialApp(
-            title: 'herdr',
-            debugShowCheckedModeBanner: false,
-            theme: AppTheme.light(
-              terminal: widget.appSettings.darkTerminal ? TerminalPalette.dark : null,
-            ),
-            darkTheme: AppTheme.dark(),
-            themeMode: themeModeOf(widget.appSettings.theme),
-            // A switch is instant: a cross-fade would lerp ThemeData on every
-            // frame and rebuild every mounted screen with it, including the
-            // hidden Agents board and a live pane.
-            themeAnimationDuration: Duration.zero,
-            // Lets the navigator and screens that opt in (non-secret form text,
-            // the selected tab) survive Android reclaiming the process.
-            restorationScopeId: 'herdr',
-            // One region for every screen, including ones without an AppBar
-            // (the empty state), so the bars never fall back to OEM defaults.
-            // The theme here is the resolved one, so `system` follows the phone.
-            builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
-                  value: AppTheme.systemBars(Theme.of(context).brightness),
-                  // Edge to edge draws under the bars; screens handle top and
-                  // bottom themselves, but nothing else clears the side insets
-                  // (landscape 3-button bar, camera cutout).
-                  child: MdDiagramOpener(
-                    open: openDiagramViewer,
-                    child: KeyboardFrames(
-                      child: SafeArea(top: false, bottom: false, child: child!),
-                    ),
-                  ),
-                ),
-            navigatorKey: _links.navigatorKey,
-            navigatorObservers: [_toastRoutes],
-            home: _home,
+    providers: [
+      ChangeNotifierProvider.value(value: widget.machines),
+      ChangeNotifierProvider.value(value: _fleet),
+      ChangeNotifierProvider.value(value: widget.terminalSettings),
+      if (widget.slashUsage case final usage?) ChangeNotifierProvider.value(value: usage),
+      if (widget.quickPhrases case final phrases?) ChangeNotifierProvider.value(value: phrases),
+      if (widget.dictation case final dictation?) ChangeNotifierProvider.value(value: dictation),
+      if (widget.sentPhrases case final sent?) ChangeNotifierProvider.value(value: sent),
+      ChangeNotifierProvider.value(value: widget.appSettings),
+      ChangeNotifierProvider.value(value: widget.agentScreens),
+      if (widget.lastSeen case final seen?) Provider<LastSeen>.value(value: seen),
+      Provider<PanePreviews>.value(value: _previews),
+      if (widget.observedSessions case final observed?) Provider<ObservedSessions>.value(value: observed),
+      Provider<TransportFactory>.value(value: createSshTransport),
+      if (widget.agentSessions case final sessions?) ListenableProvider<AgentSessions>.value(value: sessions),
+      ChangeNotifierProvider.value(value: _attentionSet),
+      if (widget.agentSessionSettings case final settings?) ChangeNotifierProvider.value(value: settings),
+      ChangeNotifierProvider.value(value: _notificationSettings),
+      Provider<Notifier>.value(value: _notifier),
+    ],
+    child: ListenableBuilder(
+      listenable: widget.appSettings,
+      builder: (context, _) => MaterialApp(
+        title: 'herdr',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light(terminal: widget.appSettings.darkTerminal ? TerminalPalette.dark : null),
+        darkTheme: AppTheme.dark(),
+        themeMode: themeModeOf(widget.appSettings.theme),
+        // A switch is instant: a cross-fade would lerp ThemeData on every
+        // frame and rebuild every mounted screen with it, including the
+        // hidden Agents board and a live pane.
+        themeAnimationDuration: Duration.zero,
+        // Lets the navigator and screens that opt in (non-secret form text,
+        // the selected tab) survive Android reclaiming the process.
+        restorationScopeId: 'herdr',
+        // One region for every screen, including ones without an AppBar
+        // (the empty state), so the bars never fall back to OEM defaults.
+        // The theme here is the resolved one, so `system` follows the phone.
+        builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+          value: AppTheme.systemBars(Theme.of(context).brightness),
+          // Edge to edge draws under the bars; screens handle top and
+          // bottom themselves, but nothing else clears the side insets
+          // (landscape 3-button bar, camera cutout).
+          child: MdDiagramOpener(
+            open: openDiagramViewer,
+            child: KeyboardFrames(child: SafeArea(top: false, bottom: false, child: child!)),
           ),
         ),
-      );
+        navigatorKey: _links.navigatorKey,
+        navigatorObservers: [_toastRoutes],
+        home: _home,
+      ),
+    ),
+  );
 }
 
 /// How a saved [ThemeChoice] maps onto the app's [ThemeMode].
 ThemeMode themeModeOf(ThemeChoice choice) => switch (choice) {
-      ThemeChoice.light => ThemeMode.light,
-      ThemeChoice.dark => ThemeMode.dark,
-      ThemeChoice.system => ThemeMode.system,
-    };
+  ThemeChoice.light => ThemeMode.light,
+  ThemeChoice.dark => ThemeMode.dark,
+  ThemeChoice.system => ThemeMode.system,
+};
 
 /// Puts the agent screen the app was left on back in front, once (see
 /// [resumeAgent]). It lives inside the home route because the navigator does

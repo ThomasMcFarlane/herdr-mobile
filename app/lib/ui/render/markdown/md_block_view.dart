@@ -2,7 +2,9 @@ import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/models/herdr_models.dart' show AgentStatus;
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'md_code_block.dart';
 import 'md_document.dart';
 import 'md_styles.dart';
@@ -298,7 +300,9 @@ class _Alert extends StatelessWidget {
                 children: [
                   Icon(icon, size: IconSize.row, color: color),
                   const SizedBox(width: Gap.sm),
-                  Expanded(child: Text(title, style: Type.labelStrong.copyWith(color: color))),
+                  Expanded(
+                    child: Text(title, style: Type.labelStrong.copyWith(color: color)),
+                  ),
                 ],
               ),
             ),
@@ -411,7 +415,12 @@ class _MdList extends StatelessWidget {
       );
       final dir = _directionOf(item.blocks);
       if (dir == TextDirection.rtl) row = Directionality(textDirection: dir!, child: row);
-      children.add(Padding(padding: EdgeInsets.only(top: i == 0 ? 0 : (list.tight ? 4.0 : 10.0)), child: row));
+      children.add(
+        Padding(
+          padding: EdgeInsets.only(top: i == 0 ? 0 : (list.tight ? 4.0 : 10.0)),
+          child: row,
+        ),
+      );
     }
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children);
   }

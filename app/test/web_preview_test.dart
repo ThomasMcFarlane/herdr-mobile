@@ -46,21 +46,24 @@ void main() {
       }
     });
 
-    test('a name the machine would resolve elsewhere is not the machine: the row would say one thing and dial another', () async {
-      // `*.local` reaches other devices on the machine's network; another 127.x
-      // or `*.localhost` is not what `localhost:...` on the row reads as.
-      for (final url in [
-        'http://devbox.local:4000/ui',
-        'http://svc.default.svc.cluster.local:8080',
-        'http://127.0.0.5:3000',
-        'http://127.1.2.3:3000',
-        'http://evil.localhost:3000',
-      ]) {
-        expect(WebPreview.canPreview(url), isFalse, reason: url);
-        await expectLater(web.forwardUrl(Uri.parse(url)), throwsA(isA<WebPreviewException>()), reason: url);
-      }
-      expect(transport.webBridges, isEmpty);
-    });
+    test(
+      'a name the machine would resolve elsewhere is not the machine: the row would say one thing and dial another',
+      () async {
+        // `*.local` reaches other devices on the machine's network; another 127.x
+        // or `*.localhost` is not what `localhost:...` on the row reads as.
+        for (final url in [
+          'http://devbox.local:4000/ui',
+          'http://svc.default.svc.cluster.local:8080',
+          'http://127.0.0.5:3000',
+          'http://127.1.2.3:3000',
+          'http://evil.localhost:3000',
+        ]) {
+          expect(WebPreview.canPreview(url), isFalse, reason: url);
+          await expectLater(web.forwardUrl(Uri.parse(url)), throwsA(isA<WebPreviewException>()), reason: url);
+        }
+        expect(transport.webBridges, isEmpty);
+      },
+    );
 
     test('a link that cannot be opened says so instead of asking the machine', () async {
       await expectLater(web.forwardUrl(Uri.parse('https://localhost:3000')), throwsA(isA<WebPreviewException>()));
@@ -99,7 +102,11 @@ void main() {
     test('the entry URL goes to the entry listener, not to the port the dev server is reached on', () async {
       transport.webInfo = const WebBridgeInfo(port: 3000, token: '0123456789abcdef0123456789abcdef', entryPort: 51999);
       final url = await web.forwardUrl(Uri.parse('http://localhost:3000/app'));
-      expect(url.port, 51999, reason: 'a connection the browser keeps to port 3000 is the dev server\'s, the token must not ride on it');
+      expect(
+        url.port,
+        51999,
+        reason: 'a connection the browser keeps to port 3000 is the dev server\'s, the token must not ride on it',
+      );
       expect(url.queryParameters['to'], '/app');
     });
 
@@ -145,20 +152,24 @@ void main() {
       transport.webFailure = const HerdrTransportException('the machine does not allow port forwarding', fatal: true);
       await expectLater(
         web.forwardUrl(Uri.parse('http://localhost:3000')),
-        throwsA(isA<WebPreviewException>().having(
-          (e) => e.message,
-          'message',
-          "Couldn't open on this phone: the machine does not allow port forwarding.",
-        )),
+        throwsA(
+          isA<WebPreviewException>().having(
+            (e) => e.message,
+            'message',
+            "Couldn't open on this phone: the machine does not allow port forwarding.",
+          ),
+        ),
       );
       transport.webFailure = const HerdrTransportException('Cannot open a local port: SocketException.');
       await expectLater(
         web.forwardUrl(Uri.parse('http://localhost:3000')),
-        throwsA(isA<WebPreviewException>().having(
-          (e) => e.message,
-          'message',
-          "Couldn't open on this phone: cannot open a local port: SocketException.",
-        )),
+        throwsA(
+          isA<WebPreviewException>().having(
+            (e) => e.message,
+            'message',
+            "Couldn't open on this phone: cannot open a local port: SocketException.",
+          ),
+        ),
       );
     });
   });
@@ -187,7 +198,9 @@ void main() {
       transport.fs = null;
       await expectLater(
         web.staticUrl(_file('/a/b.html')),
-        throwsA(isA<WebPreviewException>().having((e) => e.message, 'message', 'Files are not available on this machine.')),
+        throwsA(
+          isA<WebPreviewException>().having((e) => e.message, 'message', 'Files are not available on this machine.'),
+        ),
       );
       transport.fs = FakeFs();
       await expectLater(web.staticUrl(_file('b.html')), throwsA(isA<WebPreviewException>()));
@@ -249,9 +262,14 @@ void main() {
     });
 
     test('a failure keeps its reason alone for a place that says what failed', () {
-      expect(const WebPreviewException("Couldn't open on this phone: the machine does not allow port forwarding.").reason,
-          'The machine does not allow port forwarding.');
-      expect(const WebPreviewException('Files are not available on this machine.').reason, 'Files are not available on this machine.');
+      expect(
+        const WebPreviewException("Couldn't open on this phone: the machine does not allow port forwarding.").reason,
+        'The machine does not allow port forwarding.',
+      );
+      expect(
+        const WebPreviewException('Files are not available on this machine.').reason,
+        'Files are not available on this machine.',
+      );
     });
   });
 }

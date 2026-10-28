@@ -20,13 +20,13 @@ class Skeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     final fill = context.ds.fill;
     Widget bar(double width, double height) => FractionallySizedBox(
-          widthFactor: width,
-          alignment: Alignment.centerLeft,
-          child: Container(
-            height: height,
-            decoration: BoxDecoration(color: fill, borderRadius: BorderRadius.circular(Radii.xs)),
-          ),
-        );
+      widthFactor: width,
+      alignment: Alignment.centerLeft,
+      child: Container(
+        height: height,
+        decoration: BoxDecoration(color: fill, borderRadius: BorderRadius.circular(Radii.xs)),
+      ),
+    );
     return Semantics(
       label: 'Loading',
       excludeSemantics: true,
@@ -61,7 +61,10 @@ class Skeleton extends StatelessWidget {
                       ],
                     ),
                   )
-                : SizedBox(height: 22, child: Align(alignment: Alignment.centerLeft, child: bar(_widths[i % _widths.length], 10))),
+                : SizedBox(
+                    height: 22,
+                    child: Align(alignment: Alignment.centerLeft, child: bar(_widths[i % _widths.length], 10)),
+                  ),
           ),
         ),
       ),

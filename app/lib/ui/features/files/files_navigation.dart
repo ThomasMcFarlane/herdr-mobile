@@ -6,7 +6,9 @@ import '../../../data/models/remote_file.dart';
 import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/path_finder.dart';
 import '../../../data/words/plural.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'file_browser_screen.dart';
 import 'file_viewer_screen.dart';
 import 'file_widgets.dart';
@@ -48,8 +50,7 @@ List<LookupAttempt> lookupAttempts(String path, {String? cwd}) {
   if (explicit) return out;
   final variants = <String>[
     text,
-    if (text.length > 2 && (text.startsWith('a/') || text.startsWith('b/')))
-      text.substring(2),
+    if (text.length > 2 && (text.startsWith('a/') || text.startsWith('b/'))) text.substring(2),
   ];
   final bases = <String?>[cwd];
   if (cwd != null && RemotePath.isAbsolute(cwd)) {
@@ -115,10 +116,7 @@ String cutMiddle(String text, [int max = _quotedPath]) {
 
 /// "docs/a.md isn’t in herdr-mobile (also looked in 3 worktrees)".
 String pathNotFoundMessage(String shown, {String? folder, int worktrees = 0, bool searched = false}) {
-  final also = [
-    if (worktrees > 0) 'looked in ${countOf(worktrees, 'worktree')}',
-    if (searched) 'searched by name',
-  ];
+  final also = [if (worktrees > 0) 'looked in ${countOf(worktrees, 'worktree')}', if (searched) 'searched by name'];
   final where = folder == null ? 'isn’t on this machine' : 'isn’t in $folder';
   return '${cutMiddle(shown)} $where${also.isEmpty ? '' : ' (also ${also.join(' and ')})'}';
 }
@@ -230,13 +228,8 @@ Future<void> openRemoteFile(
   try {
     await navigator.push(
       MaterialPageRoute<void>(
-        builder: (_) => _OpenPathScreen(
-          machine: machine,
-          path: path,
-          cwd: cwd,
-          line: line,
-          onResolved: () => _opening.remove(key),
-        ),
+        builder: (_) =>
+            _OpenPathScreen(machine: machine, path: path, cwd: cwd, line: line, onResolved: () => _opening.remove(key)),
       ),
     );
   } finally {
@@ -247,11 +240,7 @@ Future<void> openRemoteFile(
 /// Pushes the directory browser, starting at [startDir] (the login directory
 /// when null). The browser is on screen at once and works out where it is
 /// inside; a second tap while it does is ignored.
-Future<void> openFileBrowser(
-  BuildContext context,
-  MachineConnection machine, {
-  String? startDir,
-}) async {
+Future<void> openFileBrowser(BuildContext context, MachineConnection machine, {String? startDir}) async {
   final navigator = Navigator.of(context);
   if (!machineSupportsFiles(machine)) {
     Toaster.of(context).show('Files are not available on this machine.', kind: ToastKind.failed);
@@ -262,11 +251,7 @@ Future<void> openFileBrowser(
   try {
     await navigator.push(
       MaterialPageRoute<void>(
-        builder: (_) => FileBrowserScreen(
-          machine: machine,
-          startDir: startDir,
-          onResolved: () => _opening.remove(key),
-        ),
+        builder: (_) => FileBrowserScreen(machine: machine, startDir: startDir, onResolved: () => _opening.remove(key)),
       ),
     );
   } finally {
@@ -276,11 +261,7 @@ Future<void> openFileBrowser(
 
 /// Directory picker for forms: returns the chosen absolute path, or null when
 /// dismissed. Pushed at once like [openFileBrowser].
-Future<String?> pickRemoteDirectory(
-  BuildContext context,
-  MachineConnection machine, {
-  String? startDir,
-}) async {
+Future<String?> pickRemoteDirectory(BuildContext context, MachineConnection machine, {String? startDir}) async {
   final navigator = Navigator.of(context);
   if (!machineSupportsFiles(machine)) return null;
   final key = (navigator, 'picker');
@@ -390,7 +371,9 @@ class _OpenPathScreenState extends State<_OpenPathScreen> {
           }
           open(
             PathFound(picked.stat, line, from: null),
-            picked.source == CandidateSource.worktree ? 'From worktree ${picked.rootName}' : 'Found in ${picked.folder}',
+            picked.source == CandidateSource.worktree
+                ? 'From worktree ${picked.rootName}'
+                : 'Found in ${picked.folder}',
           );
       }
     } on RemoteFileException catch (e) {
@@ -412,12 +395,7 @@ class _OpenPathScreenState extends State<_OpenPathScreen> {
     if (found != null) {
       page = found.stat.isDirectory
           ? FileBrowserScreen(key: const ValueKey('found'), machine: widget.machine, path: found.stat.path)
-          : FileViewerScreen(
-              key: const ValueKey('found'),
-              machine: widget.machine,
-              stat: found.stat,
-              line: found.line,
-            );
+          : FileViewerScreen(key: const ValueKey('found'), machine: widget.machine, stat: found.stat, line: found.line);
     } else {
       page = FileResolvingPage(
         key: ValueKey(error == null ? 'waiting' : 'failed'),

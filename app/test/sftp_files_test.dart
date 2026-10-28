@@ -16,10 +16,10 @@ const _dir = 0x41ED; // drwxr-xr-x
 const _link = 0xA1FF; // lrwxrwxrwx
 
 SftpName _name(String name, int mode, {int size = 0, int mtime = 1700000000}) => SftpName(
-      filename: name,
-      longname: name,
-      attr: SftpFileAttrs(size: size, mode: SftpFileMode.value(mode), modifyTime: mtime),
-    );
+  filename: name,
+  longname: name,
+  attr: SftpFileAttrs(size: size, mode: SftpFileMode.value(mode), modifyTime: mtime),
+);
 
 SftpStatusError _status(int code, [String message = '']) => SftpStatusError(code, message);
 
@@ -178,7 +178,11 @@ void main() {
       sftp.links['/p/current'] = 'notes.txt';
       sftp.links['/p/dangling'] = 'nowhere';
       sftp.stats['/p/latest'] = SftpFileAttrs(size: 4096, mode: const SftpFileMode.value(_dir), modifyTime: 1700000500);
-      sftp.stats['/p/current'] = SftpFileAttrs(size: 120, mode: const SftpFileMode.value(_file), modifyTime: 1700000600);
+      sftp.stats['/p/current'] = SftpFileAttrs(
+        size: 120,
+        mode: const SftpFileMode.value(_file),
+        modifyTime: 1700000600,
+      );
 
       final entries = {for (final e in await files.list('/p')) e.name: e};
 
@@ -271,13 +275,15 @@ void main() {
 
     test('a session that cannot be opened is not cached', () async {
       var attempts = 0;
-      files = SftpFiles(open: () async {
-        attempts++;
-        if (attempts == 1) {
-          throw RemoteFileException(RemoteFileErrorKind.unsupported, 'no sftp');
-        }
-        return sftp..stats['/f'] = SftpFileAttrs(size: 1, mode: const SftpFileMode.value(_file));
-      });
+      files = SftpFiles(
+        open: () async {
+          attempts++;
+          if (attempts == 1) {
+            throw RemoteFileException(RemoteFileErrorKind.unsupported, 'no sftp');
+          }
+          return sftp..stats['/f'] = SftpFileAttrs(size: 1, mode: const SftpFileMode.value(_file));
+        },
+      );
 
       final e = await failure(() => files.stat('/f'));
       expect(e.kind, RemoteFileErrorKind.unsupported);
@@ -310,27 +316,28 @@ void main() {
       final files = RemoteFiles(t);
       await expectLater(
         files.stat('/x'),
-        throwsA(isA<RemoteFileException>()
-            .having((e) => e.kind, 'kind', RemoteFileErrorKind.network)
-            .having((e) => e.fatal, 'fatal', isFalse)),
+        throwsA(
+          isA<RemoteFileException>()
+              .having((e) => e.kind, 'kind', RemoteFileErrorKind.network)
+              .having((e) => e.fatal, 'fatal', isFalse),
+        ),
       );
       t.fs = _NoFs(error: const HerdrTransportException('bad key', fatal: true));
-      await expectLater(
-        files.list('/x'),
-        throwsA(isA<RemoteFileException>().having((e) => e.fatal, 'fatal', isTrue)),
-      );
+      await expectLater(files.list('/x'), throwsA(isA<RemoteFileException>().having((e) => e.fatal, 'fatal', isTrue)));
     });
 
     test('home is asked once and a failed ask is retried', () async {
       var asks = 0;
       Object? failNext = const HerdrTransportException('down');
       final t = FakeTransport()
-        ..fs = _NoFs(onReal: () {
-          asks++;
-          final f = failNext;
-          failNext = null;
-          return f;
-        });
+        ..fs = _NoFs(
+          onReal: () {
+            asks++;
+            final f = failNext;
+            failNext = null;
+            return f;
+          },
+        );
       final files = RemoteFiles(t);
 
       await expectLater(files.home(), throwsA(isA<RemoteFileException>()));

@@ -198,17 +198,13 @@ final class CLikeHighlighter extends LineScanner {
           case 0x22: // "
             i = _string(t, i, i, n, out);
           case 0x27: // '
-            i = s.singleQuote == SingleQuote.none
-                ? i + 1
-                : _string(t, i, i, n, out);
+            i = s.singleQuote == SingleQuote.none ? i + 1 : _string(t, i, i, n, out);
           case 0x60: // `
             i = _backtickStart(t, i, n, out);
           case 0x40: // @
             i = _at(t, i, n, out);
           case 0x2E: // .
-            if (i + 1 < n &&
-                isDigit(t.codeUnitAt(i + 1)) &&
-                (i == 0 || !isIdentPart(t.codeUnitAt(i - 1)))) {
+            if (i + 1 < n && isDigit(t.codeUnitAt(i + 1)) && (i == 0 || !isIdentPart(t.codeUnitAt(i - 1)))) {
               final e = scanNumber(t, i, n);
               emit(out, i, e, TokenKind.number);
               i = e;
@@ -236,10 +232,7 @@ final class CLikeHighlighter extends LineScanner {
           emit(out, start, i, TokenKind.comment);
           return i;
         }
-      } else if (s.nested &&
-          c == 0x2F &&
-          i + 1 < n &&
-          t.codeUnitAt(i + 1) == 0x2A) {
+      } else if (s.nested && c == 0x2F && i + 1 < n && t.codeUnitAt(i + 1) == 0x2A) {
         a++;
         i += 2;
       } else {
@@ -257,10 +250,7 @@ final class CLikeHighlighter extends LineScanner {
       final c = t.codeUnitAt(i);
       if (c == 0x5C && s.backslash) {
         i += 2;
-      } else if (c == q &&
-          i + 2 < n &&
-          t.codeUnitAt(i + 1) == q &&
-          t.codeUnitAt(i + 2) == q) {
+      } else if (c == q && i + 2 < n && t.codeUnitAt(i + 1) == q && t.codeUnitAt(i + 2) == q) {
         i += 3;
         mode = 0;
         a = 0;
@@ -302,9 +292,7 @@ final class CLikeHighlighter extends LineScanner {
     while (i < n) {
       if (t.codeUnitAt(i) == 0x22) {
         var k = 0;
-        while (k < hashes &&
-            i + 1 + k < n &&
-            t.codeUnitAt(i + 1 + k) == 0x23) {
+        while (k < hashes && i + 1 + k < n && t.codeUnitAt(i + 1 + k) == 0x23) {
           k++;
         }
         if (k == hashes) {
@@ -326,9 +314,7 @@ final class CLikeHighlighter extends LineScanner {
   /// A `"` or `'` string whose body starts at [from].
   int _quoted(String t, int from, int start, int q, int n, List<Token> out) {
     var i = from;
-    final kind = q == 0x22 && s.dqIsIdentifier
-        ? TokenKind.property
-        : TokenKind.string;
+    final kind = q == 0x22 && s.dqIsIdentifier ? TokenKind.property : TokenKind.string;
     while (i < n) {
       final c = t.codeUnitAt(i);
       if (c == 0x5C && s.backslash) {
@@ -377,9 +363,7 @@ final class CLikeHighlighter extends LineScanner {
   }
 
   bool _isTriple(String t, int i, int n) =>
-      i + 2 < n &&
-      t.codeUnitAt(i + 1) == t.codeUnitAt(i) &&
-      t.codeUnitAt(i + 2) == t.codeUnitAt(i);
+      i + 2 < n && t.codeUnitAt(i + 1) == t.codeUnitAt(i) && t.codeUnitAt(i + 2) == t.codeUnitAt(i);
 
   /// A character literal, a Rust lifetime, or a lone quote.
   int _char(String t, int start, int qi, int n, List<Token> out) {
@@ -400,10 +384,7 @@ final class CLikeHighlighter extends LineScanner {
           emit(out, start, qi + 3, TokenKind.string);
           return qi + 3;
         }
-        if (c1 >= 0xD800 &&
-            c1 <= 0xDBFF &&
-            qi + 3 < n &&
-            t.codeUnitAt(qi + 3) == 0x27) {
+        if (c1 >= 0xD800 && c1 <= 0xDBFF && qi + 3 < n && t.codeUnitAt(qi + 3) == 0x27) {
           emit(out, start, qi + 4, TokenKind.string);
           return qi + 4;
         }
@@ -468,9 +449,7 @@ final class CLikeHighlighter extends LineScanner {
       }
     }
 
-    final afterDot = i > 0 &&
-        t.codeUnitAt(i - 1) == 0x2E &&
-        !(i > 1 && t.codeUnitAt(i - 2) == 0x2E);
+    final afterDot = i > 0 && t.codeUnitAt(i - 1) == 0x2E && !(i > 1 && t.codeUnitAt(i - 2) == 0x2E);
     final next = j < n ? t.codeUnitAt(j) : 0;
     if (!afterDot) {
       final k = s.words.find(t, i, j);
@@ -593,8 +572,7 @@ final class CLikeHighlighter extends LineScanner {
         return j;
       }
     }
-    if (s.directives == Directives.anywhere ||
-        (s.directives == Directives.lineStart && onlyBlankBefore(t, i))) {
+    if (s.directives == Directives.anywhere || (s.directives == Directives.lineStart && onlyBlankBefore(t, i))) {
       var j = skipBlanks(t, i + 1, n);
       final nameStart = j;
       while (j < n && isIdentPart(t.codeUnitAt(j))) {
@@ -602,8 +580,7 @@ final class CLikeHighlighter extends LineScanner {
       }
       if (j == nameStart) return i + 1;
       emit(out, i, j, TokenKind.keyword);
-      if (s.directives == Directives.lineStart &&
-          (_is(t, nameStart, j, 'include') || _is(t, nameStart, j, 'import'))) {
+      if (s.directives == Directives.lineStart && (_is(t, nameStart, j, 'include') || _is(t, nameStart, j, 'import'))) {
         final k = skipBlanks(t, j, n);
         if (k < n && t.codeUnitAt(k) == 0x3C) {
           var e = k + 1;
@@ -620,16 +597,14 @@ final class CLikeHighlighter extends LineScanner {
     return i + 1;
   }
 
-  bool _is(String t, int s, int e, String word) =>
-      e - s == word.length && t.startsWith(word, s);
+  bool _is(String t, int s, int e, String word) => e - s == word.length && t.startsWith(word, s);
 
   int _at(String t, int i, int n, List<Token> out) {
     if (s.atAttribute && i + 1 < n && isIdentStart(t.codeUnitAt(i + 1))) {
       var j = i + 2;
       while (j < n) {
         final c = t.codeUnitAt(j);
-        if (isIdentPart(c) ||
-            (c == 0x2E && j + 1 < n && isIdentStart(t.codeUnitAt(j + 1)))) {
+        if (isIdentPart(c) || (c == 0x2E && j + 1 < n && isIdentStart(t.codeUnitAt(j + 1)))) {
           j++;
         } else {
           break;
@@ -702,8 +677,6 @@ final class CLikeHighlighter extends LineScanner {
 
   bool _endsWord(String t, int p, String word) {
     final start = p - word.length + 1;
-    return start >= 0 &&
-        t.startsWith(word, start) &&
-        (start == 0 || !isIdentPart(t.codeUnitAt(start - 1)));
+    return start >= 0 && t.startsWith(word, start) && (start == 0 || !isIdentPart(t.codeUnitAt(start - 1)));
   }
 }

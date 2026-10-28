@@ -19,13 +19,7 @@ void notifyRegionBuilt(String region) => debugRegionBuilt?.call(region);
 /// compare with [same] (default `==`; lists in the session state are replaced
 /// whole when they change, so identity is the right test for them).
 class SessionSelect<T> extends StatefulWidget {
-  const SessionSelect({
-    super.key,
-    required this.session,
-    required this.select,
-    required this.builder,
-    this.same,
-  });
+  const SessionSelect({super.key, required this.session, required this.select, required this.builder, this.same});
 
   final AgentSessionView session;
   final T Function(AgentSessionView session) select;

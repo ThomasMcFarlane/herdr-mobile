@@ -52,15 +52,14 @@ Future<void> pumpLive(
 
 /// A turn in progress: [history] settled messages, a prompt, a tool call, and
 /// the answer [text] streaming (message `a1`, the live one).
-AgentSessionState streaming(String text, {int history = 0}) =>
-    stateWith(
-      items: [
-        for (var i = 0; i < history; i++) ...[userMsg('hu$i', 'question $i'), agentMsg('h$i', 'history message $i')],
-        userMsg('u1', 'go'),
-        toolItem('t1', title: 'Read file', kind: ToolKind.read),
-      ],
-      turnActive: true,
-    ).apply(MessageChunk(MessageRole.agent, 'a1', TextBlock(text)));
+AgentSessionState streaming(String text, {int history = 0}) => stateWith(
+  items: [
+    for (var i = 0; i < history; i++) ...[userMsg('hu$i', 'question $i'), agentMsg('h$i', 'history message $i')],
+    userMsg('u1', 'go'),
+    toolItem('t1', title: 'Read file', kind: ToolKind.read),
+  ],
+  turnActive: true,
+).apply(MessageChunk(MessageRole.agent, 'a1', TextBlock(text)));
 
 MessageChunk chunk(String text) => MessageChunk(MessageRole.agent, 'a1', TextBlock(text));
 
@@ -123,7 +122,11 @@ void main() {
 
       session.apply(chunk(' more\n\nfour\n\nfive'));
       await tester.pumpAndSettle();
-      expect(built.where((k) => k == '$key#0' || k == '$key#1'), isEmpty, reason: 'frozen blocks are not built again: $built');
+      expect(
+        built.where((k) => k == '$key#0' || k == '$key#1'),
+        isEmpty,
+        reason: 'frozen blocks are not built again: $built',
+      );
       expect(built.where((k) => k.startsWith('h') || k == 'u1' || k == 'tool:t1'), isEmpty);
       expect(built.toSet(), containsAll(['$key#2', '$key#3', '$key#4', '$key#live']));
       expect(onScreen('three more'), findsOneWidget);
@@ -132,16 +135,15 @@ void main() {
 
     testWidgets('a live thought follows its text while it is open', (tester) async {
       final session = FakeAgentSession(
-        state: stateWith(items: [userMsg('u1', 'go')], turnActive: true)
-            .apply(const MessageChunk(MessageRole.thought, 't1', TextBlock('weighing the options'))),
+        state: stateWith(
+          items: [userMsg('u1', 'go')],
+          turnActive: true,
+        ).apply(const MessageChunk(MessageRole.thought, 't1', TextBlock('weighing the options'))),
       );
       await pumpLive(tester, session);
       await tester.tap(find.text('Thinking'));
       await tester.pump();
-      expect(
-        find.descendant(of: find.byType(ThinkingRow), matching: onScreen('weighing the options')),
-        findsOneWidget,
-      );
+      expect(find.descendant(of: find.byType(ThinkingRow), matching: onScreen('weighing the options')), findsOneWidget);
       session.apply(const MessageChunk(MessageRole.thought, 't1', TextBlock(' and then some')));
       await tester.pump();
       expect(
@@ -169,13 +171,18 @@ void main() {
       expect(tester.binding.hasScheduledFrame, isFalse, reason: 'the ticker stopped with the backlog: no loop');
     });
 
-    testWidgets('text that is there when the row first shows is history: shown whole, in the first frame', (tester) async {
+    testWidgets('text that is there when the row first shows is history: shown whole, in the first frame', (
+      tester,
+    ) async {
       final session = FakeAgentSession(state: streaming('Start.$lump'));
       tester.view.physicalSize = const Size(412, 892) * 2;
       tester.view.devicePixelRatio = 2;
       addTearDown(tester.view.reset);
       await tester.pumpWidget(
-        MaterialApp(theme: AppTheme.light(), home: AgentSessionScreen(key: ObjectKey(session), session: session)),
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: AgentSessionScreen(key: ObjectKey(session), session: session),
+        ),
       );
       expect(onScreen('ENDMARK'), findsOneWidget);
     });
@@ -286,7 +293,9 @@ void main() {
         'Intro with **bold** and `code`.\n\n## Heading\n\nA list:\n\n- one\n- two\n\n| a | b |\n| - | - |\n| 1 | 2 |\n\n'
         '```dart\nint x = 1;\n```\n\nClosing words.';
 
-    testWidgets('lays out the same: every block keeps its place and size when the live row becomes rows', (tester) async {
+    testWidgets('lays out the same: every block keeps its place and size when the live row becomes rows', (
+      tester,
+    ) async {
       final session = FakeAgentSession(state: streaming(text));
       await pumpLive(tester, session);
       List<Rect> blocks() => [
@@ -332,7 +341,9 @@ void main() {
       }
     });
 
-    testWidgets('moves no row, in a transcript that scrolls: the end of the turn does not slide the answer', (tester) async {
+    testWidgets('moves no row, in a transcript that scrolls: the end of the turn does not slide the answer', (
+      tester,
+    ) async {
       final session = FakeAgentSession(state: streaming(text, history: 40));
       await pumpLive(tester, session, size: const Size(320, 640));
       expect(transcriptPosition(tester).extentAfter, 0);
@@ -459,12 +470,18 @@ void main() {
       await tester.tap(find.byIcon(LucideIcons.arrowUp));
       await tester.pump();
       expect(session.sent, ['do it']);
-      expect(tester.widget<TextField>(find.byType(TextField).last).controller!.text, isEmpty, reason: 'cleared in the same frame');
+      expect(
+        tester.widget<TextField>(find.byType(TextField).last).controller!.text,
+        isEmpty,
+        reason: 'cleared in the same frame',
+      );
       expect(find.text('do it'), findsOneWidget, reason: 'the prompt is a row now');
       expect(find.textContaining('Working'), findsOneWidget, reason: 'the turn runs: the status row says so');
     });
 
-    testWidgets('Working · 12s: elapsed from the start of the turn, stepping once a second, gone with the turn', (tester) async {
+    testWidgets('Working · 12s: elapsed from the start of the turn, stepping once a second, gone with the turn', (
+      tester,
+    ) async {
       final start = DateTime(2026, 10, 5, 12);
       statusNow = () => start.add(const Duration(seconds: 12));
       final session = FakeAgentSession(state: stateWith(items: [userMsg('u1', 'fix it')], turnActive: true))
@@ -489,7 +506,9 @@ void main() {
       expect(find.textContaining('Working'), findsNothing);
     });
 
-    testWidgets('a running call is named with a verb and counted from its own start; a thought by its first sentence', (tester) async {
+    testWidgets('a running call is named with a verb and counted from its own start; a thought by its first sentence', (
+      tester,
+    ) async {
       final start = DateTime(2026, 10, 5, 12);
       statusNow = () => start.add(const Duration(seconds: 95));
       final run = TranscriptTool(
@@ -503,16 +522,21 @@ void main() {
         at: start.add(const Duration(seconds: 80)),
       );
       final session = FakeAgentSession(
-        state: stateWith(items: [
-          TranscriptMessage(key: 'u1', role: MessageRole.user, blocks: const [TextBlock('fix it')], at: start),
-          run,
-        ], turnActive: true),
+        state: stateWith(
+          items: [
+            TranscriptMessage(key: 'u1', role: MessageRole.user, blocks: const [TextBlock('fix it')], at: start),
+            run,
+          ],
+          turnActive: true,
+        ),
       )..turnStart = start;
       await pumpLive(tester, session);
       expect(find.text('Running flutter test'), findsOneWidget);
       expect(find.text(' · 15s'), findsOneWidget, reason: 'the call has run for 15 s; the turn for 95 s');
 
-      session.update((s) => s.apply(ToolCallPatchUpdate(ToolCallPatch('c1', {'toolCallId': 'c1', 'status': 'completed'}))));
+      session.update(
+        (s) => s.apply(ToolCallPatchUpdate(ToolCallPatch('c1', {'toolCallId': 'c1', 'status': 'completed'}))),
+      );
       session.apply(const MessageChunk(MessageRole.thought, 'th', TextBlock('Checking the locale files. Then more')));
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
@@ -525,10 +549,16 @@ void main() {
       var now = start.add(const Duration(seconds: 30));
       statusNow = () => now;
       final session = FakeAgentSession(
-        state: stateWith(
-          items: [TranscriptMessage(key: 'u1', role: MessageRole.user, blocks: const [TextBlock('fix it')], at: start)],
-          turnActive: true,
-        ).apply(const ToolCallStart(ToolCall(toolCallId: 't', title: 'flutter test', kind: ToolKind.execute)), at: start),
+        state:
+            stateWith(
+              items: [
+                TranscriptMessage(key: 'u1', role: MessageRole.user, blocks: const [TextBlock('fix it')], at: start),
+              ],
+              turnActive: true,
+            ).apply(
+              const ToolCallStart(ToolCall(toolCallId: 't', title: 'flutter test', kind: ToolKind.execute)),
+              at: start,
+            ),
       )..turnStart = start;
       await pumpLive(tester, session);
       expect(find.textContaining('Quiet'), findsNothing);

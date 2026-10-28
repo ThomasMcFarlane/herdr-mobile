@@ -15,16 +15,10 @@ import 'package:herdr_mobile/ui/features/agents/agents_grouping.dart';
 import '../support/fake_agent_session.dart';
 import 'ui_harness.dart';
 
-MachineProfile _machine(String id, String label, {bool enabled = true}) => MachineProfile(
-      id: id,
-      label: label,
-      host: '$id.example',
-      username: 'dev',
-      enabled: enabled,
-    );
+MachineProfile _machine(String id, String label, {bool enabled = true}) =>
+    MachineProfile(id: id, label: label, host: '$id.example', username: 'dev', enabled: enabled);
 
-Pane _pane(int i, String status, {String? agent = 'claude'}) =>
-    (id: 'w1:p$i', ws: 'w1', agent: agent, status: status);
+Pane _pane(int i, String status, {String? agent = 'claude'}) => (id: 'w1:p$i', ws: 'w1', agent: agent, status: status);
 
 Future<UiHarness> _fleet(
   Map<String, List<Pane>> machines, {
@@ -44,28 +38,32 @@ Future<UiHarness> _fleet(
 }
 
 AgentRowData _row(String key, AgentStatus status, MachineConnection machine) => (
-      key: key,
-      machine: machine,
-      paneId: key,
-      status: status,
-      title: key,
-      subtitle: '',
-      stale: false,
-      since: null,
-      quietMinutes: 0,
-    );
+  key: key,
+  machine: machine,
+  paneId: key,
+  status: status,
+  title: key,
+  subtitle: '',
+  stale: false,
+  since: null,
+  quietMinutes: 0,
+);
 
 void main() {
   group('agent rows', () {
-    test('the second line is kind, machine, workspace, folder; one machine is not named',
-        () async {
+    test('the second line is kind, machine, workspace, folder; one machine is not named', () async {
       final one = await _fleet(
-        {'a': [_pane(1, 'working')]},
+        {
+          'a': [_pane(1, 'working')],
+        },
         title: (_) => 'Fix the retry test',
         cwd: (_) => '/src/payments-api',
       );
       final several = await _fleet(
-        {'a': [_pane(1, 'working')], 'b': const []},
+        {
+          'a': [_pane(1, 'working')],
+          'b': const [],
+        },
         title: (_) => 'Fix the retry test',
         cwd: (_) => '/src/payments-api',
       );
@@ -78,10 +76,11 @@ void main() {
       expect(multi.subtitle, 'Claude Code · m-a · payments-api');
     });
 
-    test('a pane with no title is named after its agent, which the line then omits',
-        () async {
+    test('a pane with no title is named after its agent, which the line then omits', () async {
       final h = await _fleet(
-        {'a': [_pane(1, 'idle', agent: 'codex')]},
+        {
+          'a': [_pane(1, 'idle', agent: 'codex')],
+        },
         title: (_) => '',
         cwd: (_) => '/src/main',
       );
@@ -93,7 +92,9 @@ void main() {
     });
 
     test('equal data is an equal overview, so an unchanged tab does not rebuild', () async {
-      final h = await _fleet({'a': [_pane(1, 'blocked'), _pane(2, 'done')]});
+      final h = await _fleet({
+        'a': [_pane(1, 'blocked'), _pane(2, 'done')],
+      });
       addTearDown(h.dispose);
 
       expect(AgentsOverview.of(h.fleet), AgentsOverview.of(h.fleet));
@@ -104,7 +105,10 @@ void main() {
   group('troubled machines', () {
     test('a machine the person disabled is not a problem', () async {
       final h = await _fleet(
-        {'a': [_pane(1, 'working')], 'b': [_pane(1, 'working')]},
+        {
+          'a': [_pane(1, 'working')],
+          'b': [_pane(1, 'working')],
+        },
         disabled: {'b'},
       );
       addTearDown(h.dispose);
@@ -114,7 +118,10 @@ void main() {
     });
 
     test('one that fails is, with its reason', () async {
-      final h = await _fleet({'a': [_pane(1, 'working')], 'b': [_pane(1, 'working')]});
+      final h = await _fleet({
+        'a': [_pane(1, 'working')],
+        'b': [_pane(1, 'working')],
+      });
       addTearDown(h.dispose);
       h.transports['b']!.failure = HerdrTransportException('Host key changed', fatal: true);
       h.fleet.connections.last.reconnect();
@@ -127,14 +134,8 @@ void main() {
     });
 
     test('the worst state colours a summary', () {
-      expect(
-        worstLinkState([LinkState.offline, LinkState.attention, LinkState.reconnecting]),
-        LinkState.attention,
-      );
-      expect(
-        worstLinkState([LinkState.offline, LinkState.connecting]),
-        LinkState.connecting,
-      );
+      expect(worstLinkState([LinkState.offline, LinkState.attention, LinkState.reconnecting]), LinkState.attention);
+      expect(worstLinkState([LinkState.offline, LinkState.connecting]), LinkState.connecting);
     });
   });
 
@@ -145,9 +146,9 @@ void main() {
 
     // Terminal rows only: each group is a section that counts every row.
     List<BoardSection> sections(Map<AgentStatus, List<AgentRowData>> g) => [
-          for (final MapEntry(key: status, value: rows) in g.entries)
-            BoardSection(status, [for (final r in rows) PaneItem(r)], count: rows.length),
-        ];
+      for (final MapEntry(key: status, value: rows) in g.entries)
+        BoardSection(status, [for (final r in rows) PaneItem(r)], count: rows.length),
+    ];
 
     setUp(() async {
       h = await _fleet({'a': const []});
@@ -168,7 +169,13 @@ void main() {
     test('a header per group, then its rows, the last one marked', () {
       final e = agentEntries(sections(groups));
       expect(e.map((x) => x is AgentHeader ? 'h' : 'r'), ['h', 'r', 'r', 'h', 'r', 'h', 'r']);
-      expect([for (final x in e) if (x is AgentLine) x.last], [false, true, true, true]);
+      expect(
+        [
+          for (final x in e)
+            if (x is AgentLine) x.last,
+        ],
+        [false, true, true, true],
+      );
     });
 
     test('a filter keeps one group; one whose group is gone keeps all', () {
@@ -260,57 +267,57 @@ void main() {
   group('Idle, panes and sessions together', () {
     final noon = DateTime.utc(2026, 1, 1, 12);
 
-    test('a session the person used ten minutes ago is not under the panes: all by when they last did something', () async {
-      final h = await _fleet({'a': const []});
-      final machine = h.fleet.connections.single;
-      final attention = AttentionSet(fleet: h.fleet);
-      AgentRowData pane(String key, StatusTime? since) => (
-            key: key,
-            machine: machine,
-            paneId: key,
-            status: AgentStatus.idle,
-            title: key,
-            subtitle: '',
-            stale: false,
-            since: since,
-            quietMinutes: 0,
-          );
-      FakeAgentSession session(String key, DateTime? activity) =>
-          FakeAgentSession(key: key, machine: machine)..lastActivity = activity;
+    test(
+      'a session the person used ten minutes ago is not under the panes: all by when they last did something',
+      () async {
+        final h = await _fleet({'a': const []});
+        final machine = h.fleet.connections.single;
+        final attention = AttentionSet(fleet: h.fleet);
+        AgentRowData pane(String key, StatusTime? since) => (
+          key: key,
+          machine: machine,
+          paneId: key,
+          status: AgentStatus.idle,
+          title: key,
+          subtitle: '',
+          stale: false,
+          since: since,
+          quietMinutes: 0,
+        );
+        FakeAgentSession session(String key, DateTime? activity) =>
+            FakeAgentSession(key: key, machine: machine)..lastActivity = activity;
 
-      final sections = boardSections(
-        [
-          pane('pane-3h', StatusTime.exact(noon.subtract(const Duration(hours: 3)))),
-          pane('pane-undated', null),
-          pane('pane-5d', StatusTime.exact(noon.subtract(const Duration(days: 5)))),
-        ],
-        [
-          session('s-3d', noon.subtract(const Duration(days: 3))),
-          session('s-10m', noon.subtract(const Duration(minutes: 10))),
-          session('s-undated', null),
-        ],
-        attention,
-        now: noon,
-      );
+        final sections = boardSections(
+          [
+            pane('pane-3h', StatusTime.exact(noon.subtract(const Duration(hours: 3)))),
+            pane('pane-undated', null),
+            pane('pane-5d', StatusTime.exact(noon.subtract(const Duration(days: 5)))),
+          ],
+          [
+            session('s-3d', noon.subtract(const Duration(days: 3))),
+            session('s-10m', noon.subtract(const Duration(minutes: 10))),
+            session('s-undated', null),
+          ],
+          attention,
+          now: noon,
+        );
 
-      final idle = sections.singleWhere((s) => s.status == AgentStatus.idle);
-      expect([
-        for (final i in idle.items)
-          switch (i) {
-            PaneItem(:final row) => row.key,
-            SessionItem(:final session) => session.key,
-          },
-      ], [
-        's-10m',
-        'pane-3h',
-        'pane-undated',
-        's-undated',
-        's-3d',
-        'pane-5d',
-      ], reason: 'recent first, mixed; the undated panes then sessions; then the old, newest first');
-      attention.dispose();
-      h.dispose();
-    });
+        final idle = sections.singleWhere((s) => s.status == AgentStatus.idle);
+        expect(
+          [
+            for (final i in idle.items)
+              switch (i) {
+                PaneItem(:final row) => row.key,
+                SessionItem(:final session) => session.key,
+              },
+          ],
+          ['s-10m', 'pane-3h', 'pane-undated', 's-undated', 's-3d', 'pane-5d'],
+          reason: 'recent first, mixed; the undated panes then sessions; then the old, newest first',
+        );
+        attention.dispose();
+        h.dispose();
+      },
+    );
   });
 
   group('the Idle fold', () {
@@ -324,15 +331,14 @@ void main() {
 
     tearDown(() => h.dispose());
 
-    BoardSection section(AgentStatus status, int n) => BoardSection(
-          status,
-          [for (var i = 0; i < n; i++) PaneItem(_row('k$i', status, machine))],
-          count: n,
-        );
+    BoardSection section(AgentStatus status, int n) =>
+        BoardSection(status, [for (var i = 0; i < n; i++) PaneItem(_row('k$i', status, machine))], count: n);
 
     List<AgentMore> folds(List<AgentEntry> entries) => entries.whereType<AgentMore>().toList();
-    List<bool> open(List<AgentEntry> entries) =>
-        [for (final e in entries) if (e is AgentLine) e.open];
+    List<bool> open(List<AgentEntry> entries) => [
+      for (final e in entries)
+        if (e is AgentLine) e.open,
+    ];
 
     test('up to a row more than it shows, nothing folds: one hidden row is no saving', () {
       for (final n in [1, idleShown, idleShown + 1]) {
@@ -385,13 +391,26 @@ void main() {
     final h = (await tester.runAsync(() => _fleet({'a': const []})))!;
     addTearDown(h.dispose);
     final row = _row('1', AgentStatus.working, h.fleet.connections.single);
-    await tester.pumpWidget(MaterialApp(
-      theme: AppTheme.light(),
-      home: Scaffold(body: StateTime(agent: (
-        key: row.key, machine: row.machine, paneId: row.paneId, status: row.status, title: row.title,
-        subtitle: row.subtitle, stale: false, since: null, quietMinutes: 14,
-      ))),
-    ));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: StateTime(
+            agent: (
+              key: row.key,
+              machine: row.machine,
+              paneId: row.paneId,
+              status: row.status,
+              title: row.title,
+              subtitle: row.subtitle,
+              stale: false,
+              since: null,
+              quietMinutes: 14,
+            ),
+          ),
+        ),
+      ),
+    );
     expect(find.textContaining('quiet'), findsOneWidget);
     expect(find.textContaining('14m'), findsOneWidget);
   });

@@ -8,7 +8,9 @@ import '../../data/repositories/app_update.dart';
 import '../../data/repositories/attention_set.dart';
 import '../../data/repositories/fleet_repository.dart';
 import '../../data/words/plural.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../support/home_tabs.dart';
 import 'arrival_cue.dart';
 import '../features/agents/agents_screen.dart';
@@ -149,13 +151,14 @@ class _HomeShellState extends State<HomeShell> with RestorationMixin, SingleTick
     final needsYou = context.select<AttentionSet, int>((a) => a.needsYou.length);
     // The arrival haptic is for an agent that starts waiting, by key: one
     // that was out of reach and is back is not news.
-    final (cueNeedsYou, cueWaiting) =
-        context.select<AttentionSet, (Set<String>, Set<String>)>((a) => (a.needsYouKeys, a.waitingKeys));
+    final (cueNeedsYou, cueWaiting) = context.select<AttentionSet, (Set<String>, Set<String>)>(
+      (a) => (a.needsYouKeys, a.waitingKeys),
+    );
     final index = _tab.value;
     if (index == _machines) _machinesOpened = true;
     if (index == _settings) _settingsOpened = true;
-    final watching = widget.moveToBackground != null &&
-        context.select<FleetRepository, bool>((f) => f.keepAliveInBackground);
+    final watching =
+        widget.moveToBackground != null && context.select<FleetRepository, bool>((f) => f.keepAliveInBackground);
     final shell = Scaffold(
       body: Stack(
         children: [

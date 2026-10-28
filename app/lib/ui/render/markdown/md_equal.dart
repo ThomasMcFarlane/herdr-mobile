@@ -25,7 +25,9 @@ bool mdBlocksEqual(MdBlock a, MdBlock b) {
         return false;
       }
       for (var i = 0; i < a.items.length; i++) {
-        if (a.items[i].checked != b.items[i].checked || !_blocksEqual(a.items[i].blocks, b.items[i].blocks)) return false;
+        if (a.items[i].checked != b.items[i].checked || !_blocksEqual(a.items[i].blocks, b.items[i].blocks)) {
+          return false;
+        }
       }
       return true;
     case (MdTable a, MdTable b):

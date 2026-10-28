@@ -59,8 +59,7 @@ Future<void> main() async {
       ('fixed window 32, no priority', true, 32),
       ('adaptive + browsing wins', false, 4),
     ]) {
-      final server = FakeSftpServer(
-          rtt: const Duration(milliseconds: 15), bytesPerSecond: 20 << 20, keepBytes: false)
+      final server = FakeSftpServer(rtt: const Duration(milliseconds: 15), bytesPerSecond: 20 << 20, keepBytes: false)
         ..dirs['/d'] = 0x41C0;
       final files = SftpFiles(
         open: () async => server,

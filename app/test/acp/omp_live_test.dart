@@ -22,7 +22,8 @@ class _RefuseAll implements AcpClientHandler {
       const PermissionCancelled();
 
   @override
-  Future<ElicitationResponse> elicit(ElicitationRequest request, Future<void> cancelled) async => const ElicitationCancel();
+  Future<ElicitationResponse> elicit(ElicitationRequest request, Future<void> cancelled) async =>
+      const ElicitationCancel();
 }
 
 String? _skipReason() {
@@ -33,39 +34,44 @@ String? _skipReason() {
 }
 
 void main() {
-  test('omp acp: initialize, session/new, commands and config options arrive', () async {
-    final cwd = Directory.systemTemp.createTempSync('herdr_acp_live_');
-    ProcessTransport? transport;
-    try {
-      transport = await ProcessTransport.start('omp', ['acp'], workingDirectory: cwd.path);
-      final problems = <String>[];
-      final client = AcpClient(transport, handler: _RefuseAll(), onProblem: problems.add);
+  test(
+    'omp acp: initialize, session/new, commands and config options arrive',
+    () async {
+      final cwd = Directory.systemTemp.createTempSync('herdr_acp_live_');
+      ProcessTransport? transport;
+      try {
+        transport = await ProcessTransport.start('omp', ['acp'], workingDirectory: cwd.path);
+        final problems = <String>[];
+        final client = AcpClient(transport, handler: _RefuseAll(), onProblem: problems.add);
 
-      final init = await client.initialize();
-      expect(init.agentInfo!.name, 'omp');
-      expect(init.protocolVersion, 1);
-      expect(init.capabilities.canList, isTrue);
+        final init = await client.initialize();
+        expect(init.agentInfo!.name, 'omp');
+        expect(init.protocolVersion, 1);
+        expect(init.capabilities.canList, isTrue);
 
-      final session = await client.newSession(cwd: cwd.path);
-      expect(session.sessionId, isNotEmpty);
-      expect(session.configOptions.map((o) => o.category), containsAll(['mode', 'model']));
+        final session = await client.newSession(cwd: cwd.path);
+        expect(session.sessionId, isNotEmpty);
+        expect(session.configOptions.map((o) => o.category), containsAll(['mode', 'model']));
 
-      // The command list is a notification after the answer.
-      final deadline = DateTime.now().add(const Duration(seconds: 20));
-      while (client.state(session.sessionId).commands.isEmpty && DateTime.now().isBefore(deadline)) {
-        await Future<void>.delayed(const Duration(milliseconds: 100));
+        // The command list is a notification after the answer.
+        final deadline = DateTime.now().add(const Duration(seconds: 20));
+        while (client.state(session.sessionId).commands.isEmpty && DateTime.now().isBefore(deadline)) {
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+        }
+        final state = client.state(session.sessionId);
+        expect(state.commands, isNotEmpty, reason: 'stderr: ${transport.stderrTail}');
+        expect(state.commands.map((c) => c.name), everyElement(isNotEmpty));
+
+        await client.closeSession(session.sessionId);
+        await client.close();
+        expect(await transport.exitCode.timeout(const Duration(seconds: 10)), isA<int>());
+        expect(problems, isEmpty);
+      } finally {
+        await transport?.close();
+        cwd.deleteSync(recursive: true);
       }
-      final state = client.state(session.sessionId);
-      expect(state.commands, isNotEmpty, reason: 'stderr: ${transport.stderrTail}');
-      expect(state.commands.map((c) => c.name), everyElement(isNotEmpty));
-
-      await client.closeSession(session.sessionId);
-      await client.close();
-      expect(await transport.exitCode.timeout(const Duration(seconds: 10)), isA<int>());
-      expect(problems, isEmpty);
-    } finally {
-      await transport?.close();
-      cwd.deleteSync(recursive: true);
-    }
-  }, skip: _skipReason(), timeout: const Timeout(Duration(seconds: 90)));
+    },
+    skip: _skipReason(),
+    timeout: const Timeout(Duration(seconds: 90)),
+  );
 }

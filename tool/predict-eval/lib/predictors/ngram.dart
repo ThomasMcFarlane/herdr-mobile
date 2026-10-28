@@ -79,7 +79,9 @@ class WordPrior {
     for (var i = 0; i < keys.length; i++) {
       cum[i + 1] = cum[i] + p[keys[i]]!;
     }
-    return WordPrior._(keys, cum, p, {for (final e in best.entries) e.key: e.value.$1});
+    return WordPrior._(keys, cum, p, {
+      for (final e in best.entries) e.key: e.value.$1,
+    });
   }
 
   final List<String> keys;
@@ -111,16 +113,21 @@ class WordPrior {
 
   /// The [k] likeliest words starting with [prefix].
   List<String> top(String prefix, int k) => _top.putIfAbsent(prefix, () {
-        final r = range(prefix);
-        final out = <String>[];
-        for (var i = r.lo; i < r.hi; i++) {
-          _insertTop(out, keys[i], k, (w) => p[w]!);
-        }
-        return out;
-      });
+    final r = range(prefix);
+    final out = <String>[];
+    for (var i = r.lo; i < r.hi; i++) {
+      _insertTop(out, keys[i], k, (w) => p[w]!);
+    }
+    return out;
+  });
 }
 
-void _insertTop(List<String> out, String key, int k, double Function(String) score) {
+void _insertTop(
+  List<String> out,
+  String key,
+  int k,
+  double Function(String) score,
+) {
   final s = score(key);
   var at = out.length;
   while (at > 0 && score(out[at - 1]) < s) {
@@ -198,7 +205,8 @@ class NgramPredictor implements Predictor {
       }
       final key = _key(word);
       if (prev1 != null) (_bi[prev1] ??= _Followers()).add(key);
-      if (prev2 != null && prev1 != null) (_tri['$prev2\t$prev1'] ??= _Followers()).add(key);
+      if (prev2 != null && prev1 != null)
+        (_tri['$prev2\t$prev1'] ??= _Followers()).add(key);
       final seen = _uni[key] ?? 0;
       if (seen == 0) _personal.insert(_personalLowerBound(key), key);
       _uni[key] = seen + 1;
@@ -230,7 +238,9 @@ class NgramPredictor implements Predictor {
         looseCount = e.value;
       }
     }
-    return exact ?? loose ?? options.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+    return exact ??
+        loose ??
+        options.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
   }
 
   @override
@@ -239,12 +249,14 @@ class NgramPredictor implements Predictor {
     final headEnd = draft.length - prefix.length;
     if (prefix.isEmpty) {
       if (!params.nextWord) return const [];
-      if (draft.isNotEmpty && draft.trimRight().length == draft.length) return const [];
+      if (draft.isNotEmpty && draft.trimRight().length == draft.length)
+        return const [];
     } else {
       if (prefix.length < params.minPrefix) return const [];
       if (headEnd > 0) {
         final before = draft[headEnd - 1];
-        if (isCodeChar(before) || RegExp(r'\d').hasMatch(before)) return const [];
+        if (isCodeChar(before) || RegExp(r'\d').hasMatch(before))
+          return const [];
       }
     }
 
@@ -252,26 +264,38 @@ class NgramPredictor implements Predictor {
     final head = draft.substring(0, headEnd);
     final spans = proseWords(head);
     final words = [for (final w in spans) _key(head.substring(w.start, w.end))];
-    final atStart = spans.isEmpty ? head.trim().isEmpty : head.substring(0, spans.first.start).trim().isEmpty;
+    final atStart = spans.isEmpty
+        ? head.trim().isEmpty
+        : head.substring(0, spans.first.start).trim().isEmpty;
     if (atStart) words.insert(0, _start);
     final v = words.isEmpty ? null : words.last;
     final u = words.length >= 2 ? words[words.length - 2] : null;
     final ctxV = v == null ? null : _bi[v];
     final ctxUV = (u == null || v == null) ? null : _tri['$u\t$v'];
-    final a2 = ctxV == null ? 1.0 : (params.d2 * ctxV.counts.length + params.mu2) / (ctxV.total + params.mu2);
-    final a3 = ctxUV == null ? 1.0 : (params.d3 * ctxUV.counts.length + params.mu3) / (ctxUV.total + params.mu3);
+    final a2 = ctxV == null
+        ? 1.0
+        : (params.d2 * ctxV.counts.length + params.mu2) /
+              (ctxV.total + params.mu2);
+    final a3 = ctxUV == null
+        ? 1.0
+        : (params.d3 * ctxUV.counts.length + params.mu3) /
+              (ctxUV.total + params.mu3);
 
     final kp = _key(prefix);
     double p3(String key) {
       var p = _p1(key);
       if (ctxV != null) {
         final c = ctxV.counts[key] ?? 0;
-        p = (math.max(c - params.d2, 0) + (params.d2 * ctxV.counts.length + params.mu2) * p) /
+        p =
+            (math.max(c - params.d2, 0) +
+                (params.d2 * ctxV.counts.length + params.mu2) * p) /
             (ctxV.total + params.mu2);
       }
       if (ctxUV != null) {
         final c = ctxUV.counts[key] ?? 0;
-        p = (math.max(c - params.d3, 0) + (params.d3 * ctxUV.counts.length + params.mu3) * p) /
+        p =
+            (math.max(c - params.d3, 0) +
+                (params.d3 * ctxUV.counts.length + params.mu3) * p) /
             (ctxUV.total + params.mu3);
       }
       return p;
@@ -293,7 +317,11 @@ class NgramPredictor implements Predictor {
       cands.addAll(_globalTop ??= _topPersonal(''));
     } else {
       final top = <String>[];
-      for (var i = _personalLowerBound(kp); i < _personal.length && _personal[i].startsWith(kp); i++) {
+      for (
+        var i = _personalLowerBound(kp);
+        i < _personal.length && _personal[i].startsWith(kp);
+        i++
+      ) {
         sumC += _uni[_personal[i]]!;
         _insertTop(top, _personal[i], params.topK, (w) => _uni[w]!.toDouble());
       }
@@ -309,7 +337,10 @@ class NgramPredictor implements Predictor {
       candRaw += (_uni[k] ?? 0) + params.mu1 * (prior.p[k] ?? 0);
       scored.add((k, s));
     }
-    final tail = math.max(0.0, (sumC + params.mu1 * sumP0 - candRaw) / (_n + params.mu1));
+    final tail = math.max(
+      0.0,
+      (sumC + params.mu1 * sumP0 - candRaw) / (_n + params.mu1),
+    );
     final z = candMass + a3 * a2 * tail;
     if (z <= 0) return const [];
 
@@ -321,7 +352,8 @@ class NgramPredictor implements Predictor {
       final surface = _surface(k, prefix);
       final n = prefix.length;
       if (surface.length < n) continue;
-      final same = surface.substring(0, n).toLowerCase() == prefix.toLowerCase();
+      final same =
+          surface.substring(0, n).toLowerCase() == prefix.toLowerCase();
       final chip = Chip(
         label: surface,
         insert: same ? surface.substring(n) : surface,

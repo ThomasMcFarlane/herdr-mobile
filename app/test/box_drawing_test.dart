@@ -8,14 +8,7 @@ import 'package:herdr_mobile/ui/render/terminal/cell_width.dart';
 const _sizes = [(8, 14), (12, 20), (18, 39), (30, 51), (31, 52), (45, 70)];
 
 GlyphShape _glyph(String ch, int w, int h, {int x0 = 0, int y0 = 0}) =>
-    boxGlyph(
-      ch.runes.single,
-      x0: x0,
-      x1: x0 + w,
-      y0: y0,
-      y1: y0 + h,
-      light: lightStroke(w.toDouble()),
-    )!;
+    boxGlyph(ch.runes.single, x0: x0, x1: x0 + w, y0: y0, y1: y0 + h, light: lightStroke(w.toDouble()))!;
 
 /// The filled pixels of [shape]'s rectangles in a [w]x[h] cell at the origin.
 List<List<bool>> _raster(GlyphShape shape, int w, int h) {
@@ -45,12 +38,10 @@ void main() {
     for (final (w, h) in _sizes) {
       test('in a ${w}x$h cell', () {
         for (var r = 0x2500; r <= 0x259f; r++) {
-          final shape = boxGlyph(r,
-              x0: 100, x1: 100 + w, y0: 200, y1: 200 + h, light: lightStroke(w.toDouble()));
+          final shape = boxGlyph(r, x0: 100, x1: 100 + w, y0: 200, y1: 200 + h, light: lightStroke(w.toDouble()));
           final name = r.toRadixString(16);
           expect(shape, isNotNull, reason: name);
-          expect(shape!.rects.length + shape.strokes.length, greaterThan(0),
-              reason: name);
+          expect(shape!.rects.length + shape.strokes.length, greaterThan(0), reason: name);
           for (final rect in shape.rects) {
             expect(rect.left, rect.left.roundToDouble(), reason: name);
             expect(rect.top, rect.top.roundToDouble(), reason: name);
@@ -71,8 +62,7 @@ void main() {
       expect(isBoxGlyph(0x24ff), isFalse);
       expect(isBoxGlyph(0x25a0), isFalse);
       expect(isBoxGlyph(0x41), isFalse);
-      expect(
-          boxGlyph(0x41, x0: 0, x1: 10, y0: 0, y1: 20, light: 1), isNull);
+      expect(boxGlyph(0x41, x0: 0, x1: 10, y0: 0, y1: 20, light: 1), isNull);
     });
   });
 
@@ -202,8 +192,7 @@ void main() {
       // The inner corner joins too: the inner vertical stroke starts at the
       // inner horizontal one, so there is no gap above it.
       expect(grid[y + 2 * t][x + 2 * t], isTrue);
-      expect(grid[y + 2 * t - 1][x + 2 * t], isFalse,
-          reason: 'inner vertical does not poke into the gap');
+      expect(grid[y + 2 * t - 1][x + 2 * t], isFalse, reason: 'inner vertical does not poke into the gap');
       // The centre of the glyph is the gap between both pairs of strokes.
       expect(grid[y + t][x + t], isFalse);
     });
@@ -216,13 +205,13 @@ void main() {
           final a = _glyph(ch, w, h).rects;
           final b = _glyph(ch, w, h, x0: w).rects;
           final all = [...a, ...b]..sort((p, q) => p.left.compareTo(q.left));
-          final gaps = [
-            for (var i = 1; i < all.length; i++) all[i].left - all[i - 1].right,
-          ];
+          final gaps = [for (var i = 1; i < all.length; i++) all[i].left - all[i - 1].right];
           expect(gaps.every((g) => g >= 1), isTrue, reason: '$gaps');
-          expect(gaps.reduce((p, q) => p > q ? p : q) -
-              gaps.reduce((p, q) => p < q ? p : q), lessThanOrEqualTo(1),
-              reason: '$gaps');
+          expect(
+            gaps.reduce((p, q) => p > q ? p : q) - gaps.reduce((p, q) => p < q ? p : q),
+            lessThanOrEqualTo(1),
+            reason: '$gaps',
+          );
           // The whole cell edge is a gap, so the pattern repeats.
           expect(a.first.left, greaterThanOrEqualTo(0));
           expect(a.last.right, lessThanOrEqualTo(w));
@@ -292,8 +281,7 @@ void main() {
       expect(_glyph('╱', 30, 51).strokes, hasLength(1));
       expect(_glyph('╲', 30, 51).strokes, hasLength(1));
       expect(_glyph('╳', 30, 51).strokes, hasLength(2));
-      expect(_glyph('╱', 30, 51).strokes.single.clip,
-          const Rect.fromLTWH(0, 0, 30, 51));
+      expect(_glyph('╱', 30, 51).strokes.single.clip, const Rect.fromLTWH(0, 0, 30, 51));
     });
   });
 

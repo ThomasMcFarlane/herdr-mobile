@@ -109,8 +109,8 @@ class AppUpdate extends ChangeNotifier {
     required this.installer,
     AppVersion? current,
     DateTime Function()? now,
-  })  : _current = current ?? AppVersion.tryParse(appVersion)!,
-        _now = now ?? DateTime.now;
+  }) : _current = current ?? AppVersion.tryParse(appVersion)!,
+       _now = now ?? DateTime.now;
 
   /// How long a check stays fresh. Also the wait after a failed one: a phone
   /// on a bad radio is not asked again every time the app is opened.

@@ -25,7 +25,10 @@ class TraceFacts {
     final prompt = lines.firstWhere((l) => !l.received && l.method == 'session/prompt');
     promptLine = prompt;
     final blocks = (prompt.msg['params'] as Map)['prompt'] as List;
-    promptText = [for (final b in blocks) if (b is Map && b['text'] is String) b['text'] as String].join();
+    promptText = [
+      for (final b in blocks)
+        if (b is Map && b['text'] is String) b['text'] as String,
+    ].join();
     final answer = lines.firstWhere((l) => l.received && l.method == null && l.msg['id'] == prompt.msg['id']);
     answerLine = answer;
     stopReason = StopReason.parse(((answer.msg['result'] as Map)['stopReason']) as String?);
@@ -97,10 +100,7 @@ AgentSessionState replayOfTrace(String agent, String scenario) {
   var state = AgentSessionState('s', replaying: true);
   for (final l in facts.lines) {
     if (l == facts.promptLine) {
-      state = state.apply(
-        MessageChunk(MessageRole.user, null, TextBlock(facts.promptText)),
-        at: traceTime(l.tMs),
-      );
+      state = state.apply(MessageChunk(MessageRole.user, null, TextBlock(facts.promptText)), at: traceTime(l.tMs));
     } else if (updateOf(l) case final u?) {
       state = state.apply(SessionUpdate.parse(u), at: traceTime(l.tMs));
     }

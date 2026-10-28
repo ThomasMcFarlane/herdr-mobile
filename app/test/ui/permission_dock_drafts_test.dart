@@ -26,7 +26,12 @@ Future<void> _pump(WidgetTester tester, FakeAgentSession session) async {
   await tester.pumpWidget(
     MaterialApp(
       theme: AppTheme.light(),
-      home: Scaffold(body: Align(alignment: Alignment.bottomCenter, child: PromptDock(session: session))),
+      home: Scaffold(
+        body: Align(
+          alignment: Alignment.bottomCenter,
+          child: PromptDock(session: session),
+        ),
+      ),
     ),
   );
   await tester.pump(Dwell.tapGuard);
@@ -106,10 +111,7 @@ void main() {
         state: stateWith(
           turnActive: true,
           pending: [
-            PendingPermission(
-              7,
-              permissionRequest(rawInput: {'command': 'ls'}, options: const [gated, refuse]),
-            ),
+            PendingPermission(7, permissionRequest(rawInput: {'command': 'ls'}, options: const [gated, refuse])),
           ],
         ),
       );

@@ -193,9 +193,8 @@ class SentPhrases extends ChangeNotifier {
     return _save();
   }
 
-  Future<void> _save() => _store
-      .write(SentPhrasesSnapshot(enabled: _enabled, entries: _entries.values.toList()))
-      .catchError((Object _) {});
+  Future<void> _save() =>
+      _store.write(SentPhrasesSnapshot(enabled: _enabled, entries: _entries.values.toList())).catchError((Object _) {});
 }
 
 /// The chips above the composer: the person's own phrases, then what they send
@@ -203,11 +202,7 @@ class SentPhrases extends ChangeNotifier {
 /// learned ones go first: the person has not chosen the defaults, and a message
 /// they really send beats a guess. A list they edited stays where it is. A
 /// phrase that is also learned shows once, where the order puts it first.
-List<String> quickChips({
-  required List<String> phrases,
-  required bool untouched,
-  required List<String> learned,
-}) {
+List<String> quickChips({required List<String> phrases, required bool untouched, required List<String> learned}) {
   final seen = <String>{};
   return [
     for (final p in untouched ? [...learned, ...phrases] : [...phrases, ...learned])

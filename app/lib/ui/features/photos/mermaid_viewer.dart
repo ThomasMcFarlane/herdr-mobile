@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/widgets.dart';
 
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../render/mermaid/mermaid_cache.dart';
 import '../../render/mermaid/mermaid_layout.dart';
 import 'photo_item.dart';

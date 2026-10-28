@@ -86,7 +86,9 @@ AskAnswers askAnswers(PendingAsk ask, Map<String, Object?> content) {
     // The text is typed into the agent's dialog: a line break would submit it
     // and put the rest in the next field or the agent's prompt.
     if (own != null && own.contains(RegExp(r'[\u0000-\u001f\u007f]'))) {
-      return AskAnswers.problem('Your own answer to “${_short(q.question)}” must be one line, with no control characters.');
+      return AskAnswers.problem(
+        'Your own answer to “${_short(q.question)}” must be one line, with no control characters.',
+      );
     }
     final chosen = raw is List ? [for (final v in raw) '$v'] : [if (raw != null) '$raw'];
     final wantsOther = chosen.contains(askOtherValue);
@@ -234,11 +236,21 @@ Object? _evidenceInput(ToolCall call) {
   final input = _flatInput(call);
   if (input is! Map) return input;
   final drop = <String>{
-    if (call.content.any((c) => c is ToolDiff)) ...const ['old_string', 'new_string', 'content', 'patch', 'edits', 'file_path'],
+    if (call.content.any((c) => c is ToolDiff)) ...const [
+      'old_string',
+      'new_string',
+      'content',
+      'patch',
+      'edits',
+      'file_path',
+    ],
     if (call.kind == ToolKind.switchMode) 'planFilePath',
   };
   if (drop.isEmpty) return input;
-  return {for (final e in input.entries) if (!drop.contains(e.key)) e.key: e.value};
+  return {
+    for (final e in input.entries)
+      if (!drop.contains(e.key)) e.key: e.value,
+  };
 }
 
 /// The call's arguments as the permission dock can read them. A `task` call
@@ -258,10 +270,7 @@ Object? _flatInput(ToolCall call) {
     lines.add('$name${agent is String && agent.isNotEmpty ? ' ($agent)' : ''}: $text');
   }
   final context = input['context'];
-  return {
-    if (context is String && context.trim().isNotEmpty) 'context': context,
-    'subagents': lines.join('\n\n'),
-  };
+  return {if (context is String && context.trim().isNotEmpty) 'context': context, 'subagents': lines.join('\n\n')};
 }
 
 String _kindWire(ToolKind k) => switch (k) {
@@ -288,8 +297,4 @@ PermissionOptionKind replyKind(QuickReply r) {
 /// A key for a prompt: changes when the question, its subject or any reply's
 /// words do. The keys are not part of it: they depend on where the cursor is,
 /// and are read from the screen again when an answer is sent.
-String promptSignature(PromptInfo p) => [
-  p.question,
-  p.subject,
-  for (final r in p.replies) r.label,
-].join('\u0001');
+String promptSignature(PromptInfo p) => [p.question, p.subject, for (final r in p.replies) r.label].join('\u0001');

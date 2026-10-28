@@ -24,7 +24,8 @@ img.Image _noise(int w, int h, {int numChannels = 3, int alpha = 255}) {
   return img.Image.fromBytes(width: w, height: h, bytes: bytes.buffer, numChannels: numChannels);
 }
 
-bool _isJpeg(Uint8List b) => b.length > 3 && b[0] == 0xff && b[1] == 0xd8 && b[b.length - 2] == 0xff && b[b.length - 1] == 0xd9;
+bool _isJpeg(Uint8List b) =>
+    b.length > 3 && b[0] == 0xff && b[1] == 0xd8 && b[b.length - 2] == 0xff && b[b.length - 1] == 0xd9;
 
 bool _contains(Uint8List haystack, List<int> needle) {
   for (var i = 0; i <= haystack.length - needle.length; i++) {

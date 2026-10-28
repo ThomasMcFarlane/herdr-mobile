@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../../data/repositories/quick_phrases.dart';
 import '../../../data/repositories/sent_phrases.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// The person's quick phrases as one row of chips above a composer, for the
@@ -21,12 +22,7 @@ import 'package:herdr_mobile/ui/core/kit.dart';
 /// compact layout (landscape with the keyboard up) is the caller's to leave
 /// out, as for the slash palette.
 class QuickPhrasesRow extends StatelessWidget {
-  const QuickPhrasesRow({
-    super.key,
-    required this.input,
-    required this.focus,
-    this.padding = EdgeInsets.zero,
-  });
+  const QuickPhrasesRow({super.key, required this.input, required this.focus, this.padding = EdgeInsets.zero});
 
   final TextEditingController input;
   final FocusNode focus;

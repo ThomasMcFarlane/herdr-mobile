@@ -32,27 +32,26 @@ void main() {
     PaneName? name,
     AgentStatus status = AgentStatus.idle,
     DateTime? lastActive,
-  }) =>
-      agentRow(
-        FleetAgent(
-          machine: h.fleet.connections.single,
-          pane: models.Pane(
-            id: 'p1',
-            workspaceId: 'w1',
-            tabId: 'w1:t1',
-            focused: false,
-            cwd: '/src/payments-api',
-            title: label ?? title,
-            label: label,
-            agent: agent,
-            status: status,
-          ),
-          workspace: null,
-          sessionName: name,
-          lastActive: lastActive,
-        ),
-        showMachine: false,
-      );
+  }) => agentRow(
+    FleetAgent(
+      machine: h.fleet.connections.single,
+      pane: models.Pane(
+        id: 'p1',
+        workspaceId: 'w1',
+        tabId: 'w1:t1',
+        focused: false,
+        cwd: '/src/payments-api',
+        title: label ?? title,
+        label: label,
+        agent: agent,
+        status: status,
+      ),
+      workspace: null,
+      sessionName: name,
+      lastActive: lastActive,
+    ),
+    showMachine: false,
+  );
 
   group('when an idle agent last did something', () {
     final at = DateTime.utc(2026, 1, 1, 9, 30);
@@ -68,7 +67,11 @@ void main() {
 
     test('only an idle agent: for the others herdr\'s own transitions say it', () {
       for (final s in [AgentStatus.working, AgentStatus.done, AgentStatus.blocked]) {
-        expect(row(status: s, lastActive: at).since, isNull, reason: s.name);
+        expect(
+          row(status: s, lastActive: at).since,
+          isNull,
+          reason: s.name,
+        );
       }
     });
   });

@@ -270,7 +270,8 @@ void main() {
     });
 
     test('leaves a protected key from an older PEM format its header lines', () {
-      const pem = '-----BEGIN RSA PRIVATE KEY-----\n'
+      const pem =
+          '-----BEGIN RSA PRIVATE KEY-----\n'
           'Proc-Type: 4,ENCRYPTED\n'
           'DEK-Info: AES-128-CBC,0123456789ABCDEF0123456789ABCDEF\n'
           '\n'

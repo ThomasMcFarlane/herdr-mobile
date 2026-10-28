@@ -26,13 +26,12 @@ void main() {
 
     // [needsYou] wait and can be answered; [waiting] are last known to wait,
     // reachable or not.
-    Future<void> keys(WidgetTester tester, Set<String> needsYou, {Set<String> waiting = const {}}) =>
-        tester.pumpWidget(
-          Directionality(
-            textDirection: TextDirection.ltr,
-            child: ArrivalCue(needsYou: needsYou, waiting: {...waiting, ...needsYou}, now: now, child: const SizedBox()),
-          ),
-        );
+    Future<void> keys(WidgetTester tester, Set<String> needsYou, {Set<String> waiting = const {}}) => tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: ArrivalCue(needsYou: needsYou, waiting: {...waiting, ...needsYou}, now: now, child: const SizedBox()),
+      ),
+    );
 
     Future<void> show(WidgetTester tester, int n) => keys(tester, {for (var i = 0; i < n; i++) 'm/p$i'});
 
@@ -135,7 +134,9 @@ void main() {
       data: MediaQueryData(disableAnimations: reduced),
       child: Directionality(
         textDirection: TextDirection.ltr,
-        child: Center(child: RollText(text: text, style: Type.badge)),
+        child: Center(
+          child: RollText(text: text, style: Type.badge),
+        ),
       ),
     );
 

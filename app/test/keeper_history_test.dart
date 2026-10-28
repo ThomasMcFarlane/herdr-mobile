@@ -14,13 +14,7 @@ import 'support/keeper_process_host.dart';
 
 Future<bool> _alive(int pid) async => (await Process.run('kill', ['-0', '$pid'])).exitCode == 0;
 
-Map<String, Object?> _session(
-  String id, {
-  String cwd = '/work',
-  Object? title,
-  String? at,
-  int? messages,
-}) => {
+Map<String, Object?> _session(String id, {String cwd = '/work', Object? title, String? at, int? messages}) => {
   'sessionId': id,
   'cwd': cwd,
   'title': ?title,
@@ -32,7 +26,12 @@ Matcher _failed(String code, [Object? text]) =>
     isA<AgentHostException>().having((e) => e.message, 'message', allOf(contains('exit $code'), text ?? anything));
 
 void main() {
-  final hasPython = ['/usr/bin', '/bin', '/usr/local/bin', '/opt/homebrew/bin'].any((d) => File('$d/python3').existsSync());
+  final hasPython = [
+    '/usr/bin',
+    '/bin',
+    '/usr/local/bin',
+    '/opt/homebrew/bin',
+  ].any((d) => File('$d/python3').existsSync());
 
   Future<KeeperProcessHost> newHost() async {
     final h = await KeeperProcessHost.create();
@@ -115,7 +114,9 @@ void main() {
       // Five pages are read at most.
       h.useAgentStore(
         page: 2,
-        sessions: [for (var i = 0; i < 14; i++) _session('p$i', at: '2026-10-${(i + 1).toString().padLeft(2, '0')}T00:00:00Z')],
+        sessions: [
+          for (var i = 0; i < 14; i++) _session('p$i', at: '2026-10-${(i + 1).toString().padLeft(2, '0')}T00:00:00Z'),
+        ],
       );
       final capped = await h.history(agent: 'omp');
       expect(capped.sessions, hasLength(10));
@@ -127,7 +128,13 @@ void main() {
       final h = await newHost();
       h.useAgentStore(
         page: 100,
-        sessions: [for (var i = 0; i < 260; i++) _session('s$i', at: '2026-10-05T10:${(i ~/ 60).toString().padLeft(2, '0')}:${(i % 60).toString().padLeft(2, '0')}Z')],
+        sessions: [
+          for (var i = 0; i < 260; i++)
+            _session(
+              's$i',
+              at: '2026-10-05T10:${(i ~/ 60).toString().padLeft(2, '0')}:${(i % 60).toString().padLeft(2, '0')}Z',
+            ),
+        ],
       );
 
       final past = await h.history(agent: 'omp');
@@ -143,7 +150,10 @@ void main() {
           _session('long', title: 'x' * 5000, at: '2026-10-05T00:00:00Z'),
           {'sessionId': 'no-folder'},
           {'cwd': '/work', 'title': 'no id'},
-          {...(_session('extra', at: '2026-10-04T00:00:00Z', messages: 3)), 'updates': List.generate(500, (i) => {'sessionUpdate': 'x$i'})},
+          {
+            ...(_session('extra', at: '2026-10-04T00:00:00Z', messages: 3)),
+            'updates': List.generate(500, (i) => {'sessionUpdate': 'x$i'}),
+          },
         ],
       );
 
@@ -198,15 +208,18 @@ void main() {
       await expectNothingLeft(h);
     });
 
-    test('an agent that answers session/list with an error: the command fails with its words, the agent is gone', () async {
-      final h = await newHost();
-      h.useAgentStore(sessions: [_session('s1')]);
-      h.env['FAKE_ACP_LIST_FAIL'] = '1';
+    test(
+      'an agent that answers session/list with an error: the command fails with its words, the agent is gone',
+      () async {
+        final h = await newHost();
+        h.useAgentStore(sessions: [_session('s1')]);
+        h.env['FAKE_ACP_LIST_FAIL'] = '1';
 
-      await expectLater(h.history(agent: 'omp'), throwsA(_failed('70', contains('omp: store unreadable'))));
+        await expectLater(h.history(agent: 'omp'), throwsA(_failed('70', contains('omp: store unreadable'))));
 
-      await expectNothingLeft(h);
-    });
+        await expectNothingLeft(h);
+      },
+    );
 
     test('an agent that dies before answering initialize fails the command', () async {
       final h = await newHost();
@@ -217,22 +230,27 @@ void main() {
       await expectNothingLeft(h);
     });
 
-    test('notifications, garbage and requests of the agent do not derail it; the request is refused, not left hanging', () async {
-      final h = await newHost();
-      h.useAgentStore(sessions: [_session('s1'), _session('s2')]);
-      h.env['FAKE_ACP_LIST_NOISE'] = '1';
+    test(
+      'notifications, garbage and requests of the agent do not derail it; the request is refused, not left hanging',
+      () async {
+        final h = await newHost();
+        h.useAgentStore(sessions: [_session('s1'), _session('s2')]);
+        h.env['FAKE_ACP_LIST_NOISE'] = '1';
 
-      final past = await h.history(agent: 'omp');
+        final past = await h.history(agent: 'omp');
 
-      expect(past.sessions.map((s) => s.sessionId).toSet(), {'s1', 's2'});
-      final answered = [
-        for (final l in File(h.env['FAKE_ACP_LOG']!).readAsLinesSync())
-          if (l.contains('noise-1') && (jsonDecode(l) as Map)['recv'] is Map && ((jsonDecode(l) as Map)['recv'] as Map)['error'] != null)
-            ((jsonDecode(l) as Map)['recv'] as Map)['error'] as Map,
-      ];
-      expect(answered.first['code'], -32601);
-      await expectNothingLeft(h);
-    });
+        expect(past.sessions.map((s) => s.sessionId).toSet(), {'s1', 's2'});
+        final answered = [
+          for (final l in File(h.env['FAKE_ACP_LOG']!).readAsLinesSync())
+            if (l.contains('noise-1') &&
+                (jsonDecode(l) as Map)['recv'] is Map &&
+                ((jsonDecode(l) as Map)['recv'] as Map)['error'] != null)
+              ((jsonDecode(l) as Map)['recv'] as Map)['error'] as Map,
+        ];
+        expect(answered.first['code'], -32601);
+        await expectNothingLeft(h);
+      },
+    );
 
     test('SIGTERM to the command ends the agent too, with SIGKILL when it ignores SIGTERM', () async {
       final h = await newHost();
@@ -276,7 +294,10 @@ void main() {
       final h = await newHost();
       h.useAgentStore();
 
-      await expectLater(h.history(agent: 'omp', cwd: '${h.home.path}/nope'), throwsA(_failed('66', contains('does not exist'))));
+      await expectLater(
+        h.history(agent: 'omp', cwd: '${h.home.path}/nope'),
+        throwsA(_failed('66', contains('does not exist'))),
+      );
 
       expect(h.agentRuns, isEmpty);
     });
@@ -293,7 +314,11 @@ void main() {
         'a b; touch $marker',
         '-rf',
       ]) {
-        await expectLater(h.history(agent: 'omp', cwd: evil), throwsA(_failed('66', contains('does not exist'))), reason: evil);
+        await expectLater(
+          h.history(agent: 'omp', cwd: evil),
+          throwsA(_failed('66', contains('does not exist'))),
+          reason: evil,
+        );
         expect(File(marker).existsSync(), isFalse, reason: evil);
       }
       expect(h.agentRuns, isEmpty);
@@ -302,7 +327,12 @@ void main() {
     test('a folder with spaces and quotes, and ~, work', () async {
       final h = await newHost();
       final odd = Directory('${h.home.path}/it\'s a "dir" \$HOME `x`')..createSync();
-      h.useAgentStore(sessions: [_session('s1', cwd: odd.path), _session('s2', cwd: h.home.path)]);
+      h.useAgentStore(
+        sessions: [
+          _session('s1', cwd: odd.path),
+          _session('s2', cwd: h.home.path),
+        ],
+      );
 
       expect((await h.history(agent: 'omp', cwd: odd.path)).sessions.map((s) => s.sessionId), ['s1']);
       expect((await h.history(agent: 'omp', cwd: '~')).sessions.map((s) => s.sessionId), ['s2']);
@@ -316,15 +346,23 @@ void main() {
         expect(() => keeperHistoryCommand(agent: bad), throwsArgumentError, reason: bad);
       }
       for (final bad in ['', 'a\nb', 'a\u0000b', 'a\rb', 'x' * 5000]) {
-        expect(() => keeperHistoryCommand(agent: 'omp', cwd: bad), throwsArgumentError, reason: bad.length > 20 ? 'long' : bad);
+        expect(
+          () => keeperHistoryCommand(agent: 'omp', cwd: bad),
+          throwsArgumentError,
+          reason: bad.length > 20 ? 'long' : bad,
+        );
       }
     });
 
-    test('a host without the script exits 65 like every other command', skip: hasPython ? false : 'python3 is not installed', () async {
-      final h = await newHost();
-      Directory('${h.home.path}/.herdr-mobile').deleteSync(recursive: true);
+    test(
+      'a host without the script exits 65 like every other command',
+      skip: hasPython ? false : 'python3 is not installed',
+      () async {
+        final h = await newHost();
+        Directory('${h.home.path}/.herdr-mobile').deleteSync(recursive: true);
 
-      await expectLater(h.history(agent: 'omp'), throwsA(_failed('65', contains('not installed'))));
-    });
+        await expectLater(h.history(agent: 'omp'), throwsA(_failed('65', contains('not installed'))));
+      },
+    );
   });
 }

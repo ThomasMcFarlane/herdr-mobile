@@ -17,7 +17,10 @@ import '../support/subagent_fixtures.dart';
 // conversation when there is one, said once
 // where it came from, else the summary with at most a loading or a retry line.
 
-Widget _app(Widget body) => MaterialApp(theme: AppTheme.light(), home: Scaffold(body: body));
+Widget _app(Widget body) => MaterialApp(
+  theme: AppTheme.light(),
+  home: Scaffold(body: body),
+);
 
 Future<void> _pump(WidgetTester tester, Widget app) async {
   tester.view.physicalSize = const Size(412, 892) * 2;
@@ -70,14 +73,24 @@ void main() {
     });
 
     testWidgets('says when the start of the log is missing, and when lines were left out', (tester) async {
-      final session = _omp(attached: const SubagentLogInfo(earlierNotShown: true, skippedLines: 2), status: SubagentLogStatus.shown);
+      final session = _omp(
+        attached: const SubagentLogInfo(earlierNotShown: true, skippedLines: 2),
+        status: SubagentLogStatus.shown,
+      );
       await _pump(tester, _app(SubagentRunScreen(session: session, runId: _id)));
-      expect(_text('From omp’s log on the machine · Earlier part not shown · 2 oversized lines left out'), findsOneWidget);
+      expect(
+        _text('From omp’s log on the machine · Earlier part not shown · 2 oversized lines left out'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('a transcript the agent sent says nothing about a log', (tester) async {
       final session = FakeAgentSession(
-        state: play([launch('t', type: 'Explore', prompt: 'Find it.', status: 'in_progress'), childTool('c', 't'), childText('t', 'Looking now.')]),
+        state: play([
+          launch('t', type: 'Explore', prompt: 'Find it.', status: 'in_progress'),
+          childTool('c', 't'),
+          childText('t', 'Looking now.'),
+        ]),
       );
       await _pump(tester, _app(SubagentRunScreen(session: session, runId: 't')));
       expect(find.byType(TranscriptView), findsOneWidget);

@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/models/herdr_models.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// What the pill says about output that arrived while the reader was away:

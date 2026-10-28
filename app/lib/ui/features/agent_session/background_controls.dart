@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 
 import '../../../data/acp/background/background_work.dart';
 import '../../../data/repositories/agent_session.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../render/visible_text.dart';
 import 'background_format.dart';
 
@@ -230,9 +232,7 @@ class StopAllChip extends StatelessWidget {
     holdVerb: 'Hold to stop all',
     state: primed ? AnswerChipState.primed : AnswerChipState.rest,
     maxLines: 1,
-    semanticLabel: primed
-        ? 'Confirm: Stop all $count, activate again to confirm'
-        : 'Stop all $count, hold to confirm',
+    semanticLabel: primed ? 'Confirm: Stop all $count, activate again to confirm' : 'Stop all $count, hold to confirm',
     onTap: onTap,
     onHeld: onHeld,
   );

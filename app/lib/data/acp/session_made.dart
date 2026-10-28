@@ -120,7 +120,12 @@ class MadeAsset {
     final key = json['key'], title = json['title'], where = json['where'], order = json['order'];
     if (kind == null || key is! String || title is! String || where is! String || order is! int) return null;
     final url = json['url'], path = json['path'], at = json['at'], launch = json['launch'];
-    if (url != null && url is! String || path != null && path is! String || at != null && at is! int || launch != null && launch is! String) return null;
+    if (url != null && url is! String ||
+        path != null && path is! String ||
+        at != null && at is! int ||
+        launch != null && launch is! String) {
+      return null;
+    }
     final uri = url == null ? null : Uri.tryParse(url as String);
     if (kind == MadeKind.server && uri == null) return null;
     return MadeAsset(
@@ -159,7 +164,14 @@ bool sameMadeAssets(List<MadeAsset> a, List<MadeAsset> b) {
   if (a.length != b.length) return false;
   for (var i = 0; i < a.length; i++) {
     final x = a[i], y = b[i];
-    if (x.key != y.key || x.title != y.title || x.where != y.where || x.at != y.at || x.url != y.url || x.launch != y.launch) return false;
+    if (x.key != y.key ||
+        x.title != y.title ||
+        x.where != y.where ||
+        x.at != y.at ||
+        x.url != y.url ||
+        x.launch != y.launch) {
+      return false;
+    }
   }
   return true;
 }
@@ -300,7 +312,10 @@ List<MadeApp> madeAppsOf(Iterable<MadeAsset> servers) {
         return MadeApp(
           port: port,
           entry: entry,
-          pages: [for (final a in group) if (!identical(a, entry)) a],
+          pages: [
+            for (final a in group)
+              if (!identical(a, entry)) a,
+          ],
           at: at,
         );
       }(),
@@ -367,13 +382,31 @@ enum _Act { server, file, drop, launch }
 /// makes no row (a launch command is not proof that a server came up).
 class _Mention {
   const _Mention.server(this.url, this.at, {this.weak = false})
-    : act = _Act.server, path = null, cwd = null, cd = null, port = null, label = null;
+    : act = _Act.server,
+      path = null,
+      cwd = null,
+      cd = null,
+      port = null,
+      label = null;
   const _Mention.file(this.path, this.cwd, this.cd, this.at)
-    : act = _Act.file, url = null, weak = false, port = null, label = null;
+    : act = _Act.file,
+      url = null,
+      weak = false,
+      port = null,
+      label = null;
   const _Mention.drop(this.path, this.cwd, this.cd, this.at)
-    : act = _Act.drop, url = null, weak = false, port = null, label = null;
+    : act = _Act.drop,
+      url = null,
+      weak = false,
+      port = null,
+      label = null;
   const _Mention.launch(this.port, this.label, this.at)
-    : act = _Act.launch, url = null, path = null, cwd = null, cd = null, weak = false;
+    : act = _Act.launch,
+      url = null,
+      path = null,
+      cwd = null,
+      cd = null,
+      weak = false;
 
   final _Act act;
   final Uri? url;
@@ -392,9 +425,7 @@ class _Mention {
 class MadeFold {
   /// [from]: what the log made before the first item added; the items are
   /// numbered after it, so their rows are newer than its rows.
-  MadeFold({String? cwd, MadeHistory? from})
-    : _cwd = cwd == null || cwd.isEmpty ? null : cwd,
-      _next = from?.span ?? 0 {
+  MadeFold({String? cwd, MadeHistory? from}) : _cwd = cwd == null || cwd.isEmpty ? null : cwd, _next = from?.span ?? 0 {
     if (from != null) {
       for (final a in from.assets) {
         _byKey[a.key] = a;
@@ -513,7 +544,8 @@ List<_Mention> _scan(TranscriptItem item) {
           if (c.newText.isEmpty && c.oldText != null) {
             out.add(_Mention.drop(p, call.cwd, null, at));
             deleted.add(p);
-          } else if (kind == MadeFileKind.page || kind == MadeFileKind.doc && c.oldText == null && c.newText.isNotEmpty) {
+          } else if (kind == MadeFileKind.page ||
+              kind == MadeFileKind.doc && c.oldText == null && c.newText.isNotEmpty) {
             out.add(_Mention.file(p, call.cwd, null, at));
           }
         }
@@ -538,7 +570,9 @@ List<_Mention> _scan(TranscriptItem item) {
           if (done) {
             // The patches of a streaming call replace the call but keep its input.
             final key = call.rawInput;
-            final scanned = key is Map ? (_commandScans[key] ??= _scanCommand(command, call.cwd)) : _scanCommand(command, call.cwd);
+            final scanned = key is Map
+                ? (_commandScans[key] ??= _scanCommand(command, call.cwd))
+                : _scanCommand(command, call.cwd);
             out.addAll(scanned.map((m) => _withTime(m, at)));
             // A launch names its port. It makes no row by itself: only a link or a
             // banner does, and then the row says what started it.
@@ -632,7 +666,9 @@ void _say(String text, DateTime? at, List<_Mention> out) {
   }
   for (final m in _bareLocalhost.allMatches(text)) {
     final port = int.parse(m.group(1)!);
-    if (port >= 1 && port <= 65535) out.add(_Mention.server(Uri(scheme: 'http', host: 'localhost', port: port, path: '/'), at, weak: true));
+    if (port >= 1 && port <= 65535) {
+      out.add(_Mention.server(Uri(scheme: 'http', host: 'localhost', port: port, path: '/'), at, weak: true));
+    }
   }
   // Pages: a code block shows what a file CONTAINS (`<img src="logo.svg">`), so
   // it is not read; a bare name needs a verb of making just before it.
@@ -674,8 +710,35 @@ const _wrappers = {'sudo', 'nohup', 'time', 'env', 'command', 'builtin'};
 /// What a command that reads or probes does not make: its output is not a
 /// banner. `localhost` after `ssh` or `docker exec` is another host.
 const _probes = {
-  'cat', 'rg', 'grep', 'egrep', 'sed', 'awk', 'git', 'head', 'tail', 'less', 'more', 'curl', 'wget', 'http',
-  'ssh', 'scp', 'kubectl', 'jq', 'ls', 'find', 'echo', 'printf', 'diff', 'nl', 'wc', 'psql', 'redis-cli', 'gh', 'nc',
+  'cat',
+  'rg',
+  'grep',
+  'egrep',
+  'sed',
+  'awk',
+  'git',
+  'head',
+  'tail',
+  'less',
+  'more',
+  'curl',
+  'wget',
+  'http',
+  'ssh',
+  'scp',
+  'kubectl',
+  'jq',
+  'ls',
+  'find',
+  'echo',
+  'printf',
+  'diff',
+  'nl',
+  'wc',
+  'psql',
+  'redis-cli',
+  'gh',
+  'nc',
 };
 
 bool _isProbe(String command) {
@@ -684,7 +747,11 @@ bool _isProbe(String command) {
     if (w.isEmpty) continue;
     final first = w.first;
     if (_probes.contains(first)) return true;
-    if ((first == 'docker' || first == 'podman') && w.length > 1 && (w[1] == 'exec' || w[1] == 'run' && w.contains('-it'))) return true;
+    if ((first == 'docker' || first == 'podman') &&
+        w.length > 1 &&
+        (w[1] == 'exec' || w[1] == 'run' && w.contains('-it'))) {
+      return true;
+    }
   }
   return false;
 }
@@ -758,7 +825,10 @@ List<_Mention> _scanCommand(String command, String? callCwd) {
         page(w.replaceFirst(RegExp(r'^>>?'), ''));
       }
     }
-    final plain = [for (final a in args) if (!a.startsWith('-') && !a.startsWith('>')) a];
+    final plain = [
+      for (final a in args)
+        if (!a.startsWith('-') && !a.startsWith('>')) a,
+    ];
     switch (cmd) {
       case 'tee':
         plain.forEach(page);
@@ -882,7 +952,10 @@ Uri? _serverUri(String raw, String before, {required bool keepPath}) {
   final uri = Uri.tryParse(trimmed);
   if (uri == null || uri.scheme.toLowerCase() != 'http' || !isPreviewHost(uri.host)) return null;
   // `:0` parses as no port at all, so the digits are read from the text.
-  final written = RegExp(r'^https?://(?:[^/@]*@)?(?:\[[^\]]*\]|[^/:?#]*):(\d+)', caseSensitive: false).firstMatch(trimmed);
+  final written = RegExp(
+    r'^https?://(?:[^/@]*@)?(?:\[[^\]]*\]|[^/:?#]*):(\d+)',
+    caseSensitive: false,
+  ).firstMatch(trimmed);
   final port = written != null ? int.parse(written.group(1)!) : (uri.hasPort ? uri.port : 80);
   if (port < 1 || port > 65535) return null;
   // Rebuilt: no credentials, no fragment.
@@ -931,7 +1004,10 @@ MadeFileKind? _kindOf(String path) => _noise.hasMatch(path) ? null : madeFileKin
 String? _cleanPath(String raw) {
   var p = raw.trim();
   if (p.startsWith('file://')) p = p.substring(7);
-  p = p.replaceFirst(RegExp(r'[.,:;!?]+$'), '').replaceFirst(RegExp(r':\d+(?::\d+)?$'), '').replaceFirst(RegExp(r'#[^/]*$'), '');
+  p = p
+      .replaceFirst(RegExp(r'[.,:;!?]+$'), '')
+      .replaceFirst(RegExp(r':\d+(?::\d+)?$'), '')
+      .replaceFirst(RegExp(r'#[^/]*$'), '');
   if (p.isEmpty || p.contains(r'$') || p.contains('`') || p.contains('://') || _drive.hasMatch(p)) return null;
   if (p.startsWith('~') && !p.startsWith('~/')) return null;
   if (p.startsWith('//')) return null;

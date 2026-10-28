@@ -25,13 +25,13 @@ void _narrow(WidgetTester tester) {
 }
 
 Widget _app(Widget home, {double textScale = 1.6}) => MaterialApp(
-      theme: AppTheme.light(),
-      builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
-        child: child!,
-      ),
-      home: home,
-    );
+  theme: AppTheme.light(),
+  builder: (context, child) => MediaQuery(
+    data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
+    child: child!,
+  ),
+  home: home,
+);
 
 /// Lets a push (or a one-shot drawing) finish without waiting on a spinner.
 Future<void> _settle(WidgetTester tester) async {
@@ -43,8 +43,9 @@ Future<void> _settle(WidgetTester tester) async {
 void main() {
   setUpAll(loadAppFonts);
 
-  testWidgets('holding Version in Settings opens the Kit screen; the first entry renders at 320 dp, 1.6x',
-      (tester) async {
+  testWidgets('holding Version in Settings opens the Kit screen; the first entry renders at 320 dp, 1.6x', (
+    tester,
+  ) async {
     _narrow(tester);
     final notifications = NotificationSettings(MemoryNotificationStore(const NotificationChoice()));
     await notifications.load();

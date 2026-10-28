@@ -6,8 +6,8 @@ import 'package:herdr_mobile/data/services/snapshot_cache.dart';
 
 class MemorySnapshotCache implements SnapshotCache {
   MemorySnapshotCache([Map<String, Snapshot>? initial, Map<String, ObservedStatuses>? observed])
-      : entries = {...?initial},
-        observed = {...?observed};
+    : entries = {...?initial},
+      observed = {...?observed};
 
   final Map<String, Snapshot> entries;
 

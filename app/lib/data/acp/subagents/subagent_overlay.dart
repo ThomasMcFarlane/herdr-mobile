@@ -55,11 +55,7 @@ class SubagentOverlay {
     if (logged == null) return base;
     final memo = _memo[base];
     if (memo != null && identical(memo.logged, logged)) return memo.run;
-    final laid = base.copyWith(
-      transcript: logged.transcript,
-      log: logged.info,
-      droppedItems: logged.droppedItems,
-    );
+    final laid = base.copyWith(transcript: logged.transcript, log: logged.info, droppedItems: logged.droppedItems);
     _memo[base] = _Laid(logged, laid);
     return laid;
   }

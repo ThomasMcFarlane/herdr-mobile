@@ -7,8 +7,7 @@ class MemoryTerminalSettingsStore implements TerminalSettingsStore {
   final writes = <String>[];
 
   @override
-  Future<({double? fontSize, bool? wrap})> read() async =>
-      (fontSize: fontSize, wrap: wrap);
+  Future<({double? fontSize, bool? wrap})> read() async => (fontSize: fontSize, wrap: wrap);
 
   @override
   Future<void> writeFontSize(double value) async {

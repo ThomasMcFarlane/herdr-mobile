@@ -63,11 +63,8 @@ class SliverLargeTitle extends StatelessWidget {
 
   /// The pinned header's full (unscrolled) height: where the list content
   /// starts. Use it as the `edgeOffset` of a pull-to-refresh indicator.
-  static double extent(
-    BuildContext context, {
-    bool hasSubtitle = false,
-    double bottomHeight = 0,
-  }) => MediaQuery.paddingOf(context).top + _barHeight + _large(hasSubtitle, bottomHeight);
+  static double extent(BuildContext context, {bool hasSubtitle = false, double bottomHeight = 0}) =>
+      MediaQuery.paddingOf(context).top + _barHeight + _large(hasSubtitle, bottomHeight);
 
   /// The pinned bar's height once the large title has scrolled away: the part
   /// of the screen's top that content scrolled under is hidden by.
@@ -126,11 +123,7 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => topInset + _bar + _large;
 
   @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     final t = (shrinkOffset / (_large * 0.55)).clamp(0.0, 1.0);
     final compact = ((t - 0.55) / 0.45).clamp(0.0, 1.0);
     final big = (1 - t * 1.25).clamp(0.0, 1.0);
@@ -234,10 +227,7 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
                           children: [
                             ?leading,
                             const Spacer(),
-                            for (final (i, a) in actions.indexed) ...[
-                              if (i > 0) const SizedBox(width: 4),
-                              a,
-                            ],
+                            for (final (i, a) in actions.indexed) ...[if (i > 0) const SizedBox(width: 4), a],
                           ],
                         ),
                       ),
@@ -254,9 +244,7 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
                   duration: reduced ? Duration.zero : Motion.standard,
                   child: ColoredBox(
                     color: ds.hairline,
-                    child: SizedBox(
-                      height: 1 / MediaQuery.devicePixelRatioOf(context),
-                    ),
+                    child: SizedBox(height: 1 / MediaQuery.devicePixelRatioOf(context)),
                   ),
                 ),
               ),
@@ -267,8 +255,7 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
     );
   }
 
-  static Widget _fade(double opacity, Widget child) =>
-      opacity >= 1 ? child : Opacity(opacity: opacity, child: child);
+  static Widget _fade(double opacity, Widget child) => opacity >= 1 ? child : Opacity(opacity: opacity, child: child);
 
   @override
   bool shouldRebuild(_LargeTitleDelegate old) =>

@@ -20,7 +20,10 @@ Future<void> pumpScreen(WidgetTester tester, FakeAgentSession session) async {
   tester.view.devicePixelRatio = 2;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
-    MaterialApp(theme: AppTheme.light(), home: AgentSessionScreen(key: ObjectKey(session), session: session)),
+    MaterialApp(
+      theme: AppTheme.light(),
+      home: AgentSessionScreen(key: ObjectKey(session), session: session),
+    ),
   );
   await tester.pump(const Duration(milliseconds: 100));
   await tester.pump(Dwell.tapGuard);
@@ -85,7 +88,10 @@ ElicitationRequest _question({int? autoResolutionMs}) => ElicitationRequest.pars
   'requestedSchema': {
     'type': 'object',
     'properties': {
-      'approach': {'type': 'string', 'enum': ['safe', 'fast']},
+      'approach': {
+        'type': 'string',
+        'enum': ['safe', 'fast'],
+      },
     },
   },
   '_meta': {
@@ -97,7 +103,12 @@ void main() {
   group('command output from _meta', () {
     testWidgets('codex-acp: the streamed output is the command output, the host-terminal note is gone', (tester) async {
       final session = FakeAgentSession(
-        state: _command(chunks: ['collecting…\n', '+12 -0: All tests passed!\n'], exit: true, exitCode: 0, status: 'completed'),
+        state: _command(
+          chunks: ['collecting…\n', '+12 -0: All tests passed!\n'],
+          exit: true,
+          exitCode: 0,
+          status: 'completed',
+        ),
       );
       await pumpScreen(tester, session);
       await tester.tap(find.text('flutter test'));
@@ -180,7 +191,9 @@ void main() {
       expect(find.text('Waiting for output…'), findsOneWidget);
     });
 
-    testWidgets('an agent that sent nothing in _meta keeps the host-terminal note once the call is over', (tester) async {
+    testWidgets('an agent that sent nothing in _meta keeps the host-terminal note once the call is over', (
+      tester,
+    ) async {
       final session = FakeAgentSession(
         state: stateWith(
           turnActive: true,
@@ -239,7 +252,10 @@ void main() {
 
     testWidgets('a cancelled turn and a normal end show no stop row', (tester) async {
       for (final reason in [StopReason.cancelled, StopReason.endTurn, StopReason.error]) {
-        final s = const AgentSessionState('s1').withUserMessage([const TextBlock('hi')]).withTurnStarted().withTurnEnded(reason);
+        final s = const AgentSessionState('s1')
+            .withUserMessage([const TextBlock('hi')])
+            .withTurnStarted()
+            .withTurnEnded(reason);
         await pumpScreen(tester, FakeAgentSession(state: s));
         expect(find.textContaining('The agent stopped'), findsNothing, reason: '$reason');
       }
@@ -253,7 +269,13 @@ void main() {
         state: const AgentSessionState('s1')
             .withUserMessage([const TextBlock('hi')])
             .withTurnStarted()
-            .apply(_u({'sessionUpdate': 'agent_message_chunk', 'messageId': 'a', 'content': {'type': 'text', 'text': 'cut o'}})),
+            .apply(
+              _u({
+                'sessionUpdate': 'agent_message_chunk',
+                'messageId': 'a',
+                'content': {'type': 'text', 'text': 'cut o'},
+              }),
+            ),
       );
       await pumpScreen(tester, session);
       expect(find.textContaining('The agent stopped'), findsNothing);
@@ -264,7 +286,10 @@ void main() {
       await tester.pump();
       expect(find.text('The agent stopped: it hit the length limit.'), findsOneWidget);
       final stop = session.state.items.whereType<TranscriptStop>().single;
-      expect(built, ['$live#0', stop.key], reason: 'the message that ended is settled into its rows, and the new row; nothing else');
+      expect(built, [
+        '$live#0',
+        stop.key,
+      ], reason: 'the message that ended is settled into its rows, and the new row; nothing else');
     });
   });
 
@@ -273,7 +298,13 @@ void main() {
       final session = FakeAgentSession(
         state: stateWith(
           turnActive: true,
-          pending: [PendingQuestion(9, _question(autoResolutionMs: 600000), receivedAt: DateTime.now().subtract(const Duration(minutes: 1)))],
+          pending: [
+            PendingQuestion(
+              9,
+              _question(autoResolutionMs: 600000),
+              receivedAt: DateTime.now().subtract(const Duration(minutes: 1)),
+            ),
+          ],
         ),
       );
       await pumpScreen(tester, session);
@@ -294,9 +325,7 @@ void main() {
     });
 
     testWidgets('a question that never answers itself has no label', (tester) async {
-      final session = FakeAgentSession(
-        state: stateWith(turnActive: true, pending: [PendingQuestion(9, _question())]),
-      );
+      final session = FakeAgentSession(state: stateWith(turnActive: true, pending: [PendingQuestion(9, _question())]));
       await pumpScreen(tester, session);
       expect(find.text('Which approach?'), findsOneWidget);
       expect(find.byType(AutoResolveLabel), findsNothing);
@@ -327,7 +356,11 @@ void main() {
 
       now = start.add(const Duration(seconds: 59, milliseconds: 200));
       await tester.pump(const Duration(seconds: 1));
-      expect(find.text('The agent goes on without an answer within 1 second.'), findsOneWidget, reason: 'rounded up, never "0 seconds"');
+      expect(
+        find.text('The agent goes on without an answer within 1 second.'),
+        findsOneWidget,
+        reason: 'rounded up, never "0 seconds"',
+      );
 
       now = start.add(const Duration(seconds: 61));
       await tester.pump(const Duration(seconds: 1));
@@ -351,9 +384,16 @@ void main() {
       }
 
       expect(await words(const Duration(seconds: 45)), 'The agent goes on without an answer within 45 seconds.');
-      expect(await words(const Duration(milliseconds: 44001)), 'The agent goes on without an answer within 45 seconds.');
+      expect(
+        await words(const Duration(milliseconds: 44001)),
+        'The agent goes on without an answer within 45 seconds.',
+      );
       expect(await words(const Duration(seconds: 60)), 'The agent goes on without an answer within 1 minute.');
-      expect(await words(const Duration(seconds: 80)), 'The agent goes on without an answer within 2 minutes.', reason: 'never shorter than the time left');
+      expect(
+        await words(const Duration(seconds: 80)),
+        'The agent goes on without an answer within 2 minutes.',
+        reason: 'never shorter than the time left',
+      );
       expect(await words(Duration.zero), 'The agent is going on without an answer.');
       expect(await words(const Duration(seconds: -3)), 'The agent is going on without an answer.');
     });

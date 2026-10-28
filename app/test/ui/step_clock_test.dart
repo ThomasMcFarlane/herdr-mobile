@@ -8,11 +8,11 @@ import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/support/step_clock.dart';
 
 Future<void> _pump(WidgetTester tester, Widget child) => tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.dark(),
-        home: Scaffold(body: Center(child: child)),
-      ),
-    );
+  MaterialApp(
+    theme: AppTheme.dark(),
+    home: Scaffold(body: Center(child: child)),
+  ),
+);
 
 void main() {
   tearDown(() {
@@ -45,12 +45,16 @@ void main() {
     });
 
     testWidgets('reduced motion changes the status without a draw-in', (tester) async {
-      Future<void> pump(AgentStatus s) => tester.pumpWidget(MaterialApp(
-            theme: AppTheme.dark(),
-            builder: (context, child) =>
-                MediaQuery(data: MediaQuery.of(context).copyWith(disableAnimations: true), child: child!),
-            home: Scaffold(body: Center(child: StatusGlyph(status: s, size: 22))),
-          ));
+      Future<void> pump(AgentStatus s) => tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.dark(),
+          builder: (context, child) =>
+              MediaQuery(data: MediaQuery.of(context).copyWith(disableAnimations: true), child: child!),
+          home: Scaffold(
+            body: Center(child: StatusGlyph(status: s, size: 22)),
+          ),
+        ),
+      );
       await pump(AgentStatus.working);
       await pump(AgentStatus.done);
       expect(tester.binding.transientCallbackCount, 0);
@@ -73,8 +77,7 @@ void main() {
       expect(clock.running, isFalse);
     });
 
-    testWidgets('the timer pauses in the background and resumes in the foreground',
-        (tester) async {
+    testWidgets('the timer pauses in the background and resumes in the foreground', (tester) async {
       final clock = StepClock(const Duration(milliseconds: 250))..acquire();
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
       expect(clock.running, isFalse);
@@ -97,8 +100,7 @@ void main() {
       clock.release();
     });
 
-    testWidgets('a lease taken while the app is backgrounded does not start the timer',
-        (tester) async {
+    testWidgets('a lease taken while the app is backgrounded does not start the timer', (tester) async {
       final clock = StepClock(const Duration(milliseconds: 250));
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
       clock.acquire();
@@ -111,10 +113,15 @@ void main() {
 
     testWidgets('minute labels poll twice a minute and only while mounted', (tester) async {
       var builds = 0;
-      await _pump(tester, MinuteBuilder(builder: (context, now) {
-        builds++;
-        return Text('${now.year}');
-      }));
+      await _pump(
+        tester,
+        MinuteBuilder(
+          builder: (context, now) {
+            builds++;
+            return Text('${now.year}');
+          },
+        ),
+      );
       expect(StepClock.minute.leases, 1);
       final first = builds;
       await tester.pump(const Duration(seconds: 29));
@@ -126,12 +133,11 @@ void main() {
       expect(StepClock.minute.running, isFalse);
     });
 
-    testWidgets('a label in a hidden tab (TickerMode off) does not tick, and wakes when shown',
-        (tester) async {
+    testWidgets('a label in a hidden tab (TickerMode off) does not tick, and wakes when shown', (tester) async {
       Widget tree(bool visible) => TickerMode(
-            enabled: visible,
-            child: MinuteBuilder(builder: (context, now) => const Text('12m')),
-          );
+        enabled: visible,
+        child: MinuteBuilder(builder: (context, now) => const Text('12m')),
+      );
 
       await _pump(tester, tree(false));
       expect(StepClock.minute.leases, 0);

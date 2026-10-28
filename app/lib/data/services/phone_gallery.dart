@@ -187,13 +187,7 @@ class PhotoManagerGallery implements PhoneGallery {
         for (final e in list)
           () {
             _entities[e.id] = e;
-            return GalleryAsset(
-              id: e.id,
-              createdAt: e.createDateTime,
-              name: e.title,
-              width: e.width,
-              height: e.height,
-            );
+            return GalleryAsset(id: e.id, createdAt: e.createDateTime, name: e.title, width: e.width, height: e.height);
           }(),
       ];
     } on Object {

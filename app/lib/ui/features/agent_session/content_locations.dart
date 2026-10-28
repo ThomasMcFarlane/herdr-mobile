@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/acp/acp_models.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../render/markdown/markdown.dart';
 import '../files/file_viewer_screen.dart' show shortenFront;
 import '../../render/visible_text.dart';
@@ -79,7 +81,11 @@ class _LocationRow extends StatelessWidget {
                 return Text.rich(
                   TextSpan(
                     children: [
-                      if (head.isNotEmpty) TextSpan(text: head, style: mono.copyWith(color: ds.textMuted)),
+                      if (head.isNotEmpty)
+                        TextSpan(
+                          text: head,
+                          style: mono.copyWith(color: ds.textMuted),
+                        ),
                       TextSpan(
                         text: shown.substring(head.length),
                         style: mono.copyWith(color: tappable ? ds.accentText : ds.textSecondary),
@@ -98,7 +104,12 @@ class _LocationRow extends StatelessWidget {
         ],
       ),
     );
-    if (!tappable) return Padding(padding: const EdgeInsets.symmetric(vertical: Gap.hair), child: row);
+    if (!tappable) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: Gap.hair),
+        child: row,
+      );
+    }
     return PressRow(
       onTap: onTap,
       semanticLabel: line == null ? 'Open $path' : 'Open $path at line $line',

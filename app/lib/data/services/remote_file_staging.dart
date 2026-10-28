@@ -46,20 +46,17 @@ class RemoteFileStaging {
   /// written. Throws [RemoteFileException]: whatever the reads say, `failed` when
   /// the phone is out of space, when the file shrank while it was copied, or
   /// when its size is not known.
-  Future<File> fetch(
-    RemoteFiles files,
-    RemoteStat stat, {
-    void Function(int written)? onProgress,
-    ReadCancel? cancel,
-  }) {
+  Future<File> fetch(RemoteFiles files, RemoteStat stat, {void Function(int written)? onProgress, ReadCancel? cancel}) {
     final turn = Completer<void>();
     final before = _line;
     _line = turn.future;
-    return before.then((_) {
-      // Cancelled while waiting for the one before: nothing was started.
-      if (cancel?.cancelled ?? false) throw const ReadCancelled();
-      return _fetch(files, stat, onProgress, cancel);
-    }).whenComplete(turn.complete);
+    return before
+        .then((_) {
+          // Cancelled while waiting for the one before: nothing was started.
+          if (cancel?.cancelled ?? false) throw const ReadCancelled();
+          return _fetch(files, stat, onProgress, cancel);
+        })
+        .whenComplete(turn.complete);
   }
 
   Future<File> _fetch(
@@ -70,8 +67,11 @@ class RemoteFileStaging {
   ) async {
     final size = stat.size;
     if (size == null) {
-      throw RemoteFileException(RemoteFileErrorKind.failed, 'The size of ${stat.name} is not known, so it cannot be copied.',
-          path: stat.path);
+      throw RemoteFileException(
+        RemoteFileErrorKind.failed,
+        'The size of ${stat.name} is not known, so it cannot be copied.',
+        path: stat.path,
+      );
     }
     final root = await _root();
     final identity = '${files.machineId}\n${stat.path}\n$size\n${stat.modified?.millisecondsSinceEpoch}';
@@ -91,9 +91,17 @@ class RemoteFileStaging {
       try {
         while (at < size) {
           if (cancel?.cancelled ?? false) throw const ReadCancelled();
-          final Uint8List piece = await files.read(stat.path, offset: at, length: copyChunk < size - at ? copyChunk : size - at);
+          final Uint8List piece = await files.read(
+            stat.path,
+            offset: at,
+            length: copyChunk < size - at ? copyChunk : size - at,
+          );
           if (piece.isEmpty) {
-            throw RemoteFileException(RemoteFileErrorKind.failed, '${stat.name} changed while it was being copied.', path: stat.path);
+            throw RemoteFileException(
+              RemoteFileErrorKind.failed,
+              '${stat.name} changed while it was being copied.',
+              path: stat.path,
+            );
           }
           sink.add(piece);
           at += piece.length;
@@ -109,7 +117,9 @@ class RemoteFileStaging {
       await _remove(folder);
       throw RemoteFileException(
         RemoteFileErrorKind.failed,
-        e.osError?.errorCode == 28 ? 'The phone is out of space for a copy.' : 'The file could not be copied to the phone.',
+        e.osError?.errorCode == 28
+            ? 'The phone is out of space for a copy.'
+            : 'The file could not be copied to the phone.',
         path: stat.path,
       );
     } on Object {

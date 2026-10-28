@@ -68,7 +68,9 @@ void main() {
     test('a big line arriving in many small chunks is kept whole', () async {
       final big = 'x' * 100000;
       final bytes = utf8.encode('$big\n');
-      final chunks = [for (var i = 0; i < bytes.length; i += 777) bytes.sublist(i, i + 777 > bytes.length ? bytes.length : i + 777)];
+      final chunks = [
+        for (var i = 0; i < bytes.length; i += 777) bytes.sublist(i, i + 777 > bytes.length ? bytes.length : i + 777),
+      ];
       final (lines, _) = await run(chunks);
       expect(lines, [big]);
     });
@@ -78,14 +80,17 @@ void main() {
     late MemoryLink link;
     late List<String> problems;
 
-    JsonRpcConnection client({IncomingRequestHandler? onRequest, IncomingNotificationHandler? onNotification, Duration? timeout}) =>
-        JsonRpcConnection(
-          link.client,
-          onRequest: onRequest,
-          onNotification: onNotification,
-          onProblem: (m, {line}) => problems.add(m),
-          defaultTimeout: timeout,
-        );
+    JsonRpcConnection client({
+      IncomingRequestHandler? onRequest,
+      IncomingNotificationHandler? onNotification,
+      Duration? timeout,
+    }) => JsonRpcConnection(
+      link.client,
+      onRequest: onRequest,
+      onNotification: onNotification,
+      onProblem: (m, {line}) => problems.add(m),
+      defaultTimeout: timeout,
+    );
 
     setUp(() {
       link = MemoryLink();
@@ -108,7 +113,17 @@ void main() {
       final rpc = client();
       final f = rpc.request('x');
       final id = _decode(link.client.sent.single)['id'];
-      link.agent.send(line({'jsonrpc': '2.0', 'id': id, 'error': {'code': -32602, 'message': 'bad', 'data': {'k': 1}}}));
+      link.agent.send(
+        line({
+          'jsonrpc': '2.0',
+          'id': id,
+          'error': {
+            'code': -32602,
+            'message': 'bad',
+            'data': {'k': 1},
+          },
+        }),
+      );
       await expectLater(
         f,
         throwsA(isA<JsonRpcException>().having((e) => e.code, 'code', -32602).having((e) => e.data, 'data', {'k': 1})),
@@ -139,7 +154,10 @@ void main() {
       final rpc = client();
       final a = rpc.request('a');
       final b = rpc.request('b', null, const Duration(seconds: 30));
-      final errors = [expectLater(a, throwsA(isA<JsonRpcClosedException>())), expectLater(b, throwsA(isA<JsonRpcClosedException>()))];
+      final errors = [
+        expectLater(a, throwsA(isA<JsonRpcClosedException>())),
+        expectLater(b, throwsA(isA<JsonRpcClosedException>())),
+      ];
       await link.agent.close();
       await Future.wait(errors);
       await rpc.done;
@@ -171,7 +189,16 @@ void main() {
       final rpc = client();
       final f = rpc.request('ping');
       final id = _decode(link.client.sent.single)['id'];
-      for (final bad in ['not json', '{"jsonrpc":', '[1,2]', '42', '"s"', '{}', '{"id":3}', '{"id":{"x":1},"method":"m"}']) {
+      for (final bad in [
+        'not json',
+        '{"jsonrpc":',
+        '[1,2]',
+        '42',
+        '"s"',
+        '{}',
+        '{"id":3}',
+        '{"id":{"x":1},"method":"m"}',
+      ]) {
         link.agent.send(bad);
       }
       link.agent.send(line({'jsonrpc': '2.0', 'id': 4242, 'result': 1})); // answers nothing
@@ -192,11 +219,19 @@ void main() {
 
     test('notifications reach the handler; a throwing handler is contained', () async {
       final seen = <(String, Object?)>[];
-      client(onNotification: (m, p) {
-        seen.add((m, p));
-        throw StateError('handler bug');
-      });
-      link.agent.send(line({'jsonrpc': '2.0', 'method': 'session/update', 'params': {'a': 1}}));
+      client(
+        onNotification: (m, p) {
+          seen.add((m, p));
+          throw StateError('handler bug');
+        },
+      );
+      link.agent.send(
+        line({
+          'jsonrpc': '2.0',
+          'method': 'session/update',
+          'params': {'a': 1},
+        }),
+      );
       link.agent.send(line({'jsonrpc': '2.0', 'method': 'again'}));
       expect(seen.map((e) => e.$1), ['session/update', 'again']);
       expect(seen.first.$2, {'a': 1});
@@ -204,31 +239,48 @@ void main() {
       expect(problems, hasLength(2));
     });
 
-    test('the raw line of every notification (and only those) goes to the line tap first; a tap that throws costs nothing', () async {
-      final order = <String>[];
-      final lines = <(String, String)>[];
-      JsonRpcConnection(
-        link.client,
-        onNotification: (m, p) => order.add('handler $m'),
-        onNotificationLine: (m, l) {
-          order.add('line $m');
-          lines.add((m, l));
-          throw StateError('a log must not cost the stream a message');
-        },
-        onProblem: (m, {line}) => problems.add(m),
-      );
-      final first = line({'jsonrpc': '2.0', 'method': 'session/update', 'params': {'a': 1}});
-      link.agent.send(first);
-      link.agent.send(line({'jsonrpc': '2.0', 'id': 7, 'method': 'session/request_permission', 'params': {}}));
-      link.agent.send(line({'jsonrpc': '2.0', 'method': 'again'}));
-      expect(lines, [('session/update', first), ('again', line({'jsonrpc': '2.0', 'method': 'again'}))]);
-      expect(order, ['line session/update', 'handler session/update', 'line again', 'handler again']);
-      expect(problems, isEmpty);
-    });
+    test(
+      'the raw line of every notification (and only those) goes to the line tap first; a tap that throws costs nothing',
+      () async {
+        final order = <String>[];
+        final lines = <(String, String)>[];
+        JsonRpcConnection(
+          link.client,
+          onNotification: (m, p) => order.add('handler $m'),
+          onNotificationLine: (m, l) {
+            order.add('line $m');
+            lines.add((m, l));
+            throw StateError('a log must not cost the stream a message');
+          },
+          onProblem: (m, {line}) => problems.add(m),
+        );
+        final first = line({
+          'jsonrpc': '2.0',
+          'method': 'session/update',
+          'params': {'a': 1},
+        });
+        link.agent.send(first);
+        link.agent.send(line({'jsonrpc': '2.0', 'id': 7, 'method': 'session/request_permission', 'params': {}}));
+        link.agent.send(line({'jsonrpc': '2.0', 'method': 'again'}));
+        expect(lines, [
+          ('session/update', first),
+          ('again', line({'jsonrpc': '2.0', 'method': 'again'})),
+        ]);
+        expect(order, ['line session/update', 'handler session/update', 'line again', 'handler again']);
+        expect(problems, isEmpty);
+      },
+    );
 
     test('a request for an unsupported method gets method-not-found', () async {
       client(onRequest: (r) async => throw JsonRpcException.methodNotFound(r.method));
-      link.agent.send(line({'jsonrpc': '2.0', 'id': 'abc', 'method': 'fs/read_text_file', 'params': {'path': '/x'}}));
+      link.agent.send(
+        line({
+          'jsonrpc': '2.0',
+          'id': 'abc',
+          'method': 'fs/read_text_file',
+          'params': {'path': '/x'},
+        }),
+      );
       await settle();
       final answer = _decode(link.client.sent.single);
       expect(answer['id'], 'abc', reason: 'string ids are echoed untouched');
@@ -243,12 +295,14 @@ void main() {
     });
 
     test('a handler result is the answer; a plain exception is an internal error', () async {
-      client(onRequest: (r) async {
-        if (r.method == 'ok') return {'v': 1};
-        if (r.method == 'void') return null;
-        if (r.method == 'rpc') throw const JsonRpcException(-32001, 'nope', {'why': 'x'});
-        throw StateError('boom');
-      });
+      client(
+        onRequest: (r) async {
+          if (r.method == 'ok') return {'v': 1};
+          if (r.method == 'void') return null;
+          if (r.method == 'rpc') throw const JsonRpcException(-32001, 'nope', {'why': 'x'});
+          throw StateError('boom');
+        },
+      );
       for (final (id, method) in [(1, 'ok'), (2, 'void'), (3, 'rpc'), (4, 'bug')]) {
         link.agent.send(line({'jsonrpc': '2.0', 'id': id, 'method': method}));
       }
@@ -257,7 +311,11 @@ void main() {
       expect(answers[1]!['result'], {'v': 1});
       expect(answers[2]!.containsKey('result'), isTrue);
       expect(answers[2]!['result'], isNull);
-      expect(answers[3]!['error'], {'code': -32001, 'message': 'nope', 'data': {'why': 'x'}});
+      expect(answers[3]!['error'], {
+        'code': -32001,
+        'message': 'nope',
+        'data': {'why': 'x'},
+      });
       expect((answers[4]!['error'] as Map)['code'], JsonRpcCode.internalError);
       expect(problems.single, contains('bug'));
     });
@@ -265,13 +323,21 @@ void main() {
     test(r'$/cancel_request from the peer answers -32800 once and wakes the handler', () async {
       final release = Completer<Object?>();
       var sawCancel = false;
-      client(onRequest: (r) {
-        r.cancelled.then((_) => sawCancel = true);
-        return release.future;
-      });
+      client(
+        onRequest: (r) {
+          r.cancelled.then((_) => sawCancel = true);
+          return release.future;
+        },
+      );
       link.agent.send(line({'jsonrpc': '2.0', 'id': 7, 'method': 'session/request_permission'}));
       expect(link.client.sent, isEmpty);
-      link.agent.send(line({'jsonrpc': '2.0', 'method': r'$/cancel_request', 'params': {'requestId': 7}}));
+      link.agent.send(
+        line({
+          'jsonrpc': '2.0',
+          'method': r'$/cancel_request',
+          'params': {'requestId': 7},
+        }),
+      );
       await settle();
       expect(sawCancel, isTrue);
       final answer = _decode(link.client.sent.single);
@@ -281,8 +347,20 @@ void main() {
       await settle();
       expect(link.client.sent, hasLength(1), reason: 'the late result is dropped');
       // Cancelling something already finished is ignored.
-      link.agent.send(line({'jsonrpc': '2.0', 'method': r'$/cancel_request', 'params': {'requestId': 7}}));
-      link.agent.send(line({'jsonrpc': '2.0', 'method': r'$/cancel_request', 'params': {'requestId': 999}}));
+      link.agent.send(
+        line({
+          'jsonrpc': '2.0',
+          'method': r'$/cancel_request',
+          'params': {'requestId': 7},
+        }),
+      );
+      link.agent.send(
+        line({
+          'jsonrpc': '2.0',
+          'method': r'$/cancel_request',
+          'params': {'requestId': 999},
+        }),
+      );
       await settle();
       expect(link.client.sent, hasLength(1));
       expect(problems, isEmpty);
@@ -297,8 +375,17 @@ void main() {
       expect(cancel['params'], {'requestId': call.id});
       expect(cancel.containsKey('id'), isFalse, reason: 'a notification');
       // The peer answers; the call finishes with the answer.
-      link.agent.send(line({'jsonrpc': '2.0', 'id': call.id, 'error': {'code': -32800, 'message': 'Request cancelled'}}));
-      await expectLater(call.response, throwsA(isA<JsonRpcException>().having((e) => e.isCancelled, 'isCancelled', isTrue)));
+      link.agent.send(
+        line({
+          'jsonrpc': '2.0',
+          'id': call.id,
+          'error': {'code': -32800, 'message': 'Request cancelled'},
+        }),
+      );
+      await expectLater(
+        call.response,
+        throwsA(isA<JsonRpcException>().having((e) => e.isCancelled, 'isCancelled', isTrue)),
+      );
       final before = link.client.sent.length;
       call.cancel();
       expect(link.client.sent, hasLength(before), reason: 'nothing pending: nothing sent');

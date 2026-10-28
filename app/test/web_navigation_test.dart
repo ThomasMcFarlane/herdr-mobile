@@ -77,10 +77,36 @@ void main() {
   });
 
   test('every spelling of a loopback or unspecified address is the phone itself, and nothing else is', () {
-    for (final host in ['127.0.0.1', '127.1', '2130706433', '0x7f000001', '0x7f.0.0.1', '0177.0.0.1', '0.0.0.0', '0', '::1', '[::1]', '::', '::ffff:127.0.0.1', '::ffff:7f00:1', '127.0.0.1.']) {
+    for (final host in [
+      '127.0.0.1',
+      '127.1',
+      '2130706433',
+      '0x7f000001',
+      '0x7f.0.0.1',
+      '0177.0.0.1',
+      '0.0.0.0',
+      '0',
+      '::1',
+      '[::1]',
+      '::',
+      '::ffff:127.0.0.1',
+      '::ffff:7f00:1',
+      '127.0.0.1.',
+    ]) {
       expect(isLoopbackAddress(host), isTrue, reason: host);
     }
-    for (final host in ['8.8.8.8', '128.0.0.1', '1.2.3.4', '::2', '2001:db8::1', '::ffff:8.8.8.8', 'example.com', '127.0.0.1.5', '0x1g', '99999999999']) {
+    for (final host in [
+      '8.8.8.8',
+      '128.0.0.1',
+      '1.2.3.4',
+      '::2',
+      '2001:db8::1',
+      '::ffff:8.8.8.8',
+      'example.com',
+      '127.0.0.1.5',
+      '0x1g',
+      '99999999999',
+    ]) {
       expect(isLoopbackAddress(host), isFalse, reason: host);
     }
   });

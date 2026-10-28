@@ -40,11 +40,11 @@ import '../support/shot.dart' show loadAppFonts;
 const _longMachine = 'Máy chủ phát triển của nhóm thanh toán (devbox-payments-eu-west-3)';
 
 MachineConnection _machine(FakeFs fs, {String label = 'devbox'}) => MachineConnection(
-      profile: MachineProfile(id: 'm', label: label, host: 'h', username: 'u'),
-      api: HerdrApi(FakeTransport()..fs = fs),
-      backoff: (_) => const Duration(hours: 1),
-      pollInterval: const Duration(hours: 1),
-    );
+  profile: MachineProfile(id: 'm', label: label, host: 'h', username: 'u'),
+  api: HerdrApi(FakeTransport()..fs = fs),
+  backoff: (_) => const Duration(hours: 1),
+  pollInterval: const Duration(hours: 1),
+);
 
 void main() {
   if (Platform.environment['WEB_SHOTS'] == null) {
@@ -104,17 +104,18 @@ void main() {
 
   /// A page with a button standing in for the tapped link, then the sheet.
   Widget sheetHome(String url, MachineConnection? machine) => Scaffold(
-        body: Builder(
-          builder: (context) => Center(
-            child: TextButton(
-              onPressed: () => showLinkSheet(context, url, machine: machine),
-              child: const Text('tap the link'),
-            ),
-          ),
+    body: Builder(
+      builder: (context) => Center(
+        child: TextButton(
+          onPressed: () => showLinkSheet(context, url, machine: machine),
+          child: const Text('tap the link'),
         ),
-      );
+      ),
+    ),
+  );
 
-  final longUrl = 'http://localhost:5173/reports/2026-q3/payments-reconciliation-dashboard/index.html?tenant=eu-west-3&range=last-90-days&compare=previous-period#anomalies';
+  final longUrl =
+      'http://localhost:5173/reports/2026-q3/payments-reconciliation-dashboard/index.html?tenant=eu-west-3&range=last-90-days&compare=previous-period#anomalies';
 
   Future<void> openSheet(WidgetTester tester) async {
     await tester.tap(find.text('tap the link'));
@@ -140,17 +141,39 @@ void main() {
 
       testWidgets('viewer-html ${b.name} ${size.width.toInt()} x$scale', (tester) async {
         final fs = FakeFs()
-          ..addFile('/home/dev/Báo cáo doanh thu quý ba/Tổng hợp thanh toán và đối soát chi tiết theo từng khu vực.html', '<h1>Báo cáo</h1>\n<p>x</p>\n' * 20);
-        const path = '/home/dev/Báo cáo doanh thu quý ba/Tổng hợp thanh toán và đối soát chi tiết theo từng khu vực.html';
+          ..addFile(
+            '/home/dev/Báo cáo doanh thu quý ba/Tổng hợp thanh toán và đối soát chi tiết theo từng khu vực.html',
+            '<h1>Báo cáo</h1>\n<p>x</p>\n' * 20,
+          );
+        const path =
+            '/home/dev/Báo cáo doanh thu quý ba/Tổng hợp thanh toán và đối soát chi tiết theo từng khu vực.html';
         final stat = RemoteStat(path: path, kind: RemoteEntryKind.file, size: fs.nodes[path]!.bytes.length);
-        await shoot(tester, 'viewer-html', FileViewerScreen(machine: _machine(fs), stat: stat), size, b, scale: scale);
+        await shoot(
+          tester,
+          'viewer-html',
+          FileViewerScreen(machine: _machine(fs), stat: stat),
+          size,
+          b,
+          scale: scale,
+        );
       });
 
       testWidgets('viewer-svg ${b.name} ${size.width.toInt()} x$scale', (tester) async {
         const path = '/home/dev/charts/chart.svg';
-        final fs = FakeFs()..addFile(path, '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100"><rect width="200" height="100" fill="blue"/></svg>');
+        final fs = FakeFs()
+          ..addFile(
+            path,
+            '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100"><rect width="200" height="100" fill="blue"/></svg>',
+          );
         final stat = RemoteStat(path: path, kind: RemoteEntryKind.file, size: fs.nodes[path]!.bytes.length);
-        await shoot(tester, 'viewer-svg', FileViewerScreen(machine: _machine(fs), stat: stat), size, b, scale: scale);
+        await shoot(
+          tester,
+          'viewer-svg',
+          FileViewerScreen(machine: _machine(fs), stat: stat),
+          size,
+          b,
+          scale: scale,
+        );
       });
     }
   }
@@ -158,15 +181,16 @@ void main() {
   // The session's Web sheet: realistic, mixed data (long and Vietnamese names,
   // a running server, a stopped one, one the phone only saw).
   FakeAgentSession webSession() {
-    TranscriptItem say(String text) => TranscriptMessage(key: 'm${text.hashCode}', role: MessageRole.agent, blocks: [TextBlock(text)]);
+    TranscriptItem say(String text) =>
+        TranscriptMessage(key: 'm${text.hashCode}', role: MessageRole.agent, blocks: [TextBlock(text)]);
     TranscriptItem wrote(String path) => TranscriptTool(
-          ToolCall(
-            toolCallId: 't$path',
-            kind: ToolKind.edit,
-            status: ToolStatus.completed,
-            content: [ToolDiff(path: path, newText: '<h1>x</h1>')],
-          ),
-        );
+      ToolCall(
+        toolCallId: 't$path',
+        kind: ToolKind.edit,
+        status: ToolStatus.completed,
+        content: [ToolDiff(path: path, newText: '<h1>x</h1>')],
+      ),
+    );
     const base = '/home/dev/payments-api';
     final session = FakeAgentSession(
       machine: _machine(FakeFs()),
@@ -187,8 +211,18 @@ void main() {
     session.setBackground(
       BackgroundWork(
         tasks: const [
-          BackgroundTask(id: 'bg1', kind: BackgroundKind.shell, status: BackgroundStatus.running, title: 'vite --port 5173'),
-          BackgroundTask(id: 'bg2', kind: BackgroundKind.shell, status: BackgroundStatus.finished, title: 'uvicorn app:app --port 8000'),
+          BackgroundTask(
+            id: 'bg1',
+            kind: BackgroundKind.shell,
+            status: BackgroundStatus.running,
+            title: 'vite --port 5173',
+          ),
+          BackgroundTask(
+            id: 'bg2',
+            kind: BackgroundKind.shell,
+            status: BackgroundStatus.finished,
+            title: 'uvicorn app:app --port 8000',
+          ),
         ],
       ),
     );
@@ -222,7 +256,11 @@ void main() {
     final image = img.Image(width: 160, height: 90);
     for (final p in image) {
       final t = p.x / image.width;
-      p.setRgb((60 + 160 * t + hue).round() % 256, (200 - 120 * t + hue ~/ 2).round() % 256, (90 + 100 * (p.y / image.height) + hue).round() % 256);
+      p.setRgb(
+        (60 + 160 * t + hue).round() % 256,
+        (200 - 120 * t + hue ~/ 2).round() % 256,
+        (90 + 100 * (p.y / image.height) + hue).round() % 256,
+      );
     }
     return Uint8List.fromList(img.encodePng(image));
   }
@@ -234,11 +272,17 @@ void main() {
     final items = <TranscriptItem>[];
     // 40 items, oldest first, five minutes apart: the newest was a few minutes ago.
     DateTime ago() => now.subtract(Duration(minutes: 3 + (40 - items.length) * 5));
-    TranscriptItem say(String text) => TranscriptMessage(key: 'm${items.length}', role: MessageRole.agent, blocks: [TextBlock(text)], at: ago());
+    TranscriptItem say(String text) =>
+        TranscriptMessage(key: 'm${items.length}', role: MessageRole.agent, blocks: [TextBlock(text)], at: ago());
     TranscriptItem wrote(String path) => TranscriptTool(
-          ToolCall(toolCallId: 't$path', kind: ToolKind.edit, status: ToolStatus.completed, content: [ToolDiff(path: path, newText: '<h1>x</h1>')]),
-          at: ago(),
-        );
+      ToolCall(
+        toolCallId: 't$path',
+        kind: ToolKind.edit,
+        status: ToolStatus.completed,
+        content: [ToolDiff(path: path, newText: '<h1>x</h1>')],
+      ),
+      at: ago(),
+    );
     // Oldest first: the list shows the newest on top.
     items.add(say('Serving http://localhost:8000/docs'));
     items.add(say('Dashboard on http://localhost:5173/'));
@@ -299,12 +343,26 @@ void main() {
     for (final p in [...docs, ...pages]) {
       fs.addFile('$base/$p', 'x');
     }
-    final session = FakeAgentSession(machine: _machine(fs), key: key, state: AgentSessionState('s', items: items));
+    final session = FakeAgentSession(
+      machine: _machine(fs),
+      key: key,
+      state: AgentSessionState('s', items: items),
+    );
     session.setBackground(
       BackgroundWork(
         tasks: const [
-          BackgroundTask(id: 'bg1', kind: BackgroundKind.shell, status: BackgroundStatus.running, title: 'vite --port 5173'),
-          BackgroundTask(id: 'bg2', kind: BackgroundKind.shell, status: BackgroundStatus.finished, title: 'uvicorn app:app --port 8000'),
+          BackgroundTask(
+            id: 'bg1',
+            kind: BackgroundKind.shell,
+            status: BackgroundStatus.running,
+            title: 'vite --port 5173',
+          ),
+          BackgroundTask(
+            id: 'bg2',
+            kind: BackgroundKind.shell,
+            status: BackgroundStatus.finished,
+            title: 'uvicorn app:app --port 8000',
+          ),
         ],
       ),
     );

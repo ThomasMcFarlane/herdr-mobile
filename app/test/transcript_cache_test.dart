@@ -45,7 +45,8 @@ List<String> _conversation(int n, {String sid = 's1', String pad = ''}) => [
 List<String> _describe(AgentSessionState s) => [
   for (final i in s.items)
     switch (i) {
-      TranscriptMessage() => 'message ${i.key} ${i.role.name} ${i.messageId} ${i.blocks.map((b) => b is TextBlock ? b.text : b.runtimeType).join('|')}',
+      TranscriptMessage() =>
+        'message ${i.key} ${i.role.name} ${i.messageId} ${i.blocks.map((b) => b is TextBlock ? b.text : b.runtimeType).join('|')}',
       TranscriptTool() => 'tool ${i.key} ${i.call.title} ${i.call.status.name} ${i.call.kind.name}',
       TranscriptStop() => 'stop ${i.key} ${i.reason.name}',
       TranscriptNote() => 'note ${i.key} ${i.text}',
@@ -135,7 +136,13 @@ void main() {
       r.takeBackLocalUser();
       expect(r.length, 2);
       final kept = replayCachedTranscript(_cached(r.lines));
-      expect([for (final i in kept.items) if (i is TranscriptMessage) i.role], [MessageRole.agent]);
+      expect(
+        [
+          for (final i in kept.items)
+            if (i is TranscriptMessage) i.role,
+        ],
+        [MessageRole.agent],
+      );
       r.takeBackLocalUser();
       expect(r.length, 2, reason: 'a message is taken back once');
     });
@@ -230,8 +237,20 @@ void main() {
       offload: offload,
     );
 
-    TranscriptSnapshot snapshot(List<String> lines, {String sid = 's1', bool partial = false, bool gap = false, Object? setup}) =>
-        TranscriptSnapshot(sessionId: sid, asOf: DateTime.utc(2026, 3, 1, 14, 2), lines: lines, partial: partial, gap: gap, setup: setup);
+    TranscriptSnapshot snapshot(
+      List<String> lines, {
+      String sid = 's1',
+      bool partial = false,
+      bool gap = false,
+      Object? setup,
+    }) => TranscriptSnapshot(
+      sessionId: sid,
+      asOf: DateTime.utc(2026, 3, 1, 14, 2),
+      lines: lines,
+      partial: partial,
+      gap: gap,
+      setup: setup,
+    );
 
     List<String> names() => [for (final f in dir.listSync()) f.uri.pathSegments.last]..sort();
 
@@ -248,7 +267,14 @@ void main() {
     test('a copy the previous app wrote (version 1, no gap field) is kept, and read as one with a gap', () async {
       // An ended session's copy may be all the phone has of it: not deleted by an update.
       final lines = _conversation(2);
-      final header = jsonEncode({'v': 1, 'key': 'm1/k1', 'sid': 's1', 'asOf': 1, 'partial': false, 'lines': lines.length});
+      final header = jsonEncode({
+        'v': 1,
+        'key': 'm1/k1',
+        'sid': 's1',
+        'asOf': 1,
+        'partial': false,
+        'lines': lines.length,
+      });
       File('${dir.path}/m1~k1.tr').writeAsStringSync('$header\n${lines.join('\n')}\n');
       final got = (await cache().read('m1/k1'))!;
       expect(got.updates, hasLength(4));
@@ -259,13 +285,25 @@ void main() {
     test('what is saved is read back: the lines decoded, the setup, the time, partial', () async {
       final c = cache();
       final lines = _conversation(3);
-      c.save('m1/k1', snapshot(lines, setup: {'modes': {'currentModeId': 'plan', 'availableModes': []}}, partial: true), now: true);
+      c.save(
+        'm1/k1',
+        snapshot(
+          lines,
+          setup: {
+            'modes': {'currentModeId': 'plan', 'availableModes': []},
+          },
+          partial: true,
+        ),
+        now: true,
+      );
       await c.flush();
       final got = (await c.read('m1/k1'))!;
       expect(got.sessionId, 's1');
       expect(got.asOf, DateTime.fromMillisecondsSinceEpoch(DateTime.utc(2026, 3, 1, 14, 2).millisecondsSinceEpoch));
       expect(got.partial, isTrue);
-      expect(got.setup, {'modes': {'currentModeId': 'plan', 'availableModes': []}});
+      expect(got.setup, {
+        'modes': {'currentModeId': 'plan', 'availableModes': []},
+      });
       expect(got.updates, hasLength(6));
       expect(got.updates.first['sessionId'], 's1');
       final state = replayCachedTranscript(got);
@@ -295,8 +333,15 @@ void main() {
         expect(names(), isEmpty, reason: '$name: the file is gone');
       }
 
-      String header(Map<String, Object?> over, {int lines = 2}) =>
-          jsonEncode({'v': FileTranscriptCache.version, 'key': 'm1/k1', 'sid': 's1', 'asOf': 1, 'partial': false, 'lines': lines, ...over});
+      String header(Map<String, Object?> over, {int lines = 2}) => jsonEncode({
+        'v': FileTranscriptCache.version,
+        'key': 'm1/k1',
+        'sid': 's1',
+        'asOf': 1,
+        'partial': false,
+        'lines': lines,
+        ...over,
+      });
 
       test('garbage', () => expectIgnored('garbage', 'not a transcript\n'));
       test('empty', () => expectIgnored('empty', ''));
@@ -315,7 +360,10 @@ void main() {
         await expectIgnored('no newline', '${header({})}\n${lines.take(2).join('\n')}');
       });
       test('a line that is not a session update', () async {
-        await expectIgnored('line', '${header({})}\n${_conversation(1).first}\n{"jsonrpc":"2.0","method":"other","params":{}}\n');
+        await expectIgnored(
+          'line',
+          '${header({})}\n${_conversation(1).first}\n{"jsonrpc":"2.0","method":"other","params":{}}\n',
+        );
         await expectIgnored('json', '${header({})}\n${_conversation(1).first}\n{broken\n');
       });
       test('a header without a session id or a time', () async {
@@ -325,9 +373,8 @@ void main() {
       test('larger than any file this cache would have written', () async {
         final small = cache(session: 4096);
         final pad = 'x' * 8000;
-        File('${dir.path}/m1~k1.tr').writeAsStringSync(
-          '${header({}, lines: 2)}\n${_line('s1', _agent(pad))}\n${_line('s1', _agent('b'))}\n',
-        );
+        File('${dir.path}/m1~k1.tr')
+            .writeAsStringSync('${header({}, lines: 2)}\n${_line('s1', _agent(pad))}\n${_line('s1', _agent('b'))}\n');
         expect(await small.read('m1/k1'), isNull);
         expect(names(), isEmpty);
       });
@@ -365,7 +412,8 @@ void main() {
         c.save('m1/$k', snapshot(lines), now: true);
         await c.flush();
         // Distinct recency for the test (file times can tie within a tick).
-        File('${dir.path}/m1~$k.tr').setLastModifiedSync(DateTime.now().subtract(Duration(minutes: {'a': 30, 'b': 20, 'c': 10}[k]!)));
+        File('${dir.path}/m1~$k.tr')
+            .setLastModifiedSync(DateTime.now().subtract(Duration(minutes: {'a': 30, 'b': 20, 'c': 10}[k]!)));
       }
       expect(names(), ['m1~a.tr', 'm1~b.tr', 'm1~c.tr']);
 

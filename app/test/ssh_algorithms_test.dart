@@ -13,11 +13,7 @@ void main() {
     int at(SSHCipherType c) => ciphers.indexOf(c);
 
     test('fast ciphers are offered before the slow GCM ones', () {
-      final fast = [
-        SSHCipherType.chacha20poly1305,
-        SSHCipherType.aes128ctr,
-        SSHCipherType.aes256ctr,
-      ];
+      final fast = [SSHCipherType.chacha20poly1305, SSHCipherType.aes128ctr, SSHCipherType.aes256ctr];
       final slow = [SSHCipherType.aes128gcm, SSHCipherType.aes256gcm];
 
       for (final f in fast) {

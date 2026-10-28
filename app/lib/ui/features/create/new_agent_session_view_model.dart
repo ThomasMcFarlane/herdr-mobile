@@ -98,9 +98,9 @@ class NewAgentSessionViewModel extends ChangeNotifier {
 
   /// Machines that can take a session now, in saved order.
   List<MachineConnection> get machines => [
-        for (final c in _fleet.connections)
-          if (c.isLive) c,
-      ];
+    for (final c in _fleet.connections)
+      if (c.isLive) c,
+  ];
 
   /// The chosen machine, or null when none is online (or the chosen one went
   /// offline).
@@ -244,19 +244,48 @@ class NewAgentSessionViewModel extends ChangeNotifier {
     final taken = {for (final c in _checkouts ?? const <WorktreeInfo>[]) ?c.branch};
     while (true) {
       final tag = _random.nextInt(0x10000).toRadixString(16).padLeft(4, '0');
-      final name = 'worktree/${_adjectives[_random.nextInt(_adjectives.length)]}-'
+      final name =
+          'worktree/${_adjectives[_random.nextInt(_adjectives.length)]}-'
           '${_nouns[_random.nextInt(_nouns.length)]}-$tag';
       if (!taken.contains(name)) return name;
     }
   }
 
   static const _adjectives = [
-    'brave', 'calm', 'bright', 'quiet', 'lucky', 'swift', 'gentle', 'bold',
-    'sunny', 'misty', 'amber', 'cosmic', 'keen', 'merry', 'noble', 'witty',
+    'brave',
+    'calm',
+    'bright',
+    'quiet',
+    'lucky',
+    'swift',
+    'gentle',
+    'bold',
+    'sunny',
+    'misty',
+    'amber',
+    'cosmic',
+    'keen',
+    'merry',
+    'noble',
+    'witty',
   ];
   static const _nouns = [
-    'meadow', 'river', 'stone', 'cloud', 'forest', 'harbor', 'lantern', 'maple',
-    'comet', 'canyon', 'falcon', 'garden', 'island', 'orchard', 'summit', 'willow',
+    'meadow',
+    'river',
+    'stone',
+    'cloud',
+    'forest',
+    'harbor',
+    'lantern',
+    'maple',
+    'comet',
+    'canyon',
+    'falcon',
+    'garden',
+    'island',
+    'orchard',
+    'summit',
+    'willow',
   ];
 
   /// Why [branch] cannot name a new branch; null when it can (or is empty:
@@ -329,11 +358,13 @@ class NewAgentSessionViewModel extends ChangeNotifier {
             created = await m.api.createWorktree(cwd: path, branch: branch.trim());
           } on HerdrUnsupportedException {
             final v = m.snapshot.version;
-            return _fail(NewSessionError(
-              'Worktrees aren’t supported',
-              'herdr${v.isEmpty ? '' : ' $v'} on ${m.profile.label} can’t create worktrees. '
-                  'Update herdr on that machine, or choose This folder.',
-            ));
+            return _fail(
+              NewSessionError(
+                'Worktrees aren’t supported',
+                'herdr${v.isEmpty ? '' : ' $v'} on ${m.profile.label} can’t create worktrees. '
+                    'Update herdr on that machine, or choose This folder.',
+              ),
+            );
           } on HerdrApiException catch (e) {
             return _fail(NewSessionError('Couldn’t create the worktree', e.message));
           } on HerdrTransportException catch (e) {
@@ -360,10 +391,12 @@ class NewAgentSessionViewModel extends ChangeNotifier {
       return session;
     } on AgentHostException catch (e) {
       final w = made;
-      return _fail(NewSessionError(
-        'Couldn’t start the session',
-        w == null ? e.message : '${e.message} The worktree ${w.name} was created; Start again to use it.',
-      ));
+      return _fail(
+        NewSessionError(
+          'Couldn’t start the session',
+          w == null ? e.message : '${e.message} The worktree ${w.name} was created; Start again to use it.',
+        ),
+      );
     } finally {
       _busy = false;
       if (!_disposed) notifyListeners();
@@ -386,7 +419,10 @@ class NewAgentSessionViewModel extends ChangeNotifier {
     final before = {for (final c in _checkouts ?? const <WorktreeInfo>[]) c.path};
     try {
       final now = await m.api.listWorktrees(cwd: folder).timeout(Dwell.refreshTimeout);
-      final fresh = [for (final w in now) if (w.isLinked && !before.contains(w.path)) w];
+      final fresh = [
+        for (final w in now)
+          if (w.isLinked && !before.contains(w.path)) w,
+      ];
       if (before.isNotEmpty && fresh.length == 1 && !_disposed) {
         _checkouts = now;
         m.noteBranches(now);

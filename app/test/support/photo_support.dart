@@ -201,14 +201,7 @@ class FakeExport implements PhotoExport {
 /// A JPEG of [width] x [height] with EXIF [orientation] (1-8) stored in it,
 /// plus optional camera data: what a phone writes. The top-left [mark] pixels
 /// are white so a test can see where the corner went.
-Uint8List jpegWithExif(
-  int width,
-  int height, {
-  int orientation = 1,
-  String? make,
-  String? model,
-  String? taken,
-}) {
+Uint8List jpegWithExif(int width, int height, {int orientation = 1, String? make, String? model, String? taken}) {
   final image = img.Image(width: width, height: height);
   img.fill(image, color: img.ColorRgb8(200, 60, 40));
   img.fillRect(image, x1: 0, y1: 0, x2: width ~/ 4, y2: height ~/ 4, color: img.ColorRgb8(255, 255, 255));
@@ -259,7 +252,12 @@ void usePhoneSurface(WidgetTester tester, {Size size = const Size(412, 892), dou
 }
 
 /// Pumps a viewer-shaped home in the app's theme.
-Future<void> pumpApp(WidgetTester tester, Widget home, {Brightness brightness = Brightness.light, bool reduceMotion = false}) async {
+Future<void> pumpApp(
+  WidgetTester tester,
+  Widget home, {
+  Brightness brightness = Brightness.light,
+  bool reduceMotion = false,
+}) async {
   await tester.pumpWidget(
     MaterialApp(
       key: UniqueKey(),

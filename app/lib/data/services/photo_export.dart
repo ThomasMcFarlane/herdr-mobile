@@ -67,8 +67,7 @@ class DevicePhotoExport implements PhotoExport {
       _intoGallery('picture', () => Gal.putImageBytes(bytes, album: photoAlbum, name: _stem(name)));
 
   @override
-  Future<void> saveVideoToGallery(File file) =>
-      _intoGallery('video', () => Gal.putVideo(file.path, album: photoAlbum));
+  Future<void> saveVideoToGallery(File file) => _intoGallery('video', () => Gal.putVideo(file.path, album: photoAlbum));
 
   /// Asks for the gallery (the album, so on Android 10+ no permission is
   /// needed), runs [put], and says in words what went wrong. [thing] is
@@ -83,8 +82,7 @@ class DevicePhotoExport implements PhotoExport {
       rethrow;
     } on GalException catch (e) {
       throw PhotoExportException(switch (e.type) {
-        GalExceptionType.accessDenied =>
-          'Saving needs access to your photos. Allow it in the phone\u2019s settings.',
+        GalExceptionType.accessDenied => 'Saving needs access to your photos. Allow it in the phone\u2019s settings.',
         GalExceptionType.notEnoughSpace => 'The phone is out of space.',
         GalExceptionType.notSupportedFormat => 'The gallery cannot keep this kind of $thing.',
         GalExceptionType.unexpected => 'The $thing could not be saved.',

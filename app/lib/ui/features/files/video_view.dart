@@ -7,7 +7,9 @@ import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../../data/models/remote_file.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'file_copy_model.dart';
 import 'file_format.dart';
 import 'file_kind.dart';
@@ -136,12 +138,20 @@ class _VideoViewState extends State<VideoView> with WidgetsBindingObserver {
     final video = _video;
     final onSave = widget.canSave ? widget.onSave : null;
     if (video != null && video.value.isInitialized) {
-      return _Player(video: video, onToggle: () => _toggle(video), onShare: widget.onShare, onSave: onSave, busy: copy.handing);
+      return _Player(
+        video: video,
+        onToggle: () => _toggle(video),
+        onShare: widget.onShare,
+        onSave: onSave,
+        busy: copy.handing,
+      );
     }
     if (copy.running) return _Copying(stat: widget.stat, copy: copy, willPlay: _starting);
     if (video != null) return const Center(child: BusySpinner(size: IconSize.lead));
     if (_cannotPlay) return _CannotPlay(onShare: widget.onShare, onSave: onSave, busy: copy.handing);
-    if (copy.phase == CopyPhase.failed) return _CopyFailed(message: copy.failure ?? '', onRetry: () => unawaited(_start()));
+    if (copy.phase == CopyPhase.failed) {
+      return _CopyFailed(message: copy.failure ?? '', onRetry: () => unawaited(_start()));
+    }
     return _Card(stat: widget.stat, type: widget.type, onPlay: () => unawaited(_start()));
   }
 }
@@ -157,14 +167,14 @@ class _Frame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(Gap.gutter, Gap.lg, Gap.gutter, Gap.xl + MediaQuery.paddingOf(context).bottom),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: _measure),
-            child: Column(mainAxisSize: MainAxisSize.min, children: children),
-          ),
-        ),
-      );
+    child: SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(Gap.gutter, Gap.lg, Gap.gutter, Gap.xl + MediaQuery.paddingOf(context).bottom),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: _measure),
+        child: Column(mainAxisSize: MainAxisSize.min, children: children),
+      ),
+    ),
+  );
 }
 
 /// Before anything is copied: what the file is, and the one thing to do.
@@ -179,25 +189,31 @@ class _Card extends StatelessWidget {
   Widget build(BuildContext context) {
     final ds = context.ds;
     final size = stat.size;
-    return _Frame(children: [
-      const IconTile(icon: LucideIcons.fileVideo, size: IconSize.hero),
-      const SizedBox(height: Gap.md),
-      Text(stat.name, textAlign: TextAlign.center, style: Type.title.copyWith(color: ds.text)),
-      const SizedBox(height: Gap.xs),
-      Text(
-        [type.label, if (size != null) formatBytes(size)].join(' · '),
-        textAlign: TextAlign.center,
-        style: Type.secondary.copyWith(color: ds.textSecondary),
-      ),
-      const SizedBox(height: Gap.lg),
-      AppButton(label: 'Play', icon: LucideIcons.play, onPressed: onPlay),
-      const SizedBox(height: Gap.md),
-      Text(
-        'It is copied to the phone first, then it plays from there.',
-        textAlign: TextAlign.center,
-        style: Type.compact.copyWith(color: ds.textMuted),
-      ),
-    ]);
+    return _Frame(
+      children: [
+        const IconTile(icon: LucideIcons.fileVideo, size: IconSize.hero),
+        const SizedBox(height: Gap.md),
+        Text(
+          stat.name,
+          textAlign: TextAlign.center,
+          style: Type.title.copyWith(color: ds.text),
+        ),
+        const SizedBox(height: Gap.xs),
+        Text(
+          [type.label, if (size != null) formatBytes(size)].join(' · '),
+          textAlign: TextAlign.center,
+          style: Type.secondary.copyWith(color: ds.textSecondary),
+        ),
+        const SizedBox(height: Gap.lg),
+        AppButton(label: 'Play', icon: LucideIcons.play, onPressed: onPlay),
+        const SizedBox(height: Gap.md),
+        Text(
+          'It is copied to the phone first, then it plays from there.',
+          textAlign: TextAlign.center,
+          style: Type.compact.copyWith(color: ds.textMuted),
+        ),
+      ],
+    );
   }
 }
 
@@ -216,30 +232,47 @@ class _Copying extends StatelessWidget {
     final ds = context.ds;
     final total = copy.total;
     final line = total > 0 ? '${formatBytes(copy.written)} of ${formatBytes(total)}' : formatBytes(copy.written);
-    return _Frame(children: [
-      Semantics(
-        liveRegion: true,
-        // No numbers: a label that changes with every piece would be read out every piece.
-        label: 'Copying ${stat.name} to the phone',
-        child: ExcludeSemantics(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const IconTile(icon: LucideIcons.fileVideo, size: IconSize.hero),
-            const SizedBox(height: Gap.md),
-            Text(stat.name, textAlign: TextAlign.center, style: Type.title.copyWith(color: ds.text)),
-            const SizedBox(height: Gap.lg),
-            if (total > 0) ProgressLine(fraction: copy.written / total) else const BusySpinner(size: IconSize.lead),
-            const SizedBox(height: Gap.md),
-            Text('Copying to the phone · $line', textAlign: TextAlign.center, style: Type.compact.copyWith(color: ds.textSecondary)),
-          ]),
+    return _Frame(
+      children: [
+        Semantics(
+          liveRegion: true,
+          // No numbers: a label that changes with every piece would be read out every piece.
+          label: 'Copying ${stat.name} to the phone',
+          child: ExcludeSemantics(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const IconTile(icon: LucideIcons.fileVideo, size: IconSize.hero),
+                const SizedBox(height: Gap.md),
+                Text(
+                  stat.name,
+                  textAlign: TextAlign.center,
+                  style: Type.title.copyWith(color: ds.text),
+                ),
+                const SizedBox(height: Gap.lg),
+                if (total > 0) ProgressLine(fraction: copy.written / total) else const BusySpinner(size: IconSize.lead),
+                const SizedBox(height: Gap.md),
+                Text(
+                  'Copying to the phone · $line',
+                  textAlign: TextAlign.center,
+                  style: Type.compact.copyWith(color: ds.textSecondary),
+                ),
+              ],
+            ),
+          ),
         ),
-      ),
-      const SizedBox(height: Gap.lg),
-      AppButton(label: 'Cancel', kind: AppButtonKind.secondary, onPressed: copy.cancel),
-      if (willPlay) ...[
-        const SizedBox(height: Gap.md),
-        Text('It plays when the copy is done.', textAlign: TextAlign.center, style: Type.compact.copyWith(color: ds.textMuted)),
+        const SizedBox(height: Gap.lg),
+        AppButton(label: 'Cancel', kind: AppButtonKind.secondary, onPressed: copy.cancel),
+        if (willPlay) ...[
+          const SizedBox(height: Gap.md),
+          Text(
+            'It plays when the copy is done.',
+            textAlign: TextAlign.center,
+            style: Type.compact.copyWith(color: ds.textMuted),
+          ),
+        ],
       ],
-    ]);
+    );
   }
 }
 
@@ -253,15 +286,17 @@ class _CopyFailed extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
-    return _Frame(children: [
-      StatusPanel(
-        color: ds.danger,
-        icon: LucideIcons.triangleAlert,
-        title: 'Couldn\u2019t copy the video',
-        message: message,
-        trailing: AppButton(label: 'Retry', kind: AppButtonKind.secondary, compact: true, onPressed: onRetry),
-      ),
-    ]);
+    return _Frame(
+      children: [
+        StatusPanel(
+          color: ds.danger,
+          icon: LucideIcons.triangleAlert,
+          title: 'Couldn\u2019t copy the video',
+          message: message,
+          trailing: AppButton(label: 'Retry', kind: AppButtonKind.secondary, compact: true, onPressed: onRetry),
+        ),
+      ],
+    );
   }
 }
 
@@ -279,26 +314,48 @@ class _CannotPlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
-    return _Frame(children: [
-      StatusPanel(
-        color: ds.danger,
-        icon: LucideIcons.triangleAlert,
-        title: 'This phone can\u2019t play this video',
-        message: 'Android couldn\u2019t open it, usually because of its format. Share it to open it in a player that can.',
-      ),
-      const SizedBox(height: Gap.lg),
-      AppButton(label: 'Share or save\u2026', icon: LucideIcons.share2, expand: true, loading: busy, onPressed: onShare),
-      if (onSave != null) ...[
-        const SizedBox(height: Gap.sm),
-        AppButton(label: 'Save to gallery', icon: LucideIcons.download, expand: true, kind: AppButtonKind.secondary, loading: busy, onPressed: onSave),
+    return _Frame(
+      children: [
+        StatusPanel(
+          color: ds.danger,
+          icon: LucideIcons.triangleAlert,
+          title: 'This phone can\u2019t play this video',
+          message:
+              'Android couldn\u2019t open it, usually because of its format. Share it to open it in a player that can.',
+        ),
+        const SizedBox(height: Gap.lg),
+        AppButton(
+          label: 'Share or save\u2026',
+          icon: LucideIcons.share2,
+          expand: true,
+          loading: busy,
+          onPressed: onShare,
+        ),
+        if (onSave != null) ...[
+          const SizedBox(height: Gap.sm),
+          AppButton(
+            label: 'Save to gallery',
+            icon: LucideIcons.download,
+            expand: true,
+            kind: AppButtonKind.secondary,
+            loading: busy,
+            onPressed: onSave,
+          ),
+        ],
       ],
-    ]);
+    );
   }
 }
 
 /// The video, whole, over its seek bar and the two ways to keep it.
 class _Player extends StatelessWidget {
-  const _Player({required this.video, required this.onToggle, required this.onShare, required this.onSave, required this.busy});
+  const _Player({
+    required this.video,
+    required this.onToggle,
+    required this.onShare,
+    required this.onSave,
+    required this.busy,
+  });
 
   final VideoPlayerController video;
   final VoidCallback onToggle;
@@ -308,27 +365,50 @@ class _Player extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(left: Gap.gutter, top: Gap.md, right: Gap.gutter),
-              child: VideoStage(video: video, onTap: onToggle),
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Expanded(
+        child: Padding(
+          padding: const EdgeInsets.only(left: Gap.gutter, top: Gap.md, right: Gap.gutter),
+          child: VideoStage(video: video, onTap: onToggle),
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: Gap.gutter),
+        child: VideoSeekBar(video: video),
+      ),
+      Padding(
+        padding: EdgeInsets.only(
+          left: Gap.gutter,
+          right: Gap.gutter,
+          bottom: Gap.md + MediaQuery.paddingOf(context).bottom,
+        ),
+        // Stacked: two labels side by side are cut at a narrow phone or a large text size.
+        child: Column(
+          spacing: Gap.sm,
+          children: [
+            if (onSave != null)
+              AppButton(
+                label: 'Save to gallery',
+                icon: LucideIcons.download,
+                kind: AppButtonKind.secondary,
+                compact: true,
+                expand: true,
+                loading: busy,
+                onPressed: onSave,
+              ),
+            AppButton(
+              label: 'Share or save\u2026',
+              icon: LucideIcons.share2,
+              kind: AppButtonKind.secondary,
+              compact: true,
+              expand: true,
+              loading: busy,
+              onPressed: onShare,
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: Gap.gutter),
-            child: VideoSeekBar(video: video),
-          ),
-          Padding(
-            padding: EdgeInsets.only(left: Gap.gutter, right: Gap.gutter, bottom: Gap.md + MediaQuery.paddingOf(context).bottom),
-            // Stacked: two labels side by side are cut at a narrow phone or a large text size.
-            child: Column(spacing: Gap.sm, children: [
-              if (onSave != null)
-                AppButton(label: 'Save to gallery', icon: LucideIcons.download, kind: AppButtonKind.secondary, compact: true, expand: true, loading: busy, onPressed: onSave),
-              AppButton(label: 'Share or save\u2026', icon: LucideIcons.share2, kind: AppButtonKind.secondary, compact: true, expand: true, loading: busy, onPressed: onShare),
-            ]),
-          ),
-        ],
-      );
+          ],
+        ),
+      ),
+    ],
+  );
 }

@@ -397,7 +397,10 @@ class AcpClient {
           'prompt': [for (final b in content) b.toJson()],
         }, Duration.zero),
       );
-      _update(sessionId, (s) => s.withTurnEnded(result.stopReason, usage: result.usage, meta: result.meta, at: _clock()));
+      _update(
+        sessionId,
+        (s) => s.withTurnEnded(result.stopReason, usage: result.usage, meta: result.meta, at: _clock()),
+      );
       return result;
     } on Object catch (e) {
       final wasCancelled = _cancelling.contains(sessionId) && e is JsonRpcException;

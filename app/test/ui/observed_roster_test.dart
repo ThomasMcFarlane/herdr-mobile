@@ -19,13 +19,8 @@ SubagentEntry _e(String name, SubagentState state, {int tools = 0, String assign
   state: state,
 );
 
-BackgroundTask _task(String id, {StopRoute stop = StopRoute.message}) => BackgroundTask(
-  id: id,
-  kind: BackgroundKind.agent,
-  status: BackgroundStatus.running,
-  title: id,
-  stop: stop,
-);
+BackgroundTask _task(String id, {StopRoute stop = StopRoute.message}) =>
+    BackgroundTask(id: id, kind: BackgroundKind.agent, status: BackgroundStatus.running, title: id, stop: stop);
 
 /// 2 waiting, 6 running, 3 failed, 55 finished: a swarm as the log names it,
 /// oldest first.
@@ -49,7 +44,10 @@ Future<void> _openRoster(WidgetTester tester, FakeAgentSession session, {Size si
   tester.view.devicePixelRatio = 2;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
-    MaterialApp(theme: AppTheme.light(), home: Scaffold(body: SubagentsChip(session: session))),
+    MaterialApp(
+      theme: AppTheme.light(),
+      home: Scaffold(body: SubagentsChip(session: session)),
+    ),
   );
   await tester.pump(Dwell.tapGuard);
 }
@@ -77,22 +75,23 @@ void main() {
     expect(s.done.map((e) => e.name), ['f', 'c', 'e', 'b']);
   });
 
-
-    testWidgets('a link that is down claims nothing is running', (tester) async {
-      final session = _session(_swarm());
-      await _openRoster(tester, session);
-      session.setLink(AgentLink.reconnecting);
-      await tester.pump();
-      expect(find.text('6 running'), findsNothing);
-      expect(find.text('66 subagents'), findsOneWidget);
-    });
+  testWidgets('a link that is down claims nothing is running', (tester) async {
+    final session = _session(_swarm());
+    await _openRoster(tester, session);
+    session.setLink(AgentLink.reconnecting);
+    await tester.pump();
+    expect(find.text('6 running'), findsNothing);
+    expect(find.text('66 subagents'), findsOneWidget);
+  });
   group('the chip', () {
     testWidgets('says what runs; the total is one tap down', (tester) async {
       await _openRoster(tester, _session(_swarm()));
       expect(find.text('6 running'), findsOneWidget);
     });
 
-    testWidgets('nothing runs: the count of the subagents, with a + while only the end of the log is read', (tester) async {
+    testWidgets('nothing runs: the count of the subagents, with a + while only the end of the log is read', (
+      tester,
+    ) async {
       final done = [for (var i = 0; i < 66; i++) _e('R$i', SubagentState.finished)];
       final session = _session(done);
       await _openRoster(tester, session);
@@ -110,7 +109,11 @@ void main() {
       await _tapChip(tester);
       expect(find.text('Subagents · 66'), findsOneWidget);
       final running = tester.getTopLeft(find.text('Running · 6')).dy;
-      expect(running, lessThan(tester.getTopLeft(find.text('SecFix0')).dy), reason: 'running first: the few that run now are not below the waiting');
+      expect(
+        running,
+        lessThan(tester.getTopLeft(find.text('SecFix0')).dy),
+        reason: 'running first: the few that run now are not below the waiting',
+      );
       expect(session.rosterWatchers, 1);
 
       await tester.drag(find.byType(ListView).last, const Offset(0, -2000));
@@ -160,7 +163,9 @@ void main() {
       expect(session.stopAllOnly, [BackgroundKind.agent]);
     });
 
-    testWidgets('a subagent the log lists no task for has no stop control; one task alone has no Stop all', (tester) async {
+    testWidgets('a subagent the log lists no task for has no stop control; one task alone has no Stop all', (
+      tester,
+    ) async {
       final session = _session([_e('A', SubagentState.running), _e('B', SubagentState.running)], tasks: [_task('A')]);
       await _openRoster(tester, session);
       await _tapChip(tester);

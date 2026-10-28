@@ -138,12 +138,18 @@ void main() {
     test('a path outside the folder keeps its absolute path as the name; a trailing slash on the folder is fine', () {
       expect(fileLinkBlock('/etc/hosts', cwd: '/home/dev/app').name, '/etc/hosts');
       expect(fileLinkBlock('/home/dev/app/a.txt', cwd: '/home/dev/app/').name, 'a.txt');
-      expect(fileLinkBlock('/home/dev/application/a.txt', cwd: '/home/dev/app').name, '/home/dev/application/a.txt',
-          reason: 'a sibling folder with the same prefix is not inside');
+      expect(
+        fileLinkBlock('/home/dev/application/a.txt', cwd: '/home/dev/app').name,
+        '/home/dev/application/a.txt',
+        reason: 'a sibling folder with the same prefix is not inside',
+      );
     });
 
     test('the uri is percent-encoded', () {
-      expect(fileLinkBlock('/home/dev/my app/é.txt', cwd: '/home/dev/my app').uri, 'file:///home/dev/my%20app/%C3%A9.txt');
+      expect(
+        fileLinkBlock('/home/dev/my app/é.txt', cwd: '/home/dev/my app').uri,
+        'file:///home/dev/my%20app/%C3%A9.txt',
+      );
     });
 
     test('embedded text only when the agent takes it and the file is small; else a link', () {
@@ -152,9 +158,16 @@ void main() {
       expect(small, isA<EmbeddedResourceBlock>());
       expect((small as EmbeddedResourceBlock).text, 'hello');
 
-      expect(fileBlock(path, cwd: '/home/dev/app', text: 'hello', embeddedContext: false), isA<ResourceLinkBlock>(),
-          reason: 'the agent did not advertise embeddedContext');
-      expect(fileBlock(path, cwd: '/home/dev/app', embeddedContext: true), isA<ResourceLinkBlock>(), reason: 'no text read');
+      expect(
+        fileBlock(path, cwd: '/home/dev/app', text: 'hello', embeddedContext: false),
+        isA<ResourceLinkBlock>(),
+        reason: 'the agent did not advertise embeddedContext',
+      );
+      expect(
+        fileBlock(path, cwd: '/home/dev/app', embeddedContext: true),
+        isA<ResourceLinkBlock>(),
+        reason: 'no text read',
+      );
 
       final big = 'x' * (maxEmbeddedBytes + 1);
       expect(fileBlock(path, cwd: '/home/dev/app', text: big, embeddedContext: true), isA<ResourceLinkBlock>());
@@ -183,11 +196,13 @@ void main() {
 
     test('or carrying authMethods in the data (pi-acp\'s authRequired), or reason auth_required', () {
       expect(
-        isAuthRequired(const JsonRpcException(-32000, 'Configure an API key or log in with an OAuth provider.', {
-          'authMethods': [
-            {'id': 'pi_terminal_login'},
-          ],
-        })),
+        isAuthRequired(
+          const JsonRpcException(-32000, 'Configure an API key or log in with an OAuth provider.', {
+            'authMethods': [
+              {'id': 'pi_terminal_login'},
+            ],
+          }),
+        ),
         isTrue,
       );
       expect(isAuthRequired(const JsonRpcException(-32000, 'nope', {'reason': 'auth_required'})), isTrue);
@@ -195,8 +210,15 @@ void main() {
 
     test('the same code for another reason is not an auth failure (the keeper uses -32000 too)', () {
       expect(isAuthRequired(const JsonRpcException(-32000, 'The client went away before it answered.')), isFalse);
-      expect(isAuthRequired(const JsonRpcException(-32000, 'No client is attached to answer fs/read_text_file.')), isFalse);
-      expect(isAuthRequired(const JsonRpcException(-32603, 'Authentication required')), isFalse, reason: 'another code');
+      expect(
+        isAuthRequired(const JsonRpcException(-32000, 'No client is attached to answer fs/read_text_file.')),
+        isFalse,
+      );
+      expect(
+        isAuthRequired(const JsonRpcException(-32603, 'Authentication required')),
+        isFalse,
+        reason: 'another code',
+      );
       expect(isAuthRequired(StateError('x')), isFalse);
       expect(isAuthRequired(null), isFalse);
     });
@@ -256,7 +278,12 @@ void main() {
         const JsonRpcException(-32000, 'Authentication required'),
         agentLabel: 'Claude Code',
         advertised: const [
-          {'id': 'claude-login', 'name': 'Log in with Claude', 'type': 'terminal', 'args': ['--cli']},
+          {
+            'id': 'claude-login',
+            'name': 'Log in with Claude',
+            'type': 'terminal',
+            'args': ['--cli'],
+          },
         ],
       );
       expect(need.terminalHint, isTrue);

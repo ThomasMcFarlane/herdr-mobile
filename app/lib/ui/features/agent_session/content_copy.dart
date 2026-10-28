@@ -4,7 +4,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/acp/acp_models.dart' show MessageRole;
 import '../../../data/acp/session_state.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../render/markdown/markdown.dart';
 
 /// Copying a message (docs/screens/session.md "Copying").
@@ -98,7 +100,10 @@ class _ContentSelectionAreaState extends State<ContentSelectionArea> {
       items.insertAll(after, [
         ContextMenuButtonItem(label: 'Copy message', onPressed: () => run((c) => copyMessage(c, message))),
         if (messageHasMarkdown(message))
-          ContextMenuButtonItem(label: 'Copy as Markdown', onPressed: () => run((c) => copyMessageMarkdown(c, message))),
+          ContextMenuButtonItem(
+            label: 'Copy as Markdown',
+            onPressed: () => run((c) => copyMessageMarkdown(c, message)),
+          ),
       ]);
     }
     return AdaptiveTextSelectionToolbar.buttonItems(anchors: region.contextMenuAnchors, buttonItems: items);

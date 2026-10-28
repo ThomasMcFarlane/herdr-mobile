@@ -138,7 +138,11 @@ class SheetPosition {
       return;
     }
     _controller.value = offset.value;
-    unawaited(_controller.animateWith(SpringSimulation(Springs.carry, offset.value, target, velocity)).catchError((Object _) {}));
+    unawaited(
+      _controller
+          .animateWith(SpringSimulation(Springs.carry, offset.value, target, velocity))
+          .catchError((Object _) {}),
+    );
   }
 
   /// Apple's projection of a fling: where it would stop with the usual
@@ -263,7 +267,13 @@ class AttachSheetRoute<T> extends PopupRoute<T> {
 /// The scrim, the surface and the pinned bars, moved by [SheetPosition] and
 /// the route's animation with transforms only.
 class SheetFrame extends StatefulWidget {
-  const SheetFrame({super.key, required this.route, required this.animation, required this.content, required this.bars});
+  const SheetFrame({
+    super.key,
+    required this.route,
+    required this.animation,
+    required this.content,
+    required this.bars,
+  });
 
   final AttachSheetRoute<Object?> route;
   final Animation<double> animation;
@@ -334,40 +344,41 @@ class _SheetFrameState extends State<SheetFrame> with SingleTickerProviderStateM
         return Material(
           type: MaterialType.transparency,
           child: SheetScope(
-          position: _position,
-          bottomClearance: clearance,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              // Scrim: fades with the route and with the sheet's drop.
-              AnimatedBuilder(
-                animation: Listenable.merge([widget.animation, _position.offset]),
-                builder: (context, _) {
-                  final drop = (1 - ((_position.offset.value - restHalf) / math.max(1, full - restHalf)).clamp(0.0, 1.0));
-                  final alpha = _enter() * drop;
-                  return Semantics(
-                    label: 'Close',
-                    button: true,
-                    onTap: _tapScrim,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
+            position: _position,
+            bottomClearance: clearance,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // Scrim: fades with the route and with the sheet's drop.
+                AnimatedBuilder(
+                  animation: Listenable.merge([widget.animation, _position.offset]),
+                  builder: (context, _) {
+                    final drop =
+                        (1 - ((_position.offset.value - restHalf) / math.max(1, full - restHalf)).clamp(0.0, 1.0));
+                    final alpha = _enter() * drop;
+                    return Semantics(
+                      label: 'Close',
+                      button: true,
                       onTap: _tapScrim,
-                      excludeFromSemantics: true,
-                      child: ColoredBox(color: Color.lerp(ds.scrim.withAlpha(0), ds.scrim, alpha)!),
-                    ),
-                  );
-                },
-              ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: keyboard,
-                height: full,
-                child: _Body(frame: this, full: full, restHalf: restHalf),
-              ),
-            ],
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: _tapScrim,
+                        excludeFromSemantics: true,
+                        child: ColoredBox(color: Color.lerp(ds.scrim.withAlpha(0), ds.scrim, alpha)!),
+                      ),
+                    );
+                  },
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: keyboard,
+                  height: full,
+                  child: _Body(frame: this, full: full, restHalf: restHalf),
+                ),
+              ],
+            ),
           ),
-        ),
         );
       },
     );

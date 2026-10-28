@@ -97,10 +97,12 @@ class Composer extends StatelessWidget {
   final DictationSession? dictation;
 
   @override
-  Widget build(BuildContext context) =>
-      SessionSelect<(AgentLink, AgentPhase, bool, String?, String?, SendDelivery, bool)>(
+  Widget build(
+    BuildContext context,
+  ) => SessionSelect<(AgentLink, AgentPhase, bool, String?, String?, SendDelivery, bool)>(
     session: session,
-    select: (s) => (s.link, s.phase, s.state.cancelRequested, s.sendBlocked, s.relayNote, s.delivery, s.waitingOnBackground),
+    select: (s) =>
+        (s.link, s.phase, s.state.cancelRequested, s.sendBlocked, s.relayNote, s.delivery, s.waitingOnBackground),
     builder: (context, snapshot) {
       final (link, phase, stopping, blocked, relay, delivery, waiting) = snapshot;
       final live = link == AgentLink.live;
@@ -121,10 +123,14 @@ class Composer extends StatelessWidget {
             : ListenableBuilder(
                 listenable: attachments,
                 builder: (context, _) {
-                  void open() =>
-                      unawaited(showAttachSheet(context, target: session, attachments: attachments));
+                  void open() => unawaited(showAttachSheet(context, target: session, attachments: attachments));
                   return HideWhenCompact(
-                    compact: ComposerAttachButton(enabled: typing, count: attachments.items.length, onPressed: open, onWarm: attachments.warm),
+                    compact: ComposerAttachButton(
+                      enabled: typing,
+                      count: attachments.items.length,
+                      onPressed: open,
+                      onWarm: attachments.warm,
+                    ),
                     child: ComposerAttachButton(enabled: typing, onPressed: open, onWarm: attachments.warm),
                   );
                 },
@@ -316,14 +322,14 @@ class _StopButton extends StatefulWidget {
 class _StopButtonState extends State<_StopButton> with TapGuardState<_StopButton> {
   @override
   Widget build(BuildContext context) => ComposerRoundButton(
-        label: 'Stop',
-        icon: LucideIcons.square,
-        iconSize: IconSize.inline,
-        busy: widget.stopping,
-        ready: settled && !widget.stopping,
-        quiet: widget.quiet,
-        onPressed: widget.onPressed,
-      );
+    label: 'Stop',
+    icon: LucideIcons.square,
+    iconSize: IconSize.inline,
+    busy: widget.stopping,
+    ready: settled && !widget.stopping,
+    quiet: widget.quiet,
+    onPressed: widget.onPressed,
+  );
 }
 
 /// The queue never takes more than this share of the window; past it, the

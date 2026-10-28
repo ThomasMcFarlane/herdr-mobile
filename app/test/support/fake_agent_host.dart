@@ -8,22 +8,18 @@ import 'package:herdr_mobile/data/acp/past_session.dart';
 import '../acp/support/fake_agent.dart';
 
 Json agentChunk(String text, {String messageId = 'a1'}) => {
-      'sessionUpdate': 'agent_message_chunk',
-      'messageId': messageId,
-      'content': {'type': 'text', 'text': text},
-    };
+  'sessionUpdate': 'agent_message_chunk',
+  'messageId': messageId,
+  'content': {'type': 'text', 'text': text},
+};
 
 Json userChunk(String text, {String messageId = 'u1'}) => {
-      'sessionUpdate': 'user_message_chunk',
-      'messageId': messageId,
-      'content': {'type': 'text', 'text': text},
-    };
+  'sessionUpdate': 'user_message_chunk',
+  'messageId': messageId,
+  'content': {'type': 'text', 'text': text},
+};
 
-Json idleUpdate(String stopReason) => {
-      'sessionUpdate': 'state_update',
-      'state': 'idle',
-      'stopReason': stopReason,
-    };
+Json idleUpdate(String stopReason) => {'sessionUpdate': 'state_update', 'state': 'idle', 'stopReason': stopReason};
 
 Json runningUpdate() => {'sessionUpdate': 'state_update', 'state': 'running'};
 
@@ -166,9 +162,9 @@ class FakeKeeper {
 
   /// The answers the client gave, in order.
   List<Object?> get answers => [
-        for (final r in requests)
-          if (r.answered) r.answer,
-      ];
+    for (final r in requests)
+      if (r.answered) r.answer,
+  ];
 
   void update(Json update) {
     log.add(update);
@@ -449,8 +445,7 @@ class FakeKeeper {
 /// stored id takes the session over and replays it. [restart] simulates a host
 /// reboot (every keeper `exited`, every channel dead).
 class FakeAgentHost implements AgentHost {
-  FakeAgentHost({Set<String>? installed, this.clock})
-      : installed = installed ?? {for (final r in agentRoutes) r.id};
+  FakeAgentHost({Set<String>? installed, this.clock}) : installed = installed ?? {for (final r in agentRoutes) r.id};
 
   /// Route ids [available] reports.
   Set<String> installed;
@@ -538,26 +533,25 @@ class FakeAgentHost implements AgentHost {
     bool? unseenDone,
     DateTime? lastEventAt,
     String? paneId,
-  }) =>
-      KeeperInfo(
-        id: i.id,
-        agent: i.agent,
-        cwd: i.cwd,
-        state: state ?? i.state,
-        startedAt: i.startedAt,
-        pid: i.pid,
-        exitCode: exitCode ?? i.exitCode,
-        sessionId: sessionId ?? i.sessionId,
-        title: title ?? i.title,
-        pending: pending ?? i.pending,
-        turnActive: turnActive ?? i.turnActive,
-        unseenDone: unseenDone ?? i.unseenDone,
-        lastEventAt: lastEventAt ?? i.lastEventAt,
-        exitReason: exitReason ?? i.exitReason,
-        paneId: paneId ?? i.paneId,
-        clients: i.clients,
-        loginInKeychain: i.loginInKeychain,
-      );
+  }) => KeeperInfo(
+    id: i.id,
+    agent: i.agent,
+    cwd: i.cwd,
+    state: state ?? i.state,
+    startedAt: i.startedAt,
+    pid: i.pid,
+    exitCode: exitCode ?? i.exitCode,
+    sessionId: sessionId ?? i.sessionId,
+    title: title ?? i.title,
+    pending: pending ?? i.pending,
+    turnActive: turnActive ?? i.turnActive,
+    unseenDone: unseenDone ?? i.unseenDone,
+    lastEventAt: lastEventAt ?? i.lastEventAt,
+    exitReason: exitReason ?? i.exitReason,
+    paneId: paneId ?? i.paneId,
+    clients: i.clients,
+    loginInKeychain: i.loginInKeychain,
+  );
 
   @override
   Future<Set<String>> available() async {

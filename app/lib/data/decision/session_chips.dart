@@ -147,7 +147,9 @@ SessionChips sessionChipsOf(AgentSessionState state) {
         } else if (o.category == 'thought_level') {
           effort ??= SessionChip(kind: SessionChipKind.effort, settingId: o.id, title: title, label: _label(name));
         } else if (o.category != 'mode') {
-          others.add(SessionChip(kind: SessionChipKind.other, settingId: o.id, title: title, label: _label('$title: $name')));
+          others.add(
+            SessionChip(kind: SessionChipKind.other, settingId: o.id, title: title, label: _label('$title: $name')),
+          );
         }
       case BooleanConfigOption():
         final title = _nonBlank(o.name) ?? o.id;

@@ -101,8 +101,7 @@ void main() {
       await u.togglePin('omp', 'b');
       await u.togglePin('omp', 'c');
       expect(u.pinned('omp'), isEmpty);
-      expect((jsonDecode(store.raw!) as Map)['pinned'], isEmpty,
-          reason: 'no empty list is left behind');
+      expect((jsonDecode(store.raw!) as Map)['pinned'], isEmpty, reason: 'no empty list is left behind');
     });
 
     test('remembers at most 40 per agent: the busiest, and always the newest', () async {
@@ -204,9 +203,13 @@ void main() {
             'short': [1],
             'float': [1, 1.5],
           },
-          'empty': {'bad': [0, 0]},
+          'empty': {
+            'bad': [0, 0],
+          },
           'nope': 'not a map',
-          7: {'a': [1, 1]},
+          7: {
+            'a': [1, 1],
+          },
         },
         'pinned': {
           'omp': ['a', 3, 'b', 'a'],
@@ -224,7 +227,13 @@ void main() {
     });
 
     test('anything else is empty', () {
-      for (final junk in [null, 5, 'x', <Object?>[], {'uses': 3, 'pinned': 3}]) {
+      for (final junk in [
+        null,
+        5,
+        'x',
+        <Object?>[],
+        {'uses': 3, 'pinned': 3},
+      ]) {
         final m = SlashUsageMemory.fromJson(junk);
         expect(m.uses, isEmpty, reason: '$junk');
         expect(m.pinned, isEmpty, reason: '$junk');
@@ -255,13 +264,13 @@ void main() {
     var agent = 'claude';
 
     CommandPaletteModel vm({SlashUsage? withUsage, FakeFs? fs}) => CommandPaletteModel(
-          source: CatalogCommandSource(
-            agent: () => agent,
-            cwd: () => '/work/app',
-            catalog: SlashCatalog(machineWithFiles(fs).files),
-          ),
-          usage: withUsage ?? usage,
-        );
+      source: CatalogCommandSource(
+        agent: () => agent,
+        cwd: () => '/work/app',
+        catalog: SlashCatalog(machineWithFiles(fs).files),
+      ),
+      usage: withUsage ?? usage,
+    );
 
     Future<CommandPaletteModel> loaded({FakeFs? fs}) async {
       final m = vm(fs: fs);
@@ -270,8 +279,7 @@ void main() {
       return m;
     }
 
-    List<String> names(CommandPaletteModel m, String input) =>
-        [for (final c in m.match(input)) c.name];
+    List<String> names(CommandPaletteModel m, String input) => [for (final c in m.match(input)) c.name];
 
     setUp(() {
       usage = _usage();
@@ -290,8 +298,7 @@ void main() {
 
       expect(all.take(2), ['help', 'exit'], reason: 'pinned, in the order pinned');
       expect(all.skip(2).take(5), ['cost', 'context', 'rewind', 'resume', 'model']);
-      expect(all.skip(7).take(2), ['clear', 'compact'],
-          reason: 'older ones fall back to the catalog order');
+      expect(all.skip(7).take(2), ['clear', 'compact'], reason: 'older ones fall back to the catalog order');
       expect(all.toSet(), hasLength(all.length), reason: 'nothing twice');
       expect(all, hasLength(builtInSlashCommands['claude']!.length));
     });
@@ -432,13 +439,13 @@ void main() {
     String? agent = 'omp';
 
     CommandPaletteModel vm() => CommandPaletteModel(
-          source: CatalogCommandSource(
-            agent: () => agent,
-            cwd: () => null,
-            catalog: SlashCatalog(machineWithFiles(null).files),
-          ),
-          usage: usage,
-        );
+      source: CatalogCommandSource(
+        agent: () => agent,
+        cwd: () => null,
+        catalog: SlashCatalog(machineWithFiles(null).files),
+      ),
+      usage: usage,
+    );
 
     setUp(() {
       usage = _usage();

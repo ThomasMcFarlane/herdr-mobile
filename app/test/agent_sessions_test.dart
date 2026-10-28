@@ -43,13 +43,16 @@ MachineProfile _profile(String id, String label) =>
 /// clock).
 class _Outcome<T> {
   _Outcome(Future<T> f) {
-    f.then((v) {
-      value = v;
-      done = true;
-    }, onError: (Object e) {
-      error = e;
-      done = true;
-    });
+    f.then(
+      (v) {
+        value = v;
+        done = true;
+      },
+      onError: (Object e) {
+        error = e;
+        done = true;
+      },
+    );
   }
 
   T? value;
@@ -66,8 +69,8 @@ class _Rig {
     ReviewedState? reviewed,
     int maxAttempts = 12,
     FakeFs? fs,
-  })  : host = FakeAgentHost(clock: () => _t0.add(async.elapsed)),
-        reviewed = reviewed ?? ReviewedState() {
+  }) : host = FakeAgentHost(clock: () => _t0.add(async.elapsed)),
+       reviewed = reviewed ?? ReviewedState() {
     // A machine that is online: sessions only retry against one.
     machine = MachineConnection(
       profile: _profile('m1', 'studio-mac'),
@@ -120,19 +123,21 @@ class _Rig {
   /// shows it).
   void listed({int pending = 0, bool turnActive = false, bool unseenDone = false, DateTime? lastEventAt}) {
     final i = keeper.info;
-    session.update(KeeperInfo(
-      id: i.id,
-      agent: i.agent,
-      cwd: i.cwd,
-      state: i.state,
-      startedAt: i.startedAt,
-      sessionId: i.sessionId,
-      title: i.title,
-      pending: pending,
-      turnActive: turnActive,
-      unseenDone: unseenDone,
-      lastEventAt: lastEventAt,
-    ));
+    session.update(
+      KeeperInfo(
+        id: i.id,
+        agent: i.agent,
+        cwd: i.cwd,
+        state: i.state,
+        startedAt: i.startedAt,
+        sessionId: i.sessionId,
+        title: i.title,
+        pending: pending,
+        turnActive: turnActive,
+        unseenDone: unseenDone,
+        lastEventAt: lastEventAt,
+      ),
+    );
   }
 
   void dispose() {
@@ -148,14 +153,13 @@ void _rigTest(
   ReviewedState? reviewed,
   int maxAttempts = 12,
   FakeFs? fs,
-}) =>
-    test(name, () {
-      fakeAsync((async) {
-        final r = _Rig(async, seed: seed, reviewed: reviewed, maxAttempts: maxAttempts, fs: fs);
-        body(r);
-        r.dispose();
-      });
-    });
+}) => test(name, () {
+  fakeAsync((async) {
+    final r = _Rig(async, seed: seed, reviewed: reviewed, maxAttempts: maxAttempts, fs: fs);
+    body(r);
+    r.dispose();
+  });
+});
 
 /// How many sessions wait for the person, and how many finished turns nobody
 /// looked at, as the repository holds them (the board's counts come from
@@ -351,9 +355,7 @@ void main() {
     _rigTest('reconnects with 1, 2, 4, 8, 15, 30, 30 s backoff and keeps the transcript', (r) {
       r.connect();
       expect(r.session.state.items, hasLength(1));
-      r.host.attachFailures.addAll([
-        for (var i = 0; i < 7; i++) const AgentHostException('The host did not answer.'),
-      ]);
+      r.host.attachFailures.addAll([for (var i = 0; i < 7; i++) const AgentHostException('The host did not answer.')]);
 
       r.keeper.dropLink();
       r.async.flushMicrotasks();
@@ -375,9 +377,7 @@ void main() {
       expect(r.host.attachCalls, 9, reason: 'seven failures, then the attach that worked');
       final times = r.host.attachTimes;
       expect(times[1].difference(droppedAt), const Duration(seconds: 1));
-      expect([
-        for (var i = 1; i < 8; i++) times[i + 1].difference(times[i]).inSeconds,
-      ], [2, 4, 8, 15, 30, 30, 30]);
+      expect([for (var i = 1; i < 8; i++) times[i + 1].difference(times[i]).inSeconds], [2, 4, 8, 15, 30, 30, 30]);
       expect(r.session.state.disconnected, isFalse);
       expect(r.session.state.items, hasLength(1), reason: 'replayed, not doubled');
       expect(r.keeper.loadCount, 2);
@@ -757,29 +757,33 @@ void main() {
   });
 
   group('the keeper\'s notices', () {
-    _rigTest('a keeper from before shared sessions: another device attaching ends the session, retries stop, Take over comes back', (r) {
-      r.connect();
-      expect(r.session.evicted, isFalse);
+    _rigTest(
+      'a keeper from before shared sessions: another device attaching ends the session, retries stop, Take over comes back',
+      (r) {
+        r.connect();
+        expect(r.session.evicted, isFalse);
 
-      r.keeper.attach(); // another phone attaches; the keeper evicts this one
-      r.async.flushMicrotasks();
+        r.keeper.attach(); // another phone attaches; the keeper evicts this one
+        r.async.flushMicrotasks();
 
-      expect(r.session.link, AgentLink.ended);
-      expect(r.session.evicted, isTrue);
-      expect(r.session.error, 'Opened on another device.');
-      r.async.elapse(const Duration(minutes: 10));
-      expect(r.host.attachCalls, 1, reason: 'two phones must not evict each other for ever');
-      expect(r.host.listCalls, 0);
-      expect(_timers(r.async), r.machineTimers);
+        expect(r.session.link, AgentLink.ended);
+        expect(r.session.evicted, isTrue);
+        expect(r.session.error, 'Opened on another device.');
+        r.async.elapse(const Duration(minutes: 10));
+        expect(r.host.attachCalls, 1, reason: 'two phones must not evict each other for ever');
+        expect(r.host.listCalls, 0);
+        expect(_timers(r.async), r.machineTimers);
 
-      unawaited(r.session.reattach());
-      r.pump();
-      expect(r.session.link, AgentLink.live);
-      expect(r.session.evicted, isFalse);
-      expect(r.host.attachCalls, 2);
-      expect(r.keeper.attached, isTrue);
-      expect(r.session.state.items, hasLength(1));
-    }, seed: (h) => h.add(sessionId: 's1')..log.add(agentChunk('hello')));
+        unawaited(r.session.reattach());
+        r.pump();
+        expect(r.session.link, AgentLink.live);
+        expect(r.session.evicted, isFalse);
+        expect(r.host.attachCalls, 2);
+        expect(r.keeper.attached, isTrue);
+        expect(r.session.state.items, hasLength(1));
+      },
+      seed: (h) => h.add(sessionId: 's1')..log.add(agentChunk('hello')),
+    );
 
     _rigTest('its own re-attach after a half-dead channel is not mistaken for another device', (r) {
       r.connect();
@@ -1141,64 +1145,79 @@ void main() {
 
     String runId(_Rig r) => r.session.subagentRuns.single.id;
 
-    _rigTest('the drill-in reads the log; the transcript survives what the client publishes next', (r) {
-      r.connect();
-      r.keeper.update(calls[0]);
-      r.keeper.update(calls[1]);
-      r.pump();
-      final id = runId(r);
-      expect(r.session.subagentRun(id)!.hasTranscript, isFalse, reason: 'ACP sends a summary only');
-      expect(r.session.subagentLogStatus(id), SubagentLogStatus.idle);
-      final timers = _timers(r.async);
+    _rigTest(
+      'the drill-in reads the log; the transcript survives what the client publishes next',
+      (r) {
+        r.connect();
+        r.keeper.update(calls[0]);
+        r.keeper.update(calls[1]);
+        r.pump();
+        final id = runId(r);
+        expect(r.session.subagentRun(id)!.hasTranscript, isFalse, reason: 'ACP sends a summary only');
+        expect(r.session.subagentLogStatus(id), SubagentLogStatus.idle);
+        final timers = _timers(r.async);
 
-      r.session.watchSubagentLog(id, true);
-      r.pump();
-      final run = r.session.subagentRun(id)!;
-      expect(r.session.subagentLogStatus(id), SubagentLogStatus.shown);
-      expect(run.hasTranscript, isTrue);
-      expect(run.log, isNotNull);
-      expect(r.session.subagentRuns.single.hasTranscript, isTrue);
-      expect(r.session.subagentsOfToolCall(run.parentToolCallId).single.hasTranscript, isTrue);
-      expect(_timers(r.async), timers + 1, reason: 'one timer while the screen is open');
+        r.session.watchSubagentLog(id, true);
+        r.pump();
+        final run = r.session.subagentRun(id)!;
+        expect(r.session.subagentLogStatus(id), SubagentLogStatus.shown);
+        expect(run.hasTranscript, isTrue);
+        expect(run.log, isNotNull);
+        expect(r.session.subagentRuns.single.hasTranscript, isTrue);
+        expect(r.session.subagentsOfToolCall(run.parentToolCallId).single.hasTranscript, isTrue);
+        expect(_timers(r.async), timers + 1, reason: 'one timer while the screen is open');
 
-      r.keeper.update(calls[2]);
-      r.pump();
-      expect(r.session.subagentRun(id)!.status, SubagentStatus.finished);
-      expect(r.session.subagentRun(id)!.hasTranscript, isTrue, reason: 'the client\'s next state did not drop it');
+        r.keeper.update(calls[2]);
+        r.pump();
+        expect(r.session.subagentRun(id)!.status, SubagentStatus.finished);
+        expect(r.session.subagentRun(id)!.hasTranscript, isTrue, reason: 'the client\'s next state did not drop it');
 
-      r.session.watchSubagentLog(id, false);
-      expect(_timers(r.async), timers);
-    }, seed: (h) => h.add(sessionId: sid), fs: host());
+        r.session.watchSubagentLog(id, false);
+        expect(_timers(r.async), timers);
+      },
+      seed: (h) => h.add(sessionId: sid),
+      fs: host(),
+    );
 
     final untouched = host();
-    _rigTest('a session nobody looked at reads nothing', (r) {
-      r.connect();
-      r.keeper.update(calls[1]);
-      r.pump();
-      r.async.elapse(const Duration(minutes: 2));
-      expect(untouched.calls, isEmpty);
-      expect(r.session.subagentLogStatus(runId(r)), SubagentLogStatus.idle);
-      expect(r.session.subagentRun(runId(r))!.hasTranscript, isFalse);
-    }, seed: (h) => h.add(sessionId: sid), fs: untouched);
+    _rigTest(
+      'a session nobody looked at reads nothing',
+      (r) {
+        r.connect();
+        r.keeper.update(calls[1]);
+        r.pump();
+        r.async.elapse(const Duration(minutes: 2));
+        expect(untouched.calls, isEmpty);
+        expect(r.session.subagentLogStatus(runId(r)), SubagentLogStatus.idle);
+        expect(r.session.subagentRun(runId(r))!.hasTranscript, isFalse);
+      },
+      seed: (h) => h.add(sessionId: sid),
+      fs: untouched,
+    );
 
     final watched = host();
-    _rigTest('an open screen reads nothing while the app is in the background', (r) {
-      r.connect();
-      r.keeper.update(calls[1]);
-      r.pump();
-      final id = runId(r);
-      r.session.watchSubagentLog(id, true);
-      r.pump();
-      r.session.onLifecycleState(AppLifecycleState.paused);
-      watched.calls.clear();
-      r.async.elapse(const Duration(seconds: 30));
-      expect(watched.calls, isEmpty);
+    _rigTest(
+      'an open screen reads nothing while the app is in the background',
+      (r) {
+        r.connect();
+        r.keeper.update(calls[1]);
+        r.pump();
+        final id = runId(r);
+        r.session.watchSubagentLog(id, true);
+        r.pump();
+        r.session.onLifecycleState(AppLifecycleState.paused);
+        watched.calls.clear();
+        r.async.elapse(const Duration(seconds: 30));
+        expect(watched.calls, isEmpty);
 
-      r.session.onLifecycleState(AppLifecycleState.resumed);
-      r.async.elapse(const Duration(seconds: 4));
-      expect(watched.calls, isNotEmpty, reason: 'back in front: the running subagent is read again');
-      r.session.watchSubagentLog(id, false);
-    }, seed: (h) => h.add(sessionId: sid), fs: watched);
+        r.session.onLifecycleState(AppLifecycleState.resumed);
+        r.async.elapse(const Duration(seconds: 4));
+        expect(watched.calls, isNotEmpty, reason: 'back in front: the running subagent is read again');
+        r.session.watchSubagentLog(id, false);
+      },
+      seed: (h) => h.add(sessionId: sid),
+      fs: watched,
+    );
 
     _rigTest('a host without SFTP leaves the summary and says nothing', (r) {
       r.connect();
@@ -1211,17 +1230,22 @@ void main() {
       r.session.watchSubagentLog(runId(r), false);
     }, seed: (h) => h.add(sessionId: sid));
 
-    _rigTest('a screen that closes after the session was disposed does nothing', (r) {
-      r.connect();
-      r.keeper.update(calls[1]);
-      r.pump();
-      final id = runId(r);
-      r.session.watchSubagentLog(id, true);
-      r.session.dispose();
-      r.session.watchSubagentLog(id, false);
-      r.session.watchSubagentLog(id, true);
-      expect(_timers(r.async), r.machineTimers);
-    }, seed: (h) => h.add(sessionId: sid), fs: host());
+    _rigTest(
+      'a screen that closes after the session was disposed does nothing',
+      (r) {
+        r.connect();
+        r.keeper.update(calls[1]);
+        r.pump();
+        final id = runId(r);
+        r.session.watchSubagentLog(id, true);
+        r.session.dispose();
+        r.session.watchSubagentLog(id, false);
+        r.session.watchSubagentLog(id, true);
+        expect(_timers(r.async), r.machineTimers);
+      },
+      seed: (h) => h.add(sessionId: sid),
+      fs: host(),
+    );
   });
 
   group('prompts', () {
@@ -1238,7 +1262,8 @@ void main() {
       expect(r.session.phase, AgentPhase.idle);
     });
 
-    const silent = 'The agent ended the turn without an answer. '
+    const silent =
+        'The agent ended the turn without an answer. '
         'If this keeps happening, its login on the machine may have expired.';
 
     _rigTest('a turn that ends with end_turn and not a word says the login may have expired', (r) {
@@ -1259,7 +1284,13 @@ void main() {
       expect(r.session.error, isNull, reason: 'the default agent answers');
 
       r.keeper.onPrompt = (_) {
-        r.keeper.update({'sessionUpdate': 'tool_call', 'toolCallId': 't1', 'title': 'ls', 'kind': 'execute', 'status': 'completed'});
+        r.keeper.update({
+          'sessionUpdate': 'tool_call',
+          'toolCallId': 't1',
+          'title': 'ls',
+          'kind': 'execute',
+          'status': 'completed',
+        });
         return {'stopReason': 'end_turn'};
       };
       unawaited(r.session.send('list files'));
@@ -1515,14 +1546,16 @@ void main() {
     _rigTest('update() with an exited keeper ends the session with its reason', (r) {
       r.connect();
       final exited = r.keeper.info;
-      r.session.update(KeeperInfo(
-        id: exited.id,
-        agent: exited.agent,
-        cwd: exited.cwd,
-        state: KeeperState.exited,
-        startedAt: exited.startedAt,
-        exitCode: 137,
-      ));
+      r.session.update(
+        KeeperInfo(
+          id: exited.id,
+          agent: exited.agent,
+          cwd: exited.cwd,
+          state: KeeperState.exited,
+          startedAt: exited.startedAt,
+          exitCode: 137,
+        ),
+      );
       r.pump();
 
       expect(r.session.link, AgentLink.ended);
@@ -1545,33 +1578,39 @@ void main() {
 
     // -- a route that cannot steer: omp and pi --------------------------------
 
-    _rigTest('omp: a message sent mid-turn waits, is visible as queued, and goes out when the turn ends, and not before', (r) {
-      r.connect();
-      expect(r.session.delivery, SendDelivery.now);
-      working(r);
-      expect(r.session.canSteer, isFalse, reason: 'omp has no steering');
-      expect(r.session.delivery, SendDelivery.queued);
+    _rigTest(
+      'omp: a message sent mid-turn waits, is visible as queued, and goes out when the turn ends, and not before',
+      (r) {
+        r.connect();
+        expect(r.session.delivery, SendDelivery.now);
+        working(r);
+        expect(r.session.canSteer, isFalse, reason: 'omp has no steering');
+        expect(r.session.delivery, SendDelivery.queued);
 
-      final sent = _Outcome(r.session.send('also, run the tests'));
-      r.pump();
+        final sent = _Outcome(r.session.send('also, run the tests'));
+        r.pump();
 
-      expect(sent.done, isTrue, reason: 'queueing is immediate');
-      expect(r.session.queued, hasLength(1));
-      expect(r.session.queued.single.text, 'also, run the tests');
-      expect(r.session.queued.single.state, QueuedState.waiting);
-      expect(r.keeper.prompts, ['first'], reason: 'a prompt during a turn would cancel it in omp: never sent');
-      expect(r.keeper.steers, isEmpty);
-      expect(r.session.state.items.whereType<TranscriptMessage>().where((m) => m.text == 'also, run the tests'), isEmpty,
-          reason: 'not in the transcript until it is sent');
+        expect(sent.done, isTrue, reason: 'queueing is immediate');
+        expect(r.session.queued, hasLength(1));
+        expect(r.session.queued.single.text, 'also, run the tests');
+        expect(r.session.queued.single.state, QueuedState.waiting);
+        expect(r.keeper.prompts, ['first'], reason: 'a prompt during a turn would cancel it in omp: never sent');
+        expect(r.keeper.steers, isEmpty);
+        expect(
+          r.session.state.items.whereType<TranscriptMessage>().where((m) => m.text == 'also, run the tests'),
+          isEmpty,
+          reason: 'not in the transcript until it is sent',
+        );
 
-      r.keeper.finishTurn();
-      r.pump();
+        r.keeper.finishTurn();
+        r.pump();
 
-      expect(r.keeper.prompts, ['first', 'also, run the tests']);
-      expect(r.session.queued, isEmpty);
-      expect(r.session.phase, AgentPhase.idle);
-      expect(r.keeper.maxPromptsInFlight, 1);
-    });
+        expect(r.keeper.prompts, ['first', 'also, run the tests']);
+        expect(r.session.queued, isEmpty);
+        expect(r.session.phase, AgentPhase.idle);
+        expect(r.keeper.maxPromptsInFlight, 1);
+      },
+    );
 
     _rigTest('several queued messages go out one at a time, in order, after edits and removals', (r) {
       r.connect();
@@ -1621,8 +1660,11 @@ void main() {
       r.session.cancel();
       unawaited(r.session.send('three'));
       r.pump();
-      expect(r.session.queued.map((q) => q.state), everyElement(QueuedState.waiting),
-          reason: 'not held: stopping the turn is saying go on with these');
+      expect(
+        r.session.queued.map((q) => q.state),
+        everyElement(QueuedState.waiting),
+        reason: 'not held: stopping the turn is saying go on with these',
+      );
       expect(queuedText(r), ['one', 'two', 'three'], reason: 'each stays its own row until the turn has stopped');
 
       r.keeper.finishTurn('cancelled');
@@ -1688,36 +1730,39 @@ void main() {
       expect(r.keeper.prompts, ['first']);
     });
 
-    _rigTest('a link drop keeps the queue and a message sent meanwhile; nothing goes out until the agent is idle again', (r) {
-      r.connect();
-      working(r);
-      unawaited(r.session.send('second'));
-      r.pump();
+    _rigTest(
+      'a link drop keeps the queue and a message sent meanwhile; nothing goes out until the agent is idle again',
+      (r) {
+        r.connect();
+        working(r);
+        unawaited(r.session.send('second'));
+        r.pump();
 
-      r.keeper.dropLink();
-      r.pump();
-      expect(r.session.link, AgentLink.reconnecting);
-      expect(queuedText(r), ['second'], reason: 'kept in memory across the drop');
-      expect(r.session.delivery, SendDelivery.queued);
+        r.keeper.dropLink();
+        r.pump();
+        expect(r.session.link, AgentLink.reconnecting);
+        expect(queuedText(r), ['second'], reason: 'kept in memory across the drop');
+        expect(r.session.delivery, SendDelivery.queued);
 
-      unawaited(r.session.send('third'));
-      r.pump();
-      expect(queuedText(r), ['second', 'third'], reason: 'sent while the link is being made again: it waits for it');
+        unawaited(r.session.send('third'));
+        r.pump();
+        expect(queuedText(r), ['second', 'third'], reason: 'sent while the link is being made again: it waits for it');
 
-      r.async.elapse(const Duration(seconds: 3));
-      expect(r.session.link, AgentLink.live);
-      expect(r.session.state.turnActive, isTrue, reason: 'the keeper says the turn still runs');
-      expect(queuedText(r), ['second', 'third']);
-      expect(r.keeper.prompts, ['first'], reason: 'the agent is still working: nothing was sent');
+        r.async.elapse(const Duration(seconds: 3));
+        expect(r.session.link, AgentLink.live);
+        expect(r.session.state.turnActive, isTrue, reason: 'the keeper says the turn still runs');
+        expect(queuedText(r), ['second', 'third']);
+        expect(r.keeper.prompts, ['first'], reason: 'the agent is still working: nothing was sent');
 
-      r.keeper.finishTurn();
-      r.keeper.update(idleUpdate('end_turn'));
-      r.pump();
+        r.keeper.finishTurn();
+        r.keeper.update(idleUpdate('end_turn'));
+        r.pump();
 
-      expect(r.keeper.prompts, ['first', 'second', 'third']);
-      expect(r.keeper.maxPromptsInFlight, 1);
-      expect(r.session.queued, isEmpty);
-    });
+        expect(r.keeper.prompts, ['first', 'second', 'third']);
+        expect(r.keeper.maxPromptsInFlight, 1);
+        expect(r.session.queued, isEmpty);
+      },
+    );
 
     _rigTest('a queue of the same session survives a reattach after it was dropped to save a channel', (r) {
       r.connect();
@@ -1791,24 +1836,33 @@ void main() {
       expect(r.session.error, isNull);
     });
 
-    _rigTest('omp with steering: a message goes into the turn, asking for promptRequired when no turn runs; the old omp still queues', (r) {
-      r.keeper.initialize = ompSteeringInitialize;
-      r.connect();
-      expect(r.session.canSteer, isTrue);
-      working(r);
-      expect(r.session.delivery, SendDelivery.steered);
+    _rigTest(
+      'omp with steering: a message goes into the turn, asking for promptRequired when no turn runs; the old omp still queues',
+      (r) {
+        r.keeper.initialize = ompSteeringInitialize;
+        r.connect();
+        expect(r.session.canSteer, isTrue);
+        working(r);
+        expect(r.session.delivery, SendDelivery.steered);
 
-      unawaited(r.session.send('use the other table'));
-      r.pump();
+        unawaited(r.session.send('use the other table'));
+        r.pump();
 
-      expect(r.keeper.prompts, ['first'], reason: 'a prompt during a turn would cancel it in omp: never sent');
-      expect(r.keeper.steers, hasLength(1));
-      expect(r.keeper.steers.single['_meta'], {
-        'steering': {'idleBehavior': 'promptRequired'},
-      }, reason: 'omp says it understands it: a steer after the turn ended must not start a turn nobody would see end');
-      expect(r.session.queued, isEmpty);
-      expect([for (final m in r.session.state.items.whereType<TranscriptMessage>()) m.text], contains('use the other table'));
-    });
+        expect(r.keeper.prompts, ['first'], reason: 'a prompt during a turn would cancel it in omp: never sent');
+        expect(r.keeper.steers, hasLength(1));
+        expect(
+          r.keeper.steers.single['_meta'],
+          {
+            'steering': {'idleBehavior': 'promptRequired'},
+          },
+          reason: 'omp says it understands it: a steer after the turn ended must not start a turn nobody would see end',
+        );
+        expect(r.session.queued, isEmpty);
+        expect([
+          for (final m in r.session.state.items.whereType<TranscriptMessage>()) m.text,
+        ], contains('use the other table'));
+      },
+    );
 
     _rigTest('a steering route queues on request: "when you are done, also..."', (r) {
       r.keeper.initialize = claudeInitialize;
@@ -1825,7 +1879,9 @@ void main() {
       expect(r.keeper.prompts, ['first', 'then update the docs']);
     });
 
-    _rigTest('steering answers promptRequired (the turn ended on the way): it goes out as a prompt, after the turn', (r) {
+    _rigTest('steering answers promptRequired (the turn ended on the way): it goes out as a prompt, after the turn', (
+      r,
+    ) {
       r.keeper.initialize = claudeInitialize;
       r.connect();
       working(r);
@@ -1879,10 +1935,12 @@ void main() {
       working(r);
       r.keeper.onSteer = (_) => throw const JsonRpcException(-32600, 'The current model does not support image input');
 
-      final sent = _Outcome(r.session.sendBlocks([
-        const TextBlock('what is this?'),
-        const ImageBlock(data: 'AAAA', mimeType: 'image/jpeg'),
-      ]));
+      final sent = _Outcome(
+        r.session.sendBlocks([
+          const TextBlock('what is this?'),
+          const ImageBlock(data: 'AAAA', mimeType: 'image/jpeg'),
+        ]),
+      );
       r.pump();
 
       expect(sent.done, isTrue);
@@ -1907,11 +1965,13 @@ void main() {
       expect(r.session.acceptsImages, isTrue);
       expect(r.session.acceptsEmbeddedContext, isTrue);
 
-      unawaited(r.session.sendBlocks([
-        const TextBlock('what is this?'),
-        const ImageBlock(data: 'AAAA', mimeType: 'image/jpeg'),
-        const ResourceLinkBlock(uri: 'file:///work/a.dart', name: 'a.dart'),
-      ]));
+      unawaited(
+        r.session.sendBlocks([
+          const TextBlock('what is this?'),
+          const ImageBlock(data: 'AAAA', mimeType: 'image/jpeg'),
+          const ResourceLinkBlock(uri: 'file:///work/a.dart', name: 'a.dart'),
+        ]),
+      );
       r.pump();
 
       expect(r.keeper.promptBlocks.single, [
@@ -1932,10 +1992,12 @@ void main() {
       expect(r.session.acceptsImages, isFalse);
       expect(r.session.acceptsEmbeddedContext, isFalse);
 
-      unawaited(r.session.sendBlocks([
-        const TextBlock('what is this?'),
-        const ImageBlock(data: 'AAAA', mimeType: 'image/jpeg'),
-      ]));
+      unawaited(
+        r.session.sendBlocks([
+          const TextBlock('what is this?'),
+          const ImageBlock(data: 'AAAA', mimeType: 'image/jpeg'),
+        ]),
+      );
       r.pump();
 
       expect(r.session.error, 'the agent does not take images');
@@ -1950,10 +2012,12 @@ void main() {
       r.keeper.onPrompt = (_) => throw const JsonRpcException(-32600, 'The current model does not support image input');
       r.connect();
 
-      final sent = _Outcome(r.session.sendBlocks([
-        const TextBlock('what is this?'),
-        const ImageBlock(data: 'AAAA', mimeType: 'image/jpeg'),
-      ]));
+      final sent = _Outcome(
+        r.session.sendBlocks([
+          const TextBlock('what is this?'),
+          const ImageBlock(data: 'AAAA', mimeType: 'image/jpeg'),
+        ]),
+      );
       r.pump();
 
       expect(sent.done, isTrue);
@@ -1985,7 +2049,8 @@ void main() {
     _rigTest('an auth_required turn says to sign in on the host, with the methods; the next send clears it', (r) {
       r.connect();
       expect(r.session.authNeeded, isNull);
-      r.keeper.onPrompt = (_) => throw const JsonRpcException(-32000, 'Authentication required', {'authMethods': piMethods});
+      r.keeper.onPrompt = (_) =>
+          throw const JsonRpcException(-32000, 'Authentication required', {'authMethods': piMethods});
       final sent = _Outcome(r.session.send('hello'));
       r.pump();
 
@@ -2037,7 +2102,9 @@ void main() {
       expect(r.session.error, 'The client went away before it answered.');
     });
 
-    _rigTest('session/new refusing for lack of a login: the link failed, a login is needed, and Retry works after it', (r) {
+    _rigTest('session/new refusing for lack of a login: the link failed, a login is needed, and Retry works after it', (
+      r,
+    ) {
       r.keeper.newFailure = const JsonRpcException(-32000, 'Authentication required');
       r.connect();
 
@@ -2087,13 +2154,7 @@ void main() {
         host.add(id: 'ended', state: KeeperState.exited, exitCode: 0);
         h.addMachine('a', 'alpha');
 
-        expect([for (final s in h.repo.sessions) s.key], [
-          'a/blocked',
-          'a/done',
-          'a/working',
-          'a/idle',
-          'a/ended',
-        ]);
+        expect([for (final s in h.repo.sessions) s.key], ['a/blocked', 'a/done', 'a/working', 'a/idle', 'a/ended']);
         expect(h.repo.blockedCount, 1);
         expect(h.repo.reviewCount, 1);
         expect(host.openLinks, 1);
@@ -2303,9 +2364,12 @@ void main() {
     test('a blocked keeper gets a channel before the recent ones, however old', () {
       fakeAsync((async) {
         final h = _Fleet(async);
-        final host = _twelve(h, each: (i, k) {
-          if (i == 2) k.askPermission();
-        });
+        final host = _twelve(
+          h,
+          each: (i, k) {
+            if (i == 2) k.askPermission();
+          },
+        );
         h.addMachine('a', 'alpha');
 
         expect(_open(host), {'k02', 'k11', 'k10', 'k09'}, reason: 'one waiting + three recent = the cap');
@@ -2337,36 +2401,44 @@ void main() {
       });
     });
 
-    test('more waiting than the cap: four hold channels, the longest waiting first; all still count; answering frees one', () {
-      fakeAsync((async) {
-        final h = _Fleet(async);
-        final host = _twelve(h, each: (i, k) {
-          if (i < 6) k.askPermission();
+    test(
+      'more waiting than the cap: four hold channels, the longest waiting first; all still count; answering frees one',
+      () {
+        fakeAsync((async) {
+          final h = _Fleet(async);
+          final host = _twelve(
+            h,
+            each: (i, k) {
+              if (i < 6) k.askPermission();
+            },
+          );
+          h.addMachine('a', 'alpha');
+
+          expect(_open(host), {'k00', 'k01', 'k02', 'k03'});
+          expect(h.repo.blockedCount, 6, reason: 'the two without a channel are blocked by the listing');
+          expect(h.repo.byKey('a/k05')!.phase, AgentPhase.blockedOnPermission);
+          expect(host.peakOpenLinks, lessThanOrEqualTo(4));
+
+          final first = h.repo.byKey('a/k00')!;
+          first.answerPermission(first.state.pending.single.id, const PermissionSelected('allow'));
+          async.elapse(const Duration(seconds: 3)); // the settle window of the attach ends
+
+          expect(_open(host), {'k01', 'k02', 'k03', 'k04'}, reason: 'the next one waiting takes the channel');
+          expect(h.repo.blockedCount, 5);
+          expect(host.peakOpenLinks, lessThanOrEqualTo(4));
+          h.dispose();
         });
-        h.addMachine('a', 'alpha');
-
-        expect(_open(host), {'k00', 'k01', 'k02', 'k03'});
-        expect(h.repo.blockedCount, 6, reason: 'the two without a channel are blocked by the listing');
-        expect(h.repo.byKey('a/k05')!.phase, AgentPhase.blockedOnPermission);
-        expect(host.peakOpenLinks, lessThanOrEqualTo(4));
-
-        final first = h.repo.byKey('a/k00')!;
-        first.answerPermission(first.state.pending.single.id, const PermissionSelected('allow'));
-        async.elapse(const Duration(seconds: 3)); // the settle window of the attach ends
-
-        expect(_open(host), {'k01', 'k02', 'k03', 'k04'}, reason: 'the next one waiting takes the channel');
-        expect(h.repo.blockedCount, 5);
-        expect(host.peakOpenLinks, lessThanOrEqualTo(4));
-        h.dispose();
-      });
-    });
+      },
+    );
 
     test('opening a session attaches it; the open one wins over the cap; closing lets go', () {
       fakeAsync((async) {
         final h = _Fleet(async);
         final host = _twelve(h);
         h.addMachine('a', 'alpha');
-        final screens = [for (final k in ['k00', 'k01', 'k02', 'k03', 'k04']) h.repo.byKey('a/$k')!];
+        final screens = [
+          for (final k in ['k00', 'k01', 'k02', 'k03', 'k04']) h.repo.byKey('a/$k')!,
+        ];
 
         screens[0].acquire();
         expect(screens[0].link, AgentLink.connecting);
@@ -2378,12 +2450,23 @@ void main() {
           s.acquire();
           async.elapse(const Duration(seconds: 1));
         }
-        expect(_open(host), {'k00', 'k01', 'k02', 'k03'}, reason: 'four screens fill the cap, the recent ones make room');
+        expect(_open(host), {
+          'k00',
+          'k01',
+          'k02',
+          'k03',
+        }, reason: 'four screens fill the cap, the recent ones make room');
         expect(host.peakOpenLinks, lessThanOrEqualTo(4), reason: 'room is made before the next one attaches');
 
         screens[4].acquire();
         async.elapse(const Duration(seconds: 1));
-        expect(_open(host), {'k00', 'k01', 'k02', 'k03', 'k04'}, reason: 'an open screen keeps its channel, cap or not');
+        expect(_open(host), {
+          'k00',
+          'k01',
+          'k02',
+          'k03',
+          'k04',
+        }, reason: 'an open screen keeps its channel, cap or not');
 
         for (final s in screens) {
           s.release();
@@ -2397,10 +2480,13 @@ void main() {
     test('the rest show the listing: a turn in flight, a turn nobody saw end', () {
       fakeAsync((async) {
         final h = _Fleet(async);
-        final host = _twelve(h, each: (i, k) {
-          if (i == 0) k.busy = true;
-          if (i == 1) k.unseenDone = true;
-        });
+        final host = _twelve(
+          h,
+          each: (i, k) {
+            if (i == 0) k.busy = true;
+            if (i == 1) k.unseenDone = true;
+          },
+        );
         h.addMachine('a', 'alpha');
 
         final working = h.repo.byKey('a/k00')!;
@@ -2701,8 +2787,8 @@ FakeAgentHost _twelve(_Fleet h, {void Function(int i, FakeKeeper k)? each}) {
 
 /// The keepers a channel is open to right now.
 Set<String> _open(FakeAgentHost host) => {
-      for (final k in host.keepers.values)
-        if (k.linkOpen) k.info.id,
-    };
+  for (final k in host.keepers.values)
+    if (k.linkOpen) k.info.id,
+};
 
 bool _attached(_Fleet h, String key) => (h.repo.byKey(key)! as AcpAgentSession).attached;

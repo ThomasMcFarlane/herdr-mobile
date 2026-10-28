@@ -6,7 +6,9 @@ import '../../../data/models/herdr_models.dart';
 import '../../../data/repositories/machine_connection.dart';
 import '../../../data/words/agent_names.dart';
 import '../../../data/words/where_line.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../files/files_navigation.dart';
 import 'pane_view_model.dart';
 
@@ -21,13 +23,7 @@ typedef PaneTitle = ({String title, String where, AgentStatus? status, bool live
 /// keeps its name. [named] is the name read from the agent's session log for a
 /// pane whose own title says nothing (`FleetAgent.betterTitle`): the board
 /// calls it the same.
-PaneTitle paneTitle(
-  MachineConnection? machine,
-  String machineId,
-  String paneId, {
-  PaneTitle? known,
-  String? named,
-}) {
+PaneTitle paneTitle(MachineConnection? machine, String machineId, String paneId, {PaneTitle? known, String? named}) {
   final pane = machine?.paneById(paneId);
   if (pane == null) {
     return (

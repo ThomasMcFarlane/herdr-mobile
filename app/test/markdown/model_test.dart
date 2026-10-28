@@ -43,8 +43,7 @@ void main() {
           for (var i = 0; i < inl.items.length; i++) {
             final run = inl.items[i];
             expect(inl.startOf(i), at, reason: '${t.name} run $i');
-            expect(inl.text.substring(at, at + run.text.length), run.text,
-                reason: '${t.name} run $i');
+            expect(inl.text.substring(at, at + run.text.length), run.text, reason: '${t.name} run $i');
             at += run.text.length;
             expect(inl.endOf(i), at);
           }
@@ -100,9 +99,10 @@ void main() {
 
   group('plainText', () {
     test('blocks, lists, quotes and tables', () {
-      final doc = parseMd('# T\n\n- a\n- **b**\n\n> q1\n>\n> q2\n\n| x | y |\n|---|---|\n| 1 | 2 |\n\n```\ncode\n```\n\n---');
-      expect(doc.blocks.map((b) => b.plainText).toList(),
-          ['T', 'a\nb', 'q1\nq2', 'x\ty\n1\t2', 'code', '']);
+      final doc = parseMd(
+        '# T\n\n- a\n- **b**\n\n> q1\n>\n> q2\n\n| x | y |\n|---|---|\n| 1 | 2 |\n\n```\ncode\n```\n\n---',
+      );
+      expect(doc.blocks.map((b) => b.plainText).toList(), ['T', 'a\nb', 'q1\nq2', 'x\ty\n1\t2', 'code', '']);
       expect(doc.plainText, 'T\n\na\nb\n\nq1\nq2\n\nx\ty\n1\t2\n\ncode\n\n');
     });
 

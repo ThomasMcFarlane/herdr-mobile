@@ -25,8 +25,7 @@ HerdrTransport _noTransport(
   MachineSecrets secrets,
   void Function(String) onPin,
   void Function(String) onNotice,
-) =>
-    throw StateError('this test never opens a connection');
+) => throw StateError('this test never opens a connection');
 
 Future<void> _flush(WidgetTester tester) async {
   for (var i = 0; i < 6; i++) {
@@ -281,10 +280,14 @@ void main() {
       await _tearDown(tester);
     });
 
-    testWidgets('editing a machine with a saved key asks too, and the replaced key drops its passphrase', (tester) async {
+    testWidgets('editing a machine with a saved key asks too, and the replaced key drops its passphrase', (
+      tester,
+    ) async {
       final old = KeyGenerator.generate(label: 'old');
-      final protected = (SSHKeyPair.fromPem(old.privateKeyPem).single as OpenSSHEd25519KeyPair)
-          .toPem(passphrase: 'OLDPASS', rounds: 1);
+      final protected = (SSHKeyPair.fromPem(old.privateKeyPem).single as OpenSSHEd25519KeyPair).toPem(
+        passphrase: 'OLDPASS',
+        rounds: 1,
+      );
       final repo = await _repo({_machine('k'): MachineSecrets(privateKeyPem: protected, passphrase: 'OLDPASS')});
       await _pump(
         tester,
@@ -321,8 +324,7 @@ void main() {
       await _tearDown(tester);
     });
 
-    testWidgets('a generated key comes back after Android reclaims the process, and goes with Discard',
-        (tester) async {
+    testWidgets('a generated key comes back after Android reclaims the process, and goes with Discard', (tester) async {
       final repo = await _repo();
       await _pump(
         tester,
@@ -458,7 +460,11 @@ void main() {
 
       await tester.enterText(_field(4), 'a new key being pasted');
       await _flush(tester);
-      expect(find.widgetWithText(AppButton, 'Show public key'), findsNothing, reason: 'the field now holds another key');
+      expect(
+        find.widgetWithText(AppButton, 'Show public key'),
+        findsNothing,
+        reason: 'the field now holds another key',
+      );
       await _tearDown(tester);
 
       final noKey = await _repo({_machine('n'): const MachineSecrets()});
@@ -474,8 +480,10 @@ void main() {
     group('protected key', () {
       Future<({MachineRepository repo, GeneratedKey key})> protectedMachine({String? savedPassphrase}) async {
         final key = KeyGenerator.generate(label: 'locked');
-        final pem = (SSHKeyPair.fromPem(key.privateKeyPem).single as OpenSSHEd25519KeyPair)
-            .toPem(passphrase: 'right', rounds: 1);
+        final pem = (SSHKeyPair.fromPem(key.privateKeyPem).single as OpenSSHEd25519KeyPair).toPem(
+          passphrase: 'right',
+          rounds: 1,
+        );
         final repo = await _repo({_machine('k'): MachineSecrets(privateKeyPem: pem, passphrase: savedPassphrase)});
         return (repo: repo, key: key);
       }
@@ -503,7 +511,11 @@ void main() {
 
         await tester.enterText(_field(5), 'right');
         await _tapAndWaitForKey(tester, 'Show public key');
-        expect(find.text('That passphrase does not open the saved key.'), findsNothing, reason: 'the old message is gone');
+        expect(
+          find.text('That passphrase does not open the saved key.'),
+          findsNothing,
+          reason: 'the old message is gone',
+        );
         expect(_shownLine(tester), m.key.publicKeyLine);
         await _tearDown(tester);
       });
@@ -548,7 +560,11 @@ void main() {
         if (s != placeholder) expect(s, isNot(contains('PRIVATE KEY')));
         expect(s, isNot(contains(body)));
       }
-      expect(strings.where((s) => s.startsWith('ssh-ed25519 ')), isNotEmpty, reason: 'the public line is the one key text shown');
+      expect(
+        strings.where((s) => s.startsWith('ssh-ed25519 ')),
+        isNotEmpty,
+        reason: 'the public line is the one key text shown',
+      );
       handle.dispose();
       await _tearDown(tester);
     });
@@ -591,10 +607,13 @@ void main() {
       return _keyText(tester);
     }
 
-    const warning = 'This replaces the key this machine uses now. Run the command on the machine first, '
+    const warning =
+        'This replaces the key this machine uses now. Run the command on the machine first, '
         'then Test connection, then Save.';
 
-    testWidgets('the generated-key panel says to install it first, but only when it replaces a saved key', (tester) async {
+    testWidgets('the generated-key panel says to install it first, but only when it replaces a saved key', (
+      tester,
+    ) async {
       await open(tester);
       await generate(tester);
       expect(find.text(warning), findsOneWidget);
@@ -735,20 +754,17 @@ void main() {
 
   group('saving a replaced key', () {
     MachineFormValues values({String key = '', String passphrase = ''}) => MachineFormValues(
-          label: '',
-          host: 'box.example',
-          port: 22,
-          username: 'me',
-          auth: SshAuth.key,
-          privateKey: key,
-          passphrase: passphrase,
-        );
+      label: '',
+      host: 'box.example',
+      port: 22,
+      username: 'me',
+      auth: SshAuth.key,
+      privateKey: key,
+      passphrase: passphrase,
+    );
 
-    Future<MachineFormViewModel> editing(MachineRepository repo) async => MachineFormViewModel(
-          repo: repo,
-          existing: repo.machines.single,
-          transportFactory: _noTransport,
-        );
+    Future<MachineFormViewModel> editing(MachineRepository repo) async =>
+        MachineFormViewModel(repo: repo, existing: repo.machines.single, transportFactory: _noTransport);
 
     Future<MachineRepository> savedWithPassphrase() =>
         _repo({_machine('k'): const MachineSecrets(privateKeyPem: 'OLD-KEY', passphrase: 'OLDPASS')});
@@ -784,7 +800,9 @@ void main() {
   group('layout', () {
     for (final brightness in Brightness.values) {
       for (final (width, scale) in [(360.0, 1.0), (320.0, 2.0)]) {
-        testWidgets('the panel fits at ${width.toInt()}dp ${scale}x, ${brightness.name}, with a very long name', (tester) async {
+        testWidgets('the panel fits at ${width.toInt()}dp ${scale}x, ${brightness.name}, with a very long name', (
+          tester,
+        ) async {
           await _pump(
             tester,
             const MachineFormScreen(),

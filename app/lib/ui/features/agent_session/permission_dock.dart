@@ -11,7 +11,9 @@ import '../../../data/decision/permission_evidence.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/command_risk.dart';
 import '../../../data/words/plural.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../support/tap_guard.dart';
 import 'agent_md_scope.dart';
 import 'permission_evidence_view.dart';
@@ -79,7 +81,12 @@ class PromptDock extends StatelessWidget {
       select: (s) => s.cachedAsOf != null ? const <PendingRequest>[] : s.state.pending,
       same: identical,
       builder: (context, all) {
-        final pending = forRun == null ? all : [for (final p in all) if (p.origin?.id == forRun) p];
+        final pending = forRun == null
+            ? all
+            : [
+                for (final p in all)
+                  if (p.origin?.id == forRun) p,
+              ];
         final drafts = _draftsFor(all);
         final permission = pending.whereType<PendingPermission>().firstOrNull;
         if (permission != null) {
@@ -189,8 +196,8 @@ String answeredElsewhereText(AnsweredElsewhere a) {
   final where = by.isEmpty
       ? 'elsewhere'
       : by == AcpClient.herdrMobile.title
-          ? 'on another phone'
-          : 'in $by';
+      ? 'on another phone'
+      : 'in $by';
   final verb = a.question
       ? switch (a.answer) {
           'accept' => 'Answered',
@@ -432,58 +439,57 @@ class _PermissionPanelState extends State<PermissionPanel> with TapGuardState<Pe
               details: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                    if (_evidence.intent case final said?) EvidenceIntent(text: said),
+                  if (_evidence.intent case final said?) EvidenceIntent(text: said),
+                  const SizedBox(height: Gap.sm),
+                  if (_evidence.planMarkdown case final plan?) ...[
+                    PlanEvidence(markdown: plan),
                     const SizedBox(height: Gap.sm),
-                    if (_evidence.planMarkdown case final plan?) ...[
-                      PlanEvidence(markdown: plan),
-                      const SizedBox(height: Gap.sm),
-                    ],
-                    if (_showSubject) ...[
-                      NotificationListener<ScrollMetricsNotification>(
-                        onNotification: _onMetrics,
-                        child: NotificationListener<ScrollNotification>(
-                          onNotification: _onScroll,
-                          child: _SubjectBox(
-                            text: info.subject,
-                            controller: _scroll,
-                            overflows: _overflows,
-                            style: Mono.base.copyWith(color: ds.text),
-                          ),
+                  ],
+                  if (_showSubject) ...[
+                    NotificationListener<ScrollMetricsNotification>(
+                      onNotification: _onMetrics,
+                      child: NotificationListener<ScrollNotification>(
+                        onNotification: _onScroll,
+                        child: _SubjectBox(
+                          text: info.subject,
+                          controller: _scroll,
+                          overflows: _overflows,
+                          style: Mono.base.copyWith(color: ds.text),
                         ),
                       ),
-                      if (_overflows)
-                        ReadAllCue(
-                          text: _atEnd ? null : 'More below · $lines lines',
-                          onOpen: _openFull,
+                    ),
+                    if (_overflows) ReadAllCue(text: _atEnd ? null : 'More below · $lines lines', onOpen: _openFull),
+                  ],
+                  if (_evidence.diffs.isNotEmpty) ...[
+                    const SizedBox(height: Gap.sm),
+                    DiffEvidence(evidence: _evidence),
+                  ],
+                  if (_paths.isNotEmpty) ...[
+                    const SizedBox(height: Gap.sm),
+                    _Paths(
+                      paths: _paths,
+                      style: Mono.base.copyWith(color: ds.text),
+                    ),
+                  ],
+                  if (info.risk != null) ...[
+                    const SizedBox(height: Gap.sm),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(top: Gap.hair),
+                          child: Icon(LucideIcons.triangleAlert, size: IconSize.inline, color: ds.dangerText),
                         ),
-                    ],
-                    if (_evidence.diffs.isNotEmpty) ...[
-                      const SizedBox(height: Gap.sm),
-                      DiffEvidence(evidence: _evidence),
-                    ],
-                    if (_paths.isNotEmpty) ...[
-                      const SizedBox(height: Gap.sm),
-                      _Paths(paths: _paths, style: Mono.base.copyWith(color: ds.text)),
-                    ],
-                    if (info.risk != null) ...[
-                      const SizedBox(height: Gap.sm),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(top: Gap.hair),
-                            child: Icon(LucideIcons.triangleAlert, size: IconSize.inline, color: ds.dangerText),
+                        const SizedBox(width: Gap.sm),
+                        Expanded(
+                          child: Text(
+                            'Look closely: ${info.risk}',
+                            style: Type.secondaryStrong.copyWith(color: ds.dangerText),
                           ),
-                          const SizedBox(width: Gap.sm),
-                          Expanded(
-                            child: Text(
-                              'Look closely: ${info.risk}',
-                              style: Type.secondaryStrong.copyWith(color: ds.dangerText),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -520,10 +526,7 @@ class _PermissionPanelState extends State<PermissionPanel> with TapGuardState<Pe
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   if (widget.more > 0)
-                    Text(
-                      '${widget.more} more waiting',
-                      style: Type.labelStrong.copyWith(color: ds.blockedText),
-                    ),
+                    Text('${widget.more} more waiting', style: Type.labelStrong.copyWith(color: ds.blockedText)),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: Gap.md),
                     child: TextAction(

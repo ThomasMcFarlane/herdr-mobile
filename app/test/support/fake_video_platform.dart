@@ -25,8 +25,12 @@ class FakeVideoPlatform extends VideoPlayerPlatform {
 
   @override
   Stream<VideoEvent> videoEventsFor(int playerId) => Stream.value(
-        VideoEvent(eventType: VideoEventType.initialized, duration: const Duration(minutes: 2), size: const Size(1280, 720)),
-      );
+    VideoEvent(
+      eventType: VideoEventType.initialized,
+      duration: const Duration(minutes: 2),
+      size: const Size(1280, 720),
+    ),
+  );
 
   @override
   Future<void> setLooping(int playerId, bool looping) async {}

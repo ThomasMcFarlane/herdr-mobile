@@ -4,7 +4,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/acp/acp_models.dart';
 import '../../../data/acp/session_state.dart';
 import '../../../data/acp/turns/plain_text.dart' show safeEnd;
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../render/markdown/markdown.dart';
 import 'code_panel.dart';
 import 'content_blocks.dart';
@@ -26,7 +28,12 @@ typedef RowToggle = void Function(String id);
 /// The key of the "Show all" flag of a row's panels.
 String allKey(String rowKey) => '$rowKey:all';
 
-Widget _gap(double gap, Widget child) => gap == 0 ? child : Padding(padding: EdgeInsets.only(top: gap), child: child);
+Widget _gap(double gap, Widget child) => gap == 0
+    ? child
+    : Padding(
+        padding: EdgeInsets.only(top: gap),
+        child: child,
+      );
 
 /// What the person said: a quiet filled block. A long message shows its first
 /// lines with a "Show more".
@@ -70,25 +77,24 @@ class UserRow extends StatelessWidget {
         message: message,
         child: Panel(
           padding: const EdgeInsets.symmetric(horizontal: Gap.md, vertical: Gap.sm + Gap.hair),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (text.isNotEmpty)
-                  Text(
-                    text,
-                    maxLines: collapsible && !open ? _collapsedLines : null,
-                    // An ellipsis without a line cap would cut the text to one line.
-                    overflow: collapsible && !open ? TextOverflow.ellipsis : TextOverflow.clip,
-                    style: Type.compact.copyWith(color: ds.text),
-                  ),
-                for (final block in message.blocks)
-                  if (block is! TextBlock) ...[
-                    const SizedBox(height: Gap.xs),
-                    ContentBlockView(block: block, expanded: all, onToggle: () => onToggle(allKey(rowKey))),
-                  ],
-                if (collapsible)
-                  TextAction(label: open ? 'Show less' : 'Show more', onTap: () => onToggle(rowKey)),
-              ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (text.isNotEmpty)
+                Text(
+                  text,
+                  maxLines: collapsible && !open ? _collapsedLines : null,
+                  // An ellipsis without a line cap would cut the text to one line.
+                  overflow: collapsible && !open ? TextOverflow.ellipsis : TextOverflow.clip,
+                  style: Type.compact.copyWith(color: ds.text),
+                ),
+              for (final block in message.blocks)
+                if (block is! TextBlock) ...[
+                  const SizedBox(height: Gap.xs),
+                  ContentBlockView(block: block, expanded: all, onToggle: () => onToggle(allKey(rowKey))),
+                ],
+              if (collapsible) TextAction(label: open ? 'Show less' : 'Show more', onTap: () => onToggle(rowKey)),
+            ],
           ),
         ),
       ),
@@ -173,7 +179,11 @@ class ContentRow extends StatelessWidget {
     final toggle = onToggle;
     return _gap(
       gap,
-      ContentBlockView(block: block, expanded: expanded, onToggle: toggle == null ? null : () => toggle(allKey(rowKey))),
+      ContentBlockView(
+        block: block,
+        expanded: expanded,
+        onToggle: toggle == null ? null : () => toggle(allKey(rowKey)),
+      ),
     );
   }
 }
@@ -209,7 +219,9 @@ class StopNoteRow extends StatelessWidget {
             child: Icon(LucideIcons.circleAlert, size: IconSize.row, color: ds.textTertiary),
           ),
           const SizedBox(width: Gap.sm),
-          Expanded(child: Text(stopNoteText(reason), style: Type.secondary.copyWith(color: ds.textSecondary))),
+          Expanded(
+            child: Text(stopNoteText(reason), style: Type.secondary.copyWith(color: ds.textSecondary)),
+          ),
         ],
       ),
     );
@@ -239,7 +251,9 @@ class TranscriptNoteRow extends StatelessWidget {
             child: Icon(LucideIcons.info, size: IconSize.row, color: ds.textTertiary),
           ),
           const SizedBox(width: Gap.sm),
-          Expanded(child: Text(visibleText(text), style: Type.secondary.copyWith(color: ds.textSecondary))),
+          Expanded(
+            child: Text(visibleText(text), style: Type.secondary.copyWith(color: ds.textSecondary)),
+          ),
         ],
       ),
     );

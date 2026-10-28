@@ -57,46 +57,59 @@ void main() {
         _file('Ảnh 3.webp'),
         _file('ảnh 20.webp'),
       ];
-      expect([for (final e in photoEntries(entries)) e.name], ['IMG_1.png', 'img_2.JPG', 'IMG_10.jpg', 'Ảnh 3.webp', 'ảnh 20.webp']);
+      expect(
+        [for (final e in photoEntries(entries)) e.name],
+        ['IMG_1.png', 'img_2.JPG', 'IMG_10.jpg', 'Ảnh 3.webp', 'ảnh 20.webp'],
+      );
     });
   });
 
   group('opening a photo from a folder', () {
-    testWidgets('a tap in the browser opens the immersive viewer, with the folder\'s photos to swipe through, in order', (tester) async {
-      final fs = FakeFs();
-      for (final n in ['img10.png', 'img2.png', 'img1.png']) {
-        fs.addFile('/p/$n', await makePng(tester, 64, 48));
-      }
-      fs.addFile('/p/notes.txt', 'x');
-      await _pumpHome(tester, FileBrowserScreen(machine: machineWithFiles(fs), path: '/p'));
-      await pumpUntil(tester, () => find.text('img2.png').evaluate().isNotEmpty);
+    testWidgets(
+      'a tap in the browser opens the immersive viewer, with the folder\'s photos to swipe through, in order',
+      (tester) async {
+        final fs = FakeFs();
+        for (final n in ['img10.png', 'img2.png', 'img1.png']) {
+          fs.addFile('/p/$n', await makePng(tester, 64, 48));
+        }
+        fs.addFile('/p/notes.txt', 'x');
+        await _pumpHome(tester, FileBrowserScreen(machine: machineWithFiles(fs), path: '/p'));
+        await pumpUntil(tester, () => find.text('img2.png').evaluate().isNotEmpty);
 
-      await tester.tap(find.text('img2.png'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+        await tester.tap(find.text('img2.png'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.byType(FileViewerScreen), findsNothing, reason: 'a picture does not open in the text viewer');
-      expect(find.byType(PhotoViewer), findsOneWidget);
-      final model = _modelOf(tester);
-      expect([for (final i in model.items) i.name], ['img1.png', 'img2.png', 'img10.png'], reason: 'natural order');
-      expect(model.index, 1);
-      await pumpUntil(tester, () => model.currentEntry.ready);
-      await tester.pump(const Duration(milliseconds: 50));
-      expect(find.text('Photo 2 of 3'), findsOneWidget);
-      expect(model.current.path, '/p/img2.png');
-    });
+        expect(find.byType(FileViewerScreen), findsNothing, reason: 'a picture does not open in the text viewer');
+        expect(find.byType(PhotoViewer), findsOneWidget);
+        final model = _modelOf(tester);
+        expect([for (final i in model.items) i.name], ['img1.png', 'img2.png', 'img10.png'], reason: 'natural order');
+        expect(model.index, 1);
+        await pumpUntil(tester, () => model.currentEntry.ready);
+        await tester.pump(const Duration(milliseconds: 50));
+        expect(find.text('Photo 2 of 3'), findsOneWidget);
+        expect(model.current.path, '/p/img2.png');
+      },
+    );
 
-    testWidgets('a path tapped in a chat opens the viewer, and the folder\'s other photos join it once listed', (tester) async {
+    testWidgets('a path tapped in a chat opens the viewer, and the folder\'s other photos join it once listed', (
+      tester,
+    ) async {
       final fs = FakeFs();
       for (final n in ['a.png', 'b.png', 'c.png']) {
         fs.addFile('/home/dev/shots/$n', await makePng(tester, 64, 48));
       }
       fs.addFile('/home/dev/shots/.hidden.png', await makePng(tester, 64, 48));
       late BuildContext host;
-      await _pumpHome(tester, Builder(builder: (c) {
-        host = c;
-        return const SizedBox();
-      }));
+      await _pumpHome(
+        tester,
+        Builder(
+          builder: (c) {
+            host = c;
+            return const SizedBox();
+          },
+        ),
+      );
       final machine = machineWithFiles(fs);
 
       // ignore: unawaited_futures
@@ -116,10 +129,15 @@ void main() {
     testWidgets('a file called .png whose bytes are text offers to view it as text, and does', (tester) async {
       final fs = FakeFs()..addFile('/p/error.png', '<html>404 Not Found</html>');
       late BuildContext host;
-      await _pumpHome(tester, Builder(builder: (c) {
-        host = c;
-        return const SizedBox();
-      }));
+      await _pumpHome(
+        tester,
+        Builder(
+          builder: (c) {
+            host = c;
+            return const SizedBox();
+          },
+        ),
+      );
       // ignore: unawaited_futures
       openRemoteFile(host, machineWithFiles(fs), '/p/error.png');
       await pumpUntil(tester, () => find.text('Show as text').evaluate().isNotEmpty);
@@ -133,13 +151,19 @@ void main() {
       expect(find.textContaining('404 Not Found'), findsOneWidget);
     });
 
-    testWidgets('a picture whose name does not say so is handed to the photo viewer once its bytes are read', (tester) async {
+    testWidgets('a picture whose name does not say so is handed to the photo viewer once its bytes are read', (
+      tester,
+    ) async {
       final fs = FakeFs()..addFile('/p/screenshot', await makePng(tester, 64, 48));
       await _pumpHome(
         tester,
         FileViewerScreen(
           machine: machineWithFiles(fs),
-          stat: RemoteStat(path: '/p/screenshot', kind: RemoteEntryKind.file, size: fs.nodes['/p/screenshot']!.bytes.length),
+          stat: RemoteStat(
+            path: '/p/screenshot',
+            kind: RemoteEntryKind.file,
+            size: fs.nodes['/p/screenshot']!.bytes.length,
+          ),
         ),
       );
       // The bytes are read and the picture decoded by the engine in real time; wait for the event, not a fixed 3 s.
@@ -159,10 +183,15 @@ void main() {
     testWidgets('a photo over 40 MB is refused with its size, before a byte of it is read', (tester) async {
       final fs = FakeFs()..addFile('/p/huge.jpg', Uint8List(41 * 1024 * 1024));
       late BuildContext host;
-      await _pumpHome(tester, Builder(builder: (c) {
-        host = c;
-        return const SizedBox();
-      }));
+      await _pumpHome(
+        tester,
+        Builder(
+          builder: (c) {
+            host = c;
+            return const SizedBox();
+          },
+        ),
+      );
       // ignore: unawaited_futures
       openRemoteFile(host, machineWithFiles(fs), '/p/huge.jpg');
       await pumpUntil(tester, () => find.text('Too large to open here').evaluate().isNotEmpty);
@@ -178,10 +207,15 @@ void main() {
       final bytes = Uint8List(12 * 1024 * 1024);
       final fs = FakeFs()..addFile('/p/big.jpg', bytes);
       late BuildContext host;
-      await _pumpHome(tester, Builder(builder: (c) {
-        host = c;
-        return const SizedBox();
-      }));
+      await _pumpHome(
+        tester,
+        Builder(
+          builder: (c) {
+            host = c;
+            return const SizedBox();
+          },
+        ),
+      );
       // ignore: unawaited_futures
       openRemoteFile(host, machineWithFiles(fs), '/p/big.jpg');
       await pumpUntil(tester, () => fs.calls.where((c) => c.startsWith('read')).length >= 6);

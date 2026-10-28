@@ -281,10 +281,12 @@ class _MachineWatch {
     // A microtask later, so every request made in this turn (a new watcher
     // asks for a read in several ways) collapses into this one read.
     final w = next;
-    unawaited(Future<void>.microtask(w.read).whenComplete(() {
-      _running--;
-      _kick();
-    }));
+    unawaited(
+      Future<void>.microtask(w.read).whenComplete(() {
+        _running--;
+        _kick();
+      }),
+    );
     // Space out the starts; a lone watcher pays nothing for this.
     _gap = Timer(owner.startGap, () {
       _gap = null;
@@ -407,9 +409,7 @@ class _PaneWatch {
     unchangedStreak++;
     if (disposed) return;
     // 3 s between reads after one unchanged read, 6 s after more.
-    final extra = unchangedStreak == 1
-        ? _owner.minInterval * 2
-        : _owner.minInterval * 4;
+    final extra = unchangedStreak == 1 ? _owner.minInterval * 2 : _owner.minInterval * 4;
     _extra?.cancel();
     _extra = Timer(extra, () {
       _extra = null;
@@ -461,13 +461,11 @@ class _PaneWatch {
   bool _publish() {
     // The card shows what the agent has been doing, not its own input box and
     // status bar; the prompt is still read from every row.
-    final content = withoutAgentChrome(
-      [for (final r in rows) if (!isDashedRule(r)) r],
-      blocked: status == AgentStatus.blocked,
-    );
-    final shown = content.length > _owner.keepRows
-        ? content.sublist(content.length - _owner.keepRows)
-        : content;
+    final content = withoutAgentChrome([
+      for (final r in rows)
+        if (!isDashedRule(r)) r,
+    ], blocked: status == AgentStatus.blocked);
+    final shown = content.length > _owner.keepRows ? content.sublist(content.length - _owner.keepRows) : content;
     final next = PanePreview(
       lines: [for (final r in shown) PreviewLine(r)],
       prompt: status == AgentStatus.blocked ? detectPrompt(rows) : null,

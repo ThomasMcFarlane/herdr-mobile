@@ -80,7 +80,11 @@ void main() {
   );
 
   FakeAgentSession session({bool turn = false, bool terminal = false}) {
-    final s = FakeAgentSession(state: state(turn: turn), agent: 'omp', agentLabel: 'omp');
+    final s = FakeAgentSession(
+      state: state(turn: turn),
+      agent: 'omp',
+      agentLabel: 'omp',
+    );
     if (terminal) {
       s
         ..observed = true
@@ -191,28 +195,54 @@ void main() {
       false,
     ),
     'waiting-no-wake-terminal': (
-      () => session()..backgroundWork = work([task('t1', kind: BackgroundKind.terminal, ago: const Duration(minutes: 3))], wakes: false),
+      () => session()
+        ..backgroundWork = work([
+          task('t1', kind: BackgroundKind.terminal, ago: const Duration(minutes: 3)),
+        ], wakes: false),
       null,
       const Size(412, 892),
       1,
       false,
     ),
-    'sheet-one': (
-      () => session()..backgroundWork = work([task('bg_6')]),
-      open,
-      const Size(412, 892),
-      1,
-      false,
-    ),
+    'sheet-one': (() => session()..backgroundWork = work([task('bg_6')]), open, const Size(412, 892), 1, false),
     'sheet-two-mixed': (
       () => session()
         ..backgroundWork = work([
           task('bg_6', stop: StopRoute.message),
-          task('bg_7', kind: BackgroundKind.eval, title: 'for i in range(10): train(i)', ago: const Duration(minutes: 14)),
-          task('RLFrameworks', kind: BackgroundKind.agent, title: 'Survey RL frameworks for the screening', stop: StopRoute.none, ago: const Duration(seconds: 40)),
-          task('f1', status: BackgroundStatus.finished, title: 'sleep 31', ago: const Duration(minutes: 20), ran: const Duration(seconds: 31)),
-          task('f2', status: BackgroundStatus.failed, title: 'make test', ago: const Duration(minutes: 30), ran: const Duration(seconds: 12)),
-          task('f3', status: BackgroundStatus.stopped, title: 'tail -f /var/log/syslog', ago: const Duration(hours: 1), ran: const Duration(minutes: 5)),
+          task(
+            'bg_7',
+            kind: BackgroundKind.eval,
+            title: 'for i in range(10): train(i)',
+            ago: const Duration(minutes: 14),
+          ),
+          task(
+            'RLFrameworks',
+            kind: BackgroundKind.agent,
+            title: 'Survey RL frameworks for the screening',
+            stop: StopRoute.none,
+            ago: const Duration(seconds: 40),
+          ),
+          task(
+            'f1',
+            status: BackgroundStatus.finished,
+            title: 'sleep 31',
+            ago: const Duration(minutes: 20),
+            ran: const Duration(seconds: 31),
+          ),
+          task(
+            'f2',
+            status: BackgroundStatus.failed,
+            title: 'make test',
+            ago: const Duration(minutes: 30),
+            ran: const Duration(seconds: 12),
+          ),
+          task(
+            'f3',
+            status: BackgroundStatus.stopped,
+            title: 'tail -f /var/log/syslog',
+            ago: const Duration(hours: 1),
+            ran: const Duration(minutes: 5),
+          ),
         ]),
       open,
       const Size(412, 892),
@@ -223,9 +253,19 @@ void main() {
       () => session()
         ..backgroundWork = work([
           for (var i = 0; i < 40; i++)
-            task('bg_$i', title: 'python3 run.py --screen s${i}t --chunk $i', ago: Duration(minutes: 5 + i * 7)),
+            task(
+              'bg_$i',
+              title: 'python3 run.py --screen s${i}t --chunk $i',
+              ago: Duration(minutes: 5 + i * 7),
+            ),
           for (var i = 0; i < 7; i++)
-            task('f$i', status: i == 3 ? BackgroundStatus.failed : BackgroundStatus.finished, title: 'finished job $i', ago: const Duration(hours: 9), ran: Duration(seconds: 31 + i)),
+            task(
+              'f$i',
+              status: i == 3 ? BackgroundStatus.failed : BackgroundStatus.finished,
+              title: 'finished job $i',
+              ago: const Duration(hours: 9),
+              ran: Duration(seconds: 31 + i),
+            ),
         ]),
       open,
       const Size(412, 892),
@@ -235,7 +275,12 @@ void main() {
     'sheet-forty-scrolled': (
       () => session()
         ..backgroundWork = work([
-          for (var i = 0; i < 40; i++) task('bg_$i', title: 'python3 run.py --screen s${i}t --chunk $i', ago: Duration(minutes: 5 + i * 7)),
+          for (var i = 0; i < 40; i++)
+            task(
+              'bg_$i',
+              title: 'python3 run.py --screen s${i}t --chunk $i',
+              ago: Duration(minutes: 5 + i * 7),
+            ),
         ]),
       (tester) async {
         await open(tester);
@@ -281,7 +326,10 @@ void main() {
     'sheet-long-id': (
       () => session()
         ..backgroundWork = work([
-          task('background_job_for_the_nightly_screening_of_all_chunks_${'0123456789' * 4}', ago: const Duration(minutes: 70)),
+          task(
+            'background_job_for_the_nightly_screening_of_all_chunks_${'0123456789' * 4}',
+            ago: const Duration(minutes: 70),
+          ),
           task('bg_\u202E6', title: 'sleep 9999'),
         ]),
       open,
@@ -290,7 +338,8 @@ void main() {
       false,
     ),
     'sheet-unknown-start': (
-      () => session()..backgroundWork = work([task('bg_6', ago: null), task('bg_7', ago: null, stop: StopRoute.message)]),
+      () =>
+          session()..backgroundWork = work([task('bg_6', ago: null), task('bg_7', ago: null, stop: StopRoute.message)]),
       open,
       const Size(412, 892),
       1,
@@ -378,7 +427,8 @@ void main() {
       false,
     ),
     'narrow-sheet': (
-      () => session()..backgroundWork = work([task('bg_6', stop: StopRoute.message), task('bg_7', title: viet.substring(0, 300))]),
+      () => session()
+        ..backgroundWork = work([task('bg_6', stop: StopRoute.message), task('bg_7', title: viet.substring(0, 300))]),
       open,
       const Size(320, 640),
       1,
@@ -404,7 +454,12 @@ void main() {
       () => (session(terminal: true, turn: true)
         ..backgroundWork = work([task('bg_6')])
         ..waitingOnBackground = true
-        ..roster = const [SubagentEntry(info: SubagentInfo(name: 'RLFrameworks'), state: SubagentState.running)]),
+        ..roster = const [
+          SubagentEntry(
+            info: SubagentInfo(name: 'RLFrameworks'),
+            state: SubagentState.running,
+          ),
+        ]),
       null,
       const Size(800, 400),
       1,

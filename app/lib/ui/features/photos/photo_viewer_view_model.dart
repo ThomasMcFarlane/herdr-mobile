@@ -254,7 +254,10 @@ class PhotoViewerViewModel extends ChangeNotifier {
 
   /// Entries outside the open picture's neighbourhood are cancelled and freed.
   void _trim() {
-    final keep = {for (var i = _index - 1; i <= _index + 1; i++) if (i >= 0 && i < _items.length) _items[i].id};
+    final keep = {
+      for (var i = _index - 1; i <= _index + 1; i++)
+        if (i >= 0 && i < _items.length) _items[i].id,
+    };
     for (final id in _entries.keys.toList()) {
       if (keep.contains(id)) continue;
       _entries.remove(id)!.dispose();

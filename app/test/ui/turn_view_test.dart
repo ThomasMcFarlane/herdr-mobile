@@ -41,10 +41,13 @@ Widget _app(FakeAgentSession session, {SinceLeft? sinceLeft, double textScale = 
     MaterialApp(
       theme: AppTheme.light(),
       builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale), disableAnimations: reducedMotion),
+        data: MediaQuery.of(context)
+            .copyWith(textScaler: TextScaler.linear(textScale), disableAnimations: reducedMotion),
         child: child!,
       ),
-      home: Scaffold(body: TranscriptView(session: session, sinceLeft: sinceLeft)),
+      home: Scaffold(
+        body: TranscriptView(session: session, sinceLeft: sinceLeft),
+      ),
     );
 
 SinceLeft since(String? key, {int steps = 3}) => SinceLeft(
@@ -84,35 +87,44 @@ void main() {
   });
 
   group('the fold', () {
-    testWidgets('a finished turn is one line; the answer, the card and the failure stay; a tap opens the log in place', (tester) async {
-      await pumpView(tester, FakeAgentSession(state: stateWith(items: richTurn())));
-      expect(rich('Worked 42s \u00b7 2 files \u00b7 2 commands \u00b7 1 failed'), findsOneWidget);
-      expect(find.text('Thinking'), findsNothing);
-      expect(find.text('dart format lib test'), findsNothing, reason: 'a command that went well folds');
-      expect(find.textContaining('Read 3 files'), findsNothing);
-      expect(rich('The parser lowercased'), findsOneWidget, reason: 'the answer');
-      expect(rich('Changed'), findsOneWidget);
-      expect(find.text('flutter test test/locale_test.dart'), findsOneWidget, reason: 'the failure breaks out');
-      expect(find.text('exit 1'), findsNothing);
-      expect(rich('exit 1'), findsOneWidget);
+    testWidgets(
+      'a finished turn is one line; the answer, the card and the failure stay; a tap opens the log in place',
+      (tester) async {
+        await pumpView(tester, FakeAgentSession(state: stateWith(items: richTurn())));
+        expect(rich('Worked 42s \u00b7 2 files \u00b7 2 commands \u00b7 1 failed'), findsOneWidget);
+        expect(find.text('Thinking'), findsNothing);
+        expect(find.text('dart format lib test'), findsNothing, reason: 'a command that went well folds');
+        expect(find.textContaining('Read 3 files'), findsNothing);
+        expect(rich('The parser lowercased'), findsOneWidget, reason: 'the answer');
+        expect(rich('Changed'), findsOneWidget);
+        expect(find.text('flutter test test/locale_test.dart'), findsOneWidget, reason: 'the failure breaks out');
+        expect(find.text('exit 1'), findsNothing);
+        expect(rich('exit 1'), findsOneWidget);
 
-      final fold = rich('Worked 42s');
-      final top = tester.getTopLeft(fold);
-      await tester.tap(fold);
-      await tester.pumpAndSettle();
-      expect(tester.getTopLeft(fold), top, reason: 'the line under the thumb stays');
-      expect(find.text('Thinking'), findsOneWidget);
-      expect(find.text('dart format lib test'), findsOneWidget);
-      expect(find.textContaining('Read 3 files'), findsOneWidget);
-      expect(find.text('flutter test test/locale_test.dart'), findsOneWidget, reason: 'in its place in the log, not twice');
+        final fold = rich('Worked 42s');
+        final top = tester.getTopLeft(fold);
+        await tester.tap(fold);
+        await tester.pumpAndSettle();
+        expect(tester.getTopLeft(fold), top, reason: 'the line under the thumb stays');
+        expect(find.text('Thinking'), findsOneWidget);
+        expect(find.text('dart format lib test'), findsOneWidget);
+        expect(find.textContaining('Read 3 files'), findsOneWidget);
+        expect(
+          find.text('flutter test test/locale_test.dart'),
+          findsOneWidget,
+          reason: 'in its place in the log, not twice',
+        );
 
-      await tester.tap(fold);
-      await tester.pumpAndSettle();
-      expect(find.text('Thinking'), findsNothing);
-      expect(find.text('dart format lib test'), findsNothing);
-    });
+        await tester.tap(fold);
+        await tester.pumpAndSettle();
+        expect(find.text('Thinking'), findsNothing);
+        expect(find.text('dart format lib test'), findsNothing);
+      },
+    );
 
-    testWidgets('the rows a fold brings are revealed over Motion.expand; reduced motion shows them at once', (tester) async {
+    testWidgets('the rows a fold brings are revealed over Motion.expand; reduced motion shows them at once', (
+      tester,
+    ) async {
       final session = FakeAgentSession(state: stateWith(items: richTurn()));
       await pumpView(tester, session);
       await tester.tap(rich('Worked 42s'));
@@ -150,7 +162,14 @@ void main() {
         userAt('u', 'clean up', 0),
         readAt('ok', '/a/x.dart', 1),
         runAt('bad', 'make \u202Etest', 2, exitCode: 2, output: 'boom\nerror: nothing to do\n'),
-        toolAt('cut', title: 'sleep 9', kind: ToolKind.execute, status: ToolStatus.cancelled, rawInput: {'command': 'sleep 9'}, start: 5),
+        toolAt(
+          'cut',
+          title: 'sleep 9',
+          kind: ToolKind.execute,
+          status: ToolStatus.cancelled,
+          rawInput: {'command': 'sleep 9'},
+          start: 5,
+        ),
         toolAt(
           't1',
           title: 'rm -rf build',
@@ -162,7 +181,9 @@ void main() {
         const TranscriptStop(key: 'stop', reason: StopReason.maxTokens),
         const TranscriptNote(key: 'note', text: 'Mode changed to Plan'),
       ];
-      final session = FakeAgentSession(state: stateWith(items: items, pending: [PendingPermission(7, permissionRequest())]));
+      final session = FakeAgentSession(
+        state: stateWith(items: items, pending: [PendingPermission(7, permissionRequest())]),
+      );
       await pumpView(tester, session);
       expect(rich('Worked'), findsOneWidget);
       expect(find.text('/a/x.dart'), findsNothing);
@@ -183,7 +204,10 @@ void main() {
     });
 
     testWidgets('a turn with no user message renders without a user row', (tester) async {
-      await pumpView(tester, FakeAgentSession(state: stateWith(items: [readAt('r', '/a/b.dart', 0), agentAt('a', 'Found it.', 2)])));
+      await pumpView(
+        tester,
+        FakeAgentSession(state: stateWith(items: [readAt('r', '/a/b.dart', 0), agentAt('a', 'Found it.', 2)])),
+      );
       expect(find.text('Found it.'), findsOneWidget);
       expect(find.byType(UserRow), findsNothing);
       expect(rich('Worked'), findsOneWidget);
@@ -225,7 +249,9 @@ void main() {
   });
 
   group('tool rows', () {
-    testWidgets('quiet: no chevron, about 44 dp, a shape only when the call did not go well, one line per kind', (tester) async {
+    testWidgets('quiet: no chevron, about 44 dp, a shape only when the call did not go well, one line per kind', (
+      tester,
+    ) async {
       final items = [
         userAt('u', 'go', 0),
         readAt('r', '/home/dev/payments-api/lib/locale/parse.dart', 1),
@@ -234,15 +260,30 @@ void main() {
         toolAt('f', title: 'Fetch', kind: ToolKind.fetch, rawInput: {'url': 'https://pub.dev/packages/x'}, start: 4),
         runAt('c', 'dart test', 5, exitCode: 0),
         runAt('x', 'make', 6, exitCode: 2, output: 'cc: error\n'),
-        toolAt('p', title: 'Slow', kind: ToolKind.execute, status: ToolStatus.inProgress, rawInput: {'command': 'sleep 99'}, start: 7),
+        toolAt(
+          'p',
+          title: 'Slow',
+          kind: ToolKind.execute,
+          status: ToolStatus.inProgress,
+          rawInput: {'command': 'sleep 99'},
+          start: 7,
+        ),
       ];
       await pumpView(tester, FakeAgentSession(state: stateWith(items: items, turnActive: true)));
       expect(find.byIcon(LucideIcons.chevronRight), findsNothing);
       expect(find.byIcon(LucideIcons.chevronDown), findsNothing);
-      expect(find.byWidgetPredicate((w) => w is StatusGlyph && w.isFailed), findsOneWidget, reason: 'only the failure has a shape of its own');
+      expect(
+        find.byWidgetPredicate((w) => w is StatusGlyph && w.isFailed),
+        findsOneWidget,
+        reason: 'only the failure has a shape of its own',
+      );
       expect(rich('parse.dart'), findsNWidgets(2));
       expect(find.text('+1'), findsNothing);
-      expect(find.bySemanticsLabel(RegExp('1 line added, 1 line removed')), findsNothing, reason: 'no semantics without the handle');
+      expect(
+        find.bySemanticsLabel(RegExp('1 line added, 1 line removed')),
+        findsNothing,
+        reason: 'no semantics without the handle',
+      );
       expect(rich('toLowerCase'), findsOneWidget);
       expect(rich('4 matches'), findsOneWidget);
       expect(find.text('pub.dev'), findsOneWidget);
@@ -257,7 +298,13 @@ void main() {
 
     testWidgets('a row opens its body on a tap and keeps it where it is', (tester) async {
       final session = FakeAgentSession(
-        state: stateWith(items: [userAt('u', 'go', 0), runAt('c', 'dart test', 2, exitCode: 0, output: 'All tests passed!\n')], turnActive: true),
+        state: stateWith(
+          items: [
+            userAt('u', 'go', 0),
+            runAt('c', 'dart test', 2, exitCode: 0, output: 'All tests passed!\n'),
+          ],
+          turnActive: true,
+        ),
       );
       await pumpView(tester, session);
       expect(find.text('All tests passed!'), findsNothing);
@@ -295,7 +342,14 @@ void main() {
         userAt('u', 'go', 0),
         readAt('r1', '/a/one.dart', 1),
         readAt('r2', '/a/two.dart', 2),
-        toolAt('r3', title: 'Read', kind: ToolKind.read, status: ToolStatus.inProgress, rawInput: {'file_path': '/a/three.dart'}, start: 3),
+        toolAt(
+          'r3',
+          title: 'Read',
+          kind: ToolKind.read,
+          status: ToolStatus.inProgress,
+          rawInput: {'file_path': '/a/three.dart'},
+          start: 3,
+        ),
       ];
       await pumpView(tester, FakeAgentSession(state: stateWith(items: items, turnActive: true)));
       expect(find.text('Read 2 files'), findsOneWidget);
@@ -327,7 +381,13 @@ void main() {
       final items = [
         userAt('u', 'go', 0),
         editAt('e0', '/a/lib/zero.dart', 1, before: 'a\n', after: 'b\nc\n'),
-        toolAt('n', title: 'Write', kind: ToolKind.edit, content: const [ToolDiff(path: '/a/lib/fresh.dart', newText: 'one\ntwo\nthree\n')], start: 2),
+        toolAt(
+          'n',
+          title: 'Write',
+          kind: ToolKind.edit,
+          content: const [ToolDiff(path: '/a/lib/fresh.dart', newText: 'one\ntwo\nthree\n')],
+          start: 2,
+        ),
         toolAt('d', title: 'Delete', kind: ToolKind.delete, rawInput: {'file_path': '/a/lib/gone.dart'}, start: 3),
         for (var i = 3; i < 8; i++) editAt('e$i', '/a/lib/f$i.dart', i + 1),
         agentAt('a', 'Done.', 20),
@@ -360,18 +420,31 @@ void main() {
     });
 
     testWidgets('absent when nothing changed', (tester) async {
-      await pumpView(tester, FakeAgentSession(state: stateWith(items: [userAt('u', 'go', 0), readAt('r', '/a/b.dart', 1), agentAt('a', 'Read it.', 2)])));
+      await pumpView(
+        tester,
+        FakeAgentSession(
+          state: stateWith(items: [userAt('u', 'go', 0), readAt('r', '/a/b.dart', 1), agentAt('a', 'Read it.', 2)]),
+        ),
+      );
       expect(rich('Changed'), findsNothing);
     });
 
-    testWidgets('300 files: six rows and the rest on demand, built lazily, nothing overflows at 320 dp and 160% text', (tester) async {
+    testWidgets('300 files: six rows and the rest on demand, built lazily, nothing overflows at 320 dp and 160% text', (
+      tester,
+    ) async {
       final built = <String>[];
       final items = [
         userAt('u', 'rename', 0),
-        for (var i = 0; i < 300; i++) editAt('e$i', '/home/dev/payments-api/lib/feature_${i ~/ 10}/a_rather_long_file_name_$i.dart', i + 1),
+        for (var i = 0; i < 300; i++)
+          editAt('e$i', '/home/dev/payments-api/lib/feature_${i ~/ 10}/a_rather_long_file_name_$i.dart', i + 1),
         agentAt('a', 'Done.', 400),
       ];
-      await pumpView(tester, FakeAgentSession(state: stateWith(items: items)), size: const Size(320, 640), textScale: 1.6);
+      await pumpView(
+        tester,
+        FakeAgentSession(state: stateWith(items: items)),
+        size: const Size(320, 640),
+        textScale: 1.6,
+      );
       debugRowBuilt = built.add;
       expect(find.text('294 more'), findsOneWidget);
       await tester.tap(find.text('294 more'));
@@ -394,19 +467,30 @@ void main() {
     });
 
     testWidgets('no steps counted still marks the place', (tester) async {
-      await pumpView(tester, FakeAgentSession(state: stateWith(items: turns(3))), sinceLeft: since('u2', steps: 0));
+      await pumpView(
+        tester,
+        FakeAgentSession(state: stateWith(items: turns(3))),
+        sinceLeft: since('u2', steps: 0),
+      );
       expect(find.text('New'), findsOneWidget);
     });
 
     testWidgets('no marker, no divider; an unknown key, no divider', (tester) async {
       await pumpView(tester, FakeAgentSession(state: stateWith(items: turns(3))));
       expect(find.textContaining(' new'), findsNothing);
-      await tester.pumpWidget(_app(FakeAgentSession(state: stateWith(items: turns(3))), sinceLeft: since('gone')));
+      await tester.pumpWidget(
+        _app(
+          FakeAgentSession(state: stateWith(items: turns(3))),
+          sinceLeft: since('gone'),
+        ),
+      );
       await tester.pump();
       expect(find.textContaining(' new'), findsNothing);
     });
 
-    testWidgets('when more than a screen is new the view opens with the divider near the top, away from the end', (tester) async {
+    testWidgets('when more than a screen is new the view opens with the divider near the top, away from the end', (
+      tester,
+    ) async {
       final session = FakeAgentSession(state: stateWith(items: turns(60)));
       await pumpView(tester, session, sinceLeft: since('u20', steps: 120));
       await tester.pump();
@@ -420,11 +504,23 @@ void main() {
     });
 
     testWidgets('a divider inside a fold goes above the fold line', (tester) async {
-      final session = FakeAgentSession(state: stateWith(items: [...turns(2), ...richTurn(prefix: 'n')]));
+      final session = FakeAgentSession(
+        state: stateWith(
+          items: [
+            ...turns(2),
+            ...richTurn(prefix: 'n'),
+          ],
+        ),
+      );
       await pumpView(tester, session, sinceLeft: since('tool:nc1'));
       final divider = tester.getRect(find.text('3 new'));
       expect(divider.bottom, lessThan(tester.getTopLeft(rich('Worked').last).dy));
-      expect(divider.top, greaterThan(tester.getBottomLeft(find.text('Fix the Hà Nội locale bug in the parser and add a regression test.')).dy));
+      expect(
+        divider.top,
+        greaterThan(
+          tester.getBottomLeft(find.text('Fix the Hà Nội locale bug in the parser and add a regression test.')).dy,
+        ),
+      );
     });
 
     testWidgets('it arrives late: placed, the view does not move; a second value is ignored', (tester) async {
@@ -442,7 +538,11 @@ void main() {
       await tester.pumpWidget(_app(session, sinceLeft: since('u3', steps: 9)));
       await tester.pump();
       expect(position(tester).pixels, pixels, reason: 'the reader is left alone');
-      expect(tester.getTopLeft(find.text(first.data!)).dy, closeTo(before, 0.5), reason: 'a row inserted above the screen moves nothing');
+      expect(
+        tester.getTopLeft(find.text(first.data!)).dy,
+        closeTo(before, 0.5),
+        reason: 'a row inserted above the screen moves nothing',
+      );
 
       await tester.pumpWidget(_app(session, sinceLeft: since('u40', steps: 2)));
       await tester.pump();
@@ -454,14 +554,21 @@ void main() {
   });
 
   group('streaming', () {
-    testWidgets('a live turn of 200 steps: a chunk rebuilds the live row; scrolling builds only what comes into view', (tester) async {
+    testWidgets('a live turn of 200 steps: a chunk rebuilds the live row; scrolling builds only what comes into view', (
+      tester,
+    ) async {
       final built = <String>[];
       final items = [
         userAt('u', 'audit', 0),
         for (var i = 0; i < 200; i++)
           if (i.isEven) readAt('t$i', '/a/file_$i.dart', i + 1) else runAt('t$i', 'cmd $i', i + 1, exitCode: 0),
       ];
-      final session = FakeAgentSession(state: stateWith(items: items, turnActive: true).apply(const MessageChunk(MessageRole.agent, 'a1', TextBlock('first paragraph\n\nsecond'))));
+      final session = FakeAgentSession(
+        state: stateWith(
+          items: items,
+          turnActive: true,
+        ).apply(const MessageChunk(MessageRole.agent, 'a1', TextBlock('first paragraph\n\nsecond'))),
+      );
       await pumpView(tester, session, size: const Size(320, 640));
       debugRowBuilt = built.add;
       final key = session.state.liveKey!;
@@ -477,14 +584,19 @@ void main() {
         await tester.fling(find.byType(TranscriptView), const Offset(0, 600), 3000);
         await tester.pump(const Duration(milliseconds: 400));
       }
-      expect(built.toSet().length, lessThan(160), reason: 'five flings must not build 200 steps: ${built.toSet().length}');
+      expect(
+        built.toSet().length,
+        lessThan(160),
+        reason: 'five flings must not build 200 steps: ${built.toSet().length}',
+      );
       expect(tester.takeException(), isNull);
     });
 
     testWidgets('the answer that becomes narration (a call starts after it) does not move or re-flow', (tester) async {
       final session = FakeAgentSession(
-        state: stateWith(items: [userAt('u', 'go', 0), readAt('r1', '/a/one.dart', 1)], turnActive: true)
-            .apply(const MessageChunk(MessageRole.agent, 'a', TextBlock('I will run the tests now.\n\nThen I fix what fails.'))),
+        state: stateWith(items: [userAt('u', 'go', 0), readAt('r1', '/a/one.dart', 1)], turnActive: true).apply(
+          const MessageChunk(MessageRole.agent, 'a', TextBlock('I will run the tests now.\n\nThen I fix what fails.')),
+        ),
       );
       await pumpView(tester, session);
       final text = rich('I will run the tests now.');
@@ -500,7 +612,12 @@ void main() {
 
     testWidgets('the end of the answer is not a visual event: the last lines stay where they were', (tester) async {
       final items = [...turns(30), userAt('ul', 'last', 400), readAt('rl', '/a/last.dart', 401)];
-      final session = FakeAgentSession(state: stateWith(items: items, turnActive: true).apply(const MessageChunk(MessageRole.agent, 'a', TextBlock('Final words.'))));
+      final session = FakeAgentSession(
+        state: stateWith(
+          items: items,
+          turnActive: true,
+        ).apply(const MessageChunk(MessageRole.agent, 'a', TextBlock('Final words.'))),
+      );
       await pumpView(tester, session, size: const Size(320, 640));
       final final_ = find.text('Final words.');
       final top = tester.getTopLeft(final_);
@@ -530,7 +647,11 @@ void main() {
       session.apply(ToolCallStart(const ToolCall(toolCallId: 't2', title: 'dart test', kind: ToolKind.execute)));
       session.update((s) => s.withTurnEnded(StopReason.endTurn));
       await tester.pump();
-      expect(region.contextMenuButtonItems.where((i) => i.type == ContextMenuButtonType.copy), isNotEmpty, reason: 'still selected');
+      expect(
+        region.contextMenuButtonItems.where((i) => i.type == ContextMenuButtonType.copy),
+        isNotEmpty,
+        reason: 'still selected',
+      );
     });
   });
 
@@ -540,43 +661,71 @@ void main() {
       tester.view.physicalSize = const Size(412, 892) * 2;
       tester.view.devicePixelRatio = 2;
       addTearDown(tester.view.reset);
-      await tester.pumpWidget(MaterialApp(theme: AppTheme.light(), home: AgentSessionScreen(key: ObjectKey(session), session: session)));
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: AgentSessionScreen(key: ObjectKey(session), session: session),
+        ),
+      );
       await tester.pump(const Duration(milliseconds: 100));
     }
 
-    testWidgets('takes room while it has steps to do, or changed in the turn that runs; a finished plan folds into the turn', (tester) async {
-      final done = [step('One', PlanStatus.completed), step('Two', PlanStatus.completed), step('Three', PlanStatus.completed)];
-      final open = [step('One', PlanStatus.completed), step('Two', PlanStatus.inProgress), step('Three', PlanStatus.pending)];
-      final session = FakeAgentSession(state: stateWith(items: [userAt('u', 'go', 0)], plan: done));
-      await pumpScreen(tester, session);
-      expect(tester.getSize(find.byType(PlanHeader)).height, 0, reason: 'a finished plan of an earlier turn');
+    testWidgets(
+      'takes room while it has steps to do, or changed in the turn that runs; a finished plan folds into the turn',
+      (tester) async {
+        final done = [
+          step('One', PlanStatus.completed),
+          step('Two', PlanStatus.completed),
+          step('Three', PlanStatus.completed),
+        ];
+        final open = [
+          step('One', PlanStatus.completed),
+          step('Two', PlanStatus.inProgress),
+          step('Three', PlanStatus.pending),
+        ];
+        final session = FakeAgentSession(
+          state: stateWith(items: [userAt('u', 'go', 0)], plan: done),
+        );
+        await pumpScreen(tester, session);
+        expect(tester.getSize(find.byType(PlanHeader)).height, 0, reason: 'a finished plan of an earlier turn');
 
-      session.update((s) => s.withUserMessage([const TextBlock('next')]).withTurnStarted());
-      await tester.pump();
-      expect(tester.getSize(find.byType(PlanHeader)).height, 0, reason: 'not changed in this turn');
+        session.update((s) => s.withUserMessage([const TextBlock('next')]).withTurnStarted());
+        await tester.pump();
+        expect(tester.getSize(find.byType(PlanHeader)).height, 0, reason: 'not changed in this turn');
 
-      session.update((s) => s.apply(PlanUpdate(open)));
-      await tester.pump();
-      expect(tester.getSize(find.byType(PlanHeader)).height, greaterThan(0), reason: 'a plan in progress');
-      expect(rich('1 of 3'), findsOneWidget);
+        session.update((s) => s.apply(PlanUpdate(open)));
+        await tester.pump();
+        expect(tester.getSize(find.byType(PlanHeader)).height, greaterThan(0), reason: 'a plan in progress');
+        expect(rich('1 of 3'), findsOneWidget);
 
-      session.update(
-        (s) => s
-            .apply(PlanUpdate([...done]))
-            .apply(ToolCallStart(const ToolCall(toolCallId: 'x', title: 'ls', kind: ToolKind.execute, status: ToolStatus.completed))),
-      );
-      await tester.pump();
-      expect(tester.getSize(find.byType(PlanHeader)).height, greaterThan(0), reason: 'changed in the turn that runs');
+        session.update(
+          (s) => s
+              .apply(PlanUpdate([...done]))
+              .apply(
+                ToolCallStart(
+                  const ToolCall(toolCallId: 'x', title: 'ls', kind: ToolKind.execute, status: ToolStatus.completed),
+                ),
+              ),
+        );
+        await tester.pump();
+        expect(tester.getSize(find.byType(PlanHeader)).height, greaterThan(0), reason: 'changed in the turn that runs');
 
-      session.update((s) => s.withTurnEnded(StopReason.endTurn));
-      await tester.pump();
-      expect(tester.getSize(find.byType(PlanHeader)).height, 0, reason: 'the turn ended: the plan is part of its summary');
-      expect(rich('Plan 3 of 3 done'), findsOneWidget);
-    });
+        session.update((s) => s.withTurnEnded(StopReason.endTurn));
+        await tester.pump();
+        expect(
+          tester.getSize(find.byType(PlanHeader)).height,
+          0,
+          reason: 'the turn ended: the plan is part of its summary',
+        );
+        expect(rich('Plan 3 of 3 done'), findsOneWidget);
+      },
+    );
 
     testWidgets('a plan left unfinished stays above the conversation', (tester) async {
       final open = [step('One', PlanStatus.completed), step('Two', PlanStatus.pending)];
-      final session = FakeAgentSession(state: stateWith(items: [userAt('u', 'go', 0), agentAt('a', 'stopped', 1)], plan: open));
+      final session = FakeAgentSession(
+        state: stateWith(items: [userAt('u', 'go', 0), agentAt('a', 'stopped', 1)], plan: open),
+      );
       await pumpScreen(tester, session);
       expect(tester.getSize(find.byType(PlanHeader)).height, greaterThan(0));
     });

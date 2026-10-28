@@ -63,8 +63,8 @@ class AgentSessionRepository extends ChangeNotifier implements AgentSessions {
     this.flush,
     this._cache,
     this.preconnectHold = const Duration(seconds: 6),
-  })  : reviewed = reviewed ?? ReviewedState(),
-        _ownsReviewed = reviewed == null {
+  }) : reviewed = reviewed ?? ReviewedState(),
+       _ownsReviewed = reviewed == null {
     _fleet.addListener(_onFleet);
     _onFleet();
   }
@@ -297,11 +297,13 @@ class AgentSessionRepository extends ChangeNotifier implements AgentSessions {
     // them to be removed above).
     if (_swept.add(id)) {
       if (_cache case final cache?) {
-        unawaited(cache.retain(id, {
-          ...listed,
-          for (final s in _sessions.values)
-            if (s.machine.profile.id == id) s.keeperId,
-        }));
+        unawaited(
+          cache.retain(id, {
+            ...listed,
+            for (final s in _sessions.values)
+              if (s.machine.profile.id == id) s.keeperId,
+          }),
+        );
       }
     }
     _rebalance(id);
@@ -367,22 +369,24 @@ class AgentSessionRepository extends ChangeNotifier implements AgentSessions {
       for (final s in mine)
         if (!s.held && s.attachable) s,
     ];
-    final blocked = [
-      for (final s in others)
-        if (_isBlocked(s)) s,
-    ]..sort((a, b) {
-        // The keeper's last event is, for a waiting request, about when it
-        // began to wait; by the host's clock, comparable across sessions.
-        final byWait = a.activityAt.compareTo(b.activityAt);
-        return byWait != 0 ? byWait : a.key.compareTo(b.key);
-      });
-    final quiet = [
-      for (final s in others)
-        if (!_isBlocked(s)) s,
-    ]..sort((a, b) {
-        final byActivity = b.activityAt.compareTo(a.activityAt);
-        return byActivity != 0 ? byActivity : a.key.compareTo(b.key);
-      });
+    final blocked =
+        [
+          for (final s in others)
+            if (_isBlocked(s)) s,
+        ]..sort((a, b) {
+          // The keeper's last event is, for a waiting request, about when it
+          // began to wait; by the host's clock, comparable across sessions.
+          final byWait = a.activityAt.compareTo(b.activityAt);
+          return byWait != 0 ? byWait : a.key.compareTo(b.key);
+        });
+    final quiet =
+        [
+          for (final s in others)
+            if (!_isBlocked(s)) s,
+        ]..sort((a, b) {
+          final byActivity = b.activityAt.compareTo(a.activityAt);
+          return byActivity != 0 ? byActivity : a.key.compareTo(b.key);
+        });
     var slots = maxAttached - heldCount;
     if (slots < 0) slots = 0;
     final chosen = <AcpAgentSession>{};
@@ -399,7 +403,10 @@ class AgentSessionRepository extends ChangeNotifier implements AgentSessions {
     }
     // Channels are given back before new ones are taken, so the host's count
     // does not overshoot on the way.
-    final keep = [for (final s in mine) if (s.held || chosen.contains(s)) s];
+    final keep = [
+      for (final s in mine)
+        if (s.held || chosen.contains(s)) s,
+    ];
     for (final s in mine) {
       if (!keep.contains(s)) s.want(false);
     }
@@ -711,9 +718,9 @@ class AgentSessionRepository extends ChangeNotifier implements AgentSessions {
   }
 
   static String _unreachable(MachineConnection machine, Object e) => switch (e) {
-        TimeoutException() => '${machine.profile.label} did not answer in time.',
-        _ => 'Could not reach ${machine.profile.label}: $e',
-      };
+    TimeoutException() => '${machine.profile.label} did not answer in time.',
+    _ => 'Could not reach ${machine.profile.label}: $e',
+  };
 
   @override
   Preconnect preconnect(String sessionKey) {

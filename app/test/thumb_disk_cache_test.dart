@@ -56,10 +56,12 @@ void main() {
   Future<Uint8List?> load(WidgetTester tester, ThumbLoader loader, RemoteEntry entry) async {
     Uint8List? bytes;
     var done = false;
-    unawaited(loader.load(files, entry, cancelled: () => false).then((v) {
-      bytes = v;
-      done = true;
-    }));
+    unawaited(
+      loader.load(files, entry, cancelled: () => false).then((v) {
+        bytes = v;
+        done = true;
+      }),
+    );
     await until(tester, () => done);
     return bytes;
   }
@@ -157,11 +159,7 @@ void main() {
     expect(reads(), 1, reason: 'one read of the original across both');
 
     // A new loader (restart): answered from disk.
-    final again = await load(
-      tester,
-      ThumbLoader(store: store, thumbnailer: (_) async => fail('not needed')),
-      entry,
-    );
+    final again = await load(tester, ThumbLoader(store: store, thumbnailer: (_) async => fail('not needed')), entry);
     expect(again, _thumb);
     expect(reads(), 1);
   });

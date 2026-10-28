@@ -156,20 +156,18 @@ class BoardHarness {
   }
 
   List<SingleChildWidget> get providers => [
-        ChangeNotifierProvider.value(value: machines),
-        ChangeNotifierProvider.value(value: fleet),
-        ChangeNotifierProvider.value(value: terminalSettings),
-        ChangeNotifierProvider.value(value: appSettings),
-        ChangeNotifierProvider.value(value: agentScreens),
-        ChangeNotifierProvider(create: (_) => NotificationSettings(MemoryNotificationStore())),
-        Provider<Notifier>.value(value: const NullNotifier()),
-        Provider<PanePreviews>.value(value: previews),
-        Provider<TransportFactory>.value(
-          value: (profile, secrets, onPin, onNotice) => UiTransport(snapshotWith(const [])),
-        ),
-        // A test that adds sessions after these adds it again after them.
-        attentionSetProvider(),
-      ];
+    ChangeNotifierProvider.value(value: machines),
+    ChangeNotifierProvider.value(value: fleet),
+    ChangeNotifierProvider.value(value: terminalSettings),
+    ChangeNotifierProvider.value(value: appSettings),
+    ChangeNotifierProvider.value(value: agentScreens),
+    ChangeNotifierProvider(create: (_) => NotificationSettings(MemoryNotificationStore())),
+    Provider<Notifier>.value(value: const NullNotifier()),
+    Provider<PanePreviews>.value(value: previews),
+    Provider<TransportFactory>.value(value: (profile, secrets, onPin, onNotice) => UiTransport(snapshotWith(const []))),
+    // A test that adds sessions after these adds it again after them.
+    attentionSetProvider(),
+  ];
 
   /// Moves panes to new statuses as if observed [ago] ago.
   Future<void> changeStatuses(
@@ -214,10 +212,8 @@ Future<void> pumpBoard(
       child: MaterialApp(
         theme: brightness == Brightness.dark ? AppTheme.dark() : AppTheme.light(),
         builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            textScaler: TextScaler.linear(textScale),
-            disableAnimations: reduceMotion,
-          ),
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: TextScaler.linear(textScale), disableAnimations: reduceMotion),
           child: child!,
         ),
         home: const HomeShell(),

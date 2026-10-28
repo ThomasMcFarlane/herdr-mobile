@@ -40,6 +40,7 @@ class SettingsGroup extends StatefulWidget {
   final String summary;
   final bool open;
   final VoidCallback onToggle;
+
   /// The group's body, a [RowColumn]: dividers come from neighbouring rows.
   final List<RowSpec> rows;
   final Color? tint;
@@ -104,8 +105,10 @@ class _SettingsGroupState extends State<SettingsGroup> {
     final position = scrollable.position;
     final atTop = viewport.getOffsetToReveal(box, 0).offset - SliverLargeTitle.collapsedExtent(context);
     final atEnd = viewport.getOffsetToReveal(box, 1).offset + FloatingBar.clearance(context);
-    final target = (atEnd <= atTop ? position.pixels.clamp(atEnd, atTop) : atTop)
-        .clamp(position.minScrollExtent, position.maxScrollExtent);
+    final target = (atEnd <= atTop ? position.pixels.clamp(atEnd, atTop) : atTop).clamp(
+      position.minScrollExtent,
+      position.maxScrollExtent,
+    );
     if ((target - position.pixels).abs() < 1) return;
     if (jump) {
       position.jumpTo(target);
@@ -141,7 +144,10 @@ class _SettingsGroupState extends State<SettingsGroup> {
           open: w.open,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [RowColumn(rows: w.rows), const SizedBox(height: Gap.sm)],
+            children: [
+              RowColumn(rows: w.rows),
+              const SizedBox(height: Gap.sm),
+            ],
           ),
         ),
         if (w.divider) Hairline(indent: ListRow.textIndent()),

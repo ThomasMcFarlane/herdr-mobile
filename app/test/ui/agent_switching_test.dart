@@ -64,9 +64,7 @@ class _Home extends StatelessWidget {
   );
 }
 
-List<(String, AgentRef)> _panesHome([int count = 4]) => [
-  for (var i = 1; i <= count; i++) (_id(i), _agent(i)),
-];
+List<(String, AgentRef)> _panesHome([int count = 4]) => [for (var i = 1; i <= count; i++) (_id(i), _agent(i))];
 
 Future<UiHarness> _harness({List<Pane>? panes, bool wrap = true}) async {
   final h = await UiHarness.create([
@@ -332,8 +330,11 @@ void main() {
       await tester.pump();
       await _swipeLeft(tester);
       expect(_onScreen(tester), _id(2));
-      expect(tester.widget<TextField>(find.byType(TextField)).controller!.text, isEmpty,
-          reason: 'the next agent has its own composer');
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        isEmpty,
+        reason: 'the next agent has its own composer',
+      );
 
       await _swipeRight(tester);
       expect(_onScreen(tester), _id(4));
@@ -752,7 +753,10 @@ void main() {
       await run(
         tester,
         (t, _) => t.tapAt(centre),
-        child: GestureDetector(onTap: () => taps++, child: const ColoredBox(color: Color(0xFF000000))),
+        child: GestureDetector(
+          onTap: () => taps++,
+          child: const ColoredBox(color: Color(0xFF000000)),
+        ),
       );
 
       expect(taps, 1);
@@ -786,10 +790,7 @@ void main() {
       final steps = await run(
         tester,
         quickLeft,
-        child: const SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: SizedBox(width: 200, height: 300),
-        ),
+        child: const SingleChildScrollView(scrollDirection: Axis.horizontal, child: SizedBox(width: 200, height: 300)),
       );
 
       expect(steps, [1]);
@@ -801,21 +802,17 @@ void main() {
       final controller = ScrollController();
       addTearDown(controller.dispose);
       var peekedAtEnd = true;
-      final steps = await run(
-        tester,
-        (t, _) async {
-          // dx -120, dy -42: a slant of 0.35, under the 0.4 a swipe allows.
-          final g = await t.startGesture(centre);
-          for (var i = 1; i <= 6; i++) {
-            await g.moveBy(const Offset(-20, -7), timeStamp: Duration(milliseconds: 16 * i));
-            await t.pump(const Duration(milliseconds: 16));
-          }
-          await t.pump();
-          peekedAtEnd = find.text('peek 1').evaluate().isNotEmpty;
-          await g.up(timeStamp: const Duration(milliseconds: 96));
-        },
-        child: ListView(controller: controller, children: const [SizedBox(height: 2000)]),
-      );
+      final steps = await run(tester, (t, _) async {
+        // dx -120, dy -42: a slant of 0.35, under the 0.4 a swipe allows.
+        final g = await t.startGesture(centre);
+        for (var i = 1; i <= 6; i++) {
+          await g.moveBy(const Offset(-20, -7), timeStamp: Duration(milliseconds: 16 * i));
+          await t.pump(const Duration(milliseconds: 16));
+        }
+        await t.pump();
+        peekedAtEnd = find.text('peek 1').evaluate().isNotEmpty;
+        await g.up(timeStamp: const Duration(milliseconds: 96));
+      }, child: ListView(controller: controller, children: const [SizedBox(height: 2000)]));
 
       expect(controller.offset, greaterThan(0), reason: 'the list scrolled');
       expect(peekedAtEnd, isFalse, reason: 'once the list scrolls the card is taken back');
@@ -863,13 +860,11 @@ void main() {
       final p2 = (snapshot['panes'] as List).cast<Map<String, dynamic>>().firstWhere((p) => p['pane_id'] == _id(2));
       p2['agent_session'] = {'agent': 'omp', 'kind': 'path', 'value': ompLog};
       final h = await UiHarness.create([
-        (
-          profile: const MachineProfile(id: _machine, label: 'box', host: 'h', username: 'u'),
-          snapshot: snapshot,
-        ),
+        (profile: const MachineProfile(id: _machine, label: 'box', host: 'h', username: 'u'), snapshot: snapshot),
       ]);
       h.transports[_machine]!.paneText = 'ready';
-      final source = FakeLogSource()..write([sessionLine(), userLine('u1', 'fix the build'), assistantLine('a1', 'Fixed it.')]);
+      final source = FakeLogSource()
+        ..write([sessionLine(), userLine('u1', 'fix the build'), assistantLine('a1', 'Fixed it.')]);
       return (
         h,
         <SingleChildWidget>[
@@ -893,7 +888,9 @@ void main() {
       await settle(tester);
     }
 
-    testWidgets('switches between the chat and the terminal of the same agent, remembered for this run', (tester) async {
+    testWidgets('switches between the chat and the terminal of the same agent, remembered for this run', (
+      tester,
+    ) async {
       final (h, observed) = await withOmp();
       await _pump(tester, h, home: _panesHome(2), extra: observed);
 
@@ -964,10 +961,7 @@ void main() {
       await _pump(tester, h);
 
       unawaited(
-        resumeAgent(
-          tester.state<NavigatorState>(find.byType(Navigator)),
-          FrontAgent(_agent(2), AgentView.terminal),
-        ),
+        resumeAgent(tester.state<NavigatorState>(find.byType(Navigator)), FrontAgent(_agent(2), AgentView.terminal)),
       );
       await tester.pump();
 

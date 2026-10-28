@@ -104,13 +104,13 @@ class _FakeDecoder {
 }
 
 RemoteEntry _entry(String name, int? size, {DateTime? modified, String dir = '/p'}) => RemoteEntry(
-      name: name,
-      path: '$dir/$name',
-      kind: RemoteEntryKind.file,
-      resolvedKind: RemoteEntryKind.file,
-      size: size,
-      modified: modified ?? DateTime.utc(2026, 5, 20),
-    );
+  name: name,
+  path: '$dir/$name',
+  kind: RemoteEntryKind.file,
+  resolvedKind: RemoteEntryKind.file,
+  size: size,
+  modified: modified ?? DateTime.utc(2026, 5, 20),
+);
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -119,12 +119,8 @@ void main() {
     late _GatedFiles files;
     late _FakeDecoder decoder;
 
-    PhotoThumbs make({int maxConcurrent = 3, int autoLimit = 1000, int capacity = 120}) => PhotoThumbs(
-          maxConcurrent: maxConcurrent,
-          autoLimit: autoLimit,
-          capacity: capacity,
-          decoder: decoder.call,
-        );
+    PhotoThumbs make({int maxConcurrent = 3, int autoLimit = 1000, int capacity = 120}) =>
+        PhotoThumbs(maxConcurrent: maxConcurrent, autoLimit: autoLimit, capacity: capacity, decoder: decoder.call);
 
     setUp(() {
       files = _GatedFiles();
@@ -133,13 +129,13 @@ void main() {
 
     /// [n] entries `p0..` of [size] bytes each, registered with the files.
     List<RemoteEntry> batch(int n, {int size = 100}) => [
-          for (var i = 0; i < n; i++)
-            () {
-              final e = _entry('p$i.png', size);
-              files.sizes[e.path] = size;
-              return e;
-            }(),
-        ];
+      for (var i = 0; i < n; i++)
+        () {
+          final e = _entry('p$i.png', size);
+          files.sizes[e.path] = size;
+          return e;
+        }(),
+    ];
 
     test('never more than maxConcurrent reads are in flight', () async {
       final thumbs = make();
@@ -403,31 +399,34 @@ void main() {
       thumbs.dispose();
     });
 
-    test('a read that fails (or a file that is no picture) is a failed tile, never a throw; asking again retries', () async {
-      final thumbs = make();
-      files.openAll();
-      final broken = _entry('broken.png', 100);
-      files.sizes[broken.path] = 100;
-      files.failing.add(broken.path);
-      final empty = _entry('empty.png', 0);
-      final held = thumbs.acquire(files, broken);
-      final emptyHeld = thumbs.acquire(files, empty);
-      await flush();
+    test(
+      'a read that fails (or a file that is no picture) is a failed tile, never a throw; asking again retries',
+      () async {
+        final thumbs = make();
+        files.openAll();
+        final broken = _entry('broken.png', 100);
+        files.sizes[broken.path] = 100;
+        files.failing.add(broken.path);
+        final empty = _entry('empty.png', 0);
+        final held = thumbs.acquire(files, broken);
+        final emptyHeld = thumbs.acquire(files, empty);
+        await flush();
 
-      expect(held.phase, ThumbPhase.failed);
-      expect(emptyHeld.phase, ThumbPhase.failed);
-      expect(files.reads, [broken.path], reason: 'an empty file has nothing to read');
-      expect(thumbs.inFlight, 0);
-      thumbs.release(held);
+        expect(held.phase, ThumbPhase.failed);
+        expect(emptyHeld.phase, ThumbPhase.failed);
+        expect(files.reads, [broken.path], reason: 'an empty file has nothing to read');
+        expect(thumbs.inFlight, 0);
+        thumbs.release(held);
 
-      files.failing.clear();
-      final retry = thumbs.acquire(files, broken);
-      await flush();
-      expect(retry.phase, ThumbPhase.ready);
-      thumbs.release(retry);
-      thumbs.release(emptyHeld);
-      thumbs.dispose();
-    });
+        files.failing.clear();
+        final retry = thumbs.acquire(files, broken);
+        await flush();
+        expect(retry.phase, ThumbPhase.ready);
+        thumbs.release(retry);
+        thumbs.release(emptyHeld);
+        thumbs.dispose();
+      },
+    );
   });
 
   group('PhotoGrid', () {
@@ -445,29 +444,34 @@ void main() {
     tearDown(() => thumbs.dispose());
 
     List<RemoteEntry> photos(int n, {int size = 100}) => [
-          for (var i = 0; i < n; i++)
-            () {
-              final e = _entry('IMG_$i.png', size, dir: '/pics');
-              files.sizes[e.path] = size;
-              return e;
-            }(),
-        ];
+      for (var i = 0; i < n; i++)
+        () {
+          final e = _entry('IMG_$i.png', size, dir: '/pics');
+          files.sizes[e.path] = size;
+          return e;
+        }(),
+    ];
 
-    Future<void> pumpGrid(WidgetTester tester, List<RemoteEntry> entries, {ValueChanged<int>? onOpen, Size? size}) async {
+    Future<void> pumpGrid(
+      WidgetTester tester,
+      List<RemoteEntry> entries, {
+      ValueChanged<int>? onOpen,
+      Size? size,
+    }) async {
       tester.view
         ..physicalSize = (size ?? const Size(412, 892)) * 2.625
         ..devicePixelRatio = 2.625;
       addTearDown(tester.view.reset);
-      await tester.pumpWidget(MaterialApp(
-        theme: AppTheme.light(),
-        home: Scaffold(
-          body: CustomScrollView(
-            slivers: [
-              PhotoGrid(files: files, entries: entries, thumbs: thumbs, onOpen: onOpen ?? (_) {}),
-            ],
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: Scaffold(
+            body: CustomScrollView(
+              slivers: [PhotoGrid(files: files, entries: entries, thumbs: thumbs, onOpen: onOpen ?? (_) {})],
+            ),
           ),
         ),
-      ));
+      );
       await tester.pump();
     }
 
@@ -496,7 +500,9 @@ void main() {
       expect(r[3].left, 0);
     });
 
-    testWidgets('a tile shows a still placeholder while it waits, the picture when ready, and no spinner', (tester) async {
+    testWidgets('a tile shows a still placeholder while it waits, the picture when ready, and no spinner', (
+      tester,
+    ) async {
       await pumpGrid(tester, photos(4));
       await tester.pump();
       expect(find.byType(RawImage), findsNothing);
@@ -513,7 +519,9 @@ void main() {
       expect(tester.binding.hasScheduledFrame, isFalse);
     });
 
-    testWidgets('an over-limit file shows a glyph and its size and is never read; a failed one an off-glyph', (tester) async {
+    testWidgets('an over-limit file shows a glyph and its size and is never read; a failed one an off-glyph', (
+      tester,
+    ) async {
       final entries = [
         _entry('big.png', 5 * 1024 * 1024, dir: '/pics'),
         _entry('bad.png', 100, dir: '/pics'),
@@ -539,10 +547,7 @@ void main() {
     testWidgets('each tile is a button labelled name and size; the name is never drawn', (tester) async {
       final handle = tester.ensureSemantics();
       final long = 'Ảnh kỷ niệm chuyến đi Hạ Long — ${'rất dài ' * 20}.png';
-      final entries = [
-        _entry(long, 2048, dir: '/pics'),
-        _entry('b.png', 100, dir: '/pics'),
-      ];
+      final entries = [_entry(long, 2048, dir: '/pics'), _entry('b.png', 100, dir: '/pics')];
       var opened = -1;
       await pumpGrid(tester, entries, onOpen: (i) => opened = i);
 
@@ -589,15 +594,20 @@ void main() {
       expect(thumbs.inFlight, 3, reason: 'the three old slots were handed on at once');
       final newReads = files.reads.skip(3).toList();
       expect(newReads.length, greaterThanOrEqualTo(3));
-      expect(newReads.every((p) => int.parse(RegExp(r'IMG_(\d+)').firstMatch(p)!.group(1)!) > 250), isTrue,
-          reason: 'only tiles near the end were read after the jump: $newReads');
+      expect(
+        newReads.every((p) => int.parse(RegExp(r'IMG_(\d+)').firstMatch(p)!.group(1)!) > 250),
+        isTrue,
+        reason: 'only tiles near the end were read after the jump: $newReads',
+      );
       // Nothing from the middle of the folder was ever fetched.
       expect(files.reads.length, lessThan(10));
     });
 
     testWidgets('320 dp wide: tiles stay square and 3 across, with the long size text fitting', (tester) async {
-      await pumpGrid(tester, [_entry('huge-photo.png', 1234 * 1024 * 1024, dir: '/pics'), ...photos(5)],
-          size: const Size(320, 640));
+      await pumpGrid(tester, [
+        _entry('huge-photo.png', 1234 * 1024 * 1024, dir: '/pics'),
+        ...photos(5),
+      ], size: const Size(320, 640));
       final tiles = find.byType(PressBuilder);
       final first = tester.getRect(tiles.at(0));
       final third = tester.getRect(tiles.at(2));
@@ -614,7 +624,9 @@ void main() {
         Scaffold(
           body: CustomScrollView(
             slivers: [
-              SliverSafeArea(sliver: PhotoGrid(files: files, entries: photos(14), thumbs: thumbs, onOpen: (_) {})),
+              SliverSafeArea(
+                sliver: PhotoGrid(files: files, entries: photos(14), thumbs: thumbs, onOpen: (_) {}),
+              ),
             ],
           ),
         ),
@@ -648,16 +660,23 @@ void main() {
       return (fs, dir);
     }
 
-    Future<void> open(WidgetTester tester, FakeFs fs, String dir, {FileBrowserMode mode = FileBrowserMode.browse}) async {
+    Future<void> open(
+      WidgetTester tester,
+      FakeFs fs,
+      String dir, {
+      FileBrowserMode mode = FileBrowserMode.browse,
+    }) async {
       tester.view
         ..physicalSize = const Size(412, 892) * 2.625
         ..devicePixelRatio = 2.625;
       addTearDown(tester.view.reset);
-      await tester.pumpWidget(MaterialApp(
-        key: UniqueKey(),
-        theme: AppTheme.light(),
-        home: FileBrowserScreen(machine: machineWithFiles(fs), path: dir, mode: mode),
-      ));
+      await tester.pumpWidget(
+        MaterialApp(
+          key: UniqueKey(),
+          theme: AppTheme.light(),
+          home: FileBrowserScreen(machine: machineWithFiles(fs), path: dir, mode: mode),
+        ),
+      );
       await tester.pump();
       await _settle(tester);
     }
@@ -680,10 +699,14 @@ void main() {
     });
 
     testWidgets('hidden pictures count only while hidden files are shown', (tester) async {
-      final (fs, dir) = await photoFolder(tester, 5, extra: (fs, d) {
-        fs.addFile('$d/.secret.png', Uint8List(10));
-        fs.addFile('$d/.second.png', Uint8List(10));
-      });
+      final (fs, dir) = await photoFolder(
+        tester,
+        5,
+        extra: (fs, d) {
+          fs.addFile('$d/.secret.png', Uint8List(10));
+          fs.addFile('$d/.second.png', Uint8List(10));
+        },
+      );
       await open(tester, fs, dir);
       expect(find.byTooltip('Photos'), findsNothing);
 
@@ -697,10 +720,14 @@ void main() {
     });
 
     testWidgets('the grid replaces the list, the header counts photos, and the list comes back', (tester) async {
-      final (fs, dir) = await photoFolder(tester, 8, extra: (fs, d) {
-        fs.addDir('$d/raw');
-        fs.addFile('$d/notes.txt', 'x');
-      });
+      final (fs, dir) = await photoFolder(
+        tester,
+        8,
+        extra: (fs, d) {
+          fs.addDir('$d/raw');
+          fs.addFile('$d/notes.txt', 'x');
+        },
+      );
       await open(tester, fs, dir);
       expect(find.text('10 items'), findsOneWidget);
       expect(find.byType(FileRow), findsNWidgets(10));
@@ -722,7 +749,9 @@ void main() {
       expect(find.text('10 items'), findsOneWidget);
     });
 
-    testWidgets('tapping a tile opens the viewer on that photo, paging through the folder in natural order', (tester) async {
+    testWidgets('tapping a tile opens the viewer on that photo, paging through the folder in natural order', (
+      tester,
+    ) async {
       final (fs, dir) = await photoFolder(tester, 12, extra: (fs, d) => fs.addFile('$d/readme.txt', 'x'));
       await open(tester, fs, dir);
       await tester.tap(find.byTooltip('Photos'));
@@ -734,8 +763,9 @@ void main() {
 
       final viewer = tester.state<PhotoViewerState>(find.byType(PhotoViewer));
       expect(viewer.model.index, 2);
-      expect(viewer.model.items.map((i) => i.path), [for (var i = 1; i <= 12; i++) '$dir/IMG_$i.png'],
-          reason: 'IMG_2 before IMG_10, no readme');
+      expect(viewer.model.items.map((i) => i.path), [
+        for (var i = 1; i <= 12; i++) '$dir/IMG_$i.png',
+      ], reason: 'IMG_2 before IMG_10, no readme');
       expect(viewer.model.current.name, 'IMG_3.png');
     });
 
@@ -770,14 +800,20 @@ void main() {
 
       expect(find.text('5,000 photos'), findsOneWidget);
       expect(find.byType(PhotoGrid), findsOneWidget);
-      expect(find.descendant(of: find.byType(PhotoGrid), matching: find.byType(PressBuilder)).evaluate().length, lessThan(40));
+      expect(
+        find.descendant(of: find.byType(PhotoGrid), matching: find.byType(PressBuilder)).evaluate().length,
+        lessThan(40),
+      );
       expect(fs.calls.where((c) => c.startsWith('read')), isEmpty, reason: '3 MB files are not fetched for thumbnails');
 
       final scroll = tester.state<ScrollableState>(find.byType(Scrollable).first);
       scroll.position.jumpTo(scroll.position.maxScrollExtent);
       await tester.pump();
       await tester.pump();
-      expect(find.descendant(of: find.byType(PhotoGrid), matching: find.byType(PressBuilder)).evaluate().length, lessThan(40));
+      expect(
+        find.descendant(of: find.byType(PhotoGrid), matching: find.byType(PressBuilder)).evaluate().length,
+        lessThan(40),
+      );
     });
 
     group('screenshots', () {
@@ -902,9 +938,19 @@ Future<Uint8List> _art(WidgetTester tester, int seed, {bool portrait = false}) a
           HSLColor.fromAHSL(1, (hue + 70) % 360, 0.75, 0.32).toColor(),
         ]),
     );
-    canvas.drawCircle(ui.Offset(w * (0.25 + 0.12 * (seed % 4)), h * 0.3), h * 0.12, ui.Paint()..color = const ui.Color(0xD9FFFFFF));
-    canvas.drawRect(ui.Rect.fromLTWH(0, h * 0.72, w.toDouble(), h * 0.28), ui.Paint()..color = const ui.Color(0x59000000));
-    canvas.drawRect(ui.Rect.fromLTWH(w * 0.1, h * 0.55, w * 0.2, h * 0.3), ui.Paint()..color = const ui.Color(0x99000000));
+    canvas.drawCircle(
+      ui.Offset(w * (0.25 + 0.12 * (seed % 4)), h * 0.3),
+      h * 0.12,
+      ui.Paint()..color = const ui.Color(0xD9FFFFFF),
+    );
+    canvas.drawRect(
+      ui.Rect.fromLTWH(0, h * 0.72, w.toDouble(), h * 0.28),
+      ui.Paint()..color = const ui.Color(0x59000000),
+    );
+    canvas.drawRect(
+      ui.Rect.fromLTWH(w * 0.1, h * 0.55, w * 0.2, h * 0.3),
+      ui.Paint()..color = const ui.Color(0x99000000),
+    );
     final image = await recorder.endRecording().toImage(w, h);
     final data = await image.toByteData(format: ui.ImageByteFormat.png);
     image.dispose();

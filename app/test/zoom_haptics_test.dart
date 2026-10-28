@@ -79,26 +79,25 @@ void main() {
   group('pinching the terminal', () {
     Future<ValueNotifier<double>> pump(WidgetTester tester) async {
       final size = ValueNotifier(defaultTerminalFontSize);
-      await tester.pumpWidget(MaterialApp(
-        theme: AppTheme.dark(),
-        home: Scaffold(
-          body: Align(
-            alignment: Alignment.topLeft,
-            child: SizedBox(
-              width: 360,
-              height: 400,
-              child: ValueListenableBuilder<double>(
-                valueListenable: size,
-                builder: (_, value, _) => TerminalView(
-                  text: 'a\r\nb',
-                  fontSize: value,
-                  onFontSizeChanged: (v) => size.value = v,
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.dark(),
+          home: Scaffold(
+            body: Align(
+              alignment: Alignment.topLeft,
+              child: SizedBox(
+                width: 360,
+                height: 400,
+                child: ValueListenableBuilder<double>(
+                  valueListenable: size,
+                  builder: (_, value, _) =>
+                      TerminalView(text: 'a\r\nb', fontSize: value, onFontSizeChanged: (v) => size.value = v),
                 ),
               ),
             ),
           ),
         ),
-      ));
+      );
       return size;
     }
 

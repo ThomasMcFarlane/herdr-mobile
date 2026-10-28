@@ -167,10 +167,16 @@ void main() {
       session.waitingOnBackground = true;
       await pump(tester, session);
       expect(
-        find.bySemanticsLabel('Background work, 1 running, omp continues by itself when it finishes, double tap to open'),
+        find.bySemanticsLabel(
+          'Background work, 1 running, omp continues by itself when it finishes, double tap to open',
+        ),
         findsOneWidget,
       );
-      expect(find.bySemanticsLabel('1 running in background'), findsNothing, reason: 'the visible lines are inside the one node');
+      expect(
+        find.bySemanticsLabel('1 running in background'),
+        findsNothing,
+        reason: 'the visible lines are inside the one node',
+      );
       handle.dispose();
     });
 
@@ -371,9 +377,7 @@ void main() {
       await holdFor(tester, find.text('Stop'));
       expect(find.text('Stopping\u2026'), findsOneWidget);
 
-      session.setBackground(
-        work([task('bg_6', status: BackgroundStatus.stopped)]),
-      );
+      session.setBackground(work([task('bg_6', status: BackgroundStatus.stopped)]));
       await tester.pump();
       expect(find.text('Stopping\u2026'), findsNothing);
       expect(find.text('Couldn’t confirm'), findsNothing);
@@ -588,7 +592,10 @@ void main() {
     testWidgets('a subagent that has its own roster opens it instead of expanding', (tester) async {
       final session = waitingTerminal();
       session.roster = const [
-        SubagentEntry(info: SubagentInfo(name: 'RLFrameworks'), state: SubagentState.running),
+        SubagentEntry(
+          info: SubagentInfo(name: 'RLFrameworks'),
+          state: SubagentState.running,
+        ),
       ];
       session.backgroundWork = work([
         task('RLFrameworks', kind: BackgroundKind.agent, title: 'Survey RL frameworks', stop: StopRoute.none),
@@ -599,7 +606,11 @@ void main() {
       await tester.tap(find.text('Survey RL frameworks'));
       await settle(tester);
       expect(find.text('Background work \u00b7 1'), findsNothing, reason: 'the sheet closed');
-      expect(find.text('RLFrameworks'), findsOneWidget, reason: 'the roster row; the background sheet row says "Survey RL frameworks"');
+      expect(
+        find.text('RLFrameworks'),
+        findsOneWidget,
+        reason: 'the roster row; the background sheet row says "Survey RL frameworks"',
+      );
     });
 
     testWidgets('a machine that is not reachable: the last list, no actions', (tester) async {

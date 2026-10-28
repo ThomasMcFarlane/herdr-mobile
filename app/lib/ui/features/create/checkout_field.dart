@@ -3,7 +3,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/models/worktrees.dart';
 import '../../../data/words/plural.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'machine_field.dart' show MachineField, fieldMinHeight, shortPath;
 import 'new_agent_session_view_model.dart';
 
@@ -40,10 +42,10 @@ class CheckoutField extends StatelessWidget {
   }
 
   String get _text => switch (choice) {
-        ThisFolder() => 'This folder',
-        ExistingCheckout(:final path) => _entry(path)?.name ?? _nameOf(path),
-        NewWorktree() => 'New worktree',
-      };
+    ThisFolder() => 'This folder',
+    ExistingCheckout(:final path) => _entry(path)?.name ?? _nameOf(path),
+    NewWorktree() => 'New worktree',
+  };
 
   String get _helper {
     switch (choice) {
@@ -60,7 +62,10 @@ class CheckoutField extends StatelessWidget {
   }
 
   void _choose(BuildContext context) {
-    final others = [for (final c in checkouts) if (c.path != folder) c];
+    final others = [
+      for (final c in checkouts)
+        if (c.path != folder) c,
+    ];
     showAppSheet<void>(
       context,
       builder: (ctx) {
@@ -71,16 +76,15 @@ class CheckoutField extends StatelessWidget {
           required IconData icon,
           required bool selected,
           required CheckoutChoice picks,
-        }) =>
-            ListRow(
-              title: title,
-              subtitle: subtitle,
-              leading: Icon(selected ? LucideIcons.check : icon, size: IconSize.lead, color: ds.textSecondary),
-              onTap: () {
-                Navigator.of(ctx).pop();
-                onSelect(picks);
-              },
-            );
+        }) => ListRow(
+          title: title,
+          subtitle: subtitle,
+          leading: Icon(selected ? LucideIcons.check : icon, size: IconSize.lead, color: ds.textSecondary),
+          onTap: () {
+            Navigator.of(ctx).pop();
+            onSelect(picks);
+          },
+        );
 
         final rows = [
           row(
@@ -119,10 +123,7 @@ class CheckoutField extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              for (var i = 0; i < rows.length; i++) ...[
-                if (i > 0) Hairline(indent: ListRow.textIndent()),
-                rows[i],
-              ],
+              for (var i = 0; i < rows.length; i++) ...[if (i > 0) Hairline(indent: ListRow.textIndent()), rows[i]],
             ],
           ),
         );

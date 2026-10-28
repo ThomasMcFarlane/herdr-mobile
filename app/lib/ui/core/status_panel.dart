@@ -12,9 +12,9 @@ abstract final class StatusTint {
   static const pad = Gap.md;
 
   static BoxDecoration decoration(Ds ds, Color color, {bool pressed = false}) => BoxDecoration(
-        color: pressed ? ds.washPressed(color) : ds.wash(color),
-        borderRadius: BorderRadius.circular(Radii.md),
-      );
+    color: pressed ? ds.washPressed(color) : ds.wash(color),
+    borderRadius: BorderRadius.circular(Radii.md),
+  );
 }
 
 /// Flat tinted panel for a state that needs a sentence: a connection error, a
@@ -70,10 +70,7 @@ class StatusPanel extends StatelessWidget {
           children: [
             if (icon != null)
               Padding(
-                padding: EdgeInsets.only(
-                  right: Gap.md,
-                  top: title != null ? 1 + StatusTint.pad - vertical : 0,
-                ),
+                padding: EdgeInsets.only(right: Gap.md, top: title != null ? 1 + StatusTint.pad - vertical : 0),
                 child: ExcludeSemantics(child: Icon(icon, size: 18, color: color)),
               ),
             Expanded(
@@ -86,10 +83,7 @@ class StatusPanel extends StatelessWidget {
                     if (title != null)
                       Semantics(
                         header: true,
-                        child: Text(
-                          title!,
-                          style: Type.answer.copyWith(color: ds.text),
-                        ),
+                        child: Text(title!, style: Type.answer.copyWith(color: ds.text)),
                       ),
                     if (message != null && message!.isNotEmpty)
                       Padding(
@@ -98,11 +92,14 @@ class StatusPanel extends StatelessWidget {
                           message!,
                           maxLines: messageMaxLines,
                           overflow: messageMaxLines == null ? null : TextOverflow.ellipsis,
-                          style: (mono ? Mono.base : Type.secondary)
-                              .copyWith(color: ds.textSecondary),
+                          style: (mono ? Mono.base : Type.secondary).copyWith(color: ds.textSecondary),
                         ),
                       ),
-                    if (footer != null) Padding(padding: const EdgeInsets.only(top: Gap.md), child: footer),
+                    if (footer != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: Gap.md),
+                        child: footer,
+                      ),
                   ],
                 ),
               ),
@@ -161,10 +158,7 @@ class StatusStrip extends StatelessWidget {
           decoration: StatusTint.decoration(ds, color, pressed: pressed && onTap != null),
           child: Row(
             children: [
-              if (leading != null) ...[
-                ExcludeSemantics(child: leading),
-                const SizedBox(width: 10),
-              ],
+              if (leading != null) ...[ExcludeSemantics(child: leading), const SizedBox(width: 10)],
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: Gap.sm),

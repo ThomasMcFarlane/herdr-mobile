@@ -48,15 +48,20 @@ class _Android {
 
   /// What Android sends when a notification is tapped.
   Future<void> tap(String? payload, {int type = 0}) async {
-    final data = _channel.codec.encodeMethodCall(MethodCall('didReceiveNotificationResponse', {
-      'notificationId': 7,
-      'actionId': null,
-      'input': null,
-      'payload': payload,
-      'notificationResponseType': type,
-    }));
-    await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .handlePlatformMessage(_channel.name, data, (_) {});
+    final data = _channel.codec.encodeMethodCall(
+      MethodCall('didReceiveNotificationResponse', {
+        'notificationId': 7,
+        'actionId': null,
+        'input': null,
+        'payload': payload,
+        'notificationResponseType': type,
+      }),
+    );
+    await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.handlePlatformMessage(
+      _channel.name,
+      data,
+      (_) {},
+    );
   }
 }
 
@@ -66,8 +71,7 @@ AgentNotification _note({
   int id = 42,
   NotifyKind kind = NotifyKind.needsYou,
   String link = 'herdr://agent/m1/w1%3Ap1',
-}) =>
-    AgentNotification(id: id, kind: kind, title: 'omp needs you', body: 'Run rm -rf build?', link: link);
+}) => AgentNotification(id: id, kind: kind, title: 'omp needs you', body: 'Run rm -rf build?', link: link);
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -77,14 +81,15 @@ void main() {
     android = _Android();
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     AndroidFlutterLocalNotificationsPlugin.registerWith();
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(_channel, android.handle);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+      _channel,
+      android.handle,
+    );
   });
 
   tearDown(() {
     debugDefaultTargetPlatformOverride = null;
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(_channel, null);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(_channel, null);
   });
 
   Future<Notifier> start({Color? accent}) async {
@@ -181,7 +186,10 @@ void main() {
     });
 
     test('the Watching notice is recognised by its channel on any id, and by its id without one', () async {
-      android.active = [_active(99, watchingChannelId), {'id': watchingNotificationId, 'channelId': null}];
+      android.active = [
+        _active(99, watchingChannelId),
+        {'id': watchingNotificationId, 'channelId': null},
+      ];
       final notifier = await start();
       await notifier.cancelAll();
       expect(android.called('cancel'), isEmpty);
@@ -211,8 +219,11 @@ void main() {
       expect(details['silent'], isTrue);
       expect(details['autoCancel'], isFalse);
       expect(started()['foregroundServiceTypes'], [AndroidServiceForegroundType.foregroundServiceTypeSpecialUse.value]);
-      expect(started()['startType'], AndroidServiceStartType.startNotSticky.index,
-          reason: 'a killed process must not leave a notice nothing backs');
+      expect(
+        started()['startType'],
+        AndroidServiceStartType.startNotSticky.index,
+        reason: 'a killed process must not leave a notice nothing backs',
+      );
     });
 
     test('a new count updates the text; the same numbers ask Android nothing', () async {
@@ -376,48 +387,75 @@ void main() {
   group('answer buttons', () {
     const link = 'herdr://agent/m1/w1%3Ap1';
     const yes = NotificationAnswer(
-        machineId: 'm1', paneId: 'w1:p1', digest: '00ff00ff00ff00ff', index: 0, nonce: 'k-1', label: '1. Yes');
+      machineId: 'm1',
+      paneId: 'w1:p1',
+      digest: '00ff00ff00ff00ff',
+      index: 0,
+      nonce: 'k-1',
+      label: '1. Yes',
+    );
     const no = NotificationAnswer(
-        machineId: 'm1', paneId: 'w1:p1', digest: '00ff00ff00ff00ff', index: 2, nonce: 'k-1', label: '3. No');
+      machineId: 'm1',
+      paneId: 'w1:p1',
+      digest: '00ff00ff00ff00ff',
+      index: 2,
+      nonce: 'k-1',
+      label: '3. No',
+    );
 
     NotificationResponse pressed(NotificationAnswer a, {int id = 42}) => NotificationResponse(
-          notificationResponseType: NotificationResponseType.selectedNotificationAction,
-          id: id,
-          actionId: a.actionId,
-          payload: link,
-        );
+      notificationResponseType: NotificationResponseType.selectedNotificationAction,
+      id: id,
+      actionId: a.actionId,
+      payload: link,
+    );
 
     /// The press crosses a port: give the event loop a turn.
     Future<void> settle() => Future<void>.delayed(const Duration(milliseconds: 20));
 
     test('buttons are actions that do not open the app; the whole question is the expanded text', () async {
       final notifier = await start();
-      await notifier.show(const AgentNotification(
-        id: 42,
-        kind: NotifyKind.needsYou,
-        title: 'api',
-        body: 'Do you want to proceed?\ngit push origin main\nneeds you · claude · Alpha',
-        collapsed: 'git push origin main',
-        link: link,
-        answers: [yes, no],
-      ));
+      await notifier.show(
+        const AgentNotification(
+          id: 42,
+          kind: NotifyKind.needsYou,
+          title: 'api',
+          body: 'Do you want to proceed?\ngit push origin main\nneeds you · claude · Alpha',
+          collapsed: 'git push origin main',
+          link: link,
+          answers: [yes, no],
+        ),
+      );
       final shown = android.only('show');
       expect(shown['body'], 'git push origin main', reason: 'what a heads-up shows is the command');
       final details = shown['platformSpecifics'] as Map;
-      expect((details['styleInformation'] as Map)['bigText'],
-          'Do you want to proceed?\ngit push origin main\nneeds you · claude · Alpha');
+      expect(
+        (details['styleInformation'] as Map)['bigText'],
+        'Do you want to proceed?\ngit push origin main\nneeds you · claude · Alpha',
+      );
       final actions = (details['actions'] as List).cast<Map>();
       expect(actions.map((a) => a['title']), ['1. Yes', '3. No']);
       expect(actions.map((a) => a['id']), [yes.actionId, no.actionId]);
       expect(actions.map((a) => a['showsUserInterface']), everyElement(isFalse));
-      expect(actions.map((a) => a['cancelNotification']), everyElement(isTrue),
-          reason: 'a pressed button must not stay to be pressed again');
+      expect(
+        actions.map((a) => a['cancelNotification']),
+        everyElement(isTrue),
+        reason: 'a pressed button must not stay to be pressed again',
+      );
     });
 
     test('never more than two buttons, and none for a notification without answers', () async {
       final notifier = await start();
-      await notifier.show(const AgentNotification(
-        id: 1, kind: NotifyKind.needsYou, title: 't', body: 'b', link: link, answers: [yes, no, yes]));
+      await notifier.show(
+        const AgentNotification(
+          id: 1,
+          kind: NotifyKind.needsYou,
+          title: 't',
+          body: 'b',
+          link: link,
+          answers: [yes, no, yes],
+        ),
+      );
       expect(((android.only('show')['platformSpecifics'] as Map)['actions'] as List), hasLength(2));
       android.calls.clear();
       await notifier.show(_note());
@@ -428,10 +466,17 @@ void main() {
 
     test('an action id carries which option of which question, and survives odd names', () {
       const odd = NotificationAnswer(
-          machineId: 'a|b c', paneId: 'w1:p%2', digest: 'deadbeefdeadbeef', index: 11, nonce: 'x|y-3');
+        machineId: 'a|b c',
+        paneId: 'w1:p%2',
+        digest: 'deadbeefdeadbeef',
+        index: 11,
+        nonce: 'x|y-3',
+      );
       final back = NotificationAnswer.tryParse(odd.actionId)!;
-      expect([back.machineId, back.paneId, back.digest, back.index, back.nonce],
-          ['a|b c', 'w1:p%2', 'deadbeefdeadbeef', 11, 'x|y-3']);
+      expect(
+        [back.machineId, back.paneId, back.digest, back.index, back.nonce],
+        ['a|b c', 'w1:p%2', 'deadbeefdeadbeef', 11, 'x|y-3'],
+      );
       expect(NotificationAnswer.tryParse(null), isNull);
       expect(NotificationAnswer.tryParse('open'), isNull);
       expect(NotificationAnswer.tryParse('answer|m|p|d|x|n'), isNull, reason: 'the index is a number');
@@ -456,10 +501,19 @@ void main() {
       final notifier = await start();
       final heard = <int>[];
       notifier.onAnswer((answer, id) async => heard.add(id));
-      notificationActionInBackground(const NotificationResponse(
-          notificationResponseType: NotificationResponseType.selectedNotificationAction, id: 3, actionId: 'other'));
-      notificationActionInBackground(const NotificationResponse(
-          notificationResponseType: NotificationResponseType.selectedNotificationAction, id: 3));
+      notificationActionInBackground(
+        const NotificationResponse(
+          notificationResponseType: NotificationResponseType.selectedNotificationAction,
+          id: 3,
+          actionId: 'other',
+        ),
+      );
+      notificationActionInBackground(
+        const NotificationResponse(
+          notificationResponseType: NotificationResponseType.selectedNotificationAction,
+          id: 3,
+        ),
+      );
       await settle();
       expect(heard, isEmpty);
       expect(android.called('show'), isEmpty);

@@ -90,7 +90,14 @@ class _Follow {
   void _start() {
     final String command;
     try {
-      command = keeperFollowCommand(_path, from: _from, until: _until, digest: _digest, tailBytes: _tailBytes, zipped: true);
+      command = keeperFollowCommand(
+        _path,
+        from: _from,
+        until: _until,
+        digest: _digest,
+        tailBytes: _tailBytes,
+        zipped: true,
+      );
     } on ArgumentError {
       _fail(const AgentHostException('That session log has a name the app cannot use.', fatal: true));
       return;
@@ -163,9 +170,7 @@ class _Follow {
     if (tab == 1 && line.codeUnitAt(0) == 0x45) {
       // E: the follower met something it cannot go on from, and exits.
       _flush();
-      _fail(AgentHostException(
-        line.length > 2 ? line.substring(2) : 'The machine could not read the session log.',
-      ));
+      _fail(AgentHostException(line.length > 2 ? line.substring(2) : 'The machine could not read the session log.'));
       return;
     }
     final offset = int.tryParse(line.substring(0, tab));

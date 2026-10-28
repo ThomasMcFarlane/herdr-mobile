@@ -34,18 +34,18 @@ class _Screens extends FakeTransport {
 }
 
 MachineConnection _connect(FakeTransport t) => MachineConnection(
-      profile: _profile,
-      api: HerdrApi(t),
-      pollInterval: const Duration(hours: 1),
-      screenWaits: const {'omp': ompWaitsOnPlanReview},
-    );
+  profile: _profile,
+  api: HerdrApi(t),
+  pollInterval: const Duration(hours: 1),
+  screenWaits: const {'omp': ompWaitsOnPlanReview},
+);
 
-Map<String, dynamic> _snapshot(String status, {String agent = 'omp'}) => snapshotJson(
-      panes: [(id: 'w1:p1', ws: 'w1', agent: agent, status: status)],
-    );
+Map<String, dynamic> _snapshot(String status, {String agent = 'omp'}) =>
+    snapshotJson(panes: [(id: 'w1:p1', ws: 'w1', agent: agent, status: status)]);
 
 /// The fake clock of [async] (`DateTime.now` is not faked by `fakeAsync`).
-DateTime Function() _clockOf(FakeAsync async) => () => async.getClock(DateTime(2026)).now();
+DateTime Function() _clockOf(FakeAsync async) =>
+    () => async.getClock(DateTime(2026)).now();
 
 void main() {
   final review = fixtureScreen('plan-review');
@@ -107,13 +107,8 @@ void main() {
   });
 
   group('ScreenWaits timing', () {
-    Pane pane(String status) => Pane.fromJson({
-          'pane_id': 'p',
-          'workspace_id': 'w',
-          'tab_id': 't',
-          'agent': 'omp',
-          'agent_status': status,
-        });
+    Pane pane(String status) =>
+        Pane.fromJson({'pane_id': 'p', 'workspace_id': 'w', 'tab_id': 't', 'agent': 'omp', 'agent_status': status});
 
     test('the review that opens a moment after the status turns is found by the second read', () {
       fakeAsync((async) {

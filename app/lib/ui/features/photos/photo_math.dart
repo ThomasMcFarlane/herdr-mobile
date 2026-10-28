@@ -55,9 +55,7 @@ class PhotoGeometry {
   /// may zoom: 3x the scale that shows one image pixel per device pixel, at
   /// least 4x (a 32 px icon has no "actual size" worth reaching), at most 16x.
   factory PhotoGeometry.forImage({required Size viewport, required Size image, required double devicePixelRatio}) {
-    final fit = image.isEmpty || viewport.isEmpty
-        ? viewport
-        : applyBoxFit(BoxFit.contain, image, viewport).destination;
+    final fit = image.isEmpty || viewport.isEmpty ? viewport : applyBoxFit(BoxFit.contain, image, viewport).destination;
     final actual = fit.width <= 0 ? 1.0 : image.width / devicePixelRatio / fit.width;
     return PhotoGeometry(viewport: viewport, fit: fit, maxScale: (actual * 3).clamp(4.0, 16.0));
   }

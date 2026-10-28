@@ -29,8 +29,7 @@ class KeyboardFrames extends StatefulWidget {
   State<KeyboardFrames> createState() => _KeyboardFramesState();
 }
 
-class _KeyboardFramesState extends State<KeyboardFrames>
-    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+class _KeyboardFramesState extends State<KeyboardFrames> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late final Ticker _ticker = createTicker(_tick);
   double _inset = 0;
 

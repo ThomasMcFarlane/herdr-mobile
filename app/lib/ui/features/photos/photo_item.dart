@@ -111,7 +111,13 @@ class RemotePhotoSource implements RangedPhotoSource {
         return hit;
       }
     }
-    final bytes = await _files.readAll(path, size: known, chunk: photoReadChunk, onProgress: onProgress, cancel: cancel);
+    final bytes = await _files.readAll(
+      path,
+      size: known,
+      chunk: photoReadChunk,
+      onProgress: onProgress,
+      cancel: cancel,
+    );
     if (key != null && known <= _store.maxEntryBytes) unawaited(_store.put(key, bytes));
     return bytes;
   }

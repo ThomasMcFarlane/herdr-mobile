@@ -92,8 +92,7 @@ final class StreamingMd {
   void _sync() {
     while (_frozenChunks < _chunker.closed.length) {
       final c = _chunker.closed[_frozenChunks++];
-      _frozen.addAll(parseMdChunk(_chunker.source(c.start, c.end),
-          softBreaksAsNewlines: softBreaksAsNewlines));
+      _frozen.addAll(parseMdChunk(_chunker.source(c.start, c.end), softBreaksAsNewlines: softBreaksAsNewlines));
     }
   }
 
@@ -132,6 +131,5 @@ final class StreamingMd {
   }
 
   /// Frozen blocks followed by the tail, as a document.
-  MdDocument document({bool heal = false}) =>
-      MdDocument([...frozen, ...tail(heal: heal)]);
+  MdDocument document({bool heal = false}) => MdDocument([...frozen, ...tail(heal: heal)]);
 }

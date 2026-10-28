@@ -188,7 +188,14 @@ class _Roll extends StatelessWidget {
     final a = _width(from);
     final b = _width(to);
     final travel = (style.fontSize ?? Type.body.fontSize!) * Motion.rollTravel * (up ? 1 : -1);
-    Widget line(String s) => Text(s, maxLines: 1, softWrap: false, overflow: TextOverflow.visible, style: style, textScaler: TextScaler.noScaling);
+    Widget line(String s) => Text(
+      s,
+      maxLines: 1,
+      softWrap: false,
+      overflow: TextOverflow.visible,
+      style: style,
+      textScaler: TextScaler.noScaling,
+    );
     final old = line(from);
     final next = line(to);
     return AnimatedBuilder(

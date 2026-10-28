@@ -56,7 +56,11 @@ void main() {
       // The same box holds pictures and audio: not videos.
       expect(detectType('x', ftyp('heic')).kind, isNot(FileKind.video));
       expect(detectType('x', ftyp('M4A ')).kind, isNot(FileKind.video));
-      expect(detectType('memo.m4a', ftyp('mp42')).kind, FileKind.binary, reason: 'a voice recording in an MP4 box is audio');
+      expect(
+        detectType('memo.m4a', ftyp('mp42')).kind,
+        FileKind.binary,
+        reason: 'a voice recording in an MP4 box is audio',
+      );
 
       // A video name over a container nothing here knows is still tried by the player; over text it is text.
       expect(detectType('x.mp4', _b([9, 9, 0, 1, 2, 3])).kind, FileKind.video);

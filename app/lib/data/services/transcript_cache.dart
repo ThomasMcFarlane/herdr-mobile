@@ -76,9 +76,8 @@ class FileTranscriptCache implements TranscriptCache {
   /// Backup uploads, which a transcript with secrets must not be in; the OS may
   /// clear it when space is short, which a cache survives). The directory is
   /// looked up when first needed.
-  factory FileTranscriptCache.inAppStorage() => FileTranscriptCache(
-    () async => Directory('${(await getApplicationCacheDirectory()).path}/transcripts'),
-  );
+  factory FileTranscriptCache.inAppStorage() =>
+      FileTranscriptCache(() async => Directory('${(await getApplicationCacheDirectory()).path}/transcripts'));
 
   /// Where the files go; looked up when first needed.
   final Future<Directory> Function() _directory;
@@ -109,30 +108,32 @@ class FileTranscriptCache implements TranscriptCache {
     final result = previous.then((_) => op());
     final tail = result.then<void>((_) {}, onError: (Object _) {});
     _chains[key] = tail;
-    unawaited(tail.then((_) {
-      if (identical(_chains[key], tail)) _chains.remove(key);
-    }));
+    unawaited(
+      tail.then((_) {
+        if (identical(_chains[key], tail)) _chains.remove(key);
+      }),
+    );
     return result;
   }
 
   @override
   Future<CachedTranscript?> read(String key) => _after(key, () async {
-        try {
-          final path = '${await _dir()}/${_fileName(key)}';
-          final result = await offload(readTranscriptFile, (path: path, key: key, maxBytes: maxSessionBytes));
-          if (result == null) return null;
-          return CachedTranscript(
-            sessionId: result.sessionId,
-            asOf: DateTime.fromMillisecondsSinceEpoch(result.asOfMs),
-            updates: result.updates,
-            setup: result.setup,
-            partial: result.partial,
-            gap: result.gap,
-          );
-        } on Object {
-          return null;
-        }
-      });
+    try {
+      final path = '${await _dir()}/${_fileName(key)}';
+      final result = await offload(readTranscriptFile, (path: path, key: key, maxBytes: maxSessionBytes));
+      if (result == null) return null;
+      return CachedTranscript(
+        sessionId: result.sessionId,
+        asOf: DateTime.fromMillisecondsSinceEpoch(result.asOfMs),
+        updates: result.updates,
+        setup: result.setup,
+        partial: result.partial,
+        gap: result.gap,
+      );
+    } on Object {
+      return null;
+    }
+  });
 
   @override
   void save(String key, TranscriptSnapshot snapshot, {bool now = false}) {
@@ -455,7 +456,14 @@ TranscriptFileRead? readTranscriptFile(({String path, String key, int maxBytes})
     } on Object {
       // Recency is best effort.
     }
-    return TranscriptFileRead(sid, asOf, updates, header['setup'], header['partial'] == true, v == 1 || header['gap'] == true);
+    return TranscriptFileRead(
+      sid,
+      asOf,
+      updates,
+      header['setup'],
+      header['partial'] == true,
+      v == 1 || header['gap'] == true,
+    );
   } on Object {
     deleteTranscriptFiles(path);
     return null;

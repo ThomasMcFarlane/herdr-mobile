@@ -5,7 +5,9 @@ import '../../../data/acp/acp_models.dart';
 import '../../../data/acp/session_state.dart' show TranscriptItem;
 import '../../../data/decision/permission_evidence.dart';
 import '../../../data/words/elapsed.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../support/step_clock.dart';
 import '../../support/tap_guard.dart';
 import 'permission_evidence_view.dart';
@@ -38,8 +40,8 @@ Set<String> secretFields(ElicitationRequest request) {
 String fieldError(String message) => message == 'required'
     ? 'Required'
     : message.isEmpty
-        ? message
-        : '${message[0].toUpperCase()}${message.substring(1)}';
+    ? message
+    : '${message[0].toUpperCase()}${message.substring(1)}';
 
 /// What the person has put into one question and not sent yet, by field
 /// name. It lives outside the panel (the dock keeps one per request) because
@@ -253,10 +255,7 @@ class _QuestionPanelState extends State<QuestionPanel> with TapGuardState<Questi
                 const SizedBox(height: Gap.xs),
                 Text(schema.description!, style: Type.secondary.copyWith(color: ds.textSecondary)),
               ],
-              if (secrets.isNotEmpty) ...[
-                const SizedBox(height: Gap.sm),
-                _SecretWarning(fields: secrets),
-              ],
+              if (secrets.isNotEmpty) ...[const SizedBox(height: Gap.sm), _SecretWarning(fields: secrets)],
               for (final f in schema.fields) ...[
                 const SizedBox(height: Gap.md),
                 _FieldBlock(
@@ -284,44 +283,41 @@ class _QuestionPanelState extends State<QuestionPanel> with TapGuardState<Questi
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-              if (schema != null && request.autoResolution != null) ...[
-                const SizedBox(height: Gap.sm),
-                AutoResolveLabel(deadline: _arrived.add(request.autoResolution!), now: widget.now),
-              ],
-              const SizedBox(height: Gap.md),
-              Row(
-                children: [
+            if (schema != null && request.autoResolution != null) ...[
+              const SizedBox(height: Gap.sm),
+              AutoResolveLabel(deadline: _arrived.add(request.autoResolution!), now: widget.now),
+            ],
+            const SizedBox(height: Gap.md),
+            Row(
+              children: [
+                Expanded(
+                  child: AppButton(
+                    label: 'Decline',
+                    kind: AppButtonKind.secondary,
+                    expand: true,
+                    onPressed: _sent || !settled ? null : _decline,
+                  ),
+                ),
+                if (schema != null) ...[
+                  const SizedBox(width: Gap.sm),
                   Expanded(
                     child: AppButton(
-                      label: 'Decline',
-                      kind: AppButtonKind.secondary,
+                      label: 'Accept',
                       expand: true,
-                      onPressed: _sent || !settled ? null : _decline,
+                      loading: _sent,
+                      onPressed: _sent || !settled ? null : _accept,
                     ),
                   ),
-                  if (schema != null) ...[
-                    const SizedBox(width: Gap.sm),
-                    Expanded(
-                      child: AppButton(
-                        label: 'Accept',
-                        expand: true,
-                        loading: _sent,
-                        onPressed: _sent || !settled ? null : _accept,
-                      ),
-                    ),
-                  ],
                 ],
-              ),
-              if (widget.more > 0) ...[
-                const SizedBox(height: Gap.sm),
-                Text(
-                  '${widget.more} more waiting',
-                  style: Type.labelStrong.copyWith(color: ds.blockedText),
-                ),
               ],
+            ),
+            if (widget.more > 0) ...[
+              const SizedBox(height: Gap.sm),
+              Text('${widget.more} more waiting', style: Type.labelStrong.copyWith(color: ds.blockedText)),
             ],
-          ),
+          ],
         ),
+      ),
     );
   }
 }
@@ -387,7 +383,8 @@ class _FieldBlock extends StatelessWidget {
     final label = f.label + (f.required ? '' : ' (optional)');
     final description = f.description;
     final errorText = error == null ? null : fieldError(error!);
-    final hasDetails = f is! BooleanField && f is! UnknownField && ((description != null && description.isNotEmpty) || secret);
+    final hasDetails =
+        f is! BooleanField && f is! UnknownField && ((description != null && description.isNotEmpty) || secret);
     final Widget? details = hasDetails
         ? Padding(
             padding: const EdgeInsets.only(bottom: Gap.sm),
@@ -567,8 +564,7 @@ class _Choices extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: Gap.hair),
               child: Text(hint!, style: Type.caption.copyWith(color: ds.textMuted)),
             ),
-          if (options.isEmpty)
-            const EmptyState.inline('No choices offered.', padding: EdgeInsets.zero),
+          if (options.isEmpty) const EmptyState.inline('No choices offered.', padding: EdgeInsets.zero),
           for (final o in options)
             _ChoiceRow(
               label: o.title,
@@ -679,4 +675,3 @@ class _AutoResolveLabelState extends State<AutoResolveLabel> with StepClockLease
     },
   );
 }
-

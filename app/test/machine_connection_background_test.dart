@@ -35,7 +35,7 @@ const _structural = {
 
 class _Rig {
   _Rig(this.async, List<_Pane> panes, {Duration backoff = const Duration(milliseconds: 10)})
-      : transport = FakeTransport(snapshotJson(panes: panes)) {
+    : transport = FakeTransport(snapshotJson(panes: panes)) {
     connection = MachineConnection(
       profile: const MachineProfile(id: 'm', label: 'Mac', host: 'm.local', username: 'u'),
       api: HerdrApi(transport),
@@ -66,9 +66,9 @@ class _Rig {
   List<Map<String, dynamic>> get lastSubscription => transport.subscribed.last;
 
   Set<String> get named => {
-        for (final s in lastSubscription)
-          if (s['type'] == 'pane.agent_status_changed') s['pane_id'] as String,
-      };
+    for (final s in lastSubscription)
+      if (s['type'] == 'pane.agent_status_changed') s['pane_id'] as String,
+  };
 
   Set<String> get types => {for (final s in lastSubscription) s['type'] as String};
 
@@ -225,18 +225,22 @@ void main() {
     test('a pane that closed after the snapshot and before the subscription is retaken at once', () {
       // herdr answers pane_not_found for the whole subscription then; the
       // back-off here is an hour, so only the quick path can recover.
-      _run((r) {
-        r.connection.setBackground(true);
-        r.elapse(second);
-        final subscriptions = r.transport.subscribed.length;
-        r.herdr([_agent('w1:p1', 'working')]);
-        r.transport.dropEvents(const HerdrApiException('pane_not_found', 'pane w1:p2 not found'));
-        r.elapse(second);
+      _run(
+        (r) {
+          r.connection.setBackground(true);
+          r.elapse(second);
+          final subscriptions = r.transport.subscribed.length;
+          r.herdr([_agent('w1:p1', 'working')]);
+          r.transport.dropEvents(const HerdrApiException('pane_not_found', 'pane w1:p2 not found'));
+          r.elapse(second);
 
-        expect(r.connection.isLive, isTrue);
-        expect(r.transport.subscribed, hasLength(subscriptions + 1));
-        expect(r.named, {'w1:p1'});
-      }, [_agent('w1:p1', 'working'), _agent('w1:p2', 'working')], backoff: const Duration(hours: 1));
+          expect(r.connection.isLive, isTrue);
+          expect(r.transport.subscribed, hasLength(subscriptions + 1));
+          expect(r.named, {'w1:p1'});
+        },
+        [_agent('w1:p1', 'working'), _agent('w1:p2', 'working')],
+        backoff: const Duration(hours: 1),
+      );
     });
 
     test('a status event makes the normal urgent refresh', () {

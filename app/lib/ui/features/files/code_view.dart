@@ -3,7 +3,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../data/acp/turns/plain_text.dart' show safeEnd;
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'text_document.dart';
 
 /// Longest stretch of one line that is drawn. A minified bundle is one line of
@@ -23,13 +25,7 @@ const _gutterPad = 10.0;
 /// what is off screen (and "jump to line N" is arithmetic). Wrapping, rows
 /// take their natural height. Only the rows on screen exist either way.
 class CodeView extends StatefulWidget {
-  const CodeView({
-    super.key,
-    required this.document,
-    required this.wrap,
-    this.highlightLine,
-    this.lineCount,
-  });
+  const CodeView({super.key, required this.document, required this.wrap, this.highlightLine, this.lineCount});
 
   final TextDocument document;
   final bool wrap;
@@ -180,7 +176,15 @@ class _CodeViewState extends State<CodeView> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SelectionContainer.disabled(child: number),
-            if (widget.wrap) Expanded(child: Padding(padding: const EdgeInsets.only(right: Gap.gutter), child: body)) else body,
+            if (widget.wrap)
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(right: Gap.gutter),
+                  child: body,
+                ),
+              )
+            else
+              body,
           ],
         ),
       );

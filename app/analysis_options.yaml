@@ -34,3 +34,8 @@ linter:
 
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options
+
+# `dart format` line width. The code was written to ~120 columns; the 80 default
+# would rewrite most files. Keep it here so every `dart format` agrees.
+formatter:
+  page_width: 120

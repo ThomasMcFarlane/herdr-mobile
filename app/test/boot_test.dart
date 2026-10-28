@@ -16,33 +16,33 @@ import 'support/memory_stores.dart';
 /// A machine that never answers: what the board shows has to come from disk.
 class _Silent extends FakeTransport {
   @override
-  Future<Map<String, dynamic>> request(
-    String method, [
-    Map<String, dynamic> params = const {},
-  ]) => Completer<Map<String, dynamic>>().future;
+  Future<Map<String, dynamic>> request(String method, [Map<String, dynamic> params = const {}]) =>
+      Completer<Map<String, dynamic>>().future;
 }
 
 Map<String, Object> _prefs() {
   Map<String, Object?> machine(String id) => {
-        'id': id,
-        'label': id,
-        'host': '$id.example',
-        'port': 22,
-        'username': 'u',
-        'auth': 'password',
-        'session': 'default',
-        'enabled': true,
-      };
+    'id': id,
+    'label': id,
+    'host': '$id.example',
+    'port': 22,
+    'username': 'u',
+    'auth': 'password',
+    'session': 'default',
+    'enabled': true,
+  };
   String snapshot(String id) => jsonEncode(
-        Snapshot.fromJson(snapshotJson(
-          workspaces: [(id: '$id-w', label: 'work')],
-          panes: [
-            (id: '$id-p1', ws: '$id-w', agent: 'claude', status: 'working'),
-            (id: '$id-p2', ws: '$id-w', agent: 'codex', status: 'blocked'),
-            (id: '$id-p3', ws: '$id-w', agent: null, status: 'idle'),
-          ],
-        )).toJson(),
-      );
+    Snapshot.fromJson(
+      snapshotJson(
+        workspaces: [(id: '$id-w', label: 'work')],
+        panes: [
+          (id: '$id-p1', ws: '$id-w', agent: 'claude', status: 'working'),
+          (id: '$id-p2', ws: '$id-w', agent: 'codex', status: 'blocked'),
+          (id: '$id-p3', ws: '$id-w', agent: null, status: 'idle'),
+        ],
+      ),
+    ).toJson(),
+  );
   return {
     'machines.v1': jsonEncode([machine('a'), machine('b')]),
     'herdr.snapshot.v1.a': snapshot('a'),
@@ -76,13 +76,13 @@ void main() {
     await eventually(() => fleet.agents.length == 4, reason: 'cached agents');
 
     expect(fleet.connections.map((c) => c.profile.id), ['a', 'b']);
-    expect(
-      fleet.agents.map((a) => a.pane.id).toSet(),
-      {'a-p1', 'a-p2', 'b-p1', 'b-p2'},
-      reason: 'the two agent panes of each machine; the idle shell is not one',
-    );
-    expect(fleet.agents.every((a) => a.stale), isTrue,
-        reason: 'from disk, not yet confirmed by the machine');
+    expect(fleet.agents.map((a) => a.pane.id).toSet(), {
+      'a-p1',
+      'a-p2',
+      'b-p1',
+      'b-p2',
+    }, reason: 'the two agent panes of each machine; the idle shell is not one');
+    expect(fleet.agents.every((a) => a.stale), isTrue, reason: 'from disk, not yet confirmed by the machine');
   });
 
   test('a first launch with no machines boots to an empty fleet', () async {

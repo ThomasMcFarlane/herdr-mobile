@@ -77,10 +77,7 @@ void main() {
           home: Builder(
             builder: (context) => Scaffold(
               body: Center(
-                child: TextButton(
-                  onPressed: () => openWebPreview(context, machine, page),
-                  child: const Text('open'),
-                ),
+                child: TextButton(onPressed: () => openWebPreview(context, machine, page), child: const Text('open')),
               ),
             ),
           ),
@@ -91,13 +88,19 @@ void main() {
     await _settle(tester);
   }
 
-  testWidgets('the bar names the page by its address on the machine, then by its title, and says each once', (tester) async {
+  testWidgets('the bar names the page by its address on the machine, then by its title, and says each once', (
+    tester,
+  ) async {
     web.titles['http://localhost:51111/'] = 'Web test';
     final gate = transport.webGate = Completer();
     await pump(tester, ServerPage(Uri.parse('http://localhost:3000/')));
 
     expect(find.text('localhost:3000'), findsOneWidget, reason: 'the machine\'s port, not the phone\'s 51111');
-    expect(find.text('build-box'), findsOneWidget, reason: 'the title is the address: the pill keeps the machine alone');
+    expect(
+      find.text('build-box'),
+      findsOneWidget,
+      reason: 'the title is the address: the pill keeps the machine alone',
+    );
 
     gate.complete();
     await _settle(tester);
@@ -153,20 +156,27 @@ void main() {
     expect(find.textContaining('net::'), findsNothing);
   });
 
-  testWidgets('⋯ shows the whole link, and Copy link copies it: the address on the machine, never the phone\'s tokened URL', (tester) async {
-    await pump(tester, ServerPage(Uri.parse('http://localhost:3000/')));
-    await web.navigate('http://localhost:51111/page2.html?tab=logs#b');
-    await _settle(tester);
+  testWidgets(
+    '⋯ shows the whole link, and Copy link copies it: the address on the machine, never the phone\'s tokened URL',
+    (tester) async {
+      await pump(tester, ServerPage(Uri.parse('http://localhost:3000/')));
+      await web.navigate('http://localhost:51111/page2.html?tab=logs#b');
+      await _settle(tester);
 
-    await tester.tap(find.byTooltip('Page options'));
-    await _settle(tester);
-    expect(find.text('http://localhost:3000/page2.html?tab=logs#b'), findsOneWidget, reason: 'the bar cuts the address; the sheet shows all of it');
-    await tester.tap(find.text('Copy link'));
-    await _settle(tester);
+      await tester.tap(find.byTooltip('Page options'));
+      await _settle(tester);
+      expect(
+        find.text('http://localhost:3000/page2.html?tab=logs#b'),
+        findsOneWidget,
+        reason: 'the bar cuts the address; the sheet shows all of it',
+      );
+      await tester.tap(find.text('Copy link'));
+      await _settle(tester);
 
-    expect(copied, ['http://localhost:3000/page2.html?tab=logs#b']);
-    expect(copied.single, isNot(contains(_token)));
-  });
+      expect(copied, ['http://localhost:3000/page2.html?tab=logs#b']);
+      expect(copied.single, isNot(contains(_token)));
+    },
+  );
 
   testWidgets('a file\'s page copies its path on the machine', (tester) async {
     transport.webInfo = const WebBridgeInfo(port: 51111, token: _token);
@@ -181,7 +191,9 @@ void main() {
     expect(copied, ['/home/dev/site/index.html']);
   });
 
-  testWidgets('a page of the web opens nowhere by itself: the person is told, and Open takes it to the browser', (tester) async {
+  testWidgets('a page of the web opens nowhere by itself: the person is told, and Open takes it to the browser', (
+    tester,
+  ) async {
     await pump(tester, ServerPage(Uri.parse('http://localhost:3000/')));
     final before = web.loaded.length;
 
@@ -210,7 +222,9 @@ void main() {
     expect(find.text('This link is not encrypted.'), findsOneWidget);
   });
 
-  testWidgets('a page posted to another site says it is not from the machine, and copies its own address', (tester) async {
+  testWidgets('a page posted to another site says it is not from the machine, and copies its own address', (
+    tester,
+  ) async {
     await pump(tester, ServerPage(Uri.parse('http://localhost:3000/')));
     web.titles['https://evil.example.com/login'] = 'Sign in';
     web.land('https://evil.example.com/login');
@@ -231,7 +245,9 @@ void main() {
     expect(copied, ['https://evil.example.com/login']);
   });
 
-  testWidgets('another port of the machine is not loaded on its own, is one deliberate tap away, and Back returns', (tester) async {
+  testWidgets('another port of the machine is not loaded on its own, is one deliberate tap away, and Back returns', (
+    tester,
+  ) async {
     await pump(tester, ServerPage(Uri.parse('http://localhost:3000/')));
 
     expect(await web.navigate('http://localhost:8791/api'), isFalse);
@@ -257,7 +273,11 @@ void main() {
     web.downloads.add('http://localhost:51111/report.zip');
     await web.navigate('http://localhost:51111/report.zip');
     await _settle(tester);
-    expect(web.asked.where((u) => u.endsWith('report.zip')), hasLength(2), reason: 'Android asks again for a file; the second is refused');
+    expect(
+      web.asked.where((u) => u.endsWith('report.zip')),
+      hasLength(2),
+      reason: 'Android asks again for a file; the second is refused',
+    );
     expect(find.textContaining('herdr doesn’t download files'), findsOneWidget);
   });
 
@@ -291,7 +311,9 @@ void main() {
     machine.dispose();
   });
 
-  testWidgets('the connection is held while the screen is open, named for the notice, and let go when it closes', (tester) async {
+  testWidgets('the connection is held while the screen is open, named for the notice, and let go when it closes', (
+    tester,
+  ) async {
     await pump(tester, ServerPage(Uri.parse('http://localhost:3000/')));
     expect(fleet.held, isTrue);
     expect(fleet.heldPages, ['localhost:3000 on build-box']);
@@ -301,7 +323,9 @@ void main() {
     expect(fleet.held, isFalse);
   });
 
-  testWidgets('cookies, web storage and the cache are cleared before the first page and when the last screen closes', (tester) async {
+  testWidgets('cookies, web storage and the cache are cleared before the first page and when the last screen closes', (
+    tester,
+  ) async {
     await pump(tester, ServerPage(Uri.parse('http://localhost:3000/')));
     expect((web.cookiesCleared, web.storageCleared, web.cacheCleared), (1, 1, 1));
 
@@ -310,7 +334,9 @@ void main() {
     expect((web.cookiesCleared, web.storageCleared, web.cacheCleared), (2, 2, 2));
   });
 
-  testWidgets('a page loading draws the hairline as far as it has got, and it is plain again when the page is in', (tester) async {
+  testWidgets('a page loading draws the hairline as far as it has got, and it is plain again when the page is in', (
+    tester,
+  ) async {
     await pump(tester, ServerPage(Uri.parse('http://localhost:3000/')));
     final accent = AppTheme.light().extension<Ds>()!.accent;
     Finder bar() => find.byWidgetPredicate((w) => w is ColoredBox && w.color == accent);
@@ -351,11 +377,11 @@ void main() {
     late List<String> answers;
 
     HttpAuthRequest ask({String? realm = 'staging'}) => HttpAuthRequest(
-          host: 'localhost',
-          realm: realm,
-          onProceed: (c) => answers.add('${c.user}:${c.password}'),
-          onCancel: () => answers.add('cancel'),
-        );
+      host: 'localhost',
+      realm: realm,
+      onProceed: (c) => answers.add('${c.user}:${c.password}'),
+      onCancel: () => answers.add('cancel'),
+    );
 
     setUp(() => answers = []);
 

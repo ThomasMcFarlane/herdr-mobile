@@ -9,6 +9,7 @@ import '../../../data/repositories/agent_session_settings.dart';
 import '../../../data/repositories/fleet_repository.dart';
 import '../../../data/repositories/machine_connection.dart';
 import '../../render/visible_text.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// What the Past sessions screen can show.
@@ -233,12 +234,7 @@ class PastSessionsViewModel extends ChangeNotifier {
     _resuming = past.sessionId;
     notifyListeners();
     try {
-      final session = await _sessions.resume(
-        machine: m,
-        agent: past.agent,
-        cwd: past.cwd,
-        sessionId: past.sessionId,
-      );
+      final session = await _sessions.resume(machine: m, agent: past.agent, cwd: past.cwd, sessionId: past.sessionId);
       return (session: session, error: null);
     } on AgentHostException catch (e) {
       return (session: null, error: e.message);

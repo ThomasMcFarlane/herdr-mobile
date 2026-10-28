@@ -36,15 +36,16 @@ class LocalKeeperHost implements AgentHost {
     if (!File(agent).existsSync()) throw StateError('run from app/: $agent is missing');
     final omp = File('${bin.path}/omp')..writeAsStringSync('#!/bin/sh\nexec python3 \'$agent\' "\$@"\n');
     await Process.run('chmod', ['755', omp.path]);
-    final host = LocalKeeperHost._(home, {
-      'HOME': home.path,
-      'PATH': '${bin.path}:/usr/bin:/bin:/usr/local/bin',
-    });
+    final host = LocalKeeperHost._(home, {'HOME': home.path, 'PATH': '${bin.path}:/usr/bin:/bin:/usr/local/bin'});
     await host.install();
     return host;
   }
 
-  Future<({String out, String err, int code})> run(String command, {String input = '', Map<String, String> extraEnv = const {}}) async {
+  Future<({String out, String err, int code})> run(
+    String command, {
+    String input = '',
+    Map<String, String> extraEnv = const {},
+  }) async {
     final p = await Process.start(
       '/bin/sh',
       ['-c', command],
@@ -68,7 +69,10 @@ class LocalKeeperHost implements AgentHost {
   /// Starts a keeper whose agent plays [seedFile] on its first prompt.
   @override
   Future<KeeperInfo> start({required String agent, required String cwd, String? seedFile}) async {
-    final r = await run(keeperStartCommand(agent: agent, cwd: cwd), extraEnv: {'BENCH_SEED': ?seedFile});
+    final r = await run(
+      keeperStartCommand(agent: agent, cwd: cwd),
+      extraEnv: {'BENCH_SEED': ?seedFile},
+    );
     if (r.code != 0) throw StateError('keeper start failed (${r.code}): ${r.err}');
     return KeeperInfo.fromJson((jsonDecode(r.out) as Map).cast<String, Object?>());
   }

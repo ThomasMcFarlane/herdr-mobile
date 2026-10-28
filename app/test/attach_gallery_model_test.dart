@@ -14,19 +14,22 @@ GalleryModel modelOf(FakeGallery g, {bool Function()? foreground, ThumbCache? ca
     GalleryModel(g, cache ?? ThumbCache(load: (a) => g.thumbnail(a)), foreground: foreground);
 
 void main() {
-  test('warm loads albums, the first page and the first 24 thumbnails when access is granted, and never asks', () async {
-    final g = FakeGallery(count: 1000);
-    final m = modelOf(g);
-    await m.warm();
-    await settle();
-    expect(g.requests, 0);
-    expect(g.pageQueries, 1);
-    expect(m.count, 1000);
-    expect(m.at(0)!.id, '1000', reason: 'newest first');
-    expect(m.at(galleryPage - 1), isNotNull);
-    expect(m.at(galleryPage), isNull, reason: 'the second page waits for the grid');
-    expect(m.thumbs.length, galleryWarmThumbs);
-  });
+  test(
+    'warm loads albums, the first page and the first 24 thumbnails when access is granted, and never asks',
+    () async {
+      final g = FakeGallery(count: 1000);
+      final m = modelOf(g);
+      await m.warm();
+      await settle();
+      expect(g.requests, 0);
+      expect(g.pageQueries, 1);
+      expect(m.count, 1000);
+      expect(m.at(0)!.id, '1000', reason: 'newest first');
+      expect(m.at(galleryPage - 1), isNotNull);
+      expect(m.at(galleryPage), isNull, reason: 'the second page waits for the grid');
+      expect(m.thumbs.length, galleryWarmThumbs);
+    },
+  );
 
   test('warm does nothing when the permission was never given, was refused, or the app is in the background', () async {
     for (final state in [GalleryAccess.undetermined, GalleryAccess.denied, GalleryAccess.unavailable]) {
@@ -43,7 +46,6 @@ void main() {
     await m.warm();
     expect(g.accessReads, 0, reason: 'not even a platform call in the background');
   });
-
 
   test('ensure loads the page of an index once, however often the grid asks', () async {
     final g = FakeGallery(count: 1000);

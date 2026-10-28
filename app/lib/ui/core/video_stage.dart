@@ -40,23 +40,39 @@ class VideoStage extends StatelessWidget {
                 aspectRatio: v.aspectRatio,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(Radii.md),
-                  child: Stack(fit: StackFit.expand, children: [
-                    VideoPlayer(video),
-                    if (!v.isPlaying)
-                      Center(
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(color: ds.inverseSurface, borderRadius: BorderRadius.circular(Radii.pill)),
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(Gap.sm, Gap.xs, Gap.md, Gap.xs),
-                            child: Row(mainAxisSize: MainAxisSize.min, children: [
-                              Icon(ended ? LucideIcons.rotateCcw : LucideIcons.play, size: IconSize.inline, color: ds.onInverse),
-                              const SizedBox(width: Gap.xs),
-                              Text(ended ? 'Play again' : 'Play', style: Type.labelStrong.copyWith(color: ds.onInverse)),
-                            ]),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      VideoPlayer(video),
+                      if (!v.isPlaying)
+                        Center(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: ds.inverseSurface,
+                              borderRadius: BorderRadius.circular(Radii.pill),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(Gap.sm, Gap.xs, Gap.md, Gap.xs),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    ended ? LucideIcons.rotateCcw : LucideIcons.play,
+                                    size: IconSize.inline,
+                                    color: ds.onInverse,
+                                  ),
+                                  const SizedBox(width: Gap.xs),
+                                  Text(
+                                    ended ? 'Play again' : 'Play',
+                                    style: Type.labelStrong.copyWith(color: ds.onInverse),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                  ]),
+                    ],
+                  ),
                 ),
               ),
             ),

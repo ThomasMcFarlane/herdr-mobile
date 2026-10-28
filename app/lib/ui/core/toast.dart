@@ -44,10 +44,10 @@ abstract final class ToastTiming {
   /// characters is short).
   static Duration of(ToastKind kind, {required bool hasAction, required String message}) =>
       kind == ToastKind.failed || hasAction
-          ? Dwell.toastAction
-          : message.length < 20
-          ? Dwell.toastShort
-          : Dwell.toastLong;
+      ? Dwell.toastAction
+      : message.length < 20
+      ? Dwell.toastShort
+      : Dwell.toastLong;
 }
 
 /// Shows a toast on the app's root overlay and replaces the one showing: a
@@ -62,14 +62,8 @@ void showToast(
   Object? groupKey,
   String Function(int count)? groupMessage,
 }) =>
-    Toaster.of(context).show(
-      message,
-      kind: kind,
-      action: action,
-      duration: duration,
-      groupKey: groupKey,
-      groupMessage: groupMessage,
-    );
+    Toaster.of(context)
+        .show(message, kind: kind, action: action, duration: duration, groupKey: groupKey, groupMessage: groupMessage);
 
 /// A handle on the root overlay that outlives the widget that took it: code
 /// that shows a toast after an `await` (or after its screen popped) captures
@@ -458,9 +452,11 @@ class _ToastViewState extends State<_ToastView> with TickerProviderStateMixin {
       leaving = true;
       _timer?.cancel();
       final side = (dx.abs() > 1 ? dx.sign : velocity.sign) * (width + Gap.lg);
-      unawaited(_swipe.animateTo(side, duration: Motion.standard, curve: Motion.easeOut).whenComplete(() {
-        if (mounted) _remove();
-      }));
+      unawaited(
+        _swipe.animateTo(side, duration: Motion.standard, curve: Motion.easeOut).whenComplete(() {
+          if (mounted) _remove();
+        }),
+      );
     } else {
       unawaited(_swipe.animateWith(SpringSimulation(Springs.settle, dx, 0, velocity)));
     }
@@ -591,10 +587,7 @@ class ToastCard extends StatelessWidget {
     // field or a card in it. No outline, no shadow: dark on paper and a step
     // lighter on ink is edge enough.
     return DecoratedBox(
-      decoration: BoxDecoration(
-        color: ds.inverseSurface,
-        borderRadius: BorderRadius.circular(Radii.md),
-      ),
+      decoration: BoxDecoration(color: ds.inverseSurface, borderRadius: BorderRadius.circular(Radii.md)),
       // The root overlay sits above every route, so no `Scaffold` is above the
       // text: without a `Material` it takes `MaterialApp`'s fallback style, a
       // double yellow underline. Transparent: it paints nothing of its own.
@@ -607,7 +600,9 @@ class ToastCard extends StatelessWidget {
             child: Row(
               children: [
                 if (mark != null) ...[
-                  ExcludeSemantics(child: Icon(mark.$1, size: IconSize.bar, color: mark.$2)),
+                  ExcludeSemantics(
+                    child: Icon(mark.$1, size: IconSize.bar, color: mark.$2),
+                  ),
                   const SizedBox(width: Gap.md),
                 ],
                 Expanded(
@@ -629,10 +624,7 @@ class ToastCard extends StatelessWidget {
                     scale: PressScale.button,
                     builder: (context, pressed) => Padding(
                       padding: const EdgeInsets.symmetric(horizontal: Gap.md),
-                      child: Text(
-                        label,
-                        style: Type.button.copyWith(color: pressed ? ds.onInverse : ds.inverseAccent),
-                      ),
+                      child: Text(label, style: Type.button.copyWith(color: pressed ? ds.onInverse : ds.inverseAccent)),
                     ),
                   ),
               ],

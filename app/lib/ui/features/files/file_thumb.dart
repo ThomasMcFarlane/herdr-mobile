@@ -10,7 +10,9 @@ import '../../../data/services/image_decode.dart';
 import '../../../data/services/image_sniff.dart';
 import '../../../data/services/disk_cache.dart';
 import '../../../data/services/remote_files.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'file_kind.dart';
 
 /// Images over this are never fetched for a thumbnail (a phone photo is
@@ -65,11 +67,7 @@ class ThumbLoader {
   /// nothing here to draw it.)
   static bool eligible(RemoteEntry e) {
     final size = e.size;
-    return e.isFile &&
-        size != null &&
-        size > 0 &&
-        size <= thumbMaxBytes &&
-        typeForName(e.name).kind == FileKind.image;
+    return e.isFile && size != null && size > 0 && size <= thumbMaxBytes && typeForName(e.name).kind == FileKind.image;
   }
 
   static String _key(RemoteEntry e) => '${e.path}\u0000${e.modified?.millisecondsSinceEpoch}\u0000${e.size}';
@@ -276,7 +274,8 @@ class _FileThumbState extends State<FileThumb> {
           frameBuilder: (context, child, frame, sync) =>
               sync || Motion.reduced(context) ? child : _FadeIn(shown: frame != null, child: child),
           // Bytes the engine cannot decode: back to the glyph.
-          errorBuilder: (context, error, stack) => Icon(LucideIcons.fileImage, size: size * 0.56, color: ds.textSecondary),
+          errorBuilder: (context, error, stack) =>
+              Icon(LucideIcons.fileImage, size: size * 0.56, color: ds.textSecondary),
         ),
       ),
     );

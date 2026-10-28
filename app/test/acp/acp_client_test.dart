@@ -115,7 +115,10 @@ Json _formParams({String mode = 'form'}) => {
   'requestedSchema': {
     'type': 'object',
     'properties': {
-      'approach': {'type': 'string', 'enum': ['safe', 'fast']},
+      'approach': {
+        'type': 'string',
+        'enum': ['safe', 'fast'],
+      },
       'notes': {'type': 'string'},
     },
     'required': ['approach'],
@@ -152,7 +155,12 @@ void main() {
 
     test('session/new: options and modes from the answer, commands from the updates after it', () async {
       final commands = [
-        for (var i = 0; i < 98; i++) {'name': i < 90 ? 'cmd$i' : 'skill:s$i', 'description': 'd$i', if (i == 3) 'input': {'hint': 'arg'}},
+        for (var i = 0; i < 98; i++)
+          {
+            'name': i < 90 ? 'cmd$i' : 'skill:s$i',
+            'description': 'd$i',
+            if (i == 3) 'input': {'hint': 'arg'},
+          },
       ];
       final h = _Harness(
         methods: {
@@ -199,7 +207,11 @@ void main() {
     });
 
     test('an answer without a sessionId is a protocol error', () async {
-      final h = _Harness(methods: {'session/new': (_) => {'configOptions': <Object>[]}});
+      final h = _Harness(
+        methods: {
+          'session/new': (_) => {'configOptions': <Object>[]},
+        },
+      );
       await h.client.initialize();
       await expectLater(h.client.newSession(cwd: '/x'), throwsA(isA<AcpProtocolException>()));
       await h.dispose();
@@ -208,10 +220,7 @@ void main() {
 
   group('capabilities are checked before the call', () {
     test('load, resume, list and close need the matching capability, and nothing is sent without it', () async {
-      final bare = {
-        'protocolVersion': 1,
-        'agentCapabilities': <String, Object?>{},
-      };
+      final bare = {'protocolVersion': 1, 'agentCapabilities': <String, Object?>{}};
       final h = _Harness(initialize: bare);
       await h.client.initialize();
       final before = h.agent.requests.length;
@@ -224,17 +233,23 @@ void main() {
     });
 
     test('images, audio and embedded context need the prompt capability', () async {
-      final h = _Harness(initialize: {
-        'protocolVersion': 1,
-        'agentCapabilities': {'promptCapabilities': <String, Object?>{}},
-      });
+      final h = _Harness(
+        initialize: {
+          'protocolVersion': 1,
+          'agentCapabilities': {'promptCapabilities': <String, Object?>{}},
+        },
+      );
       await h.client.initialize();
       for (final block in <ContentBlock>[
         const ImageBlock(data: 'AAAA', mimeType: 'image/png'),
         const AudioBlock(data: 'AAAA', mimeType: 'audio/wav'),
         const EmbeddedResourceBlock(uri: 'file:///a', text: 'x'),
       ]) {
-        await expectLater(h.client.prompt(_sid, [block]), throwsA(isA<AcpProtocolException>()), reason: '${block.runtimeType}');
+        await expectLater(
+          h.client.prompt(_sid, [block]),
+          throwsA(isA<AcpProtocolException>()),
+          reason: '${block.runtimeType}',
+        );
       }
       expect(h.agent.paramsOf('session/prompt'), isEmpty);
       expect(h.state.items, isEmpty, reason: 'a refused prompt leaves no trace');
@@ -248,7 +263,13 @@ void main() {
         methods: {
           'session/list': (r) => {
             'sessions': [
-              {'sessionId': 'a', 'cwd': '/p', 'title': 'T', 'updatedAt': '2026-10-04T10:00:00Z', '_meta': {'messageCount': 3, 'size': 10}},
+              {
+                'sessionId': 'a',
+                'cwd': '/p',
+                'title': 'T',
+                'updatedAt': '2026-10-04T10:00:00Z',
+                '_meta': {'messageCount': 3, 'size': 10},
+              },
             ],
           },
           'session/resume': (_) => ompSessionNew(id: 'a')..remove('sessionId'),
@@ -281,7 +302,12 @@ void main() {
               'messageId': 'a1',
               'content': {'type': 'text', 'text': 'fixed'},
             });
-            pushUpdate(_sid, {'sessionUpdate': 'tool_call', 'toolCallId': 'c1', 'title': 'edit', 'status': 'completed'});
+            pushUpdate(_sid, {
+              'sessionUpdate': 'tool_call',
+              'toolCallId': 'c1',
+              'title': 'edit',
+              'status': 'completed',
+            });
             return <String, Object?>{};
           },
         },
@@ -325,7 +351,10 @@ void main() {
         },
       );
       await h.client.initialize();
-      h.agent.update(_sid, {'sessionUpdate': 'config_option_update', 'configOptions': ompSessionNew()['configOptions']});
+      h.agent.update(_sid, {
+        'sessionUpdate': 'config_option_update',
+        'configOptions': ompSessionNew()['configOptions'],
+      });
       await h.client.setMode(_sid, 'plan');
       expect(h.sentFor('session/set_mode'), {'sessionId': _sid, 'modeId': 'plan'});
       expect(h.state.currentModeId, 'plan');
@@ -345,7 +374,12 @@ void main() {
         ],
       });
       await h.client.setConfigOption(_sid, 'think', true);
-      expect(h.sentFor('session/set_config_option'), {'sessionId': _sid, 'configId': 'think', 'value': true, 'type': 'boolean'});
+      expect(h.sentFor('session/set_config_option'), {
+        'sessionId': _sid,
+        'configId': 'think',
+        'value': true,
+        'type': 'boolean',
+      });
       expect(h.state.configOptions.single.currentValue, true);
       await h.dispose();
     });
@@ -368,11 +402,30 @@ void main() {
       expect(h.state.phase, AgentPhase.working);
       expect((h.state.items.single as TranscriptMessage).local, isTrue);
 
-      h.agent.update(_sid, {'sessionUpdate': 'agent_thought_chunk', 'messageId': 'a', 'content': {'type': 'text', 'text': 'think'}});
-      h.agent.update(_sid, {'sessionUpdate': 'agent_message_chunk', 'messageId': 'b', 'content': {'type': 'text', 'text': 'On it'}});
-      h.agent.update(_sid, {'sessionUpdate': 'tool_call', 'toolCallId': 'c', 'title': 'Edit', 'kind': 'edit', 'status': 'in_progress'});
+      h.agent.update(_sid, {
+        'sessionUpdate': 'agent_thought_chunk',
+        'messageId': 'a',
+        'content': {'type': 'text', 'text': 'think'},
+      });
+      h.agent.update(_sid, {
+        'sessionUpdate': 'agent_message_chunk',
+        'messageId': 'b',
+        'content': {'type': 'text', 'text': 'On it'},
+      });
+      h.agent.update(_sid, {
+        'sessionUpdate': 'tool_call',
+        'toolCallId': 'c',
+        'title': 'Edit',
+        'kind': 'edit',
+        'status': 'in_progress',
+      });
       h.agent.update(_sid, {'sessionUpdate': 'tool_call_update', 'toolCallId': 'c', 'status': 'completed'});
-      expect(h.state.items.map((i) => i.runtimeType), [TranscriptMessage, TranscriptMessage, TranscriptMessage, TranscriptTool]);
+      expect(h.state.items.map((i) => i.runtimeType), [
+        TranscriptMessage,
+        TranscriptMessage,
+        TranscriptMessage,
+        TranscriptTool,
+      ]);
       expect(h.state.phase, AgentPhase.working);
 
       turn.complete({'stopReason': 'end_turn'});
@@ -414,8 +467,16 @@ void main() {
       final h = _Harness();
       await h.client.initialize();
       h.agent.methods['session/prompt'] = (_) {
-        h.agent.update(_sid, {'sessionUpdate': 'user_message_chunk', 'messageId': 'u', 'content': {'type': 'text', 'text': 'hello'}});
-        h.agent.update(_sid, {'sessionUpdate': 'agent_message_chunk', 'messageId': 'a', 'content': {'type': 'text', 'text': 'hi'}});
+        h.agent.update(_sid, {
+          'sessionUpdate': 'user_message_chunk',
+          'messageId': 'u',
+          'content': {'type': 'text', 'text': 'hello'},
+        });
+        h.agent.update(_sid, {
+          'sessionUpdate': 'agent_message_chunk',
+          'messageId': 'a',
+          'content': {'type': 'text', 'text': 'hi'},
+        });
         return {'stopReason': 'end_turn'};
       };
       await h.client.prompt(_sid, [const TextBlock('hello')]);
@@ -485,7 +546,12 @@ void main() {
       // A late answer from the UI changes nothing: the agent got one reply.
       h.handler.permissions.single.answer.complete(const PermissionSelected('allow'));
       await settle();
-      expect(h.link.client.sent.where((l) => (jsonDecode(l) as Map).containsKey('result') && (jsonDecode(l) as Map)['id'] == 1), hasLength(1));
+      expect(
+        h.link.client.sent.where(
+          (l) => (jsonDecode(l) as Map).containsKey('result') && (jsonDecode(l) as Map)['id'] == 1,
+        ),
+        hasLength(1),
+      );
 
       turn.complete({'stopReason': 'cancelled'});
       expect((await f).stopReason, StopReason.cancelled);
@@ -527,7 +593,10 @@ void main() {
       final call = h.agent.ask('session/request_permission', _permissionParams());
       expect(h.state.pending, hasLength(1));
       call.cancel();
-      await expectLater(call.response, throwsA(isA<JsonRpcException>().having((e) => e.isCancelled, 'isCancelled', isTrue)));
+      await expectLater(
+        call.response,
+        throwsA(isA<JsonRpcException>().having((e) => e.isCancelled, 'isCancelled', isTrue)),
+      );
       await settle();
       expect(h.handler.permissions.single.cancelledFired, isTrue);
       expect(h.state.pending, isEmpty);
@@ -551,7 +620,10 @@ void main() {
       await h.client.initialize();
       final call = h.agent.ask('session/request_permission', _permissionParams());
       h.handler.permissions.single.answer.completeError(StateError('ui crashed'));
-      await expectLater(call.response, throwsA(isA<JsonRpcException>().having((e) => e.code, 'code', JsonRpcCode.internalError)));
+      await expectLater(
+        call.response,
+        throwsA(isA<JsonRpcException>().having((e) => e.code, 'code', JsonRpcCode.internalError)),
+      );
       expect(h.state.pending, isEmpty);
       await h.dispose();
     });
@@ -559,8 +631,15 @@ void main() {
     test('a request without options or a session is invalid params', () async {
       final h = _Harness();
       await h.client.initialize();
-      final noOptions = h.agent.ask('session/request_permission', {'sessionId': _sid, 'toolCall': {'toolCallId': 't'}, 'options': <Object>[]});
-      await expectLater(noOptions.response, throwsA(isA<JsonRpcException>().having((e) => e.code, 'code', JsonRpcCode.invalidParams)));
+      final noOptions = h.agent.ask('session/request_permission', {
+        'sessionId': _sid,
+        'toolCall': {'toolCallId': 't'},
+        'options': <Object>[],
+      });
+      await expectLater(
+        noOptions.response,
+        throwsA(isA<JsonRpcException>().having((e) => e.code, 'code', JsonRpcCode.invalidParams)),
+      );
       expect(h.handler.permissions, isEmpty);
       await h.dispose();
     });
@@ -633,8 +712,16 @@ void main() {
       final h = _Harness();
       await h.client.initialize();
       for (final mode in ['url', 'hologram']) {
-        final call = h.agent.ask('elicitation/create', {'sessionId': _sid, 'mode': mode, 'message': 'Sign in', 'url': 'https://example.com'});
-        await expectLater(call.response, throwsA(isA<JsonRpcException>().having((e) => e.code, 'code', JsonRpcCode.invalidParams)));
+        final call = h.agent.ask('elicitation/create', {
+          'sessionId': _sid,
+          'mode': mode,
+          'message': 'Sign in',
+          'url': 'https://example.com',
+        });
+        await expectLater(
+          call.response,
+          throwsA(isA<JsonRpcException>().having((e) => e.code, 'code', JsonRpcCode.invalidParams)),
+        );
       }
       expect(h.handler.questions, isEmpty);
       await h.dispose();
@@ -649,7 +736,9 @@ void main() {
         'message': 'Proceed?',
         'requestedSchema': {
           'type': 'object',
-          'properties': {'value': {'type': 'boolean'}},
+          'properties': {
+            'value': {'type': 'boolean'},
+          },
         },
       });
       h.handler.questions.single.answer.complete(const ElicitationAccept({'value': true}));
@@ -665,9 +754,19 @@ void main() {
     test('a request for an unsupported method gets method-not-found, and so does anything newer', () async {
       final h = _Harness();
       await h.client.initialize();
-      for (final method in ['fs/read_text_file', 'fs/write_text_file', 'terminal/create', 'terminal/output', 'future/thing']) {
+      for (final method in [
+        'fs/read_text_file',
+        'fs/write_text_file',
+        'terminal/create',
+        'terminal/output',
+        'future/thing',
+      ]) {
         final call = h.agent.ask(method, {'sessionId': _sid, 'path': '/etc/passwd'});
-        await expectLater(call.response, throwsA(isA<JsonRpcException>().having((e) => e.code, 'code', JsonRpcCode.methodNotFound)), reason: method);
+        await expectLater(
+          call.response,
+          throwsA(isA<JsonRpcException>().having((e) => e.code, 'code', JsonRpcCode.methodNotFound)),
+          reason: method,
+        );
       }
       await h.dispose();
     });
@@ -677,12 +776,18 @@ void main() {
       await h.client.initialize();
       h.link.agent.send('{broken');
       h.link.agent.send('[]');
-      h.agent.rpc.notify('session/update', {'update': {'sessionUpdate': 'agent_message_chunk'}}); // no sessionId
+      h.agent.rpc.notify('session/update', {
+        'update': {'sessionUpdate': 'agent_message_chunk'},
+      }); // no sessionId
       h.agent.rpc.notify('session/update', 'not an object');
       h.agent.rpc.notify('_vendor/ping', {'x': 1});
       h.agent.rpc.notify('elicitation/complete', {'elicitationId': 'e'});
       h.agent.update(_sid, {'sessionUpdate': 'telepathy_update', 'secret': true});
-      h.agent.update(_sid, {'sessionUpdate': 'agent_message_chunk', 'messageId': 'a', 'content': {'type': 'text', 'text': 'still here'}});
+      h.agent.update(_sid, {
+        'sessionUpdate': 'agent_message_chunk',
+        'messageId': 'a',
+        'content': {'type': 'text', 'text': 'still here'},
+      });
       expect((h.state.items.single as TranscriptMessage).text, 'still here');
       expect(h.problems.where((p) => p.contains('not JSON')), hasLength(1));
       expect(h.problems.where((p) => p.contains('sessionId')), hasLength(2));
@@ -705,7 +810,10 @@ void main() {
       final turn = await h.readyToPrompt();
       final f = h.client.prompt(_sid, [const TextBlock('x')]);
       final failed = expectLater(f, throwsA(isA<JsonRpcClosedException>()));
-      h.agent.ask('session/request_permission', _permissionParams()).response.then<void>((_) {}, onError: (Object _) {});
+      h.agent
+          .ask('session/request_permission', _permissionParams())
+          .response
+          .then<void>((_) {}, onError: (Object _) {});
       expect(h.state.phase, AgentPhase.blockedOnPermission);
 
       var closed = false;
@@ -734,7 +842,11 @@ void main() {
 
     test('closing the client hangs up on the agent', () async {
       final h = _Harness();
-      h.agent.update(_sid, {'sessionUpdate': 'agent_message_chunk', 'messageId': 'a', 'content': {'type': 'text', 'text': 'x'}});
+      h.agent.update(_sid, {
+        'sessionUpdate': 'agent_message_chunk',
+        'messageId': 'a',
+        'content': {'type': 'text', 'text': 'x'},
+      });
       await h.client.initialize();
       var agentSawEof = false;
       unawaited(h.agent.rpc.done.then((_) => agentSawEof = true));
@@ -747,10 +859,18 @@ void main() {
       final link = MemoryLink();
       final agent = FakeAgent(link.agent, {});
       final heard = <String>[];
-      final client = AcpClient(link.client, handler: _Handler(), onExtension: (m, p) => heard.add('$m ${jsonEncode(p)}'));
+      final client = AcpClient(
+        link.client,
+        handler: _Handler(),
+        onExtension: (m, p) => heard.add('$m ${jsonEncode(p)}'),
+      );
 
       agent.rpc.notify('_herdr/evicted', {'reason': 'another device'});
-      agent.update(_sid, {'sessionUpdate': 'agent_message_chunk', 'messageId': 'a', 'content': {'type': 'text', 'text': 'x'}});
+      agent.update(_sid, {
+        'sessionUpdate': 'agent_message_chunk',
+        'messageId': 'a',
+        'content': {'type': 'text', 'text': 'x'},
+      });
       await settle();
 
       expect(heard, ['_herdr/evicted {"reason":"another device"}']);
@@ -765,14 +885,18 @@ void main() {
       await h.client.initialize();
       h.agent.methods['session/prompt'] = (_) => {
         'stopReason': 'refusal',
-        '_meta': {'quota': {'token_count': 9}},
+        '_meta': {
+          'quota': {'token_count': 9},
+        },
         'usage': {'totalTokens': 30, 'inputTokens': 10, 'outputTokens': 20},
       };
       final result = await h.client.prompt(_sid, [const TextBlock('do it')]);
       expect(result.stopReason, StopReason.refusal);
       expect(result.usage!.totalTokens, 30);
       expect(h.state.turnUsage!.outputTokens, 20);
-      expect(h.state.turnMeta, {'quota': {'token_count': 9}});
+      expect(h.state.turnMeta, {
+        'quota': {'token_count': 9},
+      });
       expect(h.state.items.last, isA<TranscriptStop>().having((i) => i.reason, 'reason', StopReason.refusal));
       expect(h.state.phase, AgentPhase.idle);
 
@@ -800,7 +924,11 @@ void main() {
       expect(h.state.lastActivityAt, isNull);
 
       now = DateTime.utc(2026, 10, 5, 9, 0, 5);
-      h.agent.update(_sid, {'sessionUpdate': 'agent_message_chunk', 'messageId': 'a', 'content': {'type': 'text', 'text': 'x'}});
+      h.agent.update(_sid, {
+        'sessionUpdate': 'agent_message_chunk',
+        'messageId': 'a',
+        'content': {'type': 'text', 'text': 'x'},
+      });
       expect(h.state.lastActivityAt, now);
 
       now = DateTime.utc(2026, 10, 5, 9, 0, 9);
@@ -810,14 +938,20 @@ void main() {
       now = DateTime.utc(2026, 10, 5, 9, 1);
       final call = h.agent.ask('elicitation/create', {
         ..._formParams(),
-        '_meta': {'codex': {'autoResolutionMs': 60000}},
+        '_meta': {
+          'codex': {'autoResolutionMs': 60000},
+        },
       });
       final pending = h.state.pending.single as PendingQuestion;
       expect(pending.receivedAt, now);
       expect(pending.request.autoResolution, const Duration(minutes: 1));
       h.handler.questions.single.answer.complete(const ElicitationDecline());
       await call.response;
-      expect(h.state.lastActivityAt, DateTime.utc(2026, 10, 5, 9, 0, 9), reason: 'answering is the person, not the agent');
+      expect(
+        h.state.lastActivityAt,
+        DateTime.utc(2026, 10, 5, 9, 0, 9),
+        reason: 'answering is the person, not the agent',
+      );
       await h.dispose();
     });
   });

@@ -66,12 +66,12 @@ class _Rig {
 }
 
 void _rigTest(String name, void Function(_Rig r) body) => test(name, () {
-      fakeAsync((async) {
-        final r = _Rig(async);
-        body(r);
-        r.dispose();
-      });
-    });
+  fakeAsync((async) {
+    final r = _Rig(async);
+    body(r);
+    r.dispose();
+  });
+});
 
 void main() {
   group('flush', () {

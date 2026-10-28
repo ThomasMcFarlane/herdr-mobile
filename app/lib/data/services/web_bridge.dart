@@ -14,11 +14,7 @@ import 'herdr_transport.dart';
 /// What the host needs from the machine. Three small callbacks instead of a
 /// transport so the host is tested with a fake machine and a fake socket.
 typedef WebStat = Future<RemoteStat> Function(String path);
-typedef WebRead = Future<Uint8List> Function(
-  String path,
-  int offset,
-  int length,
-);
+typedef WebRead = Future<Uint8List> Function(String path, int offset, int length);
 typedef WebDial = Future<SSHSocket> Function(String host, int port);
 
 /// Size of one SFTP read. Small enough that a 6 MB page never sits in memory
@@ -127,11 +123,7 @@ class WebBridgeHost {
     // A forward takes the port number of its target first: a page written for
     // localhost:3000 talks to localhost:3000 by name, and only the same number
     // reaches the phone's listener. A taken port falls back to a free one.
-    final candidates = <int>{
-      if (spec is PortForward) spec.port,
-      if (remembered != null) remembered.port,
-      0,
-    };
+    final candidates = <int>{if (spec is PortForward) spec.port, if (remembered != null) remembered.port, 0};
     Object? lastError;
     for (final candidate in candidates) {
       // The remembered token belongs to the remembered port: a tab left open
@@ -139,23 +131,11 @@ class WebBridgeHost {
       // else took the port meanwhile and the listener came back elsewhere,
       // the old tab would reload into that other app and hand it the cookie,
       // so a listener on any other port starts over with a new token.
-      final token = remembered != null && candidate == remembered.port
-          ? remembered.token
-          : _newToken();
+      final token = remembered != null && candidate == remembered.port ? remembered.token : _newToken();
       try {
         final bridge = switch (spec) {
-          StaticSite() => await _StaticBridge.bind(
-            this,
-            spec,
-            token,
-            candidate,
-          ),
-          PortForward() => await _ForwardBridge.bind(
-            this,
-            spec,
-            token,
-            candidate,
-          ),
+          StaticSite() => await _StaticBridge.bind(this, spec, token, candidate),
+          PortForward() => await _ForwardBridge.bind(this, spec, token, candidate),
         };
         if (_closed) {
           await bridge.stop();
@@ -195,10 +175,7 @@ class WebBridgeHost {
     final entry = _entry;
     _entry = null;
     _entryStarting = null;
-    await Future.wait([
-      for (final b in all) b.stop(),
-      if (entry != null) entry.close(force: true),
-    ]);
+    await Future.wait([for (final b in all) b.stop(), if (entry != null) entry.close(force: true)]);
   }
 
   // ----- the entry listener -----
@@ -227,10 +204,7 @@ class WebBridgeHost {
       }
       server.idleTimeout = const Duration(seconds: 5);
       server.defaultResponseHeaders.clear();
-      server.listen(
-        (request) => unawaited(_serveEntry(server.port, request)),
-        onError: (Object _) {},
-      );
+      server.listen((request) => unawaited(_serveEntry(server.port, request)), onError: (Object _) {});
       _entry = server;
       return server;
     } on SocketException catch (e) {
@@ -256,12 +230,7 @@ class WebBridgeHost {
     final res = req.response;
     try {
       if (!_hostAllowed(_one(req.headers, 'host'), port)) {
-        return _errorPage(
-          res,
-          403,
-          'Wrong address',
-          '<p>This address is only for herdr-mobile.</p>',
-        );
+        return _errorPage(res, 403, 'Wrong address', '<p>This address is only for herdr-mobile.</p>');
       }
       final uri = req.uri;
       if (uri.hasAuthority || uri.hasScheme || uri.path != '/__herdr/open') {
@@ -292,11 +261,8 @@ class WebBridgeHost {
     }
   }
 
-  WebBridgeInfo _infoOf(_Bridge bridge) => WebBridgeInfo(
-    port: bridge.port,
-    token: bridge.token,
-    entryPort: bridge is _ForwardBridge ? _entry!.port : null,
-  );
+  WebBridgeInfo _infoOf(_Bridge bridge) =>
+      WebBridgeInfo(port: bridge.port, token: bridge.token, entryPort: bridge is _ForwardBridge ? _entry!.port : null);
 
   String _newToken() {
     final bytes = List<int>.generate(16, (_) => _random.nextInt(256));
@@ -345,8 +311,7 @@ class WebBridgeHost {
 
   /// Every value of a header that may be repeated, joined with [separator]
   /// (`Cookie` is one list however many lines carry it).
-  static String? _joined(HttpHeaders headers, String name, String separator) =>
-      headers[name]?.join(separator);
+  static String? _joined(HttpHeaders headers, String name, String separator) => headers[name]?.join(separator);
 
   /// The query of [uri] as pairs, without ever throwing. `Uri.queryParameters`
   /// throws a `FormatException` on `%ff` (an invalid UTF-8 escape); one request
@@ -382,8 +347,7 @@ class WebBridgeHost {
     return to;
   }
 
-  static String _entryCookie(int port, String token) =>
-      'herdr_$port=$token; Path=/; HttpOnly; SameSite=Strict';
+  static String _entryCookie(int port, String token) => 'herdr_$port=$token; Path=/; HttpOnly; SameSite=Strict';
 
   /// The answer to a good entry URL: the cookie, and a page that sends the
   /// browser on to [destination] with a `Refresh` header, not a 302.
@@ -403,14 +367,10 @@ class WebBridgeHost {
     200,
     type: 'text/html; charset=utf-8',
     body: _page('Opening…', '<p><a href="${_esc(destination)}">Continue</a></p>'),
-    headers: {
-      'set-cookie': _entryCookie(port, token),
-      'refresh': '0; url=$destination',
-    },
+    headers: {'set-cookie': _entryCookie(port, token), 'refresh': '0; url=$destination'},
   );
 
-  static String _esc(String s) =>
-      const HtmlEscape(HtmlEscapeMode.attribute).convert(s);
+  static String _esc(String s) => const HtmlEscape(HtmlEscapeMode.attribute).convert(s);
 
   static String _page(String title, String body) =>
       '<!doctype html><html><head>'
@@ -446,13 +406,7 @@ class WebBridgeHost {
 
 /// One answer from a listener that is an [HttpServer] (the static folder, the
 /// entry listener). The body is written and the response closed here.
-void _send(
-  HttpResponse res,
-  int code, {
-  String? type,
-  String body = '',
-  Map<String, String> headers = const {},
-}) {
+void _send(HttpResponse res, int code, {String? type, String body = '', Map<String, String> headers = const {}}) {
   res.statusCode = code;
   res.headers
     ..set('x-content-type-options', 'nosniff')
@@ -471,12 +425,8 @@ void _send(
   unawaited(res.close().catchError((Object _) {}));
 }
 
-void _errorPage(HttpResponse res, int code, String title, String body) => _send(
-  res,
-  code,
-  type: 'text/html; charset=utf-8',
-  body: WebBridgeHost._page(title, body),
-);
+void _errorPage(HttpResponse res, int code, String title, String body) =>
+    _send(res, code, type: 'text/html; charset=utf-8', body: WebBridgeHost._page(title, body));
 
 abstract class _Bridge {
   _Bridge(this.host, this.spec, this.token);
@@ -561,19 +511,7 @@ const _mime = {
   'xml': 'application/xml',
   'wasm': 'application/wasm',
 };
-const _textual = {
-  'html',
-  'htm',
-  'xhtml',
-  'css',
-  'js',
-  'mjs',
-  'json',
-  'map',
-  'svg',
-  'txt',
-  'xml',
-};
+const _textual = {'html', 'htm', 'xhtml', 'css', 'js', 'mjs', 'json', 'map', 'svg', 'txt', 'xml'};
 
 String _extensionOf(String path) {
   final name = path.substring(path.lastIndexOf('/') + 1);
@@ -590,13 +528,7 @@ String _contentTypeOf(String name) {
 }
 
 final class _StaticBridge extends _Bridge {
-  _StaticBridge._(
-    super.host,
-    StaticSite super.spec,
-    super.token,
-    this._server,
-    this._root,
-  );
+  _StaticBridge._(super.host, StaticSite super.spec, super.token, this._server, this._root);
 
   final HttpServer _server;
   final String _root;
@@ -606,20 +538,13 @@ final class _StaticBridge extends _Bridge {
   @override
   int get port => _server.port;
 
-  static Future<_StaticBridge> bind(
-    WebBridgeHost host,
-    StaticSite spec,
-    String token,
-    int port,
-  ) async {
+  static Future<_StaticBridge> bind(WebBridgeHost host, StaticSite spec, String token, int port) async {
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, port);
     // Chrome keeps connections it has finished with; closing them here lets a
     // listener with nothing to do actually have no connection.
     server.idleTimeout = const Duration(seconds: 15);
     server.defaultResponseHeaders.clear();
-    final root = spec.root.length > 1
-        ? spec.root.replaceFirst(RegExp(r'/+$'), '')
-        : '';
+    final root = spec.root.length > 1 ? spec.root.replaceFirst(RegExp(r'/+$'), '') : '';
     final bridge = _StaticBridge._(host, spec, token, server, root);
     server.listen(bridge._serve, onError: (Object _) {});
     return bridge;
@@ -632,8 +557,7 @@ final class _StaticBridge extends _Bridge {
   /// (empty for the site's own folder). The only place a request becomes a
   /// machine path, after `_handle` has refused everything that could leave
   /// the folder.
-  String _pathOf(String rel) =>
-      rel.isEmpty ? (_root.isEmpty ? '/' : _root) : '$_root$rel';
+  String _pathOf(String rel) => rel.isEmpty ? (_root.isEmpty ? '/' : _root) : '$_root$rel';
 
   Future<void> _serve(HttpRequest request) async {
     begin();
@@ -680,19 +604,9 @@ final class _StaticBridge extends _Bridge {
         case RemoteFileErrorKind.notAFile:
           return _notFound(res, '');
         case RemoteFileErrorKind.permission:
-          return _errorPage(
-            res,
-            403,
-            'Not allowed',
-            '<p>${WebBridgeHost._esc(e.message)}</p>',
-          );
+          return _errorPage(res, 403, 'Not allowed', '<p>${WebBridgeHost._esc(e.message)}</p>');
         case RemoteFileErrorKind.unsupported:
-          return _errorPage(
-            res,
-            502,
-            'Files are not available',
-            '<p>${WebBridgeHost._esc(e.message)}</p>',
-          );
+          return _errorPage(res, 502, 'Files are not available', '<p>${WebBridgeHost._esc(e.message)}</p>');
         case RemoteFileErrorKind.tooLarge:
         case RemoteFileErrorKind.notADirectory:
         case RemoteFileErrorKind.failed:
@@ -712,12 +626,7 @@ final class _StaticBridge extends _Bridge {
     final res = req.response;
     final hostHeader = WebBridgeHost._one(req.headers, 'host');
     if (!WebBridgeHost._hostAllowed(hostHeader, port)) {
-      return _errorPage(
-        res,
-        403,
-        'Wrong address',
-        '<p>This address is only for herdr-mobile.</p>',
-      );
+      return _errorPage(res, 403, 'Wrong address', '<p>This address is only for herdr-mobile.</p>');
     }
 
     final uri = req.uri;
@@ -734,12 +643,7 @@ final class _StaticBridge extends _Bridge {
       }
       // Anchored to this listener's own origin, as the forward's is: a
       // relative target is only as safe as the browser's reading of it.
-      return WebBridgeHost._enter(
-        res,
-        port,
-        token,
-        'http://localhost:$port${WebBridgeHost._safeTo(query['to'])}',
-      );
+      return WebBridgeHost._enter(res, port, token, 'http://localhost:$port${WebBridgeHost._safeTo(query['to'])}');
     }
     if (!WebBridgeHost._tokenOk(
       WebBridgeHost._cookie(WebBridgeHost._joined(req.headers, 'cookie', '; '), 'herdr_$port'),
@@ -767,9 +671,7 @@ final class _StaticBridge extends _Bridge {
     // same origin as them. No segment is exempt (`..` starts with a dot too).
     // The served folder itself is never checked, only what a request names, so
     // a site whose own folder starts with a dot still opens.
-    if (decoded.contains('\u0000') ||
-        decoded.contains(r'\') ||
-        decoded.split('/').any((s) => s.startsWith('.'))) {
+    if (decoded.contains('\u0000') || decoded.contains(r'\') || decoded.split('/').any((s) => s.startsWith('.'))) {
       return _notFound(res, rawPath);
     }
 
@@ -780,28 +682,19 @@ final class _StaticBridge extends _Bridge {
       // A link inside the folder that points outside it is followed: the SFTP
       // stat resolves it, and telling it apart would take a realpath call for
       // every request. The folder is trusted to hold what the page may read.
-      st = await host.stat(
-        _pathOf(wantsFolder ? rel.substring(0, rel.length - 1) : rel),
-      );
+      st = await host.stat(_pathOf(wantsFolder ? rel.substring(0, rel.length - 1) : rel));
       if (wantsFolder && !st.isDirectory) return _notFound(res, rawPath);
       if (st.isDirectory) {
         // A folder without its trailing slash would make the page's relative
         // links resolve one level up.
         if (!wantsFolder) {
-          return _send(
-            res,
-            301,
-            headers: {
-              'location': uri.hasQuery ? '$rawPath/?${uri.query}' : '$rawPath/',
-            },
-          );
+          return _send(res, 301, headers: {'location': uri.hasQuery ? '$rawPath/?${uri.query}' : '$rawPath/'});
         }
         rel = '${rel}index.html';
         st = await host.stat(_pathOf(rel));
       }
     } on Object catch (e) {
-      final missing =
-          e is RemoteFileException && e.kind == RemoteFileErrorKind.notFound;
+      final missing = e is RemoteFileException && e.kind == RemoteFileErrorKind.notFound;
       if (!missing) return _failure(res, e);
       // A single-page app's own route (`/about`): only a page navigation
       // without a file extension falls back to the app's entry page.
@@ -827,16 +720,10 @@ final class _StaticBridge extends _Bridge {
       );
     }
 
-    final headers = <String, String>{
-      'content-type': _contentTypeOf(rel),
-      'accept-ranges': 'bytes',
-    };
+    final headers = <String, String>{'content-type': _contentTypeOf(rel), 'accept-ranges': 'bytes'};
     final modified = st.modified;
     if (modified != null) {
-      final stamp = DateTime.fromMillisecondsSinceEpoch(
-        (modified.millisecondsSinceEpoch ~/ 1000) * 1000,
-        isUtc: true,
-      );
+      final stamp = DateTime.fromMillisecondsSinceEpoch((modified.millisecondsSinceEpoch ~/ 1000) * 1000, isUtc: true);
       headers['last-modified'] = HttpDate.format(stamp);
       final since = WebBridgeHost._one(req.headers, 'if-modified-since');
       if (since != null) {
@@ -868,12 +755,7 @@ final class _StaticBridge extends _Bridge {
           // went away mid-file otherwise still had the whole rest read over
           // SFTP, nothing tells this listener the peer vanished. The player
           // asks for the next piece when it needs it. A plain 200 stays whole.
-          last = math.min<int>(
-            last,
-            m[2]!.isNotEmpty
-                ? int.parse(m[2]!)
-                : start + webBridgeOpenRange - 1,
-          );
+          last = math.min<int>(last, m[2]!.isNotEmpty ? int.parse(m[2]!) : start + webBridgeOpenRange - 1);
         }
         if (start > last || start >= size) {
           return _send(res, 416, headers: {'content-range': 'bytes */$size'});
@@ -884,11 +766,7 @@ final class _StaticBridge extends _Bridge {
     }
     final length = size == 0 ? 0 : last - start + 1;
     if (head || length == 0) {
-      return _send(
-        res,
-        code,
-        headers: {...headers, 'content-length': '$length'},
-      );
+      return _send(res, code, headers: {...headers, 'content-length': '$length'});
     }
 
     final path = _pathOf(rel);
@@ -922,9 +800,7 @@ final class _StaticBridge extends _Bridge {
     res.headers.set('content-length', '$length');
 
     var gone = false;
-    unawaited(
-      res.done.then((_) => gone = true, onError: (Object _) => gone = true),
-    );
+    unawaited(res.done.then((_) => gone = true, onError: (Object _) => gone = true));
     final pending = Queue<Future<Uint8List>>()..add(Future.value(first));
     var next = start + first.length;
     void topUp() {
@@ -963,12 +839,7 @@ final class _StaticBridge extends _Bridge {
 // ======================= port forward =======================
 
 final class _ForwardBridge extends _Bridge {
-  _ForwardBridge._(
-    super.host,
-    PortForward super.spec,
-    super.token,
-    this._server,
-  );
+  _ForwardBridge._(super.host, PortForward super.spec, super.token, this._server);
 
   final ServerSocket _server;
   final _connections = <Socket>{};
@@ -978,12 +849,7 @@ final class _ForwardBridge extends _Bridge {
   @override
   int get port => _server.port;
 
-  static Future<_ForwardBridge> bind(
-    WebBridgeHost host,
-    PortForward spec,
-    String token,
-    int port,
-  ) async {
+  static Future<_ForwardBridge> bind(WebBridgeHost host, PortForward spec, String token, int port) async {
     final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, port);
     final bridge = _ForwardBridge._(host, spec, token, server);
     server.listen(bridge._accept, onError: (Object _) {});
@@ -1077,41 +943,18 @@ final class _ForwardBridge extends _Bridge {
       }
     }
     if (!changed) return bytes;
-    return Uint8List.fromList([
-      ...latin1.encode(kept.join('\r\n')),
-      ...Uint8List.sublistView(bytes, end),
-    ]);
+    return Uint8List.fromList([...latin1.encode(kept.join('\r\n')), ...Uint8List.sublistView(bytes, end)]);
   }
 
-  Uint8List _response(
-    int code,
-    String reason,
-    String body, {
-    Map<String, String> headers = const {},
-  }) {
+  Uint8List _response(int code, String reason, String body, {Map<String, String> headers = const {}}) {
     final bytes = utf8.encode(body);
-    final h = {
-      'content-length': '${bytes.length}',
-      'connection': 'close',
-      'cache-control': 'no-store',
-      ...headers,
-    };
-    final head =
-        'HTTP/1.1 $code $reason\r\n${[for (final e in h.entries) '${e.key}: ${e.value}\r\n'].join()}\r\n';
+    final h = {'content-length': '${bytes.length}', 'connection': 'close', 'cache-control': 'no-store', ...headers};
+    final head = 'HTTP/1.1 $code $reason\r\n${[for (final e in h.entries) '${e.key}: ${e.value}\r\n'].join()}\r\n';
     return Uint8List.fromList([...latin1.encode(head), ...bytes]);
   }
 
-  Uint8List _errorResponse(
-    int code,
-    String reason,
-    String title,
-    String body,
-  ) => _response(
-    code,
-    reason,
-    WebBridgeHost._page(title, body),
-    headers: {'content-type': 'text/html; charset=utf-8'},
-  );
+  Uint8List _errorResponse(int code, String reason, String title, String body) =>
+      _response(code, reason, WebBridgeHost._page(title, body), headers: {'content-type': 'text/html; charset=utf-8'});
 
   Future<void> _reply(Socket socket, Uint8List bytes) async {
     try {
@@ -1206,12 +1049,7 @@ final class _ForwardBridge extends _Bridge {
       unawaited(sub.cancel());
       return _reply(
         socket,
-        _errorResponse(
-          403,
-          'Forbidden',
-          'Wrong address',
-          '<p>This address is only for herdr-mobile.</p>',
-        ),
+        _errorResponse(403, 'Forbidden', 'Wrong address', '<p>This address is only for herdr-mobile.</p>'),
       );
     }
     // The entry URL is answered by the host's entry listener, on another port,
@@ -1222,31 +1060,12 @@ final class _ForwardBridge extends _Bridge {
     // answer for a hand-made request.
     if (parsed != null && parsed.path == '/__herdr/open') {
       unawaited(sub.cancel());
-      return _reply(
-        socket,
-        _errorResponse(
-          404,
-          'Not Found',
-          'Not found',
-          WebBridgeHost._openText,
-        ),
-      );
+      return _reply(socket, _errorResponse(404, 'Not Found', 'Not found', WebBridgeHost._openText));
     }
-    final cookieGood = WebBridgeHost._tokenOk(
-      WebBridgeHost._cookie(headers['cookie'], 'herdr_$port'),
-      token,
-    );
+    final cookieGood = WebBridgeHost._tokenOk(WebBridgeHost._cookie(headers['cookie'], 'herdr_$port'), token);
     if (!cookieGood && !host._siblingOrigin(headers, port)) {
       unawaited(sub.cancel());
-      return _reply(
-        socket,
-        _errorResponse(
-          403,
-          'Forbidden',
-          'Not allowed',
-          WebBridgeHost._openText,
-        ),
-      );
+      return _reply(socket, _errorResponse(403, 'Forbidden', 'Not allowed', WebBridgeHost._openText));
     }
 
     final SSHSocket channel;
@@ -1266,10 +1085,7 @@ final class _ForwardBridge extends _Bridge {
           ? '<p>${WebBridgeHost._esc(e.message)}</p>'
           : "<p>Couldn't reach <code>localhost:${target.port}</code> on ${WebBridgeHost._esc(target.machineName)}. "
                 'The server may have stopped. Reload to retry.</p>';
-      return _reply(
-        socket,
-        _errorResponse(502, 'Bad Gateway', "Couldn't reach the server", why),
-      );
+      return _reply(socket, _errorResponse(502, 'Bad Gateway', "Couldn't reach the server", why));
     }
 
     // From here on it is bytes both ways (keep-alive, WebSocket upgrades): one
@@ -1288,10 +1104,7 @@ final class _ForwardBridge extends _Bridge {
     // TCP flow control hold the rest. Pauses nest: nothing here may call
     // `sub.resume()` of its own, or it would undo the pause [up] asked for
     // (the first version did, and still read 64 MiB with the machine stalled).
-    final up = StreamController<Uint8List>(
-      onPause: sub.pause,
-      onResume: sub.resume,
-    );
+    final up = StreamController<Uint8List>(onPause: sub.pause, onResume: sub.resume);
     // A browser that stops sending closes only its side: the machine gets the
     // end of the request (`sink.close`) and may still answer. A sink that
     // fails ends the whole connection.
@@ -1325,12 +1138,8 @@ final class _ForwardBridge extends _Bridge {
           .then((_) => socket.close(), onError: (Object _) => socket.destroy())
           .whenComplete(finish),
     );
-    unawaited(
-      channel.done.then((_) => finish(), onError: (Object _) => finish()),
-    );
-    unawaited(
-      socket.done.then((_) => finish(), onError: (Object _) => finish()),
-    );
+    unawaited(channel.done.then((_) => finish(), onError: (Object _) => finish()));
+    unawaited(socket.done.then((_) => finish(), onError: (Object _) => finish()));
     await closed.future;
     unawaited(sub.cancel().catchError((Object _) {}));
     unawaited(up.close());

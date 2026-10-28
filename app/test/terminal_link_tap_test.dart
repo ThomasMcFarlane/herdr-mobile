@@ -32,12 +32,7 @@ Future<void> _pump(
           child: SizedBox(
             width: width,
             height: 400,
-            child: TerminalView(
-              text: text,
-              wrap: wrap,
-              fontSize: fontSize,
-              onLinkTap: tappable ? _taps.add : null,
-            ),
+            child: TerminalView(text: text, wrap: wrap, fontSize: fontSize, onLinkTap: tappable ? _taps.add : null),
           ),
         ),
       ),
@@ -46,9 +41,8 @@ Future<void> _pump(
 }
 
 /// The row showing text that contains [needle].
-Finder _row(String needle) => find.byWidgetPredicate(
-      (w) => w is TerminalLineView && w.line.span.toPlainText().contains(needle),
-    );
+Finder _row(String needle) =>
+    find.byWidgetPredicate((w) => w is TerminalLineView && w.line.span.toPlainText().contains(needle));
 
 /// Where cell [column] of the row sits on screen.
 Offset _cell(WidgetTester tester, Finder row, int column, double fontSize) {
@@ -63,13 +57,9 @@ Future<void> _tapCell(WidgetTester tester, Finder row, int column, [double fontS
 }
 
 /// Pixels of the view, as 0xAARRGGBB at (x, y) in device pixels.
-Future<({int width, int height, int Function(int x, int y) at})> _capture(
-  WidgetTester tester,
-) async {
+Future<({int width, int height, int Function(int x, int y) at})> _capture(WidgetTester tester) async {
   final boundary = tester.renderObject<RenderRepaintBoundary>(
-    find
-        .descendant(of: find.byType(TerminalView), matching: find.byType(RepaintBoundary))
-        .first,
+    find.descendant(of: find.byType(TerminalView), matching: find.byType(RepaintBoundary)).first,
   );
   final dpr = tester.view.devicePixelRatio;
   return (await tester.runAsync(() async {
@@ -165,10 +155,7 @@ void main() {
               child: SizedBox(
                 width: 900,
                 height: 400,
-                child: TerminalView(
-                  text: 'go lib/ui/core/ansi.dart now',
-                  onLinkTap: _taps.add,
-                ),
+                child: TerminalView(text: 'go lib/ui/core/ansi.dart now', onLinkTap: _taps.add),
               ),
             ),
           ),
@@ -217,8 +204,7 @@ void main() {
       expect(_taps.single.target, 'https://example.com/far');
     });
 
-    testWidgets('does nothing without a handler, and draws no underline',
-        (tester) async {
+    testWidgets('does nothing without a handler, and draws no underline', (tester) async {
       await _pump(tester, 'see https://example.com/docs', tappable: false);
       final line = (tester.widget(_row('https://').first) as TerminalLineView).line;
 
@@ -235,9 +221,7 @@ void main() {
     /// The rows holding a piece of a link, top to bottom.
     Future<List<Finder>> rowsOfLink(WidgetTester tester) async {
       final rows = [
-        for (final e in find
-            .byWidgetPredicate((w) => w is TerminalLineView && w.line.links.isNotEmpty)
-            .evaluate())
+        for (final e in find.byWidgetPredicate((w) => w is TerminalLineView && w.line.links.isNotEmpty).evaluate())
           find.byWidget(e.widget),
       ]..sort((a, b) => tester.getTopLeft(a).dy.compareTo(tester.getTopLeft(b).dy));
       return rows;
@@ -298,17 +282,15 @@ void main() {
   });
 
   group('gestures', () {
-    String linkRows(int count) => [
-          for (var i = 0; i < count; i++) 'row $i https://example.com/page/$i end',
-        ].join('\r\n');
+    String linkRows(int count) =>
+        [for (var i = 0; i < count; i++) 'row $i https://example.com/page/$i end'].join('\r\n');
 
-    testWidgets('a vertical drag that starts on a link scrolls and opens nothing',
-        (tester) async {
+    testWidgets('a vertical drag that starts on a link scrolls and opens nothing', (tester) async {
       await _pump(tester, linkRows(200));
       final position = tester
-          .state<ScrollableState>(find
-              .descendant(of: find.byType(CustomScrollView), matching: find.byType(Scrollable))
-              .first)
+          .state<ScrollableState>(
+            find.descendant(of: find.byType(CustomScrollView), matching: find.byType(Scrollable)).first,
+          )
           .position;
       expect(position.pixels, 0);
 
@@ -320,13 +302,12 @@ void main() {
       expect(_taps, isEmpty);
     });
 
-    testWidgets('a horizontal drag that starts on a link scrolls and opens nothing',
-        (tester) async {
+    testWidgets('a horizontal drag that starts on a link scrolls and opens nothing', (tester) async {
       await _pump(tester, '${'x' * 4} https://example.com/${'y' * 100}');
       final horizontal = tester
-          .state<ScrollableState>(find
-              .descendant(of: find.byType(TerminalView), matching: find.byType(Scrollable))
-              .first)
+          .state<ScrollableState>(
+            find.descendant(of: find.byType(TerminalView), matching: find.byType(Scrollable)).first,
+          )
           .position;
 
       await tester.dragFrom(_cell(tester, _row('https://'), 12, 11.5), const Offset(-120, 0));
@@ -345,15 +326,12 @@ void main() {
       expect(_taps, isEmpty);
     });
 
-    testWidgets('a touch that stops a fling does not open what is under it',
-        (tester) async {
+    testWidgets('a touch that stops a fling does not open what is under it', (tester) async {
       await _pump(tester, linkRows(300));
       await tester.fling(find.byType(TerminalView), const Offset(0, 300), 2000);
       await tester.pump(const Duration(milliseconds: 50));
 
-      final visible = find.byWidgetPredicate(
-        (w) => w is TerminalLineView && w.line.links.isNotEmpty,
-      );
+      final visible = find.byWidgetPredicate((w) => w is TerminalLineView && w.line.links.isNotEmpty);
       final row = visible.at(visible.evaluate().length ~/ 2);
       await tester.tapAt(_cell(tester, row, 12, 11.5));
       await tester.pump(const Duration(milliseconds: 100));
@@ -396,11 +374,7 @@ void main() {
               child: SizedBox(
                 width: 900,
                 height: 400,
-                child: TerminalView(
-                  text: linkRows(40),
-                  onLinkTap: _taps.add,
-                  onFontSizeChanged: (s) => size = s,
-                ),
+                child: TerminalView(text: linkRows(40), onLinkTap: _taps.add, onFontSizeChanged: (s) => size = s),
               ),
             ),
           ),
@@ -422,12 +396,7 @@ void main() {
 
   group('drawing', () {
     /// Longest run of [color] pixels on one pixel row between [x0] and [x1].
-    int longestRun(
-      ({int width, int height, int Function(int, int) at}) pixels,
-      Color color,
-      int x0,
-      int x1,
-    ) {
+    int longestRun(({int width, int height, int Function(int, int) at}) pixels, Color color, int x0, int x1) {
       var best = 0;
       for (var y = 0; y < pixels.height; y++) {
         var run = 0;
@@ -439,8 +408,7 @@ void main() {
       return best;
     }
 
-    testWidgets('links are underlined across their cells and nowhere else',
-        (tester) async {
+    testWidgets('links are underlined across their cells and nowhere else', (tester) async {
       // Text in the terminal's own colour, so only the underline and the
       // recoloured link text can be the link colour.
       await _pump(tester, 'plain words https://example.com/docs and more words');
@@ -453,20 +421,21 @@ void main() {
       final pixels = await _capture(tester);
 
       final inside = longestRun(pixels, terminalLinkColor, px(start), px(end));
-      expect(inside, greaterThanOrEqualTo(px(end) - px(start) - 2),
-          reason: 'one unbroken line under the link');
-      expect(longestRun(pixels, terminalLinkColor, px(0), px(start - 1)), lessThan(metrics.advancePx),
-          reason: 'none under the words before');
-      expect(longestRun(pixels, terminalLinkColor, px(end + 1), px(end + 20)), lessThan(metrics.advancePx),
-          reason: 'none under the words after');
+      expect(inside, greaterThanOrEqualTo(px(end) - px(start) - 2), reason: 'one unbroken line under the link');
+      expect(
+        longestRun(pixels, terminalLinkColor, px(0), px(start - 1)),
+        lessThan(metrics.advancePx),
+        reason: 'none under the words before',
+      );
+      expect(
+        longestRun(pixels, terminalLinkColor, px(end + 1), px(end + 20)),
+        lessThan(metrics.advancePx),
+        reason: 'none under the words after',
+      );
     });
 
-    testWidgets('link text is in the link colour; coloured text keeps its own',
-        (tester) async {
-      await _pump(
-        tester,
-        'plain https://a.dev/x \x1b[31mred https://b.dev/y\x1b[0m',
-      );
+    testWidgets('link text is in the link colour; coloured text keeps its own', (tester) async {
+      await _pump(tester, 'plain https://a.dev/x \x1b[31mred https://b.dev/y\x1b[0m');
       final line = (tester.widget(_row('a.dev').first) as TerminalLineView).line;
       final spans = line.span.children!.cast<TextSpan>();
       final byText = {for (final s in spans) s.text: s.style?.color};
@@ -483,8 +452,7 @@ void main() {
       final link = line.span.children!.cast<TextSpan>().last;
 
       expect(link.style!.color, isNot(terminalLinkColor));
-      expect(link.style!.color!.computeLuminance(),
-          lessThan(terminalLinkColor.computeLuminance()));
+      expect(link.style!.color!.computeLuminance(), lessThan(terminalLinkColor.computeLuminance()));
     });
 
     testWidgets('the text layer keeps its cells: the span only splits', (tester) async {

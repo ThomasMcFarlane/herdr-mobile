@@ -17,5 +17,4 @@ Finder terminalRowContaining(String text) => find.byWidgetPredicate(
 
 /// The row's own span: one child per run of identical style. The same object
 /// for as long as the row is unchanged.
-TextSpan rowSpan(Widget row) =>
-    (row as TerminalLineView).text.children!.single as TextSpan;
+TextSpan rowSpan(Widget row) => (row as TerminalLineView).text.children!.single as TextSpan;

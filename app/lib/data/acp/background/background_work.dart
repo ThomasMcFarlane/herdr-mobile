@@ -160,12 +160,7 @@ class BackgroundTask {
 /// out the same instance until something changes, so widgets compare by
 /// identity.
 class BackgroundWork {
-  BackgroundWork({
-    this.tasks = const [],
-    this.wakes = false,
-    this.wakeLabel,
-    this.unknownRunning = false,
-  });
+  BackgroundWork({this.tasks = const [], this.wakes = false, this.wakeLabel, this.unknownRunning = false});
 
   /// The nothing: the same instance for every session without tasks.
   static final BackgroundWork empty = BackgroundWork();

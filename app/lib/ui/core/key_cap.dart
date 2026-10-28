@@ -18,15 +18,8 @@ import 'theme.dart';
 /// [active] true is an armed modifier (`ctrl` waiting for the next key): the accent
 /// tint, announced as selected.
 class KeyCap extends StatefulWidget {
-  const KeyCap({
-    super.key,
-    this.label,
-    this.icon,
-    required this.onTap,
-    this.onRepeat,
-    this.active,
-    this.semanticLabel,
-  }) : assert((label == null) != (icon == null), 'a label or an icon');
+  const KeyCap({super.key, this.label, this.icon, required this.onTap, this.onRepeat, this.active, this.semanticLabel})
+    : assert((label == null) != (icon == null), 'a label or an icon');
 
   final String? label;
   final IconData? icon;
@@ -129,8 +122,8 @@ class _KeyCapState extends State<KeyCap> {
           color: !enabled
               ? Colors.transparent
               : active
-                  ? (pressed ? ds.accentWashPressed : ds.accentWash)
-                  : (pressed ? ds.fillPressed : ds.fill),
+              ? (pressed ? ds.accentWashPressed : ds.accentWash)
+              : (pressed ? ds.fillPressed : ds.fill),
           borderRadius: BorderRadius.circular(Radii.sm),
         ),
         // widthFactor: shrink-wrap, so a Wrap gives it its own width, not all.

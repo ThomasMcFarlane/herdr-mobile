@@ -15,37 +15,32 @@ const _chip = Key('chip');
 
 Future<void> _pump(WidgetTester tester, _Probe probe, {bool reduced = false}) async {
   Widget app() => MaterialApp(
-        theme: AppTheme.light(),
-        builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(context).copyWith(disableAnimations: reduced),
-          child: child!,
-        ),
-        home: Scaffold(
-          body: Center(
-            child: SizedBox(
-              width: 300,
-              child: HoldToConfirm(
-                enabled: probe.enabled,
-                onConfirmed: () => probe.confirmed++,
-                onActivate: () => probe.activated++,
-                builder: (context, hold) => ColoredBox(
-                  key: _chip,
-                  color: Colors.white,
-                  child: SizedBox(
-                    height: 44,
-                    child: Stack(
-                      children: [
-                        hold.fill,
-                        Text(hold.holding ? 'holding' : (hold.hint ? 'hint' : 'rest')),
-                      ],
-                    ),
-                  ),
-                ),
+    theme: AppTheme.light(),
+    builder: (context, child) => MediaQuery(
+      data: MediaQuery.of(context).copyWith(disableAnimations: reduced),
+      child: child!,
+    ),
+    home: Scaffold(
+      body: Center(
+        child: SizedBox(
+          width: 300,
+          child: HoldToConfirm(
+            enabled: probe.enabled,
+            onConfirmed: () => probe.confirmed++,
+            onActivate: () => probe.activated++,
+            builder: (context, hold) => ColoredBox(
+              key: _chip,
+              color: Colors.white,
+              child: SizedBox(
+                height: 44,
+                child: Stack(children: [hold.fill, Text(hold.holding ? 'holding' : (hold.hint ? 'hint' : 'rest'))]),
               ),
             ),
           ),
         ),
-      );
+      ),
+    ),
+  );
   await tester.pumpWidget(app());
 }
 

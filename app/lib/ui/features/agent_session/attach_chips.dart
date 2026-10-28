@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../attach/gallery_thumb.dart';
 import '../files/file_format.dart';
 import '../photos/photo_item.dart';
@@ -154,9 +155,17 @@ class _Chip extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Type.compact.copyWith(color: ds.text)),
+                            Text(
+                              label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Type.compact.copyWith(color: ds.text),
+                            ),
                             if (progress != null && a.uploading)
-                              ValueListenableBuilder<double>(valueListenable: progress, builder: (context, v, _) => status(v))
+                              ValueListenableBuilder<double>(
+                                valueListenable: progress,
+                                builder: (context, v, _) => status(v),
+                              )
                             else
                               status(null),
                           ],
@@ -184,7 +193,9 @@ class _Chip extends StatelessWidget {
                 semanticLabel: a.uploading ? 'Cancel upload of $label' : 'Remove $label',
                 builder: (context, pressed) => SizedBox.square(
                   dimension: kMinTap,
-                  child: Center(child: Icon(LucideIcons.x, size: IconSize.row, color: pressed ? ds.text : ds.textSecondary)),
+                  child: Center(
+                    child: Icon(LucideIcons.x, size: IconSize.row, color: pressed ? ds.text : ds.textSecondary),
+                  ),
                 ),
               ),
             ],
@@ -209,7 +220,12 @@ class _Thumb extends StatelessWidget {
       // The gallery's own thumbnail, even after the picture is prepared: the
       // same provider the grid used, so it is already decoded and the chip
       // costs no second decode.
-      picture = Image(image: galleryThumbProvider(a.preview!), fit: BoxFit.cover, gaplessPlayback: true, excludeFromSemantics: true);
+      picture = Image(
+        image: galleryThumbProvider(a.preview!),
+        fit: BoxFit.cover,
+        gaplessPlayback: true,
+        excludeFromSemantics: true,
+      );
     } else if (a.thumb != null) {
       picture = Image.memory(
         a.thumb!,
@@ -236,7 +252,11 @@ class _Thumb extends StatelessWidget {
     } else if (a.preparing) {
       child = const Center(child: BusySpinner());
     } else {
-      child = Icon(a.kind == AttachmentKind.image ? HerdrIcons.picture : LucideIcons.fileText, size: IconSize.bar, color: ds.textSecondary);
+      child = Icon(
+        a.kind == AttachmentKind.image ? HerdrIcons.picture : LucideIcons.fileText,
+        size: IconSize.bar,
+        color: ds.textSecondary,
+      );
     }
     final tile = ClipRRect(
       borderRadius: BorderRadius.circular(Radii.xs),
@@ -256,7 +276,9 @@ class _Thumb extends StatelessWidget {
           tile,
           ValueListenableBuilder<double>(
             valueListenable: progress,
-            builder: (context, v, _) => CustomPaint(painter: _RingPainter(progress: v, track: ds.hairline, color: ds.accent)),
+            builder: (context, v, _) => CustomPaint(
+              painter: _RingPainter(progress: v, track: ds.hairline, color: ds.accent),
+            ),
           ),
         ],
       ),

@@ -31,7 +31,8 @@ import '../support/memory_terminal_settings_store.dart';
 import 'board_support.dart';
 import 'ui_harness.dart' show attentionSetProvider, snapshotWith;
 
-const _longFolder = '/home/nguyễn-văn-a/Dự án thử nghiệm/thư mục rất dài và lằng nhằng/a-very-long-directory-name/payments-api';
+const _longFolder =
+    '/home/nguyễn-văn-a/Dự án thử nghiệm/thư mục rất dài và lằng nhằng/a-very-long-directory-name/payments-api';
 
 Future<void> _flush(WidgetTester tester) async {
   for (var i = 0; i < 8; i++) {
@@ -43,9 +44,9 @@ Future<void> _flush(WidgetTester tester) async {
 }
 
 Finder _field(String label) => find.descendant(
-      of: find.byWidgetPredicate((w) => w is LabeledField && w.label == label),
-      matching: find.byType(TextFormField),
-    );
+  of: find.byWidgetPredicate((w) => w is LabeledField && w.label == label),
+  matching: find.byType(TextFormField),
+);
 
 Finder _button(String label) => find.widgetWithText(AppButton, label);
 
@@ -77,24 +78,21 @@ class _Base extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        body: Center(
-          child: AppButton(
-            label: 'Open form',
-            onPressed: () => openNewAgentSession(context),
-          ),
-        ),
-      );
+    body: Center(
+      child: AppButton(label: 'Open form', onPressed: () => openNewAgentSession(context)),
+    ),
+  );
 }
 
 MaterialApp _app(Widget home, {Brightness brightness = Brightness.light, double scale = 1}) => MaterialApp(
-      theme: brightness == Brightness.dark ? AppTheme.dark() : AppTheme.light(),
-      navigatorObservers: [ToastRouteObserver()],
-      builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale)),
-        child: child!,
-      ),
-      home: home,
-    );
+  theme: brightness == Brightness.dark ? AppTheme.dark() : AppTheme.light(),
+  navigatorObservers: [ToastRouteObserver()],
+  builder: (context, child) => MediaQuery(
+    data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale)),
+    child: child!,
+  ),
+  home: home,
+);
 
 void _phone(WidgetTester tester, double width, double height) {
   tester.view
@@ -138,24 +136,26 @@ Future<CreateHarness> _paneEnv({AgentSessionMemory? memory}) async {
 
 Future<void> _panePump(WidgetTester tester, CreateHarness h, AgentScreens screens, Widget home) async {
   _phone(tester, 360, 740);
-  await tester.pumpWidget(MultiProvider(
-    providers: [
-      ChangeNotifierProvider.value(value: h.machines),
-      ChangeNotifierProvider.value(value: h.fleet),
-      ListenableProvider<AgentSessions>.value(value: h.agents),
-      ChangeNotifierProvider.value(value: h.agentSettings),
-      ChangeNotifierProvider.value(value: TerminalSettings(MemoryTerminalSettingsStore())),
-      ChangeNotifierProvider(create: (_) => AppSettings(MemoryAppSettingsStore())),
-      ChangeNotifierProvider.value(value: screens),
-      Provider<PanePreviews>(
-        create: (_) => PanePreviews(changes: h.fleet, connection: h.fleet.connection),
-        dispose: (_, previews) => previews.dispose(),
-      ),
-      Provider<TransportFactory>.value(value: (p, s, a, b) => throw StateError('unused')),
-      attentionSetProvider(),
-    ],
-    child: _app(home),
-  ));
+  await tester.pumpWidget(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: h.machines),
+        ChangeNotifierProvider.value(value: h.fleet),
+        ListenableProvider<AgentSessions>.value(value: h.agents),
+        ChangeNotifierProvider.value(value: h.agentSettings),
+        ChangeNotifierProvider.value(value: TerminalSettings(MemoryTerminalSettingsStore())),
+        ChangeNotifierProvider(create: (_) => AppSettings(MemoryAppSettingsStore())),
+        ChangeNotifierProvider.value(value: screens),
+        Provider<PanePreviews>(
+          create: (_) => PanePreviews(changes: h.fleet, connection: h.fleet.connection),
+          dispose: (_, previews) => previews.dispose(),
+        ),
+        Provider<TransportFactory>.value(value: (p, s, a, b) => throw StateError('unused')),
+        attentionSetProvider(),
+      ],
+      child: _app(home),
+    ),
+  );
   await _flush(tester);
 }
 
@@ -198,7 +198,11 @@ void main() {
       await _duplicatePane(tester);
 
       expect(find.byType(NewAgentSessionScreen), findsOneWidget);
-      expect(find.bySemanticsLabel(RegExp('^Machine, workstation')), findsOneWidget, reason: 'not the laptop used last');
+      expect(
+        find.bySemanticsLabel(RegExp('^Machine, workstation')),
+        findsOneWidget,
+        reason: 'not the laptop used last',
+      );
       expect(_text(tester, 'Folder'), '/work/w1/api', reason: 'where the program is, not where the pane opened');
       expect(_selected(tester, 'Claude Code'), isTrue, reason: 'the pane\'s agent, not the codex used last');
       semantics.dispose();
@@ -342,7 +346,10 @@ void main() {
 
       expect(find.bySemanticsLabel(RegExp('started in api')), findsOneWidget);
       final pill = tester.getRect(find.byType(FloatingTabBar));
-      for (final part in [find.textContaining('started in'), find.descendant(of: find.byKey(toastActionKey), matching: find.text('Open'))]) {
+      for (final part in [
+        find.textContaining('started in'),
+        find.descendant(of: find.byKey(toastActionKey), matching: find.text('Open')),
+      ]) {
         expect(tester.getRect(part).overlaps(pill), isFalse);
       }
       semantics.dispose();
@@ -390,18 +397,28 @@ void main() {
       await _flush(tester);
     }
 
-    testWidgets('opens the form on the session\'s machine, folder and agent; backing out remembers nothing', (tester) async {
+    testWidgets('opens the form on the session\'s machine, folder and agent; backing out remembers nothing', (
+      tester,
+    ) async {
       final semantics = tester.ensureSemantics();
       final e = await _AgentEnv.create(
         machines: const [(id: 'a', label: 'studio-mac'), (id: 'b', label: 'build-box')],
-        memory: const AgentSessionMemory(machineId: 'b', agents: {'a': 'omp', 'b': 'claude'}, folders: {'a': '/old', 'b': '/srv/app'}),
+        memory: const AgentSessionMemory(
+          machineId: 'b',
+          agents: {'a': 'omp', 'b': 'claude'},
+          folders: {'a': '/old', 'b': '/srv/app'},
+        ),
       );
       await sessionScreen(tester, e);
 
       await duplicate(tester);
 
       expect(find.byType(NewAgentSessionScreen), findsOneWidget);
-      expect(find.bySemanticsLabel(RegExp('^Machine, studio-mac')), findsOneWidget, reason: 'not the build box used last');
+      expect(
+        find.bySemanticsLabel(RegExp('^Machine, studio-mac')),
+        findsOneWidget,
+        reason: 'not the build box used last',
+      );
       expect(_text(tester, 'Folder'), folder);
       expect(_selected(tester, 'Codex'), isTrue);
       expect(_selected(tester, 'omp'), isFalse);
@@ -418,7 +435,9 @@ void main() {
       await e.tearDown(tester);
     });
 
-    testWidgets('starting from it starts a fresh session, stays on the chat it came from and remembers', (tester) async {
+    testWidgets('starting from it starts a fresh session, stays on the chat it came from and remembers', (
+      tester,
+    ) async {
       final e = await _AgentEnv.create();
       final original = await sessionScreen(tester, e);
 
@@ -446,7 +465,10 @@ void main() {
       await _tap(tester, _button('Start and open'));
 
       expect(find.byType(NewAgentSessionScreen), findsNothing);
-      expect(tester.widget<AgentSessionScreen>(find.byType(AgentSessionScreen)).session.key, e.repo.sessions.single.key);
+      expect(
+        tester.widget<AgentSessionScreen>(find.byType(AgentSessionScreen)).session.key,
+        e.repo.sessions.single.key,
+      );
       expect(find.byKey(toastKey), findsNothing);
       await e.tearDown(tester);
     });
@@ -472,7 +494,9 @@ void main() {
       final e = await _AgentEnv.create();
       await e.pump(
         tester,
-        const NewAgentSessionScreen(prefill: SessionPrefill(machineId: 'a', folder: folder, agent: 'not-a-route')),
+        const NewAgentSessionScreen(
+          prefill: SessionPrefill(machineId: 'a', folder: folder, agent: 'not-a-route'),
+        ),
       );
 
       expect(_text(tester, 'Folder'), folder);
@@ -484,7 +508,9 @@ void main() {
       final e = await _AgentEnv.create(machines: const [(id: 'a', label: 'studio-mac'), (id: 'b', label: 'build-box')]);
       await e.pump(
         tester,
-        const NewAgentSessionScreen(prefill: SessionPrefill(machineId: 'gone', folder: folder, agent: 'codex')),
+        const NewAgentSessionScreen(
+          prefill: SessionPrefill(machineId: 'gone', folder: folder, agent: 'codex'),
+        ),
       );
 
       expect(find.text('That machine went offline. Pick another.'), findsOneWidget);
@@ -495,10 +521,14 @@ void main() {
     });
 
     testWidgets('a worst-case folder at 320dp and 2x text fits, and is kept whole', (tester) async {
-      final e = await _AgentEnv.create(machines: const [(id: 'a', label: 'build-server-eu-west-2-primary-with-a-very-long-name')]);
+      final e = await _AgentEnv.create(
+        machines: const [(id: 'a', label: 'build-server-eu-west-2-primary-with-a-very-long-name')],
+      );
       await e.pump(
         tester,
-        const NewAgentSessionScreen(prefill: SessionPrefill(machineId: 'a', folder: _longFolder, agent: 'codex')),
+        const NewAgentSessionScreen(
+          prefill: SessionPrefill(machineId: 'a', folder: _longFolder, agent: 'codex'),
+        ),
         width: 320,
         height: 568,
         scale: 2,
@@ -552,7 +582,10 @@ class _AgentEnv {
         ),
     ]);
     final hosts = <String, FakeAgentHost>{};
-    final repo = AgentSessionRepository(fleet: h.fleet, hostFor: (c) => hosts.putIfAbsent(c.profile.id, FakeAgentHost.new));
+    final repo = AgentSessionRepository(
+      fleet: h.fleet,
+      hostFor: (c) => hosts.putIfAbsent(c.profile.id, FakeAgentHost.new),
+    );
     final store = _MemoryStore()..memory = memory;
     final settings = AgentSessionSettings(store);
     await settings.load();

@@ -100,7 +100,11 @@ class PhrasePredictor implements Predictor {
     if (fd.isEmpty) {
       _entries.forEach(consider);
     } else {
-      for (var i = _lowerBound(fd); i < _sorted.length && _sorted[i].startsWith(fd); i++) {
+      for (
+        var i = _lowerBound(fd);
+        i < _sorted.length && _sorted[i].startsWith(fd);
+        i++
+      ) {
         consider(_sorted[i], _entries[_sorted[i]]!);
       }
     }

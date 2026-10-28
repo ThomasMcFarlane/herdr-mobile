@@ -53,7 +53,16 @@ void main() {
     final tray = AttachTray(capacity: 5);
     addTearDown(tray.dispose);
     final host = await _host(tester);
-    unawaited(openGalleryPreview(host, model: m, tray: tray, cache: ThumbCache(load: (a) => g.thumbnail(a)), index: 300, gallery: g));
+    unawaited(
+      openGalleryPreview(
+        host,
+        model: m,
+        tray: tray,
+        cache: ThumbCache(load: (a) => g.thumbnail(a)),
+        index: 300,
+        gallery: g,
+      ),
+    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
@@ -70,7 +79,14 @@ void main() {
     addTearDown(tray.dispose);
     final host = await _host(tester);
 
-    await openGalleryPreview(host, model: m, tray: tray, cache: ThumbCache(load: (a) => g.thumbnail(a)), index: 0, gallery: g);
+    await openGalleryPreview(
+      host,
+      model: m,
+      tray: tray,
+      cache: ThumbCache(load: (a) => g.thumbnail(a)),
+      index: 0,
+      gallery: g,
+    );
     await tester.pump(const Duration(milliseconds: 400));
 
     expect(find.byType(PhotoViewer), findsNothing);

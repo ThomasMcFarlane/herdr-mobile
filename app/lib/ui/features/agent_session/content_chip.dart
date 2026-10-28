@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show OverflowBoxFit;
 
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../render/visible_text.dart';
 
 /// One quiet line for a piece of content that is not text: an icon, what it
@@ -43,13 +44,17 @@ class ContentChip extends StatelessWidget {
     final ds = context.ds;
     final tappable = onTap != null;
     // The icon sits on the middle of the first line, at any text size.
-    final lineHeight = MediaQuery.textScalerOf(context).scale(
-      (Type.secondary.fontSize ?? 14) * (Type.secondary.height ?? 1.3),
-    );
+    final lineHeight = MediaQuery.textScalerOf(context)
+        .scale((Type.secondary.fontSize ?? 14) * (Type.secondary.height ?? 1.3));
     final row = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(height: lineHeight, child: Center(child: Icon(icon, size: IconSize.row, color: ds.textTertiary))),
+        SizedBox(
+          height: lineHeight,
+          child: Center(
+            child: Icon(icon, size: IconSize.row, color: ds.textTertiary),
+          ),
+        ),
         const SizedBox(width: Gap.sm),
         Expanded(
           child: Column(
@@ -88,7 +93,10 @@ class ContentChip extends StatelessWidget {
       constraints: const BoxConstraints(minHeight: kMinTap),
       child: Align(
         alignment: Alignment.centerLeft,
-        child: Padding(padding: const EdgeInsets.symmetric(horizontal: Gap.sm, vertical: Gap.xs), child: row),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Gap.sm, vertical: Gap.xs),
+          child: row,
+        ),
       ),
     );
     return LayoutBuilder(

@@ -47,8 +47,9 @@ Future<void> pumpScreen(
   await tester.pump(Dwell.tapGuard);
 }
 
-FakeAgentSession asking(PermissionRequest request, {List<TranscriptItem> items = const []}) =>
-    FakeAgentSession(state: stateWith(items: items, turnActive: true, pending: [PendingPermission(7, request)]));
+FakeAgentSession asking(PermissionRequest request, {List<TranscriptItem> items = const []}) => FakeAgentSession(
+  state: stateWith(items: items, turnActive: true, pending: [PendingPermission(7, request)]),
+);
 
 Map<String, Object?> diff(String path, String? before, String after) => {
   'type': 'diff',
@@ -78,7 +79,10 @@ SelectConfigOption modeOption(String value, {List<(String, String)>? choices}) =
   name: 'Mode',
   category: 'mode',
   value: value,
-  choices: [for (final (id, name) in choices ?? const [('default', 'Default'), ('bypassPermissions', 'Bypass Permissions')]) ConfigChoice(value: id, name: name)],
+  choices: [
+    for (final (id, name) in choices ?? const [('default', 'Default'), ('bypassPermissions', 'Bypass Permissions')])
+      ConfigChoice(value: id, name: name),
+  ],
 );
 
 const modelOption = SelectConfigOption(
@@ -86,7 +90,10 @@ const modelOption = SelectConfigOption(
   name: 'Model',
   category: 'model',
   value: 'sonnet',
-  choices: [ConfigChoice(value: 'sonnet', name: 'Claude Sonnet'), ConfigChoice(value: 'opus', name: 'Claude Opus')],
+  choices: [
+    ConfigChoice(value: 'sonnet', name: 'Claude Sonnet'),
+    ConfigChoice(value: 'opus', name: 'Claude Opus'),
+  ],
 );
 
 const effortOption = SelectConfigOption(
@@ -94,13 +101,18 @@ const effortOption = SelectConfigOption(
   name: 'Effort',
   category: 'thought_level',
   value: 'high',
-  choices: [ConfigChoice(value: 'high', name: 'High'), ConfigChoice(value: 'low', name: 'Low')],
+  choices: [
+    ConfigChoice(value: 'high', name: 'High'),
+    ConfigChoice(value: 'low', name: 'Low'),
+  ],
 );
 
 const fastOption = BooleanConfigOption(id: 'fast', name: 'Fast', value: false);
 
-FakeAgentSession withOptions(List<ConfigOption> options, {AgentLink link = AgentLink.live}) =>
-    FakeAgentSession(state: stateWith(options: options), link: link);
+FakeAgentSession withOptions(List<ConfigOption> options, {AgentLink link = AgentLink.live}) => FakeAgentSession(
+  state: stateWith(options: options),
+  link: link,
+);
 
 void main() {
   group('evidence in the dock', () {
@@ -108,7 +120,10 @@ void main() {
       final request = permissionRequest(title: 'Bash', rawInput: {'command': 'flutter test'});
       await pumpScreen(
         tester,
-        asking(request, items: [userMsg('u1', 'fix it'), agentMsg('a1', 'I will run the suite before I change anything.')]),
+        asking(
+          request,
+          items: [userMsg('u1', 'fix it'), agentMsg('a1', 'I will run the suite before I change anything.')],
+        ),
       );
       final said = find.text('\u201cI will run the suite before I change anything.\u201d');
       expect(said, findsOneWidget);
@@ -131,7 +146,11 @@ void main() {
         content: [diff('lib/a.dart', 'a\nb\nd\n', 'a\nc\nd\n')],
       );
       await pumpScreen(tester, asking(request));
-      expect(find.text('lib/a.dart'), findsOneWidget, reason: 'the diff names its file once (the path list does not repeat it)');
+      expect(
+        find.text('lib/a.dart'),
+        findsOneWidget,
+        reason: 'the diff names its file once (the path list does not repeat it)',
+      );
       expect(find.text('+1 \u22121'), findsOneWidget);
       expect(find.text('+ c'), findsOneWidget);
       expect(find.text('- b'), findsOneWidget);
@@ -243,7 +262,9 @@ void main() {
           pending: [
             PendingQuestion(
               9,
-              planQuestion('Approve plan "Add flag" and start implementation?\n\n# Plan\n\n1. Add the flag\n2. Test it\n\u2026'),
+              planQuestion(
+                'Approve plan "Add flag" and start implementation?\n\n# Plan\n\n1. Add the flag\n2. Test it\n\u2026',
+              ),
             ),
           ],
         ),
@@ -277,10 +298,7 @@ void main() {
 
     testWidgets('an ordinary question is untouched', (tester) async {
       final session = FakeAgentSession(
-        state: stateWith(
-          turnActive: true,
-          pending: [PendingQuestion(9, planQuestion('Pick one'))],
-        ),
+        state: stateWith(turnActive: true, pending: [PendingQuestion(9, planQuestion('Pick one'))]),
       );
       await pumpScreen(tester, session);
       expect(find.text('Pick one'), findsOneWidget);
@@ -303,7 +321,9 @@ void main() {
       }
       expect(find.widgetWithText(AppChip, 'Web search'), findsNothing, reason: 'four chips, then +N');
       expect(find.widgetWithText(AppChip, '+1'), findsOneWidget);
-      final tops = {for (final c in tester.widgetList<AppChip>(find.byType(AppChip))) tester.getTopLeft(find.byWidget(c)).dy};
+      final tops = {
+        for (final c in tester.widgetList<AppChip>(find.byType(AppChip))) tester.getTopLeft(find.byWidget(c)).dy,
+      };
       expect(tops, hasLength(1), reason: 'a single row');
     });
 
@@ -386,7 +406,10 @@ void main() {
         state: stateWith(
           modes: const ModeState(
             currentModeId: 'plan',
-            availableModes: [SessionMode(id: 'plan', name: 'Plan'), SessionMode(id: 'code', name: 'Code')],
+            availableModes: [
+              SessionMode(id: 'plan', name: 'Plan'),
+              SessionMode(id: 'code', name: 'Code'),
+            ],
           ),
         ),
       );
@@ -502,7 +525,9 @@ void main() {
     });
 
     testWidgets('an elevated mode is neutral with a quiet marker; a plain one has neither', (tester) async {
-      final elevated = withOptions([modeOption('acceptEdits', choices: const [('acceptEdits', 'Accept edits')])]);
+      final elevated = withOptions([
+        modeOption('acceptEdits', choices: const [('acceptEdits', 'Accept edits')]),
+      ]);
       await pumpScreen(tester, elevated);
       final chip = tester.widget<AppChip>(find.widgetWithText(AppChip, 'Accept edits'));
       expect(chip.tint, isNull);
@@ -524,7 +549,11 @@ void main() {
       final session = withOptions([
         modeOption(
           'default',
-          choices: const [('default', 'Default'), ('acceptEdits', 'Accept edits'), ('bypassPermissions', 'Bypass Permissions')],
+          choices: const [
+            ('default', 'Default'),
+            ('acceptEdits', 'Accept edits'),
+            ('bypassPermissions', 'Bypass Permissions'),
+          ],
         ),
       ]);
       await pumpScreen(tester, session);
@@ -557,7 +586,10 @@ void main() {
         state: stateWith(
           modes: const ModeState(
             currentModeId: 'default',
-            availableModes: [SessionMode(id: 'default', name: 'Default'), SessionMode(id: 'bypassPermissions', name: 'Bypass')],
+            availableModes: [
+              SessionMode(id: 'default', name: 'Default'),
+              SessionMode(id: 'bypassPermissions', name: 'Bypass'),
+            ],
           ),
         ),
       );
@@ -582,7 +614,10 @@ void main() {
         state: stateWith(
           modes: const ModeState(
             currentModeId: 'default',
-            availableModes: [SessionMode(id: 'default', name: 'Default'), SessionMode(id: 'bypassPermissions', name: 'Bypass Permissions')],
+            availableModes: [
+              SessionMode(id: 'default', name: 'Default'),
+              SessionMode(id: 'bypassPermissions', name: 'Bypass Permissions'),
+            ],
           ),
         ),
       );
@@ -608,7 +643,10 @@ void main() {
     test('announcesDanger looks only at the items that arrived', () {
       const bypass = ModeState(
         currentModeId: 'bypassPermissions',
-        availableModes: [SessionMode(id: 'default', name: 'Default'), SessionMode(id: 'bypassPermissions', name: 'Bypass Permissions')],
+        availableModes: [
+          SessionMode(id: 'default', name: 'Default'),
+          SessionMode(id: 'bypassPermissions', name: 'Bypass Permissions'),
+        ],
       );
       final note = TranscriptNote(key: 'n1', text: 'Mode changed to Bypass Permissions', modeId: 'bypassPermissions');
       final state = stateWith(modes: bypass, items: [agentMsg('a', 'x'), note]);
@@ -618,7 +656,16 @@ void main() {
         currentModeId: 'default',
         availableModes: [SessionMode(id: 'default', name: 'Default')],
       );
-      expect(announcesDanger(stateWith(modes: calm, items: [TranscriptNote(key: 'n', text: 't', modeId: 'default')]), 0), isFalse);
+      expect(
+        announcesDanger(
+          stateWith(
+            modes: calm,
+            items: [TranscriptNote(key: 'n', text: 't', modeId: 'default')],
+          ),
+          0,
+        ),
+        isFalse,
+      );
     });
   });
 
@@ -627,7 +674,11 @@ void main() {
       final named = FakeAgentSession(title: 'payments-api');
       expect(sessionWhere(named), 'Claude Code · devbox');
       expect(sessionWhere(FakeAgentSession(title: 'Fix payments')), 'Claude Code · devbox · payments-api');
-      expect(sessionWhere(FakeAgentSession(title: 'Payments-API ')), 'Claude Code · devbox', reason: 'case and spaces do not make it new');
+      expect(
+        sessionWhere(FakeAgentSession(title: 'Payments-API ')),
+        'Claude Code · devbox',
+        reason: 'case and spaces do not make it new',
+      );
     });
 
     testWidgets('the subtitle is agent · machine when the title is the folder', (tester) async {
@@ -674,7 +725,8 @@ void main() {
       expect(since.since, DateTime(2026, 10, 5, 14, 2));
 
       session.update(
-        (s) => s.apply(const MessageUpsert(MessageRole.agent, 'a9', hasContent: true, content: [TextBlock('and more')])),
+        (s) =>
+            s.apply(const MessageUpsert(MessageRole.agent, 'a9', hasContent: true, content: [TextBlock('and more')])),
       );
       await tester.pump();
       await tester.pump();
@@ -683,7 +735,10 @@ void main() {
 
     testWidgets('while the replay runs nothing is asked; it is asked when it has finished', (tester) async {
       final lastSeen = await seen(MemoryLastSeenStore());
-      final session = FakeAgentSession(link: AgentLink.connecting, state: stateWith(items: [agentMsg('a0', 'old')]));
+      final session = FakeAgentSession(
+        link: AgentLink.connecting,
+        state: stateWith(items: [agentMsg('a0', 'old')]),
+      );
       await pumpScreen(tester, session, lastSeen: lastSeen);
       await tester.pump();
       expect(passed(tester), isNull);

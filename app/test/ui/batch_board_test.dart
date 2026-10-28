@@ -29,8 +29,7 @@ const _tall = 2400.0;
 MachineProfile _profile(String id, String label) =>
     MachineProfile(id: id, label: label, host: '$id.example', username: 'dev');
 
-Pane _pane(int i, String status, {String agent = 'claude'}) =>
-    (id: 'w1:p$i', ws: 'w1', agent: agent, status: status);
+Pane _pane(int i, String status, {String agent = 'claude'}) => (id: 'w1:p$i', ws: 'w1', agent: agent, status: status);
 
 String _title(String paneId) => 'task ${paneId.split('p').last}';
 
@@ -39,20 +38,18 @@ String _title(String paneId) => 'task ${paneId.split('p').last}';
   List<Pane> panes, {
   String? label,
   String Function(String paneId)? title,
-}) =>
-    (profile: _profile(id, label ?? 'box-$id'), snapshot: snapshotWith(panes, title: title ?? _title));
+}) => (profile: _profile(id, label ?? 'box-$id'), snapshot: snapshotWith(panes, title: title ?? _title));
 
 /// The ten agents of the acceptance case on one machine: tasks 1-3 work,
 /// 4-5 wait for an answer, 6-7 are done, 8-10 are idle.
 List<Pane> _ten() => [
-      for (var i = 1; i <= 3; i++) _pane(i, 'working'),
-      for (var i = 4; i <= 5; i++) _pane(i, 'blocked'),
-      for (var i = 6; i <= 7; i++) _pane(i, 'done'),
-      for (var i = 8; i <= 10; i++) _pane(i, 'idle'),
-    ];
+  for (var i = 1; i <= 3; i++) _pane(i, 'working'),
+  for (var i = 4; i <= 5; i++) _pane(i, 'blocked'),
+  for (var i = 6; i <= 7; i++) _pane(i, 'done'),
+  for (var i = 8; i <= 10; i++) _pane(i, 'idle'),
+];
 
-Future<BoardHarness> _studio(List<Pane> panes) =>
-    BoardHarness.create([_machine('a', panes, label: 'studio-mac')]);
+Future<BoardHarness> _studio(List<Pane> panes) => BoardHarness.create([_machine('a', panes, label: 'studio-mac')]);
 
 class _Sessions extends FakeAgentSessions {
   _Sessions(super.sessions);
@@ -119,9 +116,9 @@ Future<void> _pump(
 
 /// The title of a board row (card or compact row), not the same text in a sheet.
 Finder _row(String title) => find.descendant(
-      of: find.byWidgetPredicate((w) => w is AgentCard || w is AgentCompactRow || w is AgentSessionRow),
-      matching: find.text(title),
-    );
+  of: find.byWidgetPredicate((w) => w is AgentCard || w is AgentCompactRow || w is AgentSessionRow),
+  matching: find.text(title),
+);
 
 Future<void> _longPress(WidgetTester tester, Finder f) async {
   await tester.longPress(f);
@@ -142,9 +139,9 @@ Future<void> _pick(WidgetTester tester, List<String> titles) async {
 }
 
 List<Map<String, dynamic>> _sent(BoardHarness h, String machine, String method) => [
-      for (final (m, p) in h.transports[machine]!.calls)
-        if (m == method) p,
-    ];
+  for (final (m, p) in h.transports[machine]!.calls)
+    if (m == method) p,
+];
 
 List<String> _panesOf(List<Map<String, dynamic>> calls) => [for (final c in calls) c['pane_id'] as String];
 
@@ -174,10 +171,7 @@ void main() {
       expect(find.byType(FloatingTabBar), findsNothing, reason: 'the action bar takes its place');
       expect(find.text('All'), findsOneWidget);
       expect(find.text('Cancel'), findsOneWidget);
-      expect(
-        tester.getSemantics(_row('task 1')).flagsCollection.isSelected,
-        Tristate.isTrue,
-      );
+      expect(tester.getSemantics(_row('task 1')).flagsCollection.isSelected, Tristate.isTrue);
 
       await _tap(tester, _row('task 2'));
       expect(_selected(2), findsOneWidget);
@@ -254,9 +248,11 @@ void main() {
       await _pick(tester, ['task 1', 'task 2']);
       expect(_selected(2), findsOneWidget);
 
-      unawaited(tester.state<NavigatorState>(find.byType(Navigator).first).push(
-            MaterialPageRoute<void>(builder: (_) => const Scaffold(body: Text('pushed'))),
-          ));
+      unawaited(
+        tester
+            .state<NavigatorState>(find.byType(Navigator).first)
+            .push(MaterialPageRoute<void>(builder: (_) => const Scaffold(body: Text('pushed')))),
+      );
       await _settle(tester);
       expect(find.text('pushed'), findsOneWidget);
 
@@ -318,10 +314,7 @@ void main() {
 
       await _longPress(tester, _row('task 1'));
       expect(_selected(1), findsOneWidget);
-      expect(
-        tester.getSemantics(find.byType(AgentCompactRow).first).flagsCollection.isSelected,
-        Tristate.isTrue,
-      );
+      expect(tester.getSemantics(find.byType(AgentCompactRow).first).flagsCollection.isSelected, Tristate.isTrue);
       await _tap(tester, _row('task 2'));
       expect(_selected(2), findsOneWidget);
       expect(h.agentScreens.front, isNull);
@@ -399,22 +392,47 @@ void main() {
       await _pump(tester, h);
 
       await _longPress(tester, _row('task 1')); // working
-      expect([for (final a in ['Stop', 'Message', 'Close']) _enabled(tester, a)], [true, true, false]);
+      expect(
+        [
+          for (final a in ['Stop', 'Message', 'Close']) _enabled(tester, a),
+        ],
+        [true, true, false],
+      );
 
       await _tap(tester, _row('task 1'));
       expect(_selected(0), findsOneWidget);
-      expect([for (final a in ['Stop', 'Message', 'Close']) _enabled(tester, a)], [false, false, false]);
+      expect(
+        [
+          for (final a in ['Stop', 'Message', 'Close']) _enabled(tester, a),
+        ],
+        [false, false, false],
+      );
 
       await _tap(tester, _row('task 4')); // blocked: only a message (on the person's say so)
-      expect([for (final a in ['Stop', 'Message', 'Close']) _enabled(tester, a)], [false, true, false]);
+      expect(
+        [
+          for (final a in ['Stop', 'Message', 'Close']) _enabled(tester, a),
+        ],
+        [false, true, false],
+      );
 
       await _tap(tester, _row('task 4'));
       await _tap(tester, _row('task 6')); // done
-      expect([for (final a in ['Stop', 'Message', 'Close']) _enabled(tester, a)], [false, true, true]);
+      expect(
+        [
+          for (final a in ['Stop', 'Message', 'Close']) _enabled(tester, a),
+        ],
+        [false, true, true],
+      );
 
       await _tap(tester, _row('task 6'));
       await _tap(tester, _row('task 8')); // idle
-      expect([for (final a in ['Stop', 'Message', 'Close']) _enabled(tester, a)], [false, true, true]);
+      expect(
+        [
+          for (final a in ['Stop', 'Message', 'Close']) _enabled(tester, a),
+        ],
+        [false, true, true],
+      );
       await teardownBoard(tester, h);
     });
 
@@ -729,13 +747,12 @@ void main() {
   });
 
   group('agent sessions', () {
-    FakeAgentSession session(BoardHarness h, String key, String title, {AgentSessionState? state}) =>
-        FakeAgentSession(
-          key: 'a/$key',
-          title: title,
-          machine: h.fleet.connection('a'),
-          state: state ?? const AgentSessionState('s1'),
-        );
+    FakeAgentSession session(BoardHarness h, String key, String title, {AgentSessionState? state}) => FakeAgentSession(
+      key: 'a/$key',
+      title: title,
+      machine: h.fleet.connection('a'),
+      state: state ?? const AgentSessionState('s1'),
+    );
 
     testWidgets('stop, message and close go through cancel, send and end', (tester) async {
       final h = await _studio([_pane(1, 'working')]);
@@ -775,40 +792,43 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('a blocked session is never offered the switch, and sessions that cannot take a message are not sent one', (tester) async {
-      final h = await _studio([_pane(1, 'blocked')]);
-      final working = session(h, 'k1', 'agent one', state: stateWith(turnActive: true));
-      final blocked = session(
-        h,
-        'k2',
-        'agent two',
-        state: stateWith(turnActive: true, pending: [PendingPermission(1, permissionRequest())]),
-      );
-      final sessions = _Sessions([working, blocked]);
-      await _pump(tester, h, sessions: sessions);
+    testWidgets(
+      'a blocked session is never offered the switch, and sessions that cannot take a message are not sent one',
+      (tester) async {
+        final h = await _studio([_pane(1, 'blocked')]);
+        final working = session(h, 'k1', 'agent one', state: stateWith(turnActive: true));
+        final blocked = session(
+          h,
+          'k2',
+          'agent two',
+          state: stateWith(turnActive: true, pending: [PendingPermission(1, permissionRequest())]),
+        );
+        final sessions = _Sessions([working, blocked]);
+        await _pump(tester, h, sessions: sessions);
 
-      // Sessions alone: nothing could take a message, so the bar says no.
-      await _pick(tester, ['agent one', 'agent two']);
-      expect(_enabled(tester, 'Message'), isFalse);
+        // Sessions alone: nothing could take a message, so the bar says no.
+        await _pick(tester, ['agent one', 'agent two']);
+        expect(_enabled(tester, 'Message'), isFalse);
 
-      await _tap(tester, _row('task 1'));
-      await _tap(tester, find.text('Message'));
-      await tester.enterText(find.byType(TextField), 'hi');
-      await _settle(tester);
-      await _tap(tester, find.text('Send anyway'));
+        await _tap(tester, _row('task 1'));
+        await _tap(tester, find.text('Message'));
+        await tester.enterText(find.byType(TextField), 'hi');
+        await _settle(tester);
+        await _tap(tester, find.text('Send anyway'));
 
-      // The switch opens the terminal agent; the blocked session stays skipped.
-      expect(_confirm('Message 1 agent'), findsOneWidget);
-      expect(find.text('Waiting for an answer (skipped)'), findsOneWidget);
-      expect(find.text('Waiting for an answer'), findsOneWidget, reason: 'the skipped row says why');
-      expect(find.text('Still working'), findsOneWidget);
-      await _tap(tester, find.text('Message 1 agent'));
-      expect(_panesOf(_sent(h, 'a', 'pane.send_input')), ['w1:p1']);
-      expect(working.sent, isEmpty);
-      expect(blocked.sent, isEmpty);
-      sessions.dispose();
-      await teardownBoard(tester, h);
-    });
+        // The switch opens the terminal agent; the blocked session stays skipped.
+        expect(_confirm('Message 1 agent'), findsOneWidget);
+        expect(find.text('Waiting for an answer (skipped)'), findsOneWidget);
+        expect(find.text('Waiting for an answer'), findsOneWidget, reason: 'the skipped row says why');
+        expect(find.text('Still working'), findsOneWidget);
+        await _tap(tester, find.text('Message 1 agent'));
+        expect(_panesOf(_sent(h, 'a', 'pane.send_input')), ['w1:p1']);
+        expect(working.sent, isEmpty);
+        expect(blocked.sent, isEmpty);
+        sessions.dispose();
+        await teardownBoard(tester, h);
+      },
+    );
 
     testWidgets('a session that is not live can be neither closed nor messaged', (tester) async {
       final h = await _studio([_pane(1, 'idle')]);
@@ -879,8 +899,8 @@ void main() {
         '— ưu tiên rất cao, kiểm thử lại toàn bộ trước khi phát hành';
 
     List<Pane> thirty() => [
-          for (var i = 1; i <= 30; i++) _pane(i, const ['working', 'blocked', 'done', 'idle', 'unknown'][i % 5]),
-        ];
+      for (var i = 1; i <= 30; i++) _pane(i, const ['working', 'blocked', 'done', 'idle', 'unknown'][i % 5]),
+    ];
 
     for (final brightness in Brightness.values) {
       testWidgets('30 agents, 320 dp, 2x text, ${brightness.name}: no overflow in any step', (tester) async {

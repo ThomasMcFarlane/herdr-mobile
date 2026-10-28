@@ -83,12 +83,10 @@ final class MdStyles {
   );
 
   /// Links and tappable paths: the accent, underlined faintly.
-  // design-lint: allow(raw-type) colour-only overlay merged onto the text it sits in
-  TextStyle get link => TextStyle(
-    color: ds.accentText,
-    decoration: TextDecoration.underline,
-    decorationColor: ds.linkUnderline,
-  );
+  TextStyle get link {
+    // design-lint: allow(raw-type) colour-only overlay merged onto the text it sits in
+    return TextStyle(color: ds.accentText, decoration: TextDecoration.underline, decorationColor: ds.linkUnderline);
+  }
 
   /// An image chip: quiet text on the fill, so it never reads as a link.
   // design-lint: allow(raw-type) colour-only overlay merged onto the text it sits in

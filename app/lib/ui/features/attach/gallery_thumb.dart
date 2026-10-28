@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../../data/services/phone_gallery.dart';
 import '../../../data/services/thumb_cache.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// Thumbnails are decoded at their own size (MediaStore made them <= 240 px).
@@ -12,7 +13,8 @@ import 'package:herdr_mobile/ui/core/kit.dart';
 /// bytes, so the chip finds the picture already decoded in the image cache.
 const galleryThumbPx = 240;
 
-ImageProvider galleryThumbProvider(Uint8List bytes) => ResizeImage(MemoryImage(bytes), width: galleryThumbPx, allowUpscaling: false);
+ImageProvider galleryThumbProvider(Uint8List bytes) =>
+    ResizeImage(MemoryImage(bytes), width: galleryThumbPx, allowUpscaling: false);
 
 /// One picture's thumbnail: a flat tinted tile until its bytes arrive (never a
 /// spinner), then the picture, faded in over `Motion.fade` when it arrived

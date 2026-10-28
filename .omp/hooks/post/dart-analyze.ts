@@ -1,9 +1,11 @@
 // After the agent edits/writes a Dart file (or pubspec.yaml), run
-// `dart analyze` on it and hand any findings straight back as trusted
-// context. Silent when clean, so it adds no noise to a healthy edit loop.
+// `dart analyze` and `dart format --set-exit-if-changed` on it and hand any
+// findings straight back as trusted context. Silent when clean, so it adds no
+// noise to a healthy edit loop.
 //
-// Never reformats: a formatter run would invalidate the edit tool's line
-// anchors for the file the agent is still working on.
+// Never reformats by itself: a formatter run would invalidate the edit tool's
+// line anchors for the file the agent is still working on. It names the files
+// that need `dart format`; the agent runs it and re-reads them.
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
@@ -91,6 +93,22 @@ export function render(findings: Finding[]): string {
   return lines.join("\n");
 }
 
+/** Files among [files] that `dart format` would change; the width is pinned in app/analysis_options.yaml. */
+async function needFormat(files: string[], env: NodeJS.ProcessEnv): Promise<string[]> {
+  try {
+    await run("dart", ["format", "-o", "none", "--set-exit-if-changed", ...files], { cwd: APP, env, timeout: 30_000 });
+    return [];
+  } catch (err) {
+    // Exit 1 with "Changed <path>" lines on stdout: files to format. Anything else is not a finding.
+    const e = err as { stdout?: string; code?: number };
+    if (e.code !== 1 || typeof e.stdout !== "string") return [];
+    return e.stdout
+      .split("\n")
+      .filter((l) => l.startsWith("Changed "))
+      .map((l) => resolve(APP, l.slice("Changed ".length).trim()));
+  }
+}
+
 export default function hook(pi: HookAPI): void {
   pi.on("tool_result", async (event) => {
     if (event.isError || !Object.hasOwn(EDIT_TOOLS, event.toolName)) return;
@@ -121,11 +139,22 @@ export default function hook(pi: HookAPI): void {
     }
 
     const findings = parseMachine(stdout);
-    if (findings.length === 0) return;
-    return {
-      additionalContext:
+    const unformatted = await needFormat(files, env);
+    const parts: string[] = [];
+    if (findings.length > 0) {
+      parts.push(
         `dart analyze reported ${findings.length} issue(s) in the file(s) you just edited. ` +
-        `Fix them before moving on:\n${render(findings)}`,
-    };
+          `Fix them before moving on:\n${render(findings)}`,
+      );
+    }
+    if (unformatted.length > 0) {
+      parts.push(
+        `Not dart-formatted: ${unformatted.map((f) => relative(ROOT, f)).join(", ")}. ` +
+          `Run \`dart format\` on them when your edits to them are done, then re-read before editing again ` +
+          `(it moves lines). CI fails on unformatted files.`,
+      );
+    }
+    if (parts.length === 0) return;
+    return { additionalContext: parts.join("\n\n") };
   });
 }

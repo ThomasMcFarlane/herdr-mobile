@@ -15,8 +15,13 @@ class _Script implements Predictor {
   void learn(String message) {}
 }
 
-Chip _word(String insert, {int replace = 0}) =>
-    Chip(label: insert, insert: insert, replace: replace, space: true, confidence: 0.9);
+Chip _word(String insert, {int replace = 0}) => Chip(
+  label: insert,
+  insert: insert,
+  replace: replace,
+  space: true,
+  confidence: 0.9,
+);
 
 void main() {
   group('Vietnamese', () {
@@ -45,7 +50,15 @@ void main() {
     test('one tap finishes a message and nothing was typed', () {
       final t = typeMessage(
         'run the tests',
-        _Script({'': [const Chip(label: 'run the tests', insert: 'run the tests', confidence: 1)]}),
+        _Script({
+          '': [
+            const Chip(
+              label: 'run the tests',
+              insert: 'run the tests',
+              confidence: 1,
+            ),
+          ],
+        }),
         sim,
         0,
       );
@@ -55,7 +68,14 @@ void main() {
     });
 
     test('a chip that is wrong is never tapped, and is counted as noise', () {
-      final t = typeMessage('hello', _Script({'': [_word('goodbye')]}), sim, 0);
+      final t = typeMessage(
+        'hello',
+        _Script({
+          '': [_word('goodbye')],
+        }),
+        sim,
+        0,
+      );
       expect(t.taps, 0);
       expect(t.keys, 5);
       expect(t.noisyWords, 1);
@@ -63,16 +83,37 @@ void main() {
 
     test('a chip worth no more than its tap is not tapped', () {
       // "to" -> chip "to " saves 0 keys after typing "t": one char for one tap.
-      final t = typeMessage('to', _Script({'t': [_word('o')]}), sim, 0);
+      final t = typeMessage(
+        'to',
+        _Script({
+          't': [_word('o')],
+        }),
+        sim,
+        0,
+      );
       expect(t.taps, 0);
     });
 
     test('a word chip leaves a space the text did not want: that costs a backspace', () {
-      final withComma = typeMessage('refactor, then', _Script({'ref': [_word('actor')]}), sim, 0);
+      final withComma = typeMessage(
+        'refactor, then',
+        _Script({
+          'ref': [_word('actor')],
+        }),
+        sim,
+        0,
+      );
       expect(withComma.taps, 1);
       // 3 typed + 1 tap + 1 backspace + ", then" (6) = 11.
       expect(withComma.keys, 11);
-      final withSpace = typeMessage('refactor then', _Script({'ref': [_word('actor')]}), sim, 0);
+      final withSpace = typeMessage(
+        'refactor then',
+        _Script({
+          'ref': [_word('actor')],
+        }),
+        sim,
+        0,
+      );
       // 3 typed + 1 tap + "then" (4) = 8: the space came with the chip.
       expect(withSpace.keys, 8);
     });
@@ -95,7 +136,9 @@ void main() {
       const bare = Simulation(style: Style.bare);
       final t = typeMessage(
         'không sao',
-        _Script({'kho': [_word('không', replace: 3)]}),
+        _Script({
+          'kho': [_word('không', replace: 3)],
+        }),
         bare,
         0,
       );
@@ -104,23 +147,30 @@ void main() {
       expect(t.keys, 7);
     });
 
-    test('noticing half the time keeps the same decision for the whole word', () {
-      const half = Simulation(style: Style.chars, notice: 0.5);
-      var taken = 0;
-      for (var i = 0; i < 200; i++) {
-        final t = typeMessage(
-          'refactor',
-          _Script({
-            'ref': [_word('actor')],
-            'refa': [_word('ctor')],
-            'refac': [_word('tor')],
-          }),
-          half,
-          i,
+    test(
+      'noticing half the time keeps the same decision for the whole word',
+      () {
+        const half = Simulation(style: Style.chars, notice: 0.5);
+        var taken = 0;
+        for (var i = 0; i < 200; i++) {
+          final t = typeMessage(
+            'refactor',
+            _Script({
+              'ref': [_word('actor')],
+              'refa': [_word('ctor')],
+              'refac': [_word('tor')],
+            }),
+            half,
+            i,
+          );
+          taken += t.taps;
+        }
+        expect(
+          taken,
+          inInclusiveRange(70, 130),
+          reason: 'about half of 200, not 1 - 0.5^3',
         );
-        taken += t.taps;
-      }
-      expect(taken, inInclusiveRange(70, 130), reason: 'about half of 200, not 1 - 0.5^3');
-    });
+      },
+    );
   });
 }

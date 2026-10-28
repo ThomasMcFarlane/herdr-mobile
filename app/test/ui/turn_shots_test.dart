@@ -76,7 +76,9 @@ void main() {
             : Builder(
                 builder: (context) => Scaffold(
                   backgroundColor: context.ds.bg,
-                  body: SafeArea(child: TranscriptView(session: session, sinceLeft: sinceLeft)),
+                  body: SafeArea(
+                    child: TranscriptView(session: session, sinceLeft: sinceLeft),
+                  ),
                 ),
               ),
       ),
@@ -96,8 +98,9 @@ void main() {
 
   FakeAgentSession session(List<TranscriptItem> items, {bool live = false, List<PendingRequest> pending = const []}) {
     statusNow = () => at(live ? 95 : 100);
-    return FakeAgentSession(state: stateWith(items: items, turnActive: live, pending: pending))
-      ..turnStart = live ? t0 : null;
+    return FakeAgentSession(
+      state: stateWith(items: items, turnActive: live, pending: pending),
+    )..turnStart = live ? t0 : null;
   }
 
   Future<void> openFold(WidgetTester tester) async {
@@ -187,7 +190,13 @@ void main() {
       () => session([
         userAt('u', 'Rename the package everywhere.', 0),
         for (var i = 0; i < 300; i++)
-          editAt('e$i', '/home/dev/payments-api/lib/feature_${i ~/ 10}/screen_$i.dart', 3 + i, before: 'import old;\n', after: 'import new;\n'),
+          editAt(
+            'e$i',
+            '/home/dev/payments-api/lib/feature_${i ~/ 10}/screen_$i.dart',
+            3 + i,
+            before: 'import old;\n',
+            after: 'import new;\n',
+          ),
         agentAt('a', 'Renamed the package in 300 files.', 400),
       ]),
       null,
@@ -219,7 +228,9 @@ void main() {
           ),
         ],
         live: true,
-        pending: [PendingPermission(7, permissionRequest(title: 'rm -rf build', rawInput: {'command': 'rm -rf build'}))],
+        pending: [
+          PendingPermission(7, permissionRequest(title: 'rm -rf build', rawInput: {'command': 'rm -rf build'})),
+        ],
       ),
       null,
     ),

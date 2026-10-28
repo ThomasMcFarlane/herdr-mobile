@@ -70,12 +70,16 @@ void main() {
       expect(toneOf(running, blocked: const {}, live: true), RunTone.running);
       expect(runLine(running, RunTone.running, now: at(43)), 'running 42s \u00b7 Grep \u00b7 1 tool');
 
-      final done = play([launch('t', status: 'in_progress'), finished('t', seconds: 31, tools: 12)], active: false).subagents.single;
+      final done = play([
+        launch('t', status: 'in_progress'),
+        finished('t', seconds: 31, tools: 12),
+      ], active: false).subagents.single;
       expect(runLine(done, RunTone.done, now: at(60)), 'Explore \u00b7 done \u00b7 31s \u00b7 12 tools');
 
-      final failed = play([launch('t', type: 'Explore', status: 'in_progress'), toolUpdate('t', status: 'failed')], active: false)
-          .subagents
-          .single;
+      final failed = play([
+        launch('t', type: 'Explore', status: 'in_progress'),
+        toolUpdate('t', status: 'failed'),
+      ], active: false).subagents.single;
       expect(toneOf(failed, blocked: const {}, live: true), RunTone.failed);
       expect(runLine(failed, RunTone.failed, now: at(30)), startsWith('Explore \u00b7 failed'));
 
@@ -90,7 +94,11 @@ void main() {
       expect(blockedRunIds(s), {'t'});
       expect(toneOf(run, blocked: blockedRunIds(s), live: true), RunTone.waitingForYou);
       expect(runLine(run, RunTone.waitingForYou, now: at(30)), 'Needs you \u00b7 1 tool');
-      expect(toneOf(run, blocked: blockedRunIds(s), live: false), RunTone.stale, reason: 'never says running for a dead link');
+      expect(
+        toneOf(run, blocked: blockedRunIds(s), live: false),
+        RunTone.stale,
+        reason: 'never says running for a dead link',
+      );
       expect(runLine(run, RunTone.stale, now: at(90)).startsWith('was running'), isTrue);
     });
 
@@ -145,25 +153,28 @@ void main() {
       expect(groupTitle(s.subagents, const {}), '2 subagents \u00b7 all done');
     });
 
-    test('roster: waiting first (the person\'s own before the not started), running, then finished with failures first', () {
-      var s = play([
-        launch('done', description: 'Done one', status: 'in_progress'),
-        finished('done'),
-        launch('failed', description: 'Failed one', status: 'in_progress'),
-        toolUpdate('failed', status: 'failed'),
-        launch('run', description: 'Running one', status: 'in_progress'),
-        launch('ask', description: 'Asking one', status: 'in_progress'),
-        childTool('askc', 'ask'),
-        {...launch('new', description: 'Not started'), 'rawInput': <String, Object?>{}},
-      ]);
-      s = s.withPending(PendingPermission(1, askFor('askc')));
-      final items = rosterOf(s.subagents, blocked: blockedRunIds(s), live: true);
-      String name(RosterItem i) => switch (i) {
-        RosterHeader(:final section, :final count) => '${section.title} $count',
-        RosterEntry(:final run) => run.id,
-      };
-      expect(items.map(name).toList(), ['Waiting 2', 'ask', 'new', 'Running 1', 'run', 'Done 2', 'failed', 'done']);
-    });
+    test(
+      'roster: waiting first (the person\'s own before the not started), running, then finished with failures first',
+      () {
+        var s = play([
+          launch('done', description: 'Done one', status: 'in_progress'),
+          finished('done'),
+          launch('failed', description: 'Failed one', status: 'in_progress'),
+          toolUpdate('failed', status: 'failed'),
+          launch('run', description: 'Running one', status: 'in_progress'),
+          launch('ask', description: 'Asking one', status: 'in_progress'),
+          childTool('askc', 'ask'),
+          {...launch('new', description: 'Not started'), 'rawInput': <String, Object?>{}},
+        ]);
+        s = s.withPending(PendingPermission(1, askFor('askc')));
+        final items = rosterOf(s.subagents, blocked: blockedRunIds(s), live: true);
+        String name(RosterItem i) => switch (i) {
+          RosterHeader(:final section, :final count) => '${section.title} $count',
+          RosterEntry(:final run) => run.id,
+        };
+        expect(items.map(name).toList(), ['Waiting 2', 'ask', 'new', 'Running 1', 'run', 'Done 2', 'failed', 'done']);
+      },
+    );
 
     test('context warning: only from 85%, never without a window', () {
       expect(contextWarning(null), isNull);
@@ -184,7 +195,11 @@ void main() {
 
       expect(find.text('Run ls command and report filenames'), findsOneWidget);
       expect(_text('general-purpose \u00b7 done \u00b7 6s \u00b7 1 tool'), findsOneWidget);
-      expect(_text('ls -1 /tmp/scratch'), findsNothing, reason: 'the child\'s own Bash call is not in the parent transcript');
+      expect(
+        _text('ls -1 /tmp/scratch'),
+        findsNothing,
+        reason: 'the child\'s own Bash call is not in the parent transcript',
+      );
       expect(find.byType(SubagentCard), findsOneWidget);
     });
 
@@ -210,7 +225,10 @@ void main() {
 
     testWidgets('failed: the card breaks out of the fold, in the danger tone, with why', (tester) async {
       final session = FakeAgentSession(
-        state: play([launch('t', type: 'Explore', status: 'in_progress'), toolUpdate('t', status: 'failed')], active: false),
+        state: play([
+          launch('t', type: 'Explore', status: 'in_progress'),
+          toolUpdate('t', status: 'failed'),
+        ], active: false),
       );
       await _pumpTranscript(tester, session);
       expect(_text('Worked'), findsOneWidget);
@@ -276,7 +294,11 @@ void main() {
       final session = FakeAgentSession(
         state: play(
           [launch('t', status: 'in_progress'), finished('t'), for (var i = 0; i < 1; i++) mainText('answer')],
-          from: stateWith(items: [for (var i = 0; i < 40; i++) ...[userAt('u$i', 'q$i', i), agentAt('a$i', 'a$i', i)]]),
+          from: stateWith(
+            items: [
+              for (var i = 0; i < 40; i++) ...[userAt('u$i', 'q$i', i), agentAt('a$i', 'a$i', i)],
+            ],
+          ),
         ),
       );
       await _pumpTranscript(tester, session);
@@ -302,9 +324,7 @@ void main() {
   group('omp and Codex: a summary, said once', () {
     testWidgets('omp: the card opens to a summary that is not a chat', (tester) async {
       statusNow = () => at(30);
-      final session = FakeAgentSession(
-        state: play(ompTask('call', [ompProgress(0, 'Alpha', 'running')])),
-      );
+      final session = FakeAgentSession(state: play(ompTask('call', [ompProgress(0, 'Alpha', 'running')])));
       await _pumpTranscript(tester, session);
       expect(_text('60%'), findsOneWidget);
       await tester.tap(find.text('Look into Alpha'));
@@ -322,7 +342,11 @@ void main() {
       expect(find.text('Recent output'), findsOneWidget);
       expect(_text('12k'), findsOneWidget, reason: 'tokens it reported');
       expect(_text('\$0.051'), findsOneWidget, reason: 'cost it reported');
-      expect(find.byType(TranscriptView), findsNothing, reason: 'the detail is no chat: nothing but the main transcript, under it');
+      expect(
+        find.byType(TranscriptView),
+        findsNothing,
+        reason: 'the detail is no chat: nothing but the main transcript, under it',
+      );
       expect(find.byType(TranscriptView, skipOffstage: false), findsOneWidget);
     });
 
@@ -332,7 +356,15 @@ void main() {
           'call',
           [ompProgress(0, 'Alpha', 'failed')],
           results: [
-            {'index': 0, 'id': 'Alpha', 'agent': 'explore', 'exitCode': 1, 'output': '', 'error': 'Provider quota exhausted', 'durationMs': 9000},
+            {
+              'index': 0,
+              'id': 'Alpha',
+              'agent': 'explore',
+              'exitCode': 1,
+              'output': '',
+              'error': 'Provider quota exhausted',
+              'durationMs': 9000,
+            },
           ],
           status: 'completed',
         ),
@@ -354,7 +386,9 @@ void main() {
   });
 
   group('drill-in', () {
-    testWidgets('a conversation: the prompt pinned, the child\'s own transcript, back to the same place', (tester) async {
+    testWidgets('a conversation: the prompt pinned, the child\'s own transcript, back to the same place', (
+      tester,
+    ) async {
       final session = FakeAgentSession(
         state: play(
           [
@@ -362,7 +396,11 @@ void main() {
             childTool('c', 't'),
             childText('t', 'Looking at parser.dart now.'),
           ],
-          from: stateWith(items: [for (var i = 0; i < 40; i++) ...[userAt('u$i', 'q$i', i), agentAt('a$i', 'a$i', i)]]),
+          from: stateWith(
+            items: [
+              for (var i = 0; i < 40; i++) ...[userAt('u$i', 'q$i', i), agentAt('a$i', 'a$i', i)],
+            ],
+          ),
         ),
       );
       await _pumpTranscript(tester, session);
@@ -422,17 +460,30 @@ void main() {
     testWidgets('the prompt is Markdown: prose when clamped, structure when opened', (tester) async {
       final session = FakeAgentSession(
         state: play([
-          launch('t', type: 'Explore', prompt: '## Plan\n\n- first step\n- second step\n\nUse `lib/a.dart` today.', status: 'in_progress'),
+          launch(
+            't',
+            type: 'Explore',
+            prompt: '## Plan\n\n- first step\n- second step\n\nUse `lib/a.dart` today.',
+            status: 'in_progress',
+          ),
           childText('t', 'On it.'),
         ]),
       );
       await _pump(tester, _app(SubagentRunScreen(session: session, runId: 't')));
       expect(find.textContaining('##', findRichText: true), findsNothing);
-      expect(find.text('Plan\nfirst step\nsecond step\nUse lib/a.dart today.'), findsOneWidget, reason: 'the markers are gone, the lines stay');
+      expect(
+        find.text('Plan\nfirst step\nsecond step\nUse lib/a.dart today.'),
+        findsOneWidget,
+        reason: 'the markers are gone, the lines stay',
+      );
 
       await tester.tap(find.text('Asked to'));
       await tester.pumpAndSettle();
-      expect(find.textContaining('first step', findRichText: true), findsOneWidget, reason: 'the list, drawn once: the preview folds away');
+      expect(
+        find.textContaining('first step', findRichText: true),
+        findsOneWidget,
+        reason: 'the list, drawn once: the preview folds away',
+      );
       expect(find.textContaining('- first', findRichText: true), findsNothing);
       expect(find.textContaining('##', findRichText: true), findsNothing);
     });
@@ -447,7 +498,11 @@ void main() {
       expect(s.subagents.map((r) => r.id), containsAll(['t', 'g']), reason: 'the fixture makes a nested run');
       await _pump(tester, _app(SubagentRunScreen(session: session, runId: 't')));
       expect(find.text('Grandchild task'), findsOneWidget);
-      expect(_text('Needs you'), findsWidgets, reason: 'the card reads what waits from the session that owns every run');
+      expect(
+        _text('Needs you'),
+        findsWidgets,
+        reason: 'the card reads what waits from the session that owns every run',
+      );
     });
   });
 
@@ -459,7 +514,14 @@ void main() {
           'call',
           [ompProgress(0, 'Alpha', 'completed')],
           results: [
-            {'index': 0, 'id': 'Alpha', 'agent': 'explore', 'exitCode': 0, 'output': 'Found it:\n\n```\n$code\n```', 'durationMs': 9000},
+            {
+              'index': 0,
+              'id': 'Alpha',
+              'agent': 'explore',
+              'exitCode': 0,
+              'output': 'Found it:\n\n```\n$code\n```',
+              'durationMs': 9000,
+            },
           ],
           status: 'completed',
         ),
@@ -480,7 +542,9 @@ void main() {
       final updates = <Json>[];
       for (var i = 0; i < 25; i++) {
         updates.add(launch('r$i', description: 'Subagent number $i', type: 'Explore', status: 'in_progress'));
-        if (i >= 4) updates.add(i % 7 == 0 ? toolUpdate('r$i', status: 'failed') : finished('r$i', seconds: 20 + i, tools: i));
+        if (i >= 4) {
+          updates.add(i % 7 == 0 ? toolUpdate('r$i', status: 'failed') : finished('r$i', seconds: 20 + i, tools: i));
+        }
       }
       updates.add(childTool('askc', 'r0'));
       return FakeAgentSession(state: play(updates).withPending(PendingPermission(1, askFor('askc'))));
@@ -494,7 +558,11 @@ void main() {
 
     testWidgets('an ACP session with a few runs: the chip says running, the roster groups them', (tester) async {
       final session = FakeAgentSession(
-        state: play([launch('a', description: 'Alpha', status: 'in_progress'), launch('b', description: 'Beta', status: 'in_progress'), finished('b')]),
+        state: play([
+          launch('a', description: 'Alpha', status: 'in_progress'),
+          launch('b', description: 'Beta', status: 'in_progress'),
+          finished('b'),
+        ]),
       );
       await _pump(tester, _app(SubagentsChip(session: session)));
       expect(find.text('1 of 2 running'), findsOneWidget);
@@ -526,8 +594,14 @@ void main() {
       final session = FakeAgentSession()
         ..observed = true
         ..roster = const [
-          SubagentEntry(info: SubagentInfo(name: 'PongReply', assignment: 'Reply pong', toolCount: 2, recentTools: ['read']), state: SubagentState.running),
-          SubagentEntry(info: SubagentInfo(name: 'Other'), state: SubagentState.finished),
+          SubagentEntry(
+            info: SubagentInfo(name: 'PongReply', assignment: 'Reply pong', toolCount: 2, recentTools: ['read']),
+            state: SubagentState.running,
+          ),
+          SubagentEntry(
+            info: SubagentInfo(name: 'Other'),
+            state: SubagentState.finished,
+          ),
         ];
       await _pump(tester, _app(SubagentsChip(session: session)));
       expect(find.text('1 running'), findsOneWidget);
@@ -557,7 +631,13 @@ void main() {
     Future<void> open(WidgetTester tester, FakeAgentSession session, {double textScale = 1}) async {
       await _pump(
         tester,
-        _app(Builder(builder: (context) => GestureDetector(onTap: () => showSessionOverview(context, session), child: const Text('open'))), textScale: textScale),
+        _app(
+          Builder(
+            builder: (context) =>
+                GestureDetector(onTap: () => showSessionOverview(context, session), child: const Text('open')),
+          ),
+          textScale: textScale,
+        ),
       );
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
@@ -570,12 +650,24 @@ void main() {
       tester.view.viewPadding = tester.view.padding;
       await _pump(
         tester,
-        _app(Builder(builder: (context) => GestureDetector(onTap: () => showSessionOverview(context, FakeAgentSession(state: rich())), child: const Text('open'))), textScale: 2),
+        _app(
+          Builder(
+            builder: (context) => GestureDetector(
+              onTap: () => showSessionOverview(context, FakeAgentSession(state: rich())),
+              child: const Text('open'),
+            ),
+          ),
+          textScale: 2,
+        ),
         size: const Size(320, 640),
       );
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
-      expect(tester.getRect(find.byType(BottomSheet)).top, greaterThanOrEqualTo(24), reason: 'the grabber and the title clear the clock');
+      expect(
+        tester.getRect(find.byType(BottomSheet)).top,
+        greaterThanOrEqualTo(24),
+        reason: 'the grabber and the title clear the clock',
+      );
     });
 
     testWidgets('in landscape with side insets the sheet still reaches the screen edges', (tester) async {
@@ -583,7 +675,14 @@ void main() {
       tester.view.viewPadding = tester.view.padding;
       await _pump(
         tester,
-        _app(Builder(builder: (context) => GestureDetector(onTap: () => showSessionOverview(context, FakeAgentSession(state: rich())), child: const Text('open')))),
+        _app(
+          Builder(
+            builder: (context) => GestureDetector(
+              onTap: () => showSessionOverview(context, FakeAgentSession(state: rich())),
+              child: const Text('open'),
+            ),
+          ),
+        ),
         size: const Size(600, 360),
       );
       await tester.tap(find.text('open'));
@@ -600,7 +699,11 @@ void main() {
       expect(_text('Goal'), findsOneWidget);
       expect(_text('Plan'), findsOneWidget);
       expect(_text('1 of 3 done'), findsOneWidget);
-      expect(find.text('Fix the Hà Nội locale bug in the parser module and add a test'), findsOneWidget, reason: 'the step in progress');
+      expect(
+        find.text('Fix the Hà Nội locale bug in the parser module and add a test'),
+        findsOneWidget,
+        reason: 'the step in progress',
+      );
       expect(find.text('2 subagents \u00b7 1 running'), findsOneWidget);
       expect(_text('Changed'), findsOneWidget);
       expect(_text('Commands'), findsOneWidget);
@@ -618,7 +721,15 @@ void main() {
     testWidgets('almost nothing: only what exists', (tester) async {
       await open(tester, FakeAgentSession(state: stateWith(items: [userAt('u', 'Say hi', 0)])));
       expect(_text('Goal'), findsOneWidget);
-      for (final absent in ['Plan', 'Changed', 'Commands', 'Subagents', 'Mode and model', 'Context and cost', 'Needs you']) {
+      for (final absent in [
+        'Plan',
+        'Changed',
+        'Commands',
+        'Subagents',
+        'Mode and model',
+        'Context and cost',
+        'Needs you',
+      ]) {
         expect(_text(absent), findsNothing, reason: absent);
       }
     });
@@ -648,7 +759,12 @@ void main() {
       await _pump(
         tester,
         _app(
-          Builder(builder: (context) => GestureDetector(onTap: () => showSessionOverview(context, FakeAgentSession(state: rich())), child: const Text('open'))),
+          Builder(
+            builder: (context) => GestureDetector(
+              onTap: () => showSessionOverview(context, FakeAgentSession(state: rich())),
+              child: const Text('open'),
+            ),
+          ),
           textScale: 1.6,
         ),
         size: const Size(320, 640),

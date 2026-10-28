@@ -39,7 +39,13 @@ void main() {
     });
 
     test('anything else is not one', () {
-      for (final s in ['blob:sha256:ff', 'blob:sha256:${'AB' * 32}', 'blob:sha256:${'a' * 65}', 'data:image/png;base64,AAAA', '']) {
+      for (final s in [
+        'blob:sha256:ff',
+        'blob:sha256:${'AB' * 32}',
+        'blob:sha256:${'a' * 65}',
+        'data:image/png;base64,AAAA',
+        '',
+      ]) {
         expect(parseOmpBlob(s), isNull, reason: s);
       }
     });

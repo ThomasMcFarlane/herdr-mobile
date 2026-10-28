@@ -22,7 +22,8 @@ void main() {
   }
 
   group('alert hook', skip: hasPython ? false : 'python3 is not installed', () {
-    const record = r'''printf '%s|%s|%s|%s|%s|%s\n' "$KEEPER_EVENT" "$KEEPER_ID" "$KEEPER_AGENT" "$KEEPER_CWD" "$KEEPER_TITLE" "$KEEPER_SUMMARY" >> "$HOME/hook.out"''';
+    const record =
+        r'''printf '%s|%s|%s|%s|%s|%s\n' "$KEEPER_EVENT" "$KEEPER_ID" "$KEEPER_AGENT" "$KEEPER_CWD" "$KEEPER_TITLE" "$KEEPER_SUMMARY" >> "$HOME/hook.out"''';
 
     List<List<String>> events(KeeperHost h) {
       final f = File(h.hookOut);

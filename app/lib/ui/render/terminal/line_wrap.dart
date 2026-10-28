@@ -49,9 +49,8 @@ List<List<AnsiRun>> wrapLine(List<AnsiRun> runs, int columns) {
   return rows;
 }
 
-AnsiRun _piece(AnsiRun run, int start, int end) => start == 0 && end == run.text.length
-    ? run
-    : run.withText(run.text.substring(start, end));
+AnsiRun _piece(AnsiRun run, int start, int end) =>
+    start == 0 && end == run.text.length ? run : run.withText(run.text.substring(start, end));
 
 extension on String {
   /// The code point starting at code unit [index].

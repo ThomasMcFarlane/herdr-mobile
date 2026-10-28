@@ -29,12 +29,7 @@ class _Pixels {
     expect(x, inInclusiveRange(0, width - 1));
     expect(y, inInclusiveRange(0, height - 1));
     final i = (y * width + x) * 4;
-    return Color.fromARGB(
-      _data.getUint8(i + 3),
-      _data.getUint8(i),
-      _data.getUint8(i + 1),
-      _data.getUint8(i + 2),
-    );
+    return Color.fromARGB(_data.getUint8(i + 3), _data.getUint8(i), _data.getUint8(i + 1), _data.getUint8(i + 2));
   }
 
   bool isColor(int x, int y, Color color) => at(x, y) == color;
@@ -51,8 +46,7 @@ class _Pixels {
   }
 
   /// Every pixel of the box that is not [color], as `x,y`.
-  List<String> notColor(Color color,
-      {int x0 = 0, int y0 = 0, int? x1, int? y1}) {
+  List<String> notColor(Color color, {int x0 = 0, int y0 = 0, int? x1, int? y1}) {
     final out = <String>[];
     for (var y = y0; y < (y1 ?? height); y++) {
       for (var x = x0; x < (x1 ?? width); x++) {
@@ -96,10 +90,7 @@ Future<({_Pixels pixels, CellMetrics metrics})> _render(
                     height: metrics.lineHeight,
                     child: Builder(
                       builder: (context) => TerminalLineView(
-                        line: TerminalLine(
-                          parseAnsi(row).lines.single,
-                          metrics,
-                        ),
+                        line: TerminalLine(parseAnsi(row).lines.single, metrics),
                         env: TerminalRowEnv.of(context, metrics),
                       ),
                     ),
@@ -116,8 +107,7 @@ Future<({_Pixels pixels, CellMetrics metrics})> _render(
 }
 
 Future<_Pixels> _capture(WidgetTester tester, GlobalKey key, double dpr) async {
-  final boundary =
-      key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+  final boundary = key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
   return (await tester.runAsync(() async {
     final ui.Image image = await boundary.toImage(pixelRatio: dpr);
     final data = await image.toByteData();
@@ -127,18 +117,12 @@ Future<_Pixels> _capture(WidgetTester tester, GlobalKey key, double dpr) async {
   }))!;
 }
 
-String _sgrBg(Color c) =>
-    '\x1b[48;2;${(c.r * 255).round()};${(c.g * 255).round()};${(c.b * 255).round()}m';
-String _sgrFg(Color c) =>
-    '\x1b[38;2;${(c.r * 255).round()};${(c.g * 255).round()};${(c.b * 255).round()}m';
+String _sgrBg(Color c) => '\x1b[48;2;${(c.r * 255).round()};${(c.g * 255).round()};${(c.b * 255).round()}m';
+String _sgrFg(Color c) => '\x1b[38;2;${(c.r * 255).round()};${(c.g * 255).round()};${(c.b * 255).round()}m';
 
 /// A cell's box in device pixels.
-({int x0, int x1, int y0, int y1}) _cell(CellMetrics m, int column, int row) => (
-      x0: m.columnEdge(column),
-      x1: m.columnEdge(column + 1),
-      y0: row * m.rowPx,
-      y1: (row + 1) * m.rowPx,
-    );
+({int x0, int x1, int y0, int y1}) _cell(CellMetrics m, int column, int row) =>
+    (x0: m.columnEdge(column), x1: m.columnEdge(column + 1), y0: row * m.rowPx, y1: (row + 1) * m.rowPx);
 
 void main() {
   group('backgrounds fill the whole row', () {
@@ -158,8 +142,7 @@ void main() {
         expect(scene.pixels.isColor(width, m.rowPx, _bg), isTrue);
       });
 
-      testWidgets('rows of different backgrounds meet exactly at dpr $dpr',
-          (tester) async {
+      testWidgets('rows of different backgrounds meet exactly at dpr $dpr', (tester) async {
         final a = '${_sgrBg(_light)}      ';
         final b = '${_sgrBg(const Color(0xFF204060))}      ';
         final scene = await _render(tester, [a, b], dpr: dpr);
@@ -167,13 +150,11 @@ void main() {
 
         for (var x = 0; x < m.columnEdge(6); x++) {
           expect(scene.pixels.isColor(x, m.rowPx - 1, _light), isTrue);
-          expect(scene.pixels.isColor(x, m.rowPx, const Color(0xFF204060)),
-              isTrue);
+          expect(scene.pixels.isColor(x, m.rowPx, const Color(0xFF204060)), isTrue);
         }
       });
 
-      testWidgets('adjacent runs with different backgrounds touch at dpr $dpr',
-          (tester) async {
+      testWidgets('adjacent runs with different backgrounds touch at dpr $dpr', (tester) async {
         const blue = Color(0xFF204060);
         final row = '${_sgrBg(_light)}   ${_sgrBg(blue)}   ';
         final scene = await _render(tester, [row], dpr: dpr);
@@ -181,10 +162,7 @@ void main() {
         final edge = m.columnEdge(3);
 
         expect(scene.pixels.notColor(_light, x1: edge, y1: m.rowPx), isEmpty);
-        expect(
-          scene.pixels.notColor(blue, x0: edge, x1: m.columnEdge(6), y1: m.rowPx),
-          isEmpty,
-        );
+        expect(scene.pixels.notColor(blue, x0: edge, x1: m.columnEdge(6), y1: m.rowPx), isEmpty);
       });
     }
 
@@ -231,15 +209,13 @@ void main() {
         ),
       );
       final pixels = await _capture(tester, key, dpr);
-      expect(pixels.notColor(_light, x1: 10, y1: 3 * metrics.rowPx),
-          isNotEmpty);
+      expect(pixels.notColor(_light, x1: 10, y1: 3 * metrics.rowPx), isNotEmpty);
     });
   });
 
   group('box drawing meets across cells', () {
     for (final dpr in _densities) {
-      testWidgets('vertical lines continue through the row boundary at dpr $dpr',
-          (tester) async {
+      testWidgets('vertical lines continue through the row boundary at dpr $dpr', (tester) async {
         final row = '${_sgrFg(_fg)}│';
         final scene = await _render(tester, [row, row, row], dpr: dpr);
         final m = scene.metrics;
@@ -288,15 +264,10 @@ void main() {
         expect(p.isColor(m.columnEdge(3), ys.first, _bg), isTrue);
       });
 
-      testWidgets('corners and junctions are filled at dpr $dpr',
-          (tester) async {
+      testWidgets('corners and junctions are filled at dpr $dpr', (tester) async {
         final scene = await _render(
           tester,
-          [
-            '${_sgrFg(_fg)}┌─┐ ╭╮ ┏┓',
-            '${_sgrFg(_fg)}│ │ ╰╯ ┗┛',
-            '${_sgrFg(_fg)}└┼┘ ╔╗ ╬┤',
-          ],
+          ['${_sgrFg(_fg)}┌─┐ ╭╮ ┏┓', '${_sgrFg(_fg)}│ │ ╰╯ ┗┛', '${_sgrFg(_fg)}└┼┘ ╔╗ ╬┤'],
           dpr: dpr,
           columns: 12,
         );
@@ -308,8 +279,7 @@ void main() {
           final c = _cell(m, column, row);
           final x = c.x0 + (c.x1 - c.x0 - 1) ~/ 2;
           final y = c.y0 + (c.y1 - c.y0 - 1) ~/ 2;
-          expect(p.isColor(x, y, _fg), isTrue,
-              reason: 'junction of column $column row $row ($x,$y)');
+          expect(p.isColor(x, y, _fg), isTrue, reason: 'junction of column $column row $row ($x,$y)');
         }
 
         junction(0, 0); // ┌
@@ -360,8 +330,7 @@ void main() {
     }
 
     testWidgets('dashes keep their rhythm across cells', (tester) async {
-      final scene =
-          await _render(tester, ['${_sgrFg(_fg)}┄┄┄┄'], dpr: 2.625, columns: 4);
+      final scene = await _render(tester, ['${_sgrFg(_fg)}┄┄┄┄'], dpr: 2.625, columns: 4);
       final m = scene.metrics;
       final p = scene.pixels;
       final y = m.rowPx ~/ 2;
@@ -394,24 +363,21 @@ void main() {
         for (final (lit, length) in segments)
           if (lit) length,
       ];
-      expect(dashes.reduce((a, b) => a > b ? a : b) -
-          dashes.reduce((a, b) => a < b ? a : b), lessThanOrEqualTo(1));
+      expect(dashes.reduce((a, b) => a > b ? a : b) - dashes.reduce((a, b) => a < b ? a : b), lessThanOrEqualTo(1));
     });
   });
 
   group('block elements', () {
     // Fraction of the cell filled with the foreground.
     Future<double> fill(WidgetTester tester, String glyph, double dpr) async {
-      final scene = await _render(tester, ['${_sgrFg(_fg)}$glyph'],
-          dpr: dpr, columns: 1);
+      final scene = await _render(tester, ['${_sgrFg(_fg)}$glyph'], dpr: dpr, columns: 1);
       final c = _cell(scene.metrics, 0, 0);
       final lit = scene.pixels.count(_fg, x1: c.x1, y1: c.y1);
       return lit / ((c.x1 - c.x0) * (c.y1 - c.y0));
     }
 
     for (final dpr in [2.0, 2.625, 3.0]) {
-      testWidgets('fractional blocks fill their share at dpr $dpr',
-          (tester) async {
+      testWidgets('fractional blocks fill their share at dpr $dpr', (tester) async {
         const expected = {
           '█': 1.0,
           '▀': 0.5,
@@ -448,15 +414,13 @@ void main() {
         for (final MapEntry(key: glyph, value: share) in expected.entries) {
           final got = await fill(tester, glyph, dpr);
           // Within one pixel row/column of the exact share.
-          expect(got, closeTo(share, 1 / w + 1 / h + 0.001),
-              reason: '$glyph at dpr $dpr');
+          expect(got, closeTo(share, 1 / w + 1 / h + 0.001), reason: '$glyph at dpr $dpr');
         }
       });
     }
 
     testWidgets('halves are drawn on the right side', (tester) async {
-      final scene = await _render(
-          tester, ['${_sgrFg(_fg)}▀▄▌▐'], dpr: 3, columns: 4);
+      final scene = await _render(tester, ['${_sgrFg(_fg)}▀▄▌▐'], dpr: 3, columns: 4);
       final m = scene.metrics;
       final p = scene.pixels;
       final upper = _cell(m, 0, 0), lower = _cell(m, 1, 0);
@@ -471,10 +435,8 @@ void main() {
       expect(p.isColor(right.x1 - 2, 3, _fg), isTrue);
     });
 
-    testWidgets('shades blend the foreground over the background',
-        (tester) async {
-      final scene = await _render(tester, ['${_sgrFg(_fg)}░▒▓'],
-          dpr: 3, columns: 3);
+    testWidgets('shades blend the foreground over the background', (tester) async {
+      final scene = await _render(tester, ['${_sgrFg(_fg)}░▒▓'], dpr: 3, columns: 3);
       final m = scene.metrics;
       for (var i = 0; i < 3; i++) {
         final c = _cell(m, i, 0);
@@ -488,14 +450,8 @@ void main() {
       }
     });
 
-    testWidgets('sprites draw over their own background and dim colour',
-        (tester) async {
-      final scene = await _render(
-        tester,
-        ['${_sgrBg(_light)}\x1b[2m${_sgrFg(_fg)}█'],
-        dpr: 3,
-        columns: 1,
-      );
+    testWidgets('sprites draw over their own background and dim colour', (tester) async {
+      final scene = await _render(tester, ['${_sgrBg(_light)}\x1b[2m${_sgrFg(_fg)}█'], dpr: 3, columns: 1);
       final dim = Color.lerp(_light, _fg, 0.62)!;
       final got = scene.pixels.at(3, 3);
       expect((got.r - dim.r).abs() * 255, lessThan(2));
@@ -505,8 +461,7 @@ void main() {
   });
 
   group('whole view', () {
-    testWidgets('a coloured block has no seams, still or mid-scroll',
-        (tester) async {
+    testWidgets('a coloured block has no seams, still or mid-scroll', (tester) async {
       const dpr = 2.625;
       tester.view
         ..devicePixelRatio = dpr
@@ -528,10 +483,9 @@ void main() {
           ),
         ),
       );
-      final state = tester.state<ScrollableState>(find
-          .descendant(
-              of: find.byType(TerminalView), matching: find.byType(Scrollable))
-          .last);
+      final state = tester.state<ScrollableState>(
+        find.descendant(of: find.byType(TerminalView), matching: find.byType(Scrollable)).last,
+      );
 
       final metrics = CellMetrics.measure(defaultTerminalFontSize, dpr);
       final padPx = (12 * dpr).round();
@@ -543,8 +497,7 @@ void main() {
         final x1 = padPx + metrics.columnEdge(20);
         // Skip the list's own padding (8 px at the ends of the list).
         final y0 = (8 * dpr).ceil() + 1;
-        final bad = pixels.notColor(_light,
-            x0: x0, x1: x1, y0: y0, y1: (390 * dpr).floor());
+        final bad = pixels.notColor(_light, x0: x0, x1: x1, y0: y0, y1: (390 * dpr).floor());
         expect(bad, isEmpty, reason: 'offset $offset');
       }
     });

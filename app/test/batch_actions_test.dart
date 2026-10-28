@@ -57,20 +57,14 @@ BatchPlan _plan(
   BatchKind kind = BatchKind.terminal,
   String? unreachable,
   bool sendAnyway = false,
-}) =>
-    BatchPlan.of(
-      action,
-      [_t('x', status: status, kind: kind, unreachable: unreachable, log: [])],
-      sendAnyway: sendAnyway,
-    );
+}) => BatchPlan.of(action, [
+  _t('x', status: status, kind: kind, unreachable: unreachable, log: []),
+], sendAnyway: sendAnyway);
 
 void main() {
   group('stop', () {
     test('touches only working agents and says why the others are left', () {
-      final reasons = {
-        for (final s in AgentStatus.values)
-          s: _plan(BatchAction.stop, s),
-      };
+      final reasons = {for (final s in AgentStatus.values) s: _plan(BatchAction.stop, s)};
       expect(reasons[AgentStatus.working]!.run, hasLength(1));
       expect(reasons[AgentStatus.idle]!.skipped.single.reason, 'not working');
       expect(reasons[AgentStatus.done]!.skipped.single.reason, 'not working');
@@ -237,7 +231,10 @@ void main() {
         _t('2', machine: 'b', log: log, status: AgentStatus.idle),
       ]);
       await runBatch(plan, text: text);
-      expect(log.where((l) => l.startsWith('start')), containsAll(['start message[$text] 1', 'start message[$text] 2']));
+      expect(
+        log.where((l) => l.startsWith('start')),
+        containsAll(['start message[$text] 1', 'start message[$text] 2']),
+      );
     });
 
     test('a very long text is passed whole', () async {
@@ -263,15 +260,24 @@ void main() {
       var settledA = 0;
       var settledB = 0;
       final plan = BatchPlan.of(BatchAction.stop, [
-        _t('a1', log: log, settle: () async {
-          settledA++;
-          log.add('settle a');
-        }),
+        _t(
+          'a1',
+          log: log,
+          settle: () async {
+            settledA++;
+            log.add('settle a');
+          },
+        ),
         _t('a2', log: log),
-        _t('b1', machine: 'b', log: log, settle: () async {
-          settledB++;
-          throw const HerdrTransportException('offline');
-        }),
+        _t(
+          'b1',
+          machine: 'b',
+          log: log,
+          settle: () async {
+            settledB++;
+            throw const HerdrTransportException('offline');
+          },
+        ),
       ]);
       final result = await runBatch(plan);
       expect([settledA, settledB], [1, 1]);
@@ -303,10 +309,7 @@ void main() {
       expect(result().summary, 'Stopped 3');
       expect(result(action: BatchAction.message, done: 1).summary, 'Messaged 1');
       expect(result(action: BatchAction.close, skipped: 2).summary, 'Closed 3 · 2 skipped');
-      expect(
-        result(failed: [failure('a', 'offline')]).summary,
-        'Stopped 3 · 1 failed: machine-a: offline',
-      );
+      expect(result(failed: [failure('a', 'offline')]).summary, 'Stopped 3 · 1 failed: machine-a: offline');
       expect(
         result(done: 0, failed: [failure('a', 'offline')], skipped: 1).summary,
         'Stopped 0 · 1 failed: machine-a: offline · 1 skipped',

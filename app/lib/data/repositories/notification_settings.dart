@@ -39,10 +39,7 @@ class PrefsNotificationStore implements NotificationStore {
   Future<NotificationChoice> read() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      return NotificationChoice(
-        enabled: prefs.getBool(_enabled) ?? false,
-        alsoDone: prefs.getBool(_alsoDone) ?? false,
-      );
+      return NotificationChoice(enabled: prefs.getBool(_enabled) ?? false, alsoDone: prefs.getBool(_alsoDone) ?? false);
     } on Object {
       return const NotificationChoice();
     }

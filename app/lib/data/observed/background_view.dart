@@ -64,7 +64,9 @@ class BackgroundView {
     final nothingWorks = turnEnded && (herdr == AgentStatus.idle || herdr == AgentStatus.done);
     final waiting = working && turnEnded;
     if (tasks.isEmpty) {
-      return waiting ? BackgroundView(BackgroundWork(wakes: wakes, wakeLabel: wakeLabel, unknownRunning: true), true) : none;
+      return waiting
+          ? BackgroundView(BackgroundWork(wakes: wakes, wakeLabel: wakeLabel, unknownRunning: true), true)
+          : none;
     }
 
     var changed = false;

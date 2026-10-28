@@ -61,6 +61,8 @@ class MemoryTranscriptCache implements TranscriptCache {
   @override
   Future<void> retain(String machineId, Set<String> keeperIds) async {
     retained.add((machineId, keeperIds));
-    stored.removeWhere((key, _) => key.startsWith('$machineId/') && !keeperIds.contains(key.substring(machineId.length + 1)));
+    stored.removeWhere(
+      (key, _) => key.startsWith('$machineId/') && !keeperIds.contains(key.substring(machineId.length + 1)),
+    );
   }
 }

@@ -164,11 +164,7 @@ class CommandPaletteModel extends ChangeNotifier {
       return const [];
     }
     int uses(SlashCommand c) => usage?.count(agentName, c.usageKey) ?? 0;
-    return [
-      ..._ordered(starts, uses),
-      ..._ordered(inName, uses),
-      ..._ordered(inText, uses),
-    ];
+    return [..._ordered(starts, uses), ..._ordered(inName, uses), ..._ordered(inText, uses)];
   }
 
   static String _triggerOf(String key) => key.startsWith(r'$') ? r'$' : '/';
@@ -181,9 +177,7 @@ class CommandPaletteModel extends ChangeNotifier {
   ) {
     final usage = _usage;
     final all = {...known, for (final c in extras) c.usageKey: c};
-    final pinned = [
-      for (final key in usage?.pinned(agentName) ?? const <String>[]) ?all[key],
-    ];
+    final pinned = [for (final key in usage?.pinned(agentName) ?? const <String>[]) ?all[key]];
     final shown = {for (final c in pinned) c.usageKey};
     final recent = [
       for (final key in usage?.recent(agentName, limit: recentShown, exclude: shown) ?? const <String>[]) ?all[key],
@@ -224,6 +218,9 @@ class CommandPaletteModel extends ChangeNotifier {
 /// keeps the keyboard up.
 void fillCommand(TextEditingController input, FocusNode focus, SlashCommand command) {
   final text = '${command.text} ';
-  input.value = TextEditingValue(text: text, selection: TextSelection.collapsed(offset: text.length));
+  input.value = TextEditingValue(
+    text: text,
+    selection: TextSelection.collapsed(offset: text.length),
+  );
   focus.requestFocus();
 }

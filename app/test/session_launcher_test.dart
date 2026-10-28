@@ -35,10 +35,10 @@ void main() {
     test('a path with quotes, spaces and substitutions stays one literal word', () {
       expect(cdLine('~'), r'cd -- "$HOME"');
       expect(cdLine('~/'), r'cd -- "$HOME"');
-      expect(cdLine('~/code/my app'), r'''cd -- "$HOME"/'code/my app' ''' .trim());
+      expect(cdLine('~/code/my app'), r'''cd -- "$HOME"/'code/my app' '''.trim());
       expect(
         cdLine(r"~/a'; rm -rf /; echo '$(id)`id`"),
-        r'''cd -- "$HOME"/'a'\''; rm -rf /; echo '\''$(id)`id`' ''' .trim(),
+        r'''cd -- "$HOME"/'a'\''; rm -rf /; echo '\''$(id)`id`' '''.trim(),
       );
     });
 
@@ -104,9 +104,11 @@ void main() {
 
       await expectLater(
         _launcher(c).launch(const LaunchRequest(folder: '/work/typo')),
-        throwsA(isA<FolderNotFoundException>()
-            .having((e) => e.folder, 'folder', '/work/typo')
-            .having((e) => e.actual, 'actual', '/home/u')),
+        throwsA(
+          isA<FolderNotFoundException>()
+              .having((e) => e.folder, 'folder', '/work/typo')
+              .having((e) => e.actual, 'actual', '/home/u'),
+        ),
       );
 
       expect(t.methods, ['workspace.create', 'workspace.close']);

@@ -27,7 +27,9 @@ import 'package:image/image.dart' as img;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../support/attach_fakes.dart';
+
 import 'package:herdr_mobile/data/words/elapsed.dart';
+
 import '../support/fake_agent_session.dart';
 import '../support/files_support.dart';
 import '../support/shot.dart' show loadAppFonts;
@@ -59,10 +61,8 @@ PickedPhoto _picked(String name) => PickedPhoto(path: '/cache/image_picker/$name
 
 Future<PreparedImage> _instantly(Uint8List input) async => PreparedImage(bytes: input, width: 8, height: 8);
 
-FakeAgentSession _session({bool images = true}) => FakeAgentSession(
-  machine: machineWithFiles(projectFs()),
-  cwd: '/home/dev/herdr-mobile',
-)..imagesAccepted = images;
+FakeAgentSession _session({bool images = true}) =>
+    FakeAgentSession(machine: machineWithFiles(projectFs()), cwd: '/home/dev/herdr-mobile')..imagesAccepted = images;
 
 Future<void> _open(
   WidgetTester tester,
@@ -141,7 +141,9 @@ void main() {
       expect(find.text('Camera'), findsOneWidget, reason: 'the camera tile does not wait for the library');
     });
 
-    testWidgets('the permission is asked only after the one-line reason and a tap, and only for the Gallery tab', (tester) async {
+    testWidgets('the permission is asked only after the one-line reason and a tap, and only for the Gallery tab', (
+      tester,
+    ) async {
       final gallery = FakeGallery(state: GalleryAccess.undetermined);
       final fake = FakeKit(gallery: gallery);
       await _open(tester, _session(), fake);
@@ -168,20 +170,27 @@ void main() {
       expect(find.text('Allow photo access'), findsOneWidget);
     });
 
-    testWidgets('warming on the finger landing loads the first page and thumbnails before the sheet opens, without asking', (tester) async {
-      final gallery = FakeGallery(count: 300);
-      final fake = FakeKit(gallery: gallery);
-      await _open(tester, _session(), fake);
-      // The screen warmed the library after its first frame.
-      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
-      await tester.pump();
-      expect(gallery.pageQueries, 1, reason: 'one query for the first page');
-      expect(fake.kit.thumbs.length, greaterThanOrEqualTo(24), reason: 'the first screenful of thumbnails is in memory');
-      expect(gallery.requests, 0);
-      final before = gallery.thumbCalls;
-      await _tapClip(tester);
-      expect(gallery.thumbCalls, lessThan(before + 12), reason: 'opening did not decode the first screenful again');
-    });
+    testWidgets(
+      'warming on the finger landing loads the first page and thumbnails before the sheet opens, without asking',
+      (tester) async {
+        final gallery = FakeGallery(count: 300);
+        final fake = FakeKit(gallery: gallery);
+        await _open(tester, _session(), fake);
+        // The screen warmed the library after its first frame.
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+        await tester.pump();
+        expect(gallery.pageQueries, 1, reason: 'one query for the first page');
+        expect(
+          fake.kit.thumbs.length,
+          greaterThanOrEqualTo(24),
+          reason: 'the first screenful of thumbnails is in memory',
+        );
+        expect(gallery.requests, 0);
+        final before = gallery.thumbCalls;
+        await _tapClip(tester);
+        expect(gallery.thumbCalls, lessThan(before + 12), reason: 'opening did not decode the first screenful again');
+      },
+    );
 
     testWidgets('warming does nothing without the permission', (tester) async {
       final gallery = FakeGallery(state: GalleryAccess.denied);
@@ -202,7 +211,11 @@ void main() {
       expect(bar.bottom, lessThanOrEqualTo(892), reason: 'no slide in: the bars are already on the screen');
       await tester.tap(_tab(AttachTab.files));
       await tester.pump();
-      expect(find.text('Choose files\u2026').hitTestable(), findsOneWidget, reason: 'no cross-fade under reduced motion');
+      expect(
+        find.text('Choose files\u2026').hitTestable(),
+        findsOneWidget,
+        reason: 'no cross-fade under reduced motion',
+      );
     });
 
     testWidgets('the last tab is remembered for the app run', (tester) async {
@@ -219,7 +232,9 @@ void main() {
       expect(find.textContaining('Find in'), findsOneWidget, reason: 'it opened on the Machine tab');
     });
 
-    testWidgets('a screenshot taken while the app was open is on the grid the next time the sheet opens', (tester) async {
+    testWidgets('a screenshot taken while the app was open is on the grid the next time the sheet opens', (
+      tester,
+    ) async {
       final gallery = FakeGallery(count: 30);
       final fake = FakeKit(gallery: gallery);
       await _open(tester, _session(), fake);
@@ -249,8 +264,7 @@ void main() {
       await tester.pump();
       await tester.tap(_circle(1));
       await _wait(tester);
-      Finder number(int tile, String n) =>
-          find.descendant(of: find.byType(PhotoTile).at(tile), matching: find.text(n));
+      Finder number(int tile, String n) => find.descendant(of: find.byType(PhotoTile).at(tile), matching: find.text(n));
       expect(number(2, '1'), findsOneWidget);
       expect(number(0, '2'), findsOneWidget);
       expect(number(1, '3'), findsOneWidget);
@@ -377,7 +391,9 @@ void main() {
       expect(find.text('Open the system picker'), findsOneWidget);
     });
 
-    testWidgets('partial access shows a Manage chip that re-opens the selector and re-reads the library', (tester) async {
+    testWidgets('partial access shows a Manage chip that re-opens the selector and re-reads the library', (
+      tester,
+    ) async {
       final gallery = FakeGallery(state: GalleryAccess.limited, count: 12);
       final fake = FakeKit(gallery: gallery);
       await _open(tester, _session(), fake);
@@ -472,13 +488,20 @@ void main() {
       expect(find.text('Preparing\u2026'), findsNothing);
     });
 
-    testWidgets('a picture is encoded the moment it is picked and the work is dropped when it is undone', (tester) async {
+    testWidgets('a picture is encoded the moment it is picked and the work is dropped when it is undone', (
+      tester,
+    ) async {
       final started = <int>[];
       final fake = FakeKit();
-      await _open(tester, _session(), fake, prepare: (b) async {
-        started.add(b.length);
-        return PreparedImage(bytes: _jpeg, width: 8, height: 8);
-      });
+      await _open(
+        tester,
+        _session(),
+        fake,
+        prepare: (b) async {
+          started.add(b.length);
+          return PreparedImage(bytes: _jpeg, width: 8, height: 8);
+        },
+      );
       await _tapClip(tester);
       await tester.tap(_circle(0));
       await tester.pump();
@@ -489,7 +512,9 @@ void main() {
       expect(_attachButton, findsNothing);
     });
 
-    testWidgets('an agent that takes no pictures: a gallery photo goes up as a file and the chip says so', (tester) async {
+    testWidgets('an agent that takes no pictures: a gallery photo goes up as a file and the chip says so', (
+      tester,
+    ) async {
       final fake = FakeKit();
       await _open(tester, _session(images: false), fake);
       await _tapClip(tester);
@@ -524,7 +549,9 @@ void main() {
       return fake;
     }
 
-    testWidgets('uploads after the sheet is gone; the chip shows the progress; the host path is what is sent', (tester) async {
+    testWidgets('uploads after the sheet is gone; the chip shows the progress; the host path is what is sent', (
+      tester,
+    ) async {
       final fake = await uploading(tester);
       final up = fake.uploader.last;
       expect(up.localPath, '/cache/file_picker/1/report.pdf');
@@ -542,7 +569,11 @@ void main() {
       final session = tester.widget<AgentSessionScreen>(find.byType(AgentSessionScreen)).session as FakeAgentSession;
       final link = session.sentBlocks.single.single as ResourceLinkBlock;
       expect(link.uri, 'file:///home/dev/.herdr-mobile/inbox/k/2026-05-20-report.pdf');
-      expect(link.name, '/home/dev/.herdr-mobile/inbox/k/2026-05-20-report.pdf', reason: 'outside the folder: the absolute path');
+      expect(
+        link.name,
+        '/home/dev/.herdr-mobile/inbox/k/2026-05-20-report.pdf',
+        reason: 'outside the folder: the absolute path',
+      );
     });
 
     testWidgets('Send waits while the upload runs and the hint says why', (tester) async {
@@ -570,7 +601,9 @@ void main() {
       expect(find.text('report.pdf'), findsNothing);
     });
 
-    testWidgets('a failed upload shows Retry on its chip; Retry starts it again and Send stays held until it is done', (tester) async {
+    testWidgets('a failed upload shows Retry on its chip; Retry starts it again and Send stays held until it is done', (
+      tester,
+    ) async {
       final fake = await uploading(tester);
       fake.uploader.last.fail(RemoteFileException(RemoteFileErrorKind.network, 'Connection lost'));
       await tester.pump();
@@ -669,7 +702,9 @@ void main() {
       }
     });
 
-    testWidgets('a tap on the picture opens it in the photo viewer with a Select toggle that works on the tray', (tester) async {
+    testWidgets('a tap on the picture opens it in the photo viewer with a Select toggle that works on the tray', (
+      tester,
+    ) async {
       final fake = FakeKit();
       await _open(tester, _session(), fake);
       await _tapClip(tester);
@@ -702,7 +737,9 @@ void main() {
       expect(find.byType(AttachTabBar), findsOneWidget);
     });
 
-    testWidgets('the chip of a gallery pick shows the thumbnail the grid decoded: the same image-cache entry', (tester) async {
+    testWidgets('the chip of a gallery pick shows the thumbnail the grid decoded: the same image-cache entry', (
+      tester,
+    ) async {
       final fake = FakeKit();
       fake.gallery.picture = (_) => fakePicture(5);
       await _open(tester, _session(), fake);
@@ -710,9 +747,8 @@ void main() {
       await _tapClip(tester);
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 60)));
       await tester.pump();
-      ImageProvider tileImage() => tester
-          .widget<Image>(find.descendant(of: find.byType(PhotoTile).at(0), matching: find.byType(Image)))
-          .image;
+      ImageProvider tileImage() =>
+          tester.widget<Image>(find.descendant(of: find.byType(PhotoTile).at(0), matching: find.byType(Image))).image;
       final provider = tileImage();
       await tester.tap(_circle(0));
       await _wait(tester);

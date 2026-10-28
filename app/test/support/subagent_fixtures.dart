@@ -43,7 +43,14 @@ Json toolUpdate(String id, {String? parent, String? status, String tool = 'Agent
 };
 
 /// A call a subagent made.
-Json childTool(String id, String parent, {String tool = 'Grep', String title = 'Grep locale', String kind = 'search', String status = 'in_progress'}) => {
+Json childTool(
+  String id,
+  String parent, {
+  String tool = 'Grep',
+  String title = 'Grep locale',
+  String kind = 'search',
+  String status = 'in_progress',
+}) => {
   'sessionUpdate': 'tool_call',
   'toolCallId': id,
   'title': title,
@@ -69,21 +76,26 @@ Json mainText(String text, {String id = 'main-msg'}) => {
 };
 
 /// The end of a Claude subagent call: what `toolResponse` carries.
-Json finished(String id, {String text = 'Found it in parse.dart.', int seconds = 31, int tools = 12, String type = 'Explore'}) =>
-    toolUpdate(
-      id,
-      status: 'completed',
-      response: {
-        'status': 'completed',
-        'agentType': type,
-        'totalDurationMs': seconds * 1000,
-        'totalToolUseCount': tools,
-        'totalTokens': 52000,
-        'content': [
-          {'type': 'text', 'text': text},
-        ],
-      },
-    );
+Json finished(
+  String id, {
+  String text = 'Found it in parse.dart.',
+  int seconds = 31,
+  int tools = 12,
+  String type = 'Explore',
+}) => toolUpdate(
+  id,
+  status: 'completed',
+  response: {
+    'status': 'completed',
+    'agentType': type,
+    'totalDurationMs': seconds * 1000,
+    'totalToolUseCount': tools,
+    'totalTokens': 52000,
+    'content': [
+      {'type': 'text', 'text': text},
+    ],
+  },
+);
 
 /// A session after the person asked [goal], with [updates] applied one second
 /// apart from [start] seconds after [t0]. The turn runs unless [active] is false.
@@ -103,19 +115,20 @@ AgentSessionState play(
 }
 
 /// The permission request of the call [toolId].
-PermissionRequest askFor(String toolId, {String title = 'rtk ls -1 /tmp/scratch', String kind = 'execute'}) => PermissionRequest(
-  sessionId: 's1',
-  toolCall: ToolCallPatch(toolId, {
-    'toolCallId': toolId,
-    'title': title,
-    'kind': kind,
-    'rawInput': {'command': title},
-  }),
-  options: const [
-    PermissionOption(optionId: 'allow-once', name: 'Yes', kind: PermissionOptionKind.allowOnce),
-    PermissionOption(optionId: 'reject', name: 'No', kind: PermissionOptionKind.rejectOnce),
-  ],
-);
+PermissionRequest askFor(String toolId, {String title = 'rtk ls -1 /tmp/scratch', String kind = 'execute'}) =>
+    PermissionRequest(
+      sessionId: 's1',
+      toolCall: ToolCallPatch(toolId, {
+        'toolCallId': toolId,
+        'title': title,
+        'kind': kind,
+        'rawInput': {'command': title},
+      }),
+      options: const [
+        PermissionOption(optionId: 'allow-once', name: 'Yes', kind: PermissionOptionKind.allowOnce),
+        PermissionOption(optionId: 'reject', name: 'No', kind: PermissionOptionKind.rejectOnce),
+      ],
+    );
 
 // -- omp ------------------------------------------------------------------------
 
@@ -171,7 +184,13 @@ List<Json> ompTask(String callId, List<Json> progress, {List<Json>? results, Str
 
 // -- codex ----------------------------------------------------------------------
 
-Json codexSpawn(String thread, String childStatus, {String status = 'inProgress', String? message, String prompt = 'Find the current weather in Paris.\nBe brief.'}) => {
+Json codexSpawn(
+  String thread,
+  String childStatus, {
+  String status = 'inProgress',
+  String? message,
+  String prompt = 'Find the current weather in Paris.\nBe brief.',
+}) => {
   'sessionUpdate': 'tool_call',
   'toolCallId': 'spawn-$thread',
   'title': 'spawnAgent',
@@ -198,7 +217,10 @@ AgentSessionState overviewState() {
       items: richTurn(),
       plan: const [
         PlanEntry(content: 'Read the parser', status: PlanStatus.completed),
-        PlanEntry(content: 'Fix the Hà Nội locale bug in the parser module and add a test', status: PlanStatus.inProgress),
+        PlanEntry(
+          content: 'Fix the Hà Nội locale bug in the parser module and add a test',
+          status: PlanStatus.inProgress,
+        ),
         PlanEntry(content: 'Run the tests'),
       ],
       modes: const ModeState(
@@ -208,7 +230,14 @@ AgentSessionState overviewState() {
     ),
   );
   s = s.withPending(PendingPermission(1, permissionRequest(title: 'Run flutter test')));
-  s = s.apply(parse({'sessionUpdate': 'usage_update', 'used': 182000, 'size': 200000, 'cost': {'amount': 1.2345, 'currency': 'USD'}}));
+  s = s.apply(
+    parse({
+      'sessionUpdate': 'usage_update',
+      'used': 182000,
+      'size': 200000,
+      'cost': {'amount': 1.2345, 'currency': 'USD'},
+    }),
+  );
   return s.withTurnEnded(
     StopReason.endTurn,
     usage: const TurnUsage(totalTokens: 12000, inputTokens: 9000, outputTokens: 3000),

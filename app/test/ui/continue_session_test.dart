@@ -60,7 +60,10 @@ void main() {
       await tester.tap(find.byType(StatusStrip), warnIfMissed: false);
       await settleHistory(tester, 5);
       expect(
-        find.widgetWithText(SelectableText, 'The agent kept the conversation. The host restarted and took Claude Code with it.'),
+        find.widgetWithText(
+          SelectableText,
+          'The agent kept the conversation. The host restarted and took Claude Code with it.',
+        ),
         findsOneWidget,
       );
       await e.tearDown(tester);

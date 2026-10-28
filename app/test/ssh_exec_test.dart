@@ -74,12 +74,7 @@ class _Client implements SSHClient {
   bool get isClosed => closed;
 
   @override
-  Future<SSHSession> execute(
-    String command, {
-    SSHPtyConfig? pty,
-    SSHX11Config? x11,
-    Map<String, String>? environment,
-  }) {
+  Future<SSHSession> execute(String command, {SSHPtyConfig? pty, SSHX11Config? x11, Map<String, String>? environment}) {
     executes++;
     return onExecute(command);
   }
@@ -105,31 +100,30 @@ class _Client implements SSHClient {
 const _profile = MachineProfile(id: 'm', label: 'm', host: 'h', username: 'u');
 
 SshTransport _transportOver(List<_Client> clients, _Client Function() make) => SshTransport(
-      profile: _profile,
-      secrets: const MachineSecrets(),
-      onPinHostKey: (_) {},
-      connectClient: (_) async {
-        final client = make();
-        clients.add(client);
-        return client;
-      },
-    );
+  profile: _profile,
+  secrets: const MachineSecrets(),
+  onPinHostKey: (_) {},
+  connectClient: (_) async {
+    final client = make();
+    clients.add(client);
+    return client;
+  },
+);
 
 void main() {
   group('a host that refuses another channel', () {
     test('fails that channel with words for a person and keeps the connection', () async {
       final clients = <_Client>[];
-      final t = _transportOver(
-        clients,
-        () => _Client((_) => Future.error(SSHChannelOpenError(1, 'open failed'))),
-      );
+      final t = _transportOver(clients, () => _Client((_) => Future.error(SSHChannelOpenError(1, 'open failed'))));
 
       for (var i = 0; i < 3; i++) {
         await expectLater(
           t.openExec('keeper attach'),
-          throwsA(isA<HerdrTransportException>()
-              .having((e) => e.fatal, 'fatal', isFalse)
-              .having((e) => e.message, 'message', contains('Too many sessions'))),
+          throwsA(
+            isA<HerdrTransportException>()
+                .having((e) => e.fatal, 'fatal', isFalse)
+                .having((e) => e.message, 'message', contains('Too many sessions')),
+          ),
         );
       }
 
@@ -139,24 +133,18 @@ void main() {
     });
 
     test('resource shortage means the same, and other refusals keep the host\'s reason', () {
-      expect(channelRefusal(SSHChannelOpenError(4, 'no resources'))?.message,
-          contains('Too many sessions'));
-      expect(channelRefusal(SSHChannelOpenError(3, 'unknown channel type'))?.message,
-          contains('unknown channel type'));
+      expect(channelRefusal(SSHChannelOpenError(4, 'no resources'))?.message, contains('Too many sessions'));
+      expect(channelRefusal(SSHChannelOpenError(3, 'unknown channel type'))?.message, contains('unknown channel type'));
       expect(channelRefusal(SSHChannelOpenError(3, 'x'))?.fatal, isFalse);
     });
 
     test('any other failure still drops the connection, and the next call reconnects', () async {
       final clients = <_Client>[];
-      final t = _transportOver(
-        clients,
-        () => _Client((_) => Future.error(StateError('socket closed'))),
-      );
+      final t = _transportOver(clients, () => _Client((_) => Future.error(StateError('socket closed'))));
 
       await expectLater(
         t.openExec('x'),
-        throwsA(isA<HerdrTransportException>()
-            .having((e) => e.message, 'message', contains('Cannot open channel'))),
+        throwsA(isA<HerdrTransportException>().having((e) => e.message, 'message', contains('Cannot open channel'))),
       );
       expect(clients.single.closed, isTrue);
 
@@ -236,8 +224,7 @@ void main() {
       expect(session.stdinText, isEmpty);
     });
 
-    test('close sends end of input, then closes the channel once, however often it is called',
-        () async {
+    test('close sends end of input, then closes the channel once, however often it is called', () async {
       await Future.wait([channel.close(), channel.close()]);
       await channel.close();
 

@@ -9,7 +9,9 @@ import '../../../data/repositories/agent_screens.dart';
 import '../../../data/repositories/machine_connection.dart';
 import '../../../data/words/agent_names.dart';
 import '../../../data/words/where_line.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../agents/agent_navigation.dart';
 import '../create/management_sheets.dart';
 
@@ -36,22 +38,29 @@ List<RowSpec> machinePaneRows({
   final rows = <RowSpec>[];
   for (final entry in entries) {
     if (!showAll && rows.length >= machinePaneCap) break;
-    rows.add(CustomRow(
-      id: entry.pane.id,
-      dividerIndent: ListRow.textIndent(leadingExtent: MachinePaneRow.leadingExtent),
-      child: RepaintBoundary(
-        child: MachinePaneRow(
-          machine: machine,
-          pane: entry.pane,
-          tabLabel: entry.tab,
-          folder: folderOf(entry.pane),
-          dim: !live,
+    rows.add(
+      CustomRow(
+        id: entry.pane.id,
+        dividerIndent: ListRow.textIndent(leadingExtent: MachinePaneRow.leadingExtent),
+        child: RepaintBoundary(
+          child: MachinePaneRow(
+            machine: machine,
+            pane: entry.pane,
+            tabLabel: entry.tab,
+            folder: folderOf(entry.pane),
+            dim: !live,
+          ),
         ),
       ),
-    ));
+    );
   }
   if (entries.length > rows.length) {
-    rows.add(CustomRow(id: 'show-all', child: _ShowAllRow(total: entries.length, onTap: onShowAll)));
+    rows.add(
+      CustomRow(
+        id: 'show-all',
+        child: _ShowAllRow(total: entries.length, onTap: onShowAll),
+      ),
+    );
   }
   return rows;
 }
@@ -65,18 +74,15 @@ class _ShowAllRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => PressRow(
-        onTap: onTap,
-        minHeight: _minHeight,
-        // Aligned with the pane titles above.
-        padding: EdgeInsetsDirectional.only(
-          start: ListRow.textIndent(leadingExtent: MachinePaneRow.leadingExtent) - PressRow.inset,
-          end: Gap.gutter - PressRow.inset,
-        ),
-        child: Text(
-          'Show all $total panes',
-          style: Type.labelStrong.copyWith(color: context.ds.accentText),
-        ),
-      );
+    onTap: onTap,
+    minHeight: _minHeight,
+    // Aligned with the pane titles above.
+    padding: EdgeInsetsDirectional.only(
+      start: ListRow.textIndent(leadingExtent: MachinePaneRow.leadingExtent) - PressRow.inset,
+      end: Gap.gutter - PressRow.inset,
+    ),
+    child: Text('Show all $total panes', style: Type.labelStrong.copyWith(color: context.ds.accentText)),
+  );
 
   /// A quiet closing row, lower than a pane row.
   static const _minHeight = 48.0;

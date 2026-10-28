@@ -26,23 +26,14 @@ final class JsonHighlighter extends LineScanner {
         }
         j = j < n ? j + 1 : n;
         final k = skipBlanks(t, j, n);
-        emit(out, i, j,
-            k < n && t.codeUnitAt(k) == 0x3A
-                ? TokenKind.property
-                : TokenKind.string);
+        emit(out, i, j, k < n && t.codeUnitAt(k) == 0x3A ? TokenKind.property : TokenKind.string);
         i = j;
       } else if (isDigit(c) ||
-          ((c == 0x2D || c == 0x2B) &&
-              i + 1 < n &&
-              (isDigit(t.codeUnitAt(i + 1)) || t.codeUnitAt(i + 1) == 0x2E))) {
+          ((c == 0x2D || c == 0x2B) && i + 1 < n && (isDigit(t.codeUnitAt(i + 1)) || t.codeUnitAt(i + 1) == 0x2E))) {
         var j = i + 1;
         while (j < n) {
           final d = t.codeUnitAt(j);
-          if (isDigit(d) ||
-              d == 0x2E ||
-              d == 0x2B ||
-              d == 0x2D ||
-              (d | 0x20) == 0x65) {
+          if (isDigit(d) || d == 0x2E || d == 0x2B || d == 0x2D || (d | 0x20) == 0x65) {
             j++;
           } else {
             break;
@@ -55,9 +46,7 @@ final class JsonHighlighter extends LineScanner {
         while (j < n && isIdentPart(t.codeUnitAt(j))) {
           j++;
         }
-        if (_word(t, i, j, 'true') ||
-            _word(t, i, j, 'false') ||
-            _word(t, i, j, 'null')) {
+        if (_word(t, i, j, 'true') || _word(t, i, j, 'false') || _word(t, i, j, 'null')) {
           emit(out, i, j, TokenKind.constant);
         }
         i = j;
@@ -72,8 +61,7 @@ final class JsonHighlighter extends LineScanner {
     }
   }
 
-  bool _word(String t, int s, int e, String w) =>
-      e - s == w.length && t.startsWith(w, s);
+  bool _word(String t, int s, int e, String w) => e - s == w.length && t.startsWith(w, s);
 
   int _comment(String t, int from, int start, int n, List<Token> out) {
     for (var i = from; i + 1 < n; i++) {
@@ -115,9 +103,7 @@ final class YamlHighlighter extends LineScanner {
       emit(out, i, n, TokenKind.comment);
       return;
     }
-    if (i == 0 &&
-        (t.startsWith('---') || t.startsWith('...')) &&
-        (n == 3 || isSpace(t.codeUnitAt(3)))) {
+    if (i == 0 && (t.startsWith('---') || t.startsWith('...')) && (n == 3 || isSpace(t.codeUnitAt(3)))) {
       emit(out, 0, 3, TokenKind.punctuation);
       i = 3;
     }
@@ -277,7 +263,15 @@ final class YamlHighlighter extends LineScanner {
       var j = s + 1;
       while (j < e) {
         final d = t.codeUnitAt(j);
-        if (isDigit(d) || d == 0x2E || d == 0x5F || (d | 0x20) == 0x65 || d == 0x2B || d == 0x2D || d == 0x3A || d == 0x78 || isHex(d)) {
+        if (isDigit(d) ||
+            d == 0x2E ||
+            d == 0x5F ||
+            (d | 0x20) == 0x65 ||
+            d == 0x2B ||
+            d == 0x2D ||
+            d == 0x3A ||
+            d == 0x78 ||
+            isHex(d)) {
           j++;
         } else {
           return TokenKind.string;
@@ -368,10 +362,7 @@ final class TomlHighlighter extends LineScanner {
           }
           j = j < n ? j + 1 : n;
           final k = skipBlanks(t, j, n);
-          emit(out, i, j,
-              k < n && t.codeUnitAt(k) == 0x3D
-                  ? TokenKind.property
-                  : TokenKind.string);
+          emit(out, i, j, k < n && t.codeUnitAt(k) == 0x3D ? TokenKind.property : TokenKind.string);
           i = j;
         }
       } else if (c == 0x5B) {
@@ -410,11 +401,9 @@ final class TomlHighlighter extends LineScanner {
     }
   }
 
-  bool _isWord(String t, int s, int e, String w) =>
-      e - s == w.length && t.startsWith(w, s);
+  bool _isWord(String t, int s, int e, String w) => e - s == w.length && t.startsWith(w, s);
 
-  bool _isBool(String t, int s, int e) =>
-      _isWord(t, s, e, 'true') || _isWord(t, s, e, 'false');
+  bool _isBool(String t, int s, int e) => _isWord(t, s, e, 'true') || _isWord(t, s, e, 'false');
 
   int _multiline(String t, int from, int start, int q, int n, List<Token> out) {
     var i = from;
@@ -422,10 +411,7 @@ final class TomlHighlighter extends LineScanner {
       final c = t.codeUnitAt(i);
       if (c == 0x5C && q == 0x22) {
         i += 2;
-      } else if (c == q &&
-          i + 2 < n &&
-          t.codeUnitAt(i + 1) == q &&
-          t.codeUnitAt(i + 2) == q) {
+      } else if (c == q && i + 2 < n && t.codeUnitAt(i + 1) == q && t.codeUnitAt(i + 2) == q) {
         i += 3;
         mode = a > 0 ? _tArray : 0;
         emit(out, start, i, TokenKind.string);

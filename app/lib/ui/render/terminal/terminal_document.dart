@@ -25,10 +25,10 @@ final class RowLink {
 /// survives an update costs nothing again.
 final class DocLine {
   DocLine._(this.src, this.start, AnsiLine parsed)
-      : runs = parsed.runs,
-        columns = parsed.columns,
-        hasText = parsed.hasText,
-        end = parsed.end;
+    : runs = parsed.runs,
+      columns = parsed.columns,
+      hasText = parsed.hasText,
+      end = parsed.end;
 
   /// The raw text, escape sequences included.
   final String src;
@@ -113,11 +113,7 @@ final class DocLine {
     return [
       for (final link in all)
         if (link.start < to && link.end > from)
-          RowLink(
-            link,
-            math.max(link.start, from) - from,
-            math.min(link.end, to) - from,
-          ),
+          RowLink(link, math.max(link.start, from) - from, math.min(link.end, to) - from),
     ];
   }
 }
@@ -213,7 +209,8 @@ final class TerminalDocument {
 
     final oldLength = _lines.length;
     final list = history is RowsSnapshot ? history.backing : null;
-    final known = list != null &&
+    final known =
+        list != null &&
             identical(list, _historyList) &&
             windowStart >= _historyLength &&
             // Enough lines for _shiftOf to anchor on, so that it would answer 0.

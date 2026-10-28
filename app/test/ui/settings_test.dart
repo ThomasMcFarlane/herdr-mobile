@@ -38,7 +38,6 @@ import '../support/settings_support.dart';
 import '../support/shot.dart' show loadAppFonts;
 import 'ui_harness.dart';
 
-
 class _ScreensStore implements AgentScreensStore {
   _ScreensStore(this.saved);
 
@@ -91,15 +90,17 @@ Future<void> pumpApp(
     ),
   );
   await fleet.settled();
-  await tester.pumpWidget(HerdrMobileApp(
-    machines: machines,
-    network: network,
-    snapshotCache: MemorySnapshotCache(),
-    terminalSettings: terminal,
-    appSettings: app,
-    agentScreens: screens,
-    fleet: fleet,
-  ));
+  await tester.pumpWidget(
+    HerdrMobileApp(
+      machines: machines,
+      network: network,
+      snapshotCache: MemorySnapshotCache(),
+      terminalSettings: terminal,
+      appSettings: app,
+      agentScreens: screens,
+      fleet: fleet,
+    ),
+  );
   await tester.pump(const Duration(milliseconds: 100));
 }
 
@@ -109,9 +110,7 @@ Future<void> disposeApp(WidgetTester tester) async {
 }
 
 SystemUiOverlayStyle barsOf(WidgetTester tester) => tester
-    .widget<AnnotatedRegion<SystemUiOverlayStyle>>(
-      find.byType(AnnotatedRegion<SystemUiOverlayStyle>).first,
-    )
+    .widget<AnnotatedRegion<SystemUiOverlayStyle>>(find.byType(AnnotatedRegion<SystemUiOverlayStyle>).first)
     .value;
 
 Future<void> pumpScreen(
@@ -169,7 +168,8 @@ Future<void> pumpBar(
     MaterialApp(
       theme: AppTheme.light(),
       builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale), disableAnimations: reduceMotion),
+        data: MediaQuery.of(context)
+            .copyWith(textScaler: TextScaler.linear(textScale), disableAnimations: reduceMotion),
         child: child!,
       ),
       home: Scaffold(
@@ -248,14 +248,16 @@ void main() {
       await machines.load();
       final screens = AgentScreens();
       addTearDown(screens.dispose);
-      await tester.pumpWidget(HerdrMobileApp(
-        machines: machines,
-        network: FakeNetwork(),
-        snapshotCache: MemorySnapshotCache(),
-        terminalSettings: TerminalSettings(MemoryTerminalSettingsStore()),
-        appSettings: app,
-        agentScreens: screens,
-      ));
+      await tester.pumpWidget(
+        HerdrMobileApp(
+          machines: machines,
+          network: FakeNetwork(),
+          snapshotCache: MemorySnapshotCache(),
+          terminalSettings: TerminalSettings(MemoryTerminalSettingsStore()),
+          appSettings: app,
+          agentScreens: screens,
+        ),
+      );
       expect(Theme.of(tester.element(find.byType(Scaffold).first)).brightness, Brightness.dark);
       await disposeApp(tester);
     });
@@ -287,8 +289,7 @@ void main() {
       expect(app.theme, ThemeChoice.system);
     });
 
-    testWidgets('font size steps within the pinch range and stays in sync with the pane',
-        (tester) async {
+    testWidgets('font size steps within the pinch range and stays in sync with the pane', (tester) async {
       final store = MemoryTerminalSettingsStore();
       final terminal = TerminalSettings(store);
       await pumpScreen(tester, app: AppSettings(MemoryAppSettingsStore()), terminal: terminal, height: 1200);
@@ -298,12 +299,8 @@ void main() {
       expect(FontSizeControl.format(12), '12');
       expect(FontSizeControl.format(12.5), '12.5');
 
-      final plus = find.byWidgetPredicate(
-        (w) => w is PressBuilder && w.semanticLabel == 'Increase font size',
-      );
-      final minus = find.byWidgetPredicate(
-        (w) => w is PressBuilder && w.semanticLabel == 'Decrease font size',
-      );
+      final plus = find.byWidgetPredicate((w) => w is PressBuilder && w.semanticLabel == 'Increase font size');
+      final minus = find.byWidgetPredicate((w) => w is PressBuilder && w.semanticLabel == 'Decrease font size');
       await tester.tap(plus);
       await tester.pump();
       expect(terminal.fontSize, 12.5);
@@ -513,7 +510,9 @@ void main() {
 
     testWidgets('the cells are equal and spread across the width', (tester) async {
       await pumpBar(tester, index: 0, tabs: _threeTabs);
-      final rects = [for (final l in ['Agents', 'Machines', 'Settings']) tester.getRect(find.byKey(FloatingTabBar.tabKey(l)))];
+      final rects = [
+        for (final l in ['Agents', 'Machines', 'Settings']) tester.getRect(find.byKey(FloatingTabBar.tabKey(l))),
+      ];
       expect(rects[1].width, rects[0].width);
       expect(rects[2].width, rects[0].width);
       final bar = tester.getRect(find.byType(FloatingTabBar));
@@ -525,7 +524,9 @@ void main() {
       Future<List<Rect>> cells(int index) async {
         await tester.pumpWidget(const SizedBox());
         await pumpBar(tester, index: index, tabs: _threeTabs);
-        return [for (final l in ['Agents', 'Machines', 'Settings']) tester.getRect(find.byKey(FloatingTabBar.tabKey(l)))];
+        return [
+          for (final l in ['Agents', 'Machines', 'Settings']) tester.getRect(find.byKey(FloatingTabBar.tabKey(l))),
+        ];
       }
 
       final first = await cells(0);
@@ -557,7 +558,11 @@ void main() {
         final badge = tester.getRect(find.text('99+'));
         expect(badge.left, greaterThanOrEqualTo(0));
         for (final label in ['Agents', 'Machines', 'Settings']) {
-          expect(badge.overlaps(tester.getRect(find.text(label))), isFalse, reason: 'the count is not written over $label');
+          expect(
+            badge.overlaps(tester.getRect(find.text(label))),
+            isFalse,
+            reason: 'the count is not written over $label',
+          );
         }
       });
     }
@@ -627,7 +632,9 @@ void main() {
         expect(tester.hasRunningAnimations, isFalse);
       });
 
-      testWidgets('the text warms as the capsule arrives under it and cools as it leaves, in step with it', (tester) async {
+      testWidgets('the text warms as the capsule arrives under it and cools as it leaves, in step with it', (
+        tester,
+      ) async {
         Color colour(String label) => tester.widget<Text>(find.text(label)).style!.color!;
         // 0 at textSecondary, 1 at accentText, read off the blue channel
         // (the one that moves most between them).
@@ -679,13 +686,19 @@ void main() {
           await drag(tester, g, 126);
           final moved = capsule(tester).left - from;
           expect(moved, lessThanOrEqualTo(travelled), reason: 'never ahead of the finger');
-          expect(moved, greaterThan(travelled - 30), reason: 'it came along with it, the touch slop aside: no glide of its own');
+          expect(
+            moved,
+            greaterThan(travelled - 30),
+            reason: 'it came along with it, the touch slop aside: no glide of its own',
+          );
           expect(taps, isEmpty, reason: 'nothing is chosen while the finger is down');
           await g.up();
           expect(taps, [1]);
         });
 
-        testWidgets('a short drag that ends nearer where it began chooses nothing, and the capsule goes back', (tester) async {
+        testWidgets('a short drag that ends nearer where it began chooses nothing, and the capsule goes back', (
+          tester,
+        ) async {
           final taps = <int>[];
           final g = await grab(tester, taps);
           await drag(tester, g, 30);
@@ -696,7 +709,9 @@ void main() {
           expect(tester.hasRunningAnimations, isFalse);
         });
 
-        testWidgets('a bar whose owner did not take the choice gets its capsule back under the chosen tab', (tester) async {
+        testWidgets('a bar whose owner did not take the choice gets its capsule back under the chosen tab', (
+          tester,
+        ) async {
           final taps = <int>[];
           final g = await grab(tester, taps);
           await drag(tester, g, cell(tester, 'Agents').width + 30);
@@ -777,11 +792,7 @@ void main() {
             Provider<Notifier>.value(value: const NullNotifier()),
             attentionSetProvider(),
           ],
-          child: MaterialApp(
-            restorationScopeId: 'app',
-            theme: AppTheme.light(),
-            home: const HomeShell(),
-          ),
+          child: MaterialApp(restorationScopeId: 'app', theme: AppTheme.light(), home: const HomeShell()),
         ),
       );
       await settle(tester);
@@ -834,48 +845,62 @@ void main() {
       await disposeApp(tester);
     });
 
-    testWidgets('the app puts the agent screen it was left on back in front, once, without the slide; leaving to the board forgets it', (tester) async {
-      const machine = MachineProfile(id: 'm1', label: 'workstation', host: 'h', username: 'u');
-      const pane = PaneAgent('m1', 'w1:p1');
-      final store = _ScreensStore(const FrontAgent(pane, AgentView.terminal));
-      final screens = AgentScreens(store);
-      await screens.load();
-      final app = AppSettings(MemoryAppSettingsStore());
-      await app.load();
-      await pumpApp(tester, app, TerminalSettings(MemoryTerminalSettingsStore()), agentScreens: screens, machine: machine);
-      // No time passes: a page transition would still be under way.
-      for (var i = 0; i < 3; i++) {
+    testWidgets(
+      'the app puts the agent screen it was left on back in front, once, without the slide; leaving to the board forgets it',
+      (tester) async {
+        const machine = MachineProfile(id: 'm1', label: 'workstation', host: 'h', username: 'u');
+        const pane = PaneAgent('m1', 'w1:p1');
+        final store = _ScreensStore(const FrontAgent(pane, AgentView.terminal));
+        final screens = AgentScreens(store);
+        await screens.load();
+        final app = AppSettings(MemoryAppSettingsStore());
+        await app.load();
+        await pumpApp(
+          tester,
+          app,
+          TerminalSettings(MemoryTerminalSettingsStore()),
+          agentScreens: screens,
+          machine: machine,
+        );
+        // No time passes: a page transition would still be under way.
+        for (var i = 0; i < 3; i++) {
+          await tester.pump();
+        }
+        expect(tester.widget<PaneScreen>(find.byType(PaneScreen)).agent, pane);
+        expect(
+          ModalRoute.of(tester.element(find.byType(PaneScreen)))!.animation!.status,
+          AnimationStatus.completed,
+          reason: 'in place on the first frames, as if the app never closed',
+        );
+        expect(screens.takeResume(), isNull, reason: 'once');
+
+        await tester.tap(find.byTooltip('Back'));
         await tester.pump();
-      }
-      expect(tester.widget<PaneScreen>(find.byType(PaneScreen)).agent, pane);
-      expect(
-        ModalRoute.of(tester.element(find.byType(PaneScreen)))!.animation!.status,
-        AnimationStatus.completed,
-        reason: 'in place on the first frames, as if the app never closed',
-      );
-      expect(screens.takeResume(), isNull, reason: 'once');
+        await tester.pump(const Duration(milliseconds: 500));
+        expect(find.byType(PaneScreen), findsNothing);
+        expect(find.byType(HomeShell), findsOneWidget);
+        expect(store.saved, isNull, reason: 'back on the board: nothing to put back');
+        await disposeApp(tester);
 
-      await tester.tap(find.byTooltip('Back'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-      expect(find.byType(PaneScreen), findsNothing);
-      expect(find.byType(HomeShell), findsOneWidget);
-      expect(store.saved, isNull, reason: 'back on the board: nothing to put back');
-      await disposeApp(tester);
-
-      final next = AgentScreens(store);
-      await next.load();
-      await pumpApp(tester, app, TerminalSettings(MemoryTerminalSettingsStore()), agentScreens: next, machine: machine);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-      expect(find.byType(PaneScreen), findsNothing, reason: 'the next launch opens on the board');
-      await disposeApp(tester);
-    });
+        final next = AgentScreens(store);
+        await next.load();
+        await pumpApp(
+          tester,
+          app,
+          TerminalSettings(MemoryTerminalSettingsStore()),
+          agentScreens: next,
+          machine: machine,
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        expect(find.byType(PaneScreen), findsNothing, reason: 'the next launch opens on the board');
+        await disposeApp(tester);
+      },
+    );
   });
 
   group('the terminal palette follows the theme', () {
-    TerminalPalette paletteUnder(WidgetTester tester) =>
-        tester.element(find.byType(Scaffold).first).terminal;
+    TerminalPalette paletteUnder(WidgetTester tester) => tester.element(find.byType(Scaffold).first).terminal;
 
     testWidgets('light on paper, dark on ink, dark on paper when asked', (tester) async {
       final app = AppSettings(MemoryAppSettingsStore());

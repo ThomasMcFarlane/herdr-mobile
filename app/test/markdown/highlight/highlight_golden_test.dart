@@ -707,9 +707,7 @@ void main() {
     test('diff', () {
       final h = highlighterFor('diff')!;
       final lines = samples['diff']!.split('\n');
-      final kinds = [
-        for (final l in lines) h.line(l, h.initial).$1.map((t) => t.kind).toList(),
-      ];
+      final kinds = [for (final l in lines) h.line(l, h.initial).$1.map((t) => t.kind).toList()];
       expect(kinds[0], [TokenKind.diffMeta]); // diff --git
       expect(kinds[1], [TokenKind.diffMeta]); // index
       expect(kinds[2], [TokenKind.diffMeta]); // ---
@@ -825,11 +823,47 @@ void main() {
   group('contract', () {
     test('aliases and unknown languages', () {
       for (final name in [
-        'js', 'javascript', 'ts', 'tsx', 'jsx', 'py', 'python', 'sh', 'bash',
-        'zsh', 'shell', 'console', 'json', 'jsonc', 'yaml', 'yml', 'toml',
-        'sql', 'rust', 'rs', 'go', 'c', 'cpp', 'c++', 'h', 'java', 'kotlin',
-        'kt', 'swift', 'dart', 'html', 'xml', 'css', 'scss', 'diff', 'patch',
-        'md', 'markdown', 'dockerfile', 'make', 'makefile',
+        'js',
+        'javascript',
+        'ts',
+        'tsx',
+        'jsx',
+        'py',
+        'python',
+        'sh',
+        'bash',
+        'zsh',
+        'shell',
+        'console',
+        'json',
+        'jsonc',
+        'yaml',
+        'yml',
+        'toml',
+        'sql',
+        'rust',
+        'rs',
+        'go',
+        'c',
+        'cpp',
+        'c++',
+        'h',
+        'java',
+        'kotlin',
+        'kt',
+        'swift',
+        'dart',
+        'html',
+        'xml',
+        'css',
+        'scss',
+        'diff',
+        'patch',
+        'md',
+        'markdown',
+        'dockerfile',
+        'make',
+        'makefile',
       ]) {
         expect(highlighterFor(name), isNotNull, reason: name);
       }
@@ -868,21 +902,8 @@ void main() {
 
     test('multi-line constructs carry across lines', () {
       List<Tok> go(String lang, String code) => tokenize(lang, code);
-      expect(go('js', 'a = `x\ny\${1}\nz` + 1'), [
-        op('='),
-        str('`x'),
-        str(r'y${1}'),
-        str('z`'),
-        op('+'),
-        num('1'),
-      ]);
-      expect(go('python', "s = '''a\nb'''\nx = 1"), [
-        op('='),
-        str("'''a"),
-        str("b'''"),
-        op('='),
-        num('1'),
-      ]);
+      expect(go('js', 'a = `x\ny\${1}\nz` + 1'), [op('='), str('`x'), str(r'y${1}'), str('z`'), op('+'), num('1')]);
+      expect(go('python', "s = '''a\nb'''\nx = 1"), [op('='), str("'''a"), str("b'''"), op('='), num('1')]);
       expect(go('rust', 'let r = r##"a "# b\nc"##; // x'), [
         kw('let'),
         op('='),

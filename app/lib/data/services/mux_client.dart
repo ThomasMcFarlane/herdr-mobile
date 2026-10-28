@@ -113,7 +113,7 @@ Stream<String> muxMessages(Stream<List<int>> bytes) {
       }
       if (nl == end) break; // no complete line yet
       final kind = buf[start];
-      if (kind != 0x5A /* Z */ && kind != 0x45 /* E */) {
+      if (kind != 0x5A /* Z */ && kind != 0x45 /* E */ ) {
         final line = Uint8List.sublistView(buf, start, nl);
         start = nl + 1;
         sink.add(utf8.decode(line, allowMalformed: true));
@@ -210,9 +210,9 @@ class MuxClient {
     required Duration heartbeatInterval,
     required Duration heartbeatTimeout,
     Duration Function()? clock,
-  })  : _heartbeatInterval = heartbeatInterval, // ignore: prefer_initializing_formals
-        _heartbeatTimeout = heartbeatTimeout, // ignore: prefer_initializing_formals
-        _now = clock ?? _stopwatchClock();
+  }) : _heartbeatInterval = heartbeatInterval, // ignore: prefer_initializing_formals
+       _heartbeatTimeout = heartbeatTimeout, // ignore: prefer_initializing_formals
+       _now = clock ?? _stopwatchClock();
 
   static Duration Function() _stopwatchClock() {
     final watch = Stopwatch()..start();
@@ -325,12 +325,14 @@ class MuxClient {
             .timeout(const Duration(seconds: 1), onTimeout: () => null)
             .catchError((Object _) => null);
         if (ready.isCompleted) return;
-        ready.completeError(MuxUnavailable(
-          code == null
-              ? 'mux channel closed before it was ready'
-              : 'mux exited with status $code before it was ready',
-          linkLost: code == null,
-        ));
+        ready.completeError(
+          MuxUnavailable(
+            code == null
+                ? 'mux channel closed before it was ready'
+                : 'mux exited with status $code before it was ready',
+            linkLost: code == null,
+          ),
+        );
       },
     );
     return ready.future.timeout(
@@ -368,12 +370,7 @@ class MuxClient {
     if (!_alive) throw const HerdrTransportException('herdr connection lost');
     final reply = _pending[id] = Completer<Object?>();
     try {
-      _channel.send(jsonEncode({
-        'id': id,
-        'method': method,
-        'params': params,
-        'mux_have': ?have,
-      }));
+      _channel.send(jsonEncode({'id': id, 'method': method, 'params': params, 'mux_have': ?have}));
     } on Object catch (e) {
       _pending.remove(id);
       _die(MuxDeath.closed, 'herdr connection lost: $e');
@@ -389,26 +386,15 @@ class MuxClient {
   /// Returns the `result` of [method]. Throws [HerdrApiException] on an API
   /// error and a non-fatal [HerdrTransportException] if the connection is
   /// lost or herdr is too slow to answer.
-  Future<Map<String, dynamic>> request(
-    String method, [
-    Map<String, dynamic> params = const {},
-  ]) async {
+  Future<Map<String, dynamic>> request(String method, [Map<String, dynamic> params = const {}]) async {
     // One read per distinct pane read or snapshot at a time may name the
     // answer it holds; a second one concurrently gets the whole answer.
-    final key = method == 'pane.read' || method == 'session.snapshot'
-        ? '$method ${jsonEncode(params)}'
-        : null;
+    final key = method == 'pane.read' || method == 'session.snapshot' ? '$method ${jsonEncode(params)}' : null;
     final owns = key != null && _reading.add(key);
     final basis = owns ? _held[key] : null;
     final Object? decoded;
     try {
-      decoded = await _exchange(
-        'm${_nextId++}',
-        method,
-        params,
-        requestTimeout,
-        have: basis?.seq,
-      );
+      decoded = await _exchange('m${_nextId++}', method, params, requestTimeout, have: basis?.seq);
     } on TimeoutException {
       throw HerdrTransportException('herdr did not answer $method in time');
     } finally {
@@ -495,8 +481,7 @@ class MuxClient {
     final chars = rows.fold<int>(0, (n, r) => n + r.length + 1);
     _held[key] = _HeldRead(seq as int, rows, chars);
     _heldChars += chars;
-    while (_held.length > 1 &&
-        (_held.length > muxDeltaKeep || _heldChars > muxDeltaChars)) {
+    while (_held.length > 1 && (_held.length > muxDeltaKeep || _heldChars > muxDeltaChars)) {
       _drop(_held.keys.first);
     }
   }
@@ -515,12 +500,7 @@ class MuxClient {
     } on FormatException {
       return null;
     }
-    return {
-      'version': rows.first.substring(1),
-      'workspaces': lists['w'],
-      'tabs': lists['t'],
-      'panes': lists['p'],
-    };
+    return {'version': rows.first.substring(1), 'workspaces': lists['w'], 'tabs': lists['t'], 'panes': lists['p']};
   }
 
   void _drop(String key) {

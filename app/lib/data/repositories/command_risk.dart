@@ -44,8 +44,7 @@ final _standing = RegExp(
 );
 
 class _Rule {
-  _Rule(String pattern, this.reason, {bool caseSensitive = false})
-      : re = RegExp(pattern, caseSensitive: caseSensitive);
+  _Rule(String pattern, this.reason, {bool caseSensitive = false}) : re = RegExp(pattern, caseSensitive: caseSensitive);
 
   final RegExp re;
   final String reason;
@@ -71,7 +70,9 @@ const _start = r'''(?:^|[\s;&|(`{"'\\])''';
 const _close = '''["']?''';
 
 /// A command word typed with its directory too (`/bin/rm`, `/usr/bin/git`).
-const _cmd = '$_start' r'(?:[\w.~-]*/)*';
+const _cmd =
+    '$_start'
+    r'(?:[\w.~-]*/)*';
 
 /// `git`, then the global options that may come before the subcommand
 /// (`-C <dir>`, `-c k=v`, `--no-pager`, `--git-dir <dir>`): `git -C repo push`
@@ -82,55 +83,109 @@ const _cmd = '$_start' r'(?:[\w.~-]*/)*';
 /// those names. With both able to match `-C`, a run of `-C -C -C ...` could be
 /// split in exponentially many ways and a failed match took minutes.
 const _gitValued = r'(?:-[Cc]|--(?:git-dir|work-tree|namespace))';
-const _git = r'\bgit(?:\s+(?:' '$_gitValued' r'\s+\S+|(?!' '$_gitValued' r'(?:\s|$))-[\w-]+(?:=\S+)?))*';
+const _git =
+    r'\bgit(?:\s+(?:'
+    '$_gitValued'
+    r'\s+\S+|(?!'
+    '$_gitValued'
+    r'(?:\s|$))-[\w-]+(?:=\S+)?))*';
 
 final _commandRules = <_Rule>[
   // Remote and history.
-  _Rule('$_git' r'\s+push\b[^;&|]*(?:--force(?:-with-lease)?\b|\s-f\b|\s\+\S)', 'force-pushes'),
-  _Rule('$_git' r'\s+push\b', 'pushes to a remote'),
+  _Rule(
+    '$_git'
+        r'\s+push\b[^;&|]*(?:--force(?:-with-lease)?\b|\s-f\b|\s\+\S)',
+    'force-pushes',
+  ),
+  _Rule(
+    '$_git'
+        r'\s+push\b',
+    'pushes to a remote',
+  ),
 
   // Data that does not come back.
-  _Rule('$_cmd(?:rm|rmdir|unlink|shred)$_close' r'\s+\S', 'deletes files'),
+  _Rule(
+    '$_cmd(?:rm|rmdir|unlink|shred)$_close'
+        r'\s+\S',
+    'deletes files',
+  ),
   _Rule(
     r'''\b(?:ba|z|da|k)?sh(?:\s+-\S+)*?\s+-\w*c\s+["'](?:[^"']*[\s;&|])?(?:[\w.~-]*/)*(?:rm|rmdir|unlink|shred)\s+\S''',
     'deletes files',
   ),
   _Rule(r'\bxargs\s+(?:-\S+\s+)*(?:sudo\s+)?(?:rm|rmdir|unlink|shred)\b', 'deletes files'),
   _Rule(r'\bfind\b[^;&|]*\s-delete\b', 'deletes files'),
-  _Rule('$_git' r'\s+clean\b', 'deletes files'),
-  _Rule('${_cmd}dd$_close' r'\s+[^;&|]*\bof=', 'overwrites a disk'),
+  _Rule(
+    '$_git'
+        r'\s+clean\b',
+    'deletes files',
+  ),
+  _Rule(
+    '${_cmd}dd$_close'
+        r'\s+[^;&|]*\bof=',
+    'overwrites a disk',
+  ),
   _Rule(r'\b(?:mkfs(?:\.\w+)?|wipefs)\b', 'overwrites a disk'),
 
   // Work in a repository.
-  _Rule('$_git' r'\s+reset\b[^;&|]*--hard\b', 'discards git changes'),
-  _Rule('$_git' r'\s+checkout\b[^;&|]*\s(?:--\s+)?\.(?:\s|$)', 'discards git changes'),
-  _Rule('$_git' r'\s+restore\b(?![^;&|]*--staged)[^;&|]*\s\.(?:\s|$)', 'discards git changes'),
-  _Rule('$_git' r'\s+branch\b[^;&|]*\s-D\b', 'discards git changes', caseSensitive: true),
-  _Rule('$_git' r'\s+stash\s+(?:drop|clear)\b', 'discards git changes'),
-  _Rule('$_git' r'\s+(?:filter-branch|filter-repo)\b', 'discards git changes'),
-  _Rule('$_git' r'\s+reflog\s+(?:expire|delete)\b', 'discards git changes'),
+  _Rule(
+    '$_git'
+        r'\s+reset\b[^;&|]*--hard\b',
+    'discards git changes',
+  ),
+  _Rule(
+    '$_git'
+        r'\s+checkout\b[^;&|]*\s(?:--\s+)?\.(?:\s|$)',
+    'discards git changes',
+  ),
+  _Rule(
+    '$_git'
+        r'\s+restore\b(?![^;&|]*--staged)[^;&|]*\s\.(?:\s|$)',
+    'discards git changes',
+  ),
+  _Rule(
+    '$_git'
+        r'\s+branch\b[^;&|]*\s-D\b',
+    'discards git changes',
+    caseSensitive: true,
+  ),
+  _Rule(
+    '$_git'
+        r'\s+stash\s+(?:drop|clear)\b',
+    'discards git changes',
+  ),
+  _Rule(
+    '$_git'
+        r'\s+(?:filter-branch|filter-repo)\b',
+    'discards git changes',
+  ),
+  _Rule(
+    '$_git'
+        r'\s+reflog\s+(?:expire|delete)\b',
+    'discards git changes',
+  ),
 
   // Visible to other people.
   _Rule(
     r'\b(?:(?:npm|pnpm|yarn|bun)\s+publish|cargo\s+publish|twine\s+upload|poetry\s+publish|'
-    r'gem\s+push|mvn\s+deploy|helm\s+push|docker\s+(?:image\s+)?push|'
-    r'gh\s+(?:release\s+(?:create|upload|delete)|pr\s+merge|repo\s+(?:create|delete)|workflow\s+run))\b',
+        r'gem\s+push|mvn\s+deploy|helm\s+push|docker\s+(?:image\s+)?push|'
+        r'gh\s+(?:release\s+(?:create|upload|delete)|pr\s+merge|repo\s+(?:create|delete)|workflow\s+run))\b',
     'publishes or merges',
   ),
 
   // Somebody else's machines.
   _Rule(
     r'\b(?:(?:terraform|tofu)\s+(?:apply|destroy|import|taint|untaint|state\s+(?:rm|mv|push))|'
-    r'pulumi\s+(?:up|destroy|refresh)|'
-    r'kubectl\s+(?:apply|delete|replace|scale|patch|edit|drain|cordon|uncordon|rollout|exec|create|annotate|label|set|taint)|'
-    r'helm\s+(?:install|upgrade|uninstall|delete|rollback)|ansible-playbook|'
-    r'(?:cdk|sls|serverless|sam|fly|flyctl|wrangler)\s+(?:deploy|destroy|remove|publish))\b',
+        r'pulumi\s+(?:up|destroy|refresh)|'
+        r'kubectl\s+(?:apply|delete|replace|scale|patch|edit|drain|cordon|uncordon|rollout|exec|create|annotate|label|set|taint)|'
+        r'helm\s+(?:install|upgrade|uninstall|delete|rollback)|ansible-playbook|'
+        r'(?:cdk|sls|serverless|sam|fly|flyctl|wrangler)\s+(?:deploy|destroy|remove|publish))\b',
     'changes infrastructure',
   ),
   _Rule(r'\b(?:gcloud|az)\b[^;&|]*\s(?:delete|create|deploy|update|reset|resize)\b', 'changes infrastructure'),
   _Rule(
     r'\baws\b[^;&|]*\s(?:s3\s+(?:rm|rb|sync|mv)|'
-    r'(?:delete|terminate|remove|create|put|update|stop|reboot|deregister|modify|invoke|run|start|attach|detach)-\S+|invoke)\b',
+        r'(?:delete|terminate|remove|create|put|update|stop|reboot|deregister|modify|invoke|run|start|attach|detach)-\S+|invoke)\b',
     'changes infrastructure',
   ),
   _Rule(r'\b(?:ssh|scp|sftp)\s', 'runs on another machine'),
@@ -139,60 +194,59 @@ final _commandRules = <_Rule>[
   // Code that was not written here.
   _Rule(
     r'\b(?:curl|wget)\b[^;&]*\|\s*(?:sudo\s+(?:-\S+\s+)*)?'
-    r'(?:(?:ba|z|da|k)?sh\b|'
-    // An interpreter that reads the script from stdin: bare, or with a lone `-`.
-    // `| python3 -m json.tool` and `| node script.js` read something else.
-    r'(?:python[\d.]*|node|nodejs|deno|perl|ruby|php)(?:\s+-(?=\s|$)|\s*(?:$|[;&|)])))|'
-    // A shell, `eval`, `source` or `.` that runs what a download printed:
-    // `bash -c "$(curl ...)"`, `source <(curl ...)`.
-    r'\b(?:(?:ba|z|da|k)?sh|eval|source)\b[^;&]*(?:[$<]\(|`)\s*(?:curl|wget)\b|'
-    r'(?:^|[\s;&|(])\.\s+<\(\s*(?:curl|wget)\b',
+        r'(?:(?:ba|z|da|k)?sh\b|'
+        // An interpreter that reads the script from stdin: bare, or with a lone `-`.
+        // `| python3 -m json.tool` and `| node script.js` read something else.
+        r'(?:python[\d.]*|node|nodejs|deno|perl|ruby|php)(?:\s+-(?=\s|$)|\s*(?:$|[;&|)])))|'
+        // A shell, `eval`, `source` or `.` that runs what a download printed:
+        // `bash -c "$(curl ...)"`, `source <(curl ...)`.
+        r'\b(?:(?:ba|z|da|k)?sh|eval|source)\b[^;&]*(?:[$<]\(|`)\s*(?:curl|wget)\b|'
+        r'(?:^|[\s;&|(])\.\s+<\(\s*(?:curl|wget)\b',
     'runs a downloaded script',
   ),
 
-  _Rule(
-    r'\b(?:curl|wget)\b[^;&|]*(?:\s-X\s*|--request[\s=]+|--method[\s=]+)DELETE\b',
-    'sends a DELETE request',
-  ),
-  _Rule(
-    r'\bpython[\d.]*\s+(?:-\S+\s+)*-c\s+.*\b(?:rmtree|os\.(?:remove|unlink|rmdir|removedirs))\b',
-    'deletes files',
-  ),
+  _Rule(r'\b(?:curl|wget)\b[^;&|]*(?:\s-X\s*|--request[\s=]+|--method[\s=]+)DELETE\b', 'sends a DELETE request'),
+  _Rule(r'\bpython[\d.]*\s+(?:-\S+\s+)*-c\s+.*\b(?:rmtree|os\.(?:remove|unlink|rmdir|removedirs))\b', 'deletes files'),
 
   // Data somebody else reads.
   _Rule(
     r'\b(?:drop|truncate|alter)\s+(?:table|database|schema|index|view|column|user|role)\b|'
-    r'\bdelete\s+from\b|\binsert\s+into\b|\b(?:flushall|flushdb)\b|'
-    r'''\bupdate\s+[\w."`\[\]]+\s+set\b|'''
-    r'\bdb\.[\w.]+\.(?:drop|deleteMany|deleteOne|remove|updateMany|updateOne|insertMany)\b',
+        r'\bdelete\s+from\b|\binsert\s+into\b|\b(?:flushall|flushdb)\b|'
+        r'''\bupdate\s+[\w."`\[\]]+\s+set\b|'''
+        r'\bdb\.[\w.]+\.(?:drop|deleteMany|deleteOne|remove|updateMany|updateOne|insertMany)\b',
     'changes a database',
   ),
   _Rule(
     r'\b(?:make|just|task|rake|npm\s+run|pnpm(?:\s+run)?|yarn(?:\s+run)?|bun\s+run)\s+[\w:.-]*migrat\w*|'
-    r'\bmanage\.py\s+(?:migrate|flush|sqlflush)\b|\bprisma\s+(?:migrate|db\s+(?:push|execute))\b|'
-    r'\b(?:rails|rake)\s+db:\w+|'
-    r'\b(?:alembic|flyway|liquibase|dbmate|goose|knex|sequelize|typeorm|atlas)\b[^;&|]*\b'
-    r'(?:upgrade|migrate|apply|up|down|deploy|reset|rollback|revert)\b',
+        r'\bmanage\.py\s+(?:migrate|flush|sqlflush)\b|\bprisma\s+(?:migrate|db\s+(?:push|execute))\b|'
+        r'\b(?:rails|rake)\s+db:\w+|'
+        r'\b(?:alembic|flyway|liquibase|dbmate|goose|knex|sequelize|typeorm|atlas)\b[^;&|]*\b'
+        r'(?:upgrade|migrate|apply|up|down|deploy|reset|rollback|revert)\b',
     'changes a database',
   ),
 
   // The machine itself.
-  _Rule('$_cmd(?:sudo|doas)' r'\b', 'runs as root'),
+  _Rule(
+    '$_cmd(?:sudo|doas)'
+        r'\b',
+    'runs as root',
+  ),
   _Rule(
     r'\bsystemctl\s+(?:stop|restart|disable|mask|kill|reboot|poweroff|halt)\b|'
-    r'\bservice\s+\S+\s+(?:stop|restart)\b|'
-    '$_cmd(?:shutdown|reboot|poweroff|halt)' r'\b|'
-    // A signal to everything (`kill -9 -1`) is a number too; `kill $PID` and
-    // `kill -s TERM 42` name a process like `kill 42` does.
-    r'\bkill\s+(?:-\S+\s+|[a-z]+\s+)*(?:-?\d|\$)|\b(?:pkill|killall)\b',
+        r'\bservice\s+\S+\s+(?:stop|restart)\b|'
+        '$_cmd(?:shutdown|reboot|poweroff|halt)'
+        r'\b|'
+        // A signal to everything (`kill -9 -1`) is a number too; `kill $PID` and
+        // `kill -s TERM 42` name a process like `kill 42` does.
+        r'\bkill\s+(?:-\S+\s+|[a-z]+\s+)*(?:-?\d|\$)|\b(?:pkill|killall)\b',
     'stops processes',
   ),
   _Rule(r'\b(?:chmod\s+(?:-\S*R\S*|[0-7]*777)|chown\s+-\S*R\S*)\b', 'changes permissions'),
   _Rule(r'(?:>>?|\btee\b(?:\s+-\S+)*)\s*\S*\.ssh/\S', 'changes ssh keys'),
   _Rule(
     r'\bdocker\b[^;&|]*\bprune\b|\bdocker\s+(?:rm|rmi|kill|stop)\s|'
-    r'\bdocker\s+(?:volume|network|image|container)\s+rm\b|'
-    r'\bdocker[ -]compose\s+down\b[^;&|]*\s-v\b',
+        r'\bdocker\s+(?:volume|network|image|container)\s+rm\b|'
+        r'\bdocker[ -]compose\s+down\b[^;&|]*\s-v\b',
     'removes containers or volumes',
   ),
 ];
@@ -202,8 +256,8 @@ final _commandRules = <_Rule>[
 final _proseRules = <_Rule>[
   _Rule(
     r'\b(?:delet(?:e|es|ed|ing)|remov(?:e|es|ed|ing)|overwrit(?:e|es|ten|ing)|wip(?:e|es|ed|ing)|'
-    r'destroy(?:s|ed|ing)?|eras(?:e|es|ed|ing)|purg(?:e|es|ed|ing)|truncat(?:e|es|ed|ing)|'
-    r'drop(?:s|ped|ping)?|discard(?:s|ed|ing)?|force)\b',
+        r'destroy(?:s|ed|ing)?|eras(?:e|es|ed|ing)|purg(?:e|es|ed|ing)|truncat(?:e|es|ed|ing)|'
+        r'drop(?:s|ped|ping)?|discard(?:s|ed|ing)?|force)\b',
     'deletes or overwrites',
   ),
 ];
@@ -225,7 +279,7 @@ final _pathRules = <_Rule>[
   _Rule(r'(?:^|/)\.ssh(?:/|$)|(?:^|/)authorized_keys2?$', 'changes ssh keys'),
   _Rule(
     r'(?:^|/)\.(?:bashrc|bash_profile|bash_login|bash_logout|zshrc|zshenv|zprofile|zlogin|profile)$|'
-    r'(?:^|/)\.config/fish/config\.fish$',
+        r'(?:^|/)\.config/fish/config\.fish$',
     'changes shell start-up',
   ),
   _Rule(r'^/etc(?:/|$)', 'changes system files'),

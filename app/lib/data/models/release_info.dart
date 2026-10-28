@@ -167,24 +167,24 @@ class ReleaseInfo {
   }
 
   factory ReleaseInfo.fromJson(Map<String, Object?> json) => ReleaseInfo(
-        version: json['version']! as String,
-        apkUrl: json['apkUrl']! as String,
-        size: json['size']! as int,
-        pageUrl: json['pageUrl']! as String,
-        notes: json['notes'] as String? ?? '',
-        sha256: json['sha256'] as String?,
-        sumsUrl: json['sumsUrl'] as String?,
-      );
+    version: json['version']! as String,
+    apkUrl: json['apkUrl']! as String,
+    size: json['size']! as int,
+    pageUrl: json['pageUrl']! as String,
+    notes: json['notes'] as String? ?? '',
+    sha256: json['sha256'] as String?,
+    sumsUrl: json['sumsUrl'] as String?,
+  );
 
   Map<String, Object?> toJson() => {
-        'version': version,
-        'apkUrl': apkUrl,
-        'size': size,
-        'pageUrl': pageUrl,
-        'notes': notes,
-        'sha256': sha256,
-        'sumsUrl': sumsUrl,
-      };
+    'version': version,
+    'apkUrl': apkUrl,
+    'size': size,
+    'pageUrl': pageUrl,
+    'notes': notes,
+    'sha256': sha256,
+    'sumsUrl': sumsUrl,
+  };
 
   /// What is written to preferences, so a suggestion survives a restart.
   String encode() => jsonEncode(toJson());

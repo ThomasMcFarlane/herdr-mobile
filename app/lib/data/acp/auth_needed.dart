@@ -7,7 +7,14 @@ const acpAuthRequired = -32000;
 
 /// One way the agent says a person can sign in.
 class AuthChoice {
-  const AuthChoice({required this.id, required this.name, this.description, this.terminal = false, this.terminalLabel, this.terminalCommand});
+  const AuthChoice({
+    required this.id,
+    required this.name,
+    this.description,
+    this.terminal = false,
+    this.terminalLabel,
+    this.terminalCommand,
+  });
 
   /// Reads one entry of `authMethods` (an `initialize` answer, or the `data`
   /// of an `auth_required` error). Nothing is thrown for a shape it does not
@@ -25,9 +32,7 @@ class AuthChoice {
       description: j['description'] is String ? j['description'] as String : null,
       terminal: j['type'] == 'terminal' || hint is Map,
       terminalLabel: label is String ? label : null,
-      terminalCommand: command is String
-          ? [command, if (args is List) ...args.whereType<String>()].join(' ')
-          : null,
+      terminalCommand: command is String ? [command, if (args is List) ...args.whereType<String>()].join(' ') : null,
     );
   }
 

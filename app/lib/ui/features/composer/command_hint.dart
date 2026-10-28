@@ -28,7 +28,10 @@ class CommandHintController extends TextEditingController {
       style: style,
       children: [
         base,
-        TextSpan(text: hint, style: style?.copyWith(color: context.ds.textMuted)),
+        TextSpan(
+          text: hint,
+          style: style?.copyWith(color: context.ds.textMuted),
+        ),
       ],
     );
   }

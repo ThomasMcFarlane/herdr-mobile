@@ -10,12 +10,10 @@ class _FakeConnectivity implements Connectivity {
 
   List<ConnectivityResult> initial;
   Object? checkError;
-  final _controller =
-      StreamController<List<ConnectivityResult>>.broadcast(sync: true);
+  final _controller = StreamController<List<ConnectivityResult>>.broadcast(sync: true);
 
   @override
-  Stream<List<ConnectivityResult>> get onConnectivityChanged =>
-      _controller.stream;
+  Stream<List<ConnectivityResult>> get onConnectivityChanged => _controller.stream;
 
   @override
   Future<List<ConnectivityResult>> checkConnectivity() async {
@@ -63,8 +61,7 @@ void main() {
     });
   });
 
-  test('a failing initial check leaves it optimistic and still follows events',
-      () {
+  test('a failing initial check leaves it optimistic and still follows events', () {
     fakeAsync((async) {
       final c = _FakeConnectivity(_wifi)..checkError = StateError('platform');
       final m = monitor(c);
@@ -121,8 +118,9 @@ void main() {
       expect(seen, isEmpty, reason: 'still settling');
       async.elapse(const Duration(milliseconds: 1));
 
-      expect(seen, [const NetworkState(online: true, signature: 'mobile')],
-          reason: 'one change, and never a spurious offline');
+      expect(seen, [
+        const NetworkState(online: true, signature: 'mobile'),
+      ], reason: 'one change, and never a spurious offline');
     });
   });
 
@@ -160,12 +158,7 @@ void main() {
       final m = monitor(c);
       async.flushMicrotasks();
 
-      c.emit(const [
-        ConnectivityResult.wifi,
-        ConnectivityResult.vpn,
-        ConnectivityResult.none,
-        ConnectivityResult.wifi,
-      ]);
+      c.emit(const [ConnectivityResult.wifi, ConnectivityResult.vpn, ConnectivityResult.none, ConnectivityResult.wifi]);
       async.elapse(const Duration(milliseconds: 300));
       expect(m.current, const NetworkState(online: true, signature: 'vpn+wifi'));
 

@@ -24,8 +24,9 @@ class ClaudeSubagentLogs implements SubagentLogs {
   /// call id -> agent id, learnt from the meta files (an id never changes).
   final _byCall = <String, String>{};
 
-  static String? _dirOf(String parentLogPath) =>
-      parentLogPath.endsWith('.jsonl') ? '${parentLogPath.substring(0, parentLogPath.length - '.jsonl'.length)}/subagents' : null;
+  static String? _dirOf(String parentLogPath) => parentLogPath.endsWith('.jsonl')
+      ? '${parentLogPath.substring(0, parentLogPath.length - '.jsonl'.length)}/subagents'
+      : null;
 
   /// The log of agent [id] under [dir]; null when the id is not a plain token
   /// (it comes from a log) or the path is not a readable log path.
@@ -98,7 +99,9 @@ class ClaudeSubagentLogs implements SubagentLogs {
       if (path == null) continue;
       try {
         final at = (await machine.files.stat(path)).modified;
-        out[info.name] = at != null && now.difference(at.toUtc()) <= running ? SubagentState.running : SubagentState.finished;
+        out[info.name] = at != null && now.difference(at.toUtc()) <= running
+            ? SubagentState.running
+            : SubagentState.finished;
       } on RemoteFileException {
         continue;
       }

@@ -9,8 +9,10 @@ import '../../../data/models/remote_file.dart';
 import '../../../data/repositories/machine_connection.dart';
 import '../../../data/services/photo_export.dart';
 import '../../../data/services/remote_file_staging.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:video_player/video_player.dart' show VideoPlayerController;
+
 import '../web/web_preview_screen.dart';
 import 'binary_view.dart';
 import 'code_view.dart';
@@ -63,22 +65,22 @@ class FileViewerScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MultiProvider(
-        providers: [
-          Provider<_ViewerMachine>.value(value: _ViewerMachine(machine)),
-          Provider<VideoControllerFor>.value(value: videoPlayer ?? VideoPlayerController.file),
-          ChangeNotifierProvider(
-            create: (_) => FileCopyModel(
-              files: machine.files,
-              staging: staging ?? RemoteFileStaging(),
-              export: export ?? const DevicePhotoExport(),
-            ),
-          ),
-          ChangeNotifierProvider(
-            create: (_) => FileViewerViewModel(files: machine.files, stat: stat, line: line, forceText: asText)..load(),
-          ),
-        ],
-        child: const _ViewerPage(),
-      );
+    providers: [
+      Provider<_ViewerMachine>.value(value: _ViewerMachine(machine)),
+      Provider<VideoControllerFor>.value(value: videoPlayer ?? VideoPlayerController.file),
+      ChangeNotifierProvider(
+        create: (_) => FileCopyModel(
+          files: machine.files,
+          staging: staging ?? RemoteFileStaging(),
+          export: export ?? const DevicePhotoExport(),
+        ),
+      ),
+      ChangeNotifierProvider(
+        create: (_) => FileViewerViewModel(files: machine.files, stat: stat, line: line, forceText: asText)..load(),
+      ),
+    ],
+    child: const _ViewerPage(),
+  );
 }
 
 /// The machine the file lives on, for what a path tapped inside rendered
@@ -276,12 +278,11 @@ class _TailText extends StatelessWidget {
 /// Shared with the agent session's `path:line` rows.
 String shortenFront(String text, double maxWidth, TextStyle style, TextScaler scaler) {
   double width(String s) => (TextPainter(
-        text: TextSpan(text: s, style: style),
-        textDirection: TextDirection.ltr,
-        textScaler: scaler,
-        maxLines: 1,
-      )..layout())
-      .width;
+    text: TextSpan(text: s, style: style),
+    textDirection: TextDirection.ltr,
+    textScaler: scaler,
+    maxLines: 1,
+  )..layout()).width;
   if (!maxWidth.isFinite || width(text) <= maxWidth) return text;
   // Smallest cut that fits: binary search over the number of dropped characters.
   var lo = 1, hi = text.length;
@@ -326,29 +327,22 @@ class _Tools extends StatelessWidget {
     final ds = context.ds;
     final chips = <Widget>[];
     if (vm.phase == ViewerPhase.ready) {
-      Widget wrap() => AppChip(
-            label: 'Wrap',
-            icon: LucideIcons.wrapText,
-            selected: vm.wrap,
-            onTap: () => vm.setWrap(!vm.wrap),
-          );
+      Widget wrap() =>
+          AppChip(label: 'Wrap', icon: LucideIcons.wrapText, selected: vm.wrap, onTap: () => vm.setWrap(!vm.wrap));
       switch (vm.kind) {
         case FileKind.text:
           if (vm.document != null && !vm.document!.isEmpty) chips.add(wrap());
         case FileKind.json:
-          chips.add(AppChip(
-            label: 'Pretty',
-            icon: LucideIcons.braces,
-            selected: vm.pretty,
-            onTap: onTogglePretty,
-          ));
+          chips.add(AppChip(label: 'Pretty', icon: LucideIcons.braces, selected: vm.pretty, onTap: onTogglePretty));
           chips.add(wrap());
         case FileKind.markdown:
-          chips.add(Segmented<bool>(
-            options: const [SegmentOption(false, 'Rendered'), SegmentOption(true, 'Source')],
-            value: vm.showSource,
-            onChanged: vm.setShowSource,
-          ));
+          chips.add(
+            Segmented<bool>(
+              options: const [SegmentOption(false, 'Rendered'), SegmentOption(true, 'Source')],
+              value: vm.showSource,
+              onChanged: vm.setShowSource,
+            ),
+          );
           if (vm.showSource) chips.add(wrap());
         case FileKind.image || FileKind.svg || FileKind.pdf || FileKind.binary || FileKind.video:
           break;
@@ -402,12 +396,7 @@ class _Body extends StatelessWidget {
         return const Skeleton();
       case ViewerPhase.failed:
         return ListView(
-          padding: EdgeInsets.fromLTRB(
-            Gap.gutter,
-            Gap.md,
-            Gap.gutter,
-            Gap.xl + MediaQuery.paddingOf(context).bottom,
-          ),
+          padding: EdgeInsets.fromLTRB(Gap.gutter, Gap.md, Gap.gutter, Gap.xl + MediaQuery.paddingOf(context).bottom),
           children: [
             FileErrorPanel(error: vm.error!, name: vm.name, onRetry: vm.retry),
             const SizedBox(height: Gap.lg),
@@ -429,21 +418,21 @@ class _Body extends StatelessWidget {
           // Handed to the photo viewer in the same frame (see _handOverPicture).
           FileKind.image => const Skeleton(),
           FileKind.video => VideoView(
-              key: ValueKey('${vm.stat.path}:${vm.stat.size}:${vm.stat.modified}'),
-              stat: vm.stat,
-              type: vm.type,
-              onShare: onShare,
-              onSave: onSave,
-              controllerFor: context.read<VideoControllerFor>(),
-              canSave: typeForName(vm.name).kind == FileKind.video,
-            ),
+            key: ValueKey('${vm.stat.path}:${vm.stat.size}:${vm.stat.modified}'),
+            stat: vm.stat,
+            type: vm.type,
+            onShare: onShare,
+            onSave: onSave,
+            controllerFor: context.read<VideoControllerFor>(),
+            canSave: typeForName(vm.name).kind == FileKind.video,
+          ),
           FileKind.svg || FileKind.pdf || FileKind.binary => BinaryView(
-              model: vm,
-              onCopyPath: () => copyText(context, vm.stat.path, what: 'Path copied'),
-              onShare: onShare,
-              onViewAsText: vm.canViewAsText ? vm.viewAsText : null,
-              onShowAsPage: canShowAsPage(vm.name) ? () => unawaited(_showAsPage(context, vm.stat)) : null,
-            ),
+            model: vm,
+            onCopyPath: () => copyText(context, vm.stat.path, what: 'Path copied'),
+            onShare: onShare,
+            onViewAsText: vm.canViewAsText ? vm.viewAsText : null,
+            onShowAsPage: canShowAsPage(vm.name) ? () => unawaited(_showAsPage(context, vm.stat)) : null,
+          ),
         };
     }
   }
@@ -467,11 +456,7 @@ class _TextBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final ds = context.ds;
     if (doc.isEmpty) {
-      return EmptyState(
-        icon: LucideIcons.fileText,
-        title: 'Empty file',
-        message: '${vm.name} has no content.',
-      );
+      return EmptyState(icon: LucideIcons.fileText, title: 'Empty file', message: '${vm.name} has no content.');
     }
     final footer = vm.hasMore || vm.loadingMore || vm.truncatedAtLimit || vm.loadMoreError != null;
     final size = vm.stat.size;
@@ -501,15 +486,12 @@ class _TextBody extends StatelessWidget {
           DecoratedBox(
             decoration: BoxDecoration(
               color: ds.bg,
-              border: Border(top: BorderSide(color: ds.hairline, width: 1 / MediaQuery.devicePixelRatioOf(context))),
+              border: Border(
+                top: BorderSide(color: ds.hairline, width: 1 / MediaQuery.devicePixelRatioOf(context)),
+              ),
             ),
             child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                Gap.gutter,
-                Gap.sm,
-                Gap.md,
-                Gap.sm + MediaQuery.paddingOf(context).bottom,
-              ),
+              padding: EdgeInsets.fromLTRB(Gap.gutter, Gap.sm, Gap.md, Gap.sm + MediaQuery.paddingOf(context).bottom),
               child: Row(
                 children: [
                   Expanded(
@@ -517,13 +499,11 @@ class _TextBody extends StatelessWidget {
                       vm.loadMoreError != null
                           ? 'Couldn’t load more: ${vm.loadMoreError!.message}'
                           : vm.truncatedAtLimit
-                              ? 'Showing the first $loaded$of. That is as much as the viewer opens.'
-                              : 'Showing $loaded$of',
+                          ? 'Showing the first $loaded$of. That is as much as the viewer opens.'
+                          : 'Showing $loaded$of',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: Type.caption.copyWith(
-                        color: vm.loadMoreError != null ? ds.dangerText : ds.textMuted,
-                      ),
+                      style: Type.caption.copyWith(color: vm.loadMoreError != null ? ds.dangerText : ds.textMuted),
                     ),
                   ),
                   if (vm.hasMore || vm.loadMoreError != null)
@@ -647,7 +627,9 @@ class _CopySlot extends StatelessWidget {
         visible: copy.running && !own,
         size: FloatingPillSize.compact,
         leading: const BusySpinner(size: IconSize.inline),
-        label: copy.total > 0 ? 'Copying ${formatBytes(copy.written)} of ${formatBytes(copy.total)}' : 'Copying ${formatBytes(copy.written)}',
+        label: copy.total > 0
+            ? 'Copying ${formatBytes(copy.written)} of ${formatBytes(copy.total)}'
+            : 'Copying ${formatBytes(copy.written)}',
         trailing: Text('Cancel', style: Type.labelStrong.copyWith(color: ds.accentText)),
         onTap: copy.cancel,
       ),

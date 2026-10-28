@@ -4,88 +4,66 @@ import 'package:herdr_mobile/data/repositories/terminal_settings.dart';
 import 'package:herdr_mobile/ui/render/terminal/terminal_cells.dart';
 import 'package:herdr_mobile/ui/render/terminal/terminal_view.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'support/terminal_rows.dart';
 
 /// The view is 360 wide with 12 px of padding on each side. How many cells fit
 /// depends on the advance of whatever font `monoFamily` resolves to (Ahem, as
 /// wide as it is high, unless the test loads the bundled fonts), so measure it.
-double _advance(double fontSize) =>
-    CellMetrics.measure(fontSize, 1).advance;
+double _advance(double fontSize) => CellMetrics.measure(fontSize, 1).advance;
 
 int _columns(double fontSize) => ((360 - 24) / _advance(fontSize)).floor();
 
-String _lines(int from, int to, {String pad = ''}) =>
-    [for (var i = from; i < to; i++) 'line $i$pad'].join('\r\n');
+String _lines(int from, int to, {String pad = ''}) => [for (var i = from; i < to; i++) 'line $i$pad'].join('\r\n');
 
 Widget _app(Widget Function() view) => MaterialApp(
-      theme: AppTheme.dark(),
-      home: Scaffold(
-        body: Align(
-          alignment: Alignment.topLeft,
-          child: SizedBox(width: 360, height: 400, child: view()),
-        ),
-      ),
-    );
+  theme: AppTheme.dark(),
+  home: Scaffold(
+    body: Align(
+      alignment: Alignment.topLeft,
+      child: SizedBox(width: 360, height: 400, child: view()),
+    ),
+  ),
+);
 
-Future<void> _pump(
-  WidgetTester tester,
-  String text, {
-  bool wrap = false,
-  double fontSize = defaultTerminalFontSize,
-}) =>
-    tester.pumpWidget(_app(
-      () => TerminalView(text: text, wrap: wrap, fontSize: fontSize),
-    ));
+Future<void> _pump(WidgetTester tester, String text, {bool wrap = false, double fontSize = defaultTerminalFontSize}) =>
+    tester.pumpWidget(_app(() => TerminalView(text: text, wrap: wrap, fontSize: fontSize)));
 
 /// Texts of the rows on screen, top to bottom.
 List<String> _rowTexts(WidgetTester tester) {
   final rows = find.byType(TerminalLineView).evaluate().toList()
-    ..sort((a, b) => (a.renderObject! as RenderBox)
-        .localToGlobal(Offset.zero)
-        .dy
-        .compareTo((b.renderObject! as RenderBox).localToGlobal(Offset.zero).dy));
-  return [
-    for (final e in rows)
-      (e.widget as TerminalLineView).line.span.toPlainText(),
-  ];
+    ..sort(
+      (a, b) => (a.renderObject! as RenderBox)
+          .localToGlobal(Offset.zero)
+          .dy
+          .compareTo((b.renderObject! as RenderBox).localToGlobal(Offset.zero).dy),
+    );
+  return [for (final e in rows) (e.widget as TerminalLineView).line.span.toPlainText()];
 }
 
 /// Prepared line and element of every visible row.
 Map<TerminalLine, Element> _visible(WidgetTester tester) => {
-      for (final e in find.byType(TerminalLineView).evaluate())
-        (e.widget as TerminalLineView).line: e,
-    };
+  for (final e in find.byType(TerminalLineView).evaluate()) (e.widget as TerminalLineView).line: e,
+};
 
 ScrollableState _horizontal(WidgetTester tester) => tester.state<ScrollableState>(
-      find
-          .descendant(
-            of: find.byType(TerminalView),
-            matching: find.byType(Scrollable),
-          )
-          .first,
-    );
+  find.descendant(of: find.byType(TerminalView), matching: find.byType(Scrollable)).first,
+);
 
 ScrollableState _vertical(WidgetTester tester) => tester.state<ScrollableState>(
-      find
-          .descendant(
-            of: find.byType(TerminalView),
-            matching: find.byType(Scrollable),
-          )
-          .last,
-    );
+  find.descendant(of: find.byType(TerminalView), matching: find.byType(Scrollable)).last,
+);
 
 void main() {
   group('wrap to screen', () {
-    testWidgets('cuts long lines into rows of the viewport width',
-        (tester) async {
+    testWidgets('cuts long lines into rows of the viewport width', (tester) async {
       final columns = _columns(defaultTerminalFontSize);
       await _pump(tester, 'x' * (2 * columns + 5), wrap: true);
 
       expect(_rowTexts(tester), ['x' * columns, 'x' * columns, 'x' * 5]);
     });
 
-    testWidgets('short lines stay one row, empty lines keep their row',
-        (tester) async {
+    testWidgets('short lines stay one row, empty lines keep their row', (tester) async {
       await _pump(tester, 'one\r\n\r\ntwo', wrap: true);
 
       expect(_rowTexts(tester), ['one', '', 'two']);
@@ -111,55 +89,49 @@ void main() {
       expect(_horizontal(tester).position.maxScrollExtent, greaterThan(1000));
     });
 
-    testWidgets('a coloured run keeps its colour on every row it spans',
-        (tester) async {
+    testWidgets('a coloured run keeps its colour on every row it spans', (tester) async {
       final columns = _columns(defaultTerminalFontSize);
       final length = columns + 11;
       await _pump(tester, '\x1b[31m${'r' * length}\x1b[0m tail', wrap: true);
 
       final rows = find.byType(TerminalLineView).evaluate().toList();
       expect(rows, hasLength(2));
-      final lines = [
-        for (final e in rows) (e.widget as TerminalLineView).line,
-      ]..sort((a, b) => b.runs.first.text.length.compareTo(a.runs.first.text.length));
+      final lines = [for (final e in rows) (e.widget as TerminalLineView).line]
+        ..sort((a, b) => b.runs.first.text.length.compareTo(a.runs.first.text.length));
       expect(lines[0].runs.first.fg, TerminalColors.ansi[1]);
       expect(lines[1].runs.first.fg, TerminalColors.ansi[1]);
       expect(lines[0].runs.first.text.length, columns);
       expect(lines[1].runs.first.text.length, length - columns);
     });
 
-    testWidgets('rows keep the fixed height, and a long pane still virtualizes',
-        (tester) async {
+    testWidgets('rows keep the fixed height, and a long pane still virtualizes', (tester) async {
       await _pump(tester, _lines(0, 300, pad: ' ${'y' * 100}'), wrap: true);
 
       final rows = find.byType(TerminalLineView);
       expect(rows.evaluate().length, inInclusiveRange(15, 80));
-      final heights = {
-        for (final e in rows.evaluate()) tester.getSize(find.byWidget(e.widget)).height,
-      };
+      final heights = {for (final e in rows.evaluate()) tester.getSize(find.byWidget(e.widget)).height};
       expect(heights, hasLength(1));
     });
 
-    testWidgets('the window of rows adapts to the width of the viewport',
-        (tester) async {
-      await tester.pumpWidget(_app(
-        () => const TerminalView(text: 'abcdefghij', wrap: true),
-      ));
+    testWidgets('the window of rows adapts to the width of the viewport', (tester) async {
+      await tester.pumpWidget(_app(() => const TerminalView(text: 'abcdefghij', wrap: true)));
       expect(_rowTexts(tester), ['abcdefghij']);
 
-      await tester.pumpWidget(MaterialApp(
-        theme: AppTheme.dark(),
-        home: Scaffold(
-          body: Align(
-            alignment: Alignment.topLeft,
-            child: SizedBox(
-              width: 24 + 4 * _advance(defaultTerminalFontSize) + 0.5,
-              height: 400,
-              child: const TerminalView(text: 'abcdefghij', wrap: true),
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.dark(),
+          home: Scaffold(
+            body: Align(
+              alignment: Alignment.topLeft,
+              child: SizedBox(
+                width: 24 + 4 * _advance(defaultTerminalFontSize) + 0.5,
+                height: 400,
+                child: const TerminalView(text: 'abcdefghij', wrap: true),
+              ),
             ),
           ),
         ),
-      ));
+      );
       expect(_rowTexts(tester), ['abcd', 'efgh', 'ij']);
     });
 
@@ -168,10 +140,8 @@ void main() {
       // Twelve lines of three rows each; the change is among the visible ones
       // and past the first lines the anchoring compares.
       final long = 2 * _columns(defaultTerminalFontSize) + 10; // three rows
-      String doc(String changed) => [
-            for (var i = 0; i < 12; i++)
-              i == 9 ? changed * long : String.fromCharCode(97 + i) * long,
-          ].join('\r\n');
+      String doc(String changed) =>
+          [for (var i = 0; i < 12; i++) i == 9 ? changed * long : String.fromCharCode(97 + i) * long].join('\r\n');
       await _pump(tester, doc('x'), wrap: true);
       final before = _visible(tester);
 
@@ -180,8 +150,7 @@ void main() {
 
       final shared = before.keys.where(after.containsKey).toList();
       expect(after.length, before.length);
-      expect(shared, hasLength(before.length - 3),
-          reason: 'only the three rows of the changed line are new');
+      expect(shared, hasLength(before.length - 3), reason: 'only the three rows of the changed line are new');
       for (final line in shared) {
         expect(after[line], same(before[line]), reason: 'same list item');
       }
@@ -189,9 +158,8 @@ void main() {
 
     testWidgets('continuation rows keep their list items as lines are appended '
         'and the window slides', (tester) async {
-      String doc(int from, int to) => [
-            for (var i = from; i < to; i++) '${'$i'.padLeft(3, '0')}${'x' * 60}',
-          ].join('\r\n');
+      String doc(int from, int to) =>
+          [for (var i = from; i < to; i++) '${'$i'.padLeft(3, '0')}${'x' * 60}'].join('\r\n');
       await _pump(tester, doc(0, 60), wrap: true);
       final before = _visible(tester);
 
@@ -209,8 +177,7 @@ void main() {
       }
     });
 
-    testWidgets('keeps what you are reading when the layout changes',
-        (tester) async {
+    testWidgets('keeps what you are reading when the layout changes', (tester) async {
       final text = _lines(0, 200, pad: ' ${'y' * 60}');
       await _pump(tester, text);
       await tester.drag(find.byType(TerminalView), const Offset(0, 600));
@@ -218,10 +185,12 @@ void main() {
       // The line at the bottom edge of the view.
       String lowest() {
         final shown = terminalRowContaining('line ').evaluate().toList()
-          ..sort((a, b) => (b.renderObject! as RenderBox)
-              .localToGlobal(Offset.zero)
-              .dy
-              .compareTo((a.renderObject! as RenderBox).localToGlobal(Offset.zero).dy));
+          ..sort(
+            (a, b) => (b.renderObject! as RenderBox)
+                .localToGlobal(Offset.zero)
+                .dy
+                .compareTo((a.renderObject! as RenderBox).localToGlobal(Offset.zero).dy),
+          );
         final span = (shown.first.widget as TerminalLineView).text.toPlainText();
         return span.substring(0, span.indexOf(' y'));
       }
@@ -231,33 +200,37 @@ void main() {
 
       await _pump(tester, text, wrap: true);
       expect(terminalRowContaining('$reading '), findsWidgets);
-      expect(tester.getBottomLeft(terminalRowContaining('$reading ').first).dy,
-          closeTo(bottom, 20));
+      expect(tester.getBottomLeft(terminalRowContaining('$reading ').first).dy, closeTo(bottom, 20));
     });
   });
 
   group('pinch to zoom', () {
     // Pumps a view whose font size follows the pinch, like the pane screen.
-    Future<({ValueNotifier<double> size, List<double> changes, List<double> ends})>
-        pumpZoom(WidgetTester tester, String text, {bool wrap = false}) async {
+    Future<({ValueNotifier<double> size, List<double> changes, List<double> ends})> pumpZoom(
+      WidgetTester tester,
+      String text, {
+      bool wrap = false,
+    }) async {
       final size = ValueNotifier(defaultTerminalFontSize);
       final changes = <double>[];
       final ends = <double>[];
-      await tester.pumpWidget(_app(
-        () => ValueListenableBuilder<double>(
-          valueListenable: size,
-          builder: (_, value, _) => TerminalView(
-            text: text,
-            wrap: wrap,
-            fontSize: value,
-            onFontSizeChanged: (v) {
-              changes.add(v);
-              size.value = v;
-            },
-            onFontSizeEnd: ends.add,
+      await tester.pumpWidget(
+        _app(
+          () => ValueListenableBuilder<double>(
+            valueListenable: size,
+            builder: (_, value, _) => TerminalView(
+              text: text,
+              wrap: wrap,
+              fontSize: value,
+              onFontSizeChanged: (v) {
+                changes.add(v);
+                size.value = v;
+              },
+              onFontSizeEnd: ends.add,
+            ),
           ),
         ),
-      ));
+      );
       return (size: size, changes: changes, ends: ends);
     }
 
@@ -269,8 +242,7 @@ void main() {
       return (a, b);
     }
 
-    testWidgets('the font size follows the distance between the fingers',
-        (tester) async {
+    testWidgets('the font size follows the distance between the fingers', (tester) async {
       final zoom = await pumpZoom(tester, _lines(0, 50));
       final (a, b) = await pinchStart(tester);
 
@@ -299,8 +271,7 @@ void main() {
       await b.moveTo(const Offset(330, 200)); // 3x
       await tester.pump();
       expect(zoom.size.value, maxTerminalFontSize);
-      expect(zoom.changes.every((v) => v >= minTerminalFontSize && v <= maxTerminalFontSize),
-          isTrue);
+      expect(zoom.changes.every((v) => v >= minTerminalFontSize && v <= maxTerminalFontSize), isTrue);
 
       await a.up();
       await b.up();
@@ -348,14 +319,15 @@ void main() {
       await tester.drag(find.byType(CustomScrollView), const Offset(0, 600));
       await tester.pumpAndSettle();
       // The line at the bottom edge of the view, and where it is.
-      Element lowest() => (terminalRowContaining('line ').evaluate().toList()
-            ..sort((a, b) => (b.renderObject! as RenderBox)
-                .localToGlobal(Offset.zero)
-                .dy
-                .compareTo((a.renderObject! as RenderBox).localToGlobal(Offset.zero).dy)))
-          .first;
-      String textOf(Element e) =>
-          (e.widget as TerminalLineView).text.toPlainText();
+      Element lowest() =>
+          (terminalRowContaining('line ').evaluate().toList()..sort(
+                (a, b) => (b.renderObject! as RenderBox)
+                    .localToGlobal(Offset.zero)
+                    .dy
+                    .compareTo((a.renderObject! as RenderBox).localToGlobal(Offset.zero).dy),
+              ))
+              .first;
+      String textOf(Element e) => (e.widget as TerminalLineView).text.toPlainText();
       final reading = textOf(lowest());
       final bottom = tester.getBottomLeft(terminalRow(reading)).dy;
       final position = _vertical(tester).position.pixels;
@@ -367,12 +339,14 @@ void main() {
       await tester.pump();
 
       expect(zoom.size.value, greaterThan(defaultTerminalFontSize));
-      expect(_vertical(tester).position.pixels, greaterThan(position),
-          reason: 'taller rows: the same lines sit further from the bottom');
+      expect(
+        _vertical(tester).position.pixels,
+        greaterThan(position),
+        reason: 'taller rows: the same lines sit further from the bottom',
+      );
       expect(terminalRow(reading), findsOneWidget);
       // Within a row of where it was (the new rows are taller).
-      expect(tester.getBottomLeft(terminalRow(reading)).dy,
-          closeTo(bottom, 15 * 2));
+      expect(tester.getBottomLeft(terminalRow(reading)).dy, closeTo(bottom, 15 * 2));
       await a.up();
       await b.up();
     });
@@ -389,8 +363,7 @@ void main() {
       expect(zoom.size.value, defaultTerminalFontSize);
     });
 
-    testWidgets('scrolling pauses during a pinch and works again after',
-        (tester) async {
+    testWidgets('scrolling pauses during a pinch and works again after', (tester) async {
       final zoom = await pumpZoom(tester, _lines(0, 200));
       final (a, b) = await pinchStart(tester);
 
@@ -399,8 +372,7 @@ void main() {
       await a.moveBy(const Offset(0, 120));
       await b.moveBy(const Offset(0, 120));
       await tester.pump();
-      expect(zoom.size.value, defaultTerminalFontSize,
-          reason: 'same distance again');
+      expect(zoom.size.value, defaultTerminalFontSize, reason: 'same distance again');
       expect(_vertical(tester).position.pixels, 0);
 
       await a.up();
@@ -413,8 +385,7 @@ void main() {
       expect(_vertical(tester).position.pixels, greaterThan(100));
     });
 
-    testWidgets('pinching over empty space below short output works',
-        (tester) async {
+    testWidgets('pinching over empty space below short output works', (tester) async {
       final zoom = await pumpZoom(tester, 'a\r\nb');
       final (a, b) = await pinchStart(tester);
       await a.moveTo(const Offset(105, 200));

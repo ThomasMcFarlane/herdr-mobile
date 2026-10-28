@@ -132,12 +132,19 @@ void main() {
       expect(after.attached, isTrue);
       expect(after.cachedAsOf, isNull);
       expect(_texts(after.state), live, reason: 'no row twice, none lost');
-      expect([for (final i in after.state.items) i.key], keys, reason: 'rows keep their keys: the list keeps its place');
+      expect(
+        [for (final i in after.state.items) i.key],
+        keys,
+        reason: 'rows keep their keys: the list keeps its place',
+      );
       expect(after.state.disconnected, isFalse);
       after.dispose();
     });
 
-    _rigTest('while the replay arrives the saved transcript stays: it is swapped once, when the replay is whole', (r, async) {
+    _rigTest('while the replay arrives the saved transcript stays: it is swapped once, when the replay is whole', (
+      r,
+      async,
+    ) {
       _talk(r.keeper, 3);
       final first = r.session()..acquire();
       r.pump();
@@ -193,7 +200,10 @@ void main() {
       second.dispose();
     });
 
-    _rigTest('the user\'s own message is in the saved copy though the keeper never echoed it to this phone', (r, async) {
+    _rigTest('the user\'s own message is in the saved copy though the keeper never echoed it to this phone', (
+      r,
+      async,
+    ) {
       final first = r.session()..acquire();
       r.pump();
       unawaited(first.send('please fix the build'));
@@ -244,7 +254,10 @@ void main() {
   });
 
   group('a saved copy is not a live request', () {
-    _rigTest('a permission that waited when the copy was saved cannot be answered until the attach confirms it', (r, async) {
+    _rigTest('a permission that waited when the copy was saved cannot be answered until the attach confirms it', (
+      r,
+      async,
+    ) {
       _talk(r.keeper, 1);
       final request = r.keeper.askPermission();
       final first = r.session()..acquire();
@@ -376,20 +389,23 @@ void main() {
       s.dispose();
     });
 
-    _rigTest('the session ending (the agent exits, or the person ends it) keeps its copy: it is what an ended session shows', (r, async) {
-      _talk(r.keeper, 1);
-      final s = r.session()..acquire();
-      r.pump();
-      s.release();
-      expect(r.cache.stored, contains('m1/k1'));
+    _rigTest(
+      'the session ending (the agent exits, or the person ends it) keeps its copy: it is what an ended session shows',
+      (r, async) {
+        _talk(r.keeper, 1);
+        final s = r.session()..acquire();
+        r.pump();
+        s.release();
+        expect(r.cache.stored, contains('m1/k1'));
 
-      unawaited(s.end());
-      r.pump();
-      expect(s.link, AgentLink.ended);
-      expect(r.cache.stored, contains('m1/k1'));
-      expect(r.cache.deleted, isEmpty);
-      s.dispose();
-    });
+        unawaited(s.end());
+        r.pump();
+        expect(s.link, AgentLink.ended);
+        expect(r.cache.stored, contains('m1/k1'));
+        expect(r.cache.deleted, isEmpty);
+        s.dispose();
+      },
+    );
 
     _rigTest('what the agent said before it exited is in the copy the ended session keeps', (r, async) {
       _talk(r.keeper, 1);
@@ -467,7 +483,11 @@ void main() {
       expect(_texts(s.state).first, hostDroppedKey, reason: 'one quiet line at the top');
       expect(_texts(s.state).skip(1), whole, reason: 'every turn, once, in order');
       expect(s.state.items.where((i) => i.key == hostDroppedKey), hasLength(1));
-      expect(s.state.items.where((i) => i.key == phoneEarlierKey), isEmpty, reason: 'the overlap is proven: no divider');
+      expect(
+        s.state.items.where((i) => i.key == phoneEarlierKey),
+        isEmpty,
+        reason: 'the overlap is proven: no divider',
+      );
       expect(sizes.where((n) => n < 12), isEmpty, reason: 'never shorter on screen, not even while the replay arrives');
       final keys = [for (final i in s.state.items) i.key];
       expect(keys.toSet(), hasLength(keys.length));
@@ -503,7 +523,13 @@ void main() {
       expect(_texts(second.state).skip(1), whole, reason: 'what the copy had is kept, once');
       second.release();
       final lines = r.cache.stored['m1/k1']!.lines;
-      expect([for (final n in [0, 2, 5]) lines.where((l) => l.contains('question $n')).length], [1, 1, 1], reason: 'the copy has them, once');
+      expect(
+        [
+          for (final n in [0, 2, 5]) lines.where((l) => l.contains('question $n')).length,
+        ],
+        [1, 1, 1],
+        reason: 'the copy has them, once',
+      );
       expect(lines, hasLength(12));
       second.dispose();
 
@@ -516,7 +542,10 @@ void main() {
       third.dispose();
     });
 
-    _rigTest('a replay that has nothing in common with what the phone holds: the phone\'s part stays above a divider', (r, async) {
+    _rigTest('a replay that has nothing in common with what the phone holds: the phone\'s part stays above a divider', (
+      r,
+      async,
+    ) {
       _talk(r.keeper, 3);
       final s = r.session()..acquire();
       r.pump();
@@ -549,7 +578,10 @@ void main() {
       s.dispose();
     });
 
-    _rigTest('a replay as long as what the phone holds changes nothing: no divider, no note, the same keys', (r, async) {
+    _rigTest('a replay as long as what the phone holds changes nothing: no divider, no note, the same keys', (
+      r,
+      async,
+    ) {
       _talk(r.keeper, 4);
       final s = r.session()..acquire();
       r.pump();
@@ -683,7 +715,13 @@ void main() {
         async.elapse(const Duration(milliseconds: 100));
         expect(identical(hold, Preconnect.none), isTrue, reason: 'it would cost a waiting session its channel');
         expect(host.openLinks, 4);
-        expect({for (final k in host.keepers.values) if (k.linkOpen) k.info.id}, {'w0', 'w1', 'w2', 'w3'});
+        expect(
+          {
+            for (final k in host.keepers.values)
+              if (k.linkOpen) k.info.id,
+          },
+          {'w0', 'w1', 'w2', 'w3'},
+        );
 
         // One of them is answered and frees a slot: now there is room.
         final w0 = h.repo.byKey('a/w0')! as AcpAgentSession;
@@ -818,7 +856,10 @@ void main() {
         host.add(id: 'k1', sessionId: 's1');
         host.add(id: 'k2', sessionId: 's2');
         h.addMachine('a'); // connecting lists the host: the first listing of the run
-        expect(cache.retained.last.$2, {'k1', 'k2'}, reason: 'the first listing of the run sweeps what is left of keepers that went while the app was closed');
+        expect(cache.retained.last.$2, {
+          'k1',
+          'k2',
+        }, reason: 'the first listing of the run sweeps what is left of keepers that went while the app was closed');
         final sweeps = cache.retained.length;
 
         host.keepers.remove('k2');
@@ -845,7 +886,12 @@ TranscriptSnapshot snapshotWith(TranscriptSnapshot s, {String? sessionId}) => Tr
 );
 
 class _Fleet {
-  _Fleet(this.async, {int recentAttached = 3, MemoryTranscriptCache? cache, Duration preconnectHold = const Duration(seconds: 6)}) {
+  _Fleet(
+    this.async, {
+    int recentAttached = 3,
+    MemoryTranscriptCache? cache,
+    Duration preconnectHold = const Duration(seconds: 6),
+  }) {
     machines = MachineRepository(profiles: MemoryProfileStore(), secrets: MemorySecretStore());
     fleet = FleetRepository(
       machines: machines,

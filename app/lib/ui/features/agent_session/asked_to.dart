@@ -30,7 +30,10 @@ class _AskedPreviewState extends State<AskedPreview> {
   Widget build(BuildContext context) {
     if (widget.markdown != _source) {
       _source = widget.markdown;
-      _text = visibleText(parseMd(widget.markdown).plainText).replaceAll('\t', ' ').replaceAll(_blankLines, '\n').trim();
+      _text = visibleText(parseMd(widget.markdown).plainText)
+          .replaceAll('\t', ' ')
+          .replaceAll(_blankLines, '\n')
+          .trim();
     }
     return Text(_text, maxLines: widget.maxLines, overflow: TextOverflow.ellipsis, style: widget.style);
   }
@@ -57,6 +60,9 @@ class _AskedMarkdownState extends State<AskedMarkdown> {
       _source = widget.markdown;
       _doc = parseMd(widget.markdown);
     }
-    return MdToneScope(tone: MdTone.quiet, child: MdDocumentView(document: _doc));
+    return MdToneScope(
+      tone: MdTone.quiet,
+      child: MdDocumentView(document: _doc),
+    );
   }
 }

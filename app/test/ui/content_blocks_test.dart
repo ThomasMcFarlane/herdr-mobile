@@ -56,7 +56,8 @@ Widget host(Widget body, {Taps? taps, double textScale = 1}) => MaterialApp(
 Future<String> pngBase64(WidgetTester tester, int w, int h) async {
   final data = await tester.runAsync(() async {
     final recorder = ui.PictureRecorder();
-    Canvas(recorder).drawRect(Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()), Paint()..color = const Color(0xFF3366CC));
+    Canvas(recorder)
+        .drawRect(Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()), Paint()..color = const Color(0xFF3366CC));
     final image = await recorder.endRecording().toImage(w, h);
     final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
     image.dispose();
@@ -135,7 +136,11 @@ void main() {
       await until(tester, find.byTooltip('Photo info'));
       expect(find.byType(PhotoViewer), findsOneWidget);
       expect(find.byTooltip('Back'), findsOneWidget);
-      expect(find.byTooltip('Save or share'), findsOneWidget, reason: 'a picture from the chat can be saved and shared');
+      expect(
+        find.byTooltip('Save or share'),
+        findsOneWidget,
+        reason: 'a picture from the chat can be saved and shared',
+      );
       expect(find.text('Fit'), findsNothing, reason: 'the old Fit / 100% chips are gone: a double tap zooms');
 
       final model = tester.state<PhotoViewerState>(find.byType(PhotoViewer)).model;
@@ -173,14 +178,21 @@ void main() {
       await tester.pumpWidget(const SizedBox());
     });
 
-    testWidgets('an http picture is never fetched: a line with the host, and a tap shows the whole address', (tester) async {
+    testWidgets('an http picture is never fetched: a line with the host, and a tap shows the whole address', (
+      tester,
+    ) async {
       final overrides = _NoHttp();
       HttpOverrides.global = overrides;
       addTearDown(() => HttpOverrides.global = null);
       final taps = Taps();
       const url = 'https://tracker.example.com/pixel.png?u=secret&token=abc';
       await tester.pumpWidget(
-        host(const ImageBlockView(block: ImageBlock(data: '', mimeType: 'image/png', uri: url)), taps: taps),
+        host(
+          const ImageBlockView(
+            block: ImageBlock(data: '', mimeType: 'image/png', uri: url),
+          ),
+          taps: taps,
+        ),
       );
       await tester.pump(const Duration(milliseconds: 100));
       expect(rich('Image'), findsOneWidget);
@@ -194,15 +206,23 @@ void main() {
       expect(taps.paths, isEmpty);
     });
 
-    testWidgets('a file uri or an absolute path opens the file viewer path; another scheme does nothing', (tester) async {
+    testWidgets('a file uri or an absolute path opens the file viewer path; another scheme does nothing', (
+      tester,
+    ) async {
       final taps = Taps();
       await tester.pumpWidget(
         host(
           Column(
             children: const [
-              ImageBlockView(block: ImageBlock(data: '', mimeType: 'image/png', uri: 'file:///home/dev/shots/a%20b.png')),
-              ImageBlockView(block: ImageBlock(data: '', mimeType: 'image/png', uri: '/tmp/out/c.png')),
-              ImageBlockView(block: ImageBlock(data: '', mimeType: 'image/png', uri: 'ftp://host/d.png')),
+              ImageBlockView(
+                block: ImageBlock(data: '', mimeType: 'image/png', uri: 'file:///home/dev/shots/a%20b.png'),
+              ),
+              ImageBlockView(
+                block: ImageBlock(data: '', mimeType: 'image/png', uri: '/tmp/out/c.png'),
+              ),
+              ImageBlockView(
+                block: ImageBlock(data: '', mimeType: 'image/png', uri: 'ftp://host/d.png'),
+              ),
             ],
           ),
           taps: taps,
@@ -219,15 +239,23 @@ void main() {
       expect(find.byType(PressBuilder), findsNWidgets(2), reason: 'ftp is plain text');
     });
 
-    testWidgets('malformed data, a non-image and an oversize one degrade to the line with a plain note', (tester) async {
+    testWidgets('malformed data, a non-image and an oversize one degrade to the line with a plain note', (
+      tester,
+    ) async {
       final big = 'A' * 17000000;
       await tester.pumpWidget(
         host(
           Column(
             children: [
-              const ImageBlockView(block: ImageBlock(data: '!!! not base64 !!!', mimeType: 'image/png')),
-              ImageBlockView(block: ImageBlock(data: base64Encode(utf8.encode('hello')), mimeType: 'image/png')),
-              ImageBlockView(block: ImageBlock(data: big, mimeType: 'image/png')),
+              const ImageBlockView(
+                block: ImageBlock(data: '!!! not base64 !!!', mimeType: 'image/png'),
+              ),
+              ImageBlockView(
+                block: ImageBlock(data: base64Encode(utf8.encode('hello')), mimeType: 'image/png'),
+              ),
+              ImageBlockView(
+                block: ImageBlock(data: big, mimeType: 'image/png'),
+              ),
             ],
           ),
         ),
@@ -241,7 +269,13 @@ void main() {
     });
 
     testWidgets('a block with no data and no uri says so', (tester) async {
-      await tester.pumpWidget(host(const ImageBlockView(block: ImageBlock(data: '', mimeType: 'image/png'))));
+      await tester.pumpWidget(
+        host(
+          const ImageBlockView(
+            block: ImageBlock(data: '', mimeType: 'image/png'),
+          ),
+        ),
+      );
       expect(find.text('The agent sent no picture data.'), findsOneWidget);
     });
 
@@ -250,9 +284,16 @@ void main() {
       addTearDown(_base.dispose);
       final cache = ImagePreviewCache(decoder: _fakeBitmap);
       ImagePreviewCache.shared = cache;
-      final blocks = [for (var i = 0; i < 200; i++) ImageBlock(data: _distinct(i), mimeType: 'image/png', uri: 'file:///p/$i.png')];
+      final blocks = [
+        for (var i = 0; i < 200; i++) ImageBlock(data: _distinct(i), mimeType: 'image/png', uri: 'file:///p/$i.png'),
+      ];
       await tester.pumpWidget(
-        host(ListView.builder(itemCount: blocks.length, itemBuilder: (_, i) => ImageBlockView(block: blocks[i]))),
+        host(
+          ListView.builder(
+            itemCount: blocks.length,
+            itemBuilder: (_, i) => ImageBlockView(block: blocks[i]),
+          ),
+        ),
       );
       await until(tester, find.byType(RawImage));
       final seen = <ui.Image>[];
@@ -268,8 +309,11 @@ void main() {
       expect(cache.bitmaps, lessThanOrEqualTo(imageCacheCapacity + onScreen + 1));
       expect(cache.length, lessThan(40));
       expect(seen.length, greaterThan(imageCacheCapacity), reason: 'many pictures went by');
-      expect(seen.where((i) => i.debugDisposed).length, greaterThan(seen.length - imageCacheCapacity - onScreen - 2),
-          reason: 'pictures that left are disposed');
+      expect(
+        seen.where((i) => i.debugDisposed).length,
+        greaterThan(seen.length - imageCacheCapacity - onScreen - 2),
+        reason: 'pictures that left are disposed',
+      );
       await tester.pumpWidget(const SizedBox());
     });
 
@@ -277,7 +321,9 @@ void main() {
       _base = (await tester.runAsync(() => createTestImage(width: 4, height: 4)))!;
       addTearDown(_base.dispose);
       final cache = ImagePreviewCache(capacity: 3, decoder: _fakeBitmap);
-      final blocks = [for (var i = 0; i < 6; i++) ImageBlock(data: _distinct(i), mimeType: 'image/png', uri: 'file:///$i')];
+      final blocks = [
+        for (var i = 0; i < 6; i++) ImageBlock(data: _distinct(i), mimeType: 'image/png', uri: 'file:///$i'),
+      ];
       final images = <ui.Image>[];
       final held = cache.acquire(blocks[0]);
       for (var i = 1; i < 6; i++) {
@@ -350,11 +396,21 @@ void main() {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: const [
               ResourceLinkRow(
-                block: ResourceLinkBlock(uri: 'file:///home/dev/export/session.html', name: 'session.html', mimeType: 'text/html'),
+                block: ResourceLinkBlock(
+                  uri: 'file:///home/dev/export/session.html',
+                  name: 'session.html',
+                  mimeType: 'text/html',
+                ),
               ),
-              ResourceLinkRow(block: ResourceLinkBlock(uri: '/home/dev/Hà Nội/báo cáo.md', name: 'báo cáo.md', title: 'Báo cáo tuần')),
-              ResourceLinkRow(block: ResourceLinkBlock(uri: 'https://docs.example.com/a/guide', name: 'guide')),
-              ResourceLinkRow(block: ResourceLinkBlock(uri: 'mailto:a@b.c', name: 'mail')),
+              ResourceLinkRow(
+                block: ResourceLinkBlock(uri: '/home/dev/Hà Nội/báo cáo.md', name: 'báo cáo.md', title: 'Báo cáo tuần'),
+              ),
+              ResourceLinkRow(
+                block: ResourceLinkBlock(uri: 'https://docs.example.com/a/guide', name: 'guide'),
+              ),
+              ResourceLinkRow(
+                block: ResourceLinkBlock(uri: 'mailto:a@b.c', name: 'mail'),
+              ),
             ],
           ),
           taps: taps,
@@ -381,7 +437,11 @@ void main() {
 
     testWidgets('hidden and bidi characters in a name show as escapes', (tester) async {
       await tester.pumpWidget(
-        host(const ResourceLinkRow(block: ResourceLinkBlock(uri: 'file:///x', name: 'fdp.\u202Etxt'))),
+        host(
+          const ResourceLinkRow(
+            block: ResourceLinkBlock(uri: 'file:///x', name: 'fdp.\u202Etxt'),
+          ),
+        ),
       );
       expect(find.textContaining('\u202E', findRichText: true), findsNothing);
       expect(find.textContaining('U+202E', findRichText: true), findsOneWidget);
@@ -439,7 +499,11 @@ void main() {
                 onToggle: () {},
               ),
               EmbeddedResourceView(
-                block: EmbeddedResourceBlock(uri: 'file:///a/data.bin', mimeType: 'application/octet-stream', blob: 'A' * 2048),
+                block: EmbeddedResourceBlock(
+                  uri: 'file:///a/data.bin',
+                  mimeType: 'application/octet-stream',
+                  blob: 'A' * 2048,
+                ),
                 expanded: false,
                 onToggle: () {},
               ),
@@ -458,7 +522,9 @@ void main() {
         host(
           Column(
             children: const [
-              ContentBlockView(block: AudioBlock(data: '', mimeType: 'audio/wav')),
+              ContentBlockView(
+                block: AudioBlock(data: '', mimeType: 'audio/wav'),
+              ),
               ContentBlockView(block: UnknownBlock('hologram', {})),
             ],
           ),
@@ -507,7 +573,11 @@ void main() {
     testWidgets('a long folder shrinks and the file name and line stay whole at 1.6x text', (tester) async {
       final deep = '/${List.filled(14, 'very-long-folder-name').join('/')}/final_file.dart';
       await tester.pumpWidget(
-        host(ToolLocationRows(locations: [ToolLocation(path: deep, line: 123)]), taps: Taps(), textScale: 1.6),
+        host(
+          ToolLocationRows(locations: [ToolLocation(path: deep, line: 123)]),
+          taps: Taps(),
+          textScale: 1.6,
+        ),
       );
       final shown = tester.widget<RichText>(rich('final_file.dart:123')).text.toPlainText();
       expect(shown, startsWith('…'), reason: 'the front of the path gave way');
@@ -525,7 +595,10 @@ void main() {
       addTearDown(tester.view.reset);
       final session = FakeAgentSession(state: stateWith(items: items));
       await tester.pumpWidget(
-        MaterialApp(theme: AppTheme.light(), home: Scaffold(body: TranscriptView(session: session))),
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: Scaffold(body: TranscriptView(session: session)),
+        ),
       );
       await tester.pump(const Duration(milliseconds: 100));
       return session;
@@ -547,7 +620,9 @@ void main() {
       await tester.pump();
     }
 
-    testWidgets('a long press on answer text still selects the word, and the toolbar carries the copy choices', (tester) async {
+    testWidgets('a long press on answer text still selects the word, and the toolbar carries the copy choices', (
+      tester,
+    ) async {
       mockClipboard(tester);
       await pump(tester, [userAt('u', 'Question', 0), agentAt('a', source, 3)]);
       await longPressOn(tester, 'Some');
@@ -599,7 +674,9 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
     });
 
-    testWidgets('a screen reader gets Copy message on the answer, and the sheet copies text or Markdown', (tester) async {
+    testWidgets('a screen reader gets Copy message on the answer, and the sheet copies text or Markdown', (
+      tester,
+    ) async {
       final handle = tester.ensureSemantics();
       mockClipboard(tester);
       await pump(tester, [agentAt('a', source, 3)]);
@@ -632,7 +709,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(clipboard, source);
 
-      tester.binding.renderViews.first.owner!.semanticsOwner!.performAction(find0()!.id, SemanticsAction.customAction, id);
+      tester.binding.renderViews.first.owner!.semanticsOwner!.performAction(
+        find0()!.id,
+        SemanticsAction.customAction,
+        id,
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.text('Copy text'));
       await tester.pumpAndSettle();
@@ -717,4 +798,3 @@ void main() {
     expect(contentBaseName('https://a.b/'), 'a.b');
   });
 }
-

@@ -24,11 +24,7 @@ int tailLength(List<String> chars) {
 /// fits. When even the end alone does not fit, the end is cut at its start
 /// instead, so the extension is the last thing to go.
 String middleEllipsize(String text, double maxWidth, TextStyle style, TextScaler scaler) {
-  final painter = TextPainter(
-    textDirection: TextDirection.ltr,
-    textScaler: scaler,
-    maxLines: 1,
-  );
+  final painter = TextPainter(textDirection: TextDirection.ltr, textScaler: scaler, maxLines: 1);
   double width(String s) {
     painter
       ..text = TextSpan(text: s, style: style)

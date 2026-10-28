@@ -49,13 +49,14 @@ class _FakeChannel implements MuxChannel {
     if (!_controller.isClosed) _controller.add(line);
   }
 
-  void reply(Object? id, [Map<String, dynamic> result = const {}]) =>
-      emit(jsonEncode({'id': id, 'result': result}));
+  void reply(Object? id, [Map<String, dynamic> result = const {}]) => emit(jsonEncode({'id': id, 'result': result}));
 
-  void replyError(Object? id, String code, String message) => emit(jsonEncode({
-        'id': id,
-        'error': {'code': code, 'message': message},
-      }));
+  void replyError(Object? id, String code, String message) => emit(
+    jsonEncode({
+      'id': id,
+      'error': {'code': code, 'message': message},
+    }),
+  );
 
   String idOf(int sentIndex) => sent[sentIndex]['id'] as String;
 }
@@ -63,13 +64,16 @@ class _FakeChannel implements MuxChannel {
 /// Captures a future's outcome so tests can inspect it synchronously.
 class _Outcome<T> {
   _Outcome(Future<T> future) {
-    future.then((v) {
-      value = v;
-      done = true;
-    }, onError: (Object e) {
-      error = e;
-      done = true;
-    });
+    future.then(
+      (v) {
+        value = v;
+        done = true;
+      },
+      onError: (Object e) {
+        error = e;
+        done = true;
+      },
+    );
   }
 
   T? value;
@@ -86,12 +90,14 @@ MuxClient _start(
   // Effectively off unless a test is about the heartbeat.
   Duration heartbeatInterval = const Duration(hours: 1),
 }) {
-  final started = _Outcome(MuxClient.connect(
-    channel,
-    requestTimeout: const Duration(seconds: 20),
-    heartbeatInterval: heartbeatInterval,
-    heartbeatTimeout: _heartbeatTimeout,
-  ));
+  final started = _Outcome(
+    MuxClient.connect(
+      channel,
+      requestTimeout: const Duration(seconds: 20),
+      heartbeatInterval: heartbeatInterval,
+      heartbeatTimeout: _heartbeatTimeout,
+    ),
+  );
   channel.emit(_ready);
   async.flushMicrotasks();
   expect(started.error, isNull);
@@ -130,8 +136,7 @@ void main() {
       });
     });
 
-    test('a channel dropped before ready (no exit status) is flagged linkLost',
-        () {
+    test('a channel dropped before ready (no exit status) is flagged linkLost', () {
       fakeAsync((async) {
         final ch = _FakeChannel();
         final started = _Outcome(MuxClient.connect(ch));
@@ -143,12 +148,10 @@ void main() {
       });
     });
 
-    test('never becoming ready within the startup timeout is MuxUnavailable',
-        () {
+    test('never becoming ready within the startup timeout is MuxUnavailable', () {
       fakeAsync((async) {
         final ch = _FakeChannel();
-        final started = _Outcome(
-            MuxClient.connect(ch, startupTimeout: const Duration(seconds: 5)));
+        final started = _Outcome(MuxClient.connect(ch, startupTimeout: const Duration(seconds: 5)));
 
         async.elapse(const Duration(seconds: 4, milliseconds: 900));
         expect(started.done, isFalse);
@@ -210,8 +213,7 @@ void main() {
       });
     });
 
-    test('a request herdr never answers times out without killing the client',
-        () {
+    test('a request herdr never answers times out without killing the client', () {
       fakeAsync((async) {
         final ch = _FakeChannel();
         final client = _start(async, ch);
@@ -235,26 +237,26 @@ void main() {
 
     group('pane.read deltas', () {
       Map<String, dynamic> whole(String id, int seq, String text) => {
-            'id': id,
-            'seq': seq,
-            'result': {
-              'type': 'pane_read',
-              'read': {'text': text, 'truncated': false},
-            },
-          };
+        'id': id,
+        'seq': seq,
+        'result': {
+          'type': 'pane_read',
+          'read': {'text': text, 'truncated': false},
+        },
+      };
 
       /// A delta over the answer [base]: [ops] as the script writes them.
       Map<String, dynamic> delta(String id, int seq, int base, List<Object> ops) => {
-            'id': id,
-            'seq': seq,
-            'result': {
-              'type': 'pane_read',
-              'read': {
-                'delta': {'base': base, 'o': ops},
-                'truncated': true,
-              },
-            },
-          };
+        'id': id,
+        'seq': seq,
+        'result': {
+          'type': 'pane_read',
+          'read': {
+            'delta': {'base': base, 'o': ops},
+            'truncated': true,
+          },
+        },
+      };
 
       test('a delta is rebuilt from the answer the request named', () {
         fakeAsync((async) {
@@ -270,11 +272,15 @@ void main() {
           expect(ch.sent[1]['mux_have'], 7);
           // Rows were [a\r, b\r, c\r, d\r, '']: keep b c, add e, keep the
           // trailing ''.
-          ch.emit(jsonEncode(delta(ch.idOf(1), 8, 7, [
-            [1, 2],
-            ['e\r'],
-            [4, 1],
-          ])));
+          ch.emit(
+            jsonEncode(
+              delta(ch.idOf(1), 8, 7, [
+                [1, 2],
+                ['e\r'],
+                [4, 1],
+              ]),
+            ),
+          );
           async.flushMicrotasks();
           final read = b.value!['read'] as Map;
           expect(read['text'], 'b\r\nc\r\ne\r\n');
@@ -306,8 +312,7 @@ void main() {
         });
       });
 
-      test('a delta against an answer we do not hold fails the request, not the link',
-          () {
+      test('a delta against an answer we do not hold fails the request, not the link', () {
         fakeAsync((async) {
           final ch = _FakeChannel();
           final client = _start(async, ch);
@@ -316,12 +321,24 @@ void main() {
           async.flushMicrotasks();
 
           for (final bad in [
-            delta('x', 3, 99, [[0, 1]]), // another base
-            delta('x', 3, 1, [[2, 2]]), // past the rows held
-            delta('x', 3, 1, [[0, -1]]),
-            delta('x', 3, 1, [[-1, 1]]),
-            delta('x', 3, 1, [[0, 1, 2]]),
-            delta('x', 3, 1, [['ok', 5]]), // a literal that is not all strings
+            delta('x', 3, 99, [
+              [0, 1],
+            ]), // another base
+            delta('x', 3, 1, [
+              [2, 2],
+            ]), // past the rows held
+            delta('x', 3, 1, [
+              [0, -1],
+            ]),
+            delta('x', 3, 1, [
+              [-1, 1],
+            ]),
+            delta('x', 3, 1, [
+              [0, 1, 2],
+            ]),
+            delta('x', 3, 1, [
+              ['ok', 5],
+            ]), // a literal that is not all strings
             delta('x', 3, 1, [[]]),
             delta('x', 3, 1, [7]),
           ]) {
@@ -492,8 +509,7 @@ void main() {
       });
     });
 
-    test('a missing reply kills the client after the timeout and fails pendings',
-        () {
+    test('a missing reply kills the client after the timeout and fails pendings', () {
       fakeAsync((async) {
         final ch = _FakeChannel();
         final client = _start(async, ch, heartbeatInterval: _heartbeat);
@@ -532,8 +548,7 @@ void main() {
       });
     });
 
-    test('an API error reply to the heartbeat still proves the link is alive',
-        () {
+    test('an API error reply to the heartbeat still proves the link is alive', () {
       fakeAsync((async) {
         final ch = _FakeChannel();
         final client = _start(async, ch, heartbeatInterval: _heartbeat);
@@ -550,11 +565,13 @@ void main() {
       fakeAsync((async) {
         // Interval shorter than the timeout: pings must not stack up.
         final ch = _FakeChannel();
-        final started = _Outcome(MuxClient.connect(
-          ch,
-          heartbeatInterval: const Duration(seconds: 2),
-          heartbeatTimeout: const Duration(seconds: 5),
-        ));
+        final started = _Outcome(
+          MuxClient.connect(
+            ch,
+            heartbeatInterval: const Duration(seconds: 2),
+            heartbeatTimeout: const Duration(seconds: 5),
+          ),
+        );
         ch.emit(_ready);
         async.flushMicrotasks();
         final client = started.value!;
@@ -582,7 +599,10 @@ void main() {
 
   group('muxMessages', () {
     final text = 'Xin chào \u001b[1mđường dẫn\u001b[0m\r\n' * 50;
-    final big = jsonEncode({'id': 'a', 'result': {'text': text}});
+    final big = jsonEncode({
+      'id': 'a',
+      'result': {'text': text},
+    });
     final stream = [
       ...utf8.encode('herdr-mux-v1\n'),
       ...utf8.encode('{"id":"p","result":{"type":"pong"}}\n'),
@@ -598,8 +618,7 @@ void main() {
       big,
     ];
 
-    test('plain lines and deflated frames come out in order, however the bytes are cut',
-        () async {
+    test('plain lines and deflated frames come out in order, however the bytes are cut', () async {
       for (final size in [1, 2, 3, 7, 64, 1000, stream.length]) {
         expect(
           await muxMessages(Stream.fromIterable(_chunks(stream, size))).toList(),
@@ -611,7 +630,10 @@ void main() {
 
     test('a message of several MB crosses the buffer intact', () async {
       final rows = List.generate(120000, (i) => 'row $i ${i * 7919 % 1000003}');
-      final huge = jsonEncode({'id': 'h', 'result': {'text': rows.join('\r\n')}});
+      final huge = jsonEncode({
+        'id': 'h',
+        'result': {'text': rows.join('\r\n')},
+      });
       expect(huge.length, greaterThan(2 * 1024 * 1024));
 
       final got = await muxMessages(
@@ -627,9 +649,8 @@ void main() {
         ...ascii.encode('Z-3\n'),
         ...ascii.encode('Z999999999999\n'),
       ];
-      final got = await muxMessages(
-        Stream.fromIterable(_chunks([...junk, ...utf8.encode('{"id":"ok"}\n')], 3)),
-      ).toList();
+      final got = await muxMessages(Stream.fromIterable(_chunks([...junk, ...utf8.encode('{"id":"ok"}\n')], 3)))
+          .toList();
 
       expect(got, ['{"id":"ok"}']);
     });
@@ -643,9 +664,7 @@ void main() {
       ];
       final got = <String>[];
       final errors = <Object>[];
-      await muxMessages(Stream.fromIterable(_chunks(stream, 4)))
-          .handleError(errors.add)
-          .forEach(got.add);
+      await muxMessages(Stream.fromIterable(_chunks(stream, 4))).handleError(errors.add).forEach(got.add);
 
       expect(got, ['{"id":"a"}']);
       expect(errors, hasLength(1));
@@ -683,25 +702,18 @@ void main() {
           ...stored(utf8.encode('${events[1]}\n${events[2]}\n')),
         ];
         for (final size in [1, 2, 5, 17, 100, stream.length]) {
-          expect(
-            await muxMessages(Stream.fromIterable(_chunks(stream, size))).toList(),
-            [utf8.decode(ack).trim(), ...events],
-            reason: 'chunks of $size bytes',
-          );
+          expect(await muxMessages(Stream.fromIterable(_chunks(stream, size))).toList(), [
+            utf8.decode(ack).trim(),
+            ...events,
+          ], reason: 'chunks of $size bytes');
         }
       });
 
       test('a line may continue in the next frame', () async {
         final line = utf8.encode('${events[0]}\n');
         final cut = line.length ~/ 2 + 1; // inside a multi-byte character too
-        final stream = [
-          ...stored(line.sublist(0, cut), first: true),
-          ...stored(line.sublist(cut)),
-        ];
-        expect(
-          await muxMessages(Stream.fromIterable(_chunks(stream, 7))).toList(),
-          [events[0]],
-        );
+        final stream = [...stored(line.sublist(0, cut), first: true), ...stored(line.sublist(cut))];
+        expect(await muxMessages(Stream.fromIterable(_chunks(stream, 7))).toList(), [events[0]]);
       });
 
       test('a stream that stops inflating is an error, and ends the reading', () async {
@@ -713,9 +725,7 @@ void main() {
         ];
         final got = <String>[];
         final errors = <Object>[];
-        await muxMessages(Stream.fromIterable(_chunks(stream, 9)))
-            .handleError(errors.add)
-            .forEach(got.add);
+        await muxMessages(Stream.fromIterable(_chunks(stream, 9))).handleError(errors.add).forEach(got.add);
 
         expect(got, [events[0]]);
         expect(errors, hasLength(1));
@@ -731,6 +741,5 @@ List<int> _frame(String json) {
 }
 
 List<List<int>> _chunks(List<int> bytes, int size) => [
-      for (var i = 0; i < bytes.length; i += size)
-        bytes.sublist(i, i + size > bytes.length ? bytes.length : i + size),
-    ];
+  for (var i = 0; i < bytes.length; i += size) bytes.sublist(i, i + size > bytes.length ? bytes.length : i + size),
+];

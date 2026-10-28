@@ -81,13 +81,7 @@ void main() {
     });
 
     test('what was saved is cleaned on the way in', () async {
-      final store = MemoryQuickPhrasesStore([
-        ' a ',
-        '',
-        'a',
-        'b\nc',
-        for (var i = 0; i < 20; i++) 'p$i',
-      ]);
+      final store = MemoryQuickPhrasesStore([' a ', '', 'a', 'b\nc', for (var i = 0; i < 20; i++) 'p$i']);
       final phrases = (await _loaded(store)).phrases;
       expect(phrases.take(3), ['a', 'b c', 'p0']);
       expect(phrases, hasLength(QuickPhrases.maxCount));

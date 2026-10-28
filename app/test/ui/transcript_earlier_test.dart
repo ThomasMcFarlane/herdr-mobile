@@ -15,8 +15,16 @@ AgentSessionState _turns(int from, int to) {
   var state = AgentSessionState('s');
   for (var i = from; i < to; i++) {
     for (final u in [
-      {'sessionUpdate': 'user_message_chunk', 'messageId': 'u$i', 'content': {'type': 'text', 'text': 'question $i'}},
-      {'sessionUpdate': 'agent_message_chunk', 'messageId': 'a$i', 'content': {'type': 'text', 'text': 'answer $i\n\nmore of answer $i'}},
+      {
+        'sessionUpdate': 'user_message_chunk',
+        'messageId': 'u$i',
+        'content': {'type': 'text', 'text': 'question $i'},
+      },
+      {
+        'sessionUpdate': 'agent_message_chunk',
+        'messageId': 'a$i',
+        'content': {'type': 'text', 'text': 'answer $i\n\nmore of answer $i'},
+      },
     ]) {
       state = state.apply(SessionUpdate.parse(u));
     }
@@ -53,7 +61,9 @@ Future<void> _scrollToTop(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('a long transcript opened at its end reads nothing earlier until the reader nears the top', (tester) async {
+  testWidgets('a long transcript opened at its end reads nothing earlier until the reader nears the top', (
+    tester,
+  ) async {
     final session = await _open(tester, _turns(40, 100), EarlierHistory.available);
     expect(session.loadEarlierCalls, 0, reason: 'the reader is at the end: no read for what nobody looks at');
     await _scrollToTop(tester);

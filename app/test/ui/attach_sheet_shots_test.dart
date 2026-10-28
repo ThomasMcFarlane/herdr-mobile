@@ -79,8 +79,7 @@ void main() {
     tester.view.viewPadding = tester.view.padding;
     addTearDown(tester.view.reset);
     final fake = kit ?? FakeKit(gallery: gallery());
-    final s = session ??
-        FakeAgentSession(machine: machineWithFiles(projectFs()), cwd: '/home/dev/herdr-mobile');
+    final s = session ?? FakeAgentSession(machine: machineWithFiles(projectFs()), cwd: '/home/dev/herdr-mobile');
     final key = GlobalKey();
     await tester.pumpWidget(
       MaterialApp(
@@ -151,56 +150,114 @@ void main() {
 
       testWidgets('gallery half height, three picks, $tag', (tester) async {
         final kit = FakeKit(gallery: gallery());
-        await shoot(tester, 'gallery-half-picks', size, brightness, kit: kit, then: (kit) async {
-          await open(tester, kit: kit);
-          await tapCircles(tester, [2, 0, 4]);
-        });
+        await shoot(
+          tester,
+          'gallery-half-picks',
+          size,
+          brightness,
+          kit: kit,
+          then: (kit) async {
+            await open(tester, kit: kit);
+            await tapCircles(tester, [2, 0, 4]);
+          },
+        );
       });
 
       testWidgets('gallery full height, $tag', (tester) async {
         final kit = FakeKit(gallery: gallery(count: 500));
-        await shoot(tester, 'gallery-full-500', size, brightness, kit: kit, then: (kit) async {
-          await open(tester, kit: kit);
-          await tapCircles(tester, [1, 3]);
-          await expand(tester, size);
-        });
+        await shoot(
+          tester,
+          'gallery-full-500',
+          size,
+          brightness,
+          kit: kit,
+          then: (kit) async {
+            await open(tester, kit: kit);
+            await tapCircles(tester, [1, 3]);
+            await expand(tester, size);
+          },
+        );
       });
 
       testWidgets('permission reason, $tag', (tester) async {
         final kit = FakeKit(gallery: gallery(state: GalleryAccess.undetermined));
-        await shoot(tester, 'permission-reason', size, brightness, kit: kit, then: (kit) => open(tester, kit: kit));
+        await shoot(
+          tester,
+          'permission-reason',
+          size,
+          brightness,
+          kit: kit,
+          then: (kit) => open(tester, kit: kit),
+        );
       });
 
       testWidgets('permission refused, $tag', (tester) async {
         final kit = FakeKit(gallery: gallery(state: GalleryAccess.denied));
-        await shoot(tester, 'permission-denied', size, brightness, kit: kit, then: (kit) => open(tester, kit: kit));
+        await shoot(
+          tester,
+          'permission-denied',
+          size,
+          brightness,
+          kit: kit,
+          then: (kit) => open(tester, kit: kit),
+        );
       });
 
       testWidgets('limited access, $tag', (tester) async {
         final kit = FakeKit(gallery: gallery(state: GalleryAccess.limited, count: 9));
-        await shoot(tester, 'gallery-limited-9', size, brightness, kit: kit, then: (kit) => open(tester, kit: kit));
+        await shoot(
+          tester,
+          'gallery-limited-9',
+          size,
+          brightness,
+          kit: kit,
+          then: (kit) => open(tester, kit: kit),
+        );
       });
 
       testWidgets('no photos, $tag', (tester) async {
         final kit = FakeKit(gallery: gallery(count: 0));
-        await shoot(tester, 'gallery-empty', size, brightness, kit: kit, then: (kit) => open(tester, kit: kit));
+        await shoot(
+          tester,
+          'gallery-empty',
+          size,
+          brightness,
+          kit: kit,
+          then: (kit) => open(tester, kit: kit),
+        );
       });
 
       testWidgets('one photo, agent without images, $tag', (tester) async {
         final kit = FakeKit(gallery: gallery(count: 1));
         final session = FakeAgentSession(machine: machineWithFiles(projectFs()), cwd: '/home/dev/herdr-mobile')
           ..imagesAccepted = false;
-        await shoot(tester, 'gallery-one-no-images', size, brightness, kit: kit, session: session, then: (kit) async {
-          await open(tester, kit: kit);
-          await tapCircles(tester, [0]);
-        });
+        await shoot(
+          tester,
+          'gallery-one-no-images',
+          size,
+          brightness,
+          kit: kit,
+          session: session,
+          then: (kit) async {
+            await open(tester, kit: kit);
+            await tapCircles(tester, [0]);
+          },
+        );
       });
 
       testWidgets('files tab, $tag', (tester) async {
         final store = MemoryRecentStore([
-          const RecentPhoneFile(name: 'Báo cáo quý ba — bản cuối cùng (đã chỉnh sửa) 2026.pdf', size: 3400000, machineId: 'm', hostPath: '/h/x'),
+          const RecentPhoneFile(
+            name: 'Báo cáo quý ba — bản cuối cùng (đã chỉnh sửa) 2026.pdf',
+            size: 3400000,
+            machineId: 'm',
+            hostPath: '/h/x',
+          ),
           const RecentPhoneFile(name: 'screenshot-2026-05-20.png', size: 812000),
-          const RecentPhoneFile(name: 'a-very-long-file-name-that-keeps-going-and-going-and-going-until-it-needs-an-ellipsis.tar.gz', size: 48000000),
+          const RecentPhoneFile(
+            name: 'a-very-long-file-name-that-keeps-going-and-going-and-going-until-it-needs-an-ellipsis.tar.gz',
+            size: 48000000,
+          ),
           const RecentPhoneFile(name: 'notes.txt', size: 1200),
         ]);
         final kit = FakeKit(gallery: gallery(), store: store);
@@ -208,50 +265,75 @@ void main() {
           const PhoneFile(path: '/c/design.fig', name: 'design.fig', size: 26 * 1024 * 1024),
           const PhoneFile(path: '/c/Thiết kế giao diện.md', name: 'Thiết kế giao diện.md', size: 2048),
         ]);
-        await shoot(tester, 'files-tab', size, brightness, kit: kit, then: (kit) async {
-          await open(tester, tab: AttachTab.files, kit: kit);
-          await tester.tap(find.text('Choose files\u2026'));
-          await tester.pump();
-          await tester.pump(const Duration(milliseconds: 400));
-        });
+        await shoot(
+          tester,
+          'files-tab',
+          size,
+          brightness,
+          kit: kit,
+          then: (kit) async {
+            await open(tester, tab: AttachTab.files, kit: kit);
+            await tester.tap(find.text('Choose files\u2026'));
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 400));
+          },
+        );
       });
 
       testWidgets('host tab, $tag', (tester) async {
         final kit = FakeKit(gallery: gallery());
-        await shoot(tester, 'host-tab', size, brightness, kit: kit, then: (kit) async {
-          await open(tester, tab: AttachTab.host, kit: kit);
-          await expand(tester, size);
-          await tester.tap(find.text('Show all files'));
-          await tester.pump();
-          await tester.pump(const Duration(milliseconds: 400));
-          await tester.tap(find.text('AGENTS.md'));
-          await tester.pump();
-          await tester.tap(find.text('build.log'));
-          await tester.pump(const Duration(milliseconds: 400));
-        });
+        await shoot(
+          tester,
+          'host-tab',
+          size,
+          brightness,
+          kit: kit,
+          then: (kit) async {
+            await open(tester, tab: AttachTab.host, kit: kit);
+            await expand(tester, size);
+            await tester.tap(find.text('Show all files'));
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 400));
+            await tester.tap(find.text('AGENTS.md'));
+            await tester.pump();
+            await tester.tap(find.text('build.log'));
+            await tester.pump(const Duration(milliseconds: 400));
+          },
+        );
       });
 
       testWidgets('chips with an upload in flight, $tag', (tester) async {
         final kit = FakeKit(gallery: gallery());
         kit.picker.queued.add([
           const PhoneFile(path: '/c/notes.txt', name: 'notes.txt', size: 1200),
-          const PhoneFile(path: '/c/design-review-recording-final-v2.mp4', name: 'design-review-recording-final-v2.mp4', size: 48 * 1024 * 1024),
+          const PhoneFile(
+            path: '/c/design-review-recording-final-v2.mp4',
+            name: 'design-review-recording-final-v2.mp4',
+            size: 48 * 1024 * 1024,
+          ),
         ]);
-        await shoot(tester, 'chips-uploading', size, brightness, kit: kit, then: (kit) async {
-          await open(tester, tab: AttachTab.files, kit: kit);
-          await tester.tap(find.text('Choose files\u2026'));
-          await tester.pump();
-          await tester.pump(const Duration(milliseconds: 300));
-          await tester.tap(find.text('Attach (2)'));
-          await tester.pump();
-          await tester.pump(const Duration(milliseconds: 400));
-          await tester.pump();
-          await tester.pump(const Duration(milliseconds: 100));
-          kit.uploader.started[0].fail(RemoteFileException(RemoteFileErrorKind.network, 'Connection lost'));
-          kit.uploader.started[1].progress(18 * 1024 * 1024, 48 * 1024 * 1024);
-          await tester.pump();
-          await tester.pump();
-        });
+        await shoot(
+          tester,
+          'chips-uploading',
+          size,
+          brightness,
+          kit: kit,
+          then: (kit) async {
+            await open(tester, tab: AttachTab.files, kit: kit);
+            await tester.tap(find.text('Choose files\u2026'));
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 300));
+            await tester.tap(find.text('Attach (2)'));
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 400));
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 100));
+            kit.uploader.started[0].fail(RemoteFileException(RemoteFileErrorKind.network, 'Connection lost'));
+            kit.uploader.started[1].progress(18 * 1024 * 1024, 48 * 1024 * 1024);
+            await tester.pump();
+            await tester.pump();
+          },
+        );
       });
     }
   }

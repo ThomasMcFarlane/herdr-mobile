@@ -8,7 +8,12 @@ void main() {
     });
 
     test('Codex draws a command as `\$ cmd`', () {
-      expect(promptShowsInput(r'$ curl -sI https://example.com | head -1', {'command': 'curl -sI https://example.com | head -1'}), isTrue);
+      expect(
+        promptShowsInput(r'$ curl -sI https://example.com | head -1', {
+          'command': 'curl -sI https://example.com | head -1',
+        }),
+        isTrue,
+      );
     });
 
     test('a cut command is the start of a longer one, but a longer dialog than the call is another call', () {

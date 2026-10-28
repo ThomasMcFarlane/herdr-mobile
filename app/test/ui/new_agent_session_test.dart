@@ -51,7 +51,10 @@ Future<_Env> _env({
     for (final m in machines) (profile: _machine(m.id, m.label), snapshot: snapshotWith(const [])),
   ]);
   final hosts = <String, FakeAgentHost>{};
-  final repo = AgentSessionRepository(fleet: h.fleet, hostFor: (c) => hosts.putIfAbsent(c.profile.id, FakeAgentHost.new));
+  final repo = AgentSessionRepository(
+    fleet: h.fleet,
+    hostFor: (c) => hosts.putIfAbsent(c.profile.id, FakeAgentHost.new),
+  );
   final store = _MemoryStore()..memory = memory;
   final settings = AgentSessionSettings(store);
   await settings.load();
@@ -112,9 +115,9 @@ Future<void> _teardown(WidgetTester tester, _Env e) async {
 }
 
 Finder _field(String label) => find.descendant(
-      of: find.byWidgetPredicate((w) => w is LabeledField && w.label == label),
-      matching: find.byType(TextFormField),
-    );
+  of: find.byWidgetPredicate((w) => w is LabeledField && w.label == label),
+  matching: find.byType(TextFormField),
+);
 
 Finder _chip(String label) => find.widgetWithText(AppChip, label);
 
@@ -338,7 +341,10 @@ void main() {
       final e = await _env();
       await _pumpForm(tester, e);
       await _type(tester, '/home/dev/api');
-      e.host('a').attachFailures.add(const AgentHostException('omp is not signed in: run `omp login` on studio-mac', fatal: true));
+      e
+          .host('a')
+          .attachFailures
+          .add(const AgentHostException('omp is not signed in: run `omp login` on studio-mac', fatal: true));
 
       await _tapStart(tester);
 
@@ -388,7 +394,11 @@ void main() {
 
       await _type(tester, '~/code/app');
       await _tapStart(tester);
-      expect(find.text('An absolute path, starting with /'), findsOneWidget, reason: 'a ~ would reach the agent unexpanded');
+      expect(
+        find.text('An absolute path, starting with /'),
+        findsOneWidget,
+        reason: 'a ~ would reach the agent unexpanded',
+      );
 
       await _type(tester, '');
       await _tapStart(tester);

@@ -35,7 +35,8 @@ Future<void> _settle(WidgetTester tester) async {
 }
 
 /// The viewer of [path] with the phone's video player, share sheet and storage replaced.
-FileViewerScreen _viewer(FakeFs fs, String path, {required FakeStaging staging, required FakeExport export}) => FileViewerScreen(
+FileViewerScreen _viewer(FakeFs fs, String path, {required FakeStaging staging, required FakeExport export}) =>
+    FileViewerScreen(
       machine: machineWithFiles(fs),
       stat: RemoteStat(
         path: path,
@@ -90,7 +91,9 @@ void main() {
       await leave(tester);
     });
 
-    testWidgets('a big video waits for Play, shows the copy under way, and Cancel goes back without a failure', (tester) async {
+    testWidgets('a big video waits for Play, shows the copy under way, and Cancel goes back without a failure', (
+      tester,
+    ) async {
       fs.addFile('/home/dev/long.mov', Uint8List(videoAutoCopyLimit + 1));
       staging.hold = Completer<void>();
       await _pump(tester, _viewer(fs, '/home/dev/long.mov', staging: staging, export: export));
@@ -150,33 +153,38 @@ void main() {
       await leave(tester);
     });
 
-    testWidgets('a copy that finishes while the app is in the background is ready, and does not play behind another app', (tester) async {
-      fs.addFile('/home/dev/long.mov', Uint8List(videoAutoCopyLimit + 1));
-      staging.hold = Completer<void>();
-      await _pump(tester, _viewer(fs, '/home/dev/long.mov', staging: staging, export: export));
-      await _settle(tester);
-      await tester.tap(find.text('Play'));
-      await _settle(tester);
+    testWidgets(
+      'a copy that finishes while the app is in the background is ready, and does not play behind another app',
+      (tester) async {
+        fs.addFile('/home/dev/long.mov', Uint8List(videoAutoCopyLimit + 1));
+        staging.hold = Completer<void>();
+        await _pump(tester, _viewer(fs, '/home/dev/long.mov', staging: staging, export: export));
+        await _settle(tester);
+        await tester.tap(find.text('Play'));
+        await _settle(tester);
 
-      // The order the framework allows: out through inactive and hidden, back the same way.
-      for (final state in [AppLifecycleState.inactive, AppLifecycleState.hidden, AppLifecycleState.paused]) {
-        tester.binding.handleAppLifecycleStateChanged(state);
-      }
-      staging.hold!.complete();
-      await _settle(tester);
+        // The order the framework allows: out through inactive and hidden, back the same way.
+        for (final state in [AppLifecycleState.inactive, AppLifecycleState.hidden, AppLifecycleState.paused]) {
+          tester.binding.handleAppLifecycleStateChanged(state);
+        }
+        staging.hold!.complete();
+        await _settle(tester);
 
-      for (final state in [AppLifecycleState.hidden, AppLifecycleState.inactive, AppLifecycleState.resumed]) {
-        tester.binding.handleAppLifecycleStateChanged(state);
-      }
-      await _settle(tester);
+        for (final state in [AppLifecycleState.hidden, AppLifecycleState.inactive, AppLifecycleState.resumed]) {
+          tester.binding.handleAppLifecycleStateChanged(state);
+        }
+        await _settle(tester);
 
-      expect(platform.calls, contains('create'));
-      expect(platform.calls, isNot(contains('play')));
-      expect(find.text('Share or save\u2026'), findsOneWidget, reason: 'the player is there for when they are back');
-      await leave(tester);
-    });
+        expect(platform.calls, contains('create'));
+        expect(platform.calls, isNot(contains('play')));
+        expect(find.text('Share or save\u2026'), findsOneWidget, reason: 'the player is there for when they are back');
+        await leave(tester);
+      },
+    );
 
-    testWidgets('a video known only by its bytes has no Save to gallery (the gallery needs a video name)', (tester) async {
+    testWidgets('a video known only by its bytes has no Save to gallery (the gallery needs a video name)', (
+      tester,
+    ) async {
       fs.addFile('/home/dev/capture.bin', Uint8List.fromList([0, 0, 0, 0x18, ...'ftypisom'.codeUnits, 0, 0, 0, 0]));
       await _pump(tester, _viewer(fs, '/home/dev/capture.bin', staging: staging, export: export));
       await _settle(tester);

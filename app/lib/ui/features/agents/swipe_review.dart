@@ -7,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/machine_connection.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// Marks the finished state of [paneId] reviewed and says so with an Undo
@@ -242,8 +243,7 @@ class _SwipeToReviewState extends State<SwipeToReview> with SingleTickerProvider
     final speed = (-d.velocity.pixelsPerSecond.dx).clamp(-6000.0, 6000.0);
     final slope = _shown(_travel + 1) - _shown(_travel);
     final carried = _travel + math.max(0.0, speed) * SwipeToReview.projection;
-    final commit = _travel >= _threshold ||
-        (_travel >= SwipeToReview.minFlickTravel && carried >= _threshold);
+    final commit = _travel >= _threshold || (_travel >= SwipeToReview.minFlickTravel && carried >= _threshold);
     if (!commit) {
       _springBack(speed * slope);
       return;
@@ -279,8 +279,7 @@ class _SwipeToReviewState extends State<SwipeToReview> with SingleTickerProvider
   // A spring that rests within a fifth of a pixel is done, and lands exactly:
   // a still row must not keep a sub-pixel offset.
   static SpringSimulation _spring(SpringDescription spring, double from, double to, double velocity) =>
-      SpringSimulation(spring, from, to, velocity,
-          snapToEnd: true, tolerance: Springs.swipe);
+      SpringSimulation(spring, from, to, velocity, snapToEnd: true, tolerance: Springs.swipe);
 
   void _finish() {
     _offset.stop();
@@ -368,7 +367,10 @@ class _SwipeToReviewState extends State<SwipeToReview> with SingleTickerProvider
             alignment: Alignment.centerLeft,
             minWidth: 0,
             maxWidth: double.infinity,
-            child: Padding(padding: EdgeInsets.only(left: widget.inset), child: label),
+            child: Padding(
+              padding: EdgeInsets.only(left: widget.inset),
+              child: label,
+            ),
           ),
         ),
       ),
@@ -396,9 +398,9 @@ class ReviewAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MergeSemantics(
-        child: Semantics(
-          customSemanticsActions: enabled ? {const CustomSemanticsAction(label: 'Mark reviewed'): _review} : null,
-          child: child,
-        ),
-      );
+    child: Semantics(
+      customSemanticsActions: enabled ? {const CustomSemanticsAction(label: 'Mark reviewed'): _review} : null,
+      child: child,
+    ),
+  );
 }

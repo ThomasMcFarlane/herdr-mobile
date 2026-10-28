@@ -43,8 +43,7 @@ const _events = 300;
 
 final _out = <String>[];
 
-void _metric(String name, num value) =>
-    _out.add('METRIC $name=${value is int ? value : value.toStringAsFixed(3)}');
+void _metric(String name, num value) => _out.add('METRIC $name=${value is int ? value : value.toStringAsFixed(3)}');
 
 /// utime + stime of every thread of this process, in ms.
 double _cpuMs() {
@@ -113,13 +112,7 @@ void main() {
     await ready.future.timeout(const Duration(seconds: 10));
 
     final transport = createSshTransport(
-      MachineProfile(
-        id: 'bench',
-        label: 'bench',
-        host: '127.0.0.1',
-        username: user,
-        socketPath: sock,
-      ),
+      MachineProfile(id: 'bench', label: 'bench', host: '127.0.0.1', username: user, socketPath: sock),
       MachineSecrets(privateKeyPem: key),
       (_) {},
       (_) {},

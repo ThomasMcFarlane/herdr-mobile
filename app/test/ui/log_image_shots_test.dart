@@ -57,10 +57,16 @@ void main() {
       canvas.drawRect(
         Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()),
         Paint()
-          ..shader = ui.Gradient.linear(Offset.zero, Offset(0, h.toDouble()), const [Color(0xFF3366CC), Color(0xFFCC6633)]),
+          ..shader = ui.Gradient.linear(Offset.zero, Offset(0, h.toDouble()), const [
+            Color(0xFF3366CC),
+            Color(0xFFCC6633),
+          ]),
       );
       for (var i = 0; i < 6; i++) {
-        canvas.drawRect(Rect.fromLTWH(w * (0.1 + i * 0.14), h * 0.3, w * 0.08, h * (0.1 + i * 0.1)), Paint()..color = const Color(0xCCFFFFFF));
+        canvas.drawRect(
+          Rect.fromLTWH(w * (0.1 + i * 0.14), h * 0.3, w * 0.08, h * (0.1 + i * 0.1)),
+          Paint()..color = const Color(0xCCFFFFFF),
+        );
       }
       final image = await recorder.endRecording().toImage(w, h);
       final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -79,7 +85,10 @@ void main() {
     mimeType: 'image/svg+xml; charset=utf-8',
     ref: KeeperPictureRef(start: 9, hash: 'fedcba9876543210', bytes: 14 * 1024 * 1024),
   );
-  const omp = LogImageBlock(mimeType: 'image/webp', ref: OmpPictureRef(sha256: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12'));
+  const omp = LogImageBlock(
+    mimeType: 'image/webp',
+    ref: OmpPictureRef(sha256: 'ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12ab12'),
+  );
 
   for (final (size, scale) in sizes) {
     for (final brightness in Brightness.values) {
@@ -96,8 +105,7 @@ void main() {
         await tester.runAsync(() => store.ready);
         final cache = ImagePreviewCache();
         addTearDown(cache.clear);
-        final session = FakeAgentSession()
-          ..logPictures[keeper.key] = await chart(tester, 640, 400);
+        final session = FakeAgentSession()..logPictures[keeper.key] = await chart(tester, 640, 400);
         // `held` is a picture the phone already keeps: it shows by itself.
         final held = LogImageBlock(
           mimeType: 'image/png',
@@ -108,7 +116,10 @@ void main() {
 
         Widget thread(List<Widget> rows) => ThreadPhotos(
           session: session,
-          child: ListView(padding: const EdgeInsets.all(16), children: [for (final r in rows) Padding(padding: const EdgeInsets.only(bottom: 14), child: r)]),
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [for (final r in rows) Padding(padding: const EdgeInsets.only(bottom: 14), child: r)],
+          ),
         );
 
         await shoot(
@@ -126,7 +137,10 @@ void main() {
           '$out/idle-$tag.png',
           brightness: brightness,
           size: size,
-          wrap: (app) => MediaQuery(data: MediaQueryData(textScaler: TextScaler.linear(scale)), child: app),
+          wrap: (app) => MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+            child: app,
+          ),
           pump: (tester) async {
             // The held picture shows by itself; wait for its decode.
             for (var i = 0; i < 80; i++) {
@@ -143,12 +157,17 @@ void main() {
         await shoot(
           tester,
           Scaffold(
-            body: MdActions(child: thread([ImageBlockView(block: png, cache: cache), ImageBlockView(block: omp, cache: cache)])),
+            body: MdActions(
+              child: thread([ImageBlockView(block: png, cache: cache), ImageBlockView(block: omp, cache: cache)]),
+            ),
           ),
           '$out/loading-$tag.png',
           brightness: brightness,
           size: size,
-          wrap: (app) => MediaQuery(data: MediaQueryData(textScaler: TextScaler.linear(scale)), child: app),
+          wrap: (app) => MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+            child: app,
+          ),
         );
       });
 
@@ -170,7 +189,10 @@ void main() {
 
         Widget thread(List<Widget> rows) => ThreadPhotos(
           session: session,
-          child: ListView(padding: const EdgeInsets.all(16), children: [for (final r in rows) Padding(padding: const EdgeInsets.only(bottom: 14), child: r)]),
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [for (final r in rows) Padding(padding: const EdgeInsets.only(bottom: 14), child: r)],
+          ),
         );
         // Both fail: the first with the sentence, the second is over the limit.
         session.logPictureError = const LogPictureException(
@@ -178,11 +200,18 @@ void main() {
         );
         await shoot(
           tester,
-          Scaffold(body: MdActions(child: thread([ImageBlockView(key: const ValueKey('png'), block: png, cache: cache)]))),
+          Scaffold(
+            body: MdActions(
+              child: thread([ImageBlockView(key: const ValueKey('png'), block: png, cache: cache)]),
+            ),
+          ),
           '$out/failed-$tag.png',
           brightness: brightness,
           size: size,
-          wrap: (app) => MediaQuery(data: MediaQueryData(textScaler: TextScaler.linear(scale)), child: app),
+          wrap: (app) => MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+            child: app,
+          ),
           pump: (tester) async {
             await tester.tap(find.text('Tap to load'));
             for (var i = 0; i < 10; i++) {
@@ -194,11 +223,18 @@ void main() {
         session.logPictureError = const LogPictureTooLarge(14 * 1024 * 1024);
         await shoot(
           tester,
-          Scaffold(body: MdActions(child: thread([ImageBlockView(key: const ValueKey('odd'), block: odd, cache: cache)]))),
+          Scaffold(
+            body: MdActions(
+              child: thread([ImageBlockView(key: const ValueKey('odd'), block: odd, cache: cache)]),
+            ),
+          ),
           '$out/toolarge-$tag.png',
           brightness: brightness,
           size: size,
-          wrap: (app) => MediaQuery(data: MediaQueryData(textScaler: TextScaler.linear(scale)), child: app),
+          wrap: (app) => MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+            child: app,
+          ),
           pump: (tester) async {
             await tester.tap(find.text('Tap to load'));
             for (var i = 0; i < 10; i++) {
@@ -222,13 +258,19 @@ void main() {
           tester,
           Scaffold(
             body: MdActions(
-              child: ListView(padding: const EdgeInsets.all(16), children: const [ImageBlockView(block: png)]),
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: const [ImageBlockView(block: png)],
+              ),
             ),
           ),
           '$out/unavailable-$tag.png',
           brightness: brightness,
           size: size,
-          wrap: (app) => MediaQuery(data: MediaQueryData(textScaler: TextScaler.linear(scale)), child: app),
+          wrap: (app) => MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+            child: app,
+          ),
         );
       });
     }

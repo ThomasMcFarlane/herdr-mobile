@@ -75,7 +75,11 @@ void main() {
     expect(rig.source.calls.last.from, isNull);
     final wider = _said(session);
     expect(wider.length, greaterThan(shown.length));
-    expect(wider.sublist(wider.length - shown.length), shown, reason: 'what was shown is still there, after the older turns');
+    expect(
+      wider.sublist(wider.length - shown.length),
+      shown,
+      reason: 'what was shown is still there, after the older turns',
+    );
     final now = _keys(session);
     for (final e in keys.entries) {
       expect(now[e.key], e.value, reason: '${e.key} keeps its key, so the list does not jump');

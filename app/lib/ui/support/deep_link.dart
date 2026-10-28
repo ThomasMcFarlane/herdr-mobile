@@ -9,6 +9,7 @@ import '../../data/repositories/machine_connection.dart';
 import '../../data/repositories/agent_session.dart' show AgentSessions;
 import '../../data/repositories/machine_repository.dart';
 import 'home_tabs.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// The shape of the link a host alert carries (the optional ntfy plugin, see
@@ -25,8 +26,7 @@ class AgentLink {
   final String paneId;
 
   @override
-  bool operator ==(Object other) =>
-      other is AgentLink && other.machine == machine && other.paneId == paneId;
+  bool operator ==(Object other) => other is AgentLink && other.machine == machine && other.paneId == paneId;
 
   @override
   int get hashCode => Object.hash(machine, paneId);
@@ -61,8 +61,7 @@ class SessionLink {
   final String keeperId;
 
   @override
-  bool operator ==(Object other) =>
-      other is SessionLink && other.machine == machine && other.keeperId == keeperId;
+  bool operator ==(Object other) => other is SessionLink && other.machine == machine && other.keeperId == keeperId;
 
   @override
   int get hashCode => Object.hash(machine, keeperId);
@@ -219,8 +218,7 @@ class DeepLinks with WidgetsBindingObserver {
 
   /// Follows [link] as a tap on a notification does: [cold] when that tap
   /// started the app. Anything that is not a `herdr:` link is ignored.
-  Future<void> follow(String link, {bool cold = false}) =>
-      _isLink(link) ? _follow(link, cold: cold) : Future.value();
+  Future<void> follow(String link, {bool cold = false}) => _isLink(link) ? _follow(link, cold: cold) : Future.value();
 
   static bool _isLink(String route) => route.toLowerCase().startsWith('herdr:');
 

@@ -13,14 +13,39 @@ const paneSlide = 3;
 const paneFooter = 4;
 
 const _words = [
-  'final', 'class', 'return', 'await', 'import', 'const', 'if', 'else',
-  'struct', 'fn', 'let', 'match', 'Future', 'String', 'widget', 'paint',
-  'herdr', 'agent', 'pane', 'socket', 'transport', 'notify', 'state',
-  'Xin chào', 'tiếng Việt', 'đường dẫn', '✓', '●', '→', '…',
+  'final',
+  'class',
+  'return',
+  'await',
+  'import',
+  'const',
+  'if',
+  'else',
+  'struct',
+  'fn',
+  'let',
+  'match',
+  'Future',
+  'String',
+  'widget',
+  'paint',
+  'herdr',
+  'agent',
+  'pane',
+  'socket',
+  'transport',
+  'notify',
+  'state',
+  'Xin chào',
+  'tiếng Việt',
+  'đường dẫn',
+  '✓',
+  '●',
+  '→',
+  '…',
 ];
 
-String _sgrFg(math.Random r) =>
-    '\x1b[38;2;${r.nextInt(256)};${r.nextInt(256)};${r.nextInt(256)}m';
+String _sgrFg(math.Random r) => '\x1b[38;2;${r.nextInt(256)};${r.nextInt(256)};${r.nextInt(256)}m';
 
 /// One row of syntax-highlighted looking output: ~100 cells, a colour change
 /// every few words (about 470 bytes, which makes 300 rows ~140 KB).
@@ -76,12 +101,12 @@ String _bodyRow(int absolute) {
 }
 
 List<String> _footerRows(int step) => [
-      _boxRow(0, 96),
-      '\x1b[38;5;214m${'⠋⠙⠹⠸⠼⠴⠦⠧'[step % 8]}\x1b[0m Working… ${step * 37 % 997}s '
-          '\x1b[2m(esc to interrupt)\x1b[0m',
-      _boxRow(1, 96),
-      '\x1b[2m? for shortcuts\x1b[0m',
-    ];
+  _boxRow(0, 96),
+  '\x1b[38;5;214m${'⠋⠙⠹⠸⠼⠴⠦⠧'[step % 8]}\x1b[0m Working… ${step * 37 % 997}s '
+      '\x1b[2m(esc to interrupt)\x1b[0m',
+  _boxRow(1, 96),
+  '\x1b[2m? for shortcuts\x1b[0m',
+];
 
 /// The text `pane.read` returns when the pane's newest body row is [newest],
 /// at animation [step]: the last [paneWindow] rows. [rows], when given,

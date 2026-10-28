@@ -50,7 +50,13 @@ void main() {
       final s = PastSessions.fromJson({
         'agent': 'omp',
         'sessions': [
-          {'sessionId': 's', 'cwd': '/x', 'title': '   ', 'updatedAt': 'yesterday', '_meta': {'messageCount': 'many'}},
+          {
+            'sessionId': 's',
+            'cwd': '/x',
+            'title': '   ',
+            'updatedAt': 'yesterday',
+            '_meta': {'messageCount': 'many'},
+          },
           {'sessionId': 't', 'cwd': '/x', 'title': 5, 'updatedAt': 3, '_meta': 'x'},
         ],
       }).sessions;
@@ -64,7 +70,10 @@ void main() {
       final past = PastSessions.fromJson({'agent': 'pi'});
 
       expect(past.sessions, isEmpty);
-      expect((past.canList, past.canLoad, past.canResume, past.more, past.canReopen), (true, false, false, false, false));
+      expect(
+        (past.canList, past.canLoad, past.canResume, past.more, past.canReopen),
+        (true, false, false, false, false),
+      );
     });
 
     test('list false is kept: no sessions then means the agent cannot say', () {

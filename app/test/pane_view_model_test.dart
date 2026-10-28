@@ -55,10 +55,7 @@ class _Fake {
       final failure = readFailure;
       if (failure != null) throw failure;
       return serve?.call(source, lines) ??
-          PaneRead(
-            text: source == ReadSource.recentUnwrapped ? unwrappedText : text,
-            truncated: false,
-          );
+          PaneRead(text: source == ReadSource.recentUnwrapped ? unwrappedText : text, truncated: false);
     } finally {
       running--;
     }
@@ -76,26 +73,25 @@ class _Fake {
     Duration deepRevertDelay = const Duration(seconds: 2),
     Duration fallbackInterval = const Duration(seconds: 4),
     bool wrap = false,
-  }) =>
-      PaneViewModel(
-        activity: activity.stream,
-        paneId: _pane,
-        read: read,
-        sendLine: _send,
-        sendPrompt: (p) async {
-          for (final path in p.pastes) {
-            await _send(path);
-          }
-          await _send(p.line);
-        },
-        sendKeys: (keys) => _send(keys.join('+')),
-        minReadInterval: minReadInterval,
-        deepReadInterval: deepReadInterval,
-        deepRevertDelay: deepRevertDelay,
-        fallbackInterval: fallbackInterval,
-        wrap: wrap,
-        clock: clock,
-      );
+  }) => PaneViewModel(
+    activity: activity.stream,
+    paneId: _pane,
+    read: read,
+    sendLine: _send,
+    sendPrompt: (p) async {
+      for (final path in p.pastes) {
+        await _send(path);
+      }
+      await _send(p.line);
+    },
+    sendKeys: (keys) => _send(keys.join('+')),
+    minReadInterval: minReadInterval,
+    deepReadInterval: deepReadInterval,
+    deepRevertDelay: deepRevertDelay,
+    fallbackInterval: fallbackInterval,
+    wrap: wrap,
+    clock: clock,
+  );
 
   /// Wall-clock time on the fake clock, so `lastRead` is exact.
   static final epoch = DateTime(2026, 1, 1);
@@ -110,10 +106,7 @@ class _Fake {
   }
 }
 
-void _scenario(
-  String name,
-  void Function(FakeAsync async, _Fake fake) body,
-) =>
+void _scenario(String name, void Function(FakeAsync async, _Fake fake) body) =>
     test(name, () => fakeAsync((async) => body(async, _Fake(async))));
 
 void main() {
@@ -158,8 +151,7 @@ void main() {
       vm.dispose();
     });
 
-    _scenario('a burst at one instant costs one leading and one trailing read',
-        (async, f) {
+    _scenario('a burst at one instant costs one leading and one trailing read', (async, f) {
       final vm = f.vm();
       async.elapse(_ms(200));
 
@@ -184,14 +176,11 @@ void main() {
 
       // A debounce would have read nothing until the flood ended.
       expect(duringFlood, greaterThanOrEqualTo(7));
-      expect(f.reads.length - before, inInclusiveRange(9, 11),
-          reason: '~one per 120 ms, not one per event');
+      expect(f.reads.length - before, inInclusiveRange(9, 11), reason: '~one per 120 ms, not one per event');
       for (var i = 1; i < f.reads.length; i++) {
-        expect(f.reads[i] - f.reads[i - 1], greaterThanOrEqualTo(_ms(120)),
-            reason: 'read $i');
+        expect(f.reads[i] - f.reads[i - 1], greaterThanOrEqualTo(_ms(120)), reason: 'read $i');
       }
-      expect(f.reads.last, greaterThanOrEqualTo(lastEvent),
-          reason: 'one trailing read after the last event');
+      expect(f.reads.last, greaterThanOrEqualTo(lastEvent), reason: 'one trailing read after the last event');
 
       final settled = f.reads.length;
       async.elapse(_ms(2000));
@@ -216,8 +205,7 @@ void main() {
       vm.dispose();
     });
 
-    _scenario('a read slower than the interval still fires the trailing read at once',
-        (async, f) {
+    _scenario('a read slower than the interval still fires the trailing read at once', (async, f) {
       f.latency = _ms(300);
       final vm = f.vm();
       async.elapse(_ms(400)); // initial read done
@@ -286,8 +274,7 @@ void main() {
       vm.didChangeAppLifecycleState(AppLifecycleState.resumed);
       async.flushMicrotasks();
 
-      expect(f.reads, [Duration.zero, resumedAt],
-          reason: 'events during the pause are not replayed');
+      expect(f.reads, [Duration.zero, resumedAt], reason: 'events during the pause are not replayed');
       expect(vm.text, 'later');
       async.elapse(const Duration(seconds: 4));
       expect(f.reads, hasLength(3));
@@ -310,8 +297,7 @@ void main() {
       });
     }
 
-    _scenario('a read in flight when the app pauses still lands, then stays quiet',
-        (async, f) {
+    _scenario('a read in flight when the app pauses still lands, then stays quiet', (async, f) {
       f.latency = _ms(100);
       final vm = f.vm();
       async.elapse(_ms(10));
@@ -378,8 +364,7 @@ void main() {
       f.flood(5, _ms(150));
       async.elapse(const Duration(seconds: 10));
       expect(f.reads.length, greaterThan(5));
-      expect(notifications, 2,
-          reason: 'once for the pane going quiet, then nothing for the same text');
+      expect(notifications, 2, reason: 'once for the pane going quiet, then nothing for the same text');
 
       f.text = 'two';
       f.activity.add(_pane);
@@ -427,15 +412,13 @@ void main() {
       expect(vm.lastRead, _Fake.epoch);
 
       async.elapse(const Duration(seconds: 5));
-      expect(vm.lastRead, _Fake.epoch.add(const Duration(seconds: 4)),
-          reason: 'the fallback poll read at 4 s');
+      expect(vm.lastRead, _Fake.epoch.add(const Duration(seconds: 4)), reason: 'the fallback poll read at 4 s');
 
       f.readFailure = const HerdrTransportException('connection lost');
       f.activity.add(_pane);
       async.elapse(const Duration(seconds: 30));
       expect(vm.isStale, isTrue);
-      expect(vm.lastRead, _Fake.epoch.add(const Duration(seconds: 4)),
-          reason: 'failed reads do not move it');
+      expect(vm.lastRead, _Fake.epoch.add(const Duration(seconds: 4)), reason: 'failed reads do not move it');
 
       f.readFailure = null;
       f.activity.add(_pane);
@@ -560,8 +543,7 @@ void main() {
       async.elapse(_ms(500));
 
       expect(f.maxRunning, 1);
-      expect(f.reads, hasLength(2),
-          reason: 'the first read may predate the send');
+      expect(f.reads, hasLength(2), reason: 'the first read may predate the send');
       expect(f.reads.last, greaterThanOrEqualTo(_ms(100)));
       vm.dispose();
     });
@@ -633,8 +615,7 @@ void main() {
       vm.dispose();
     });
 
-    _scenario('a failed send stays on screen through the reads that follow, until a send succeeds',
-        (async, f) {
+    _scenario('a failed send stays on screen through the reads that follow, until a send succeeds', (async, f) {
       final vm = f.vm();
       async.elapse(_ms(500));
       f.sendFailure = const HerdrTransportException('write failed');
@@ -768,8 +749,7 @@ void main() {
       vm.dispose();
     });
 
-    _scenario('switching tells listeners, setting the same mode does not read',
-        (async, f) {
+    _scenario('switching tells listeners, setting the same mode does not read', (async, f) {
       final vm = f.vm();
       async.elapse(_ms(500));
       var notified = 0;
@@ -787,8 +767,7 @@ void main() {
       vm.dispose();
     });
 
-    _scenario('a read of the old source that is still running is dropped',
-        (async, f) {
+    _scenario('a read of the old source that is still running is dropped', (async, f) {
       f.latency = _ms(300);
       final vm = f.vm();
       async.elapse(_ms(100)); // first read in flight
@@ -804,8 +783,7 @@ void main() {
       vm.dispose();
     });
 
-    _scenario('a failure of the old source does not mark the new one stale',
-        (async, f) {
+    _scenario('a failure of the old source does not mark the new one stale', (async, f) {
       f.latency = _ms(300);
       f.readFailure = const HerdrTransportException('connection lost');
       final vm = f.vm();
@@ -909,8 +887,7 @@ void main() {
       vm.dispose();
     });
 
-    _scenario('scrolling away from the bottom without nearing the top stays shallow',
-        (async, f) {
+    _scenario('scrolling away from the bottom without nearing the top stays shallow', (async, f) {
       pane(f, 5000);
       final vm = f.vm();
       vm.viewChanged(nearTop: false, following: false);

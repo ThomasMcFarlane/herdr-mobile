@@ -3,17 +3,89 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/models/remote_file.dart';
 import '../../../data/repositories/path_finder.dart' show PathNotFound;
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'file_kind.dart';
 
 const _codeExt = {
-  'dart', 'py', 'js', 'mjs', 'cjs', 'ts', 'tsx', 'jsx', 'rb', 'go', 'rs', 'java', 'kt', 'kts', 'swift', 'c', 'h',
-  'cc', 'cpp', 'hpp', 'cs', 'php', 'sh', 'bash', 'zsh', 'fish', 'sql', 'lua', 'html', 'htm', 'css', 'scss', 'xml',
-  'yaml', 'yml', 'toml', 'ini', 'cfg', 'conf', 'gradle', 'vue', 'svelte', 'r', 'pl', 'ex', 'exs', 'hs', 'scala',
-  'zig', 'nix', 'tf', 'proto', 'graphql', 'make', 'mk', 'cmake', 'dockerfile',
+  'dart',
+  'py',
+  'js',
+  'mjs',
+  'cjs',
+  'ts',
+  'tsx',
+  'jsx',
+  'rb',
+  'go',
+  'rs',
+  'java',
+  'kt',
+  'kts',
+  'swift',
+  'c',
+  'h',
+  'cc',
+  'cpp',
+  'hpp',
+  'cs',
+  'php',
+  'sh',
+  'bash',
+  'zsh',
+  'fish',
+  'sql',
+  'lua',
+  'html',
+  'htm',
+  'css',
+  'scss',
+  'xml',
+  'yaml',
+  'yml',
+  'toml',
+  'ini',
+  'cfg',
+  'conf',
+  'gradle',
+  'vue',
+  'svelte',
+  'r',
+  'pl',
+  'ex',
+  'exs',
+  'hs',
+  'scala',
+  'zig',
+  'nix',
+  'tf',
+  'proto',
+  'graphql',
+  'make',
+  'mk',
+  'cmake',
+  'dockerfile',
 };
 
-const _archiveExt = {'zip', 'tar', 'gz', 'tgz', 'bz2', 'xz', '7z', 'rar', 'zst', 'jar', 'war', 'apk', 'deb', 'rpm', 'iso', 'dmg'};
+const _archiveExt = {
+  'zip',
+  'tar',
+  'gz',
+  'tgz',
+  'bz2',
+  'xz',
+  '7z',
+  'rar',
+  'zst',
+  'jar',
+  'war',
+  'apk',
+  'deb',
+  'rpm',
+  'iso',
+  'dmg',
+};
 const _audioExt = {'mp3', 'wav', 'flac', 'ogg', 'm4a'};
 const _codeNames = {'makefile', 'dockerfile', 'rakefile', 'gemfile', 'justfile', 'cmakelists.txt'};
 
@@ -50,65 +122,64 @@ IconData iconForEntry(RemoteEntry e) {
 ({IconData icon, String title, String message, bool retry, bool danger}) describeFileError(
   RemoteFileException e,
   String name,
-) =>
-    switch (e.kind) {
-      RemoteFileErrorKind.notFound => (
-          icon: LucideIcons.fileX,
-          title: 'Not found',
-          message: e is PathNotFound ? e.message : '$name is no longer there. It may have been moved or deleted.',
-          retry: true,
-          danger: false,
-        ),
-      RemoteFileErrorKind.permission => (
-          icon: LucideIcons.lock,
-          title: 'No permission',
-          message: 'Your login on this machine isn’t allowed to read $name.',
-          retry: true,
-          danger: true,
-        ),
-      RemoteFileErrorKind.unsupported => (
-          icon: HerdrIcons.machinesOff,
-          title: 'Files are unavailable',
-          message: e.message,
-          retry: false,
-          danger: false,
-        ),
-      RemoteFileErrorKind.tooLarge => (
-          icon: LucideIcons.fileWarning,
-          title: 'Too large to open',
-          message: e.message,
-          retry: false,
-          danger: false,
-        ),
-      RemoteFileErrorKind.notAFile => (
-          icon: LucideIcons.fileCog,
-          title: 'Can’t open this',
-          message: e.message,
-          retry: false,
-          danger: false,
-        ),
-      RemoteFileErrorKind.notADirectory => (
-          icon: LucideIcons.file,
-          title: 'Not a folder',
-          message: e.message,
-          retry: false,
-          danger: false,
-        ),
-      RemoteFileErrorKind.network => (
-          icon: LucideIcons.cloudOff,
-          title: 'Not reachable',
-          message: e.message,
-          retry: true,
-          danger: true,
-        ),
-      RemoteFileErrorKind.failed => (
-          icon: LucideIcons.triangleAlert,
-          title: 'Couldn’t read this',
-          message: e.message,
-          retry: true,
-          danger: true,
-        ),
-    };
+) => switch (e.kind) {
+  RemoteFileErrorKind.notFound => (
+    icon: LucideIcons.fileX,
+    title: 'Not found',
+    message: e is PathNotFound ? e.message : '$name is no longer there. It may have been moved or deleted.',
+    retry: true,
+    danger: false,
+  ),
+  RemoteFileErrorKind.permission => (
+    icon: LucideIcons.lock,
+    title: 'No permission',
+    message: 'Your login on this machine isn’t allowed to read $name.',
+    retry: true,
+    danger: true,
+  ),
+  RemoteFileErrorKind.unsupported => (
+    icon: HerdrIcons.machinesOff,
+    title: 'Files are unavailable',
+    message: e.message,
+    retry: false,
+    danger: false,
+  ),
+  RemoteFileErrorKind.tooLarge => (
+    icon: LucideIcons.fileWarning,
+    title: 'Too large to open',
+    message: e.message,
+    retry: false,
+    danger: false,
+  ),
+  RemoteFileErrorKind.notAFile => (
+    icon: LucideIcons.fileCog,
+    title: 'Can’t open this',
+    message: e.message,
+    retry: false,
+    danger: false,
+  ),
+  RemoteFileErrorKind.notADirectory => (
+    icon: LucideIcons.file,
+    title: 'Not a folder',
+    message: e.message,
+    retry: false,
+    danger: false,
+  ),
+  RemoteFileErrorKind.network => (
+    icon: LucideIcons.cloudOff,
+    title: 'Not reachable',
+    message: e.message,
+    retry: true,
+    danger: true,
+  ),
+  RemoteFileErrorKind.failed => (
+    icon: LucideIcons.triangleAlert,
+    title: 'Couldn’t read this',
+    message: e.message,
+    retry: true,
+    danger: true,
+  ),
+};
 
 /// A failed read as a tinted panel with Retry (when trying again can help)
 /// and an optional second action.
@@ -271,9 +342,7 @@ class InfoRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   value,
-                  style: mono
-                      ? Mono.base.copyWith(color: ds.text)
-                      : Type.secondary.copyWith(color: ds.text),
+                  style: mono ? Mono.base.copyWith(color: ds.text) : Type.secondary.copyWith(color: ds.text),
                 ),
               ),
             ],

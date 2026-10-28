@@ -13,28 +13,34 @@ var _n = 0;
 TranscriptItem _say(String text, {MessageRole role = MessageRole.agent}) =>
     TranscriptMessage(key: 'm${_n++}', role: role, blocks: [TextBlock(text)]);
 
-TranscriptItem _run(String command, {String? output, String? cwd, ToolStatus status = ToolStatus.completed}) => TranscriptTool(
+TranscriptItem _run(String command, {String? output, String? cwd, ToolStatus status = ToolStatus.completed}) =>
+    TranscriptTool(
       ToolCall(
         toolCallId: 't${_n++}',
         kind: ToolKind.execute,
         status: status,
         rawInput: {'command': command},
         output: output == null ? null : ToolOutput(text: output, exited: true, exitCode: 0),
-        meta: cwd == null ? null : {'terminal_info': {'cwd': cwd}},
+        meta: cwd == null
+            ? null
+            : {
+                'terminal_info': {'cwd': cwd},
+              },
       ),
     );
 
 TranscriptItem _patch(String path, {String? oldText, required String newText}) => TranscriptTool(
-      ToolCall(
-        toolCallId: 't${_n++}',
-        kind: ToolKind.edit,
-        status: ToolStatus.completed,
-        content: [ToolDiff(path: path, oldText: oldText, newText: newText)],
-        locations: [ToolLocation(path: path)],
-      ),
-    );
+  ToolCall(
+    toolCallId: 't${_n++}',
+    kind: ToolKind.edit,
+    status: ToolStatus.completed,
+    content: [ToolDiff(path: path, oldText: oldText, newText: newText)],
+    locations: [ToolLocation(path: path)],
+  ),
+);
 
-TranscriptItem _write(String path, {ToolKind kind = ToolKind.edit, ToolStatus status = ToolStatus.completed}) => TranscriptTool(
+TranscriptItem _write(String path, {ToolKind kind = ToolKind.edit, ToolStatus status = ToolStatus.completed}) =>
+    TranscriptTool(
       ToolCall(
         toolCallId: 't${_n++}',
         kind: kind,
@@ -45,26 +51,37 @@ TranscriptItem _write(String path, {ToolKind kind = ToolKind.edit, ToolStatus st
     );
 
 TranscriptItem _read(String path) => TranscriptTool(
-      ToolCall(toolCallId: 't${_n++}', kind: ToolKind.read, status: ToolStatus.completed, locations: [ToolLocation(path: path)]),
-    );
+  ToolCall(
+    toolCallId: 't${_n++}',
+    kind: ToolKind.read,
+    status: ToolStatus.completed,
+    locations: [ToolLocation(path: path)],
+  ),
+);
 
 TranscriptItem _delete(String path) => TranscriptTool(
-      ToolCall(toolCallId: 't${_n++}', kind: ToolKind.delete, status: ToolStatus.completed, locations: [ToolLocation(path: path)]),
-    );
+  ToolCall(
+    toolCallId: 't${_n++}',
+    kind: ToolKind.delete,
+    status: ToolStatus.completed,
+    locations: [ToolLocation(path: path)],
+  ),
+);
 
 List<String> _keys(List<TranscriptItem> items, {String? cwd}) => [for (final a in madeAssetsOf(items, cwd: cwd)) a.key];
 
 List<MadeKind> webAssetsKinds(List<String> names) => [
-      for (final n in names)
-        if (madeFileKindOf(n) case final k?)
-          switch (k) {
-            MadeFileKind.page => MadeKind.page,
-            MadeFileKind.picture => MadeKind.picture,
-            MadeFileKind.doc => MadeKind.doc,
-          },
-    ];
+  for (final n in names)
+    if (madeFileKindOf(n) case final k?)
+      switch (k) {
+        MadeFileKind.page => MadeKind.page,
+        MadeFileKind.picture => MadeKind.picture,
+        MadeFileKind.doc => MadeKind.doc,
+      },
+];
 
-const _vite = '  VITE v5.2.0  ready in 312 ms\n\n  ➜  Local:   http://localhost:5173/\n  ➜  Network: http://192.168.1.20:5173/\n';
+const _vite =
+    '  VITE v5.2.0  ready in 312 ms\n\n  ➜  Local:   http://localhost:5173/\n  ➜  Network: http://192.168.1.20:5173/\n';
 
 void main() {
   group('servers', () {
@@ -95,7 +112,10 @@ void main() {
     test('what a probe or a log prints is not a server the agent started', () {
       // 1,304 of 1,861 rows from 6,000 real sessions came from these.
       final items = [
-        _run('curl -s http://localhost:11434/api/tags', output: '{"models":[]}\nlocal http://localhost:11434/api/tags\n'),
+        _run(
+          'curl -s http://localhost:11434/api/tags',
+          output: '{"models":[]}\nlocal http://localhost:11434/api/tags\n',
+        ),
         _run('cat docker-compose.yml', output: 'local: http://localhost:19530\n'),
         _run("rg 'localhost:9002' src", output: 'src/a.ts: Local: http://localhost:9002\n'),
         _run("ssh box 'npm run dev'", output: _vite),
@@ -121,15 +141,28 @@ void main() {
     });
 
     test('a launch that says "listening on" is still a server, from a command that starts something', () {
-      expect(_keys([_run('node server.js', output: 'Server listening on http://127.0.0.1:3001\n')]), ['localhost:3001']);
+      expect(_keys([_run('node server.js', output: 'Server listening on http://127.0.0.1:3001\n')]), [
+        'localhost:3001',
+      ]);
       expect(_keys([_run('npm run dev', output: _vite)]), ['localhost:5173']);
-      expect(_keys([_run('uvicorn app:app', output: 'INFO:     Uvicorn running on http://127.0.0.1:8000\n')]), ['localhost:8000']);
-      expect(_keys([_run('python -m http.server 8000', output: 'Serving HTTP on 0.0.0.0 port 8000 (http://0.0.0.0:8000/) ...\n')]), ['localhost:8000']);
+      expect(_keys([_run('uvicorn app:app', output: 'INFO:     Uvicorn running on http://127.0.0.1:8000\n')]), [
+        'localhost:8000',
+      ]);
+      expect(
+        _keys([
+          _run('python -m http.server 8000', output: 'Serving HTTP on 0.0.0.0 port 8000 (http://0.0.0.0:8000/) ...\n'),
+        ]),
+        ['localhost:8000'],
+      );
     });
 
     test('a command that failed or was cancelled names no server; one still running does', () {
       for (final s in [ToolStatus.failed, ToolStatus.cancelled, ToolStatus.pending]) {
-        expect(_keys([_run('npm run dev', output: _vite, status: s)]), isEmpty, reason: '$s');
+        expect(
+          _keys([_run('npm run dev', output: _vite, status: s)]),
+          isEmpty,
+          reason: '$s',
+        );
       }
       expect(_keys([_run('npm run dev', output: _vite, status: ToolStatus.inProgress)]), ['localhost:5173']);
     });
@@ -147,16 +180,25 @@ void main() {
       expect(byKey['localhost:8000/docs']!.title, 'localhost:8000/docs');
       expect(byKey['localhost:5173'], isNotNull);
       expect(byKey['localhost:4000']!.url!.path, '/');
-      expect(byKey.keys, hasLength(3), reason: 'the bare port of an item that links to a path of it adds no second row');
+      expect(
+        byKey.keys,
+        hasLength(3),
+        reason: 'the bare port of an item that links to a path of it adds no second row',
+      );
     });
 
-    test('a bare 127.0.0.1, 0.0.0.0 or [::1] with a port counts; a tunnel, a database URL or a longer address does not', () {
-      final items = [
-        _say('The API is on 127.0.0.1:8001, the app on 0.0.0.0:8002 and the docs on [::1]:8003.'),
-        _say('Tunnel with ssh -L 9100:127.0.0.1:9101 and connect postgres://u@127.0.0.1:9102/db or 10.127.0.0.1:9103.'),
-      ];
-      expect(_keys(items).toSet(), {'localhost:8001', 'localhost:8002', 'localhost:8003'});
-    });
+    test(
+      'a bare 127.0.0.1, 0.0.0.0 or [::1] with a port counts; a tunnel, a database URL or a longer address does not',
+      () {
+        final items = [
+          _say('The API is on 127.0.0.1:8001, the app on 0.0.0.0:8002 and the docs on [::1]:8003.'),
+          _say(
+            'Tunnel with ssh -L 9100:127.0.0.1:9101 and connect postgres://u@127.0.0.1:9102/db or 10.127.0.0.1:9103.',
+          ),
+        ];
+        expect(_keys(items).toSet(), {'localhost:8001', 'localhost:8002', 'localhost:8003'});
+      },
+    );
 
     test('only plain http to the machine itself, spelled the ways a dev server spells it', () {
       final items = [
@@ -192,7 +234,10 @@ void main() {
         expect(s.url!.path, isNot(contains('*')), reason: c.key);
         expect(s.url!.toString(), isNot(endsWith('_')), reason: c.key);
       }
-      expect(madeAssetsOf([_say('**http://localhost:3006/f?x=1**')]).single.url.toString(), 'http://localhost:3006/f?x=1');
+      expect(
+        madeAssetsOf([_say('**http://localhost:3006/f?x=1**')]).single.url.toString(),
+        'http://localhost:3006/f?x=1',
+      );
     });
 
     test('a link that ends in a mark of its own keeps it when nothing opened that mark before it', () {
@@ -215,19 +260,31 @@ void main() {
         _say('Try http://localhost:3000/health'),
       ];
       expect(madeAssetsOf(items).map((a) => a.title), ['localhost:3000/health', 'localhost:4000', 'localhost:3000']);
-      expect(_keys([...items, _say('and again http://localhost:3000/')]), ['localhost:3000', 'localhost:3000/health', 'localhost:4000']);
+      expect(_keys([...items, _say('and again http://localhost:3000/')]), [
+        'localhost:3000',
+        'localhost:3000/health',
+        'localhost:4000',
+      ]);
     });
 
-    test('a dashboard and its tabs, linked in one table, are one row each (a log of a real session lost all but the last)', () {
-      final table = _say(
-        'Links (from elsewhere run `ssh -L 8765:localhost:8765 gpu-3` first):\n\n'
-        '| Dashboard | http://localhost:8765/ |\n'
-        '| Synth | http://localhost:8765/synth |\n'
-        '| Review | http://localhost:8765/review |\n'
-        '| Failures | http://localhost:8765/failures |\n',
-      );
-      expect(_keys([table]), ['localhost:8765/failures', 'localhost:8765/review', 'localhost:8765/synth', 'localhost:8765']);
-    });
+    test(
+      'a dashboard and its tabs, linked in one table, are one row each (a log of a real session lost all but the last)',
+      () {
+        final table = _say(
+          'Links (from elsewhere run `ssh -L 8765:localhost:8765 gpu-3` first):\n\n'
+          '| Dashboard | http://localhost:8765/ |\n'
+          '| Synth | http://localhost:8765/synth |\n'
+          '| Review | http://localhost:8765/review |\n'
+          '| Failures | http://localhost:8765/failures |\n',
+        );
+        expect(_keys([table]), [
+          'localhost:8765/failures',
+          'localhost:8765/review',
+          'localhost:8765/synth',
+          'localhost:8765',
+        ]);
+      },
+    );
 
     test('a banner names the origin; a link in another message adds its page beside it', () {
       final items = [_run('npm run dev', output: _vite), _say('The docs are at http://localhost:5173/docs/intro')];
@@ -240,7 +297,9 @@ void main() {
         for (var i = 0; i < 12; i++) _say('see http://localhost:8000/p$i'),
       ];
       final keys = _keys(items);
-      expect(keys.where((k) => k.startsWith('localhost:8000')), [for (var i = 11; i > 11 - madeServerPathsCap; i--) 'localhost:8000/p$i']);
+      expect(keys.where((k) => k.startsWith('localhost:8000')), [
+        for (var i = 11; i > 11 - madeServerPathsCap; i--) 'localhost:8000/p$i',
+      ]);
       expect(keys, contains('localhost:9000'));
     });
 
@@ -248,25 +307,39 @@ void main() {
       expect(_keys([_say('Please run http://localhost:3000', role: MessageRole.user)]), isEmpty);
     });
 
-    test('state: running only while a running task names the port; stopped when only ended ones do; else just seen', () {
-      final server = madeAssetsOf([_say('http://localhost:5173/')]).single;
-      BackgroundTask task(String title, BackgroundStatus s) =>
-          BackgroundTask(id: title, kind: BackgroundKind.shell, status: s, title: title);
-      expect(serverStateOf(server, const []), ServerState.seen);
-      expect(serverStateOf(server, [task('vite --port 5173', BackgroundStatus.running)]), ServerState.running);
-      expect(serverStateOf(server, [task('vite --port 5173', BackgroundStatus.paused)]), ServerState.stopped, reason: 'paused serves nothing');
-      expect(serverStateOf(server, [task('vite --port 5173', BackgroundStatus.finished)]), ServerState.stopped);
-      expect(
-        serverStateOf(server, [task('vite --port 5173', BackgroundStatus.finished), task('npm run dev -- --port 5173', BackgroundStatus.running)]),
-        ServerState.running,
-      );
-      expect(serverStateOf(server, [task('serve -p 51730', BackgroundStatus.running)]), ServerState.seen, reason: 'a longer number is another port');
-      expect(
-        serverStateOf(server, [task('vite --port 5173', BackgroundStatus.running)], live: false),
-        ServerState.seen,
-        reason: 'a saved copy or a link that is down knows of nothing running now',
-      );
-    });
+    test(
+      'state: running only while a running task names the port; stopped when only ended ones do; else just seen',
+      () {
+        final server = madeAssetsOf([_say('http://localhost:5173/')]).single;
+        BackgroundTask task(String title, BackgroundStatus s) =>
+            BackgroundTask(id: title, kind: BackgroundKind.shell, status: s, title: title);
+        expect(serverStateOf(server, const []), ServerState.seen);
+        expect(serverStateOf(server, [task('vite --port 5173', BackgroundStatus.running)]), ServerState.running);
+        expect(
+          serverStateOf(server, [task('vite --port 5173', BackgroundStatus.paused)]),
+          ServerState.stopped,
+          reason: 'paused serves nothing',
+        );
+        expect(serverStateOf(server, [task('vite --port 5173', BackgroundStatus.finished)]), ServerState.stopped);
+        expect(
+          serverStateOf(server, [
+            task('vite --port 5173', BackgroundStatus.finished),
+            task('npm run dev -- --port 5173', BackgroundStatus.running),
+          ]),
+          ServerState.running,
+        );
+        expect(
+          serverStateOf(server, [task('serve -p 51730', BackgroundStatus.running)]),
+          ServerState.seen,
+          reason: 'a longer number is another port',
+        );
+        expect(
+          serverStateOf(server, [task('vite --port 5173', BackgroundStatus.running)], live: false),
+          ServerState.seen,
+          reason: 'a saved copy or a link that is down knows of nothing running now',
+        );
+      },
+    );
 
     test('launchLabelOf is what started the server: no cd, wrapper, redirect or folder of the program', () {
       expect(
@@ -287,8 +360,16 @@ void main() {
       final banner = madeAssetsOf([_run('npm run dev', output: _vite)]);
       expect(banner.single.launch, 'npm run dev');
 
-      expect(madeAssetsOf([_run('pytest --port 8765'), _say('http://localhost:8765/')]).single.launch, isNull, reason: 'a test run launches nothing');
-      expect(madeAssetsOf([_run('curl -p 8765 http://localhost:8765/x'), _say('http://localhost:8765/')]).single.launch, isNull, reason: 'a probe launches nothing');
+      expect(
+        madeAssetsOf([_run('pytest --port 8765'), _say('http://localhost:8765/')]).single.launch,
+        isNull,
+        reason: 'a test run launches nothing',
+      );
+      expect(
+        madeAssetsOf([_run('curl -p 8765 http://localhost:8765/x'), _say('http://localhost:8765/')]).single.launch,
+        isNull,
+        reason: 'a probe launches nothing',
+      );
     });
 
     test('a launch is kept with the row through a kept history, and the newest launch of a port wins', () {
@@ -296,7 +377,8 @@ void main() {
       final history = first.history(100);
       final restored = MadeHistory.fromBytes(history.toBytes())!;
       expect(restored.assets.single.launch, 'python a.py --port 8765');
-      final next = MadeFold(from: restored)..addAll([_run('python b.py --port 8765'), _say('again http://localhost:8765/x')]);
+      final next = MadeFold(from: restored)
+        ..addAll([_run('python b.py --port 8765'), _say('again http://localhost:8765/x')]);
       expect(next.assets.map((a) => a.launch), everyElement('python b.py --port 8765'));
     });
 
@@ -315,7 +397,9 @@ void main() {
       expect(apps.last.pages, isEmpty);
       expect(madeCountOf(assets), 2);
 
-      final noRoot = madeAppsOf(madeAssetsOf([_say('http://localhost:8765/label'), _say('http://localhost:8765/review')]));
+      final noRoot = madeAppsOf(
+        madeAssetsOf([_say('http://localhost:8765/label'), _say('http://localhost:8765/review')]),
+      );
       expect(noRoot.single.entry.route, '/review', reason: 'no root named: the newest page opens');
     });
 
@@ -325,23 +409,33 @@ void main() {
           BackgroundTask(id: title, kind: BackgroundKind.shell, status: s, title: title);
       expect(serverNameOf(server, const []), 'python old.py --port 5173');
       expect(
-        serverNameOf(server, [task('vite --port 5173', BackgroundStatus.running), task('serve -p 5173', BackgroundStatus.finished)]),
+        serverNameOf(server, [
+          task('vite --port 5173', BackgroundStatus.running),
+          task('serve -p 5173', BackgroundStatus.finished),
+        ]),
         'vite --port 5173',
       );
-      expect(serverNameOf(server, [task('serve -p 51730', BackgroundStatus.running)]), 'python old.py --port 5173', reason: 'another port');
+      expect(
+        serverNameOf(server, [task('serve -p 51730', BackgroundStatus.running)]),
+        'python old.py --port 5173',
+        reason: 'another port',
+      );
     });
   });
 
   group('pages the agent wrote', () {
-    test('a file a tool wrote is a page; a file it only read is not; an edit that has not completed changed nothing', () {
-      final items = [
-        _write('/home/dev/app/report.html'),
-        _read('/home/dev/app/old.html'),
-        _write('/home/dev/app/main.dart'),
-        _write('/a/pending.html', status: ToolStatus.pending),
-      ];
-      expect(_keys(items), ['/home/dev/app/report.html']);
-    });
+    test(
+      'a file a tool wrote is a page; a file it only read is not; an edit that has not completed changed nothing',
+      () {
+        final items = [
+          _write('/home/dev/app/report.html'),
+          _read('/home/dev/app/old.html'),
+          _write('/home/dev/app/main.dart'),
+          _write('/a/pending.html', status: ToolStatus.pending),
+        ];
+        expect(_keys(items), ['/home/dev/app/report.html']);
+      },
+    );
 
     test('a page that was deleted or moved away is not listed', () {
       final items = [
@@ -356,11 +450,19 @@ void main() {
     });
 
     test('a page written again is one row, newest first', () {
-      expect(_keys([_write('/a/one.html'), _write('/a/two.html'), _write('/a/one.html')]), ['/a/one.html', '/a/two.html']);
+      expect(_keys([_write('/a/one.html'), _write('/a/two.html'), _write('/a/one.html')]), [
+        '/a/one.html',
+        '/a/two.html',
+      ]);
     });
 
     test('dependencies and system files are not the session\'s pages', () {
-      final items = [_write('/w/node_modules/pkg/index.html'), _write('/usr/share/doc/x/index.html'), _write('/w/.git/a.html'), _write('/w/mine.html')];
+      final items = [
+        _write('/w/node_modules/pkg/index.html'),
+        _write('/usr/share/doc/x/index.html'),
+        _write('/w/.git/a.html'),
+        _write('/w/mine.html'),
+      ];
       expect(_keys(items), ['/w/mine.html']);
     });
   });
@@ -384,14 +486,27 @@ void main() {
 
     test('a command that did not run wrote and removed nothing', () {
       for (final s in [ToolStatus.pending, ToolStatus.inProgress, ToolStatus.failed, ToolStatus.cancelled]) {
-        expect(_keys([_run('echo x > a.html', cwd: '/w', status: s)]), isEmpty, reason: '$s writes nothing');
-        expect(_keys([_run('echo x > a.html', cwd: '/w'), _run('rm a.html', cwd: '/w', status: s)]), ['/w/a.html'], reason: '$s removes nothing');
-        expect(_keys([_run('python shot.py', output: 'Saved screenshot to screenshots/a.png\n', cwd: '/w', status: s)]), isEmpty, reason: '$s');
+        expect(
+          _keys([_run('echo x > a.html', cwd: '/w', status: s)]),
+          isEmpty,
+          reason: '$s writes nothing',
+        );
+        expect(_keys([_run('echo x > a.html', cwd: '/w'), _run('rm a.html', cwd: '/w', status: s)]), [
+          '/w/a.html',
+        ], reason: '$s removes nothing');
+        expect(
+          _keys([_run('python shot.py', output: 'Saved screenshot to screenshots/a.png\n', cwd: '/w', status: s)]),
+          isEmpty,
+          reason: '$s',
+        );
       }
     });
 
     test('a leading cd moves where a relative name is taken from', () {
-      final items = [_run('cd /tmp/scratch/report && python gen.py > out.html', cwd: '/home/dev/app'), _run('cd sub && cd deep; echo x > y.html', cwd: '/w')];
+      final items = [
+        _run('cd /tmp/scratch/report && python gen.py > out.html', cwd: '/home/dev/app'),
+        _run('cd sub && cd deep; echo x > y.html', cwd: '/w'),
+      ];
       expect(_keys(items), ['/w/sub/deep/y.html', '/tmp/scratch/report/out.html']);
     });
 
@@ -411,16 +526,16 @@ void main() {
 
     test('the body of a heredoc is a file\'s content, not something the agent made', () {
       final items = [
-        _run("cat > site/index.html <<'EOF'\n<a href=\"about.html\">x</a>\n<a href=\"/contact.html\">y</a>\nEOF", cwd: '/w'),
+        _run(
+          "cat > site/index.html <<'EOF'\n<a href=\"about.html\">x</a>\n<a href=\"/contact.html\">y</a>\nEOF",
+          cwd: '/w',
+        ),
       ];
       expect(_keys(items), ['/w/site/index.html']);
     });
 
     test('shell variables, urls and Windows paths are not paths of the machine', () {
-      final items = [
-        _run(r'echo hi > $OUT/flow/t.html', cwd: '/w'),
-        _run(r'echo hi > C:\Users\me\a.html', cwd: '/w'),
-      ];
+      final items = [_run(r'echo hi > $OUT/flow/t.html', cwd: '/w'), _run(r'echo hi > C:\Users\me\a.html', cwd: '/w')];
       expect(_keys(items), isEmpty);
     });
 
@@ -434,9 +549,14 @@ void main() {
   group('pages the agent names', () {
     test('a path with a folder in it counts; a markdown link too; a code block does not', () {
       final items = [
-        _say('See `coverage/index.html` and [the chart](diagrams/architecture.svg).\n```html\n<img src="logo.svg"><a href="reports/x.html">x</a>\n```'),
+        _say(
+          'See `coverage/index.html` and [the chart](diagrams/architecture.svg).\n```html\n<img src="logo.svg"><a href="reports/x.html">x</a>\n```',
+        ),
       ];
-      expect(_keys(items, cwd: '/home/dev/app'), ['/home/dev/app/diagrams/architecture.svg', '/home/dev/app/coverage/index.html']);
+      expect(_keys(items, cwd: '/home/dev/app'), [
+        '/home/dev/app/diagrams/architecture.svg',
+        '/home/dev/app/coverage/index.html',
+      ]);
     });
 
     test('a bare file name counts only right after a word of making', () {
@@ -469,16 +589,23 @@ void main() {
     });
 
     test('a line number, an anchor, a full stop and file:// are not part of the path', () {
-      final items = [_say('Wrote /tmp/out/final.html. Then /tmp/out/a.html:12 and /tmp/out/b.html#top and file:///tmp/out/c.html.')];
+      final items = [
+        _say('Wrote /tmp/out/final.html. Then /tmp/out/a.html:12 and /tmp/out/b.html#top and file:///tmp/out/c.html.'),
+      ];
       expect(_keys(items), ['/tmp/out/c.html', '/tmp/out/b.html', '/tmp/out/a.html', '/tmp/out/final.html']);
     });
 
     test('a path inside a url is not a page, and a server is still found', () {
-      expect(_keys([_say('Wrote /tmp/out/final.html. Then http://localhost:8000/not-a-page.html is served.')]), ['/tmp/out/final.html', 'localhost:8000/not-a-page.html']);
+      expect(_keys([_say('Wrote /tmp/out/final.html. Then http://localhost:8000/not-a-page.html is served.')]), [
+        '/tmp/out/final.html',
+        'localhost:8000/not-a-page.html',
+      ]);
     });
 
     test('the same file under its spellings is one row', () {
-      final items = [_say('see ./reports/a.html and reports/a.html and ../app/reports/a.html and /w/app/reports/a.html')];
+      final items = [
+        _say('see ./reports/a.html and reports/a.html and ../app/reports/a.html and /w/app/reports/a.html'),
+      ];
       expect(_keys(items, cwd: '/w/app'), ['/w/app/reports/a.html']);
     });
   });
@@ -494,7 +621,10 @@ void main() {
     });
 
     test('a flood of one kind never pushes another kind out', () {
-      final items = [_say('http://localhost:3000/'), for (var i = 0; i < madeAssetsCap + 50; i++) _say('I saved shots/$i.png')];
+      final items = [
+        _say('http://localhost:3000/'),
+        for (var i = 0; i < madeAssetsCap + 50; i++) _say('I saved shots/$i.png'),
+      ];
       final assets = madeAssetsOf(items, cwd: '/w');
       expect(assets.where((a) => a.kind == MadeKind.server), hasLength(1));
       final pictures = assets.where((a) => a.kind == MadeKind.picture).toList();
@@ -520,7 +650,11 @@ void main() {
       final items = [_say('http://localhost:3000/'), _write('/a/one.html')];
       expect(identical(madeAssetsOf(items, cwd: '/a'), madeAssetsOf(items, cwd: '/a')), isTrue);
       final other = madeAssetsOf(items, cwd: '/b');
-      expect(identical(madeAssetsOf(items, cwd: '/a'), madeAssetsOf(items, cwd: '/a')), isTrue, reason: 'another folder does not evict');
+      expect(
+        identical(madeAssetsOf(items, cwd: '/a'), madeAssetsOf(items, cwd: '/a')),
+        isTrue,
+        reason: 'another folder does not evict',
+      );
       expect(other, isNotNull);
     });
 
@@ -531,7 +665,12 @@ void main() {
     });
 
     test('a streaming tool call keeps its server while its output grows', () {
-      final call = ToolCall(toolCallId: 'x', kind: ToolKind.execute, status: ToolStatus.inProgress, rawInput: {'command': 'npm run dev'});
+      final call = ToolCall(
+        toolCallId: 'x',
+        kind: ToolKind.execute,
+        status: ToolStatus.inProgress,
+        rawInput: {'command': 'npm run dev'},
+      );
       TranscriptItem at(String text) => TranscriptTool(call.copyWith(output: ToolOutput(text: text)));
       expect(_keys([at('starting\n')]), isEmpty);
       expect(_keys([at(_vite)]), ['localhost:5173']);
@@ -549,33 +688,40 @@ void main() {
 
   group('pictures and documents', () {
     TranscriptItem create(String path) => TranscriptTool(
-          ToolCall(
-            toolCallId: 't${_n++}',
-            kind: ToolKind.edit,
-            status: ToolStatus.completed,
-            content: [ToolDiff(path: path, newText: '# x')],
-          ),
-        );
+      ToolCall(
+        toolCallId: 't${_n++}',
+        kind: ToolKind.edit,
+        status: ToolStatus.completed,
+        content: [ToolDiff(path: path, newText: '# x')],
+      ),
+    );
 
     TranscriptItem edit(String path) => TranscriptTool(
-          ToolCall(
-            toolCallId: 't${_n++}',
-            kind: ToolKind.edit,
-            status: ToolStatus.completed,
-            content: [ToolDiff(path: path, oldText: 'a', newText: 'b')],
-          ),
-        );
+      ToolCall(
+        toolCallId: 't${_n++}',
+        kind: ToolKind.edit,
+        status: ToolStatus.completed,
+        content: [ToolDiff(path: path, oldText: 'a', newText: 'b')],
+      ),
+    );
 
     test('the kind comes from the name; svg is a page, source and data are nothing', () {
-      expect(webAssetsKinds(['/a/x.png', '/a/x.JPG', '/a/x.svg', '/a/x.html', '/a/x.md', '/a/x.pdf', '/a/x.csv', '/a/x.dart', '/a/x.json', '/a/x.txt', '/a/x.log']), [
-        MadeKind.picture,
-        MadeKind.picture,
-        MadeKind.page,
-        MadeKind.page,
-        MadeKind.doc,
-        MadeKind.doc,
-        MadeKind.doc,
-      ]);
+      expect(
+        webAssetsKinds([
+          '/a/x.png',
+          '/a/x.JPG',
+          '/a/x.svg',
+          '/a/x.html',
+          '/a/x.md',
+          '/a/x.pdf',
+          '/a/x.csv',
+          '/a/x.dart',
+          '/a/x.json',
+          '/a/x.txt',
+          '/a/x.log',
+        ]),
+        [MadeKind.picture, MadeKind.picture, MadeKind.page, MadeKind.page, MadeKind.doc, MadeKind.doc, MadeKind.doc],
+      );
     });
 
     test('a document counts when the agent created it, not when it edited one', () {
@@ -614,25 +760,47 @@ void main() {
     });
 
     test('a removed picture or document leaves the list', () {
-      final items = [create('/w/docs/a.md'), _run('rm /w/docs/a.md'), _run('python p.py -o /w/out.png'), _delete('/w/out.png')];
-      expect(_keys(items), isEmpty);
-    });
-
-    test('a patch that leaves nothing behind removes the file, as Codex deletes one; an empty new file is no document', () {
       final items = [
-        _patch('/w/a.html', newText: '<p>x</p>'),
-        _patch('/w/docs/b.md', newText: '# b'),
-        _patch('/w/a.html', oldText: '<p>x</p>', newText: ''),
-        _patch('/w/docs/b.md', oldText: '# b', newText: ''),
-        _patch('/w/docs/empty.md', newText: ''),
+        create('/w/docs/a.md'),
+        _run('rm /w/docs/a.md'),
+        _run('python p.py -o /w/out.png'),
+        _delete('/w/out.png'),
       ];
       expect(_keys(items), isEmpty);
-      expect(_keys([_patch('/w/a.html', newText: '<p>x</p>'), _patch('/w/a.html', oldText: '<p>x</p>', newText: '<p>y</p>')]), ['/w/a.html']);
     });
 
+    test(
+      'a patch that leaves nothing behind removes the file, as Codex deletes one; an empty new file is no document',
+      () {
+        final items = [
+          _patch('/w/a.html', newText: '<p>x</p>'),
+          _patch('/w/docs/b.md', newText: '# b'),
+          _patch('/w/a.html', oldText: '<p>x</p>', newText: ''),
+          _patch('/w/docs/b.md', oldText: '# b', newText: ''),
+          _patch('/w/docs/empty.md', newText: ''),
+        ];
+        expect(_keys(items), isEmpty);
+        expect(
+          _keys([
+            _patch('/w/a.html', newText: '<p>x</p>'),
+            _patch('/w/a.html', oldText: '<p>x</p>', newText: '<p>y</p>'),
+          ]),
+          ['/w/a.html'],
+        );
+      },
+    );
+
     test('the kinds are told apart on the rows', () {
-      final items = [create('/w/a.md'), _write('/w/p.html'), _run('python p.py -o /w/c.png'), _say('http://localhost:3000/')];
-      expect([for (final a in madeAssetsOf(items, cwd: '/w')) a.kind], [MadeKind.server, MadeKind.picture, MadeKind.page, MadeKind.doc]);
+      final items = [
+        create('/w/a.md'),
+        _write('/w/p.html'),
+        _run('python p.py -o /w/c.png'),
+        _say('http://localhost:3000/'),
+      ];
+      expect(
+        [for (final a in madeAssetsOf(items, cwd: '/w')) a.kind],
+        [MadeKind.server, MadeKind.picture, MadeKind.page, MadeKind.doc],
+      );
     });
   });
 
@@ -640,23 +808,34 @@ void main() {
     MadeHistory read(List<TranscriptItem> items, {int upTo = 1000, MadeHistory? from}) =>
         (MadeFold(cwd: '/w', from: from)..addAll(items)).history(upTo);
 
-    test('what the earlier part made is listed beneath what the shown part made, whichever order they were read in', () {
-      final older = read([_say('http://localhost:8790/'), _write('/w/old.html')]);
-      final shown = [_say('http://localhost:8765/')];
-      final keys = [for (final a in madeAssetsOf(shown, cwd: '/w', history: older)) a.key];
-      expect(keys, ['localhost:8765', '/w/old.html', 'localhost:8790']);
-    });
+    test(
+      'what the earlier part made is listed beneath what the shown part made, whichever order they were read in',
+      () {
+        final older = read([_say('http://localhost:8790/'), _write('/w/old.html')]);
+        final shown = [_say('http://localhost:8765/')];
+        final keys = [for (final a in madeAssetsOf(shown, cwd: '/w', history: older)) a.key];
+        expect(keys, ['localhost:8765', '/w/old.html', 'localhost:8790']);
+      },
+    );
 
     test('the shown part still removes and replaces what the earlier part made', () {
       final older = read([_write('/w/gone.html'), _say('http://localhost:3000/')]);
       final shown = [_delete('/w/gone.html'), _say('Now http://localhost:3000/health')];
-      expect([for (final a in madeAssetsOf(shown, cwd: '/w', history: older)) a.key], ['localhost:3000/health', 'localhost:3000']);
+      expect(
+        [for (final a in madeAssetsOf(shown, cwd: '/w', history: older)) a.key],
+        ['localhost:3000/health', 'localhost:3000'],
+      );
     });
 
     test('reading the same lines again on top of a history (a wider tail overlaps it) changes nothing', () {
-      final items = [_say('http://localhost:3000/'), _write('/w/a.html'), _delete('/w/a.html'), _say('http://localhost:4000/')];
+      final items = [
+        _say('http://localhost:3000/'),
+        _write('/w/a.html'),
+        _delete('/w/a.html'),
+        _say('http://localhost:4000/'),
+      ];
       final whole = [for (final a in madeAssetsOf(items, cwd: '/w')) a.key];
-      final overlapped = [for (final a in madeAssetsOf(items.sublist(1), cwd: '/w', history: read(items)) ) a.key];
+      final overlapped = [for (final a in madeAssetsOf(items.sublist(1), cwd: '/w', history: read(items))) a.key];
       expect(overlapped.toSet(), whole.toSet());
     });
 
@@ -669,14 +848,23 @@ void main() {
     });
 
     test('kept bytes read back to the same rows; damage and older rules are a history that does not exist', () {
-      final h = read([_say('http://localhost:3000/docs'), _write('/w/a.html'), _say('I created docs/spec.md')], upTo: 4242);
+      final h = read([
+        _say('http://localhost:3000/docs'),
+        _write('/w/a.html'),
+        _say('I created docs/spec.md'),
+      ], upTo: 4242);
       final back = MadeHistory.fromBytes(h.toBytes())!;
       expect(back.upTo, 4242);
       expect(back.span, h.span);
       expect(sameMadeAssets(back.assets, h.assets), isTrue);
       expect(back.assets.map((a) => a.order), h.assets.map((a) => a.order));
       expect(MadeHistory.fromBytes(Uint8List.fromList(utf8.encode('{"v":0,"span":1,"upTo":1,"assets":[]}'))), isNull);
-      expect(MadeHistory.fromBytes(Uint8List.fromList(utf8.encode('{"v":$madeScanVersion,"span":1,"upTo":1,"assets":[{"kind":"nope"}]}'))), isNull);
+      expect(
+        MadeHistory.fromBytes(
+          Uint8List.fromList(utf8.encode('{"v":$madeScanVersion,"span":1,"upTo":1,"assets":[{"kind":"nope"}]}')),
+        ),
+        isNull,
+      );
       expect(MadeHistory.fromBytes(Uint8List.fromList(utf8.encode('not json'))), isNull);
     });
   });

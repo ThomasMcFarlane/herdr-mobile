@@ -115,8 +115,21 @@ void main() {
   List<Json> many() {
     final updates = <Json>[];
     for (var i = 0; i < 25; i++) {
-      updates.add(launch('r$i', description: i == 3 ? long : 'Subagent number $i', type: i.isEven ? 'Explore' : 'general-purpose', status: 'in_progress'));
-      if (i >= 4) updates.add(i % 7 == 0 ? toolUpdate('r$i', status: 'failed') : finished('r$i', seconds: 20 + i, tools: i, type: i.isEven ? 'Explore' : 'general-purpose'));
+      updates.add(
+        launch(
+          'r$i',
+          description: i == 3 ? long : 'Subagent number $i',
+          type: i.isEven ? 'Explore' : 'general-purpose',
+          status: 'in_progress',
+        ),
+      );
+      if (i >= 4) {
+        updates.add(
+          i % 7 == 0
+              ? toolUpdate('r$i', status: 'failed')
+              : finished('r$i', seconds: 20 + i, tools: i, type: i.isEven ? 'Explore' : 'general-purpose'),
+        );
+      }
     }
     updates.add(childTool('askc', 'r0'));
     return updates;
@@ -136,121 +149,205 @@ void main() {
     return play(u, from: stateWith(items: [userAt('uu', 'earlier', 0), agentAt('aa', 'ok', 1)]));
   }
 
-  Widget sheetHost(FakeAgentSession s) => Scaffold(body: SafeArea(child: TranscriptView(session: s)));
+  Widget sheetHost(FakeAgentSession s) => Scaffold(
+    body: SafeArea(child: TranscriptView(session: s)),
+  );
 
   // name -> (session, home, action)
-  final scenarios = <String, (FakeAgentSession Function(), Widget Function(FakeAgentSession), Future<void> Function(WidgetTester)?)>{
-    'card-running': (
-      () => session(play([launch('t', type: 'Explore', status: 'in_progress'), childTool('c', 't')])),
-      transcript,
-      null,
-    ),
-    'card-finished-open': (
-      () => session(
-        play(
-          [launch('t', type: 'Explore', prompt: 'Find where the locale is lowercased.', status: 'in_progress'), finished('t', text: 'The call is in **lib/locale/parse.dart** line 42.\n\n- it lowercases first\n- then normalizes\n\n```dart\ns.toLowerCase();\n```')],
-          active: false,
+  final scenarios =
+      <String, (FakeAgentSession Function(), Widget Function(FakeAgentSession), Future<void> Function(WidgetTester)?)>{
+        'card-running': (
+          () => session(play([launch('t', type: 'Explore', status: 'in_progress'), childTool('c', 't')])),
+          transcript,
+          null,
         ),
-      ),
-      transcript,
-      (t) async {
-        await t.tap(find.textContaining('Worked', findRichText: true));
-        await t.pump(const Duration(milliseconds: 400));
-        await t.tap(find.text('Explore the parser'));
-        await t.pump(const Duration(milliseconds: 400));
-      },
-    ),
-    'card-failed': (
-      () => session(play([launch('t', type: 'Explore', status: 'in_progress'), childTool('c', 't'), toolUpdate('t', status: 'failed')], active: false)),
-      transcript,
-      null,
-    ),
-    'card-waiting-dock': (
-      () => session(
-        play([launch('t', type: 'Explore', status: 'in_progress'), childTool('c', 't')]).withPending(PendingPermission(1, askFor('c'))),
-      ),
-      transcript,
-      null,
-    ),
-    'parallel-3': (
-      () => session(
-        play([
-          launch('a', description: 'Check the parser', type: 'Explore', status: 'in_progress'),
-          launch('b', description: long, type: 'general-purpose', status: 'in_progress'),
-          launch('c', description: 'Đọc tài liệu về chuẩn hóa Unicode', type: 'Explore', status: 'in_progress'),
-          childTool('x', 'a'),
-          finished('c'),
-        ]),
-      ),
-      transcript,
-      null,
-    ),
-    'omp-group': (
-      () => session(
-        play(ompTask('call', [ompProgress(0, 'Alpha', 'running'), ompProgress(1, 'Beta', 'pending', extra: {'retryState': {'attempt': 2, 'maxAttempts': 5, 'delayMs': 8000, 'errorMessage': '429 rate limited', 'startedAt': 1}})])),
-      ),
-      transcript,
-      null,
-    ),
-    'roster-25': (
-      () => session(play(many()).withPending(PendingPermission(1, askFor('askc')))),
-      (s) => Scaffold(body: SafeArea(child: Column(children: [SubagentsChip(session: s), Expanded(child: TranscriptView(session: s))]))),
-      (t) async {
-        await t.tap(find.textContaining('needs you'));
-        await t.pump(const Duration(milliseconds: 400));
-      },
-    ),
-    'drill-in': (
-      () => session(child()),
-      (s) => SubagentRunScreen(session: s, runId: 't'),
-      null,
-    ),
-    'summary-omp': (
-      () => session(play(ompTask('call', [ompProgress(0, 'Alpha', 'running', extra: {'assignment': '## Task\n\nRead `lib/a.ts` and report:\n\n- every call site\n- why it matters\n\n```ts\nfoo(bar);\n```'})]))),
-      (s) => SubagentRunScreen(session: s, runId: 'call#0'),
-      null,
-    ),
-    'summary-omp-failed': (
-      () => session(
-        play(
-          ompTask('call', [ompProgress(0, 'Beta', 'failed')], results: [
-            {'index': 0, 'id': 'Beta', 'agent': 'scout', 'exitCode': 1, 'output': 'Partial notes:\n\n- parser.dart\n- locale.dart', 'error': 'Provider quota exhausted', 'durationMs': 9000},
-          ], status: 'completed'),
-          active: false,
+        'card-finished-open': (
+          () => session(
+            play([
+              launch('t', type: 'Explore', prompt: 'Find where the locale is lowercased.', status: 'in_progress'),
+              finished(
+                't',
+                text: 'The call is in **lib/locale/parse.dart** line 42.\n\n- it lowercases first\n- then normalizes\n\n```dart\ns.toLowerCase();\n```',
+              ),
+            ], active: false),
+          ),
+          transcript,
+          (t) async {
+            await t.tap(find.textContaining('Worked', findRichText: true));
+            await t.pump(const Duration(milliseconds: 400));
+            await t.tap(find.text('Explore the parser'));
+            await t.pump(const Duration(milliseconds: 400));
+          },
         ),
-      ),
-      (s) => SubagentRunScreen(session: s, runId: 'call#0'),
-      null,
-    ),
-    'overview-full': (
-      () => session(overviewState()),
-      sheetHost,
-      (t) async {
-        unawaited(showSessionOverview(t.element(find.byType(TranscriptView)), t.widget<TranscriptView>(find.byType(TranscriptView)).session));
-        await t.pump(const Duration(milliseconds: 400));
-      },
-    ),
-    'overview-min': (
-      () => session(stateWith(items: [userAt('u', 'Say hi', 0)])),
-      sheetHost,
-      (t) async {
-        unawaited(showSessionOverview(t.element(find.byType(TranscriptView)), t.widget<TranscriptView>(find.byType(TranscriptView)).session));
-        await t.pump(const Duration(milliseconds: 400));
-      },
-    ),
-    'bar-context': (
-      () => session(const AgentSessionState('s1').apply(parse({'sessionUpdate': 'usage_update', 'used': 182000, 'size': 200000}))),
-      (s) => Scaffold(body: SessionBar(session: s)),
-      null,
-    ),
-  };
+        'card-failed': (
+          () => session(
+            play([
+              launch('t', type: 'Explore', status: 'in_progress'),
+              childTool('c', 't'),
+              toolUpdate('t', status: 'failed'),
+            ], active: false),
+          ),
+          transcript,
+          null,
+        ),
+        'card-waiting-dock': (
+          () => session(
+            play([launch('t', type: 'Explore', status: 'in_progress'), childTool('c', 't')])
+                .withPending(PendingPermission(1, askFor('c'))),
+          ),
+          transcript,
+          null,
+        ),
+        'parallel-3': (
+          () => session(
+            play([
+              launch('a', description: 'Check the parser', type: 'Explore', status: 'in_progress'),
+              launch('b', description: long, type: 'general-purpose', status: 'in_progress'),
+              launch('c', description: 'Đọc tài liệu về chuẩn hóa Unicode', type: 'Explore', status: 'in_progress'),
+              childTool('x', 'a'),
+              finished('c'),
+            ]),
+          ),
+          transcript,
+          null,
+        ),
+        'omp-group': (
+          () => session(
+            play(
+              ompTask('call', [
+                ompProgress(0, 'Alpha', 'running'),
+                ompProgress(
+                  1,
+                  'Beta',
+                  'pending',
+                  extra: {
+                    'retryState': {
+                      'attempt': 2,
+                      'maxAttempts': 5,
+                      'delayMs': 8000,
+                      'errorMessage': '429 rate limited',
+                      'startedAt': 1,
+                    },
+                  },
+                ),
+              ]),
+            ),
+          ),
+          transcript,
+          null,
+        ),
+        'roster-25': (
+          () => session(play(many()).withPending(PendingPermission(1, askFor('askc')))),
+          (s) => Scaffold(
+            body: SafeArea(
+              child: Column(
+                children: [
+                  SubagentsChip(session: s),
+                  Expanded(child: TranscriptView(session: s)),
+                ],
+              ),
+            ),
+          ),
+          (t) async {
+            await t.tap(find.textContaining('needs you'));
+            await t.pump(const Duration(milliseconds: 400));
+          },
+        ),
+        'drill-in': (() => session(child()), (s) => SubagentRunScreen(session: s, runId: 't'), null),
+        'summary-omp': (
+          () => session(
+            play(
+              ompTask('call', [
+                ompProgress(
+                  0,
+                  'Alpha',
+                  'running',
+                  extra: {
+                    'assignment': '## Task\n\nRead `lib/a.ts` and report:\n\n- every call site\n- why it matters\n\n```ts\nfoo(bar);\n```',
+                  },
+                ),
+              ]),
+            ),
+          ),
+          (s) => SubagentRunScreen(session: s, runId: 'call#0'),
+          null,
+        ),
+        'summary-omp-failed': (
+          () => session(
+            play(
+              ompTask(
+                'call',
+                [ompProgress(0, 'Beta', 'failed')],
+                results: [
+                  {
+                    'index': 0,
+                    'id': 'Beta',
+                    'agent': 'scout',
+                    'exitCode': 1,
+                    'output': 'Partial notes:\n\n- parser.dart\n- locale.dart',
+                    'error': 'Provider quota exhausted',
+                    'durationMs': 9000,
+                  },
+                ],
+                status: 'completed',
+              ),
+              active: false,
+            ),
+          ),
+          (s) => SubagentRunScreen(session: s, runId: 'call#0'),
+          null,
+        ),
+        'overview-full': (
+          () => session(overviewState()),
+          sheetHost,
+          (t) async {
+            unawaited(
+              showSessionOverview(
+                t.element(find.byType(TranscriptView)),
+                t.widget<TranscriptView>(find.byType(TranscriptView)).session,
+              ),
+            );
+            await t.pump(const Duration(milliseconds: 400));
+          },
+        ),
+        'overview-min': (
+          () => session(stateWith(items: [userAt('u', 'Say hi', 0)])),
+          sheetHost,
+          (t) async {
+            unawaited(
+              showSessionOverview(
+                t.element(find.byType(TranscriptView)),
+                t.widget<TranscriptView>(find.byType(TranscriptView)).session,
+              ),
+            );
+            await t.pump(const Duration(milliseconds: 400));
+          },
+        ),
+        'bar-context': (
+          () => session(
+            const AgentSessionState('s1')
+                .apply(parse({'sessionUpdate': 'usage_update', 'used': 182000, 'size': 200000})),
+          ),
+          (s) => Scaffold(body: SessionBar(session: s)),
+          null,
+        ),
+      };
 
   for (final entry in scenarios.entries) {
     for (final brightness in Brightness.values) {
       for (final (size, scale) in [(const Size(412, 892), 1.0), (const Size(320, 640), 1.6)]) {
         testWidgets('${entry.key} ${brightness.name} ${size.width.toInt()} x$scale', (tester) async {
           final (make, home, action) = entry.value;
-          await shoot(tester, entry.key, home, make(), size, brightness, scale, then: action == null ? null : () => action(tester));
+          await shoot(
+            tester,
+            entry.key,
+            home,
+            make(),
+            size,
+            brightness,
+            scale,
+            then: action == null ? null : () => action(tester),
+          );
         });
       }
     }

@@ -129,7 +129,9 @@ final class DumpOut {
 }
 
 /// A table row: cells joined with ` | `, an empty cell as `""`.
-String dumpCells(Iterable<Iterable<DInline>> cells) => cells.map((c) {
+String dumpCells(Iterable<Iterable<DInline>> cells) => cells
+    .map((c) {
       final d = dumpInlines(c);
       return d.isEmpty ? '""' : d;
-    }).join(' | ');
+    })
+    .join(' | ');

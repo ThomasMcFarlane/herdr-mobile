@@ -223,7 +223,10 @@ void main() {
       await tester.pumpWidget(
         ChangeNotifierProvider<Dictation>.value(
           value: dictation,
-          child: MaterialApp(theme: AppTheme.light(), home: AgentSessionScreen(key: ObjectKey(session), session: session)),
+          child: MaterialApp(
+            theme: AppTheme.light(),
+            home: AgentSessionScreen(key: ObjectKey(session), session: session),
+          ),
         ),
       );
       await tester.pump(const Duration(milliseconds: 100));
@@ -249,7 +252,11 @@ void main() {
       await tester.pump();
       expect(tester.widget<TextField>(find.byType(TextField).last).controller!.text, 'run the tests');
       expect(session.sent, isEmpty);
-      expect(find.byIcon(LucideIcons.mic), findsOneWidget, reason: 'still the stop button while it listens, though the box has text');
+      expect(
+        find.byIcon(LucideIcons.mic),
+        findsOneWidget,
+        reason: 'still the stop button while it listens, though the box has text',
+      );
       await tester.tap(find.byIcon(LucideIcons.mic));
       await tester.pump();
       expect(find.byIcon(LucideIcons.arrowUp), findsOneWidget);
@@ -266,7 +273,9 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       final position = tester
-          .state<ScrollableState>(find.descendant(of: find.byType(EditableText).last, matching: find.byType(Scrollable)))
+          .state<ScrollableState>(
+            find.descendant(of: find.byType(EditableText).last, matching: find.byType(Scrollable)),
+          )
           .position;
       expect(position.maxScrollExtent, greaterThan(0), reason: 'more than five lines');
       expect(position.pixels, position.maxScrollExtent);
@@ -291,7 +300,10 @@ void main() {
       tester.view.devicePixelRatio = 2;
       addTearDown(tester.view.reset);
       await tester.pumpWidget(
-        MaterialApp(theme: AppTheme.light(), home: AgentSessionScreen(key: ObjectKey(session), session: session)),
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: AgentSessionScreen(key: ObjectKey(session), session: session),
+        ),
       );
       await tester.pump(const Duration(milliseconds: 100));
       expect(find.byIcon(LucideIcons.mic), findsNothing);

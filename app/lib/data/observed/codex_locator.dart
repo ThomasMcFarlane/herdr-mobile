@@ -22,8 +22,7 @@ class CodexLocator implements SessionLogLocator {
       'herdr does not know which session this Codex runs. Install herdr\'s hook (the terminal\'s ⋯ menu has '
       '"Read as chat…", or run "herdr integration install codex" on the machine; Codex asks you to trust it), then run "codex resume".';
 
-  static const compressedWhy =
-      'Codex compressed this session after a week idle. Resume it in Codex to read it here.';
+  static const compressedWhy = 'Codex compressed this session after a week idle. Resume it in Codex to read it here.';
 
   static const notYetWhy = 'Codex has not written this session yet.';
 
@@ -128,9 +127,7 @@ class CodexLocator implements SessionLogLocator {
       return await files.list(dir);
     } on RemoteFileException catch (e) {
       return switch (e.kind) {
-        RemoteFileErrorKind.notFound ||
-        RemoteFileErrorKind.permission ||
-        RemoteFileErrorKind.notADirectory => null,
+        RemoteFileErrorKind.notFound || RemoteFileErrorKind.permission || RemoteFileErrorKind.notADirectory => null,
         _ => throw e,
       };
     }

@@ -68,9 +68,7 @@ class TerminalSettings extends ChangeNotifier {
       saved = (fontSize: null, wrap: null);
     }
     final fontSize = saved.fontSize;
-    _fontSize = fontSize == null || !fontSize.isFinite
-        ? defaultTerminalFontSize
-        : _clamp(fontSize);
+    _fontSize = fontSize == null || !fontSize.isFinite ? defaultTerminalFontSize : _clamp(fontSize);
     _wrap = saved.wrap ?? false;
     notifyListeners();
   }
@@ -98,6 +96,5 @@ class TerminalSettings extends ChangeNotifier {
     return _store.writeWrap(_wrap);
   }
 
-  static double _clamp(double v) =>
-      v.clamp(minTerminalFontSize, maxTerminalFontSize).toDouble();
+  static double _clamp(double v) => v.clamp(minTerminalFontSize, maxTerminalFontSize).toDouble();
 }

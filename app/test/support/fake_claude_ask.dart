@@ -155,7 +155,9 @@ class FakeClaudeAsk {
   // -- the screen ----------------------------------------------------------------
 
   String screen() {
-    if (!open) return '⏺ ${submitted ? 'User answered Claude\'s questions' : 'User declined to answer questions'}\n\n❯ \n';
+    if (!open) {
+      return '⏺ ${submitted ? 'User answered Claude\'s questions' : 'User declined to answer questions'}\n\n❯ \n';
+    }
     final rule = '─' * cols;
     final out = <String>[
       ' ▐▛███▛█   Claude Code v2.1.295',
@@ -168,7 +170,10 @@ class FakeClaudeAsk {
     final strip = _strip();
     if (tab == questions.length) {
       out.addAll([strip, '', 'Review your answers', '']);
-      final answered = [for (var i = 0; i < questions.length; i++) if (answerOf(i) != null) i];
+      final answered = [
+        for (var i = 0; i < questions.length; i++)
+          if (answerOf(i) != null) i,
+      ];
       if (answered.length < questions.length) out.add('⚠ You have not answered all questions');
       for (final i in answered) {
         out.addAll([' ● ${questions[i].question}', '   → ${answerOf(i)}']);
@@ -208,9 +213,7 @@ class FakeClaudeAsk {
 
   String _strip() {
     if (_lone) return ' ☐ ${questions.single.id} ';
-    final tabs = [
-      for (var i = 0; i < questions.length; i++) '${answerOf(i) != null ? '☒' : '☐'} ${questions[i].id}',
-    ];
+    final tabs = [for (var i = 0; i < questions.length; i++) '${answerOf(i) != null ? '☒' : '☐'} ${questions[i].id}'];
     return '←  ${tabs.join('  ')}  ✔ Submit  →';
   }
 

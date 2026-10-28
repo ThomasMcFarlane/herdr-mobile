@@ -49,12 +49,7 @@ ToolOutput _out(AgentSessionState s, String id) => s.toolCall(id)!.output!;
 void main() {
   group('command output from _meta', () {
     test('codex-acp: deltas append in arrival order, the exit and cwd are kept', () {
-      final s = _fold([
-        _start('c1'),
-        _delta('c1', 'a.txt\n'),
-        _delta('c1', 'b.txt\n'),
-        _exit('c1', code: 0),
-      ]);
+      final s = _fold([_start('c1'), _delta('c1', 'a.txt\n'), _delta('c1', 'b.txt\n'), _exit('c1', code: 0)]);
       final call = s.toolCall('c1')!;
       expect(call.output!.text, 'a.txt\nb.txt\n');
       expect(call.output!.exited, isTrue);
@@ -191,7 +186,13 @@ void main() {
       expect(s.toolCall('c')!.meta!.containsKey('terminal_input'), isFalse);
 
       s = _fold([
-        {'sessionUpdate': 'tool_call', 'toolCallId': 'm', 'title': 'mcp.docs.search', 'kind': 'execute', '_meta': {'is_mcp_tool_call': true}},
+        {
+          'sessionUpdate': 'tool_call',
+          'toolCallId': 'm',
+          'title': 'mcp.docs.search',
+          'kind': 'execute',
+          '_meta': {'is_mcp_tool_call': true},
+        },
         {
           'sessionUpdate': 'tool_call_update',
           'toolCallId': 'm',
@@ -279,7 +280,13 @@ void main() {
 
     test('the row sits after what the agent did, with a stable key of its own', () {
       final s = turn()
-          .apply(_u({'sessionUpdate': 'agent_message_chunk', 'messageId': 'a', 'content': {'type': 'text', 'text': 'cut o'}}))
+          .apply(
+            _u({
+              'sessionUpdate': 'agent_message_chunk',
+              'messageId': 'a',
+              'content': {'type': 'text', 'text': 'cut o'},
+            }),
+          )
           .withTurnEnded(StopReason.maxTokens);
       expect(s.items.map((i) => i.runtimeType), [TranscriptMessage, TranscriptMessage, TranscriptStop]);
       final keys = s.items.map((i) => i.key).toList();
@@ -317,9 +324,13 @@ void main() {
         'sessionUpdate': 'agent_message_chunk',
         'messageId': 'a',
         'content': {'type': 'text', 'text': 'x'},
-        '_meta': {'claudeCode': {'parentToolUseId': 'tu1'}},
+        '_meta': {
+          'claudeCode': {'parentToolUseId': 'tu1'},
+        },
       }) as MessageChunk;
-      expect(chunk.meta, {'claudeCode': {'parentToolUseId': 'tu1'}});
+      expect(chunk.meta, {
+        'claudeCode': {'parentToolUseId': 'tu1'},
+      });
 
       final upsert = _u({
         'sessionUpdate': 'agent_message',
@@ -332,12 +343,22 @@ void main() {
       final info = _u({
         'sessionUpdate': 'session_info_update',
         'title': 'T',
-        '_meta': {'piAcp': {'queueDepth': 0, 'running': true}},
+        '_meta': {
+          'piAcp': {'queueDepth': 0, 'running': true},
+        },
       }) as SessionInfoUpdate;
-      expect(info.meta, {'piAcp': {'queueDepth': 0, 'running': true}});
+      expect(info.meta, {
+        'piAcp': {'queueDepth': 0, 'running': true},
+      });
       expect(info.title, 'T');
 
-      expect(_u({'sessionUpdate': 'agent_message_chunk', 'content': {'type': 'text', 'text': 'x'}}), isA<MessageChunk>().having((c) => c.meta, 'meta', isNull));
+      expect(
+        _u({
+          'sessionUpdate': 'agent_message_chunk',
+          'content': {'type': 'text', 'text': 'x'},
+        }),
+        isA<MessageChunk>().having((c) => c.meta, 'meta', isNull),
+      );
     });
 
     test('the state keeps the last session_info _meta, and keeps it through updates without one', () {
@@ -345,15 +366,30 @@ void main() {
         {
           'sessionUpdate': 'session_info_update',
           'title': 'T',
-          '_meta': {'piAcp': {'running': true}},
+          '_meta': {
+            'piAcp': {'running': true},
+          },
         },
       ]);
-      expect(s.infoMeta, {'piAcp': {'running': true}});
+      expect(s.infoMeta, {
+        'piAcp': {'running': true},
+      });
       s = s.apply(_u({'sessionUpdate': 'session_info_update', 'title': 'U'}));
       expect(s.title, 'U');
-      expect(s.infoMeta, {'piAcp': {'running': true}});
-      s = s.apply(_u({'sessionUpdate': 'session_info_update', '_meta': {'piAcp': {'running': false}}}));
-      expect(s.infoMeta, {'piAcp': {'running': false}});
+      expect(s.infoMeta, {
+        'piAcp': {'running': true},
+      });
+      s = s.apply(
+        _u({
+          'sessionUpdate': 'session_info_update',
+          '_meta': {
+            'piAcp': {'running': false},
+          },
+        }),
+      );
+      expect(s.infoMeta, {
+        'piAcp': {'running': false},
+      });
       expect(s.title, 'U');
     });
 
@@ -377,7 +413,9 @@ void main() {
     test('PromptResponse.usage and _meta are parsed, null counts stay null', () {
       final r = PromptResult.parse({
         'stopReason': 'end_turn',
-        '_meta': {'quota': {'token_count': null}},
+        '_meta': {
+          'quota': {'token_count': null},
+        },
         'usage': {
           'totalTokens': 53000,
           'inputTokens': 35000,
@@ -387,7 +425,9 @@ void main() {
         },
       });
       expect(r.stopReason, StopReason.endTurn);
-      expect(r.meta, {'quota': {'token_count': null}});
+      expect(r.meta, {
+        'quota': {'token_count': null},
+      });
       expect(r.usage!.totalTokens, 53000);
       expect(r.usage!.inputTokens, 35000);
       expect(r.usage!.outputTokens, 12000);
@@ -423,8 +463,15 @@ void main() {
       var s = const AgentSessionState('s');
       expect(s.lastActivityAt, isNull);
       final updates = <Json>[
-        {'sessionUpdate': 'agent_message_chunk', 'messageId': 'a', 'content': {'type': 'text', 'text': 'x'}},
-        {'sessionUpdate': 'agent_thought_chunk', 'content': {'type': 'text', 'text': 'x'}},
+        {
+          'sessionUpdate': 'agent_message_chunk',
+          'messageId': 'a',
+          'content': {'type': 'text', 'text': 'x'},
+        },
+        {
+          'sessionUpdate': 'agent_thought_chunk',
+          'content': {'type': 'text', 'text': 'x'},
+        },
         _start('c'),
         _delta('c', 'x'),
         {'sessionUpdate': 'plan', 'entries': []},
@@ -442,7 +489,13 @@ void main() {
     });
 
     test('without a time the reducer reads no clock and an unknown update is still the same instance', () {
-      final s = const AgentSessionState('s').apply(_u({'sessionUpdate': 'agent_message_chunk', 'content': {'type': 'text', 'text': 'x'}}), at: t0);
+      final s = const AgentSessionState('s').apply(
+        _u({
+          'sessionUpdate': 'agent_message_chunk',
+          'content': {'type': 'text', 'text': 'x'},
+        }),
+        at: t0,
+      );
       final unknown = _u({'sessionUpdate': 'telepathy_update'});
       expect(identical(s.apply(unknown), s), isTrue);
       expect(s.apply(unknown).lastActivityAt, t0);
@@ -468,14 +521,44 @@ void main() {
     });
 
     test('codex autoResolutionMs becomes a Duration; null, missing and nonsense mean never', () {
-      expect(ask({'codex': {'autoResolutionMs': 60000}}).autoResolution, const Duration(minutes: 1));
-      expect(ask({'codex': {'autoResolutionMs': 1500.0}}).autoResolution, const Duration(milliseconds: 1500));
-      expect(ask({'codex': {'autoResolutionMs': 0}}).autoResolution, Duration.zero);
-      expect(ask({'codex': {'autoResolutionMs': null}}).autoResolution, isNull);
+      expect(
+        ask({
+          'codex': {'autoResolutionMs': 60000},
+        }).autoResolution,
+        const Duration(minutes: 1),
+      );
+      expect(
+        ask({
+          'codex': {'autoResolutionMs': 1500.0},
+        }).autoResolution,
+        const Duration(milliseconds: 1500),
+      );
+      expect(
+        ask({
+          'codex': {'autoResolutionMs': 0},
+        }).autoResolution,
+        Duration.zero,
+      );
+      expect(
+        ask({
+          'codex': {'autoResolutionMs': null},
+        }).autoResolution,
+        isNull,
+      );
       expect(ask({'codex': {}}).autoResolution, isNull);
       expect(ask({'codex': 'x'}).autoResolution, isNull);
-      expect(ask({'codex': {'autoResolutionMs': '60000'}}).autoResolution, isNull);
-      expect(ask({'codex': {'autoResolutionMs': -5}}).autoResolution, isNull);
+      expect(
+        ask({
+          'codex': {'autoResolutionMs': '60000'},
+        }).autoResolution,
+        isNull,
+      );
+      expect(
+        ask({
+          'codex': {'autoResolutionMs': -5},
+        }).autoResolution,
+        isNull,
+      );
       expect(ask(null).autoResolution, isNull);
     });
 

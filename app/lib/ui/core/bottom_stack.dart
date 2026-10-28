@@ -233,23 +233,23 @@ class _BottomStackTransitionState extends State<BottomStackTransition> with Sing
   // hidden, the child is dropped.
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
-        animation: _curve,
-        builder: (context, _) {
-          final t = _curve.value;
-          if (t <= 0) return const SizedBox.shrink();
-          final slide = widget.slide && !Motion.reduced(context);
-          return IgnorePointer(
-            ignoring: t < 1,
-            child: Opacity(
-              opacity: t,
-              child: Transform.translate(
-                offset: Offset(0, slide ? (1 - t) * Motion.travel : 0),
-                child: widget.builder(context),
-              ),
-            ),
-          );
-        },
+    animation: _curve,
+    builder: (context, _) {
+      final t = _curve.value;
+      if (t <= 0) return const SizedBox.shrink();
+      final slide = widget.slide && !Motion.reduced(context);
+      return IgnorePointer(
+        ignoring: t < 1,
+        child: Opacity(
+          opacity: t,
+          child: Transform.translate(
+            offset: Offset(0, slide ? (1 - t) * Motion.travel : 0),
+            child: widget.builder(context),
+          ),
+        ),
       );
+    },
+  );
 }
 
 /// Floating pill tab bar ([FloatingBarPill] in a [FloatingBarSlot]): three
@@ -272,12 +272,7 @@ class _BottomStackTransitionState extends State<BottomStackTransition> with Sing
 /// colour tween) drifted apart, and the label weight, which cannot be
 /// interpolated, snapped on its own: it no longer changes.
 class FloatingTabBar extends StatefulWidget {
-  const FloatingTabBar({
-    super.key,
-    required this.tabs,
-    required this.index,
-    required this.onChanged,
-  });
+  const FloatingTabBar({super.key, required this.tabs, required this.index, required this.onChanged});
 
   final List<TabSpec> tabs;
   final int index;
@@ -296,10 +291,7 @@ class FloatingTabBar extends StatefulWidget {
 class _FloatingTabBarState extends State<FloatingTabBar> with SingleTickerProviderStateMixin {
   // The capsule's place in tab units (0 is the first cell). It stops when it
   // arrives; nothing runs at rest.
-  late final AnimationController _place = AnimationController.unbounded(
-    vsync: this,
-    value: widget.index.toDouble(),
-  );
+  late final AnimationController _place = AnimationController.unbounded(vsync: this, value: widget.index.toDouble());
 
   final _cellsKey = GlobalKey();
 
@@ -370,9 +362,11 @@ class _FloatingTabBarState extends State<FloatingTabBar> with SingleTickerProvid
       _place.value = target.toDouble();
     } else {
       _springTo = target;
-      unawaited(_place.animateWith(
-        SpringSimulation(Springs.snap, _place.value, target.toDouble(), velocity / cell, tolerance: Springs.scale),
-      ));
+      unawaited(
+        _place.animateWith(
+          SpringSimulation(Springs.snap, _place.value, target.toDouble(), velocity / cell, tolerance: Springs.scale),
+        ),
+      );
     }
     if (target != widget.index) {
       widget.onChanged(target);
@@ -395,8 +389,7 @@ class _FloatingTabBarState extends State<FloatingTabBar> with SingleTickerProvid
   }
 
   @override
-  Widget build(BuildContext context) =>
-      ToastShelf(lift: FloatingBar.clearance(context), child: _bar(context));
+  Widget build(BuildContext context) => ToastShelf(lift: FloatingBar.clearance(context), child: _bar(context));
 
   Widget _bar(BuildContext context) {
     final ds = context.ds;
@@ -417,54 +410,54 @@ class _FloatingTabBarState extends State<FloatingTabBar> with SingleTickerProvid
           duration: Motion.settle,
           curve: Motion.easeOut,
           child: FloatingBarPill(
-          child: SizedBox(
-            key: _cellsKey,
-            child: AnimatedBuilder(
-              animation: _place,
-              builder: (context, _) {
-                final at = _place.value;
-                return Stack(
-                  children: [
-                    // One capsule under the cells that travels from where
-                    // it was to where it is, so the eye follows it; the
-                    // cells themselves never move. A tint of the accent: the
-                    // hue says "selected", so the capsule can stay faint
-                    // (grey on grey said it too quietly).
-                    Align(
-                      alignment: Alignment(n < 2 ? 0 : -1 + 2 * at / (n - 1), 0),
-                      child: FractionallySizedBox(
-                        key: FloatingTabBar.capsuleKey,
-                        widthFactor: 1 / n,
-                        heightFactor: 1,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: ds.accentWash,
-                            borderRadius: BorderRadius.circular(Radii.pill),
+            child: SizedBox(
+              key: _cellsKey,
+              child: AnimatedBuilder(
+                animation: _place,
+                builder: (context, _) {
+                  final at = _place.value;
+                  return Stack(
+                    children: [
+                      // One capsule under the cells that travels from where
+                      // it was to where it is, so the eye follows it; the
+                      // cells themselves never move. A tint of the accent: the
+                      // hue says "selected", so the capsule can stay faint
+                      // (grey on grey said it too quietly).
+                      Align(
+                        alignment: Alignment(n < 2 ? 0 : -1 + 2 * at / (n - 1), 0),
+                        child: FractionallySizedBox(
+                          key: FloatingTabBar.capsuleKey,
+                          widthFactor: 1 / n,
+                          heightFactor: 1,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: ds.accentWash,
+                              borderRadius: BorderRadius.circular(Radii.pill),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    Row(
-                      children: [
-                        for (final (i, tab) in widget.tabs.indexed)
-                          Expanded(
-                            child: _TabItem(
-                              key: FloatingTabBar.tabKey(tab.label),
-                              tab: tab,
-                              selected: i == widget.index,
-                              // 1 with the capsule centred under this cell, 0 a cell away.
-                              near: (1 - (at - i).abs()).clamp(0.0, 1.0).toDouble(),
-                              onTap: () => widget.onChanged(i),
+                      Row(
+                        children: [
+                          for (final (i, tab) in widget.tabs.indexed)
+                            Expanded(
+                              child: _TabItem(
+                                key: FloatingTabBar.tabKey(tab.label),
+                                tab: tab,
+                                selected: i == widget.index,
+                                // 1 with the capsule centred under this cell, 0 a cell away.
+                                near: (1 - (at - i).abs()).clamp(0.0, 1.0).toDouble(),
+                                onTap: () => widget.onChanged(i),
+                              ),
                             ),
-                          ),
-                      ],
-                    ),
-                  ],
-                );
-              },
+                        ],
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
           ),
-        ),
         ),
       ),
     );
@@ -472,13 +465,7 @@ class _FloatingTabBarState extends State<FloatingTabBar> with SingleTickerProvid
 }
 
 class _TabItem extends StatelessWidget {
-  const _TabItem({
-    super.key,
-    required this.tab,
-    required this.selected,
-    required this.near,
-    required this.onTap,
-  });
+  const _TabItem({super.key, required this.tab, required this.selected, required this.near, required this.onTap});
 
   final TabSpec tab;
   final bool selected;
@@ -499,8 +486,8 @@ class _TabItem extends StatelessWidget {
       semanticLabel: badge > 0
           ? '${tab.label}, $badge ${tab.badgeLabel}'
           : tab.mark
-              ? '${tab.label}, ${tab.markLabel}'
-              : tab.label,
+          ? '${tab.label}, ${tab.markLabel}'
+          : tab.label,
       builder: (context, pressed) => SizedBox(
         height: FloatingBar.cell,
         // The press warms the cell at once; the capsule's place does the rest.
@@ -546,12 +533,7 @@ class _TabItem extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: Gap.hair),
-                Text(
-                  tab.label,
-                  maxLines: 1,
-                  softWrap: false,
-                  style: Type.caption.copyWith(color: color),
-                ),
+                Text(tab.label, maxLines: 1, softWrap: false, style: Type.caption.copyWith(color: color)),
               ],
             );
           },

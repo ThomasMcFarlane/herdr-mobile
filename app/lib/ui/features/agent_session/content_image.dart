@@ -7,7 +7,9 @@ import 'package:flutter/material.dart';
 import '../../../data/acp/acp_models.dart';
 import '../../../data/observed/log_picture.dart';
 import '../../../data/services/disk_cache.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../../data/services/image_decode.dart' show DecodedImage;
 import '../files/file_format.dart';
 import 'content_chip.dart';
@@ -85,9 +87,11 @@ class _LogImageViewState extends State<LogImageView> {
     // otherwise as soon as it is: no tap, no radio.
     final store = DiskCache.shared;
     if (!_requested) {
-      unawaited(store.ready.then((_) {
-        if (mounted && !_requested && store.knows(widget.block.key)) setState(() => _requested = true);
-      }));
+      unawaited(
+        store.ready.then((_) {
+          if (mounted && !_requested && store.knows(widget.block.key)) setState(() => _requested = true);
+        }),
+      );
     }
   }
 
@@ -322,7 +326,10 @@ class _Frame extends StatelessWidget {
       height: height,
       child: DecoratedBox(
         position: DecorationPosition.foreground,
-        decoration: BoxDecoration(borderRadius: radius, border: Border.all(color: ds.hairline)),
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          border: Border.all(color: ds.hairline),
+        ),
         child: ClipRRect(borderRadius: radius, child: child),
       ),
     );
@@ -330,11 +337,8 @@ class _Frame extends StatelessWidget {
 }
 
 /// `Image, image/png, chart.png`: what a screen reader says for a picture.
-String imageSemanticLabel(ImageBlock block, String name) => [
-  'Image',
-  if (block.mimeType.isNotEmpty) block.mimeType,
-  if (name.isNotEmpty) visibleText(name),
-].join(', ');
+String imageSemanticLabel(ImageBlock block, String name) =>
+    ['Image', if (block.mimeType.isNotEmpty) block.mimeType, if (name.isNotEmpty) visibleText(name)].join(', ');
 
 /// The frame an image that has not loaded (or cannot) holds.
 const _placeholder = Size(120, 96);

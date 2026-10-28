@@ -10,10 +10,12 @@ import 'package:herdr_mobile/ui/render/mermaid/mermaid_layout.dart';
 const _flow = 'flowchart TD\n A[Start] --> B{Ok?}\n B -->|yes| C[Ship]\n B -->|no| A';
 
 /// 14 nodes in a column: taller than the 420 dp a diagram shows before "Show all".
-final _tall = 'flowchart TB\n${[for (var i = 0; i < 13; i++) ' N$i[Step number $i] --> N${i + 1}[Step number ${i + 1}]'].join('\n')}';
+final _tall =
+    'flowchart TB\n${[for (var i = 0; i < 13; i++) ' N$i[Step number $i] --> N${i + 1}[Step number ${i + 1}]'].join('\n')}';
 
 /// 8 participants: wider than a phone at 80%.
-final _wide = 'sequenceDiagram\n${[for (var i = 0; i < 8; i++) ' participant P$i as Participant number $i'].join('\n')}\n P0->>P7: hello';
+final _wide =
+    'sequenceDiagram\n${[for (var i = 0; i < 8; i++) ' participant P$i as Participant number $i'].join('\n')}\n P0->>P7: hello';
 
 MdBlock _block(String source, {String lang = 'mermaid'}) => parseMd('```$lang\n$source\n```').blocks.single;
 
@@ -38,13 +40,21 @@ class _HarnessState extends State<_Harness> {
       child: SizedBox(
         width: 328,
         child: SingleChildScrollView(
-          child: MdBlockView(block: widget.block, tail: widget.tail, expanded: expanded, onToggleExpanded: () => setState(() => expanded = !expanded)),
+          child: MdBlockView(
+            block: widget.block,
+            tail: widget.tail,
+            expanded: expanded,
+            onToggleExpanded: () => setState(() => expanded = !expanded),
+          ),
         ),
       ),
     );
     final open = widget.open;
     if (open != null) view = MdDiagramOpener(open: open, child: view);
-    return MaterialApp(theme: AppTheme.light(), home: Scaffold(body: view));
+    return MaterialApp(
+      theme: AppTheme.light(),
+      home: Scaffold(body: view),
+    );
   }
 }
 
@@ -75,7 +85,9 @@ void main() {
     semantics.dispose();
   });
 
-  testWidgets('a fence that never closed (a cut-off message, a thought arriving) is code, not a diagram', (tester) async {
+  testWidgets('a fence that never closed (a cut-off message, a thought arriving) is code, not a diagram', (
+    tester,
+  ) async {
     final semantics = tester.ensureSemantics();
     final block = parseMd('Here:\n\n```mermaid\nflowchart TD\n A-->B\n B-->C').blocks.last as MdCode;
     expect(block.closed, isFalse);
@@ -87,7 +99,9 @@ void main() {
     semantics.dispose();
   });
 
-  testWidgets('a diagram the cache holds is on the first frame, with no code block that jumps taller after it', (tester) async {
+  testWidgets('a diagram the cache holds is on the first frame, with no code block that jumps taller after it', (
+    tester,
+  ) async {
     final semantics = tester.ensureSemantics();
     final h = _Harness(block: _block(_flow));
     await _pump(tester, h);
@@ -95,7 +109,11 @@ void main() {
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpWidget(h);
-    expect(find.bySemanticsLabel('Diagram, flowchart'), findsOneWidget, reason: 'drawn by the first frame, not one microtask later');
+    expect(
+      find.bySemanticsLabel('Diagram, flowchart'),
+      findsOneWidget,
+      reason: 'drawn by the first frame, not one microtask later',
+    );
     expect(find.text('mermaid'), findsNothing);
     semantics.dispose();
   });
@@ -129,7 +147,12 @@ void main() {
 
   testWidgets('a diagram wider than the block scrolls sideways', (tester) async {
     await _pump(tester, _Harness(block: _block(_wide)));
-    final scroll = tester.widget<SingleChildScrollView>(find.descendant(of: find.byType(MdBlockView), matching: find.byWidgetPredicate((w) => w is SingleChildScrollView && w.scrollDirection == Axis.horizontal)));
+    final scroll = tester.widget<SingleChildScrollView>(
+      find.descendant(
+        of: find.byType(MdBlockView),
+        matching: find.byWidgetPredicate((w) => w is SingleChildScrollView && w.scrollDirection == Axis.horizontal),
+      ),
+    );
     expect(scroll.controller!.position.maxScrollExtent, greaterThan(0));
   });
 

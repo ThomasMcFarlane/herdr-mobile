@@ -32,7 +32,8 @@ import '../support/files_support.dart';
 import '../support/photo_support.dart' show FakeExport;
 import '../support/shot.dart' show loadAppFonts;
 
-const _name = 'Bản ghi màn hình buổi demo thanh toán — phiên bản cuối cùng (đã chỉnh sửa lần 3) 2026-05-20 at 09.30.mp4';
+const _name =
+    'Bản ghi màn hình buổi demo thanh toán — phiên bản cuối cùng (đã chỉnh sửa lần 3) 2026-05-20 at 09.30.mp4';
 const _dir = '/home/dev/payments-api/docs/demo';
 
 void main() {
@@ -110,10 +111,7 @@ void main() {
     await tester.pump();
   }
 
-  final sizes = [
-    (const Size(412, 892), Brightness.light, 1.0),
-    (const Size(320, 640), Brightness.dark, 1.6),
-  ];
+  final sizes = [(const Size(412, 892), Brightness.light, 1.0), (const Size(320, 640), Brightness.dark, 1.6)];
   const big = videoAutoCopyLimit * 10;
 
   for (final (size, b, scale) in sizes) {
@@ -150,7 +148,15 @@ void main() {
       await shoot(tester, 'copy-failed', size, b, scale, bytes: 4000000, staging: staging);
     });
     testWidgets('cannot-play ${size.width} $b', (tester) async {
-      await shoot(tester, 'cannot-play', size, b, scale, bytes: 4000000, openFails: PlatformException(code: 'unsupported'));
+      await shoot(
+        tester,
+        'cannot-play',
+        size,
+        b,
+        scale,
+        bytes: 4000000,
+        openFails: PlatformException(code: 'unsupported'),
+      );
     });
     testWidgets('binary-card ${size.width} $b', (tester) async {
       await shoot(tester, 'binary-card', size, b, scale, bytes: 4000000, file: 'build-output-2026-05-20.dat');

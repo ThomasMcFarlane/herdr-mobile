@@ -57,41 +57,37 @@ class BatchTarget {
     required String title,
     required String agent,
     required AgentStatus status,
-  }) =>
-      BatchTarget(
-        key: '${machine.profile.id}/$paneId',
-        kind: BatchKind.terminal,
-        machineId: machine.profile.id,
-        machineLabel: machine.profile.label,
-        title: title,
-        agent: agent,
-        status: status,
-        unreachable: machine.isLive ? null : 'offline',
-        stop: () => machine.api.sendKeys(paneId, const ['esc']),
-        message: (text) async {
-          await machine.api.sendLine(paneId, text);
-          machine.markReviewed(paneId);
-        },
-        close: () async {
-          try {
-            await machine.api.closePane(paneId);
-          } on HerdrApiException catch (e) {
-            // Already gone is what the person wanted.
-            if (!e.isNotFound) rethrow;
-          }
-        },
-        settle: machine.refresh,
-      );
+  }) => BatchTarget(
+    key: '${machine.profile.id}/$paneId',
+    kind: BatchKind.terminal,
+    machineId: machine.profile.id,
+    machineLabel: machine.profile.label,
+    title: title,
+    agent: agent,
+    status: status,
+    unreachable: machine.isLive ? null : 'offline',
+    stop: () => machine.api.sendKeys(paneId, const ['esc']),
+    message: (text) async {
+      await machine.api.sendLine(paneId, text);
+      machine.markReviewed(paneId);
+    },
+    close: () async {
+      try {
+        await machine.api.closePane(paneId);
+      } on HerdrApiException catch (e) {
+        // Already gone is what the person wanted.
+        if (!e.isNotFound) rethrow;
+      }
+    },
+    settle: machine.refresh,
+  );
 
   /// An agent session. [status] is the board's status for it.
   ///
   /// A prompt is started, not awaited: `send` returns when the turn is over,
   /// which would hold every later target of the machine for minutes. It never
   /// throws, and only a live, idle session is sent one (see [BatchPlan.of]).
-  factory BatchTarget.session({
-    required AgentSessionView session,
-    required AgentStatus status,
-  }) {
+  factory BatchTarget.session({required AgentSessionView session, required AgentStatus status}) {
     final machine = session.machine;
     return BatchTarget(
       key: session.key,
@@ -195,10 +191,16 @@ class BatchPlan {
   final List<BatchSkip> skipped;
 
   /// The skipped agents that wait for an answer.
-  List<BatchSkip> get waiting => [for (final s in skipped) if (s.kind == SkipKind.waiting) s];
+  List<BatchSkip> get waiting => [
+    for (final s in skipped)
+      if (s.kind == SkipKind.waiting) s,
+  ];
 
   /// The skipped agents that are not [waiting].
-  List<BatchSkip> get others => [for (final s in skipped) if (s.kind != SkipKind.waiting) s];
+  List<BatchSkip> get others => [
+    for (final s in skipped)
+      if (s.kind != SkipKind.waiting) s,
+  ];
 
   static BatchSkip? _skip(BatchAction action, BatchTarget t, bool sendAnyway) {
     final why = t.unreachable;
@@ -247,12 +249,7 @@ class BatchFailure {
 
 /// What a run did.
 class BatchResult {
-  const BatchResult({
-    required this.action,
-    required this.done,
-    required this.failed,
-    required this.skipped,
-  });
+  const BatchResult({required this.action, required this.done, required this.failed, required this.skipped});
 
   final BatchAction action;
   final List<BatchTarget> done;
@@ -263,9 +260,7 @@ class BatchResult {
   String get summary {
     final parts = ['${action.past} ${done.length}'];
     if (failed.isNotEmpty) {
-      final causes = <String>{
-        for (final f in failed) '${f.target.machineLabel}: ${f.message}',
-      }.toList();
+      final causes = <String>{for (final f in failed) '${f.target.machineLabel}: ${f.message}'}.toList();
       final shown = causes.take(2).join('; ');
       final more = causes.length > 2 ? ' (+${causes.length - 2} more)' : '';
       parts.add('${failed.length} failed: $shown$more');
@@ -314,7 +309,10 @@ Future<BatchResult> runBatch(BatchPlan plan, {String text = ''}) async {
 
   return BatchResult(
     action: plan.action,
-    done: [for (final (i, t) in run.indexed) if (errors[i] == null) t],
+    done: [
+      for (final (i, t) in run.indexed)
+        if (errors[i] == null) t,
+    ],
     failed: [
       for (final (i, t) in run.indexed)
         if (errors[i] case final message?) BatchFailure(t, message),

@@ -22,7 +22,10 @@ class FakeEngine implements SpeechEngine {
   void Function(String, bool)? onWords;
 
   @override
-  Future<bool> initialize({required void Function(String error, bool permanent) onError, required void Function(bool listening) onListening}) async {
+  Future<bool> initialize({
+    required void Function(String error, bool permanent) onError,
+    required void Function(bool listening) onListening,
+  }) async {
     this.onError = onError;
     this.onListening = onListening;
     if (initError case final e?) onError(e, true);

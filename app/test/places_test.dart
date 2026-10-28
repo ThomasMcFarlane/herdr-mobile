@@ -8,22 +8,24 @@ void main() {
   const primary = '/home/u/workspace/herdr-mobile';
   const linked = '/home/u/.herdr/worktrees/herdr-mobile/worktree-lucky-cloud-848c';
 
-  PlaceIndex index([List<Map<String, dynamic>>? extra]) => PlaceIndex.of(snapshotOf(workspaces: [
+  PlaceIndex index([List<Map<String, dynamic>>? extra]) => PlaceIndex.of(
+    snapshotOf(
+      workspaces: [
         wireWorkspace('w1', worktree: wirePrimaryWorktree),
         wireWorkspace('w2', worktree: wireLinkedWorktree),
         ...?extra,
-      ]));
+      ],
+    ),
+  );
 
   group('which checkout a folder is in', () {
     test('a folder inside a linked checkout is that checkout', () {
       final place = index().of('$linked/app/lib')!;
 
-      expect((place.isLinked, place.checkoutName, place.repoName, place.workspaceId), (
-        true,
-        'worktree-lucky-cloud-848c',
-        'herdr-mobile',
-        'w2',
-      ));
+      expect(
+        (place.isLinked, place.checkoutName, place.repoName, place.workspaceId),
+        (true, 'worktree-lucky-cloud-848c', 'herdr-mobile', 'w2'),
+      );
     });
 
     test('a sibling folder that only shares a name prefix is not inside', () {
@@ -38,10 +40,14 @@ void main() {
 
     test('the deepest checkout wins when one is nested in another', () {
       final nested = {...wireLinkedWorktree, 'checkout_path': '$primary/.wt/x'};
-      final idx = PlaceIndex.of(snapshotOf(workspaces: [
-        wireWorkspace('w1', worktree: wirePrimaryWorktree),
-        wireWorkspace('w2', worktree: nested),
-      ]));
+      final idx = PlaceIndex.of(
+        snapshotOf(
+          workspaces: [
+            wireWorkspace('w1', worktree: wirePrimaryWorktree),
+            wireWorkspace('w2', worktree: nested),
+          ],
+        ),
+      );
 
       expect(idx.of('$primary/.wt/x/app')!.workspaceId, 'w2');
       expect(idx.of('$primary/app')!.workspaceId, 'w1');
@@ -57,10 +63,14 @@ void main() {
 
   group('repos', () {
     test('a repo is shown as a group only with two or more open checkouts, primary first', () {
-      final idx = PlaceIndex.of(snapshotOf(workspaces: [
-        wireWorkspace('w1', worktree: wireLinkedWorktree),
-        wireWorkspace('w2', worktree: wirePrimaryWorktree),
-      ]));
+      final idx = PlaceIndex.of(
+        snapshotOf(
+          workspaces: [
+            wireWorkspace('w1', worktree: wireLinkedWorktree),
+            wireWorkspace('w2', worktree: wirePrimaryWorktree),
+          ],
+        ),
+      );
 
       expect(idx.repos.single.checkouts.map((w) => w.id), ['w2', 'w1']);
       expect(idx.groupOf('w1'), same(idx.groupOf('w2')));

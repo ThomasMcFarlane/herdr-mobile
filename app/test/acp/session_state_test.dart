@@ -30,10 +30,7 @@ void main() {
     });
 
     test('a new messageId is a new message, even for the same role in a row', () {
-      final s = _fold([
-        _chunk('agent_message_chunk', 'one', id: 'a'),
-        _chunk('agent_message_chunk', 'two', id: 'b'),
-      ]);
+      final s = _fold([_chunk('agent_message_chunk', 'one', id: 'a'), _chunk('agent_message_chunk', 'two', id: 'b')]);
       expect(_messages(s).map((m) => m.text), ['one', 'two']);
       expect(_messages(s).map((m) => m.key).toSet(), hasLength(2));
     });
@@ -119,7 +116,13 @@ void main() {
         }),
       );
       expect(_messages(s).single.text, 'final');
-      s = s.apply(_u({'sessionUpdate': 'agent_message', 'messageId': 'm1', '_meta': {'k': 1}}));
+      s = s.apply(
+        _u({
+          'sessionUpdate': 'agent_message',
+          'messageId': 'm1',
+          '_meta': {'k': 1},
+        }),
+      );
       expect(_messages(s).single.text, 'final', reason: 'no content key: unchanged');
       s = s.apply(_u({'sessionUpdate': 'agent_message', 'messageId': 'm1', 'content': null}));
       expect(_messages(s).single.blocks, isEmpty);
@@ -131,7 +134,10 @@ void main() {
         _chunk('user_message_chunk', 'fix the bug', id: 'u1'),
         _chunk('agent_message_chunk', 'done', id: 'a1'),
       ]);
-      expect(_messages(s).map((m) => (m.role, m.text)), [(MessageRole.user, 'fix the bug'), (MessageRole.agent, 'done')]);
+      expect(_messages(s).map((m) => (m.role, m.text)), [
+        (MessageRole.user, 'fix the bug'),
+        (MessageRole.agent, 'done'),
+      ]);
     });
   });
 
@@ -200,7 +206,14 @@ void main() {
       expect(c.locations.single.line, 3);
 
       s = s.apply(
-        _u({'sessionUpdate': 'tool_call_update', 'toolCallId': 't1', 'status': 'completed', 'rawOutput': {'exit': 0}, 'content': null, 'locations': []}),
+        _u({
+          'sessionUpdate': 'tool_call_update',
+          'toolCallId': 't1',
+          'status': 'completed',
+          'rawOutput': {'exit': 0},
+          'content': null,
+          'locations': [],
+        }),
       );
       c = s.toolCall('t1')!;
       expect(c.status, ToolStatus.completed);
@@ -209,7 +222,9 @@ void main() {
       expect(c.locations, isEmpty, reason: 'empty list replaces');
       expect(c.rawInput, {'command': 'dart test'}, reason: 'untouched');
 
-      s = s.apply(_u({'sessionUpdate': 'tool_call_update', 'toolCallId': 't1', 'title': null, 'name': null, 'rawInput': null}));
+      s = s.apply(
+        _u({'sessionUpdate': 'tool_call_update', 'toolCallId': 't1', 'title': null, 'name': null, 'rawInput': null}),
+      );
       c = s.toolCall('t1')!;
       expect(c.title, '');
       expect(c.name, isNull);
@@ -218,7 +233,9 @@ void main() {
     });
 
     test('an update for a call that never started creates it, in place of the missing start', () {
-      final s = _fold([_u({'sessionUpdate': 'tool_call_update', 'toolCallId': 'late', 'status': 'completed', 'title': 'Read'})]);
+      final s = _fold([
+        _u({'sessionUpdate': 'tool_call_update', 'toolCallId': 'late', 'status': 'completed', 'title': 'Read'}),
+      ]);
       expect(s.toolCall('late')!.title, 'Read');
       expect(s.toolCalls, hasLength(1));
     });
@@ -250,7 +267,9 @@ void main() {
     });
 
     test('unknown kind and status fall back to other and pending', () {
-      final s = _fold([_u({'sessionUpdate': 'tool_call', 'toolCallId': 't', 'title': 'x', 'kind': 'teleport', 'status': 'levitating'})]);
+      final s = _fold([
+        _u({'sessionUpdate': 'tool_call', 'toolCallId': 't', 'title': 'x', 'kind': 'teleport', 'status': 'levitating'}),
+      ]);
       expect(s.toolCall('t')!.kind, ToolKind.other);
       expect(s.toolCall('t')!.status, ToolStatus.pending);
     });
@@ -264,7 +283,12 @@ void main() {
       ]).withTurnStarted();
       s = s.withCancelRequested();
       expect(s.cancelRequested, isTrue);
-      expect(s.toolCalls.map((c) => c.status), [ToolStatus.cancelled, ToolStatus.completed, ToolStatus.failed, ToolStatus.cancelled]);
+      expect(s.toolCalls.map((c) => c.status), [
+        ToolStatus.cancelled,
+        ToolStatus.completed,
+        ToolStatus.failed,
+        ToolStatus.cancelled,
+      ]);
       s = s.withTurnEnded(StopReason.cancelled);
       expect(s.cancelRequested, isFalse);
       expect(s.turnActive, isFalse);
@@ -272,9 +296,9 @@ void main() {
     });
 
     test('a turn that ends normally leaves unfinished calls as they are', () {
-      final s = _fold([_u({'sessionUpdate': 'tool_call', 'toolCallId': 'a', 'title': 'a', 'status': 'in_progress'})])
-          .withTurnStarted()
-          .withTurnEnded(StopReason.endTurn);
+      final s = _fold([
+        _u({'sessionUpdate': 'tool_call', 'toolCallId': 'a', 'title': 'a', 'status': 'in_progress'}),
+      ]).withTurnStarted().withTurnEnded(StopReason.endTurn);
       expect(s.toolCall('a')!.status, ToolStatus.inProgress);
     });
   });
@@ -292,7 +316,11 @@ void main() {
         _u({
           'sessionUpdate': 'available_commands_update',
           'availableCommands': [
-            {'name': 'compact', 'description': 'Compact', 'input': {'hint': 'focus'}},
+            {
+              'name': 'compact',
+              'description': 'Compact',
+              'input': {'hint': 'focus'},
+            },
             {'name': 'skill:review', 'description': 'Review'},
           ],
         }),
@@ -317,7 +345,9 @@ void main() {
     });
 
     test('session info patches: absent keeps, null clears', () {
-      var s = _fold([_u({'sessionUpdate': 'session_info_update', 'title': 'Fix login', 'updatedAt': '2026-10-04T10:00:00Z'})]);
+      var s = _fold([
+        _u({'sessionUpdate': 'session_info_update', 'title': 'Fix login', 'updatedAt': '2026-10-04T10:00:00Z'}),
+      ]);
       expect(s.title, 'Fix login');
       expect(s.updatedAt, DateTime.utc(2026, 10, 4, 10));
       s = s.apply(_u({'sessionUpdate': 'session_info_update', 'updatedAt': '2026-10-04T11:00:00Z'}));
@@ -331,7 +361,12 @@ void main() {
     test('usage is replaced', () {
       final s = _fold([
         _u({'sessionUpdate': 'usage_update', 'used': 100, 'size': 1000}),
-        _u({'sessionUpdate': 'usage_update', 'used': 250, 'size': 1000, 'cost': {'amount': 0.5, 'currency': 'USD'}}),
+        _u({
+          'sessionUpdate': 'usage_update',
+          'used': 250,
+          'size': 1000,
+          'cost': {'amount': 0.5, 'currency': 'USD'},
+        }),
       ]);
       expect(s.usage!.used, 250);
       expect(s.usage!.fraction, 0.25);
@@ -408,7 +443,10 @@ void main() {
         expect(() => s.apply(u), returnsNormally, reason: '$raw');
       }
       final unknown = SessionUpdate.parse({'sessionUpdate': 'telepathy_update', 'x': 1});
-      expect(unknown, isA<UnknownUpdate>().having((u) => u.type, 'type', 'telepathy_update').having((u) => u.raw['x'], 'raw', 1));
+      expect(
+        unknown,
+        isA<UnknownUpdate>().having((u) => u.type, 'type', 'telepathy_update').having((u) => u.raw['x'], 'raw', 1),
+      );
       expect(identical(s.apply(unknown), s), isTrue);
     });
   });
@@ -421,7 +459,12 @@ void main() {
         {'optionId': 'y', 'name': 'Yes', 'kind': 'allow_once'},
       ],
     });
-    final question = ElicitationRequest.parse({'mode': 'form', 'message': 'Which?', 'sessionId': 's', 'requestedSchema': {'type': 'object'}});
+    final question = ElicitationRequest.parse({
+      'mode': 'form',
+      'message': 'Which?',
+      'sessionId': 's',
+      'requestedSchema': {'type': 'object'},
+    });
 
     test('idle, working, blocked on permission, blocked on question', () {
       var s = const AgentSessionState('s');
@@ -447,7 +490,9 @@ void main() {
     });
 
     test('v2 state updates drive the phase', () {
-      var s = _fold([_u({'sessionUpdate': 'state_update', 'state': 'running'})]);
+      var s = _fold([
+        _u({'sessionUpdate': 'state_update', 'state': 'running'}),
+      ]);
       expect(s.phase, AgentPhase.working);
       s = s.apply(_u({'sessionUpdate': 'state_update', 'state': 'requires_action'}));
       expect(s.phase, AgentPhase.blockedOnQuestion);

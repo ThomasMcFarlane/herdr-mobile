@@ -116,9 +116,9 @@ void main() {
       f.answer = _release;
       await u.check();
       final d = u.download();
-      fl.running!.completeError(const UpdateException(
-        'The download stopped at 31 MB of 48 MB. It continues from there when you try again.',
-      ));
+      fl.running!.completeError(
+        const UpdateException('The download stopped at 31 MB of 48 MB. It continues from there when you try again.'),
+      );
       await d;
     },
   };
@@ -236,7 +236,8 @@ void main() {
       apkUrl: _release.apkUrl,
       size: _release.size,
       pageUrl: _release.pageUrl,
-      notes: "[![Watch what's new · 4 changes · 0:14 · 5.1 MB]($base/0.1.7-whats-new.jpg)]($base/0.1.7-whats-new.mp4)\n\n$_notes",
+      notes:
+          "[![Watch what's new · 4 changes · 0:14 · 5.1 MB]($base/0.1.7-whats-new.jpg)]($base/0.1.7-whats-new.mp4)\n\n$_notes",
       sha256: _release.sha256,
     );
     await update.check();
@@ -245,10 +246,7 @@ void main() {
       Builder(
         builder: (context) => Scaffold(
           body: Center(
-            child: TextButton(
-              onPressed: () => unawaited(showUpdateSheet(context, update)),
-              child: const Text('open'),
-            ),
+            child: TextButton(onPressed: () => unawaited(showUpdateSheet(context, update)), child: const Text('open')),
           ),
         ),
       ),
@@ -264,8 +262,8 @@ void main() {
     // No video plugin in a test: the player's failure state.
     final clip = ReleaseClip.find(
       "[![Watch what's new · 4 changes · 0:14 · 5.1 MB]"
-      '(https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.7/0.1.7-whats-new.jpg)]'
-      '(https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.7/0.1.7-whats-new.mp4)',
+          '(https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.7/0.1.7-whats-new.jpg)]'
+          '(https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.7/0.1.7-whats-new.mp4)',
       '0.1.7',
     )!;
     await shoot(

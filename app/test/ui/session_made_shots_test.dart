@@ -31,25 +31,26 @@ import '../support/fake_transport.dart';
 import '../support/fake_webview.dart' show emptyFleet, withFleet;
 import '../support/shot.dart' show loadAppFonts, shoot;
 
-TranscriptItem _say(String text) => TranscriptMessage(key: 'm$text', role: MessageRole.agent, blocks: [TextBlock(text)]);
+TranscriptItem _say(String text) =>
+    TranscriptMessage(key: 'm$text', role: MessageRole.agent, blocks: [TextBlock(text)]);
 
 TranscriptItem _launch(String command) => TranscriptTool(
-      ToolCall(
-        toolCallId: 't$command',
-        kind: ToolKind.execute,
-        status: ToolStatus.completed,
-        rawInput: {'command': command},
-      ),
-    );
+  ToolCall(
+    toolCallId: 't$command',
+    kind: ToolKind.execute,
+    status: ToolStatus.completed,
+    rawInput: {'command': command},
+  ),
+);
 
 TranscriptItem _wrote(String path) => TranscriptTool(
-      ToolCall(
-        toolCallId: 't$path',
-        kind: ToolKind.edit,
-        status: ToolStatus.completed,
-        content: [ToolDiff(path: path, newText: '<h1>x</h1>')],
-      ),
-    );
+  ToolCall(
+    toolCallId: 't$path',
+    kind: ToolKind.edit,
+    status: ToolStatus.completed,
+    content: [ToolDiff(path: path, newText: '<h1>x</h1>')],
+  ),
+);
 
 Uint8List _png(int hue) {
   final image = img.Image(width: 96, height: 72);
@@ -110,7 +111,9 @@ void main() {
               _say('http://localhost:8765/synth'),
               _say('http://localhost:8765/'),
               _say('http://localhost:8765/label'),
-              _launch('cd /w && uv run --with torch python -m training.reconstruct_finetune_evaluate --port 8790 --config configs/arcface/finetune_reconstruct_with_a_very_long_name.yaml'),
+              _launch(
+                'cd /w && uv run --with torch python -m training.reconstruct_finetune_evaluate --port 8790 --config configs/arcface/finetune_reconstruct_with_a_very_long_name.yaml',
+              ),
               _say('Evaluation dashboard http://localhost:8790/'),
               _say('Tiến độ huấn luyện http://localhost:8792/'),
               _say('The database is on http://localhost:5432/'),
@@ -128,7 +131,14 @@ void main() {
         );
         session.setBackground(
           BackgroundWork(
-            tasks: const [BackgroundTask(id: 'bg1', kind: BackgroundKind.shell, status: BackgroundStatus.running, title: 'vite --port 3000')],
+            tasks: const [
+              BackgroundTask(
+                id: 'bg1',
+                kind: BackgroundKind.shell,
+                status: BackgroundStatus.running,
+                title: 'vite --port 3000',
+              ),
+            ],
           ),
         );
         await shoot(

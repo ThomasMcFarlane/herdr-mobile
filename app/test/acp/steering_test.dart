@@ -170,7 +170,8 @@ void main() {
 
     test('a refusal is thrown and adds no row (Codex on a text-only model)', () async {
       final r = _Rig(codexInitialize(), {
-        '_session/steering': (_) => throw const JsonRpcException(-32600, 'The current model does not support image input'),
+        '_session/steering': (_) =>
+            throw const JsonRpcException(-32600, 'The current model does not support image input'),
       });
       await r.running();
 
@@ -183,9 +184,7 @@ void main() {
     });
 
     test('a lost answer (the link died) shows the message, since it may have arrived, and throws', () async {
-      final r = _Rig(codexInitialize(), {
-        '_session/steering': (_) => Completer<Object?>().future,
-      });
+      final r = _Rig(codexInitialize(), {'_session/steering': (_) => Completer<Object?>().future});
       await r.running();
 
       final f = r.client.steer(_sid, [const TextBlock('did this arrive?')]);
@@ -249,7 +248,10 @@ void main() {
 
       expect(r.userRows, isEmpty, reason: 'refused, so it is not in the transcript, streamed or not');
       expect(
-        [for (final i in r.state.items) if (i is TranscriptMessage) i.text],
+        [
+          for (final i in r.state.items)
+            if (i is TranscriptMessage) i.text,
+        ],
         ['its own work'],
         reason: 'the agent\'s own output keeps its place',
       );

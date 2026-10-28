@@ -45,13 +45,11 @@ enum LinkState {
 /// that long was not the failure the delays are there to space out.
 const _streamProvenAfter = Duration(seconds: 30);
 
-Duration defaultBackoff(int attempt) =>
-    Duration(seconds: const [1, 2, 4, 8, 15, 30][attempt.clamp(0, 5)]);
+Duration defaultBackoff(int attempt) => Duration(seconds: const [1, 2, 4, 8, 15, 30][attempt.clamp(0, 5)]);
 
 /// The retry delays in the background profile: nobody is looking, so a machine
 /// that does not answer is tried at most every 5 minutes.
-Duration defaultBackgroundBackoff(int attempt) =>
-    Duration(seconds: const [30, 60, 120, 300][attempt.clamp(0, 3)]);
+Duration defaultBackgroundBackoff(int attempt) => Duration(seconds: const [30, 60, 120, 300][attempt.clamp(0, 3)]);
 
 /// Live state of one herdr machine: keeps a snapshot fresh from the event
 /// stream, reconnecting independently of every other machine.
@@ -246,7 +244,9 @@ class MachineConnection extends ChangeNotifier {
     if (groups.isEmpty) return;
     final lists = await Future.wait([
       for (final g in groups)
-        api.listWorktrees(workspaceId: g.checkouts.first.id).catchError(
+        api
+            .listWorktrees(workspaceId: g.checkouts.first.id)
+            .catchError(
               (Object _) => const <WorktreeInfo>[],
               test: (e) => e is HerdrApiException || e is HerdrTransportException || e is TimeoutException,
             ),
@@ -330,7 +330,10 @@ class MachineConnection extends ChangeNotifier {
   List<Pane> get agentPanes {
     final all = _snapshot.agentPanes;
     if (_keeperPanes.isEmpty) return all;
-    return [for (final p in all) if (!_keeperPanes.containsKey(p.id)) p];
+    return [
+      for (final p in all)
+        if (!_keeperPanes.containsKey(p.id)) p,
+    ];
   }
 
   /// Whether input can reach pane [id]: the machine is live and the pane exists.
@@ -352,8 +355,7 @@ class MachineConnection extends ChangeNotifier {
     if (reviewed == null) return false;
     for (final p in _raw.panes) {
       if (p.id != paneId) continue;
-      return p.status == AgentStatus.done &&
-          reviewed.review(profile.id, paneId, _completionKey(p));
+      return p.status == AgentStatus.done && reviewed.review(profile.id, paneId, _completionKey(p));
     }
     return false;
   }
@@ -438,9 +440,7 @@ class MachineConnection extends ChangeNotifier {
       ],
       tabs: [
         for (final t in raw.tabs)
-          t.status == AgentStatus.done || blockedTabs.contains(t.id)
-              ? t.withStatus(rollup((p) => p.tabId == t.id))
-              : t,
+          t.status == AgentStatus.done || blockedTabs.contains(t.id) ? t.withStatus(rollup((p) => p.tabId == t.id)) : t,
       ],
       panes: panes,
     );
@@ -557,12 +557,7 @@ class MachineConnection extends ChangeNotifier {
         String? error;
         try {
           _dropStream();
-          _set(
-            attempt == 0 && _lastSync == null
-                ? LinkState.connecting
-                : LinkState.reconnecting,
-            error: _error,
-          );
+          _set(attempt == 0 && _lastSync == null ? LinkState.connecting : LinkState.reconnecting, error: _error);
           await _refresh();
           if (!alive()) return;
           _set(LinkState.online);
@@ -685,8 +680,7 @@ class MachineConnection extends ChangeNotifier {
     final StatusTime? changed;
     if (seen == null) {
       changed = null;
-    } else if ((live && identical(watch, _seenWatch)) ||
-        now.difference(seen) <= observationGap) {
+    } else if ((live && identical(watch, _seenWatch)) || now.difference(seen) <= observationGap) {
       changed = StatusTime.exact(now);
     } else {
       changed = StatusTime.after(seen);
@@ -694,9 +688,7 @@ class MachineConnection extends ChangeNotifier {
     final next = <String, ObservedStatus>{};
     for (final p in s.panes) {
       final known = _statusSince[p.id];
-      next[p.id] = known != null && known.status == p.status
-          ? known
-          : (status: p.status, since: changed);
+      next[p.id] = known != null && known.status == p.status ? known : (status: p.status, since: changed);
     }
     _statusSince
       ..clear()
@@ -780,7 +772,9 @@ class MachineConnection extends ChangeNotifier {
     // [HerdrApi.changes]); the panes named come from the snapshot just taken.
     final panes = _background ? _agentPaneIds(_raw) : null;
     _subscribedPanes = panes;
-    final sub = _api.changes(statusPanes: panes).listen(
+    final sub = _api
+        .changes(statusPanes: panes)
+        .listen(
           (event) => _onEvent(event, refresher),
           onError: fail,
           onDone: () {
@@ -792,11 +786,7 @@ class MachineConnection extends ChangeNotifier {
     // sessions share (see [AlignedTicker]): one radio wake-up for all of them.
     final void Function() stopPoll;
     if (_background) {
-      final ticker = AlignedTicker(
-        backgroundPollInterval,
-        _clock,
-        () => refresher.schedule(urgent: true),
-      );
+      final ticker = AlignedTicker(backgroundPollInterval, _clock, () => refresher.schedule(urgent: true));
       stopPoll = ticker.cancel;
     } else {
       final timer = Timer.periodic(pollInterval, (_) => refresher.schedule(urgent: true));
@@ -939,9 +929,7 @@ class MachineConnection extends ChangeNotifier {
   /// What the cache keeps beside the snapshot; null before the first sight.
   ObservedStatuses? _observed() {
     final seen = _seenAt;
-    return seen == null
-        ? null
-        : ObservedStatuses(seenAt: seen, panes: Map.of(_statusSince));
+    return seen == null ? null : ObservedStatuses(seenAt: seen, panes: Map.of(_statusSince));
   }
 
   void _set(LinkState s, {String? error}) {

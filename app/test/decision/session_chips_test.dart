@@ -17,11 +17,15 @@ Json _select(String id, String category, String value, List<List<String>> choice
   ],
 };
 
-Json _bool(String id, bool value, {String? name}) => {'id': id, 'name': name ?? id, 'type': 'boolean', 'currentValue': value};
+Json _bool(String id, bool value, {String? name}) => {
+  'id': id,
+  'name': name ?? id,
+  'type': 'boolean',
+  'currentValue': value,
+};
 
-AgentSessionState _with(List<Json> options, {Json? modes}) => const AgentSessionState('s').withSetup(
-  AcpSessionSetup.parse({'configOptions': options, 'modes': ?modes}),
-);
+AgentSessionState _with(List<Json> options, {Json? modes}) =>
+    const AgentSessionState('s').withSetup(AcpSessionSetup.parse({'configOptions': options, 'modes': ?modes}));
 
 List<String> _labels(SessionChips c) => [for (final x in c.shown) x.label];
 
@@ -29,12 +33,10 @@ void main() {
   group('recorded sessions', () {
     test('Claude: mode, model, effort, then the persona select', () {
       final chips = sessionChipsOf(replayTrace('claude/tools').setup);
-      expect([for (final c in chips.all) c.kind], [
-        SessionChipKind.mode,
-        SessionChipKind.model,
-        SessionChipKind.effort,
-        SessionChipKind.other,
-      ]);
+      expect(
+        [for (final c in chips.all) c.kind],
+        [SessionChipKind.mode, SessionChipKind.model, SessionChipKind.effort, SessionChipKind.other],
+      );
       expect(_labels(chips), ['Default', 'Opus', 'High', 'Agent: Default']);
       expect(chips.overflow, 0);
       expect(chips.all.first.risk, ModeRisk.none);
@@ -64,7 +66,9 @@ void main() {
 
     test('the danger chip follows the mode when the agent changes it', () {
       final setup = replayTrace('codex/tools').setup;
-      final moved = setup.apply(SessionUpdate.parse({'sessionUpdate': 'current_mode_update', 'currentModeId': 'agent-full-access'}));
+      final moved = setup.apply(
+        SessionUpdate.parse({'sessionUpdate': 'current_mode_update', 'currentModeId': 'agent-full-access'}),
+      );
       final mode = sessionChipsOf(moved).all.first;
       expect((mode.label, mode.risk, mode.isRisky), ('Full access', ModeRisk.dangerous, true));
     });
@@ -74,10 +78,18 @@ void main() {
     test('order is fixed whatever order the agent lists its options in', () {
       final options = [
         _bool('fast', true, name: 'Fast'),
-        _select('effort', 'thought_level', 'high', [['high', 'High']], name: 'Effort'),
-        _select('model', 'model', 'm1', [['m1', 'Model One']], name: 'Model'),
-        _select('mode', 'mode', 'default', [['default', 'Default']], name: 'Mode'),
-        _select('extra', '', 'x', [['x', 'Ex']], name: 'Extra'),
+        _select('effort', 'thought_level', 'high', [
+          ['high', 'High'],
+        ], name: 'Effort'),
+        _select('model', 'model', 'm1', [
+          ['m1', 'Model One'],
+        ], name: 'Model'),
+        _select('mode', 'mode', 'default', [
+          ['default', 'Default'],
+        ], name: 'Mode'),
+        _select('extra', '', 'x', [
+          ['x', 'Ex'],
+        ], name: 'Extra'),
       ];
       final a = sessionChipsOf(_with(options));
       final b = sessionChipsOf(_with(options.reversed.toList()));
@@ -90,19 +102,25 @@ void main() {
 
     test('a boolean is a toggle chip with its state; labels are its name', () {
       final chips = sessionChipsOf(_with([_bool('fast', true, name: 'Fast'), _bool('think', false, name: 'Thinking')]));
-      expect([for (final c in chips.all) (c.label, c.on, c.kind)], [
-        ('Fast', true, SessionChipKind.toggle),
-        ('Thinking', false, SessionChipKind.toggle),
-      ]);
+      expect(
+        [for (final c in chips.all) (c.label, c.on, c.kind)],
+        [('Fast', true, SessionChipKind.toggle), ('Thinking', false, SessionChipKind.toggle)],
+      );
       expect(chips.all.first.settingId, 'fast');
     });
 
     test('at most four are shown; the overflow counts the rest', () {
       final chips = sessionChipsOf(
         _with([
-          _select('mode', 'mode', 'default', [['default', 'Default']]),
-          _select('model', 'model', 'm', [['m', 'M']]),
-          _select('effort', 'thought_level', 'h', [['h', 'H']]),
+          _select('mode', 'mode', 'default', [
+            ['default', 'Default'],
+          ]),
+          _select('model', 'model', 'm', [
+            ['m', 'M'],
+          ]),
+          _select('effort', 'thought_level', 'h', [
+            ['h', 'H'],
+          ]),
           _bool('a', true),
           _bool('b', false),
           _bool('c', false),
@@ -115,7 +133,13 @@ void main() {
     });
 
     test('a risky chip is never the one cut', () {
-      const risky = SessionChip(kind: SessionChipKind.other, settingId: 'x', title: 'X', label: 'X', risk: ModeRisk.dangerous);
+      const risky = SessionChip(
+        kind: SessionChipKind.other,
+        settingId: 'x',
+        title: 'X',
+        label: 'X',
+        risk: ModeRisk.dangerous,
+      );
       const quiet = SessionChip(kind: SessionChipKind.other, settingId: 'q', title: 'Q', label: 'Q');
       final chips = SessionChips([quiet, quiet, quiet, quiet, risky]);
       expect(chips.shown, hasLength(4));
@@ -124,13 +148,18 @@ void main() {
     });
 
     test('modes with no mode option: a mode chip through modes', () {
-      final chips = sessionChipsOf(_with(const [], modes: {
-        'currentModeId': 'bypassPermissions',
-        'availableModes': [
-          {'id': 'default', 'name': 'Default'},
-          {'id': 'bypassPermissions', 'name': 'Bypass Permissions'},
-        ],
-      }));
+      final chips = sessionChipsOf(
+        _with(
+          const [],
+          modes: {
+            'currentModeId': 'bypassPermissions',
+            'availableModes': [
+              {'id': 'default', 'name': 'Default'},
+              {'id': 'bypassPermissions', 'name': 'Bypass Permissions'},
+            ],
+          },
+        ),
+      );
       final mode = chips.all.single;
       expect((mode.label, mode.viaModes, mode.risk), ('Bypass Permissions', true, ModeRisk.dangerous));
       expect(mode.reason, isNotNull);
@@ -143,7 +172,12 @@ void main() {
       ];
       final chips = sessionChipsOf(
         _with(
-          [_select('model', 'model', 'p/m', [['p/m', 'p/m']]), _select('thinking', 'thought_level', 'high', levels, name: 'Thinking')],
+          [
+            _select('model', 'model', 'p/m', [
+              ['p/m', 'p/m'],
+            ]),
+            _select('thinking', 'thought_level', 'high', levels, name: 'Thinking'),
+          ],
           modes: {
             'currentModeId': 'high',
             'availableModes': [
@@ -157,9 +191,21 @@ void main() {
     });
 
     test('a model with a display name keeps it; one named by id loses the provider', () {
-      final named = sessionChipsOf(_with([_select('model', 'model', 'a/b', [['a/b', 'Fancy B']])]));
+      final named = sessionChipsOf(
+        _with([
+          _select('model', 'model', 'a/b', [
+            ['a/b', 'Fancy B'],
+          ]),
+        ]),
+      );
       expect(_labels(named), ['Fancy B']);
-      final bare = sessionChipsOf(_with([_select('model', 'model', 'a/b/c', [['a/b/c', 'a/b/c']])]));
+      final bare = sessionChipsOf(
+        _with([
+          _select('model', 'model', 'a/b/c', [
+            ['a/b/c', 'a/b/c'],
+          ]),
+        ]),
+      );
       expect(_labels(bare), ['c']);
     });
 
@@ -167,7 +213,9 @@ void main() {
       final s = _with([
         {'id': 'weird', 'name': 'Weird', 'type': 'slider', 'currentValue': 3},
         {'id': 'empty', 'name': 'Empty', 'type': 'select', 'currentValue': '', 'options': []},
-        _select('blank', '', 'b', [['b', '   ']]),
+        _select('blank', '', 'b', [
+          ['b', '   '],
+        ]),
         {'id': 'model', 'type': 'select', 'category': 'model', 'currentValue': 'm', 'options': []},
       ]);
       final chips = sessionChipsOf(s);
@@ -177,9 +225,13 @@ void main() {
     });
 
     test('labels are cleaned of hidden characters and capped', () {
-      final chips = sessionChipsOf(_with([
-        _select('model', 'model', 'm', [['m', 'Mo\u202Edel \u200Bwith a name that is far too long to fit a chip']]),
-      ]));
+      final chips = sessionChipsOf(
+        _with([
+          _select('model', 'model', 'm', [
+            ['m', 'Mo\u202Edel \u200Bwith a name that is far too long to fit a chip'],
+          ]),
+        ]),
+      );
       final label = chips.all.single.label;
       expect(label.length, lessThanOrEqualTo(chipLabelLimit));
       expect(label, isNot(contains('\u202E')));
@@ -188,9 +240,13 @@ void main() {
     });
 
     test('Vietnamese labels are kept', () {
-      final chips = sessionChipsOf(_with([
-        _select('model', 'model', 'm', [['m', 'Mô hình tiết kiệm']]),
-      ]));
+      final chips = sessionChipsOf(
+        _with([
+          _select('model', 'model', 'm', [
+            ['m', 'Mô hình tiết kiệm'],
+          ]),
+        ]),
+      );
       expect(chips.all.single.label, 'Mô hình tiết kiệm');
     });
   });

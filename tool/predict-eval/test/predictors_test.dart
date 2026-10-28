@@ -3,11 +3,17 @@ import 'package:predict_eval/predictors/phrase.dart';
 import 'package:test/test.dart';
 
 WordPrior _prior({bool fold = false}) => WordPrior.build(
-      {'the': 0.05, 'there': 0.001, 'then': 0.002, 'refactor': 0.00001, 'would': 0.01},
-      {'không': 0.05, 'khong': 0.0001, 'khác': 0.01},
-      viShare: 0.1,
-      fold: fold,
-    );
+  {
+    'the': 0.05,
+    'there': 0.001,
+    'then': 0.002,
+    'refactor': 0.00001,
+    'would': 0.01,
+  },
+  {'không': 0.05, 'khong': 0.0001, 'khác': 0.01},
+  viShare: 0.1,
+  fold: fold,
+);
 
 void main() {
   group('phrase', () {
@@ -48,8 +54,10 @@ void main() {
   });
 
   group('ngram', () {
-    NgramPredictor engine({NgramParams params = const NgramParams(), WordPrior? prior}) =>
-        NgramPredictor(params, prior ?? _prior());
+    NgramPredictor engine({
+      NgramParams params = const NgramParams(),
+      WordPrior? prior,
+    }) => NgramPredictor(params, prior ?? _prior());
 
     test('learns the words of this person and completes them', () {
       final e = engine();
@@ -61,10 +69,15 @@ void main() {
       expect(chips.first.insert, 'ctor');
     });
 
-    test('a finished word is not swapped for a longer one it merely starts', () {
-      final e = engine(params: const NgramParams(tau: 0.3));
-      expect([for (final c in e.suggest('the', 3)) c.label], isNot(contains('there')));
-    });
+    test(
+      'a finished word is not swapped for a longer one it merely starts',
+      () {
+        final e = engine(params: const NgramParams(tau: 0.3));
+        expect([
+          for (final c in e.suggest('the', 3)) c.label,
+        ], isNot(contains('there')));
+      },
+    );
 
     test('a word typed once outside the dictionary is not offered', () {
       final e = engine();
@@ -78,19 +91,28 @@ void main() {
         e.learn('open src/quokka_helper.dart');
       }
       expect(e.suggest('open src/quok', 3), isEmpty);
-      expect(e.suggest('open quok', 3), isEmpty, reason: 'the code word was never learned');
+      expect(
+        e.suggest('open quok', 3),
+        isEmpty,
+        reason: 'the code word was never learned',
+      );
     });
 
-    test('without personal learning it is a keyboard that knows nothing of you', () {
-      final e = engine(params: const NgramParams(personal: false));
-      for (var i = 0; i < 5; i++) {
-        e.learn('the quokka');
-      }
-      expect(e.suggest('the quo', 3), isEmpty);
-    });
+    test(
+      'without personal learning it is a keyboard that knows nothing of you',
+      () {
+        final e = engine(params: const NgramParams(personal: false));
+        for (var i = 0; i < 5; i++) {
+          e.learn('the quokka');
+        }
+        expect(e.suggest('the quo', 3), isEmpty);
+      },
+    );
 
     test('next word after a space, from what usually follows', () {
-      final e = engine(params: const NgramParams(nextWord: true, minPrefix: 0, tau: 0.3));
+      final e = engine(
+        params: const NgramParams(nextWord: true, minPrefix: 0, tau: 0.3),
+      );
       for (var i = 0; i < 8; i++) {
         e.learn('run the tests');
       }
@@ -98,15 +120,21 @@ void main() {
       expect(e.suggest('run the ', 3).first.label, 'tests');
     });
 
-    test('folded matching answers a word typed without marks with the marked word', () {
-      final e = NgramPredictor(const NgramParams(fold: true), _prior(fold: true));
-      for (var i = 0; i < 5; i++) {
-        e.learn('không được');
-      }
-      final chip = e.suggest('kho', 3).first;
-      expect(chip.label, 'không');
-      expect(chip.replace, 3);
-      expect(chip.insert, 'không');
-    });
+    test(
+      'folded matching answers a word typed without marks with the marked word',
+      () {
+        final e = NgramPredictor(
+          const NgramParams(fold: true),
+          _prior(fold: true),
+        );
+        for (var i = 0; i < 5; i++) {
+          e.learn('không được');
+        }
+        final chip = e.suggest('kho', 3).first;
+        expect(chip.label, 'không');
+        expect(chip.replace, 3);
+        expect(chip.insert, 'không');
+      },
+    );
   });
 }

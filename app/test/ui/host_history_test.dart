@@ -17,7 +17,12 @@ const _trimmed = {
   'herdr': {'trimmed': true},
 };
 
-Future<void> _pump(WidgetTester tester, List<TranscriptItem> items, {Size size = const Size(412, 892), double textScale = 1}) async {
+Future<void> _pump(
+  WidgetTester tester,
+  List<TranscriptItem> items, {
+  Size size = const Size(412, 892),
+  double textScale = 1,
+}) async {
   tester.view.physicalSize = size * 2;
   tester.view.devicePixelRatio = 2;
   addTearDown(tester.view.reset);
@@ -28,7 +33,11 @@ Future<void> _pump(WidgetTester tester, List<TranscriptItem> items, {Size size =
         data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
         child: child!,
       ),
-      home: Scaffold(body: TranscriptView(session: FakeAgentSession(state: stateWith(items: items)))),
+      home: Scaffold(
+        body: TranscriptView(
+          session: FakeAgentSession(state: stateWith(items: items)),
+        ),
+      ),
     ),
   );
   await tester.pump(const Duration(milliseconds: 100));
@@ -65,7 +74,10 @@ void main() {
     await _pump(tester, items);
     final line = find.text('Earlier messages are no longer kept on the machine (12 turns).');
     expect(line, findsOneWidget);
-    expect(tester.getTopLeft(line).dy, lessThan(tester.getTopLeft(find.text('Sửa lỗi dấu thanh trong trình phân tích')).dy));
+    expect(
+      tester.getTopLeft(line).dy,
+      lessThan(tester.getTopLeft(find.text('Sửa lỗi dấu thanh trong trình phân tích')).dy),
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -83,25 +95,29 @@ void main() {
     expect(find.text('Earlier, from this phone'), findsOneWidget);
   });
 
-  testWidgets('a call whose detail was trimmed says so on its row and where its output would be; a whole one does not', (tester) async {
-    await _pump(tester, _turns());
-    // A failed call breaks out of the fold: both rows are visible.
-    expect(_rich('Details trimmed'), findsOneWidget, reason: 'only the trimmed call');
-    expect(find.text('Output trimmed'), findsNothing, reason: 'the body is closed');
+  testWidgets(
+    'a call whose detail was trimmed says so on its row and where its output would be; a whole one does not',
+    (tester) async {
+      await _pump(tester, _turns());
+      // A failed call breaks out of the fold: both rows are visible.
+      expect(_rich('Details trimmed'), findsOneWidget, reason: 'only the trimmed call');
+      expect(find.text('Output trimmed'), findsNothing, reason: 'the body is closed');
 
-    await tester.tap(_rich('dart test --name'));
-    await tester.pumpAndSettle();
-    expect(find.text('Output trimmed'), findsOneWidget);
+      await tester.tap(_rich('dart test --name'));
+      await tester.pumpAndSettle();
+      expect(find.text('Output trimmed'), findsOneWidget);
 
-    // The whole call opens to its output, with no such note.
-    await tester.tap(_rich('dart analyze'));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('còn một cảnh báo', findRichText: true), findsWidgets);
-    expect(find.text('Output trimmed'), findsOneWidget, reason: 'still just the first');
-  });
+      // The whole call opens to its output, with no such note.
+      await tester.tap(_rich('dart analyze'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('còn một cảnh báo', findRichText: true), findsWidgets);
+      expect(find.text('Output trimmed'), findsOneWidget, reason: 'still just the first');
+    },
+  );
 
   testWidgets('worst case: 320 dp, 160% text, a long Vietnamese title: nothing overflows', (tester) async {
-    final long = 'Chạy toàn bộ kiểm thử đơn vị cho thư viện phân tích địa danh Hà Nội, Thành phố Hồ Chí Minh và Đà Nẵng ' * 2;
+    final long =
+        'Chạy toàn bộ kiểm thử đơn vị cho thư viện phân tích địa danh Hà Nội, Thành phố Hồ Chí Minh và Đà Nẵng ' * 2;
     final items = [
       TranscriptNote(key: hostDroppedKey, text: hostDroppedText(1234)),
       userAt('u0', 'Kiểm tra', 0),

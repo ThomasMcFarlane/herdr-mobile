@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:herdr_mobile/ui/render/terminal/cell_width.dart';
+
 import '../terminal/terminal_links.dart';
 import '../visible_text.dart';
 import 'md_actions.dart';
@@ -217,12 +218,7 @@ class _MdInlineTextState extends State<MdInlineText> {
       _builtOnLink = actions?.onLink;
       _builtOnPath = actions?.onPath;
     }
-    return Text.rich(
-      _span!,
-      style: w.style,
-      textDirection: _rtl ? TextDirection.rtl : null,
-      textAlign: w.textAlign,
-    );
+    return Text.rich(_span!, style: w.style, textDirection: _rtl ? TextDirection.rtl : null, textAlign: w.textAlign);
   }
 
   TapGestureRecognizer _tap(VoidCallback onTap) {
@@ -281,7 +277,9 @@ class _MdInlineTextState extends State<MdInlineText> {
             // A link: the label is the text, the target decides what a tap does.
             final (kind, path) = link.isEmpty ? (MdLinkKind.none, null) : classifyLink(link);
             final tap = switch (kind) {
-              MdLinkKind.web when onLink != null => _tap(() => onLink(context, hasHiddenCharacters(link) ? visibleText(link) : link)),
+              MdLinkKind.web when onLink != null => _tap(
+                () => onLink(context, hasHiddenCharacters(link) ? visibleText(link) : link),
+              ),
               MdLinkKind.path when onPath != null => _tap(() => pathTap(path!)),
               _ => null,
             };
@@ -289,7 +287,13 @@ class _MdInlineTextState extends State<MdInlineText> {
             // link that cannot be followed yet; an anchor, a `mailto:` or a
             // script address is not offered at all.
             final styled = link.isEmpty || kind != MdLinkKind.none;
-            out.add(TextSpan(text: text, style: compose(bits, link: styled), recognizer: tap));
+            out.add(
+              TextSpan(
+                text: text,
+                style: compose(bits, link: styled),
+                recognizer: tap,
+              ),
+            );
             continue;
           }
           if ((onPath == null && onLink == null) || text.length < 3) {
@@ -301,11 +305,14 @@ class _MdInlineTextState extends State<MdInlineText> {
             out.add(TextSpan(text: text, style: compose(bits, link: false)));
             continue;
           }
-          TapGestureRecognizer tapHit(_Hit h) => _tap(() => h.url != null ? onLink!(context, h.url!) : pathTap(h.path!));
+          TapGestureRecognizer tapHit(_Hit h) =>
+              _tap(() => h.url != null ? onLink!(context, h.url!) : pathTap(h.path!));
           if (isCode) {
             // Inline code is a link when it is nothing but one.
             final h = found.first;
-            if (found.length == 1 && text.substring(0, h.start).trim().isEmpty && text.substring(h.end).trim().isEmpty) {
+            if (found.length == 1 &&
+                text.substring(0, h.start).trim().isEmpty &&
+                text.substring(h.end).trim().isEmpty) {
               out.add(TextSpan(text: text, style: compose(bits, link: true), recognizer: tapHit(h)));
             } else {
               out.add(TextSpan(text: text, style: compose(bits, link: false)));
@@ -315,7 +322,9 @@ class _MdInlineTextState extends State<MdInlineText> {
           var at = 0;
           for (final h in found) {
             if (h.start > at) out.add(TextSpan(text: text.substring(at, h.start), style: compose(bits, link: false)));
-            out.add(TextSpan(text: text.substring(h.start, h.end), style: compose(bits, link: true), recognizer: tapHit(h)));
+            out.add(
+              TextSpan(text: text.substring(h.start, h.end), style: compose(bits, link: true), recognizer: tapHit(h)),
+            );
             at = h.end;
           }
           if (at < text.length) out.add(TextSpan(text: text.substring(at), style: compose(bits, link: false)));
@@ -351,7 +360,13 @@ class _MdInlineTextState extends State<MdInlineText> {
 
   /// `Image: alt · host`: a quiet chip. Nothing is fetched; a tap shows the
   /// address (web) or opens the file (a path on the machine).
-  InlineSpan _image(BuildContext context, MdImage image, MdStyles styles, MdLinkHandler? onLink, MdPathHandler? onPath) {
+  InlineSpan _image(
+    BuildContext context,
+    MdImage image,
+    MdStyles styles,
+    MdLinkHandler? onLink,
+    MdPathHandler? onPath,
+  ) {
     final (kind, path) = classifyLink(image.src);
     final host = kind == MdLinkKind.web ? Uri.tryParse(image.src.trim())?.host ?? '' : '';
     final alt = proseText(image.alt).trim();
@@ -360,8 +375,9 @@ class _MdInlineTextState extends State<MdInlineText> {
     if (host.isNotEmpty) label.write(' · $host');
     label.write('\u00A0');
     final recognizer = switch (kind) {
-      MdLinkKind.web when onLink != null =>
-        _tap(() => onLink(context, hasHiddenCharacters(image.src) ? visibleText(image.src.trim()) : image.src.trim())),
+      MdLinkKind.web when onLink != null => _tap(
+        () => onLink(context, hasHiddenCharacters(image.src) ? visibleText(image.src.trim()) : image.src.trim()),
+      ),
       MdLinkKind.path when onPath != null => _tap(() => onPath(context, path!.path, path.line)),
       _ => null,
     };

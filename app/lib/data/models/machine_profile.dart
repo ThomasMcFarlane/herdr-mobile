@@ -21,17 +21,17 @@ class MachineProfile {
   });
 
   factory MachineProfile.fromJson(Map<String, dynamic> j) => MachineProfile(
-        id: j['id'] as String,
-        label: j['label'] as String,
-        host: j['host'] as String,
-        username: j['username'] as String,
-        port: (j['port'] as num?)?.toInt() ?? 22,
-        auth: SshAuth.values.asNameMap()[j['auth']] ?? SshAuth.key,
-        session: (j['session'] as String?) ?? 'default',
-        socketPath: j['socketPath'] as String?,
-        hostKeyFingerprint: j['hostKeyFingerprint'] as String?,
-        enabled: j['enabled'] != false,
-      );
+    id: j['id'] as String,
+    label: j['label'] as String,
+    host: j['host'] as String,
+    username: j['username'] as String,
+    port: (j['port'] as num?)?.toInt() ?? 22,
+    auth: SshAuth.values.asNameMap()[j['auth']] ?? SshAuth.key,
+    session: (j['session'] as String?) ?? 'default',
+    socketPath: j['socketPath'] as String?,
+    hostKeyFingerprint: j['hostKeyFingerprint'] as String?,
+    enabled: j['enabled'] != false,
+  );
 
   /// [fromJson] for a stored row that may be anything: null when [row] is not
   /// a machine this app can read (not an object, a field of another type, an
@@ -75,33 +75,31 @@ class MachineProfile {
     String? hostKeyFingerprint,
     bool clearHostKey = false,
     bool? enabled,
-  }) =>
-      MachineProfile(
-        id: id,
-        label: label ?? this.label,
-        host: host ?? this.host,
-        port: port ?? this.port,
-        username: username ?? this.username,
-        auth: auth ?? this.auth,
-        session: session ?? this.session,
-        socketPath: clearSocketPath ? null : socketPath ?? this.socketPath,
-        hostKeyFingerprint:
-            clearHostKey ? null : hostKeyFingerprint ?? this.hostKeyFingerprint,
-        enabled: enabled ?? this.enabled,
-      );
+  }) => MachineProfile(
+    id: id,
+    label: label ?? this.label,
+    host: host ?? this.host,
+    port: port ?? this.port,
+    username: username ?? this.username,
+    auth: auth ?? this.auth,
+    session: session ?? this.session,
+    socketPath: clearSocketPath ? null : socketPath ?? this.socketPath,
+    hostKeyFingerprint: clearHostKey ? null : hostKeyFingerprint ?? this.hostKeyFingerprint,
+    enabled: enabled ?? this.enabled,
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'label': label,
-        'host': host,
-        'port': port,
-        'username': username,
-        'auth': auth.name,
-        'session': session,
-        if (socketPath != null) 'socketPath': socketPath,
-        if (hostKeyFingerprint != null) 'hostKeyFingerprint': hostKeyFingerprint,
-        'enabled': enabled,
-      };
+    'id': id,
+    'label': label,
+    'host': host,
+    'port': port,
+    'username': username,
+    'auth': auth.name,
+    'session': session,
+    if (socketPath != null) 'socketPath': socketPath,
+    if (hostKeyFingerprint != null) 'hostKeyFingerprint': hostKeyFingerprint,
+    'enabled': enabled,
+  };
 }
 
 /// Secrets for one machine.

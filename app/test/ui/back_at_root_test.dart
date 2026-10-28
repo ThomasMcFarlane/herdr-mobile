@@ -23,16 +23,20 @@ void main() {
     moves = 0;
     moveAnswers = [];
     TestWidgetsFlutterBinding.ensureInitialized();
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
-      if (call.method == 'SystemNavigator.pop') systemPops++;
-      return null;
-    });
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'SystemNavigator.pop') systemPops++;
+        return null;
+      },
+    );
   });
 
   tearDown(() {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(SystemChannels.platform, null);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      null,
+    );
   });
 
   Future<bool> fakeMove() async {
@@ -165,8 +169,10 @@ void main() {
 
     test('a failing channel is a false, never a throw', () async {
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(channel, (call) async => throw PlatformException(code: 'x'));
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+        channel,
+        (call) async => throw PlatformException(code: 'x'),
+      );
       expect(await const PlatformTaskMover().moveToBack(), isFalse);
     });
 

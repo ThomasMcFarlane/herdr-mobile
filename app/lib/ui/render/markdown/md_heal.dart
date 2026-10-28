@@ -194,10 +194,7 @@ bool _isLeafLine(String line) {
 /// Heals the paragraph that ends at line [i] in place; whether it changed.
 bool _healParagraph(List<String> lines, int i) {
   var s = i;
-  while (s > 0 &&
-      !MdChunker.isBlank(lines[s - 1]) &&
-      !_startsBlock(lines, s) &&
-      !_isLeafLine(lines[s - 1])) {
+  while (s > 0 && !MdChunker.isBlank(lines[s - 1]) && !_startsBlock(lines, s) && !_isLeafLine(lines[s - 1])) {
     s--;
   }
   final first = lines[s];
@@ -225,8 +222,7 @@ bool _healParagraph(List<String> lines, int i) {
     } else {
       var c = 0;
       if (line.trimLeft().startsWith('>')) {
-        while (c < line.length &&
-            (line.codeUnitAt(c) == 0x20 || line.codeUnitAt(c) == 0x3e)) {
+        while (c < line.length && (line.codeUnitAt(c) == 0x20 || line.codeUnitAt(c) == 0x3e)) {
           c++;
         }
       }
@@ -285,14 +281,28 @@ final class _Run {
 }
 
 bool _isWs(int c) =>
-    c == 0x20 || (c >= 0x09 && c <= 0x0d) || c == 0xa0 || c == 0x3000 ||
-    (c >= 0x2000 && c <= 0x200a) || c == 0x202f || c == 0x205f;
+    c == 0x20 ||
+    (c >= 0x09 && c <= 0x0d) ||
+    c == 0xa0 ||
+    c == 0x3000 ||
+    (c >= 0x2000 && c <= 0x200a) ||
+    c == 0x202f ||
+    c == 0x205f;
 
 bool _isPunct(int c) =>
-    (c >= 0x21 && c <= 0x2f) || (c >= 0x3a && c <= 0x40) || (c >= 0x5b && c <= 0x60) ||
-    (c >= 0x7b && c <= 0x7e) || (c >= 0x2010 && c <= 0x2027) || (c >= 0x2030 && c <= 0x205e) ||
-    (c >= 0x3001 && c <= 0x3003) || (c >= 0x3008 && c <= 0x3011) || c == 0xa1 || c == 0xa7 ||
-    c == 0xab || c == 0xbb || c == 0xbf;
+    (c >= 0x21 && c <= 0x2f) ||
+    (c >= 0x3a && c <= 0x40) ||
+    (c >= 0x5b && c <= 0x60) ||
+    (c >= 0x7b && c <= 0x7e) ||
+    (c >= 0x2010 && c <= 0x2027) ||
+    (c >= 0x2030 && c <= 0x205e) ||
+    (c >= 0x3001 && c <= 0x3003) ||
+    (c >= 0x3008 && c <= 0x3011) ||
+    c == 0xa1 ||
+    c == 0xa7 ||
+    c == 0xab ||
+    c == 0xbb ||
+    c == 0xbf;
 
 final RegExp _autolink = RegExp(r'<(?:[A-Za-z][A-Za-z0-9+.\-]*:[^\s<>]*|[^\s<>@]+@[^\s<>]+)>');
 final RegExp _htmlTag = RegExp(r'</?[A-Za-z][^<>]*>');
@@ -479,8 +489,7 @@ bool _oddMatch(_Run opener, _Run closer) =>
     (opener.len + closer.len) % 3 == 0 &&
     !(opener.len % 3 == 0 && closer.len % 3 == 0);
 
-bool _startsTag(int c) =>
-    (c >= 0x41 && c <= 0x5a) || (c >= 0x61 && c <= 0x7a) || c == 0x2f || c == 0x21 || c == 0x3f;
+bool _startsTag(int c) => (c >= 0x41 && c <= 0x5a) || (c >= 0x61 && c <= 0x7a) || c == 0x2f || c == 0x21 || c == 0x3f;
 
 bool _hasWsOrGt(String r, int from) {
   for (var k = from; k < r.length; k++) {

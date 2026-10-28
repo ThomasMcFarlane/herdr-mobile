@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'attach_kit.dart';
 import 'tray.dart';
 
@@ -175,7 +176,12 @@ class _AttachActionBarState extends State<AttachActionBar> {
                       ),
                     ),
                   ),
-                  AppButton(label: 'Attach ($count)', icon: LucideIcons.paperclip, onPressed: widget.onAttach, compact: true),
+                  AppButton(
+                    label: 'Attach ($count)',
+                    icon: LucideIcons.paperclip,
+                    onPressed: widget.onAttach,
+                    compact: true,
+                  ),
                 ],
               ),
             ),

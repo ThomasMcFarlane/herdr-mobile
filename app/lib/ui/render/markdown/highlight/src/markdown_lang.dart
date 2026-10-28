@@ -63,8 +63,7 @@ final class MarkdownHighlighter extends LineScanner {
         if (i + 2 < n &&
             t.codeUnitAt(i) == 0x5B &&
             t.codeUnitAt(i + 2) == 0x5D &&
-            (t.codeUnitAt(i + 1) == 0x20 ||
-                (t.codeUnitAt(i + 1) | 0x20) == 0x78)) {
+            (t.codeUnitAt(i + 1) == 0x20 || (t.codeUnitAt(i + 1) | 0x20) == 0x78)) {
           emit(out, i, i + 3, TokenKind.punctuation);
           i += 3;
         }
@@ -102,9 +101,7 @@ final class MarkdownHighlighter extends LineScanner {
   /// space), or [i].
   int _listMarker(String t, int i, int n) {
     final c = t.codeUnitAt(i);
-    if ((c == 0x2D || c == 0x2A || c == 0x2B) &&
-        i + 1 < n &&
-        isSpace(t.codeUnitAt(i + 1))) {
+    if ((c == 0x2D || c == 0x2A || c == 0x2B) && i + 1 < n && isSpace(t.codeUnitAt(i + 1))) {
       return i + 1;
     }
     if (isDigit(c)) {
@@ -112,9 +109,7 @@ final class MarkdownHighlighter extends LineScanner {
       while (j < n && j - i < 9 && isDigit(t.codeUnitAt(j))) {
         j++;
       }
-      if (j + 1 < n &&
-          (t.codeUnitAt(j) == 0x2E || t.codeUnitAt(j) == 0x29) &&
-          isSpace(t.codeUnitAt(j + 1))) {
+      if (j + 1 < n && (t.codeUnitAt(j) == 0x2E || t.codeUnitAt(j) == 0x29) && isSpace(t.codeUnitAt(j + 1))) {
         return j + 1;
       }
     }
@@ -195,8 +190,7 @@ final class MarkdownHighlighter extends LineScanner {
     }
   }
 
-  bool _trailing(int c) =>
-      c == 0x2E || c == 0x2C || c == 0x3B || c == 0x3A || c == 0x21 || c == 0x3F;
+  bool _trailing(int c) => c == 0x2E || c == 0x2C || c == 0x3B || c == 0x3A || c == 0x21 || c == 0x3F;
 
   /// Start of the closing run of exactly [run] backticks at or after [from].
   int _closingTicks(String t, int from, int n, int run) {
@@ -223,6 +217,5 @@ final class MarkdownHighlighter extends LineScanner {
     return opening || closing;
   }
 
-  bool _isPunct(int c) =>
-      c < 0x80 && c > 0x20 && !isLetter(c) && !isDigit(c);
+  bool _isPunct(int c) => c < 0x80 && c > 0x20 && !isLetter(c) && !isDigit(c);
 }

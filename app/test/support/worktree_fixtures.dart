@@ -18,40 +18,52 @@ const wireLinkedWorktree = <String, dynamic>{
   'repo_root': '/home/u/workspace/herdr-mobile',
 };
 
-Map<String, dynamic> wireWorkspace(String id, {Object? worktree, String label = '', String status = 'idle', int number = 1}) => {
-      'workspace_id': id,
-      'number': number,
-      'label': label.isEmpty ? id : label,
-      'focused': false,
-      'pane_count': 1,
-      'tab_count': 1,
-      'agent_status': status,
-      'worktree': ?worktree,
-    };
+Map<String, dynamic> wireWorkspace(
+  String id, {
+  Object? worktree,
+  String label = '',
+  String status = 'idle',
+  int number = 1,
+}) => {
+  'workspace_id': id,
+  'number': number,
+  'label': label.isEmpty ? id : label,
+  'focused': false,
+  'pane_count': 1,
+  'tab_count': 1,
+  'agent_status': status,
+  'worktree': ?worktree,
+};
 
 Map<String, dynamic> wireTab(String id, String workspace, {int number = 1, String label = ''}) => {
-      'tab_id': id,
-      'workspace_id': workspace,
-      'number': number,
-      'label': label,
-      'focused': false,
-      'pane_count': 1,
-      'agent_status': 'idle',
-    };
+  'tab_id': id,
+  'workspace_id': workspace,
+  'number': number,
+  'label': label,
+  'focused': false,
+  'pane_count': 1,
+  'agent_status': 'idle',
+};
 
-Map<String, dynamic> wirePaneIn(String id, String workspace, String tab, {String? cwd, String? agent, String status = 'idle'}) => {
-      'pane_id': id,
-      'workspace_id': workspace,
-      'tab_id': tab,
-      'cwd': cwd,
-      'agent': agent,
-      'agent_status': status,
-      'terminal_title': id,
-    };
+Map<String, dynamic> wirePaneIn(
+  String id,
+  String workspace,
+  String tab, {
+  String? cwd,
+  String? agent,
+  String status = 'idle',
+}) => {
+  'pane_id': id,
+  'workspace_id': workspace,
+  'tab_id': tab,
+  'cwd': cwd,
+  'agent': agent,
+  'agent_status': status,
+  'terminal_title': id,
+};
 
 Snapshot snapshotOf({
   required List<Map<String, dynamic>> workspaces,
   List<Map<String, dynamic>> tabs = const [],
   List<Map<String, dynamic>> panes = const [],
-}) =>
-    Snapshot.fromJson({'version': '1', 'workspaces': workspaces, 'tabs': tabs, 'panes': panes});
+}) => Snapshot.fromJson({'version': '1', 'workspaces': workspaces, 'tabs': tabs, 'panes': panes});

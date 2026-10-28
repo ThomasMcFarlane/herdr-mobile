@@ -135,9 +135,7 @@ class ReviewedState extends ChangeNotifier {
   void _save() {
     final store = _store;
     if (store == null || !_loaded) return;
-    final copy = {
-      for (final MapEntry(:key, :value) in _reviewed.entries) key: Map.of(value),
-    };
+    final copy = {for (final MapEntry(:key, :value) in _reviewed.entries) key: Map.of(value)};
     unawaited(() async {
       try {
         await store.write(copy);

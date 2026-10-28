@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'md_document.dart';
 import 'md_edge_fade.dart';
 import 'md_more_row.dart';
@@ -130,8 +131,16 @@ class _MdTableViewState extends State<MdTableView> {
         context,
         title: 'Table',
         actions: [
-          SheetAction(label: 'Copy as Markdown', icon: LucideIcons.copy, onTap: () => copyText(context, mdTableMarkdown(t), what: 'Table copied')),
-          SheetAction(label: 'Copy as TSV', icon: LucideIcons.table, onTap: () => copyText(context, t.plainText, what: 'Table copied as TSV')),
+          SheetAction(
+            label: 'Copy as Markdown',
+            icon: LucideIcons.copy,
+            onTap: () => copyText(context, mdTableMarkdown(t), what: 'Table copied'),
+          ),
+          SheetAction(
+            label: 'Copy as TSV',
+            icon: LucideIcons.table,
+            onTap: () => copyText(context, t.plainText, what: 'Table copied as TSV'),
+          ),
         ],
       ),
     );
@@ -148,7 +157,11 @@ class _MdTableViewState extends State<MdTableView> {
       fontFeatures: Type.tabular,
       color: styles.quiet ? ds.textSecondary : ds.text,
     );
-    final headStyle = (styles.quiet ? Type.captionStrong : Type.buttonCompact).copyWith(height: cellStyle.height, fontFeatures: Type.tabular, color: ds.text);
+    final headStyle = (styles.quiet ? Type.captionStrong : Type.buttonCompact).copyWith(
+      height: cellStyle.height,
+      fontFeatures: Type.tabular,
+      color: ds.text,
+    );
     final widths = _columnWidths(t, cellStyle, headStyle, scaler);
     final total = widths.fold<double>(0, (a, b) => a + b);
 
@@ -162,7 +175,9 @@ class _MdTableViewState extends State<MdTableView> {
     };
 
     TableRow tableRow(List<MdInlines> cells, TextStyle style, Color line) => TableRow(
-      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: line))),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: line)),
+      ),
       children: [
         for (var c = 0; c < t.columns; c++)
           Padding(
@@ -176,13 +191,8 @@ class _MdTableViewState extends State<MdTableView> {
       width: width,
       child: Table(
         defaultVerticalAlignment: TableCellVerticalAlignment.top,
-        columnWidths: {
-          for (var c = 0; c < widths.length; c++) c: FixedColumnWidth(widths[c] * (width / total)),
-        },
-        children: [
-          tableRow(t.header, headStyle, ds.border),
-          for (final r in rows) tableRow(r, cellStyle, ds.hairline),
-        ],
+        columnWidths: {for (var c = 0; c < widths.length; c++) c: FixedColumnWidth(widths[c] * (width / total))},
+        children: [tableRow(t.header, headStyle, ds.border), for (final r in rows) tableRow(r, cellStyle, ds.hairline)],
       ),
     );
 
@@ -206,19 +216,12 @@ class _MdTableViewState extends State<MdTableView> {
         }
         return MdEdgeFade(
           controller: _scroll,
-          child: SingleChildScrollView(
-            controller: _scroll,
-            scrollDirection: Axis.horizontal,
-            child: table(total),
-          ),
+          child: SingleChildScrollView(controller: _scroll, scrollDirection: Axis.horizontal, child: table(total)),
         );
       },
     );
 
-    final content = Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [body, ?more],
-    );
+    final content = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [body, ?more]);
     return ExcludeSemantics(
       excluding: widget.tail,
       child: Semantics(

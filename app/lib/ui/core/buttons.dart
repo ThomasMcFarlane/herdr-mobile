@@ -148,8 +148,8 @@ class CircleButton extends StatelessWidget {
             color: active
                 ? ds.accentWash
                 : filled
-                    ? (pressed ? ds.fillPressed : ds.fill)
-                    : (pressed ? ds.fill : Colors.transparent),
+                ? (pressed ? ds.fillPressed : ds.fill)
+                : (pressed ? ds.fill : Colors.transparent),
           ),
           alignment: Alignment.center,
           // A disabled button keeps its disc; the icon fades to decoration.

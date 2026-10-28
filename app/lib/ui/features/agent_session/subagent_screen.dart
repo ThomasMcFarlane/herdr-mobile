@@ -8,7 +8,9 @@ import '../../../data/repositories/agent_session.dart';
 import '../../../data/words/agent_names.dart';
 import '../../../data/words/elapsed.dart';
 import '../../../data/words/plural.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../render/markdown/markdown.dart';
 import 'agent_md_scope.dart';
 import 'asked_to.dart';
@@ -92,7 +94,9 @@ class _SubagentRunScreenState extends State<SubagentRunScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       LogStatusLine(session: session, runId: widget.runId),
-                      Expanded(child: SubagentSummaryBody(session: session, runId: widget.runId)),
+                      Expanded(
+                        child: SubagentSummaryBody(session: session, runId: widget.runId),
+                      ),
                     ],
                   );
                 }
@@ -109,7 +113,10 @@ class _SubagentRunScreenState extends State<SubagentRunScreen> {
           ),
           Flexible(
             flex: 0,
-            child: SafeArea(top: false, child: PromptDock(session: session, forRun: widget.runId)),
+            child: SafeArea(
+              top: false,
+              child: PromptDock(session: session, forRun: widget.runId),
+            ),
           ),
         ],
       ),
@@ -179,7 +186,9 @@ class RunStateStrip extends StatelessWidget {
           width: double.infinity,
           constraints: const BoxConstraints(minHeight: _blockMinHeight),
           padding: const EdgeInsets.symmetric(horizontal: Gap.lg, vertical: Gap.sm),
-          decoration: BoxDecoration(border: Border(bottom: BorderSide(color: ds.hairline))),
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: ds.hairline)),
+          ),
           child: RunClock(
             run: run,
             tone: tone,
@@ -255,7 +264,11 @@ class _PinnedPromptState extends State<PinnedPrompt> {
                   Text('Asked to', style: Type.captionStrong.copyWith(color: ds.textMuted)),
                   if (!_open) ...[
                     const SizedBox(height: Gap.hair),
-                    AskedPreview(markdown: text, maxLines: 3, style: Type.secondary.copyWith(color: ds.text)),
+                    AskedPreview(
+                      markdown: text,
+                      maxLines: 3,
+                      style: Type.secondary.copyWith(color: ds.text),
+                    ),
                   ],
                 ],
               ),
@@ -297,7 +310,9 @@ class LogOriginNote extends StatelessWidget {
         return Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: Gap.lg, vertical: Gap.sm),
-          decoration: BoxDecoration(border: Border(bottom: BorderSide(color: ds.hairline))),
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: ds.hairline)),
+          ),
           child: Row(
             children: [
               Icon(LucideIcons.fileText, size: IconSize.inline, color: ds.textSecondary),
@@ -343,7 +358,9 @@ class LogStatusLine extends StatelessWidget {
                 width: double.infinity,
                 constraints: const BoxConstraints(minHeight: kMinTap),
                 alignment: Alignment.centerLeft,
-                decoration: BoxDecoration(border: Border(bottom: BorderSide(color: ds.hairline))),
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: ds.hairline)),
+                ),
                 child: const LoadingRow('Loading…', padding: EdgeInsets.symmetric(horizontal: Gap.lg)),
               ),
             ),
@@ -354,7 +371,10 @@ class LogStatusLine extends StatelessWidget {
             Icon(LucideIcons.refreshCw, size: IconSize.inline, color: ds.textSecondary),
             const SizedBox(width: Gap.sm),
             Expanded(
-              child: Text('Couldn’t read the log · Tap to retry', style: Type.secondary.copyWith(color: ds.textSecondary)),
+              child: Text(
+                'Couldn’t read the log · Tap to retry',
+                style: Type.secondary.copyWith(color: ds.textSecondary),
+              ),
             ),
           ],
         );
@@ -389,7 +409,9 @@ class _SummaryNote extends StatelessWidget {
       width: double.infinity,
       constraints: const BoxConstraints(minHeight: kMinTap),
       padding: const EdgeInsets.symmetric(horizontal: Gap.lg, vertical: Gap.sm),
-      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: ds.hairline))),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: ds.hairline)),
+      ),
       child: Row(
         children: [
           Icon(LucideIcons.info, size: IconSize.row, color: ds.textSecondary),
@@ -461,7 +483,10 @@ class _SubagentSummaryBodyState extends State<SubagentSummaryBody> {
     ];
     final retry = run.retry;
     final assignment = run.assignment?.trim() ?? '';
-    final output = [for (final l in run.recentOutput) if (l.trim().isNotEmpty) _clip(visibleText(l), 300)];
+    final output = [
+      for (final l in run.recentOutput)
+        if (l.trim().isNotEmpty) _clip(visibleText(l), 300),
+    ];
     final result = run.result?.trim() ?? '';
     final doc = result.isEmpty ? null : (_resultDocs[run] ??= parseMd(result));
     if (!identical(doc, _expandedFor)) {
@@ -514,10 +539,7 @@ class _SubagentSummaryBodyState extends State<SubagentSummaryBody> {
             style: Type.secondary.copyWith(color: ds.textSecondary),
           ),
         ),
-      if (assignment.isNotEmpty) ...[
-        (c) => section('Asked to'),
-        (c) => AskedMarkdown(markdown: assignment),
-      ],
+      if (assignment.isNotEmpty) ...[(c) => section('Asked to'), (c) => AskedMarkdown(markdown: assignment)],
       if (run.recentTools.isNotEmpty || (run.lastToolLine ?? '').isNotEmpty) ...[
         (c) => section(run.isActive ? 'Doing now' : 'Latest tools'),
         if ((run.lastToolLine ?? '').trim().isNotEmpty)

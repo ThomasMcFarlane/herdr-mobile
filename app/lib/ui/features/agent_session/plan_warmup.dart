@@ -3,7 +3,9 @@ import 'dart:math' as math;
 
 import '../../../data/acp/acp_models.dart';
 import '../../../data/acp/session_state.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'transcript_plan.dart';
 
 /// Turns planned for the first frame of a long transcript: the screenful the
@@ -60,12 +62,7 @@ int firstFrameStart(List<TranscriptItem> items, {required bool live}) {
 /// inside a build), and calls `done` when the last one is ready. Nothing here
 /// is shown.
 class PlanWarmup {
-  PlanWarmup({
-    required this.open,
-    required this.notes,
-    this.budget = Dwell.planBudget,
-    this.gap = Dwell.planGap,
-  });
+  PlanWarmup({required this.open, required this.notes, this.budget = Dwell.planBudget, this.gap = Dwell.planGap});
 
   final Set<String> open;
   final Map<String, String> notes;

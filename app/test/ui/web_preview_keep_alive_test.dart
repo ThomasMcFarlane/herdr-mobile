@@ -128,12 +128,18 @@ void main() {
     FakeWebView.install();
   });
 
-  testWidgets('a page opened on the phone runs the Watching notice and keeps the connection past the 90 s away', (tester) async {
+  testWidgets('a page opened on the phone runs the Watching notice and keeps the connection past the 90 s away', (
+    tester,
+  ) async {
     final notifier = FakeNotifier();
     final app = _App(notifier);
     await app.start(tester);
     await app.openPage(tester);
-    expect(notifier.pages.last, 'localhost:3000 on build-box', reason: 'started while the app is in front, naming the page');
+    expect(
+      notifier.pages.last,
+      'localhost:3000 on build-box',
+      reason: 'started while the app is in front, naming the page',
+    );
 
     // The person switches to another app for two minutes.
     app.life(AppLifecycleState.paused);
@@ -145,23 +151,26 @@ void main() {
     await app.dispose(tester);
   });
 
-  testWidgets('with no notice (iOS, or Android refused it) the connection goes after 90 s; back, the page says so and comes back by itself', (tester) async {
-    final app = _App(const NullNotifier());
-    await app.start(tester);
-    await app.openPage(tester);
-    final asked = app.transport.webBridges.length;
+  testWidgets(
+    'with no notice (iOS, or Android refused it) the connection goes after 90 s; back, the page says so and comes back by itself',
+    (tester) async {
+      final app = _App(const NullNotifier());
+      await app.start(tester);
+      await app.openPage(tester);
+      final asked = app.transport.webBridges.length;
 
-    app.life(AppLifecycleState.paused);
-    await tester.pump(const Duration(seconds: 91));
-    expect(app.connection.isLive, isFalse, reason: 'nothing keeps Android from freezing herdr: the old rule');
-    await _settle(tester);
-    expect(find.text('Lost the connection to build-box'), findsOneWidget);
+      app.life(AppLifecycleState.paused);
+      await tester.pump(const Duration(seconds: 91));
+      expect(app.connection.isLive, isFalse, reason: 'nothing keeps Android from freezing herdr: the old rule');
+      await _settle(tester);
+      expect(find.text('Lost the connection to build-box'), findsOneWidget);
 
-    app.life(AppLifecycleState.resumed);
-    await _settle(tester, 20);
-    expect(app.connection.isLive, isTrue);
-    expect(find.text('Lost the connection to build-box'), findsNothing);
-    expect(app.transport.webBridges, hasLength(asked + 1), reason: 'the page opened again without a tap');
-    await app.dispose(tester);
-  });
+      app.life(AppLifecycleState.resumed);
+      await _settle(tester, 20);
+      expect(app.connection.isLive, isTrue);
+      expect(find.text('Lost the connection to build-box'), findsNothing);
+      expect(app.transport.webBridges, hasLength(asked + 1), reason: 'the page opened again without a tap');
+      await app.dispose(tester);
+    },
+  );
 }

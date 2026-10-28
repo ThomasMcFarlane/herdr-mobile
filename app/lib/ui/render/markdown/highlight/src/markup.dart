@@ -40,9 +40,7 @@ final class MarkupHighlighter extends LineScanner {
 
   int _comment(String t, int from, int start, int n, List<Token> out) {
     for (var i = from; i + 2 < n; i++) {
-      if (t.codeUnitAt(i) == 0x2D &&
-          t.codeUnitAt(i + 1) == 0x2D &&
-          t.codeUnitAt(i + 2) == 0x3E) {
+      if (t.codeUnitAt(i) == 0x2D && t.codeUnitAt(i + 1) == 0x2D && t.codeUnitAt(i + 2) == 0x3E) {
         mode = 0;
         emit(out, start, i + 3, TokenKind.comment);
         return i + 3;
@@ -295,9 +293,8 @@ final class CssHighlighter extends LineScanner {
           if (e > i + 1) emit(out, i, e, TokenKind.keyword);
           i = e > i ? e : i + 1;
         default:
-          final signed = (c == 0x2D || c == 0x2B) &&
-              i + 1 < n &&
-              (isDigit(t.codeUnitAt(i + 1)) || t.codeUnitAt(i + 1) == 0x2E);
+          final signed =
+              (c == 0x2D || c == 0x2B) && i + 1 < n && (isDigit(t.codeUnitAt(i + 1)) || t.codeUnitAt(i + 1) == 0x2E);
           if (isDigit(c) || (signed && kind != _sel)) {
             i = _number(t, i, n, out);
           } else if (_identStart(c)) {
@@ -311,8 +308,7 @@ final class CssHighlighter extends LineScanner {
     }
   }
 
-  bool _identStart(int c) =>
-      isLetter(c) || c == 0x5F || c >= 0x80 || c == 0x2D || c == 0x5C;
+  bool _identStart(int c) => isLetter(c) || c == 0x5F || c >= 0x80 || c == 0x2D || c == 0x5C;
 
   bool _identChar(int c) => _identStart(c) || isDigit(c);
 
@@ -454,7 +450,8 @@ final class CssHighlighter extends LineScanner {
 /// `index `, `--- ` / `+++ ` headers and git metadata. Stateless.
 final class DiffHighlighter extends LineScanner {
   static final Words _meta = Words({
-    TokenKind.diffMeta: 'diff index new deleted similarity dissimilarity '
+    TokenKind.diffMeta:
+        'diff index new deleted similarity dissimilarity '
         'rename copy old Binary',
   });
 

@@ -134,9 +134,9 @@ class FileViewerViewModel extends ChangeNotifier {
   bool get canPretty => kind == FileKind.json && _doc != null && !truncatedAtLimit;
 
   bool get isText => switch (kind) {
-        FileKind.text || FileKind.markdown || FileKind.json => true,
-        _ => false,
-      };
+    FileKind.text || FileKind.markdown || FileKind.json => true,
+    _ => false,
+  };
 
   Future<void> load() async {
     final epoch = ++_epoch;
@@ -156,8 +156,11 @@ class FileViewerViewModel extends ChangeNotifier {
         throw RemoteFileException(RemoteFileErrorKind.notAFile, '${stat.name} is a folder', path: stat.path);
       }
       if (stat.kind == RemoteEntryKind.other) {
-        throw RemoteFileException(RemoteFileErrorKind.notAFile, 'Special files (sockets, devices, pipes) cannot be opened',
-            path: stat.path);
+        throw RemoteFileException(
+          RemoteFileErrorKind.notAFile,
+          'Special files (sockets, devices, pipes) cannot be opened',
+          path: stat.path,
+        );
       }
       final size = stat.size;
       final want = size == null || size == 0 ? firstChunk : (size < firstChunk ? size : firstChunk);
@@ -259,7 +262,11 @@ class FileViewerViewModel extends ChangeNotifier {
         return;
       }
       if (!fresh.isFile) {
-        throw RemoteFileException(RemoteFileErrorKind.notAFile, '${fresh.name} is not a file any more', path: fresh.path);
+        throw RemoteFileException(
+          RemoteFileErrorKind.notAFile,
+          '${fresh.name} is not a file any more',
+          path: fresh.path,
+        );
       }
       final size = fresh.size;
       final want = size == null || size == 0 ? firstChunk : (size < firstChunk ? size : firstChunk);

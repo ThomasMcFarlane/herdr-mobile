@@ -73,4 +73,5 @@ String foldVietnamese(String text) {
 /// `ow`, `dd`) and one for a tone (`s f r x j`). `việt` is `vieejt`, 6 for 4
 /// characters. Shift is not counted: the keyboard capitalizes for free at a
 /// sentence start and the harness does not model the rest.
-int telexKeys(String char) => 1 + (_letters[char.toLowerCase()]?.extraKeys ?? 0);
+int telexKeys(String char) =>
+    1 + (_letters[char.toLowerCase()]?.extraKeys ?? 0);

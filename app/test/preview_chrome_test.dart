@@ -52,10 +52,7 @@ void main() {
 ● an answer
   ? for shortcuts
 ''');
-      expect(withoutAgentChrome(shown, blocked: false), [
-        '> a question the person asked earlier',
-        '● an answer',
-      ]);
+      expect(withoutAgentChrome(shown, blocked: false), ['> a question the person asked earlier', '● an answer']);
     });
 
     test('a blocked agent keeps a draft-looking menu row and numbered options', () {
@@ -65,17 +62,9 @@ Do you want to proceed?
   2. No
   Esc to cancel
 ''');
-      expect(withoutAgentChrome(shown, blocked: true), [
-        'Do you want to proceed?',
-        '❯ 1. Yes',
-        '  2. No',
-      ]);
+      expect(withoutAgentChrome(shown, blocked: true), ['Do you want to proceed?', '❯ 1. Yes', '  2. No']);
       // Not blocked: a numbered row is still not an input.
-      expect(withoutAgentChrome(shown, blocked: false), [
-        'Do you want to proceed?',
-        '❯ 1. Yes',
-        '  2. No',
-      ]);
+      expect(withoutAgentChrome(shown, blocked: false), ['Do you want to proceed?', '❯ 1. Yes', '  2. No']);
     });
 
     test('a blocked agent keeps a pointer row that is not numbered', () {
@@ -104,10 +93,7 @@ total 8
     });
 
     test('never takes more than a bounded number of rows', () {
-      final shown = [
-        'real output',
-        for (var i = 0; i < 12; i++) '  ? for shortcuts $i',
-      ];
+      final shown = ['real output', for (var i = 0; i < 12; i++) '  ? for shortcuts $i'];
       expect(withoutAgentChrome(shown, blocked: false).length, 5);
     });
   });

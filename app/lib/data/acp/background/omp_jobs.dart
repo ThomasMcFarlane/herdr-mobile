@@ -60,7 +60,16 @@ List<OmpJobFact> ompJobFacts(ToolCall call) {
   } else if (call.kind == ToolKind.execute) {
     // `details` lost on the way: the text still says it, at the end.
     final id = _backgroundedId(out);
-    if (id != null) facts.add(_started(id, call.rawInput is Map && (call.rawInput as Map).containsKey('code') ? 'eval' : 'bash', call, const {}));
+    if (id != null) {
+      facts.add(
+        _started(
+          id,
+          call.rawInput is Map && (call.rawInput as Map).containsKey('code') ? 'eval' : 'bash',
+          call,
+          const {},
+        ),
+      );
+    }
   }
 
   for (final job in _list(details?['jobs'])) {
@@ -80,9 +89,7 @@ List<OmpJobFact> ompJobFacts(ToolCall call) {
 
 OmpJobStarted _started(String id, String type, ToolCall call, Map<String, Object?> details) {
   final input = _map(call.rawInput);
-  final command = type == 'eval'
-      ? (_string(input?['title']) ?? _string(input?['code']))
-      : _string(input?['command']);
+  final command = type == 'eval' ? (_string(input?['title']) ?? _string(input?['code'])) : _string(input?['command']);
   final seconds = details['timeoutDisabled'] == true ? null : details['timeoutSeconds'];
   return OmpJobStarted(
     id,

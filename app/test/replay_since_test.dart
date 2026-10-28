@@ -65,7 +65,8 @@ class _Counting implements AgentHost {
 }
 
 class _Counted implements AcpTransport {
-  _Counted(this._inner, void Function(int) count) : lines = _inner.lines.map((l) {
+  _Counted(this._inner, void Function(int) count)
+    : lines = _inner.lines.map((l) {
         count(l.length);
         return l;
       });
@@ -171,35 +172,42 @@ void main() {
     expect(replaySinceOf(lines), isNotNull, reason: 'a replay stamps its turns: the copy can be cut');
   }
 
-  bootTest('a copy the keeper stamped is replayed from its last turn: the same transcript for a fraction of the bytes', () async {
-    // The first replay is a whole one (what the phone saw so far came live and
-    // carries no stamp).
-    await stampedCopy();
+  bootTest(
+    'a copy the keeper stamped is replayed from its last turn: the same transcript for a fraction of the bytes',
+    () async {
+      // The first replay is a whole one (what the phone saw so far came live and
+      // carries no stamp).
+      await stampedCopy();
 
-    // Meanwhile the chat goes on, from another device.
-    final other = open()..acquire();
-    await _until(() => other.attached && !other.state.replaying, 'the other device to attach');
-    await say(other, 'reply:another');
-    await say(other, 'reply:and one more');
-    other.release();
-    await Future<void>.delayed(const Duration(milliseconds: 100));
-    other.dispose();
+      // Meanwhile the chat goes on, from another device.
+      final other = open()..acquire();
+      await _until(() => other.attached && !other.state.replaying, 'the other device to attach');
+      await say(other, 'reply:another');
+      await say(other, 'reply:and one more');
+      other.release();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      other.dispose();
 
-    final (full, fullChars) = await opened();
-    final (delta, deltaChars) = await opened(withCache: cache);
+      final (full, fullChars) = await opened();
+      final (delta, deltaChars) = await opened(withCache: cache);
 
-    expect(_shape(delta.state), _shape(full.state), reason: 'what the person reads is what a whole replay gives');
-    expect(delta.state.items.whereType<TranscriptMessage>().last.text, 're: and one more');
-    expect(deltaChars, lessThan(fullChars ~/ 3), reason: 'only the newest turns came again ($deltaChars of $fullChars)');
-    expect(delta.state.items.length, full.state.items.length);
+      expect(_shape(delta.state), _shape(full.state), reason: 'what the person reads is what a whole replay gives');
+      expect(delta.state.items.whereType<TranscriptMessage>().last.text, 're: and one more');
+      expect(
+        deltaChars,
+        lessThan(fullChars ~/ 3),
+        reason: 'only the newest turns came again ($deltaChars of $fullChars)',
+      );
+      expect(delta.state.items.length, full.state.items.length);
 
-    // The next copy holds everything: the part the keeper did not repeat too.
-    delta.release();
-    await Future<void>.delayed(const Duration(milliseconds: 200));
-    final lines = cache.stored.values.single.lines;
-    final again = foldLines(delta.sessionId!, lines);
-    expect(_shape(again), _shape(full.state), reason: 'the saved copy is whole again');
-  });
+      // The next copy holds everything: the part the keeper did not repeat too.
+      delta.release();
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      final lines = cache.stored.values.single.lines;
+      final again = foldLines(delta.sessionId!, lines);
+      expect(_shape(again), _shape(full.state), reason: 'the saved copy is whole again');
+    },
+  );
 
   bootTest('a copy from another keeper log is replayed whole, and is still right', () async {
     await stampedCopy();
@@ -210,7 +218,10 @@ void main() {
       asOf: snapshot.asOf,
       setup: snapshot.setup,
       partial: snapshot.partial,
-      lines: [for (final l in snapshot.lines) l.replaceAllMapped(RegExp(r'"epoch"\s*:\s*"[0-9a-f]+"'), (_) => '"epoch":"000000000000"')],
+      lines: [
+        for (final l in snapshot.lines)
+          l.replaceAllMapped(RegExp(r'"epoch"\s*:\s*"[0-9a-f]+"'), (_) => '"epoch":"000000000000"'),
+      ],
     );
 
     final (full, fullChars) = await opened();
@@ -247,39 +258,35 @@ void main() {
     expect(jsonEncode(again.state.items.length), jsonEncode(full.state.items.length));
   });
 
-  bootTest(
-    'older turns the keeper trimmed since the copy do not change what the person reads',
-    () async {
-      await stampedCopy();
+  bootTest('older turns the keeper trimmed since the copy do not change what the person reads', () async {
+    await stampedCopy();
 
-      // The chat goes on from another device, heavily: the keeper's budget is
-      // small, so it cuts the detail of turns the phone's copy holds in full.
-      final other = open()..acquire();
-      await _until(() => other.attached && !other.state.replaying, 'the other device to attach');
-      await say(other, 'heavy:6:8:20:u0');
-      await say(other, 'heavy:6:8:20:u1');
-      await say(other, 'reply:the end');
-      other.release();
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-      other.dispose();
+    // The chat goes on from another device, heavily: the keeper's budget is
+    // small, so it cuts the detail of turns the phone's copy holds in full.
+    final other = open()..acquire();
+    await _until(() => other.attached && !other.state.replaying, 'the other device to attach');
+    await say(other, 'heavy:6:8:20:u0');
+    await say(other, 'heavy:6:8:20:u1');
+    await say(other, 'reply:the end');
+    other.release();
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    other.dispose();
 
-      final (full, fullChars) = await opened();
-      final (delta, deltaChars) = await opened(withCache: cache);
+    final (full, fullChars) = await opened();
+    final (delta, deltaChars) = await opened(withCache: cache);
 
-      expect(
-        full.state.items.whereType<TranscriptTool>().any((t) => t.call.detailTrimmed),
-        isTrue,
-        reason: 'the keeper did cut detail of older turns: this is the case the test is about',
-      );
-      expect(_shape(delta.state), _shape(full.state), reason: 'every row is there, the same ones, in the same order');
-      expect(
-        [for (final m in delta.state.items.whereType<TranscriptMessage>()) m.text],
-        [for (final m in full.state.items.whereType<TranscriptMessage>()) m.text],
-      );
-      expect(deltaChars, lessThan(fullChars), reason: 'and it cost less ($deltaChars of $fullChars)');
-    },
-    env: {'HERDR_KEEPER_LOG_SOFT_BYTES': '150000', 'HERDR_KEEPER_FULL_TURNS': '1'},
-  );
+    expect(
+      full.state.items.whereType<TranscriptTool>().any((t) => t.call.detailTrimmed),
+      isTrue,
+      reason: 'the keeper did cut detail of older turns: this is the case the test is about',
+    );
+    expect(_shape(delta.state), _shape(full.state), reason: 'every row is there, the same ones, in the same order');
+    expect(
+      [for (final m in delta.state.items.whereType<TranscriptMessage>()) m.text],
+      [for (final m in full.state.items.whereType<TranscriptMessage>()) m.text],
+    );
+    expect(deltaChars, lessThan(fullChars), reason: 'and it cost less ($deltaChars of $fullChars)');
+  }, env: {'HERDR_KEEPER_LOG_SOFT_BYTES': '150000', 'HERDR_KEEPER_FULL_TURNS': '1'});
 
   bootTest('a picture too large for the saved copy is still there after a re-attach that asks for less', () async {
     // 200 K characters of base64: over the recorder's line limit (128 K), so the

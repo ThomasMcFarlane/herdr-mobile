@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/batch_actions.dart';
 import '../../../data/repositories/fleet_repository.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'agents_grouping.dart';
 
 /// How the selection names a terminal agent row (`AgentRowData.key`).
@@ -99,8 +101,8 @@ typedef RowSelect = ({bool active, bool selected});
 /// itself. Rebuilds the row only when one of the two changes. A tree with no
 /// [BoardSelection] is "not picking".
 RowSelect rowSelect(BuildContext context, String ref) => context.select<BoardSelection?, RowSelect>(
-      (s) => (active: s?.active ?? false, selected: s?.isSelected(ref) ?? false),
-    );
+  (s) => (active: s?.active ?? false, selected: s?.isSelected(ref) ?? false),
+);
 
 /// The look of a flat board row (the compact list, an agent session) while the
 /// board is picking: a soft rounded tint inset like the pressed highlight, and

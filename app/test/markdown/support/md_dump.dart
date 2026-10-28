@@ -19,20 +19,21 @@ String dumpBlocks(List<MdBlock> blocks) {
 }
 
 List<DInline> dInlines(MdInlines inl) => [
-      for (final i in inl.items)
-        switch (i) {
-          MdSpan() => DRun(
-              i.text,
-              flags: (i.style.has(MdStyle.bold) ? dumpBold : 0) |
-                  (i.style.has(MdStyle.italic) ? dumpItalic : 0) |
-                  (i.style.has(MdStyle.strike) ? dumpStrike : 0) |
-                  (i.style.has(MdStyle.code) ? dumpCode : 0),
-              link: i.link,
-            ),
-          MdBreak() => const DBreak(),
-          MdImage() => DImage(i.src, i.alt),
-        },
-    ];
+  for (final i in inl.items)
+    switch (i) {
+      MdSpan() => DRun(
+        i.text,
+        flags:
+            (i.style.has(MdStyle.bold) ? dumpBold : 0) |
+            (i.style.has(MdStyle.italic) ? dumpItalic : 0) |
+            (i.style.has(MdStyle.strike) ? dumpStrike : 0) |
+            (i.style.has(MdStyle.code) ? dumpCode : 0),
+        link: i.link,
+      ),
+      MdBreak() => const DBreak(),
+      MdImage() => DImage(i.src, i.alt),
+    },
+];
 
 String _inl(MdInlines i) => dumpInlines(dInlines(i));
 
@@ -43,8 +44,7 @@ void _block(DumpOut out, int depth, MdBlock b) {
     case MdHeading():
       out.add(depth, 'h${b.level}', _inl(b.inlines));
     case MdCode():
-      out.add(depth, b.language.isEmpty ? 'code' : 'code[${b.language}]',
-          dumpQuote(b.text));
+      out.add(depth, b.language.isEmpty ? 'code' : 'code[${b.language}]', dumpQuote(b.text));
     case MdRule():
       out.add(depth, 'rule');
     case MdQuote():
@@ -68,12 +68,7 @@ void _block(DumpOut out, int depth, MdBlock b) {
         }
       }
     case MdTable():
-      const letters = {
-        MdAlign.none: '-',
-        MdAlign.left: 'l',
-        MdAlign.center: 'c',
-        MdAlign.right: 'r',
-      };
+      const letters = {MdAlign.none: '-', MdAlign.left: 'l', MdAlign.center: 'c', MdAlign.right: 'r'};
       out.add(depth, 'table ${b.aligns.map((a) => letters[a]).join(',')}');
       out.add(depth + 1, 'th', dumpCells(b.header.map(dInlines)));
       for (final r in b.rows) {

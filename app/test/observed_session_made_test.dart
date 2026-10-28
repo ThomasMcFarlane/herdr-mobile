@@ -68,7 +68,11 @@ void main() {
   });
 
   test('a log that fits the first read is whole: nothing to read, and asking reads nothing', () async {
-    final (rig, session) = await _open([sessionLine(), userLine('u', 'go'), assistantLine('a', 'http://localhost:3000/')]);
+    final (rig, session) = await _open([
+      sessionLine(),
+      userLine('u', 'go'),
+      assistantLine('a', 'http://localhost:3000/'),
+    ]);
     expect(session.madeReach, MadeReach.whole);
     session.readEarlierMade();
     await pumpEventQueue();
@@ -76,22 +80,25 @@ void main() {
     expect(_keys(session), ['localhost:3000']);
   });
 
-  test('a long log shows what its end made, says it is not all, and reads the rest as a digest up to where the end starts', () async {
-    final (rig, session) = await _open(_long());
-    expect(session.madeReach, MadeReach.partial);
-    expect(_keys(session), ['localhost:8765/failures']);
+  test(
+    'a long log shows what its end made, says it is not all, and reads the rest as a digest up to where the end starts',
+    () async {
+      final (rig, session) = await _open(_long());
+      expect(session.madeReach, MadeReach.partial);
+      expect(_keys(session), ['localhost:8765/failures']);
 
-    session.readEarlierMade();
-    expect(session.madeReach, MadeReach.reading);
-    await eventually(() => session.madeReach != MadeReach.reading, reason: 'earlier part read');
-    expect(session.madeReach, MadeReach.whole);
-    expect(_keys(session), ['localhost:8765/failures', '/work/w1/reports/old.html', 'localhost:8790']);
+      session.readEarlierMade();
+      expect(session.madeReach, MadeReach.reading);
+      await eventually(() => session.madeReach != MadeReach.reading, reason: 'earlier part read');
+      expect(session.madeReach, MadeReach.whole);
+      expect(_keys(session), ['localhost:8765/failures', '/work/w1/reports/old.html', 'localhost:8790']);
 
-    final call = rig.source.calls.singleWhere((c) => c.until != null);
-    expect(call.digest, isTrue, reason: 'the chat is not wanted, only what was made');
-    expect(call.from, 0);
-    expect(session.madeHistory!.upTo, call.until, reason: 'read through exactly where the shown part starts');
-  });
+      final call = rig.source.calls.singleWhere((c) => c.until != null);
+      expect(call.digest, isTrue, reason: 'the chat is not wanted, only what was made');
+      expect(call.from, 0);
+      expect(session.madeHistory!.upTo, call.until, reason: 'read through exactly where the shown part starts');
+    },
+  );
 
   test('asking again while it reads, or once it is read, reads nothing more', () async {
     final (rig, session) = await _open(_long());
@@ -113,7 +120,11 @@ void main() {
     final again = await _open(const [], source: first.$1.source);
     await eventually(() => again.$2.madeReach == MadeReach.whole, reason: 'kept copy found');
     expect(_keys(again.$2), ['localhost:8765/failures', '/work/w1/reports/old.html', 'localhost:8790']);
-    expect(first.$1.source.calls.where((c) => c.until != null), hasLength(1), reason: 'only the first visit read the host');
+    expect(
+      first.$1.source.calls.where((c) => c.until != null),
+      hasLength(1),
+      reason: 'only the first visit read the host',
+    );
   });
 
   test('a log that grew since reads only the new stretch and keeps what was found', () async {
@@ -126,7 +137,10 @@ void main() {
 
     first.$1.source.write([assistantLine('mid', 'Also http://localhost:9000/'), ..._filler(40, from: 100)]);
     final again = await _open(const [], source: first.$1.source);
-    await eventually(() => again.$2.madeReach != MadeReach.whole || again.$2.madeHistory != null, reason: 'kept copy found');
+    await eventually(
+      () => again.$2.madeReach != MadeReach.whole || again.$2.madeHistory != null,
+      reason: 'kept copy found',
+    );
     expect(again.$2.madeReach, MadeReach.partial, reason: 'the shown part now starts after what was read');
     again.$2.readEarlierMade();
     await eventually(() => again.$2.madeReach == MadeReach.whole, reason: 'new stretch read');

@@ -70,122 +70,136 @@ void _fill(FakeKeeper keeper) {
 Future<void> _real(WidgetTester tester, int ms) => Future<void>.delayed(Duration(milliseconds: ms));
 
 void main() {
-  final attachDelays = [
-    for (final s in (Platform.environment['OPEN_ATTACH_MS'] ?? '0,150').split(',')) int.parse(s),
-  ];
+  final attachDelays = [for (final s in (Platform.environment['OPEN_ATTACH_MS'] ?? '0,150').split(',')) int.parse(s)];
 
   for (final attachMs in attachDelays) {
-    testWidgets('open a 600-message session, attach answers after $attachMs ms', (tester) => tester.runAsync(() async {
-      tester.view.physicalSize = const Size(824, 1784);
-      tester.view.devicePixelRatio = 2;
-      addTearDown(tester.view.reset);
-      final dir = Directory.systemTemp.createTempSync('open_cache_bench');
-      addTearDown(() => dir.deleteSync(recursive: true));
+    testWidgets(
+      'open a 600-message session, attach answers after $attachMs ms',
+      (tester) => tester.runAsync(() async {
+        tester.view.physicalSize = const Size(824, 1784);
+        tester.view.devicePixelRatio = 2;
+        addTearDown(tester.view.reset);
+        final dir = Directory.systemTemp.createTempSync('open_cache_bench');
+        addTearDown(() => dir.deleteSync(recursive: true));
 
-      final host = FakeAgentHost();
-      final keeper = host.add(id: 'k1', sessionId: 'sess-k1');
-      _fill(keeper);
-      final machine = MachineConnection(
-        profile: const MachineProfile(id: 'm1', label: 'studio', host: 'm1.local', username: 'u'),
-        api: HerdrApi(FakeTransport()),
-        backoff: (_) => const Duration(hours: 1),
-        pollInterval: const Duration(hours: 1),
-      )..start();
-      await _real(tester, 20);
-      addTearDown(machine.dispose);
+        final host = FakeAgentHost();
+        final keeper = host.add(id: 'k1', sessionId: 'sess-k1');
+        _fill(keeper);
+        final machine = MachineConnection(
+          profile: const MachineProfile(id: 'm1', label: 'studio', host: 'm1.local', username: 'u'),
+          api: HerdrApi(FakeTransport()),
+          backoff: (_) => const Duration(hours: 1),
+          pollInterval: const Duration(hours: 1),
+        )..start();
+        await _real(tester, 20);
+        addTearDown(machine.dispose);
 
-      final cache = FileTranscriptCache(() async => dir);
-      AcpAgentSession make(TranscriptCache? c) => AcpAgentSession(
-        machine: machine,
-        host: host,
-        info: keeper.info,
-        cache: c,
-        notifyEvery: const Duration(milliseconds: 1),
-      );
+        final cache = FileTranscriptCache(() async => dir);
+        AcpAgentSession make(TranscriptCache? c) => AcpAgentSession(
+          machine: machine,
+          host: host,
+          info: keeper.info,
+          cache: c,
+          notifyEvery: const Duration(milliseconds: 1),
+        );
 
-      Future<void> release(AcpAgentSession s) async {
-        s.release();
-        await cache.flush();
-        s.dispose();
-      }
-
-      // A first run reads the whole log and leaves its copy behind.
-      {
-        final first = make(cache);
-        await tester.pumpWidget(MaterialApp(theme: AppTheme.light(), home: AgentSessionScreen(session: first)));
-        for (var i = 0; i < 400 && !first.attached; i++) {
-          await _real(tester, 5);
-          await tester.pump();
+        Future<void> release(AcpAgentSession s) async {
+          s.release();
+          await cache.flush();
+          s.dispose();
         }
-        expect(first.attached, isTrue);
-        expect(first.state.items.length, greaterThan(_turns * 2));
-        await tester.pumpWidget(const SizedBox());
-        await release(first);
-      }
-      final size = dir.listSync().whereType<File>().map((f) => f.lengthSync()).fold<int>(0, (a, b) => a + b);
 
-      /// Mounts the screen over a fresh session and counts until a frame shows
-      /// the last answer.
-      Future<({int firstMs, int liveMs, int swapMs})> open(TranscriptCache? c) async {
-        host.attachGate = Completer<void>();
-        final s = make(c);
-        final clock = Stopwatch()..start();
-        // The route being pushed: the screen's initState acquires the session.
-        await tester.pumpWidget(MaterialApp(theme: AppTheme.light(), home: AgentSessionScreen(session: s)));
-        if (Platform.environment['OPEN_TRACE'] != null) {
-          // ignore: avoid_print
-          print('    pumpWidget returned at ${clock.elapsedMilliseconds} ms');
+        // A first run reads the whole log and leaves its copy behind.
+        {
+          final first = make(cache);
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: AppTheme.light(),
+              home: AgentSessionScreen(session: first),
+            ),
+          );
+          for (var i = 0; i < 400 && !first.attached; i++) {
+            await _real(tester, 5);
+            await tester.pump();
+          }
+          expect(first.attached, isTrue);
+          expect(first.state.items.length, greaterThan(_turns * 2));
+          await tester.pumpWidget(const SizedBox());
+          await release(first);
         }
-        // The keeper's answer arrives `attachMs` after the open.
-        unawaited(Future<void>.delayed(Duration(milliseconds: attachMs), host.attachGate!.complete));
-        var firstMs = -1;
-        var liveMs = -1;
-        while ((firstMs < 0 || liveMs < 0) && clock.elapsedMilliseconds < 20000) {
-          await _real(tester, 1);
-          final p = Stopwatch()..start();
-          await tester.pump(const Duration(milliseconds: 16));
+        final size = dir.listSync().whereType<File>().map((f) => f.lengthSync()).fold<int>(0, (a, b) => a + b);
+
+        /// Mounts the screen over a fresh session and counts until a frame shows
+        /// the last answer.
+        Future<({int firstMs, int liveMs, int swapMs})> open(TranscriptCache? c) async {
+          host.attachGate = Completer<void>();
+          final s = make(c);
+          final clock = Stopwatch()..start();
+          // The route being pushed: the screen's initState acquires the session.
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: AppTheme.light(),
+              home: AgentSessionScreen(session: s),
+            ),
+          );
           if (Platform.environment['OPEN_TRACE'] != null) {
             // ignore: avoid_print
-            print('    t=${clock.elapsedMilliseconds} pump=${p.elapsedMilliseconds}ms attached=${s.attached} items=${s.state.items.length}');
+            print('    pumpWidget returned at ${clock.elapsedMilliseconds} ms');
           }
-          final shown = find.textContaining('longer closing paragraph', findRichText: true).evaluate().isNotEmpty;
-          if (firstMs < 0 && shown) firstMs = clock.elapsedMilliseconds;
-          if (liveMs < 0 && s.attached) liveMs = clock.elapsedMilliseconds;
+          // The keeper's answer arrives `attachMs` after the open.
+          unawaited(Future<void>.delayed(Duration(milliseconds: attachMs), host.attachGate!.complete));
+          var firstMs = -1;
+          var liveMs = -1;
+          while ((firstMs < 0 || liveMs < 0) && clock.elapsedMilliseconds < 20000) {
+            await _real(tester, 1);
+            final p = Stopwatch()..start();
+            await tester.pump(const Duration(milliseconds: 16));
+            if (Platform.environment['OPEN_TRACE'] != null) {
+              // ignore: avoid_print
+              print(
+                '    t=${clock.elapsedMilliseconds} pump=${p.elapsedMilliseconds}ms attached=${s.attached} items=${s.state.items.length}',
+              );
+            }
+            final shown = find.textContaining('longer closing paragraph', findRichText: true).evaluate().isNotEmpty;
+            if (firstMs < 0 && shown) firstMs = clock.elapsedMilliseconds;
+            if (liveMs < 0 && s.attached) liveMs = clock.elapsedMilliseconds;
+          }
+          // Let the swap to the live replay settle, and measure the frame it costs.
+          final swap = Stopwatch()..start();
+          await tester.pump(const Duration(milliseconds: 16));
+          final swapMs = swap.elapsedMilliseconds;
+          await tester.pumpWidget(const SizedBox());
+          s.dispose();
+          return (firstMs: firstMs, liveMs: liveMs, swapMs: swapMs);
         }
-        // Let the swap to the live replay settle, and measure the frame it costs.
-        final swap = Stopwatch()..start();
-        await tester.pump(const Duration(milliseconds: 16));
-        final swapMs = swap.elapsedMilliseconds;
-        await tester.pumpWidget(const SizedBox());
-        s.dispose();
-        return (firstMs: firstMs, liveMs: liveMs, swapMs: swapMs);
-      }
 
-      // Warm the JIT with one throwaway open of each kind.
-      await open(null);
-      await open(cache);
+        // Warm the JIT with one throwaway open of each kind.
+        await open(null);
+        await open(cache);
 
-      final without = <int>[];
-      final withCache = <int>[];
-      final live = <int>[];
-      final swaps = <int>[];
-      for (var i = 0; i < 5; i++) {
-        without.add((await open(null)).firstMs);
-        final r = await open(cache);
-        withCache.add(r.firstMs);
-        live.add(r.liveMs);
-        swaps.add(r.swapMs);
-      }
-      without.sort();
-      withCache.sort();
-      live.sort();
-      swaps.sort();
-      // ignore: avoid_print
-      print(
-        'OPEN_CACHE attach=${attachMs}ms cacheFile=${(size / 1024).round()}KB '
-        'first transcript (median of 5): without cache ${without[2]} ms (${without.join(',')}), '
-        'with cache ${withCache[2]} ms (${withCache.join(',')}); live replay done at ${live[2]} ms; frame after it ${swaps[2]} ms',
-      );
-    }), timeout: const Timeout(Duration(minutes: 4)));
+        final without = <int>[];
+        final withCache = <int>[];
+        final live = <int>[];
+        final swaps = <int>[];
+        for (var i = 0; i < 5; i++) {
+          without.add((await open(null)).firstMs);
+          final r = await open(cache);
+          withCache.add(r.firstMs);
+          live.add(r.liveMs);
+          swaps.add(r.swapMs);
+        }
+        without.sort();
+        withCache.sort();
+        live.sort();
+        swaps.sort();
+        // ignore: avoid_print
+        print(
+          'OPEN_CACHE attach=${attachMs}ms cacheFile=${(size / 1024).round()}KB '
+          'first transcript (median of 5): without cache ${without[2]} ms (${without.join(',')}), '
+          'with cache ${withCache[2]} ms (${withCache.join(',')}); live replay done at ${live[2]} ms; frame after it ${swaps[2]} ms',
+        );
+      }),
+      timeout: const Timeout(Duration(minutes: 4)),
+    );
   }
 }

@@ -11,7 +11,9 @@ import '../../../data/repositories/agent_session_settings.dart';
 import '../../../data/repositories/fleet_repository.dart';
 import '../../../data/words/agent_names.dart';
 import '../../../data/acp/agent_host.dart' show agentRoutes;
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../agents/agent_navigation.dart';
 import '../../render/visible_text.dart';
 import 'past_session_row.dart';
@@ -107,9 +109,7 @@ class _BodyState extends State<_Body> {
       body: CustomScrollView(
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         slivers: [
-          SliverLargeTitle.back(
-            title: 'Past sessions',
-          ),
+          SliverLargeTitle.back(title: 'Past sessions'),
           if (vm.machines.isNotEmpty) SliverToBoxAdapter(child: _Filters(vm: vm)),
           if (vm.phase == PastPhase.ready && (vm.history?.sessions.length ?? 0) > _searchFrom)
             SliverToBoxAdapter(
@@ -128,7 +128,10 @@ class _BodyState extends State<_Body> {
     final inset = MediaQuery.paddingOf(context).bottom;
     Widget filler(Widget child) => SliverFillRemaining(
       hasScrollBody: false,
-      child: Padding(padding: EdgeInsets.only(bottom: inset), child: child),
+      child: Padding(
+        padding: EdgeInsets.only(bottom: inset),
+        child: child,
+      ),
     );
     final machine = vm.machine;
     switch (vm.phase) {
@@ -175,7 +178,10 @@ class _BodyState extends State<_Body> {
   }
 
   Widget _waiting(String text) => SliverToBoxAdapter(
-    child: LoadingRow(text, padding: const EdgeInsets.symmetric(horizontal: Gap.gutter, vertical: Gap.xl)),
+    child: LoadingRow(
+      text,
+      padding: const EdgeInsets.symmetric(horizontal: Gap.gutter, vertical: Gap.xl),
+    ),
   );
 
   List<Widget> _ready(BuildContext context, PastSessionsViewModel vm, double inset, Widget Function(Widget) filler) {
@@ -319,7 +325,10 @@ class _Filters extends StatelessWidget {
     );
   }
 
-  static Widget _capped(Widget chip) => ConstrainedBox(constraints: const BoxConstraints(maxWidth: _chipMaxWidth), child: chip);
+  static Widget _capped(Widget chip) => ConstrainedBox(
+    constraints: const BoxConstraints(maxWidth: _chipMaxWidth),
+    child: chip,
+  );
 }
 
 class _ChipRow extends StatelessWidget {

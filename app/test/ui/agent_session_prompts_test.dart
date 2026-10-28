@@ -38,23 +38,23 @@ Future<void> pumpScreen(
   if (settle) await tester.pump(Dwell.tapGuard);
 }
 
-FakeAgentSession withPermission(
-  PermissionRequest request, {
-  Object id = 7,
-  bool keepPending = false,
-}) => FakeAgentSession(state: stateWith(turnActive: true, pending: [PendingPermission(id, request)]))
-  ..keepPendingOnAnswer = keepPending;
+FakeAgentSession withPermission(PermissionRequest request, {Object id = 7, bool keepPending = false}) =>
+    FakeAgentSession(state: stateWith(turnActive: true, pending: [PendingPermission(id, request)]))
+      ..keepPendingOnAnswer = keepPending;
 
 PermissionOutcome? answered(FakeAgentSession s, int i) => s.permissionAnswers[i].$2;
 
 String? selectedId(PermissionOutcome? o) => o is PermissionSelected ? o.optionId : null;
 
-ElicitationRequest form(Map<String, Object?> properties, {List<String> required = const [], String message = 'A question'}) =>
-    ElicitationRequest.parse({
-      'mode': 'form',
-      'message': message,
-      'requestedSchema': {'type': 'object', 'required': required, 'properties': properties},
-    });
+ElicitationRequest form(
+  Map<String, Object?> properties, {
+  List<String> required = const [],
+  String message = 'A question',
+}) => ElicitationRequest.parse({
+  'mode': 'form',
+  'message': message,
+  'requestedSchema': {'type': 'object', 'required': required, 'properties': properties},
+});
 
 FakeAgentSession withQuestion(ElicitationRequest request, {bool keepPending = false}) =>
     FakeAgentSession(state: stateWith(turnActive: true, pending: [PendingQuestion(9, request)]))
@@ -69,10 +69,7 @@ Map<String, Object?> acceptedContent(FakeAgentSession s) {
 void main() {
   group('permission request', () {
     testWidgets('always shows what it will run, in full, with the risk named', (tester) async {
-      final request = permissionRequest(
-        title: 'Bash',
-        rawInput: {'command': 'git push --force origin main'},
-      );
+      final request = permissionRequest(title: 'Bash', rawInput: {'command': 'git push --force origin main'});
       await pumpScreen(tester, withPermission(request));
       expect(find.text('git push --force origin main'), findsOneWidget);
       expect(find.textContaining('Look closely: force-pushes'), findsOneWidget);
@@ -80,10 +77,7 @@ void main() {
     });
 
     testWidgets('a harmless command has no risk line and its allow takes one tap, sent once', (tester) async {
-      final session = withPermission(
-        permissionRequest(rawInput: {'command': 'ls -la'}),
-        keepPending: true,
-      );
+      final session = withPermission(permissionRequest(rawInput: {'command': 'ls -la'}), keepPending: true);
       await pumpScreen(tester, session);
       expect(find.textContaining('Look closely'), findsNothing);
 
@@ -145,10 +139,7 @@ void main() {
     });
 
     testWidgets('a full hold sends once, however long the finger stays; the fill is the progress', (tester) async {
-      final session = withPermission(
-        permissionRequest(rawInput: {'command': 'rm -rf /srv/data'}),
-        keepPending: true,
-      );
+      final session = withPermission(permissionRequest(rawInput: {'command': 'rm -rf /srv/data'}), keepPending: true);
       await pumpScreen(tester, session);
       final g = await pressAndHold(tester, find.text('Allow once'), const Duration(milliseconds: 300));
       expect(find.textContaining('Hold to send · '), findsOneWidget);
@@ -211,7 +202,9 @@ void main() {
       expect(session.permissionAnswers, isEmpty);
     });
 
-    testWidgets('a new request in the middle of a hold drops it, and the finger on the new one sends nothing', (tester) async {
+    testWidgets('a new request in the middle of a hold drops it, and the finger on the new one sends nothing', (
+      tester,
+    ) async {
       final session = withPermission(permissionRequest(rawInput: {'command': 'rm -rf /srv/data'}));
       await pumpScreen(tester, session);
       final g = await pressAndHold(tester, find.text('Allow once'), const Duration(milliseconds: 450));
@@ -220,7 +213,9 @@ void main() {
       session.push(
         stateWith(
           turnActive: true,
-          pending: [PendingPermission(8, permissionRequest(rawInput: {'command': 'rm -rf /srv/other'}))],
+          pending: [
+            PendingPermission(8, permissionRequest(rawInput: {'command': 'rm -rf /srv/other'})),
+          ],
         ),
       );
       await advance(tester, const Duration(milliseconds: 1500));
@@ -242,33 +237,35 @@ void main() {
       expect(answered(session, 0), isA<PermissionCancelled>());
     });
 
-    testWidgets('Cancel request keeps its words beside "N more waiting" at 320 dp ×1.6, and reads disabled while taps are ignored',
-        (tester) async {
-      final handle = tester.ensureSemantics();
-      final session = FakeAgentSession(
-        state: stateWith(
-          turnActive: true,
-          pending: [
-            PendingPermission(1, permissionRequest(rawInput: {'command': 'ls'})),
-            PendingPermission(2, permissionRequest(rawInput: {'command': 'pwd'})),
-            PendingPermission(3, permissionRequest(rawInput: {'command': 'id'})),
-          ],
-        ),
-      );
-      await pumpScreen(tester, session, size: const Size(320, 640), textScale: 1.6, settle: false);
-      final cancel = find.text('Cancel request');
-      await tester.ensureVisible(cancel);
-      await tester.pump();
-      expect(tester.renderObject<RenderParagraph>(cancel).didExceedMaxLines, isFalse, reason: 'not cut');
-      expect(tester.getSemantics(cancel), isSemantics(isButton: true, isEnabled: false));
-      await tester.tap(cancel, warnIfMissed: false);
-      await tester.pump();
-      expect(session.permissionAnswers, isEmpty, reason: 'a guarded tap sends nothing');
+    testWidgets(
+      'Cancel request keeps its words beside "N more waiting" at 320 dp ×1.6, and reads disabled while taps are ignored',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        final session = FakeAgentSession(
+          state: stateWith(
+            turnActive: true,
+            pending: [
+              PendingPermission(1, permissionRequest(rawInput: {'command': 'ls'})),
+              PendingPermission(2, permissionRequest(rawInput: {'command': 'pwd'})),
+              PendingPermission(3, permissionRequest(rawInput: {'command': 'id'})),
+            ],
+          ),
+        );
+        await pumpScreen(tester, session, size: const Size(320, 640), textScale: 1.6, settle: false);
+        final cancel = find.text('Cancel request');
+        await tester.ensureVisible(cancel);
+        await tester.pump();
+        expect(tester.renderObject<RenderParagraph>(cancel).didExceedMaxLines, isFalse, reason: 'not cut');
+        expect(tester.getSemantics(cancel), isSemantics(isButton: true, isEnabled: false));
+        await tester.tap(cancel, warnIfMissed: false);
+        await tester.pump();
+        expect(session.permissionAnswers, isEmpty, reason: 'a guarded tap sends nothing');
 
-      await tester.pump(Dwell.tapGuard);
-      expect(tester.getSemantics(cancel), isSemantics(isButton: true, isEnabled: true));
-      handle.dispose();
-    });
+        await tester.pump(Dwell.tapGuard);
+        expect(tester.getSemantics(cancel), isSemantics(isButton: true, isEnabled: true));
+        handle.dispose();
+      },
+    );
 
     testWidgets('waiting requests are counted and shown one at a time', (tester) async {
       final session = FakeAgentSession(
@@ -277,7 +274,12 @@ void main() {
           pending: [
             PendingPermission(1, permissionRequest(title: 'First', rawInput: {'command': 'echo first'})),
             PendingPermission(2, permissionRequest(title: 'Second', rawInput: {'command': 'echo second'})),
-            PendingQuestion(3, form({'a': {'type': 'string'}})),
+            PendingQuestion(
+              3,
+              form({
+                'a': {'type': 'string'},
+              }),
+            ),
           ],
         ),
       );
@@ -305,7 +307,9 @@ void main() {
     testWidgets('without a command it shows the input, and judges the file it names', (tester) async {
       await pumpScreen(
         tester,
-        withPermission(permissionRequest(title: 'Edit file', kind: ToolKind.edit, rawInput: {'file_path': '/etc/hosts'})),
+        withPermission(
+          permissionRequest(title: 'Edit file', kind: ToolKind.edit, rawInput: {'file_path': '/etc/hosts'}),
+        ),
       );
       expect(find.textContaining('file_path: /etc/hosts'), findsOneWidget);
       expect(find.textContaining('Look closely: changes system files'), findsOneWidget);
@@ -376,23 +380,28 @@ void main() {
       expect(find.textContaining('Look closely: deletes files'), findsOneWidget);
     });
 
-    testWidgets('holding an allow on a command longer than its box shows the end and sends nothing; the next hold sends', (tester) async {
-      final long = '${List.generate(40, (i) => 'echo step $i').join('\n')}\nls';
-      final session = withPermission(permissionRequest(rawInput: {'command': long}));
-      await pumpScreen(tester, session);
-      expect(find.textContaining('More below'), findsOneWidget);
+    testWidgets(
+      'holding an allow on a command longer than its box shows the end and sends nothing; the next hold sends',
+      (tester) async {
+        final long = '${List.generate(40, (i) => 'echo step $i').join('\n')}\nls';
+        final session = withPermission(permissionRequest(rawInput: {'command': long}));
+        await pumpScreen(tester, session);
+        expect(find.textContaining('More below'), findsOneWidget);
 
-      await holdFor(tester, find.text('Allow once'));
-      expect(session.permissionAnswers, isEmpty, reason: 'the first hold only reads');
-      expect(find.text('Hold or tap again · long command, read it all'), findsOneWidget);
-      expect(find.textContaining('More below'), findsNothing, reason: 'the first hold scrolled to the end');
-      expect(fillOf(tester), 0);
+        await holdFor(tester, find.text('Allow once'));
+        expect(session.permissionAnswers, isEmpty, reason: 'the first hold only reads');
+        expect(find.text('Hold or tap again · long command, read it all'), findsOneWidget);
+        expect(find.textContaining('More below'), findsNothing, reason: 'the first hold scrolled to the end');
+        expect(fillOf(tester), 0);
 
-      await holdFor(tester, find.text('Hold or tap again · long command, read it all'));
-      expect(selectedId(answered(session, 0)), 'allow-once');
-    });
+        await holdFor(tester, find.text('Hold or tap again · long command, read it all'));
+        expect(selectedId(answered(session, 0)), 'allow-once');
+      },
+    );
 
-    testWidgets('a tap on an unread command does not scroll it or send; assistive activation shows the end', (tester) async {
+    testWidgets('a tap on an unread command does not scroll it or send; assistive activation shows the end', (
+      tester,
+    ) async {
       final semantics = tester.ensureSemantics();
       final long = '${List.generate(40, (i) => 'echo step $i').join('\n')}\nls';
       final session = withPermission(permissionRequest(rawInput: {'command': long}));
@@ -517,7 +526,9 @@ void main() {
       expect(session.permissionAnswers.map((a) => a.$1), [1, 2]);
     });
 
-    testWidgets('a request answered on the computer leaves the dock with one toast naming who answered', (tester) async {
+    testWidgets('a request answered on the computer leaves the dock with one toast naming who answered', (
+      tester,
+    ) async {
       final session = withPermission(permissionRequest(rawInput: {'command': 'npm test'}));
       await pumpScreen(tester, session);
       expect(find.byType(PermissionPanel), findsOneWidget);
@@ -554,11 +565,17 @@ void main() {
         isNotNull,
       );
       expect(
-        optionGate(const PermissionOption(optionId: 'x', name: 'Always allow', kind: PermissionOptionKind.allowOnce), null),
+        optionGate(
+          const PermissionOption(optionId: 'x', name: 'Always allow', kind: PermissionOptionKind.allowOnce),
+          null,
+        ),
         'standing permission',
       );
       expect(
-        optionGate(const PermissionOption(optionId: 'x', name: 'Allow for this session', kind: PermissionOptionKind.other), null),
+        optionGate(
+          const PermissionOption(optionId: 'x', name: 'Allow for this session', kind: PermissionOptionKind.other),
+          null,
+        ),
         'standing permission',
       );
     });
@@ -573,7 +590,10 @@ void main() {
         reason: 'an unknown kind is never assumed to be a refusal',
       );
       expect(
-        optionGate(const PermissionOption(optionId: 'x', name: 'Delete all branches', kind: PermissionOptionKind.allowOnce), null),
+        optionGate(
+          const PermissionOption(optionId: 'x', name: 'Delete all branches', kind: PermissionOptionKind.allowOnce),
+          null,
+        ),
         isNotNull,
       );
     });
@@ -587,56 +607,80 @@ void main() {
     });
 
     test('the subject names every field the call carries, not only a string command', () {
-      final list = describePermission(permissionRequest(rawInput: {'command': ['rm', '-rf', '/srv/data']}));
+      final list = describePermission(
+        permissionRequest(
+          rawInput: {
+            'command': ['rm', '-rf', '/srv/data'],
+          },
+        ),
+      );
       expect(list.subject, contains('rm'));
       expect(list.risk, 'deletes files', reason: 'a command given as a list is judged as one line');
 
       expect(describePermission(permissionRequest(rawInput: {'cmd': 'rm -rf /srv/data'})).risk, 'deletes files');
       expect(describePermission(permissionRequest(rawInput: {'script': 'git push --force'})).risk, 'force-pushes');
       expect(
-        describePermission(permissionRequest(rawInput: {'executable': 'rm', 'args': ['-rf', '/']})).risk,
+        describePermission(
+          permissionRequest(
+            rawInput: {
+              'executable': 'rm',
+              'args': ['-rf', '/'],
+            },
+          ),
+        ).risk,
         'deletes files',
       );
       expect(describePermission(permissionRequest(title: 'Delete the build folder')).risk, 'deletes or overwrites');
 
       // A file body is not a command: a README that quotes one is not flagged.
       expect(
-        describePermission(permissionRequest(
-          title: 'Write notes',
-          kind: ToolKind.edit,
-          rawInput: {'file_path': 'notes.md', 'content': 'run rm -rf build/ to clean up'},
-        )).risk,
+        describePermission(
+          permissionRequest(
+            title: 'Write notes',
+            kind: ToolKind.edit,
+            rawInput: {'file_path': 'notes.md', 'content': 'run rm -rf build/ to clean up'},
+          ),
+        ).risk,
         isNull,
       );
     });
 
     test('a write is judged by where it lands: input, locations and diffs', () {
       expect(
-        describePermission(permissionRequest(
-          kind: ToolKind.edit,
-          rawInput: {'file_path': '/home/dev/.ssh/authorized_keys', 'content': 'ssh-ed25519 AAAA'},
-        )).risk,
+        describePermission(
+          permissionRequest(
+            kind: ToolKind.edit,
+            rawInput: {'file_path': '/home/dev/.ssh/authorized_keys', 'content': 'ssh-ed25519 AAAA'},
+          ),
+        ).risk,
         'changes ssh keys',
       );
-      final located = describePermission(permissionRequest(
-        title: 'Edit file',
-        kind: ToolKind.edit,
-        locations: [
-          {'path': '/home/dev/.bashrc', 'line': 3},
-        ],
-      ));
+      final located = describePermission(
+        permissionRequest(
+          title: 'Edit file',
+          kind: ToolKind.edit,
+          locations: [
+            {'path': '/home/dev/.bashrc', 'line': 3},
+          ],
+        ),
+      );
       expect(located.risk, 'changes shell start-up');
       expect(located.paths, ['/home/dev/.bashrc:3']);
-      final diffed = describePermission(permissionRequest(
-        title: 'Edit file',
-        kind: ToolKind.edit,
-        content: [
-          {'type': 'diff', 'path': 'repo/.git/hooks/pre-commit', 'newText': 'exit 0'},
-        ],
-      ));
+      final diffed = describePermission(
+        permissionRequest(
+          title: 'Edit file',
+          kind: ToolKind.edit,
+          content: [
+            {'type': 'diff', 'path': 'repo/.git/hooks/pre-commit', 'newText': 'exit 0'},
+          ],
+        ),
+      );
       expect(diffed.risk, 'changes git hooks');
       expect(diffed.paths, ['repo/.git/hooks/pre-commit']);
-      expect(describePermission(permissionRequest(title: 'Write /etc/hosts', kind: ToolKind.edit)).risk, 'changes system files');
+      expect(
+        describePermission(permissionRequest(title: 'Write /etc/hosts', kind: ToolKind.edit)).risk,
+        'changes system files',
+      );
     });
 
     test('blank lines cannot push the dangerous tail out of sight', () {
@@ -682,7 +726,14 @@ void main() {
     Finder accept() => find.text('Accept');
 
     testWidgets('a required text field blocks Accept until filled', (tester) async {
-      final session = withQuestion(form({'name': {'type': 'string', 'title': 'Your name'}}, required: ['name']));
+      final session = withQuestion(
+        form(
+          {
+            'name': {'type': 'string', 'title': 'Your name'},
+          },
+          required: ['name'],
+        ),
+      );
       await pumpScreen(tester, session);
       expect(find.text('A question'), findsOneWidget);
       await tester.tap(accept());
@@ -700,7 +751,11 @@ void main() {
     });
 
     testWidgets('an optional field left empty is not sent', (tester) async {
-      final session = withQuestion(form({'note': {'type': 'string'}}));
+      final session = withQuestion(
+        form({
+          'note': {'type': 'string'},
+        }),
+      );
       await pumpScreen(tester, session);
       await tester.tap(accept());
       await tester.pump();
@@ -709,7 +764,12 @@ void main() {
 
     testWidgets('a number field validates type, range and whole numbers', (tester) async {
       final session = withQuestion(
-        form({'n': {'type': 'integer', 'title': 'Replicas', 'minimum': 1, 'maximum': 9}}, required: ['n']),
+        form(
+          {
+            'n': {'type': 'integer', 'title': 'Replicas', 'minimum': 1, 'maximum': 9},
+          },
+          required: ['n'],
+        ),
       );
       await pumpScreen(tester, session);
       expect(tester.widget<TextField>(find.byType(TextField).first).keyboardType.index, TextInputType.number.index);
@@ -737,7 +797,11 @@ void main() {
     });
 
     testWidgets('a decimal number keeps its fraction', (tester) async {
-      final session = withQuestion(form({'ratio': {'type': 'number'}}));
+      final session = withQuestion(
+        form({
+          'ratio': {'type': 'number'},
+        }),
+      );
       await pumpScreen(tester, session);
       await tester.enterText(find.byType(TextField).first, '2.5');
       await tester.tap(accept());
@@ -746,7 +810,12 @@ void main() {
     });
 
     testWidgets('a switch sends its value, off when untouched', (tester) async {
-      final session = withQuestion(form({'ok': {'type': 'boolean', 'title': 'Deploy now'}, 'dry': {'type': 'boolean', 'title': 'Dry run'}}));
+      final session = withQuestion(
+        form({
+          'ok': {'type': 'boolean', 'title': 'Deploy now'},
+          'dry': {'type': 'boolean', 'title': 'Dry run'},
+        }),
+      );
       await pumpScreen(tester, session);
       await tester.tap(find.text('Deploy now'));
       await tester.pump();
@@ -796,16 +865,19 @@ void main() {
 
     testWidgets('a single choice is a radio list; required until picked, optional ones can be cleared', (tester) async {
       final session = withQuestion(
-        form({
-          'env': {
-            'type': 'string',
-            'title': 'Environment',
-            'oneOf': [
-              {'const': 'staging', 'title': 'Staging'},
-              {'const': 'production', 'title': 'Production'},
-            ],
+        form(
+          {
+            'env': {
+              'type': 'string',
+              'title': 'Environment',
+              'oneOf': [
+                {'const': 'staging', 'title': 'Staging'},
+                {'const': 'production', 'title': 'Production'},
+              ],
+            },
           },
-        }, required: ['env']),
+          required: ['env'],
+        ),
       );
       await pumpScreen(tester, session);
       await tester.tap(accept());
@@ -843,20 +915,23 @@ void main() {
 
     testWidgets('several choices honour their minimum and keep the options\' order', (tester) async {
       final session = withQuestion(
-        form({
-          'tags': {
-            'type': 'array',
-            'title': 'Notify',
-            'minItems': 2,
-            'items': {
-              'anyOf': [
-                {'const': 'ops', 'title': 'Ops'},
-                {'const': 'qa', 'title': 'QA'},
-                {'const': 'dev', 'title': 'Dev'},
-              ],
+        form(
+          {
+            'tags': {
+              'type': 'array',
+              'title': 'Notify',
+              'minItems': 2,
+              'items': {
+                'anyOf': [
+                  {'const': 'ops', 'title': 'Ops'},
+                  {'const': 'qa', 'title': 'QA'},
+                  {'const': 'dev', 'title': 'Dev'},
+                ],
+              },
             },
           },
-        }, required: ['tags']),
+          required: ['tags'],
+        ),
       );
       await pumpScreen(tester, session);
       await tester.tap(find.text('Dev'));
@@ -870,7 +945,9 @@ void main() {
       await tester.pump();
       await tester.tap(accept());
       await tester.pump();
-      expect(acceptedContent(session), {'tags': ['ops', 'dev']});
+      expect(acceptedContent(session), {
+        'tags': ['ops', 'dev'],
+      });
     });
 
     testWidgets('defaults fill the form', (tester) async {
@@ -887,7 +964,12 @@ void main() {
     });
 
     testWidgets('Decline answers decline, and a double tap answers once', (tester) async {
-      final session = withQuestion(form({'a': {'type': 'string'}}), keepPending: true);
+      final session = withQuestion(
+        form({
+          'a': {'type': 'string'},
+        }),
+        keepPending: true,
+      );
       await pumpScreen(tester, session);
       await tester.tap(find.text('Decline'));
       await tester.pump();
@@ -899,7 +981,12 @@ void main() {
     });
 
     testWidgets('Accept twice answers once', (tester) async {
-      final session = withQuestion(form({'a': {'type': 'string'}}), keepPending: true);
+      final session = withQuestion(
+        form({
+          'a': {'type': 'string'},
+        }),
+        keepPending: true,
+      );
       await pumpScreen(tester, session);
       await tester.tap(accept());
       await tester.pump();
@@ -954,10 +1041,23 @@ void main() {
 
     test('secret fields are read from the codex meta, a bare flag or a password format', () {
       final request = form({
-        'a': {'type': 'string', '_meta': {'codex': {'isSecret': true}}},
-        'b': {'type': 'string', '_meta': {'isSecret': true}},
+        'a': {
+          'type': 'string',
+          '_meta': {
+            'codex': {'isSecret': true},
+          },
+        },
+        'b': {
+          'type': 'string',
+          '_meta': {'isSecret': true},
+        },
         'c': {'type': 'string', 'format': 'password'},
-        'd': {'type': 'string', '_meta': {'codex': {'isSecret': false}}},
+        'd': {
+          'type': 'string',
+          '_meta': {
+            'codex': {'isSecret': false},
+          },
+        },
         'e': {'type': 'string'},
       });
       expect(secretFields(request), {'a', 'b', 'c'});
@@ -982,9 +1082,12 @@ void main() {
 
     testWidgets('a field of a type this app can\'t show is named, and blocks Accept when required', (tester) async {
       final session = withQuestion(
-        form({
-          'blob': {'type': 'object', 'title': 'Config'},
-        }, required: ['blob']),
+        form(
+          {
+            'blob': {'type': 'object', 'title': 'Config'},
+          },
+          required: ['blob'],
+        ),
       );
       await pumpScreen(tester, session);
       expect(find.textContaining('can’t show a field of type'), findsOneWidget);

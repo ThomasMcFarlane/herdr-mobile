@@ -24,7 +24,11 @@ const _lineHeight = 1.21;
 bool _zeroWidth(int c) => (c >= 0x0300 && c <= 0x036F) || (c >= 0x200B && c <= 0x200F) || (c >= 0xFE00 && c <= 0xFE0F);
 
 /// East Asian scripts: one em each.
-bool _wide(int c) => (c >= 0x1100 && c <= 0x11FF) || (c >= 0x2E80 && c <= 0xD7AF) || (c >= 0xF900 && c <= 0xFAFF) || (c >= 0xFF00 && c <= 0xFFEF);
+bool _wide(int c) =>
+    (c >= 0x1100 && c <= 0x11FF) ||
+    (c >= 0x2E80 && c <= 0xD7AF) ||
+    (c >= 0xF900 && c <= 0xFAFF) ||
+    (c >= 0xFF00 && c <= 0xFFEF);
 
 /// Pictographs fall back to a colour emoji font, a little wider than an em.
 bool _emoji(int c) => c >= 0x1F000 || (c >= 0x2600 && c <= 0x27BF);

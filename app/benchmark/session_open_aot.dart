@@ -64,8 +64,9 @@ Future<void> main() async {
   );
   await Future<void>.delayed(const Duration(seconds: 1));
 
-  final files = Directory(dump).listSync().whereType<File>().where((f) => RegExp(r'replay_\d+\.jsonl$').hasMatch(f.path)).toList()
-    ..sort((a, b) => a.path.compareTo(b.path));
+  final files =
+      Directory(dump).listSync().whereType<File>().where((f) => RegExp(r'replay_\d+\.jsonl$').hasMatch(f.path)).toList()
+        ..sort((a, b) => a.path.compareTo(b.path));
   final bySize = {for (final f in files) int.parse(RegExp(r'replay_(\d+)').firstMatch(f.path)!.group(1)!): f};
   final sizes = bySize.keys.toList()..sort();
   const runs = 7;
@@ -104,9 +105,12 @@ Future<void> main() async {
       last = s.withSetup(setup);
       final w = Stopwatch()..start();
       var c = 0;
-      await splitLines(Stream.fromIterable([
-        for (var o = 0; o < bytes.length; o += 16384) Uint8List.sublistView(bytes, o, math.min(bytes.length, o + 16384)),
-      ])).forEach((_) => c++);
+      await splitLines(
+        Stream.fromIterable([
+          for (var o = 0; o < bytes.length; o += 16384)
+            Uint8List.sublistView(bytes, o, math.min(bytes.length, o + 16384)),
+        ]),
+      ).forEach((_) => c++);
       if (r >= 3) {
         decode.add(d / 1000);
         parse.add(pa / 1000);
@@ -136,7 +140,9 @@ Future<void> main() async {
   }
 
   Future<void> open(AgentSessionView session, Future<void> Function()? after) async {
-    final pushed = nav.currentState!.push(MaterialPageRoute<void>(builder: (_) => AgentSessionScreen(session: session)));
+    final pushed = nav.currentState!.push(
+      MaterialPageRoute<void>(builder: (_) => AgentSessionScreen(session: session)),
+    );
     await Future<void>.delayed(const Duration(milliseconds: 400));
     if (after != null) await after();
     await Future<void>.delayed(const Duration(milliseconds: 300));
@@ -152,7 +158,13 @@ Future<void> main() async {
     final first = <double>[], maxT = <double>[], over = <double>[], fillFirst = <double>[], fillMax = <double>[];
     for (var r = 0; r < runs + 3; r++) {
       final held = await frames(() => open(FakeAgentSession(state: states[n]!), null));
-      final heldFrames = held.where((t) => t.timestampInMicroseconds(ui.FramePhase.buildStart) < held.first.timestampInMicroseconds(ui.FramePhase.buildStart) + 260000).toList();
+      final heldFrames = held
+          .where(
+            (t) =>
+                t.timestampInMicroseconds(ui.FramePhase.buildStart) <
+                held.first.timestampInMicroseconds(ui.FramePhase.buildStart) + 260000,
+          )
+          .toList();
       final session = FakeAgentSession(link: AgentLink.reconnecting);
       List<FrameTiming> after = const [];
       final empty = await frames(() async {

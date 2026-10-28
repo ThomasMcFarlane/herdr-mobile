@@ -18,15 +18,10 @@ import 'package:provider/provider.dart';
 import '../support/shot.dart' show loadAppFonts;
 import 'ui_harness.dart';
 
-MachineProfile _machine(String id, String label) => MachineProfile(
-      id: id,
-      label: label,
-      host: '$id.example',
-      username: 'dev',
-    );
+MachineProfile _machine(String id, String label) =>
+    MachineProfile(id: id, label: label, host: '$id.example', username: 'dev');
 
-Pane _pane(int i, String status, {String? agent = 'claude'}) =>
-    (id: 'w1:p$i', ws: 'w1', agent: agent, status: status);
+Pane _pane(int i, String status, {String? agent = 'claude'}) => (id: 'w1:p$i', ws: 'w1', agent: agent, status: status);
 
 /// A status change event: herdr refreshes after a short delay, not the
 /// 1.5 s churn spacing of title and cwd updates.
@@ -34,10 +29,7 @@ const _statusEvent = {'event': 'pane.agent_status_changed'};
 
 /// Replaces what machine `a` reports and tells the connection it changed.
 void _push(UiHarness h, List<Pane> panes) {
-  h.transports['a']!.snapshot = snapshotWith(
-    panes,
-    title: (id) => 'task ${id.split('p').last}',
-  );
+  h.transports['a']!.snapshot = snapshotWith(panes, title: (id) => 'task ${id.split('p').last}');
   h.transports['a']!.emit(_statusEvent);
 }
 
@@ -46,8 +38,7 @@ Finder _chip(String label) => find.widgetWithText(AppChip, label);
 Finder _row(String title) => find.widgetWithText(AgentCard, title);
 
 /// The card's tappable body: one semantics node reading the whole card.
-Finder _body(String title) =>
-    find.descendant(of: _row(title), matching: find.byType(PressBuilder)).first;
+Finder _body(String title) => find.descendant(of: _row(title), matching: find.byType(PressBuilder)).first;
 
 /// Tall enough to build every card of a small fleet at once (cards are ~170dp).
 const _tall = 2400.0;
@@ -68,19 +59,16 @@ void main() {
 
   group('filter chips', () {
     Future<UiHarness> mixed() => UiHarness.create([
-          (
-            profile: _machine('a', 'workstation'),
-            snapshot: snapshotWith(
-              [
-                _pane(1, 'blocked'),
-                _pane(2, 'working'),
-                _pane(3, 'working'),
-                _pane(4, 'idle'),
-              ],
-              title: (id) => 'task ${id.split('p').last}',
-            ),
-          ),
-        ]);
+      (
+        profile: _machine('a', 'workstation'),
+        snapshot: snapshotWith([
+          _pane(1, 'blocked'),
+          _pane(2, 'working'),
+          _pane(3, 'working'),
+          _pane(4, 'idle'),
+        ], title: (id) => 'task ${id.split('p').last}'),
+      ),
+    ]);
 
     testWidgets('one chip per status that has agents, with its count', (tester) async {
       final h = await mixed();
@@ -92,8 +80,7 @@ void main() {
       await teardownUi(tester, h);
     });
 
-    testWidgets('tapping a chip narrows the list, tapping it again restores it',
-        (tester) async {
+    testWidgets('tapping a chip narrows the list, tapping it again restores it', (tester) async {
       final h = await mixed();
       await pumpUi(tester, h, height: _tall);
       expect(find.byType(AgentCard), findsNWidgets(4));
@@ -116,8 +103,7 @@ void main() {
       await teardownUi(tester, h);
     });
 
-    testWidgets('a filter whose agents disappeared stops hiding everything',
-        (tester) async {
+    testWidgets('a filter whose agents disappeared stops hiding everything', (tester) async {
       final h = await mixed();
       await pumpUi(tester, h, height: _tall);
       await tester.tap(_chip('Idle'));
@@ -131,8 +117,7 @@ void main() {
       await teardownUi(tester, h);
     });
 
-    testWidgets('and does not come back when an agent of that status returns',
-        (tester) async {
+    testWidgets('and does not come back when an agent of that status returns', (tester) async {
       final h = await mixed();
       await pumpUi(tester, h, height: _tall);
       await tester.tap(_chip('Idle'));
@@ -154,10 +139,11 @@ void main() {
       final h = await UiHarness.create([
         (
           profile: _machine('a', 'workstation'),
-          snapshot: snapshotWith(
-            [_pane(1, 'idle'), _pane(2, 'working'), _pane(3, 'blocked')],
-            title: (id) => 'task ${id.split('p').last}',
-          ),
+          snapshot: snapshotWith([
+            _pane(1, 'idle'),
+            _pane(2, 'working'),
+            _pane(3, 'blocked'),
+          ], title: (id) => 'task ${id.split('p').last}'),
         ),
       ]);
       await pumpUi(tester, h, height: _tall);
@@ -177,15 +163,14 @@ void main() {
       await teardownUi(tester, h);
     });
 
-    testWidgets('a row with no title is named after its agent, never blank',
-        (tester) async {
+    testWidgets('a row with no title is named after its agent, never blank', (tester) async {
       final h = await UiHarness.create([
         (
           profile: _machine('a', 'workstation'),
-          snapshot: snapshotWith(
-            [_pane(1, 'working'), _pane(2, 'idle', agent: 'codex')],
-            title: (id) => id.endsWith('p1') ? '⠋' : '',
-          ),
+          snapshot: snapshotWith([
+            _pane(1, 'working'),
+            _pane(2, 'idle', agent: 'codex'),
+          ], title: (id) => id.endsWith('p1') ? '⠋' : ''),
         ),
       ]);
       await pumpUi(tester, h, height: _tall);
@@ -199,10 +184,7 @@ void main() {
       final h = await UiHarness.create([
         (
           profile: _machine('a', 'workstation'),
-          snapshot: snapshotWith(
-            [_pane(1, 'working')],
-            title: (_) => 'Refactor ${'the webhook retry handling ' * 12}',
-          ),
+          snapshot: snapshotWith([_pane(1, 'working')], title: (_) => 'Refactor ${'the webhook retry handling ' * 12}'),
         ),
       ]);
       await pumpUi(tester, h, height: _tall);
@@ -214,8 +196,7 @@ void main() {
       await teardownUi(tester, h);
     });
 
-    testWidgets('a row says where it runs on one line, and names the machine only among several',
-        (tester) async {
+    testWidgets('a row says where it runs on one line, and names the machine only among several', (tester) async {
       Future<void> expectLine(List<String> machines, String line) async {
         final h = await UiHarness.create([
           for (final id in machines)
@@ -235,15 +216,13 @@ void main() {
       await expectLine(['a', 'b'], 'Claude Code · box-a · main');
     });
 
-    testWidgets('120 agents in one section: counted in full, last row clears the tab bar',
-        (tester) async {
+    testWidgets('120 agents in one section: counted in full, last row clears the tab bar', (tester) async {
       final h = await UiHarness.create([
         (
           profile: _machine('a', 'workstation'),
-          snapshot: snapshotWith(
-            [for (var i = 1; i <= 120; i++) _pane(i, 'working')],
-            title: (id) => 'task ${id.split('p').last}',
-          ),
+          snapshot: snapshotWith([
+            for (var i = 1; i <= 120; i++) _pane(i, 'working'),
+          ], title: (id) => 'task ${id.split('p').last}'),
         ),
       ]);
       await pumpUi(tester, h, height: _tall);
@@ -259,8 +238,7 @@ void main() {
           .map((w) => tester.getRect(find.byWidget(w)).bottom)
           .reduce((a, b) => a > b ? a : b);
       final bar = tester.getRect(find.byType(FloatingTabBar));
-      expect(last, lessThanOrEqualTo(bar.top),
-          reason: 'the last agent must not hide behind the floating tab bar');
+      expect(last, lessThanOrEqualTo(bar.top), reason: 'the last agent must not hide behind the floating tab bar');
       await teardownUi(tester, h);
     });
   });
@@ -289,16 +267,16 @@ void main() {
       await teardownUi(tester, h);
     });
 
-    testWidgets('every machine failing: one strip sums it up and leads to the Machines tab',
-        (tester) async {
+    testWidgets('every machine failing: one strip sums it up and leads to the Machines tab', (tester) async {
       final h = await UiHarness.create([
         for (final id in ['a', 'b', 'c'])
           (
             profile: _machine(id, id == 'a' ? 'x' : 'build-server-eu-west-2-primary-$id'),
-            snapshot: snapshotWith(
-              [_pane(1, 'blocked'), _pane(2, 'working'), _pane(3, 'done')],
-              title: (id) => 'task ${id.split('p').last}',
-            ),
+            snapshot: snapshotWith([
+              _pane(1, 'blocked'),
+              _pane(2, 'working'),
+              _pane(3, 'done'),
+            ], title: (id) => 'task ${id.split('p').last}'),
           ),
       ]);
       await pumpUi(tester, h, height: 640);
@@ -318,13 +296,9 @@ void main() {
       await teardownUi(tester, h);
     });
 
-    testWidgets('one machine failing: its own strip, and Retry works from there',
-        (tester) async {
+    testWidgets('one machine failing: its own strip, and Retry works from there', (tester) async {
       final h = await UiHarness.create([
-        (
-          profile: _machine('a', 'x'),
-          snapshot: snapshotWith([_pane(1, 'working')], title: (_) => 'task'),
-        ),
+        (profile: _machine('a', 'x'), snapshot: snapshotWith([_pane(1, 'working')], title: (_) => 'task')),
         (profile: _machine('b', 'duo'), snapshot: snapshotWith(const [])),
       ]);
       await pumpUi(tester, h, height: _tall);
@@ -346,15 +320,14 @@ void main() {
       await teardownUi(tester, h);
     });
 
-    testWidgets('a failing machine and long rows fit at 320dp and double text size',
-        (tester) async {
+    testWidgets('a failing machine and long rows fit at 320dp and double text size', (tester) async {
       final h = await UiHarness.create([
         (
           profile: _machine('a', 'tailnet-build-server-eu-west-2-primary'),
-          snapshot: snapshotWith(
-            [_pane(1, 'blocked'), _pane(2, 'working')],
-            title: (_) => 'Hôm nay chúng ta cập nhật và kiểm tra ${'dài ' * 20}',
-          ),
+          snapshot: snapshotWith([
+            _pane(1, 'blocked'),
+            _pane(2, 'working'),
+          ], title: (_) => 'Hôm nay chúng ta cập nhật và kiểm tra ${'dài ' * 20}'),
         ),
         (profile: _machine('b', 'duo'), snapshot: snapshotWith(const [])),
       ]);
@@ -371,18 +344,9 @@ void main() {
 
     testWidgets('a machine that was switched off is not a failure', (tester) async {
       final h = await UiHarness.create([
+        (profile: _machine('a', 'solo'), snapshot: snapshotWith([_pane(1, 'working')], title: (_) => 'task')),
         (
-          profile: _machine('a', 'solo'),
-          snapshot: snapshotWith([_pane(1, 'working')], title: (_) => 'task'),
-        ),
-        (
-          profile: MachineProfile(
-            id: 'b',
-            label: 'old-laptop',
-            host: 'b.example',
-            username: 'dev',
-            enabled: false,
-          ),
+          profile: MachineProfile(id: 'b', label: 'old-laptop', host: 'b.example', username: 'dev', enabled: false),
           snapshot: snapshotWith(const []),
         ),
       ]);
@@ -394,8 +358,7 @@ void main() {
       await teardownUi(tester, h);
     });
 
-    testWidgets('an offline machine keeps its agents under a strip, dimmed once',
-        (tester) async {
+    testWidgets('an offline machine keeps its agents under a strip, dimmed once', (tester) async {
       final h = await UiHarness.create([
         (
           profile: _machine('a', 'solo'),
@@ -410,10 +373,7 @@ void main() {
       expect(_row('Needs a decision'), findsOneWidget);
       // The row's own Opacity and no second one on the glyph: dimmed twice,
       // the status shape is all but invisible.
-      expect(
-        find.descendant(of: _row('Needs a decision'), matching: find.byType(Opacity)),
-        findsOneWidget,
-      );
+      expect(find.descendant(of: _row('Needs a decision'), matching: find.byType(Opacity)), findsOneWidget);
       await teardownUi(tester, h);
     });
   });
@@ -422,11 +382,7 @@ void main() {
     final h = await UiHarness.create([
       (
         profile: _machine('a', 'solo'),
-        snapshot: snapshotWith([
-          _pane(1, 'blocked'),
-          _pane(2, 'done'),
-          _pane(3, 'working'),
-        ]),
+        snapshot: snapshotWith([_pane(1, 'blocked'), _pane(2, 'done'), _pane(3, 'working')]),
       ),
     ]);
     await pumpUi(tester, h, height: _tall);
@@ -441,22 +397,22 @@ void main() {
 
   group('motion and identity', () {
     Future<UiHarness> two() => UiHarness.create([
-          (
-            profile: _machine('a', 'workstation'),
-            snapshot: snapshotWith(
-              [_pane(1, 'working'), _pane(2, 'working'), _pane(3, 'idle')],
-              title: (id) => 'task ${id.split('p').last}',
-            ),
-          ),
-        ]);
+      (
+        profile: _machine('a', 'workstation'),
+        snapshot: snapshotWith([
+          _pane(1, 'working'),
+          _pane(2, 'working'),
+          _pane(3, 'idle'),
+        ], title: (id) => 'task ${id.split('p').last}'),
+      ),
+    ]);
 
     Future<void> change(WidgetTester tester, UiHarness h, List<Pane> panes) async {
       _push(h, panes);
       await tester.pump(const Duration(milliseconds: 300));
     }
 
-    testWidgets('closing a section animates its rows away instead of cutting them',
-        (tester) async {
+    testWidgets('closing a section animates its rows away instead of cutting them', (tester) async {
       final h = await two();
       await pumpUi(tester, h, height: _tall);
 
@@ -470,8 +426,7 @@ void main() {
       await teardownUi(tester, h);
     });
 
-    testWidgets('an agent moving between sections keeps every row in place',
-        (tester) async {
+    testWidgets('an agent moving between sections keeps every row in place', (tester) async {
       final h = await two();
       await pumpUi(tester, h, height: _tall);
       final before = {
@@ -482,21 +437,19 @@ void main() {
       await settle(tester);
 
       for (final MapEntry(key: t, value: element) in before.entries) {
-        expect(identical(tester.element(_row(t)), element), isTrue,
-            reason: '$t was inflated again instead of moved');
+        expect(identical(tester.element(_row(t)), element), isTrue, reason: '$t was inflated again instead of moved');
       }
       await teardownUi(tester, h);
     });
 
-    testWidgets('a collapsed section stays still when the one above it disappears',
-        (tester) async {
+    testWidgets('a collapsed section stays still when the one above it disappears', (tester) async {
       final h = await UiHarness.create([
         (
           profile: _machine('a', 'workstation'),
-          snapshot: snapshotWith(
-            [_pane(1, 'blocked'), _pane(2, 'working')],
-            title: (id) => 'task ${id.split('p').last}',
-          ),
+          snapshot: snapshotWith([
+            _pane(1, 'blocked'),
+            _pane(2, 'working'),
+          ], title: (id) => 'task ${id.split('p').last}'),
         ),
       ]);
       await pumpUi(tester, h, height: _tall);
@@ -510,8 +463,7 @@ void main() {
         matching: find.byType(RotationTransition),
       );
       // Folded, the caret points right (no turn).
-      expect(tester.widget<RotationTransition>(chevron).turns.value, 0,
-          reason: 'the caret must not spin to catch up');
+      expect(tester.widget<RotationTransition>(chevron).turns.value, 0, reason: 'the caret must not spin to catch up');
       await teardownUi(tester, h);
     });
 
@@ -530,17 +482,16 @@ void main() {
 
   group('chips under the header', () {
     Future<UiHarness> many() => UiHarness.create([
-          (
-            profile: _machine('a', 'workstation'),
-            snapshot: snapshotWith(
-              [_pane(0, 'blocked'), for (var i = 1; i <= 40; i++) _pane(i, 'working')],
-              title: (id) => 'task ${id.split('p').last}',
-            ),
-          ),
-        ]);
+      (
+        profile: _machine('a', 'workstation'),
+        snapshot: snapshotWith([
+          _pane(0, 'blocked'),
+          for (var i = 1; i <= 40; i++) _pane(i, 'working'),
+        ], title: (id) => 'task ${id.split('p').last}'),
+      ),
+    ]);
 
-    testWidgets('are tappable while visible and not once they slid under the bar',
-        (tester) async {
+    testWidgets('are tappable while visible and not once they slid under the bar', (tester) async {
       final h = await many();
       await pumpUi(tester, h, height: _tall);
       final scroll = find.byType(CustomScrollView).first;
@@ -598,15 +549,11 @@ void main() {
     // Only the selected tab shows its label, so tabs are found by key.
     Finder tab(String label) => find.byKey(FloatingTabBar.tabKey(label));
 
-    testWidgets('only a change to what the tab draws rebuilds it, and not while hidden',
-        (tester) async {
+    testWidgets('only a change to what the tab draws rebuilds it, and not while hidden', (tester) async {
       final h = await UiHarness.create([
         (
           profile: _machine('a', 'workstation'),
-          snapshot: snapshotWith(
-            [_pane(1, 'working'), _pane(2, 'idle')],
-            title: (id) => 'task ${id.split('p').last}',
-          ),
+          snapshot: snapshotWith([_pane(1, 'working'), _pane(2, 'idle')], title: (id) => 'task ${id.split('p').last}'),
         ),
       ]);
       await pumpUi(tester, h, height: _tall);
@@ -634,8 +581,7 @@ void main() {
   });
 
   group('accessibility', () {
-    testWidgets('a row reads as one label: title, status and where, each once',
-        (tester) async {
+    testWidgets('a row reads as one label: title, status and where, each once', (tester) async {
       final handle = tester.ensureSemantics();
       final h = await UiHarness.create([
         (
@@ -647,8 +593,7 @@ void main() {
 
       final label = tester.getSemantics(_body('Pick a strategy')).label;
       for (final part in ['Pick a strategy', 'Needs you', 'Claude Code']) {
-        expect(RegExp(RegExp.escape(part)).allMatches(label), hasLength(1),
-            reason: '"$part" in: $label');
+        expect(RegExp(RegExp.escape(part)).allMatches(label), hasLength(1), reason: '"$part" in: $label');
       }
       handle.dispose();
       await teardownUi(tester, h);
@@ -671,11 +616,7 @@ void main() {
             Provider<PanePreviews>.value(value: h.previews),
             attentionSetProvider(),
           ],
-          child: MaterialApp(
-            restorationScopeId: 'app',
-            theme: AppTheme.dark(),
-            home: const HomeShell(),
-          ),
+          child: MaterialApp(restorationScopeId: 'app', theme: AppTheme.dark(), home: const HomeShell()),
         ),
       );
       await settle(tester);
@@ -685,10 +626,10 @@ void main() {
       final h = await UiHarness.create([
         (
           profile: _machine('a', 'workstation'),
-          snapshot: snapshotWith(
-            [_pane(1, 'blocked'), _pane(2, 'working')],
-            title: (id) => 'task ${id.split('p').last}',
-          ),
+          snapshot: snapshotWith([
+            _pane(1, 'blocked'),
+            _pane(2, 'working'),
+          ], title: (id) => 'task ${id.split('p').last}'),
         ),
       ]);
       await pumpRestorable(tester, h);

@@ -68,30 +68,26 @@ void main() {
     test('a missing python3 is fatal and says so in the host\'s words', () async {
       answer(fails(78, 'herdr-mobile: agent sessions need python3 on this host'));
 
-      await expectLater(
-        host.available(),
-        throwsA(_hostError(fatal: true, message: contains('need python3'))),
-      );
+      await expectLater(host.available(), throwsA(_hostError(fatal: true, message: contains('need python3'))));
     });
 
     test('an answer of the wrong shape is reported with what came back', () async {
       answer(prints(['{"agents":["omp"]}']));
 
-      await expectLater(
-        host.available(),
-        throwsA(_hostError(fatal: false, message: contains('agents'))),
-      );
+      await expectLater(host.available(), throwsA(_hostError(fatal: false, message: contains('agents'))));
     });
   });
 
   group('list', () {
     test('parses every keeper, running and exited', () async {
-      answer(prints([
-        '[{"id":"k2","agent":"claude","cwd":"/home/me/b","state":"running","started_at":1700000100000,'
-            '"pid":77,"session_id":"s-1","title":"Fix tests","pending":2,"last_event_at":1700000200000},'
-            '{"id":"k1","agent":"omp","cwd":"/home/me/a","state":"exited","started_at":1700000000000,'
-            '"exit_code":1,"exit_reason":"crashed"}]',
-      ]));
+      answer(
+        prints([
+          '[{"id":"k2","agent":"claude","cwd":"/home/me/b","state":"running","started_at":1700000100000,'
+              '"pid":77,"session_id":"s-1","title":"Fix tests","pending":2,"last_event_at":1700000200000},'
+              '{"id":"k1","agent":"omp","cwd":"/home/me/a","state":"exited","started_at":1700000000000,'
+              '"exit_code":1,"exit_reason":"crashed"}]',
+        ]),
+      );
 
       final keepers = await host.list();
 
@@ -120,9 +116,11 @@ void main() {
 
   group('start', () {
     test('runs the start command for the agent and folder and returns the keeper', () async {
-      answer(prints([
-        '{"id":"k9","agent":"codex","cwd":"/home/me/it\'s a dir","state":"running","started_at":1700000000000}',
-      ]));
+      answer(
+        prints([
+          '{"id":"k9","agent":"codex","cwd":"/home/me/it\'s a dir","state":"running","started_at":1700000000000}',
+        ]),
+      );
 
       final info = await host.start(agent: 'codex', cwd: "/home/me/it's a dir");
 
@@ -192,9 +190,7 @@ void main() {
 
       await expectLater(
         host.start(agent: 'omp', cwd: '/x'),
-        throwsA(_hostError(
-          message: allOf(endsWith('ValueError: the actual problem'), hasLength(lessThan(500))),
-        )),
+        throwsA(_hostError(message: allOf(endsWith('ValueError: the actual problem'), hasLength(lessThan(500))))),
       );
     });
 
@@ -239,11 +235,16 @@ void main() {
       final script = RegExp(r'INIT_TIMEOUT = (\d+)').firstMatch(keeperScript());
       final keeperSeconds = int.parse(script!.group(1)!);
 
-      expect(keeperInitTimeoutSeconds, keeperSeconds,
-          reason: 'the constant in ssh_agent_host.dart must follow the script');
-      expect(SshAgentHost(transport).startTimeout,
-          greaterThanOrEqualTo(Duration(seconds: keeperSeconds + 30)),
-          reason: 'the keeper\'s stderr must arrive before the app gives up');
+      expect(
+        keeperInitTimeoutSeconds,
+        keeperSeconds,
+        reason: 'the constant in ssh_agent_host.dart must follow the script',
+      );
+      expect(
+        SshAgentHost(transport).startTimeout,
+        greaterThanOrEqualTo(Duration(seconds: keeperSeconds + 30)),
+        reason: 'the keeper\'s stderr must arrive before the app gives up',
+      );
     });
 
     test('start waits longer than the quick commands do', () {
@@ -277,12 +278,14 @@ void main() {
 
   group('history', () {
     test('runs the history command and reads the line, with the capabilities', () async {
-      answer(prints([
-        '{"agent":"omp","list":true,"load":true,"resume":false,"more":true,"sessions":['
-            '{"sessionId":"s2","cwd":"/home/me/a","title":"Fix it","updatedAt":"2026-10-05T10:00:00Z","_meta":{"messageCount":12}},'
-            '{"sessionId":"s1","cwd":"/home/me/a"},'
-            '{"cwd":"/no/id"}]}',
-      ]));
+      answer(
+        prints([
+          '{"agent":"omp","list":true,"load":true,"resume":false,"more":true,"sessions":['
+              '{"sessionId":"s2","cwd":"/home/me/a","title":"Fix it","updatedAt":"2026-10-05T10:00:00Z","_meta":{"messageCount":12}},'
+              '{"sessionId":"s1","cwd":"/home/me/a"},'
+              '{"cwd":"/no/id"}]}',
+        ]),
+      );
 
       final past = await host.history(agent: 'omp', cwd: '/home/me/a');
 
@@ -330,10 +333,7 @@ void main() {
         host.history(agent: 'omp', cwd: 'line\nbreak'),
         throwsA(_hostError(fatal: true, message: contains('folder'))),
       );
-      await expectLater(
-        host.history(agent: 'emacs'),
-        throwsA(_hostError(fatal: true, message: contains('agent'))),
-      );
+      await expectLater(host.history(agent: 'emacs'), throwsA(_hostError(fatal: true, message: contains('agent'))));
       expect(transport.execCommands, isEmpty);
     });
 
@@ -362,13 +362,8 @@ void main() {
     });
 
     test('a connection error from the transport keeps its fatal flag', () async {
-      transport.onExec = (_) => Future.error(
-            const HerdrTransportException('Host key changed', fatal: true),
-          );
-      await expectLater(
-        host.list(),
-        throwsA(_hostError(fatal: true, message: 'Host key changed')),
-      );
+      transport.onExec = (_) => Future.error(const HerdrTransportException('Host key changed', fatal: true));
+      await expectLater(host.list(), throwsA(_hostError(fatal: true, message: 'Host key changed')));
 
       transport.onExec = (_) => Future.error(const HerdrTransportException('Cannot connect'));
       await expectLater(host.list(), throwsA(_hostError(fatal: false, message: 'Cannot connect')));
@@ -492,7 +487,9 @@ void main() {
       scripted();
       final scripted0 = transport.onExec!;
       transport.onExec = (command) async => command == historyCommand && there
-          ? FakeExecChannel.run(stdout: ['{"agent":"omp","list":true,"load":true,"resume":true,"more":false,"sessions":[]}'])
+          ? FakeExecChannel.run(
+              stdout: ['{"agent":"omp","list":true,"load":true,"resume":true,"more":false,"sessions":[]}'],
+            )
           : scripted0(command);
 
       final past = await host.history(agent: 'omp');
@@ -521,15 +518,11 @@ void main() {
     });
 
     test('a host without python3 fails the install fatally, and the command is not repeated', () async {
-      scripted(install: () => FakeExecChannel.run(
-            code: 78,
-            stderr: 'herdr-mobile: agent sessions need python3 on this host',
-          ));
-
-      await expectLater(
-        host.list(),
-        throwsA(_hostError(fatal: true, message: contains('need python3'))),
+      scripted(
+        install: () => FakeExecChannel.run(code: 78, stderr: 'herdr-mobile: agent sessions need python3 on this host'),
       );
+
+      await expectLater(host.list(), throwsA(_hostError(fatal: true, message: contains('need python3'))));
 
       expect(transport.execCommands, [keeperListCommand(), installCommand]);
     });
@@ -537,19 +530,15 @@ void main() {
     test('an install that fails for another reason is retryable and shows its stderr', () async {
       scripted(install: () => FakeExecChannel.run(code: 1, stderr: 'No space left on device'));
 
-      await expectLater(
-        host.list(),
-        throwsA(_hostError(fatal: false, message: contains('No space left'))),
-      );
+      await expectLater(host.list(), throwsA(_hostError(fatal: false, message: contains('No space left'))));
     });
 
     test('an install that does not say ok is a failure', () async {
-      scripted(install: () => FakeExecChannel.run(stdout: ['{"ok":false}'], stderr: 'bad hash'));
-
-      await expectLater(
-        host.list(),
-        throwsA(_hostError(message: allOf(contains('set up'), contains('bad hash')))),
+      scripted(
+        install: () => FakeExecChannel.run(stdout: ['{"ok":false}'], stderr: 'bad hash'),
       );
+
+      await expectLater(host.list(), throwsA(_hostError(message: allOf(contains('set up'), contains('bad hash')))));
     });
 
     test('an install that never answers times out', () async {
@@ -580,8 +569,11 @@ void main() {
       final attached = await host.attach('kp1');
       attached.send('{"hello":1}');
 
-      expect(transport.execCommands,
-          [keeperAttachCommand('kp1', zipped: true), installCommand, keeperAttachCommand('kp1', zipped: true)]);
+      expect(transport.execCommands, [
+        keeperAttachCommand('kp1', zipped: true),
+        installCommand,
+        keeperAttachCommand('kp1', zipped: true),
+      ]);
       expect(attachChannel.sent, ['{"hello":1}']);
     });
 
@@ -647,8 +639,9 @@ void main() {
       await ended.future.timeout(const Duration(seconds: 2));
 
       expect(channel.closeCalls, greaterThan(0), reason: 'the channel behind it is closed');
-      expect(transport.execCommands, [keeperAttachCommand('kp1', zipped: true)],
-          reason: 'no kill command is ever run by a detach');
+      expect(transport.execCommands, [
+        keeperAttachCommand('kp1', zipped: true),
+      ], reason: 'no kill command is ever run by a detach');
       expect(() => attached.send('x'), throwsStateError);
     });
 

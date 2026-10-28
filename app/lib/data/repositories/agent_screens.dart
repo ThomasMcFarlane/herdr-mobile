@@ -63,7 +63,9 @@ class FrontAgent {
   String encode() => jsonEncode({
     'v': 1,
     ...switch (agent) {
-      PaneAgent(:final machineId, :final paneId) => {'pane': [machineId, paneId]},
+      PaneAgent(:final machineId, :final paneId) => {
+        'pane': [machineId, paneId],
+      },
       SessionAgent(:final sessionKey) => {'session': sessionKey},
     },
     'view': view.name,
@@ -149,7 +151,11 @@ class PrefsAgentScreensStore implements AgentScreensStore {
       for (final entry in json['tabs'] as List) {
         if (entry is! List || entry.length != 2) continue;
         final [machine, pane] = entry;
-        if (machine is String && pane is String && machine.isNotEmpty && pane.isNotEmpty && active == '$machine|$pane') {
+        if (machine is String &&
+            pane is String &&
+            machine.isNotEmpty &&
+            pane.isNotEmpty &&
+            active == '$machine|$pane') {
           return FrontAgent(PaneAgent(machine, pane), AgentView.terminal);
         }
       }

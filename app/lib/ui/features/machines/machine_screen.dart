@@ -9,7 +9,9 @@ import '../../../data/models/machine_layout.dart';
 import '../../../data/repositories/machine_connection.dart';
 import 'approval_button.dart';
 import '../../../data/words/place_name.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../create/management_sheets.dart';
 import '../create/new_agent_session_screen.dart';
 import '../files/files_navigation.dart';
@@ -24,10 +26,7 @@ class MachineScreen extends StatelessWidget {
   final MachineConnection machine;
 
   @override
-  Widget build(BuildContext context) => ChangeNotifierProvider.value(
-        value: machine,
-        child: const _MachineView(),
-      );
+  Widget build(BuildContext context) => ChangeNotifierProvider.value(value: machine, child: const _MachineView());
 }
 
 class _MachineView extends StatefulWidget {
@@ -48,8 +47,7 @@ class _MachineViewState extends State<_MachineView> {
   /// Open by default when something here needs a look, or when there is little
   /// to scroll. [key] is a workspace id or a repo key.
   bool _isOpen(String key, AgentStatus status, int sections) =>
-      _toggled[key] ??
-      (sections <= 4 || status == AgentStatus.blocked || status == AgentStatus.done);
+      _toggled[key] ?? (sections <= 4 || status == AgentStatus.blocked || status == AgentStatus.done);
 
   @override
   void initState() {
@@ -77,14 +75,19 @@ class _MachineViewState extends State<_MachineView> {
         const SizedBox(width: Gap.sm),
         Expanded(
           child: Text.rich(
-            TextSpan(children: [
-              TextSpan(
-                text: state.label,
-                style: Type.secondary.copyWith(color: loud ? ds.blockedText : ds.textSecondary),
-              ),
-              if (snap.version.isNotEmpty)
-                TextSpan(text: ' · herdr ${snap.version}', style: Type.secondary.copyWith(color: ds.textMuted)),
-            ]),
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: state.label,
+                  style: Type.secondary.copyWith(color: loud ? ds.blockedText : ds.textSecondary),
+                ),
+                if (snap.version.isNotEmpty)
+                  TextSpan(
+                    text: ' · herdr ${snap.version}',
+                    style: Type.secondary.copyWith(color: ds.textMuted),
+                  ),
+              ],
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: Type.secondary,
@@ -152,7 +155,10 @@ class _MachineViewState extends State<_MachineView> {
                     icon: LucideIcons.shieldCheck,
                     title: 'Approve this sign-in',
                     message: 'Tailscale needs you to approve this sign-in.',
-                    footer: Align(alignment: Alignment.centerLeft, child: ApprovalButton(url: approval)),
+                    footer: Align(
+                      alignment: Alignment.centerLeft,
+                      child: ApprovalButton(url: approval),
+                    ),
                   ),
                 ),
               ),
@@ -170,30 +176,30 @@ class _MachineViewState extends State<_MachineView> {
                 itemCount: items.length,
                 itemBuilder: (_, i) => switch (items[i]) {
                   WorkspaceItem(:final workspace, :final panes) => _WorkspaceSection(
-                      key: ValueKey(workspace.id),
-                      machine: machine,
-                      workspace: workspace,
-                      panes: panes,
-                      open: _isOpen(workspace.id, workspace.status, items.length),
-                      showAll: _showAll.contains(workspace.id),
-                      onToggle: () => setState(() => _toggled[workspace.id] = !_isOpen(workspace.id, workspace.status, items.length)),
-                      onShowAll: () => setState(() => _showAll.add(workspace.id)),
-                    ),
+                    key: ValueKey(workspace.id),
+                    machine: machine,
+                    workspace: workspace,
+                    panes: panes,
+                    open: _isOpen(workspace.id, workspace.status, items.length),
+                    showAll: _showAll.contains(workspace.id),
+                    onToggle: () =>
+                        setState(() => _toggled[workspace.id] = !_isOpen(workspace.id, workspace.status, items.length)),
+                    onShowAll: () => setState(() => _showAll.add(workspace.id)),
+                  ),
                   final RepoItem repo => MachineRepoSection(
-                      key: ValueKey(repo.group.repoKey),
-                      machine: machine,
-                      item: repo,
-                      open: _isOpen(repo.group.repoKey, repo.status, items.length),
-                      onToggle: () => setState(
-                          () => _toggled[repo.group.repoKey] = !_isOpen(repo.group.repoKey, repo.status, items.length)),
-                      showAll: _showAll.contains,
-                      onShowAll: (id) => setState(() => _showAll.add(id)),
+                    key: ValueKey(repo.group.repoKey),
+                    machine: machine,
+                    item: repo,
+                    open: _isOpen(repo.group.repoKey, repo.status, items.length),
+                    onToggle: () => setState(
+                      () => _toggled[repo.group.repoKey] = !_isOpen(repo.group.repoKey, repo.status, items.length),
                     ),
+                    showAll: _showAll.contains,
+                    onShowAll: (id) => setState(() => _showAll.add(id)),
+                  ),
                 },
               ),
-            SliverToBoxAdapter(
-              child: SizedBox(height: Gap.xxl + MediaQuery.paddingOf(context).bottom),
-            ),
+            SliverToBoxAdapter(child: SizedBox(height: Gap.xxl + MediaQuery.paddingOf(context).bottom)),
           ],
         ),
       ),

@@ -32,7 +32,12 @@ Future<ImageBlock> _png(WidgetTester tester, int w, int h, {String? uri, String 
 AgentSessionState _thread(List<ImageBlock> blocks) => AgentSessionState(
   's1',
   items: [
-    TranscriptMessage(key: 'm1', role: MessageRole.user, blocks: [const TextBlock('look'), blocks[0]], at: DateTime(2026, 5, 20, 9, 30)),
+    TranscriptMessage(
+      key: 'm1',
+      role: MessageRole.user,
+      blocks: [const TextBlock('look'), blocks[0]],
+      at: DateTime(2026, 5, 20, 9, 30),
+    ),
     TranscriptTool(
       ToolCall(
         toolCallId: 't1',
@@ -44,7 +49,11 @@ AgentSessionState _thread(List<ImageBlock> blocks) => AgentSessionState(
     ),
     TranscriptMessage(key: 'm2', role: MessageRole.agent, blocks: [blocks[2], const TextBlock('done')]),
     // A bare uri is a link, not a picture: it is not paged to.
-    const TranscriptMessage(key: 'm3', role: MessageRole.agent, blocks: [ImageBlock(data: '', mimeType: 'image/png', uri: 'https://x.test/a.png')]),
+    const TranscriptMessage(
+      key: 'm3',
+      role: MessageRole.agent,
+      blocks: [ImageBlock(data: '', mimeType: 'image/png', uri: 'https://x.test/a.png')],
+    ),
   ],
 );
 
@@ -78,8 +87,15 @@ void main() {
     testWidgets('in the order of the conversation, with where each came from', (tester) async {
       final blocks = [await _png(tester, 40, 30), await _png(tester, 50, 30), await _png(tester, 60, 30)];
       final photos = threadPhotos(_thread(blocks), agentLabel: 'omp');
-      expect(photos.map((p) => p.block), orderedEquals(blocks), reason: 'message, tool result, message; the bare uri is skipped');
-      expect(photos[0].origin, startsWith('You attached it · ${formatWhen(DateTime(2026, 5, 20, 9, 30), DateTime.now())}'));
+      expect(
+        photos.map((p) => p.block),
+        orderedEquals(blocks),
+        reason: 'message, tool result, message; the bare uri is skipped',
+      );
+      expect(
+        photos[0].origin,
+        startsWith('You attached it · ${formatWhen(DateTime(2026, 5, 20, 9, 30), DateTime.now())}'),
+      );
       expect(photos[1].origin, 'Tool result · Read screenshot.png');
       expect(photos[2].origin, 'Sent by omp');
     });
@@ -118,7 +134,9 @@ void main() {
   });
 
   group('opening from the transcript', () {
-    testWidgets('a tap opens the viewer on that picture, among all the thread\'s, with the tool named in the info', (tester) async {
+    testWidgets('a tap opens the viewer on that picture, among all the thread\'s, with the tool named in the info', (
+      tester,
+    ) async {
       final blocks = [await _png(tester, 40, 30), await _png(tester, 50, 30), await _png(tester, 60, 30)];
       final session = FakeAgentSession(state: _thread(blocks), agentLabel: 'omp');
       await _pumpThread(tester, session, blocks);
@@ -151,14 +169,25 @@ void main() {
       expect(holder, isNotNull, reason: 'the decoded preview is cloned for the viewer');
       expect(holder!.width, 40);
       holder.dispose();
-      final unseen = chatPhotoItem(ThreadPhoto(block: const ImageBlock(data: 'AAAA', mimeType: 'image/png'), origin: 'o'), 2);
+      final unseen = chatPhotoItem(
+        ThreadPhoto(
+          block: const ImageBlock(data: 'AAAA', mimeType: 'image/png'),
+          origin: 'o',
+        ),
+        2,
+      );
       expect(unseen.placeholder!(), isNull, reason: 'nothing decoded: nothing to show');
     });
 
     testWidgets('outside a transcript the picture opens alone', (tester) async {
       final block = await _png(tester, 40, 30);
       usePhoneSurface(tester);
-      await tester.pumpWidget(MaterialApp(theme: AppTheme.light(), home: Scaffold(body: ImageBlockView(block: block))));
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: Scaffold(body: ImageBlockView(block: block)),
+        ),
+      );
       await pumpUntil(tester, () => find.byType(RawImage).evaluate().isNotEmpty);
       await tester.tap(find.byType(RawImage));
       await tester.pump();
@@ -194,7 +223,15 @@ void main() {
       );
       addTearDown(attachments.dispose);
       await tester.pumpWidget(
-        MaterialApp(theme: AppTheme.light(), home: Scaffold(body: Padding(padding: const EdgeInsets.all(16), child: AttachmentChips(attachments: attachments)))),
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: Scaffold(
+            body: Padding(
+              padding: const EdgeInsets.all(16),
+              child: AttachmentChips(attachments: attachments),
+            ),
+          ),
+        ),
       );
       await tester.runAsync(() => attachments.addPhoto(camera: false));
       await tester.pump();

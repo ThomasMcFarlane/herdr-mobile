@@ -150,9 +150,8 @@ class _Rig {
 
   DateTime now = DateTime.utc(2026, 1, 1, 12);
 
-  static Map<String, dynamic> _snapshot(_Statuses s) => snapshotJson(
-        panes: [for (final e in s.entries) (id: e.key, ws: 'w1', agent: 'claude', status: e.value)],
-      );
+  static Map<String, dynamic> _snapshot(_Statuses s) =>
+      snapshotJson(panes: [for (final e in s.entries) (id: e.key, ws: 'w1', agent: 'claude', status: e.value)]);
 
   void advance(Duration d) {
     now = now.add(d);
@@ -181,8 +180,7 @@ class _Rig {
   }
 
   /// One pane changes, the rest stay.
-  void change(String machine, String pane, String status) =>
-      set(machine, {...statuses[machine]!, pane: status});
+  void change(String machine, String pane, String status) => set(machine, {...statuses[machine]!, pane: status});
 
   /// Both halves of the app's lifecycle hook.
   void life(AppLifecycleState state) {
@@ -195,11 +193,7 @@ class _Rig {
 
   /// A session on [machine], listed with the others.
   FakeAgentSession addSession(String machine, String keeper, {String title = 'payments-api'}) {
-    final session = FakeAgentSession(
-      key: '$machine/$keeper',
-      machine: connection(machine),
-      title: title,
-    );
+    final session = FakeAgentSession(key: '$machine/$keeper', machine: connection(machine), title: title);
     sessions.sessions.add(session);
     session.addListener(sessions.poke);
     return session;
@@ -215,8 +209,12 @@ class _Rig {
 }
 
 /// A rig with an attention notifier built over [sessions] from the start.
-_Rig _withSessions(FakeAsync async, Map<String, _Statuses> machines, List<(String, String)> sessions,
-    {bool alsoDone = false}) {
+_Rig _withSessions(
+  FakeAsync async,
+  Map<String, _Statuses> machines,
+  List<(String, String)> sessions, {
+  bool alsoDone = false,
+}) {
   final r = _Rig(async, machines, alsoDone: alsoDone);
   for (final (m, k) in sessions) {
     r.addSession(m, k);
@@ -224,8 +222,7 @@ _Rig _withSessions(FakeAsync async, Map<String, _Statuses> machines, List<(Strin
   return r;
 }
 
-void _blockSession(FakeAgentSession s) =>
-    s.push(stateWith(pending: [PendingPermission('r1', permissionRequest())]));
+void _blockSession(FakeAgentSession s) => s.push(stateWith(pending: [PendingPermission('r1', permissionRequest())]));
 
 void _workSession(FakeAgentSession s) => s.push(stateWith(turnActive: true));
 
@@ -238,7 +235,9 @@ void main() {
   group('transitions', () {
     test('an agent that blocks in the background is announced once; opening the app clears it', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working', 'w1:p2': 'idle'}});
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'working', 'w1:p2': 'idle'},
+        });
         r.life(away);
         r.change('a', 'w1:p1', 'blocked');
 
@@ -264,7 +263,9 @@ void main() {
 
     test('what was blocked when the app went away is seen, and stays unannounced', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'blocked', 'w1:p2': 'working'}});
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'blocked', 'w1:p2': 'working'},
+        });
         r.life(away);
         r.change('a', 'w1:p2', 'blocked');
         r.advance(const Duration(minutes: 30));
@@ -281,7 +282,9 @@ void main() {
 
     test('after the app has been away, a still-blocked agent is not announced twice', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working'}});
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'working'},
+        });
         r.life(away);
         r.change('a', 'w1:p1', 'blocked');
         r.life(AppLifecycleState.hidden);
@@ -295,7 +298,9 @@ void main() {
 
     test('resuming clears every notification and takes a new baseline', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working', 'w1:p2': 'working'}});
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'working', 'w1:p2': 'working'},
+        });
         r.life(away);
         r.change('a', 'w1:p1', 'blocked');
         expect(r.notifier.visible, hasLength(1));
@@ -316,7 +321,9 @@ void main() {
 
     test('inactive (the shade, a system dialog) is not away', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working', 'w1:p2': 'working'}});
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'working', 'w1:p2': 'working'},
+        });
         r.life(AppLifecycleState.inactive);
         r.change('a', 'w1:p1', 'blocked');
         expect(r.notifier.shown, isEmpty);
@@ -357,7 +364,9 @@ void main() {
 
     test('a machine that blips out of reach keeps the notification, and the same episode goes on', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working'}});
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'working'},
+        });
         r.life(away);
         r.change('a', 'w1:p1', 'blocked');
         expect(r.notifier.visible, hasLength(1));
@@ -381,7 +390,9 @@ void main() {
 
     test('an agent seen to leave the state while its machine is reconnecting is withdrawn once it is known', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working'}});
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'working'},
+        });
         r.life(away);
         r.change('a', 'w1:p1', 'blocked');
         r.connection('a').goOffline();
@@ -398,7 +409,9 @@ void main() {
 
     test('what was blocked on an unreachable machine when the person left is seen, not news on its return', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'blocked'}});
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'blocked'},
+        });
         r.connection('a').goOffline();
         r.async.flushMicrotasks();
         r.life(away);
@@ -413,7 +426,9 @@ void main() {
 
     test('an agent session on an offline machine is not announced until it is reachable', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'idle'}});
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'idle'},
+        });
         final s = r.addSession('a', 'k1');
         r.connection('a').goOffline();
         r.life(away);
@@ -429,7 +444,10 @@ void main() {
 
     test('a machine added or removed does not announce what it already shows', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'idle'}, 'b': {'w1:p1': 'blocked'}});
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'idle'},
+          'b': {'w1:p1': 'blocked'},
+        });
         r.life(away);
         r.repository.remove('b');
         r.async.flushMicrotasks();
@@ -443,7 +461,9 @@ void main() {
   group('content', () {
     test('the title falls back to the folder, then the agent, and is cut', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {for (var i = 1; i <= 3; i++) 'w1:p$i': 'working'}});
+        final r = _Rig(async, {
+          'a': {for (var i = 1; i <= 3; i++) 'w1:p$i': 'working'},
+        });
         r.life(away);
         final snapshot = _Rig._snapshot({for (var i = 1; i <= 3; i++) 'w1:p$i': 'blocked'});
         final panes = [for (final p in snapshot['panes'] as List) p as Map<String, dynamic>];
@@ -464,7 +484,13 @@ void main() {
 
     test('the link and the id are stable and survive odd machine and pane names', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'box/1 é': {'w1:p1': 'working'}}, labels: {'box/1 é': 'Máy Việt'});
+        final r = _Rig(
+          async,
+          {
+            'box/1 é': {'w1:p1': 'working'},
+          },
+          labels: {'box/1 é': 'Máy Việt'},
+        );
         r.life(away);
         r.change('box/1 é', 'w1:p1', 'blocked');
         final n = r.notifier.shown.single;
@@ -484,7 +510,9 @@ void main() {
   group('limits', () {
     test('10 agents blocking at once: 3 notifications and one summary', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {for (var i = 1; i <= 10; i++) 'w1:p$i': 'working'}});
+        final r = _Rig(async, {
+          'a': {for (var i = 1; i <= 10; i++) 'w1:p$i': 'working'},
+        });
         r.life(away);
         r.set('a', {for (var i = 1; i <= 10; i++) 'w1:p$i': 'blocked'});
 
@@ -501,7 +529,10 @@ void main() {
 
     test('30 agents at once: still 3 and one summary, however often the fleet reports', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {for (var i = 1; i <= 15; i++) 'w1:p$i': 'working'}, 'b': {for (var i = 1; i <= 15; i++) 'w1:p$i': 'working'}});
+        final r = _Rig(async, {
+          'a': {for (var i = 1; i <= 15; i++) 'w1:p$i': 'working'},
+          'b': {for (var i = 1; i <= 15; i++) 'w1:p$i': 'working'},
+        });
         r.life(away);
         r.set('a', {for (var i = 1; i <= 15; i++) 'w1:p$i': 'blocked'});
         r.set('b', {for (var i = 1; i <= 15; i++) 'w1:p$i': 'blocked'});
@@ -520,7 +551,9 @@ void main() {
     test('the summary follows the count as agents arrive, shrink and go', () {
       fakeAsync((async) {
         final all = [for (var i = 1; i <= 6; i++) 'w1:p$i'];
-        final r = _Rig(async, {'a': {for (final p in all) p: 'working'}});
+        final r = _Rig(async, {
+          'a': {for (final p in all) p: 'working'},
+        });
         r.life(away);
         for (final p in all.take(4)) {
           r.change('a', p, 'blocked');
@@ -546,7 +579,9 @@ void main() {
     test('a later burst gets its three again; an episode is never posted twice', () {
       fakeAsync((async) {
         final all = [for (var i = 1; i <= 8; i++) 'w1:p$i'];
-        final r = _Rig(async, {'a': {for (final p in all) p: 'working'}});
+        final r = _Rig(async, {
+          'a': {for (final p in all) p: 'working'},
+        });
         r.life(away);
         r.set('a', {for (final (i, p) in all.indexed) p: i < 4 ? 'blocked' : 'working'});
         expect(r.notifier.shown.where((n) => n.id != _summaryId), hasLength(3));
@@ -566,7 +601,9 @@ void main() {
 
     test('a flapping agent is announced at most once a minute, by the minute', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working'}});
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'working'},
+        });
         r.life(away);
         r.change('a', 'w1:p1', 'blocked');
         expect(r.notifier.shown, hasLength(1));
@@ -587,7 +624,9 @@ void main() {
 
     test('a flapping agent that is no longer blocked at the minute is not announced', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working'}});
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'working'},
+        });
         r.life(away);
         r.change('a', 'w1:p1', 'blocked');
         r.change('a', 'w1:p1', 'working');
@@ -603,7 +642,9 @@ void main() {
 
     test('a flapping agent is announced again once a minute has passed', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working'}});
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'working'},
+        });
         r.life(away);
         r.change('a', 'w1:p1', 'blocked');
         r.change('a', 'w1:p1', 'working');
@@ -617,7 +658,9 @@ void main() {
     test('finished agents over the burst limit get a summary of their own, and none is dropped silently', () {
       fakeAsync((async) {
         final all = [for (var i = 1; i <= 9; i++) 'w1:p$i'];
-        final r = _Rig(async, {'a': {for (final p in all) p: 'working'}}, alsoDone: true);
+        final r = _Rig(async, {
+          'a': {for (final p in all) p: 'working'},
+        }, alsoDone: true);
         r.life(away);
         r.set('a', {for (final p in all) p: 'done'});
 
@@ -642,14 +685,19 @@ void main() {
     test('blocked and finished summaries are separate notifications', () {
       fakeAsync((async) {
         final all = [for (var i = 1; i <= 10; i++) 'w1:p$i'];
-        final r = _Rig(async, {'a': {for (final p in all) p: 'working'}}, alsoDone: true);
+        final r = _Rig(async, {
+          'a': {for (final p in all) p: 'working'},
+        }, alsoDone: true);
         r.life(away);
         r.set('a', {for (final (i, p) in all.indexed) p: i < 5 ? 'blocked' : 'done'});
 
         expect(r.notifier.active[_summaryId]!.title, '5 agents need you');
         expect(r.notifier.active[_finishedSummaryId]!.title, '5 agents done');
-        expect(r.notifier.shown.where((n) => n.id != _summaryId && n.id != _finishedSummaryId), hasLength(3),
-            reason: 'one burst: three in all, blocked first');
+        expect(
+          r.notifier.shown.where((n) => n.id != _summaryId && n.id != _finishedSummaryId),
+          hasLength(3),
+          reason: 'one burst: three in all, blocked first',
+        );
         r.dispose();
       });
     });
@@ -658,7 +706,9 @@ void main() {
   group('done', () {
     test('only with "also when finished": done and not yet reviewed', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working', 'w1:p2': 'working'}});
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'working', 'w1:p2': 'working'},
+        });
         r.life(away);
         r.change('a', 'w1:p1', 'done');
         expect(r.notifier.shown, isEmpty);
@@ -680,7 +730,9 @@ void main() {
 
     test('an agent that finishes after being reviewed is announced again', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working'}}, alsoDone: true);
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'working'},
+        }, alsoDone: true);
         r.life(away);
         r.change('a', 'w1:p1', 'done');
         r.fleet.markReviewed('a', 'w1:p1');
@@ -696,7 +748,9 @@ void main() {
     test('blocked comes before done when the burst limit bites', () {
       fakeAsync((async) {
         final all = [for (var i = 1; i <= 6; i++) 'w1:p$i'];
-        final r = _Rig(async, {'a': {for (final p in all) p: 'working'}}, alsoDone: true);
+        final r = _Rig(async, {
+          'a': {for (final p in all) p: 'working'},
+        }, alsoDone: true);
         r.life(away);
         r.set('a', {
           'w1:p1': 'done',
@@ -709,15 +763,20 @@ void main() {
         final own = r.notifier.shown.where((n) => n.id != _finishedSummaryId).toList();
         expect(own.map((n) => n.kind), everyElement(NotifyKind.needsYou));
         expect(own, hasLength(3));
-        expect(r.notifier.active[_finishedSummaryId]!.title, '3 agents done',
-            reason: 'the done ones are not dropped: they are summarised');
+        expect(
+          r.notifier.active[_finishedSummaryId]!.title,
+          '3 agents done',
+          reason: 'the done ones are not dropped: they are summarised',
+        );
         r.dispose();
       });
     });
 
     test('turning "also when finished" off withdraws the done notifications', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working'}}, alsoDone: true);
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'working'},
+        }, alsoDone: true);
         r.life(away);
         r.change('a', 'w1:p1', 'done');
         expect(r.notifier.visible, hasLength(1));
@@ -730,7 +789,14 @@ void main() {
 
     test('a finished agent session is announced and withdrawn when seen', () {
       fakeAsync((async) {
-        final r = _withSessions(async, {'a': {'w1:p1': 'idle'}}, [('a', 'k1')], alsoDone: true);
+        final r = _withSessions(
+          async,
+          {
+            'a': {'w1:p1': 'idle'},
+          },
+          [('a', 'k1')],
+          alsoDone: true,
+        );
         final s = r.sessions.sessions.single as FakeAgentSession;
         _workSession(s);
         r.life(away);
@@ -751,7 +817,14 @@ void main() {
   group('settings and permission', () {
     test('nothing is posted or cancelled while it is off', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working'}}, enabled: false, startup: true);
+        final r = _Rig(
+          async,
+          {
+            'a': {'w1:p1': 'working'},
+          },
+          enabled: false,
+          startup: true,
+        );
         r.life(away);
         r.change('a', 'w1:p1', 'blocked');
         r.life(back);
@@ -765,7 +838,9 @@ void main() {
 
     test('turning it off cancels everything and stops watching', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working', 'w1:p2': 'working'}});
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'working', 'w1:p2': 'working'},
+        });
         r.life(away);
         r.change('a', 'w1:p1', 'blocked');
         expect(r.notifier.visible, hasLength(1));
@@ -786,7 +861,9 @@ void main() {
 
     test('turning it on in the background takes the baseline then', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'blocked', 'w1:p2': 'working'}}, enabled: false);
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'blocked', 'w1:p2': 'working'},
+        }, enabled: false);
         r.life(away);
         r.settings.setEnabled(true);
         r.async.flushMicrotasks();
@@ -798,7 +875,9 @@ void main() {
 
     test('without the permission nothing is posted, and nothing is watched', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working'}}, granted: false);
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'working'},
+        }, granted: false);
         r.life(away);
         r.change('a', 'w1:p1', 'blocked');
         expect(r.notifier.shown, isEmpty);
@@ -810,7 +889,14 @@ void main() {
 
     test('the permission is read again when it is turned on and when the app is back', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working'}}, enabled: false, granted: false);
+        final r = _Rig(
+          async,
+          {
+            'a': {'w1:p1': 'working'},
+          },
+          enabled: false,
+          granted: false,
+        );
         expect(r.notifier.permissionReads, 0);
         r.settings.setEnabled(true);
         r.async.flushMicrotasks();
@@ -830,7 +916,9 @@ void main() {
 
     test('a notifier that throws does not break the rest', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working', 'w1:p2': 'working'}});
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'working', 'w1:p2': 'working'},
+        });
         r.life(away);
         r.notifier.failing = true;
         r.change('a', 'w1:p1', 'blocked');
@@ -843,7 +931,9 @@ void main() {
 
     test('at its start, with the app in front, it clears what an earlier life left and any zombie notice', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working'}}, startup: true);
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'working'},
+        }, startup: true);
         expect(r.notifier.log.take(2), ['cancelAll', 'watching:0']);
         expect(r.notifier.watching, [0, 1], reason: 'the first real count replaces the notice');
         r.dispose();
@@ -852,7 +942,14 @@ void main() {
 
     test('with notifications off it does not even do that', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working'}}, enabled: false, startup: true);
+        final r = _Rig(
+          async,
+          {
+            'a': {'w1:p1': 'working'},
+          },
+          enabled: false,
+          startup: true,
+        );
         expect(r.notifier.log, isEmpty);
         expect(r.notifier.permissionReads, 0);
         r.dispose();
@@ -863,7 +960,13 @@ void main() {
   group('agent sessions', () {
     test('a blocked session is announced with a link to its chat, and withdrawn when answered', () {
       fakeAsync((async) {
-        final r = _withSessions(async, {'a': {'w1:p1': 'idle'}}, [('a', 'k1')]);
+        final r = _withSessions(
+          async,
+          {
+            'a': {'w1:p1': 'idle'},
+          },
+          [('a', 'k1')],
+        );
         final s = r.sessions.sessions.single as FakeAgentSession;
         _workSession(s);
         r.life(away);
@@ -885,7 +988,13 @@ void main() {
 
     test('a session that was blocked when the app went away is seen', () {
       fakeAsync((async) {
-        final r = _withSessions(async, {'a': {'w1:p1': 'idle'}}, [('a', 'k1')]);
+        final r = _withSessions(
+          async,
+          {
+            'a': {'w1:p1': 'idle'},
+          },
+          [('a', 'k1')],
+        );
         _blockSession(r.sessions.sessions.single as FakeAgentSession);
         r.life(away);
         r.advance(const Duration(minutes: 5));
@@ -896,7 +1005,13 @@ void main() {
 
     test('terminal agents and sessions share the burst limit', () {
       fakeAsync((async) {
-        final r = _withSessions(async, {'a': {'w1:p1': 'working', 'w1:p2': 'working'}}, [('a', 'k1'), ('a', 'k2')]);
+        final r = _withSessions(
+          async,
+          {
+            'a': {'w1:p1': 'working', 'w1:p2': 'working'},
+          },
+          [('a', 'k1'), ('a', 'k2')],
+        );
         final sessions = [for (final s in r.sessions.sessions) s as FakeAgentSession];
         r.life(away);
         r.set('a', {'w1:p1': 'blocked', 'w1:p2': 'blocked'});
@@ -910,7 +1025,13 @@ void main() {
 
     test('a session that is attaching again keeps its episode; the same request back is not announced twice', () {
       fakeAsync((async) {
-        final r = _withSessions(async, {'a': {'w1:p1': 'idle'}}, [('a', 'k1')]);
+        final r = _withSessions(
+          async,
+          {
+            'a': {'w1:p1': 'idle'},
+          },
+          [('a', 'k1')],
+        );
         final s = r.sessions.sessions.single as FakeAgentSession;
         _workSession(s);
         r.life(away);
@@ -940,7 +1061,13 @@ void main() {
 
     test('a session that attaches again and finds the request gone is withdrawn', () {
       fakeAsync((async) {
-        final r = _withSessions(async, {'a': {'w1:p1': 'idle'}}, [('a', 'k1')]);
+        final r = _withSessions(
+          async,
+          {
+            'a': {'w1:p1': 'idle'},
+          },
+          [('a', 'k1')],
+        );
         final s = r.sessions.sessions.single as FakeAgentSession;
         _workSession(s);
         r.life(away);
@@ -957,7 +1084,13 @@ void main() {
 
     test('a session that ended or failed is over: its notification goes', () {
       fakeAsync((async) {
-        final r = _withSessions(async, {'a': {'w1:p1': 'idle'}}, [('a', 'k1'), ('a', 'k2')]);
+        final r = _withSessions(
+          async,
+          {
+            'a': {'w1:p1': 'idle'},
+          },
+          [('a', 'k1'), ('a', 'k2')],
+        );
         final ended = r.sessions.sessions.first as FakeAgentSession;
         final failed = r.sessions.sessions.last as FakeAgentSession;
         _workSession(ended);
@@ -1002,7 +1135,9 @@ void main() {
 
     test('the network going away for a moment does not end the watch', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working'}});
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'working'},
+        });
         r.life(AppLifecycleState.paused);
         r.advance(const Duration(minutes: 5)); // past the 90 s grace
         expect(r.fleet.keepAliveInBackground, isTrue);
@@ -1021,7 +1156,9 @@ void main() {
 
     test('a machine that needs the person is not watched', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working'}});
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'working'},
+        });
         r.transports['a']!.failure = const HerdrTransportException('bad key', fatal: true);
         r.connection('a').reconnect();
         r.advance(const Duration(seconds: 5));
@@ -1052,7 +1189,9 @@ void main() {
 
     test('nothing to watch stops the notice and the keep-alive at once', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working'}});
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'working'},
+        });
         expect(r.fleet.keepAliveInBackground, isTrue);
 
         r.change('a', 'w1:p1', 'idle');
@@ -1065,7 +1204,9 @@ void main() {
 
     test('a refused start is retried on the next lifecycle change, never in a loop', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working', 'w1:p2': 'idle'}});
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'working', 'w1:p2': 'idle'},
+        });
         r.notifier.watchingWorks = false;
         r.life(AppLifecycleState.inactive); // the first start already ran; start over
         r.change('a', 'w1:p1', 'idle');
@@ -1091,7 +1232,9 @@ void main() {
 
     test('stopping returns false by contract: that is not a refusal', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working'}});
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'working'},
+        });
         r.change('a', 'w1:p1', 'idle');
         r.advance(const Duration(seconds: 2));
         expect(r.notifier.watching, [1, 0]);
@@ -1106,7 +1249,9 @@ void main() {
 
     test('disposing stops the notice and the keep-alive', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working'}});
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'working'},
+        });
         expect(r.fleet.keepAliveInBackground, isTrue);
         r.attention.dispose();
         r.async.flushMicrotasks();
@@ -1121,7 +1266,9 @@ void main() {
   group('keeping the connections', () {
     test('while there is work to watch the fleet is not suspended after 90 s; when it ends, at once', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working'}});
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'working'},
+        });
         r.life(away);
         r.advance(const Duration(minutes: 10));
         expect(r.connection('a').isLive, isTrue);
@@ -1135,7 +1282,9 @@ void main() {
 
     test('the sessions are kept and let go together with the connections', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working'}});
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'working'},
+        });
         expect(r.fleet.keepAliveInBackground, isTrue);
         expect(r.sessions.keepAlive, isTrue);
 
@@ -1148,7 +1297,9 @@ void main() {
 
     test('the same with notifications off: the old 90 s applies', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working'}}, enabled: false);
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'working'},
+        }, enabled: false);
         r.life(away);
         r.advance(const Duration(seconds: 91));
         expect(r.connection('a').isLive, isFalse);
@@ -1163,7 +1314,9 @@ void main() {
 
     test('with alerts off, runs the notice at once, named, and keeps its connection; released, both go', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'idle'}}, enabled: false);
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'idle'},
+        }, enabled: false);
         final release = hold(r);
         r.async.flushMicrotasks();
         expect(r.notifier.log, ['watching:0+page'], reason: 'started while the app is in front, not debounced');
@@ -1188,7 +1341,9 @@ void main() {
 
     test('a notice Android refuses keeps nothing: the 90 s rule applies, as on a phone with no notices', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'idle'}}, enabled: false);
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'idle'},
+        }, enabled: false);
         r.notifier.watchingWorks = false;
         hold(r);
         r.async.flushMicrotasks();
@@ -1203,7 +1358,9 @@ void main() {
 
     test('a page that opens after a refused start tries the notice again', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working'}});
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'working'},
+        });
         r.notifier.watchingWorks = false;
         r.advance(const Duration(seconds: 3));
         r.change('a', 'w1:p1', 'blocked');
@@ -1221,7 +1378,9 @@ void main() {
 
     test('without the notification permission, still runs the notice: Android runs it unseen', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working'}}, granted: false);
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'working'},
+        }, granted: false);
         hold(r);
         r.async.flushMicrotasks();
         expect(r.notifier.glances.last, (count: 0, blocked: 0), reason: 'no agents without the permission');
@@ -1232,7 +1391,9 @@ void main() {
 
     test('two pages are counted, not listed', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'idle'}}, enabled: false);
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'idle'},
+        }, enabled: false);
         hold(r);
         r.fleet.holdAlive('a', page: 'report.html on Alpha');
         r.advance(const Duration(seconds: 3));
@@ -1243,7 +1404,9 @@ void main() {
 
     test('beside watched agents, joins their notice; released, the agents\' notice and keep-alive stay', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working', 'w1:p2': 'blocked'}});
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'working', 'w1:p2': 'blocked'},
+        });
         expect(r.notifier.glances, [(count: 2, blocked: 1)]);
         final release = hold(r);
         r.async.flushMicrotasks();
@@ -1262,7 +1425,9 @@ void main() {
 
     test('a page keeps the connection, never the agent sessions', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'idle'}}, enabled: false);
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'idle'},
+        }, enabled: false);
         hold(r);
         r.async.flushMicrotasks();
         expect(r.fleet.keepAliveInBackground, isTrue);
@@ -1274,7 +1439,9 @@ void main() {
 
     test('turning alerts off while a page is open keeps the notice for the page', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working'}});
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'working'},
+        });
         hold(r);
         r.async.flushMicrotasks();
         r.settings.setEnabled(false);
@@ -1302,7 +1469,9 @@ void main() {
 
     test('a change of who needs you is a new line even when the total stays; the same numbers are not', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working', 'w1:p2': 'working'}});
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'working', 'w1:p2': 'working'},
+        });
         expect(r.notifier.glances, [(count: 2, blocked: 0)]);
 
         r.advance(const Duration(seconds: 2));
@@ -1320,7 +1489,13 @@ void main() {
 
     test('a session that waits for a permission or a question needs you', () {
       fakeAsync((async) {
-        final r = _withSessions(async, {'a': {'w1:p1': 'working'}}, [('a', 'k1'), ('a', 'k2')]);
+        final r = _withSessions(
+          async,
+          {
+            'a': {'w1:p1': 'working'},
+          },
+          [('a', 'k1'), ('a', 'k2')],
+        );
         _blockSession(r.sessions.sessions.first as FakeAgentSession);
         _workSession(r.sessions.sessions.last as FakeAgentSession);
         r.advance(const Duration(seconds: 2));
@@ -1335,18 +1510,31 @@ void main() {
     const no = QuickReply(label: '2. No', keys: ['down', 'enter']);
     const base = PromptInfo(question: 'Proceed?', subject: 'ls', replies: [yes, no]);
     expect(
-      promptDigest(const PromptInfo(question: 'Proceed?', subject: 'ls', replies: [
-        QuickReply(label: '1. Yes', keys: ['up', 'enter']),
-        QuickReply(label: '2. No', keys: ['enter']),
-      ])),
+      promptDigest(
+        const PromptInfo(
+          question: 'Proceed?',
+          subject: 'ls',
+          replies: [
+            QuickReply(label: '1. Yes', keys: ['up', 'enter']),
+            QuickReply(label: '2. No', keys: ['enter']),
+          ],
+        ),
+      ),
       promptDigest(base),
     );
-    expect(promptDigest(const PromptInfo(question: 'Proceed?', subject: 'rm -rf /', replies: [yes, no])),
-        isNot(promptDigest(base)));
-    expect(promptDigest(const PromptInfo(question: 'Proceed?', subject: 'ls', replies: [no, yes])),
-        isNot(promptDigest(base)));
-    expect(promptDigest(const PromptInfo(question: 'Proceed?ls', replies: [yes, no])), isNot(promptDigest(base)),
-        reason: 'the question and the command are told apart');
+    expect(
+      promptDigest(const PromptInfo(question: 'Proceed?', subject: 'rm -rf /', replies: [yes, no])),
+      isNot(promptDigest(base)),
+    );
+    expect(
+      promptDigest(const PromptInfo(question: 'Proceed?', subject: 'ls', replies: [no, yes])),
+      isNot(promptDigest(base)),
+    );
+    expect(
+      promptDigest(const PromptInfo(question: 'Proceed?ls', replies: [yes, no])),
+      isNot(promptDigest(base)),
+      reason: 'the question and the command are told apart',
+    );
     expect(promptDigest(base), matches(RegExp(r'^[0-9a-f]{16}$')));
   });
 
@@ -1354,20 +1542,25 @@ void main() {
     final id = _id('a', 'w1:p1');
 
     // What Claude draws; the detector's reading of it is what the card shows.
-    const lsPrompt = ' Bash command\n   ls -la\n\n Do you want to proceed?\n'
+    const lsPrompt =
+        ' Bash command\n   ls -la\n\n Do you want to proceed?\n'
         ' ❯ 1. Yes\n   2. Yes, and don\'t ask again for ls commands\n'
         '   3. No, and tell Claude what to do differently (esc)\n';
-    const pushPrompt = ' Bash command\n   git push origin main\n\n Do you want to proceed?\n'
+    const pushPrompt =
+        ' Bash command\n   git push origin main\n\n Do you want to proceed?\n'
         ' ❯ 1. Yes\n   2. Yes, and don\'t ask again for git push commands\n'
         '   3. No, and tell Claude what to do differently (esc)\n';
-    const rmPrompt = ' Bash command\n   rm -rf build\n\n Do you want to proceed?\n'
+    const rmPrompt =
+        ' Bash command\n   rm -rf build\n\n Do you want to proceed?\n'
         ' ❯ 1. Yes\n   2. Yes, and don\'t ask again for rm commands\n'
         '   3. No, and tell Claude what to do differently (esc)\n';
 
     /// A machine whose pane w1:p1 shows [screen] when it becomes blocked; the
     /// app is away, and the question has been read.
     _Rig blocked(FakeAsync async, String screen) {
-      final r = _Rig(async, {'a': {'w1:p1': 'working'}}, answers: true);
+      final r = _Rig(async, {
+        'a': {'w1:p1': 'working'},
+      }, answers: true);
       r.transports['a']!.screens['w1:p1'] = screen;
       r.life(away);
       r.change('a', 'w1:p1', 'blocked');
@@ -1430,8 +1623,11 @@ void main() {
     test('a command too long to be shown whole gets no buttons', () {
       fakeAsync((async) {
         final long = [for (var i = 0; i < 5; i++) '   echo ${'x' * 150}'].join('\n');
-        final r = blocked(async, ' Bash command\n$long\n\n Do you want to proceed?\n'
-            ' ❯ 1. Yes\n   2. No\n');
+        final r = blocked(
+          async,
+          ' Bash command\n$long\n\n Do you want to proceed?\n'
+          ' ❯ 1. Yes\n   2. No\n',
+        );
         expect(r.notifier.active[id]!.body, contains('echo ${'x' * 150}'));
         expect(r.notifier.active[id]!.answers, isEmpty);
         r.dispose();
@@ -1538,13 +1734,23 @@ void main() {
         final yes = r.notifier.button(id);
         // Index 1 is "don't ask again": the digest is the right one.
         final forged = NotificationAnswer(
-            machineId: 'a', paneId: 'w1:p1', digest: yes.digest, index: 1, nonce: 'forged-1');
+          machineId: 'a',
+          paneId: 'w1:p1',
+          digest: yes.digest,
+          index: 1,
+          nonce: 'forged-1',
+        );
         r.notifier.press(forged, id);
         async.flushMicrotasks();
         expect(r.transports['a']!.sent, isEmpty);
 
         final past = NotificationAnswer(
-            machineId: 'a', paneId: 'w1:p1', digest: yes.digest, index: 7, nonce: 'forged-2');
+          machineId: 'a',
+          paneId: 'w1:p1',
+          digest: yes.digest,
+          index: 7,
+          nonce: 'forged-2',
+        );
         r.notifier.press(past, id);
         async.flushMicrotasks();
         expect(r.transports['a']!.sent, isEmpty);
@@ -1606,7 +1812,9 @@ void main() {
 
     test('a notification the app already cleared is not given buttons when the read comes back late', () {
       fakeAsync((async) {
-        final r = _Rig(async, {'a': {'w1:p1': 'working'}}, answers: true);
+        final r = _Rig(async, {
+          'a': {'w1:p1': 'working'},
+        }, answers: true);
         r.transports['a']!.screens['w1:p1'] = lsPrompt;
         r.transports['a']!.duringRead = () => r.attention.onLifecycleState(back);
         r.life(away);
@@ -1619,7 +1827,13 @@ void main() {
 
     test('sessions and finished agents get no buttons', () {
       fakeAsync((async) {
-        final r = _withSessions(async, {'a': {'w1:p1': 'working'}}, [('a', 'k1')]);
+        final r = _withSessions(
+          async,
+          {
+            'a': {'w1:p1': 'working'},
+          },
+          [('a', 'k1')],
+        );
         r.life(away);
         _blockSession(r.sessions.sessions.single as FakeAgentSession);
         expect(r.notifier.shown.single.answers, isEmpty);

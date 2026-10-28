@@ -19,11 +19,11 @@ const _tall = 2400.0;
 Pane _pane(int i, String status) => (id: 'w1:p$i', ws: 'w1', agent: 'claude', status: status);
 
 Future<BoardHarness> _board(List<Pane> panes) => BoardHarness.create([
-      (
-        profile: const MachineProfile(id: 'a', label: 'box-a', host: 'a.example', username: 'dev'),
-        snapshot: snapshotWith(panes, title: (id) => 'task ${id.split('p').last}'),
-      ),
-    ]);
+  (
+    profile: const MachineProfile(id: 'a', label: 'box-a', host: 'a.example', username: 'dev'),
+    snapshot: snapshotWith(panes, title: (id) => 'task ${id.split('p').last}'),
+  ),
+]);
 
 MachineConnection _machine(BoardHarness h) => h.fleet.connection('a')!;
 
@@ -43,8 +43,7 @@ Finder _title([int i = 1]) => find.text('task $i');
 void main() {
   setUpAll(loadAppFonts);
 
-  testWidgets('a swipe past the threshold reviews the agent, offers Undo, and Undo brings it back',
-      (tester) async {
+  testWidgets('a swipe past the threshold reviews the agent, offers Undo, and Undo brings it back', (tester) async {
     final haptics = <Object?>[];
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
       if (call.method == 'HapticFeedback.vibrate') haptics.add(call.arguments);
@@ -75,8 +74,7 @@ void main() {
     await teardownBoard(tester, h);
   });
 
-  testWidgets('a short, slow drag follows the finger, shows Reviewed, springs back and does nothing',
-      (tester) async {
+  testWidgets('a short, slow drag follows the finger, shows Reviewed, springs back and does nothing', (tester) async {
     final h = await _board([_pane(1, 'done')]);
     await pumpBoard(tester, h, height: _tall);
     final home = _x(tester);
@@ -221,8 +219,7 @@ void main() {
     Iterable<String> actions(int i) {
       final data = tester.getSemantics(_title(i)).getSemanticsData();
       return [
-        for (final id in data.customSemanticsActionIds ?? const <int>[])
-          CustomSemanticsAction.getAction(id)!.label!,
+        for (final id in data.customSemanticsActionIds ?? const <int>[]) CustomSemanticsAction.getAction(id)!.label!,
       ];
     }
 
@@ -230,7 +227,11 @@ void main() {
     expect(actions(1), ['Mark reviewed']);
 
     final node = tester.getSemantics(_title());
-    node.owner!.performAction(node.id, SemanticsAction.customAction, node.getSemanticsData().customSemanticsActionIds!.single);
+    node.owner!.performAction(
+      node.id,
+      SemanticsAction.customAction,
+      node.getSemanticsData().customSemanticsActionIds!.single,
+    );
     await _settle(tester);
 
     expect(_status(h, 1), AgentStatus.idle);

@@ -63,8 +63,7 @@ const _keychainRead = Duration(milliseconds: 2); // each read after it
 
 final _out = <String>[];
 
-void _metric(String name, num value) =>
-    _out.add('METRIC $name=${value is int ? value : value.toStringAsFixed(3)}');
+void _metric(String name, num value) => _out.add('METRIC $name=${value is int ? value : value.toStringAsFixed(3)}');
 
 double _median(List<double> v) {
   final s = [...v]..sort();
@@ -87,10 +86,7 @@ Map<String, dynamic> _snapshot(int machine) {
         ),
   ];
   return snapshotJson(
-    workspaces: [
-      for (var w = 0; w < _workspaces; w++)
-        (id: 'm$machine-w$w', label: 'project-$machine-$w'),
-    ],
+    workspaces: [for (var w = 0; w < _workspaces; w++) (id: 'm$machine-w$w', label: 'project-$machine-$w')],
     panes: panes,
   );
 }
@@ -106,10 +102,7 @@ class _SilentTransport extends FakeTransport {
   var _asked = false;
 
   @override
-  Future<Map<String, dynamic>> request(
-    String method, [
-    Map<String, dynamic> params = const {},
-  ]) async {
+  Future<Map<String, dynamic>> request(String method, [Map<String, dynamic> params = const {}]) async {
     if (!_asked) {
       _asked = true;
       await _secrets();
@@ -264,15 +257,15 @@ void main() {
           connect: (profile, dynamic secrets) => MachineConnection(
             profile: profile,
             cache: cache,
-            api: HerdrApi(_SilentTransport(
-              secrets is MachineSecrets
-                  ? (() async => secrets)
-                  : secrets as Future<MachineSecrets> Function(),
-              () {
-                secretsReady++;
-                secretsReadyUs = virtualUs;
-              },
-            )),
+            api: HerdrApi(
+              _SilentTransport(
+                secrets is MachineSecrets ? (() async => secrets) : secrets as Future<MachineSecrets> Function(),
+                () {
+                  secretsReady++;
+                  secretsReadyUs = virtualUs;
+                },
+              ),
+            ),
             backoff: (_) => const Duration(hours: 1),
             pollInterval: const Duration(hours: 1),
           ),
@@ -305,8 +298,7 @@ void main() {
       }
 
       bool cards() =>
-          find.byType(AgentCard).evaluate().isNotEmpty ||
-          find.byType(AgentCompactRow).evaluate().isNotEmpty;
+          find.byType(AgentCard).evaluate().isNotEmpty || find.byType(AgentCompactRow).evaluate().isNotEmpty;
 
       // main() hands the booted app to runApp: the first frame.
       var knownAtFrameStart = known();

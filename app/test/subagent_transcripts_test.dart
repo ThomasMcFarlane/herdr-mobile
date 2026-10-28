@@ -44,8 +44,11 @@ FakeFs _host({Object? log, bool session = true}) {
   return fs;
 }
 
-SubagentRun _run({String? name = 'PongReply', SubagentStatus status = SubagentStatus.running, SubagentRoute route = SubagentRoute.omp}) =>
-    SubagentRun(id: 'call#0', route: route, parentToolCallId: 'call', name: name, status: status);
+SubagentRun _run({
+  String? name = 'PongReply',
+  SubagentStatus status = SubagentStatus.running,
+  SubagentRoute route = SubagentRoute.omp,
+}) => SubagentRun(id: 'call#0', route: route, parentToolCallId: 'call', name: name, status: status);
 
 /// One controller over [fs], with the run the reducer would hold in [run].
 class _Rig {
@@ -70,20 +73,28 @@ class _Rig {
   SubagentLogStatus get status => controller.status(run.id);
   SubagentRun get shown => controller.overlay.run(run)!;
   List<String> get calls => fs!.calls;
-  List<String> get reads => [for (final c in calls) if (c.startsWith('read ')) c];
+  List<String> get reads => [
+    for (final c in calls)
+      if (c.startsWith('read ')) c,
+  ];
 
   void watch([bool on = true]) => controller.watch(run.id, on);
 }
 
 /// Runs [body] on a fake clock; the rig is disposed afterwards.
-void _rigTest(String name, FakeFs? Function() fs, void Function(_Rig r, FakeAsync async) body, {SubagentRun? run, SubagentLogReader Function(RemoteFiles, String, String?)? reader}) =>
-    test(name, () {
-      fakeAsync((async) {
-        final r = _Rig(fs(), run: run, reader: reader);
-        body(r, async);
-        r.controller.dispose();
-      });
-    });
+void _rigTest(
+  String name,
+  FakeFs? Function() fs,
+  void Function(_Rig r, FakeAsync async) body, {
+  SubagentRun? run,
+  SubagentLogReader Function(RemoteFiles, String, String?)? reader,
+}) => test(name, () {
+  fakeAsync((async) {
+    final r = _Rig(fs(), run: run, reader: reader);
+    body(r, async);
+    r.controller.dispose();
+  });
+});
 
 void _settle(FakeAsync async) {
   async.elapse(const Duration(milliseconds: 20));
@@ -165,11 +176,11 @@ void main() {
       expect(n('/home/dev/proj/x'), ['-proj-x', '--home-dev-proj-x--']);
       expect(n('/home/dev'), ['-', '--home-dev--']);
       expect(n('/srv/a:b'), ['--srv-a-b--']);
-      expect(
-        n('/home/dev/scratchtmp/x', tmp: '/home/dev/scratchtmp'),
-        ['-tmp-x', '-scratchtmp-x', '--home-dev-scratchtmp-x--'],
-        reason: 'a temp dir inside home: tmp first, home is the shadowed name',
-      );
+      expect(n('/home/dev/scratchtmp/x', tmp: '/home/dev/scratchtmp'), [
+        '-tmp-x',
+        '-scratchtmp-x',
+        '--home-dev-scratchtmp-x--',
+      ], reason: 'a temp dir inside home: tmp first, home is the shadowed name');
     });
 
     test('finds the session file by its id and returns the folder without .jsonl', () async {
@@ -196,7 +207,8 @@ void main() {
     });
 
     test('XDG sessions root', () async {
-      final fs = FakeFs()..addFile('/home/dev/.local/share/omp/sessions/-tmp-scratch/2026-10-05T07-06-23-175Z_$_sid.jsonl', '{}\n');
+      final fs = FakeFs()
+        ..addFile('/home/dev/.local/share/omp/sessions/-tmp-scratch/2026-10-05T07-06-23-175Z_$_sid.jsonl', '{}\n');
       expect(
         await OmpSessionLocator(_files(fs)).artifactDir(sessionId: _sid, cwd: _cwd),
         '/home/dev/.local/share/omp/sessions/-tmp-scratch/2026-10-05T07-06-23-175Z_$_sid',
@@ -229,7 +241,8 @@ void main() {
     });
 
     test('the run\'s name from the recorded progress is the file name', () {
-      final updates = (jsonDecode(File('test/fixtures/omp_logs/acp_task_updates.json').readAsStringSync()) as List).cast<Map<String, dynamic>>();
+      final updates = (jsonDecode(File('test/fixtures/omp_logs/acp_task_updates.json').readAsStringSync()) as List)
+          .cast<Map<String, dynamic>>();
       var state = const AgentSessionState('s');
       for (final u in updates) {
         state = state.apply(SessionUpdate.parse(u));
@@ -244,7 +257,10 @@ void main() {
   });
 
   group('showing it', () {
-    _rigTest('a valid artifact gives a transcript that says where it came from', () => _host(log: _text(_real)), (r, async) {
+    _rigTest('a valid artifact gives a transcript that says where it came from', () => _host(log: _text(_real)), (
+      r,
+      async,
+    ) {
       r.watch();
       expect(r.status, SubagentLogStatus.loading, reason: 'the first read is under way');
       _settle(async);
@@ -259,7 +275,11 @@ void main() {
       for (final c in r.calls) {
         final path = c.substring(c.indexOf(' ') + 1).split('@').first;
         expect(
-          path == '.' || path.startsWith('/home/dev/.omp/agent/sessions') || path == '/home/dev/.omp/agent/sessions' || path == _cwd || path == '/home/dev/.local/share/omp/sessions',
+          path == '.' ||
+              path.startsWith('/home/dev/.omp/agent/sessions') ||
+              path == '/home/dev/.omp/agent/sessions' ||
+              path == _cwd ||
+              path == '/home/dev/.local/share/omp/sessions',
           isTrue,
           reason: c,
         );
@@ -267,32 +287,49 @@ void main() {
       expect(r.reads, everyElement(startsWith('read $_logPath@')));
     });
 
-    _rigTest('the same run object comes back while nothing changed; a Claude transcript is never replaced', () => _host(log: _text(_real)), (r, async) {
-      r.watch();
-      _settle(async);
-      final a = r.shown;
-      expect(identical(r.controller.overlay.run(r.run), a), isTrue);
-      final own = SubagentRun(id: 'c', route: SubagentRoute.claude, parentToolCallId: 'c', transcript: const AgentSessionState('own'));
-      expect(identical(r.controller.overlay.run(own), own), isTrue);
-    });
+    _rigTest(
+      'the same run object comes back while nothing changed; a Claude transcript is never replaced',
+      () => _host(log: _text(_real)),
+      (r, async) {
+        r.watch();
+        _settle(async);
+        final a = r.shown;
+        expect(identical(r.controller.overlay.run(r.run), a), isTrue);
+        final own = SubagentRun(
+          id: 'c',
+          route: SubagentRoute.claude,
+          parentToolCallId: 'c',
+          transcript: const AgentSessionState('own'),
+        );
+        expect(identical(r.controller.overlay.run(own), own), isTrue);
+      },
+    );
 
-    _rigTest('a log that grows is read from where it ended, while the run is active', () => _host(log: _text(_real.take(7))), (r, async) {
-      r.watch();
-      _settle(async);
-      expect(r.shown.items.whereType<TranscriptMessage>(), hasLength(2));
-      expect(_tools(r.shown.transcript!).single.call.status, ToolStatus.inProgress, reason: 'the yield has no result in the log yet');
-      final firstBytes = utf8.encode(_text(_real.take(7))).length;
-      final before = r.shown;
+    _rigTest(
+      'a log that grows is read from where it ended, while the run is active',
+      () => _host(log: _text(_real.take(7))),
+      (r, async) {
+        r.watch();
+        _settle(async);
+        expect(r.shown.items.whereType<TranscriptMessage>(), hasLength(2));
+        expect(
+          _tools(r.shown.transcript!).single.call.status,
+          ToolStatus.inProgress,
+          reason: 'the yield has no result in the log yet',
+        );
+        final firstBytes = utf8.encode(_text(_real.take(7))).length;
+        final before = r.shown;
 
-      r.fs!.addFile(_logPath, _text(_real));
-      r.calls.clear();
-      _tick(async);
+        r.fs!.addFile(_logPath, _text(_real));
+        r.calls.clear();
+        _tick(async);
 
-      expect(_tools(r.shown.transcript!).single.call.status, ToolStatus.completed);
-      expect(identical(r.shown, before), isFalse);
-      expect(r.reads, hasLength(1));
-      expect(r.reads.single, startsWith('read $_logPath@$firstBytes+'), reason: 'not read again from the start');
-    });
+        expect(_tools(r.shown.transcript!).single.call.status, ToolStatus.completed);
+        expect(identical(r.shown, before), isFalse);
+        expect(r.reads, hasLength(1));
+        expect(r.reads.single, startsWith('read $_logPath@$firstBytes+'), reason: 'not read again from the start');
+      },
+    );
 
     _rigTest('an unchanged log is only stat\'ed on each tick', () => _host(log: _text(_real.take(7))), (r, async) {
       r.watch();
@@ -305,19 +342,23 @@ void main() {
       expect(identical(r.shown, before), isTrue);
     });
 
-    _rigTest('a half-written last line waits for its end', () {
-      final whole = _text(_real.take(7));
-      return _host(log: whole.substring(0, whole.length - 40));
-    }, (r, async) {
-      r.watch();
-      _settle(async);
-      final count = r.shown.items.length;
-      expect(count, lessThan(3), reason: 'the unfinished assistant line is not mapped');
-      r.fs!.addFile(_logPath, _text(_real.take(7)));
-      _tick(async);
-      expect(r.shown.items.length, greaterThan(count));
-      expect(r.shown.items.whereType<TranscriptMessage>().where((m) => m.role == MessageRole.thought), hasLength(1));
-    });
+    _rigTest(
+      'a half-written last line waits for its end',
+      () {
+        final whole = _text(_real.take(7));
+        return _host(log: whole.substring(0, whole.length - 40));
+      },
+      (r, async) {
+        r.watch();
+        _settle(async);
+        final count = r.shown.items.length;
+        expect(count, lessThan(3), reason: 'the unfinished assistant line is not mapped');
+        r.fs!.addFile(_logPath, _text(_real.take(7)));
+        _tick(async);
+        expect(r.shown.items.length, greaterThan(count));
+        expect(r.shown.items.whereType<TranscriptMessage>().where((m) => m.role == MessageRole.thought), hasLength(1));
+      },
+    );
 
     _rigTest('a log replaced by a shorter one starts over', () => _host(log: _text(_real)), (r, async) {
       r.watch();
@@ -330,24 +371,31 @@ void main() {
   });
 
   group('cadence', () {
-    _rigTest('nothing is read before a screen asks, and nothing after it leaves', () => _host(log: _text(_real.take(7))), (r, async) {
-      async.elapse(const Duration(minutes: 2));
-      expect(r.calls, isEmpty, reason: 'never opened');
-      expect(async.pendingTimers, isEmpty);
+    _rigTest(
+      'nothing is read before a screen asks, and nothing after it leaves',
+      () => _host(log: _text(_real.take(7))),
+      (r, async) {
+        async.elapse(const Duration(minutes: 2));
+        expect(r.calls, isEmpty, reason: 'never opened');
+        expect(async.pendingTimers, isEmpty);
 
-      r.watch();
-      _settle(async);
-      expect(r.calls, isNotEmpty);
-      expect(async.pendingTimers, hasLength(1));
+        r.watch();
+        _settle(async);
+        expect(r.calls, isNotEmpty);
+        expect(async.pendingTimers, hasLength(1));
 
-      r.watch(false);
-      expect(async.pendingTimers, isEmpty);
-      r.calls.clear();
-      async.elapse(const Duration(minutes: 2));
-      expect(r.calls, isEmpty);
-    });
+        r.watch(false);
+        expect(async.pendingTimers, isEmpty);
+        r.calls.clear();
+        async.elapse(const Duration(minutes: 2));
+        expect(r.calls, isEmpty);
+      },
+    );
 
-    _rigTest('two screens count: the timer stays until the last one leaves', () => _host(log: _text(_real.take(7))), (r, async) {
+    _rigTest('two screens count: the timer stays until the last one leaves', () => _host(log: _text(_real.take(7))), (
+      r,
+      async,
+    ) {
       r.watch();
       r.watch();
       r.watch(false);
@@ -379,7 +427,10 @@ void main() {
       expect(r.calls, isEmpty);
     });
 
-    _rigTest('opening a finished run again reads what was added since', () => _host(log: _text(_real.take(7))), (r, async) {
+    _rigTest('opening a finished run again reads what was added since', () => _host(log: _text(_real.take(7))), (
+      r,
+      async,
+    ) {
       r.run = _run(status: SubagentStatus.finished);
       r.watch();
       _settle(async);
@@ -411,7 +462,10 @@ void main() {
 
   group('the summary stays', () {
     for (final name in ['../x', '..', 'a/b', '/etc/passwd', r'a\b', 'x/../y', 'x.jsonl', '.hidden', '', 'a b']) {
-      _rigTest('a name the agent made up (${jsonEncode(name)}) reads nothing', () => _host(log: _text(_real)), (r, async) {
+      _rigTest('a name the agent made up (${jsonEncode(name)}) reads nothing', () => _host(log: _text(_real)), (
+        r,
+        async,
+      ) {
         r.run = _run(name: name);
         r.watch();
         _settle(async);
@@ -455,21 +509,29 @@ void main() {
       expect(r.status, SubagentLogStatus.unavailable);
     });
 
-    _rigTest('a log the user may not read', () {
-      final fs = _host(log: _text(_real))..deny.add(_logPath);
-      return fs;
-    }, (r, async) {
-      r.watch();
-      _settle(async);
-      expect(r.status, SubagentLogStatus.unavailable, reason: 'permission will not change: no retry offer');
-    });
+    _rigTest(
+      'a log the user may not read',
+      () {
+        final fs = _host(log: _text(_real))..deny.add(_logPath);
+        return fs;
+      },
+      (r, async) {
+        r.watch();
+        _settle(async);
+        expect(r.status, SubagentLogStatus.unavailable, reason: 'permission will not change: no retry offer');
+      },
+    );
 
-    _rigTest('a format version this app does not know', () => _host(log: _text([_header(version: 4), ..._real.skip(2)])), (r, async) {
-      r.watch();
-      _settle(async);
-      expect(r.status, SubagentLogStatus.unavailable);
-      expect(r.shown.hasTranscript, isFalse);
-    });
+    _rigTest(
+      'a format version this app does not know',
+      () => _host(log: _text([_header(version: 4), ..._real.skip(2)])),
+      (r, async) {
+        r.watch();
+        _settle(async);
+        expect(r.status, SubagentLogStatus.unavailable);
+        expect(r.shown.hasTranscript, isFalse);
+      },
+    );
 
     _rigTest('no version at all', () => _host(log: _text([_header(version: null), ..._real.skip(2)])), (r, async) {
       r.watch();
@@ -477,11 +539,15 @@ void main() {
       expect(r.status, SubagentLogStatus.unavailable);
     });
 
-    _rigTest('a log of another parent session', () => _host(log: _text([_header(parent: '/x/other-session.jsonl'), ..._real.skip(2)])), (r, async) {
-      r.watch();
-      _settle(async);
-      expect(r.status, SubagentLogStatus.unavailable);
-    });
+    _rigTest(
+      'a log of another parent session',
+      () => _host(log: _text([_header(parent: '/x/other-session.jsonl'), ..._real.skip(2)])),
+      (r, async) {
+        r.watch();
+        _settle(async);
+        expect(r.status, SubagentLogStatus.unavailable);
+      },
+    );
 
     _rigTest('a file that is not a log', () => _host(log: 'hello\nworld\n{"a":1}\n[1,2]\nnull\n'), (r, async) {
       r.watch();
@@ -490,27 +556,38 @@ void main() {
       expect(r.shown.hasTranscript, isFalse);
     });
 
-    _rigTest('a log with a header and nothing that maps', () => _host(log: _text([_header(), '{"type":"model_change","id":"a"}'])), (r, async) {
+    _rigTest(
+      'a log with a header and nothing that maps',
+      () => _host(log: _text([_header(), '{"type":"model_change","id":"a"}'])),
+      (r, async) {
+        r.watch();
+        _settle(async);
+        expect(r.status, SubagentLogStatus.unavailable);
+      },
+    );
+
+    _rigTest('a binary file', () => _host(log: Uint8List.fromList(List.generate(3000, (i) => (i * 31) % 256))), (
+      r,
+      async,
+    ) {
       r.watch();
       _settle(async);
       expect(r.status, SubagentLogStatus.unavailable);
     });
 
-    _rigTest('a binary file', () => _host(log: Uint8List.fromList(List.generate(3000, (i) => (i * 31) % 256))), (r, async) {
-      r.watch();
-      _settle(async);
-      expect(r.status, SubagentLogStatus.unavailable);
-    });
-
-    _rigTest('a directory where the log should be', () {
-      final fs = _host();
-      fs.addDir(_logPath);
-      return fs;
-    }, (r, async) {
-      r.watch();
-      _settle(async);
-      expect(r.status, SubagentLogStatus.unavailable);
-    });
+    _rigTest(
+      'a directory where the log should be',
+      () {
+        final fs = _host();
+        fs.addDir(_logPath);
+        return fs;
+      },
+      (r, async) {
+        r.watch();
+        _settle(async);
+        expect(r.status, SubagentLogStatus.unavailable);
+      },
+    );
 
     _rigTest('an empty log of a running subagent is looked at again', () => _host(log: ''), (r, async) {
       r.watch();
@@ -545,7 +622,10 @@ void main() {
       expect(r.status, SubagentLogStatus.shown);
     });
 
-    _rigTest('a transcript already shown survives a failed refresh', () => _host(log: _text(_real.take(7))), (r, async) {
+    _rigTest('a transcript already shown survives a failed refresh', () => _host(log: _text(_real.take(7))), (
+      r,
+      async,
+    ) {
       r.watch();
       _settle(async);
       final shown = r.shown;
@@ -555,7 +635,10 @@ void main() {
       expect(identical(r.shown, shown), isTrue);
     });
 
-    _rigTest('a failed read of a running subagent is tried again on the next tick', () => _host(log: _text(_real)), (r, async) {
+    _rigTest('a failed read of a running subagent is tried again on the next tick', () => _host(log: _text(_real)), (
+      r,
+      async,
+    ) {
       r.fs!.fail = RemoteFileException(RemoteFileErrorKind.network, 'down');
       r.watch();
       _settle(async);
@@ -564,17 +647,24 @@ void main() {
       expect(r.status, SubagentLogStatus.shown);
     });
 
-    _rigTest('a failed read of a finished subagent is not settled: it stays retryable', () => _host(log: _text(_real)), (r, async) {
-      r.run = _run(status: SubagentStatus.finished);
-      r.fs!.fail = RemoteFileException(RemoteFileErrorKind.network, 'down');
-      r.watch();
-      _settle(async);
-      r.fs!.fail = null;
-      _tick(async);
-      expect(r.status, SubagentLogStatus.shown);
-    });
+    _rigTest(
+      'a failed read of a finished subagent is not settled: it stays retryable',
+      () => _host(log: _text(_real)),
+      (r, async) {
+        r.run = _run(status: SubagentStatus.finished);
+        r.fs!.fail = RemoteFileException(RemoteFileErrorKind.network, 'down');
+        r.watch();
+        _settle(async);
+        r.fs!.fail = null;
+        _tick(async);
+        expect(r.status, SubagentLogStatus.shown);
+      },
+    );
 
-    _rigTest('a read that finishes after the session is gone shows nothing', () => _host(log: _text(_real)), (r, async) {
+    _rigTest('a read that finishes after the session is gone shows nothing', () => _host(log: _text(_real)), (
+      r,
+      async,
+    ) {
       r.fs!.gate = Completer<void>();
       r.watch();
       _settle(async);
@@ -587,9 +677,18 @@ void main() {
 
   group('caps', () {
     SubagentLogReader reader(FakeFs fs, {int bytes = 1024 * 1024, int lines = 4000, int line = 256 * 1024}) =>
-        SubagentLogReader(_files(fs), _logPath, expectedParent: RemotePath.basename(_artifactDir), maxReadBytes: bytes, maxLines: lines, maxLineBytes: line);
+        SubagentLogReader(
+          _files(fs),
+          _logPath,
+          expectedParent: RemotePath.basename(_artifactDir),
+          maxReadBytes: bytes,
+          maxLines: lines,
+          maxLineBytes: line,
+        );
 
-    List<String> many(int n, {String prefix = 'm'}) => [for (var i = 0; i < n; i++) _entry('$prefix$i', 'user', 'message number $i')];
+    List<String> many(int n, {String prefix = 'm'}) => [
+      for (var i = 0; i < n; i++) _entry('$prefix$i', 'user', 'message number $i'),
+    ];
 
     test('a long log is read from its tail, from a line boundary, and says the start is missing', () async {
       final body = [_header(), ...many(400)];
@@ -625,7 +724,10 @@ void main() {
 
     test('a line over the size cap is skipped and counted, its neighbours are shown', () async {
       final huge = _entry('big', 'user', 'x' * 5000);
-      final r = reader(_host(log: _text([_header(), _entry('a', 'user', 'first'), huge, _entry('b', 'user', 'last')])), line: 2000);
+      final r = reader(
+        _host(log: _text([_header(), _entry('a', 'user', 'first'), huge, _entry('b', 'user', 'last')])),
+        line: 2000,
+      );
       await r.poll();
       expect([for (final m in r.state.items.whereType<TranscriptMessage>()) m.text], ['first', 'last']);
       expect(r.skippedLines, 1);
@@ -638,7 +740,10 @@ void main() {
       final r = reader(fs, line: 2000);
       await r.poll();
       expect(r.skippedLines, 1);
-      fs.addFile(_logPath, '${_text([_header(), _entry('a', 'user', 'first')])}${'y' * 3000}${'z' * 10}\n${_entry('b', 'user', 'after')}\n');
+      fs.addFile(
+        _logPath,
+        '${_text([_header(), _entry('a', 'user', 'first')])}${'y' * 3000}${'z' * 10}\n${_entry('b', 'user', 'after')}\n',
+      );
       await r.poll();
       expect([for (final m in r.state.items.whereType<TranscriptMessage>()) m.text], ['first', 'after']);
       expect(r.skippedLines, 1, reason: 'one line, counted once');

@@ -27,13 +27,13 @@ import '../support/memory_terminal_settings_store.dart';
 import 'ui_harness.dart' show attentionSetProvider;
 
 Map<String, dynamic> _fleetSnapshot() => snapshotJson(
-      workspaces: const [(id: 'w1', label: 'payments-api'), (id: 'w2', label: 'docs')],
-      panes: const [
-        (id: 'w1:p0', ws: 'w1', agent: 'claude', status: 'working'),
-        (id: 'w1:p1', ws: 'w1', agent: null, status: 'unknown'),
-        (id: 'w2:p0', ws: 'w2', agent: 'codex', status: 'idle'),
-      ],
-    );
+  workspaces: const [(id: 'w1', label: 'payments-api'), (id: 'w2', label: 'docs')],
+  panes: const [
+    (id: 'w1:p0', ws: 'w1', agent: 'claude', status: 'working'),
+    (id: 'w1:p1', ws: 'w1', agent: null, status: 'unknown'),
+    (id: 'w2:p0', ws: 'w2', agent: 'codex', status: 'idle'),
+  ],
+);
 
 /// workstation and laptop online, staging off.
 Future<CreateHarness> _env() async {
@@ -67,31 +67,33 @@ Future<void> _pump(
     ..physicalSize = Size(width, height) * 2
     ..devicePixelRatio = 2;
   addTearDown(tester.view.reset);
-  await tester.pumpWidget(MultiProvider(
-    providers: [
-      ChangeNotifierProvider.value(value: h.machines),
-      ChangeNotifierProvider.value(value: h.fleet),
-      ListenableProvider<AgentSessions>.value(value: h.agents),
-      ChangeNotifierProvider.value(value: h.agentSettings),
-      ChangeNotifierProvider.value(value: TerminalSettings(MemoryTerminalSettingsStore())),
-      ChangeNotifierProvider(create: (_) => AppSettings(MemoryAppSettingsStore())),
-      ChangeNotifierProvider(create: (_) => AgentScreens()),
-      Provider<PanePreviews>(
-        create: (_) => PanePreviews(changes: h.fleet, connection: h.fleet.connection),
-        dispose: (_, previews) => previews.dispose(),
+  await tester.pumpWidget(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: h.machines),
+        ChangeNotifierProvider.value(value: h.fleet),
+        ListenableProvider<AgentSessions>.value(value: h.agents),
+        ChangeNotifierProvider.value(value: h.agentSettings),
+        ChangeNotifierProvider.value(value: TerminalSettings(MemoryTerminalSettingsStore())),
+        ChangeNotifierProvider(create: (_) => AppSettings(MemoryAppSettingsStore())),
+        ChangeNotifierProvider(create: (_) => AgentScreens()),
+        Provider<PanePreviews>(
+          create: (_) => PanePreviews(changes: h.fleet, connection: h.fleet.connection),
+          dispose: (_, previews) => previews.dispose(),
+        ),
+        Provider<TransportFactory>.value(value: (p, s, a, b) => throw StateError('unused')),
+        attentionSetProvider(),
+      ],
+      child: MaterialApp(
+        theme: brightness == Brightness.dark ? AppTheme.dark() : AppTheme.light(),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale)),
+          child: child!,
+        ),
+        home: home,
       ),
-      Provider<TransportFactory>.value(value: (p, s, a, b) => throw StateError('unused')),
-      attentionSetProvider(),
-    ],
-    child: MaterialApp(
-      theme: brightness == Brightness.dark ? AppTheme.dark() : AppTheme.light(),
-      builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale)),
-        child: child!,
-      ),
-      home: home,
     ),
-  ));
+  );
   await _flush(tester);
 }
 
@@ -101,9 +103,9 @@ Future<void> _tearDown(WidgetTester tester, CreateHarness h) async {
 }
 
 Finder _field(String label) => find.descendant(
-      of: find.byWidgetPredicate((w) => w is LabeledField && w.label == label),
-      matching: find.byType(TextFormField),
-    );
+  of: find.byWidgetPredicate((w) => w is LabeledField && w.label == label),
+  matching: find.byType(TextFormField),
+);
 
 Future<void> _tap(WidgetTester tester, Finder finder) async {
   await tester.ensureVisible(finder);
@@ -209,7 +211,11 @@ void main() {
       await _flush(tester);
 
       expect(find.byType(NewAgentSessionScreen), findsOneWidget);
-      expect(find.bySemanticsLabel(RegExp('^Machine, laptop')), findsOneWidget, reason: 'workstation is first in the list');
+      expect(
+        find.bySemanticsLabel(RegExp('^Machine, laptop')),
+        findsOneWidget,
+        reason: 'workstation is first in the list',
+      );
       semantics.dispose();
       await _tearDown(tester, h);
     });
@@ -227,8 +233,7 @@ void main() {
       await _pump(tester, plain, MachineScreen(machine: plain.connection('b')));
       expect(find.byTooltip('Browse files'), findsNothing);
       final plus = find.byWidgetPredicate((w) => w is CircleButton && w.tooltip == 'New agent session');
-      expect(tester.widget<CircleButton>(plus).onPressed, isNull,
-          reason: 'an offline machine cannot take a session');
+      expect(tester.widget<CircleButton>(plus).onPressed, isNull, reason: 'an offline machine cannot take a session');
       await _tearDown(tester, plain);
     });
 
@@ -243,7 +248,11 @@ void main() {
       await tester.tap(find.text('Rename'));
       await _flush(tester);
 
-      expect(tester.widget<TextFormField>(_field('Name')).controller!.text, 'payments-api', reason: 'starts from the current name');
+      expect(
+        tester.widget<TextFormField>(_field('Name')).controller!.text,
+        'payments-api',
+        reason: 'starts from the current name',
+      );
       await tester.enterText(_field('Name'), '  Thanh toán  ');
       await tester.tap(_button('Save'));
       await _flush(tester);
@@ -306,7 +315,8 @@ void main() {
 
     testWidgets('a workspace closed on the desktop meanwhile is simply gone: no error', (tester) async {
       final h = await open(tester);
-      h.stubs['a']!.on['workspace.close'] = (_) => throw const HerdrApiException('workspace_not_found', 'workspace w1 not found');
+      h.stubs['a']!.on['workspace.close'] = (_) =>
+          throw const HerdrApiException('workspace_not_found', 'workspace w1 not found');
 
       await tester.tap(find.byTooltip('Workspace actions').first);
       await _flush(tester);
@@ -355,10 +365,10 @@ void main() {
       final h = await open(tester);
       final t = h.stubs['a']!;
       t.on['tab.create'] = (_) => {
-            'type': 'tab_created',
-            'tab': {'tab_id': 'w1:t2'},
-            'root_pane': {'pane_id': 'w1:p9'},
-          };
+        'type': 'tab_created',
+        'tab': {'tab_id': 'w1:t2'},
+        'root_pane': {'pane_id': 'w1:p9'},
+      };
 
       await tester.tap(find.byTooltip('Workspace actions').first);
       await _flush(tester);
@@ -428,12 +438,12 @@ void main() {
       final h = await _env();
       final snap = h.stubs['a']!.snapshot;
       Map<String, Object> worktree(String path, {required bool linked}) => {
-            'checkout_path': path,
-            'is_linked_worktree': linked,
-            'repo_key': '/work/w1/.git',
-            'repo_name': 'payments-api',
-            'repo_root': '/work/w1',
-          };
+        'checkout_path': path,
+        'is_linked_worktree': linked,
+        'repo_key': '/work/w1/.git',
+        'repo_name': 'payments-api',
+        'repo_root': '/work/w1',
+      };
       final workspaces = snap['workspaces'] as List;
       (workspaces[0] as Map)['worktree'] = worktree('/work/w1', linked: false);
       (workspaces[1] as Map)['worktree'] = worktree('/work/wt/worktree-a', linked: true);
@@ -469,7 +479,9 @@ void main() {
       await _flush(tester);
     }
 
-    testWidgets('removing asks with a hold, names what is lost, and a tap or an early release removes nothing', (tester) async {
+    testWidgets('removing asks with a hold, names what is lost, and a tap or an early release removes nothing', (
+      tester,
+    ) async {
       final h = await open(tester);
       final t = h.stubs['a']!;
       await askToRemove(tester, h);
@@ -493,7 +505,9 @@ void main() {
       await _tearDown(tester, h);
     });
 
-    testWidgets('a phone session whose view tab sits in the worktree loses its folder, it does not stop', (tester) async {
+    testWidgets('a phone session whose view tab sits in the worktree loses its folder, it does not stop', (
+      tester,
+    ) async {
       final h = await open(tester);
       // The keeper opens its tab in the worktree's own workspace: w2:p0 is only a
       // viewer, the agent is a daemon that outlives the folder.
@@ -522,9 +536,9 @@ void main() {
       final h = await open(tester);
       // What herdr 0.9.3 answers for a checkout with staged or untracked files.
       h.stubs['a']!.on['worktree.remove'] = (_) => throw const HerdrApiException(
-            'dirty_worktree_requires_force',
-            "fatal: '/wt/worktree-a' contains modified or untracked files, use --force to delete it",
-          );
+        'dirty_worktree_requires_force',
+        "fatal: '/wt/worktree-a' contains modified or untracked files, use --force to delete it",
+      );
       await askToRemove(tester, h);
 
       await holdFor(tester, find.byType(HoldToConfirm));

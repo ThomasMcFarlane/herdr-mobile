@@ -9,7 +9,9 @@ import '../../../data/acp/subagents/subagent_run.dart';
 import '../../../data/models/herdr_models.dart' show AgentStatus;
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/words/plural.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'asked_to.dart';
 import '../../render/markdown/markdown.dart';
 import '../../support/step_clock.dart';
@@ -132,10 +134,7 @@ class SubagentGroupHeader extends StatelessWidget {
           Expanded(
             child: Semantics(
               header: true,
-              child: Text(
-                title,
-                style: Type.labelStrong.copyWith(color: ds.textSecondary),
-              ),
+              child: Text(title, style: Type.labelStrong.copyWith(color: ds.textSecondary)),
             ),
           ),
         ],
@@ -194,7 +193,13 @@ class _Snap {
 
 /// The cards of the subagents one tool call started.
 class SubagentToolRow extends StatelessWidget {
-  const SubagentToolRow({super.key, required this.rowKey, required this.session, required this.item, required this.gap});
+  const SubagentToolRow({
+    super.key,
+    required this.rowKey,
+    required this.session,
+    required this.item,
+    required this.gap,
+  });
 
   final String rowKey;
   final AgentSessionView session;
@@ -354,7 +359,10 @@ class _SubagentCardState extends State<SubagentCard> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(padding: const EdgeInsets.only(top: Gap.hair), child: RunGlyph(tone: tone)),
+          Padding(
+            padding: const EdgeInsets.only(top: Gap.hair),
+            child: RunGlyph(tone: tone),
+          ),
           const SizedBox(width: Gap.sm),
           Expanded(
             child: Column(
@@ -396,7 +404,9 @@ class _SubagentCardState extends State<SubagentCard> {
     final assignment = run.assignment?.trim() ?? '';
     final result = run.result?.trim() ?? '';
     final cut = result.length > cardResultChars ? result.length - cardResultChars : 0;
-    final doc = result.isEmpty ? null : (_results[run] ??= parseMd(cut == 0 ? result : result.substring(0, cardResultChars)));
+    final doc = result.isEmpty
+        ? null
+        : (_results[run] ??= parseMd(cut == 0 ? result : result.substring(0, cardResultChars)));
     final call = widget.callRow;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -417,7 +427,10 @@ class _SubagentCardState extends State<SubagentCard> {
               ],
               if (doc != null) ...[
                 _Label('Result'),
-                MdToneScope(tone: MdTone.quiet, child: MdDocumentView(document: doc)),
+                MdToneScope(
+                  tone: MdTone.quiet,
+                  child: MdDocumentView(document: doc),
+                ),
                 if (cut > 0)
                   Padding(
                     padding: const EdgeInsets.only(top: Gap.xs),

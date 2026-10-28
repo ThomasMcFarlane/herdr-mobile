@@ -17,16 +17,13 @@ import 'support/fake_transport.dart';
 const _path = '/home/u/.omp/agent/sessions/--work--/2026-01-01_abc.jsonl';
 
 /// The command the source runs to follow [_path]: zipped, as the transport reads it back.
-String _follow({int? from, int? tailBytes}) => keeperFollowCommand(_path, from: from, tailBytes: tailBytes, zipped: true);
+String _follow({int? from, int? tailBytes}) =>
+    keeperFollowCommand(_path, from: from, tailBytes: tailBytes, zipped: true);
 
 /// What a listener of [SshLogSource.follow] saw.
 class _Run {
   _Run(Stream<LogBatch> stream) {
-    sub = stream.listen(
-      batches.add,
-      onError: errors.add,
-      onDone: () => ended = true,
-    );
+    sub = stream.listen(batches.add, onError: errors.add, onDone: () => ended = true);
   }
 
   late final StreamSubscription<LogBatch> sub;
@@ -58,7 +55,8 @@ void main() {
     final text = base64.encode(bytes);
 
     List<String> records({int? length, int pieceSize = 60000}) => [
-      for (var i = 0; i < text.length; i += pieceSize) 'B\t${text.substring(i, i + pieceSize > text.length ? text.length : i + pieceSize)}',
+      for (var i = 0; i < text.length; i += pieceSize)
+        'B\t${text.substring(i, i + pieceSize > text.length ? text.length : i + pieceSize)}',
       'D\t${length ?? text.length}',
     ];
 
@@ -83,7 +81,9 @@ void main() {
           FakeExecChannel.run(code: 66, stderr: 'herdr-mobile: That picture is not in the log any more.');
       await expectLater(
         source.blob(_path, start: 0, hash: hash),
-        throwsA(isA<AgentHostException>().having((e) => e.message, 'message', 'That picture is not in the log any more.')),
+        throwsA(
+          isA<AgentHostException>().having((e) => e.message, 'message', 'That picture is not in the log any more.'),
+        ),
       );
     });
 
@@ -104,11 +104,7 @@ void main() {
       _Run(source.follow(_path, tailBytes: 1 << 20));
       await settle();
 
-      expect(transport.execCommands, [
-        _follow(),
-        _follow(from: 4096),
-        _follow(tailBytes: 1 << 20),
-      ]);
+      expect(transport.execCommands, [_follow(), _follow(from: 4096), _follow(tailBytes: 1 << 20)]);
       expect(transport.execZipped, everyElement(isTrue), reason: 'the transport reads the zipped lines back');
     });
 
@@ -203,7 +199,10 @@ void main() {
       await settle();
       final big = '{"t":"${'x' * (4 * 1024 * 1024)}"}';
       channel.emit('${big.length + 1}\t$big');
-      await _until(() => run.lines.isNotEmpty, 'the 4 MB line'); // decoding it takes longer than a fixed settle on a busy machine
+      await _until(
+        () => run.lines.isNotEmpty,
+        'the 4 MB line',
+      ); // decoding it takes longer than a fixed settle on a busy machine
 
       expect(run.lines.single, big);
     });
@@ -219,22 +218,25 @@ void main() {
   });
 
   group('reset', () {
-    test('lines before the marker are delivered first; the marker is an empty reset batch; then the new content', () async {
-      final run = _Run(source.follow(_path));
-      await settle();
-      channel
-        ..emit('10\t{"old":1}')
-        ..emit('R\t0')
-        ..emit('8\t{"new":1}')
-        ..emit('16\t{"new":2}');
-      await settle();
+    test(
+      'lines before the marker are delivered first; the marker is an empty reset batch; then the new content',
+      () async {
+        final run = _Run(source.follow(_path));
+        await settle();
+        channel
+          ..emit('10\t{"old":1}')
+          ..emit('R\t0')
+          ..emit('8\t{"new":1}')
+          ..emit('16\t{"new":2}');
+        await settle();
 
-      expect(run.batches.map((b) => '${b.reset} ${b.lines.join(' ')} ${b.endOffset}'), [
-        'false {"old":1} 10',
-        'true  0',
-        'false {"new":1} {"new":2} 16',
-      ]);
-    });
+        expect(run.batches.map((b) => '${b.reset} ${b.lines.join(' ')} ${b.endOffset}'), [
+          'false {"old":1} 10',
+          'true  0',
+          'false {"new":1} {"new":2} 16',
+        ]);
+      },
+    );
 
     test('two resets in a row are two markers', () async {
       final run = _Run(source.follow(_path));
@@ -259,7 +261,12 @@ void main() {
 
       expect(run.lines, ['{"a":1}']);
       expect(run.errors, hasLength(1));
-      expect(run.errors.single, isA<AgentHostException>().having((e) => e.message, 'message', 'Input/output error').having((e) => e.fatal, 'fatal', isFalse));
+      expect(
+        run.errors.single,
+        isA<AgentHostException>()
+            .having((e) => e.message, 'message', 'Input/output error')
+            .having((e) => e.fatal, 'fatal', isFalse),
+      );
       expect(run.ended, isTrue);
       expect(channel.closeCalls, greaterThan(0));
     });
@@ -270,18 +277,27 @@ void main() {
       channel.exit(66, stderr: 'herdr-mobile: not a log file in your home folder: /x.jsonl');
       await settle();
 
-      expect(run.errors.single, isA<AgentHostException>()
-          .having((e) => e.fatal, 'fatal', isTrue)
-          .having((e) => e.message, 'message', contains('home folder')));
+      expect(
+        run.errors.single,
+        isA<AgentHostException>()
+            .having((e) => e.fatal, 'fatal', isTrue)
+            .having((e) => e.message, 'message', contains('home folder')),
+      );
       expect(run.ended, isTrue);
     });
 
     test('a host without python3 is fatal', () async {
-      transport.onExec = (_) async => FakeExecChannel.run(code: 78, stderr: 'herdr-mobile: agent sessions need python3 on this host');
+      transport.onExec = (_) async =>
+          FakeExecChannel.run(code: 78, stderr: 'herdr-mobile: agent sessions need python3 on this host');
       final run = _Run(source.follow(_path));
       await settle();
 
-      expect(run.errors.single, isA<AgentHostException>().having((e) => e.fatal, 'fatal', isTrue).having((e) => e.message, 'message', contains('python3')));
+      expect(
+        run.errors.single,
+        isA<AgentHostException>()
+            .having((e) => e.fatal, 'fatal', isTrue)
+            .having((e) => e.message, 'message', contains('python3')),
+      );
     });
 
     test('a link that drops is a retryable transport error, after the lines that did arrive', () async {
@@ -325,9 +341,12 @@ void main() {
       final run = _Run(source.follow(_path));
       await settle();
 
-      expect(run.errors.single, isA<HerdrTransportException>()
-          .having((e) => e.message, 'message', 'Cannot connect')
-          .having((e) => e.fatal, 'fatal', isFalse));
+      expect(
+        run.errors.single,
+        isA<HerdrTransportException>()
+            .having((e) => e.message, 'message', 'Cannot connect')
+            .having((e) => e.fatal, 'fatal', isFalse),
+      );
       expect(run.ended, isTrue);
     });
 
@@ -336,7 +355,12 @@ void main() {
       final run = _Run(source.follow(_path));
       await settle();
 
-      expect(run.errors.single, isA<AgentHostException>().having((e) => e.fatal, 'fatal', isTrue).having((e) => e.message, 'message', 'Host key changed'));
+      expect(
+        run.errors.single,
+        isA<AgentHostException>()
+            .having((e) => e.fatal, 'fatal', isTrue)
+            .having((e) => e.message, 'message', 'Host key changed'),
+      );
     });
 
     test('a path that cannot be put on a command line fails at once, fatally, opening nothing', () async {
@@ -458,11 +482,7 @@ void main() {
       await settle();
 
       expect(installs, 1);
-      expect(transport.execCommands, [
-        _follow(),
-        installCommand,
-        _follow(),
-      ]);
+      expect(transport.execCommands, [_follow(), installCommand, _follow()]);
       expect(run.lines, ['{"a":1}']);
       expect(run.errors, isEmpty);
     });
@@ -474,7 +494,12 @@ void main() {
       final run = _Run(source.follow(_path));
       await settle(300);
 
-      expect(run.errors.single, isA<AgentHostException>().having((e) => e.fatal, 'fatal', isTrue).having((e) => e.message, 'message', contains('python3')));
+      expect(
+        run.errors.single,
+        isA<AgentHostException>()
+            .having((e) => e.fatal, 'fatal', isTrue)
+            .having((e) => e.message, 'message', contains('python3')),
+      );
     });
   });
 
@@ -528,7 +553,12 @@ void main() {
     });
 
     test('never ships more than 16 KB per field, and a truncation is a reset', () async {
-      final f = log([jsonEncode({'text': 'x' * 200000, 'image': {'type': 'image', 'data': 'QUJD' * 50000}})]);
+      final f = log([
+        jsonEncode({
+          'text': 'x' * 200000,
+          'image': {'type': 'image', 'data': 'QUJD' * 50000},
+        }),
+      ]);
       final run = _Run(local.follow(f.path, from: 0)); // the line is far bigger than the default tail
       await _until(() => run.lines.length == 1, 'the line');
       final line = jsonDecode(run.lines.single) as Map;
@@ -544,12 +574,18 @@ void main() {
     });
 
     test('a file outside the home folder is refused with the host\'s words, fatally', () async {
-      final far = File('${Directory.systemTemp.path}/log_source_far_${DateTime.now().microsecondsSinceEpoch}.jsonl')..writeAsStringSync('{}\n');
+      final far = File('${Directory.systemTemp.path}/log_source_far_${DateTime.now().microsecondsSinceEpoch}.jsonl')
+        ..writeAsStringSync('{}\n');
       addTearDown(far.deleteSync);
       final run = _Run(local.follow(far.path));
       await _until(() => run.ended, 'the end');
 
-      expect(run.errors.single, isA<AgentHostException>().having((e) => e.fatal, 'fatal', isTrue).having((e) => e.message, 'message', contains('home folder')));
+      expect(
+        run.errors.single,
+        isA<AgentHostException>()
+            .having((e) => e.fatal, 'fatal', isTrue)
+            .having((e) => e.message, 'message', contains('home folder')),
+      );
     });
 
     test('cancelling ends the process on the host', () async {
@@ -583,10 +619,7 @@ Future<void> _until(bool Function() check, String what, [Duration timeout = cons
 /// [home] as the home folder, as an [ExecChannel].
 class _ProcessChannel implements ExecChannel {
   _ProcessChannel._(this._process) {
-    lines = _process.stdout
-        .transform(utf8.decoder)
-        .transform(const LineSplitter())
-        .where((l) => l.isNotEmpty);
+    lines = _process.stdout.transform(utf8.decoder).transform(const LineSplitter()).where((l) => l.isNotEmpty);
     _process.stderr.transform(utf8.decoder).listen((s) => _stderr = s.length > 2048 ? s.substring(s.length - 2048) : s);
     unawaited(_process.exitCode.then((c) => _exit.complete(c)));
   }
@@ -594,10 +627,13 @@ class _ProcessChannel implements ExecChannel {
   static _ProcessChannel? last;
 
   static Future<_ProcessChannel> start(String command, String home) async {
-    final p = await Process.start('/bin/sh', ['-c', command],
-        environment: {'HOME': home, 'PATH': Platform.environment['PATH'] ?? '/usr/bin:/bin'},
-        includeParentEnvironment: false,
-        workingDirectory: home);
+    final p = await Process.start(
+      '/bin/sh',
+      ['-c', command],
+      environment: {'HOME': home, 'PATH': Platform.environment['PATH'] ?? '/usr/bin:/bin'},
+      includeParentEnvironment: false,
+      workingDirectory: home,
+    );
     return last = _ProcessChannel._(p);
   }
 

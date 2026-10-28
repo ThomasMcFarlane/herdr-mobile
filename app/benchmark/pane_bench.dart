@@ -30,15 +30,13 @@ const _scrolledSteps = 40;
 
 final _out = <String>[];
 
-void _metric(String name, num value) =>
-    _out.add('METRIC $name=${value is int ? value : value.toStringAsFixed(3)}');
+void _metric(String name, num value) => _out.add('METRIC $name=${value is int ? value : value.toStringAsFixed(3)}');
 
 // ---------------------------------------------------------------------------
 // Workload: fixed seed (support/pane_workload.dart), built before any timing.
 // ---------------------------------------------------------------------------
 
-double _pct(List<double> sorted, double p) =>
-    sorted[math.min(sorted.length - 1, (sorted.length * p).floor())];
+double _pct(List<double> sorted, double p) => sorted[math.min(sorted.length - 1, (sorted.length * p).floor())];
 
 void _report(String name, List<double> ms) {
   final s = [...ms]..sort();
@@ -51,9 +49,7 @@ void _report(String name, List<double> ms) {
 /// the real pane screen, where a ChangeNotifier rebuilds the pane and not the
 /// app around it (pumping a new MaterialApp per read would measure re-walking
 /// the theme and scaffold, which a read never does).
-final _shown = ValueNotifier<({String text, List<String> history})>(
-  (text: '', history: const []),
-);
+final _shown = ValueNotifier<({String text, List<String> history})>((text: '', history: const []));
 var _mounted = false;
 
 Widget _app(ScrollbackHistory h, {required bool wrap}) {
@@ -68,11 +64,7 @@ Widget _app(ScrollbackHistory h, {required bool wrap}) {
           height: 760,
           child: ValueListenableBuilder(
             valueListenable: _shown,
-            builder: (context, shown, _) => TerminalView(
-              text: shown.text,
-              history: shown.history,
-              wrap: wrap,
-            ),
+            builder: (context, shown, _) => TerminalView(text: shown.text, history: shown.history, wrap: wrap),
           ),
         ),
       ),
@@ -81,11 +73,7 @@ Widget _app(ScrollbackHistory h, {required bool wrap}) {
 }
 
 /// Mounts the app on the first call; afterwards only swaps the content.
-Future<void> _show(
-  WidgetTester tester,
-  ScrollbackHistory h, {
-  required bool wrap,
-}) async {
+Future<void> _show(WidgetTester tester, ScrollbackHistory h, {required bool wrap}) async {
   if (!_mounted) {
     _mounted = true;
     await tester.pumpWidget(_app(h, wrap: wrap));
@@ -123,11 +111,7 @@ Future<({List<double> history, List<double> view})> _stream(
 /// The vertical scroll position of the terminal's row list.
 ScrollPosition _rows(WidgetTester tester) => tester
     .state<ScrollableState>(
-      find.byWidgetPredicate(
-        (w) =>
-            w is Scrollable &&
-            axisDirectionToAxis(w.axisDirection) == Axis.vertical,
-      ),
+      find.byWidgetPredicate((w) => w is Scrollable && axisDirectionToAxis(w.axisDirection) == Axis.vertical),
     )
     .position;
 
@@ -143,11 +127,7 @@ const _deepSteps = 60;
 
 /// The same pane after ~[_deepRows] rows of history: what streaming, opening,
 /// dragging, flinging and jumping cost when there is a lot to scroll through.
-Future<void> _deepScenario(
-  WidgetTester tester,
-  String name, {
-  required bool wrap,
-}) async {
+Future<void> _deepScenario(WidgetTester tester, String name, {required bool wrap}) async {
   _mounted = false;
   final history = ScrollbackHistory();
   var newest = 1000;
@@ -175,19 +155,9 @@ Future<void> _deepScenario(
   final baseStep = step;
   String read(int s) => paneReadAt(base + (s - baseStep) * paneSlide, s);
   await _stream(tester, history, step + 1, _warmup, wrap: wrap, read: read);
-  final streamed = await _stream(
-    tester,
-    history,
-    step + 1 + _warmup,
-    _deepSteps,
-    wrap: wrap,
-    read: read,
-  );
+  final streamed = await _stream(tester, history, step + 1 + _warmup, _deepSteps, wrap: wrap, read: read);
   step += _warmup + _deepSteps;
-  _report('${name}_step', [
-    for (var i = 0; i < _deepSteps; i++)
-      streamed.history[i] + streamed.view[i],
-  ]);
+  _report('${name}_step', [for (var i = 0; i < _deepSteps; i++) streamed.history[i] + streamed.view[i]]);
 
   // Fling back through the history: every row that comes on screen is new.
   final view = find.byType(TerminalView);
@@ -240,28 +210,14 @@ Future<void> _deepScenario(
   _report('${name}_drag', drag);
 
   // Keep streaming while the user is reading deep in the history.
-  final scrolled = await _stream(
-    tester,
-    history,
-    step + 1,
-    _deepSteps,
-    wrap: wrap,
-    read: read,
-  );
-  _report('${name}_scrolled_step', [
-    for (var i = 0; i < _deepSteps; i++)
-      scrolled.history[i] + scrolled.view[i],
-  ]);
+  final scrolled = await _stream(tester, history, step + 1, _deepSteps, wrap: wrap, read: read);
+  _report('${name}_scrolled_step', [for (var i = 0; i < _deepSteps; i++) scrolled.history[i] + scrolled.view[i]]);
   await gesture.up();
 
   expect(find.byType(TerminalLineView).evaluate().length, greaterThan(20));
 }
 
-Future<void> _scenario(
-  WidgetTester tester,
-  String name, {
-  required bool wrap,
-}) async {
+Future<void> _scenario(WidgetTester tester, String name, {required bool wrap}) async {
   _mounted = false;
   final history = ScrollbackHistory();
 
@@ -272,13 +228,10 @@ Future<void> _scenario(
   _metric('${name}_open_ms', cold.elapsedMicroseconds / 1000);
 
   await _stream(tester, history, 1, _warmup, wrap: wrap);
-  final streamed =
-      await _stream(tester, history, 1 + _warmup, _steps, wrap: wrap);
+  final streamed = await _stream(tester, history, 1 + _warmup, _steps, wrap: wrap);
   _report('${name}_history', streamed.history);
   _report('${name}_view', streamed.view);
-  _report('${name}_step', [
-    for (var i = 0; i < _steps; i++) streamed.history[i] + streamed.view[i],
-  ]);
+  _report('${name}_step', [for (var i = 0; i < _steps; i++) streamed.history[i] + streamed.view[i]]);
 
   // Scroll back through history: rows are prepared as they come on screen.
   final gesture = await tester.startGesture(const Offset(200, 300));
@@ -292,17 +245,8 @@ Future<void> _scenario(
   _report('${name}_scroll', frames);
 
   // Keep streaming while the user is reading back (anchoring path).
-  final scrolled = await _stream(
-    tester,
-    history,
-    1 + _warmup + _steps,
-    _scrolledSteps,
-    wrap: wrap,
-  );
-  _report('${name}_scrolled_step', [
-    for (var i = 0; i < _scrolledSteps; i++)
-      scrolled.history[i] + scrolled.view[i],
-  ]);
+  final scrolled = await _stream(tester, history, 1 + _warmup + _steps, _scrolledSteps, wrap: wrap);
+  _report('${name}_scrolled_step', [for (var i = 0; i < _scrolledSteps; i++) scrolled.history[i] + scrolled.view[i]]);
   await gesture.up();
 
   // Guard against "optimising" by drawing nothing.

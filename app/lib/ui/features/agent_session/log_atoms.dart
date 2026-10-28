@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../data/words/plural.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// Removed lines as text: the theme's danger text tone.
@@ -38,9 +39,17 @@ class DiffStats extends StatelessWidget {
           child: Text.rich(
             TextSpan(
               children: [
-                if (added > 0) TextSpan(text: '+$added', style: base.copyWith(color: ds.addedText)),
+                if (added > 0)
+                  TextSpan(
+                    text: '+$added',
+                    style: base.copyWith(color: ds.addedText),
+                  ),
                 if (added > 0 && removed > 0) const TextSpan(text: ' '),
-                if (removed > 0) TextSpan(text: '\u2212$removed', style: base.copyWith(color: removedText(ds))),
+                if (removed > 0)
+                  TextSpan(
+                    text: '\u2212$removed',
+                    style: base.copyWith(color: removedText(ds)),
+                  ),
               ],
             ),
             maxLines: 1,
@@ -51,4 +60,3 @@ class DiffStats extends StatelessWidget {
     );
   }
 }
-

@@ -11,13 +11,11 @@ import 'support/memory_snapshot_cache.dart';
 
 typedef _P = ({String id, String ws, String? agent, String status});
 
-_P _pane(String id, String status) =>
-    (id: id, ws: 'w1', agent: 'claude', status: status);
+_P _pane(String id, String status) => (id: id, ws: 'w1', agent: 'claude', status: status);
 
 /// A connection on a clock the test moves by hand.
 class _Rig {
-  _Rig(this.async, List<_P> panes, {MemorySnapshotCache? cache})
-      : t = FakeTransport(snapshotJson(panes: panes)) {
+  _Rig(this.async, List<_P> panes, {MemorySnapshotCache? cache}) : t = FakeTransport(snapshotJson(panes: panes)) {
     c = MachineConnection(
       profile: const MachineProfile(id: 'm', label: 'box', host: 'h', username: 'u'),
       api: HerdrApi(t),
@@ -48,19 +46,19 @@ class _Rig {
   }
 }
 
-void _rig(String name, List<_P> panes, void Function(_Rig r) body) =>
-    test(name, () => fakeAsync((async) {
-          final r = _Rig(async, panes);
-          body(r);
-          r.c.dispose();
-          async.flushMicrotasks();
-        }));
+void _rig(String name, List<_P> panes, void Function(_Rig r) body) => test(
+  name,
+  () => fakeAsync((async) {
+    final r = _Rig(async, panes);
+    body(r);
+    r.c.dispose();
+    async.flushMicrotasks();
+  }),
+);
 
 void main() {
   group('statusSince', () {
-    _rig('panes already there at first sight have no known start', [
-      _pane('w1:p1', 'working'),
-    ], (r) {
+    _rig('panes already there at first sight have no known start', [_pane('w1:p1', 'working')], (r) {
       expect(r.c.statusSince('w1:p1'), isNull);
       expect(r.c.timeInStatus('w1:p1'), isNull);
     });
@@ -70,9 +68,7 @@ void main() {
       expect(r.c.timeInStatus('nope'), isNull);
     });
 
-    _rig('a status change is stamped with when we saw it', [
-      _pane('w1:p1', 'working'),
-    ], (r) {
+    _rig('a status change is stamped with when we saw it', [_pane('w1:p1', 'working')], (r) {
       r.advance(const Duration(minutes: 5));
       r.server([_pane('w1:p1', 'blocked')]);
       final seen = r.now;
@@ -82,9 +78,7 @@ void main() {
       expect(r.c.timeInStatus('w1:p1'), const Duration(minutes: 3));
     });
 
-    _rig('unchanged snapshots keep the original stamp', [
-      _pane('w1:p1', 'working'),
-    ], (r) {
+    _rig('unchanged snapshots keep the original stamp', [_pane('w1:p1', 'working')], (r) {
       r.server([_pane('w1:p1', 'blocked')]);
       final seen = r.c.statusSince('w1:p1');
       expect(seen, isNotNull);
@@ -95,9 +89,7 @@ void main() {
       expect(r.c.statusSince('w1:p1'), seen);
     });
 
-    _rig('every flip resets the clock, including flipping back', [
-      _pane('w1:p1', 'working'),
-    ], (r) {
+    _rig('every flip resets the clock, including flipping back', [_pane('w1:p1', 'working')], (r) {
       r.advance(const Duration(minutes: 1));
       r.server([_pane('w1:p1', 'blocked')]);
       final first = r.c.statusSince('w1:p1');
@@ -108,33 +100,30 @@ void main() {
       expect(r.c.timeInStatus('w1:p1'), Duration.zero);
     });
 
-    _rig('a pane that appears later starts now; its neighbour is unaffected', [
-      _pane('w1:p1', 'working'),
-    ], (r) {
+    _rig('a pane that appears later starts now; its neighbour is unaffected', [_pane('w1:p1', 'working')], (r) {
       r.advance(const Duration(minutes: 10));
       r.server([_pane('w1:p1', 'working'), _pane('w1:p2', 'working')]);
       expect(r.c.statusSince('w1:p2'), r.now);
       expect(r.c.statusSince('w1:p1'), isNull, reason: 'still unknown, not reset');
     });
 
-    _rig('a closed pane is forgotten and starts fresh if it returns', [
-      _pane('w1:p1', 'working'),
-      _pane('w1:p2', 'working'),
-    ], (r) {
-      r.server([_pane('w1:p1', 'working'), _pane('w1:p2', 'blocked')]);
-      expect(r.c.statusSince('w1:p2'), isNotNull);
+    _rig(
+      'a closed pane is forgotten and starts fresh if it returns',
+      [_pane('w1:p1', 'working'), _pane('w1:p2', 'working')],
+      (r) {
+        r.server([_pane('w1:p1', 'working'), _pane('w1:p2', 'blocked')]);
+        expect(r.c.statusSince('w1:p2'), isNotNull);
 
-      r.server([_pane('w1:p1', 'working')]);
-      expect(r.c.statusSince('w1:p2'), isNull);
+        r.server([_pane('w1:p1', 'working')]);
+        expect(r.c.statusSince('w1:p2'), isNull);
 
-      r.advance(const Duration(minutes: 4));
-      r.server([_pane('w1:p1', 'working'), _pane('w1:p2', 'blocked')]);
-      expect(r.c.statusSince('w1:p2'), r.now);
-    });
+        r.advance(const Duration(minutes: 4));
+        r.server([_pane('w1:p1', 'working'), _pane('w1:p2', 'blocked')]);
+        expect(r.c.statusSince('w1:p2'), r.now);
+      },
+    );
 
-    _rig('a change that happened while disconnected is a bound, not "just now"', [
-      _pane('w1:p1', 'working'),
-    ], (r) {
+    _rig('a change that happened while disconnected is a bound, not "just now"', [_pane('w1:p1', 'working')], (r) {
       final lastSeen = r.now;
       r.c.goOffline();
       r.t.snapshot = snapshotJson(panes: [_pane('w1:p1', 'blocked')]);

@@ -102,10 +102,7 @@ class FoldPanel extends StatelessWidget {
             ),
             Collapse(
               open: expanded,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(Gap.md, 0, Gap.md, Gap.md),
-                child: child,
-              ),
+              child: Padding(padding: const EdgeInsets.fromLTRB(Gap.md, 0, Gap.md, Gap.md), child: child),
             ),
           ],
         ),

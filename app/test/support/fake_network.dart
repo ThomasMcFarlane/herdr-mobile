@@ -24,6 +24,5 @@ class FakeNetwork implements NetworkMonitor {
 
   void goOffline() => set(const NetworkState(online: false, signature: ''));
 
-  void goOnline([String signature = 'wifi']) =>
-      set(NetworkState(online: true, signature: signature));
+  void goOnline([String signature = 'wifi']) => set(NetworkState(online: true, signature: signature));
 }

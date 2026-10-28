@@ -121,12 +121,17 @@ void main() {
       late StateSetter set;
       await pumpCore(
         tester,
-        StatefulBuilder(builder: (context, setState) {
-          set = setState;
-          return SingleChildScrollView(
-            child: Collapse(open: open, child: const ListRow(title: 'row one')),
-          );
-        }),
+        StatefulBuilder(
+          builder: (context, setState) {
+            set = setState;
+            return SingleChildScrollView(
+              child: Collapse(
+                open: open,
+                child: const ListRow(title: 'row one'),
+              ),
+            );
+          },
+        ),
       );
       expect(find.text('row one'), findsOneWidget);
       final full = tester.getSize(find.byType(ListRow)).height;
@@ -149,12 +154,17 @@ void main() {
       late StateSetter set;
       await pumpCore(
         tester,
-        StatefulBuilder(builder: (context, setState) {
-          set = setState;
-          return SingleChildScrollView(
-            child: Collapse(open: open, child: const TextField(key: Key('field'))),
-          );
-        }),
+        StatefulBuilder(
+          builder: (context, setState) {
+            set = setState;
+            return SingleChildScrollView(
+              child: Collapse(
+                open: open,
+                child: const TextField(key: Key('field')),
+              ),
+            );
+          },
+        ),
       );
       expect(find.byKey(const Key('field')), findsNothing);
 
@@ -206,17 +216,19 @@ void main() {
       final handle = tester.ensureSemantics();
       await pumpCore(
         tester,
-        Column(children: [
-          CircleButton(icon: Icons.add, tooltip: 'Add machine', onPressed: () {}),
-          AppButton(label: 'Retry', onPressed: () {}, compact: true),
-          AppChip(
-            label: 'Needs you',
-            count: 3,
-            selected: true,
-            leading: const StatusGlyph(status: AgentStatus.blocked, size: 14),
-            onTap: () {},
-          ),
-        ]),
+        Column(
+          children: [
+            CircleButton(icon: Icons.add, tooltip: 'Add machine', onPressed: () {}),
+            AppButton(label: 'Retry', onPressed: () {}, compact: true),
+            AppChip(
+              label: 'Needs you',
+              count: 3,
+              selected: true,
+              leading: const StatusGlyph(status: AgentStatus.blocked, size: 14),
+              onTap: () {},
+            ),
+          ],
+        ),
       );
       expect(find.bySemanticsLabel('Add machine'), findsOneWidget);
       expect(tester.getSemantics(find.text('Retry')).label, 'Retry');
@@ -266,7 +278,10 @@ void main() {
       final handle = tester.ensureSemantics();
       await pumpCore(
         tester,
-        const Padding(padding: EdgeInsets.all(20), child: LabeledField(label: 'Username')),
+        const Padding(
+          padding: EdgeInsets.all(20),
+          child: LabeledField(label: 'Username'),
+        ),
       );
       final node = tester.getSemantics(find.byType(EditableText));
       expect(node.label, contains('Username'));
@@ -314,15 +329,13 @@ void main() {
 
     group('Segmented as the switch', () {
       Widget switchOf(int value, void Function(int) onChanged, {int kinds = 4}) => Padding(
-            padding: const EdgeInsets.all(16),
-            child: Segmented<int>(
-              value: value,
-              onChanged: onChanged,
-              options: [
-                for (var i = 0; i < kinds; i++) SegmentOption(i, 'Kind number $i', count: 10 + i),
-              ],
-            ),
-          );
+        padding: const EdgeInsets.all(16),
+        child: Segmented<int>(
+          value: value,
+          onChanged: onChanged,
+          options: [for (var i = 0; i < kinds; i++) SegmentOption(i, 'Kind number $i', count: 10 + i)],
+        ),
+      );
 
       testWidgets('a tap on another option reports it, a tap on the chosen one does not', (tester) async {
         final got = <int>[];
@@ -350,7 +363,11 @@ void main() {
           tester,
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Segmented<int>(value: 0, onChanged: (_) {}, options: const [SegmentOption(0, 'Ab'), SegmentOption(1, 'Cd')]),
+            child: Segmented<int>(
+              value: 0,
+              onChanged: (_) {},
+              options: const [SegmentOption(0, 'Ab'), SegmentOption(1, 'Cd')],
+            ),
           ),
         );
         final a = tester.getCenter(find.text('Ab')).dx;
@@ -361,11 +378,14 @@ void main() {
 
       /// The capsule under the chosen cell: `surface` on paper, `fillPressed` on ink.
       Finder capsule(Ds ds) => find.descendant(
-            of: find.byType(Segmented<int>),
-            matching: find.byWidgetPredicate(
-              (w) => w is DecoratedBox && w.decoration is BoxDecoration && (w.decoration as BoxDecoration).color == (ds.isDark ? ds.fillPressed : ds.surface),
-            ),
-          );
+        of: find.byType(Segmented<int>),
+        matching: find.byWidgetPredicate(
+          (w) =>
+              w is DecoratedBox &&
+              w.decoration is BoxDecoration &&
+              (w.decoration as BoxDecoration).color == (ds.isDark ? ds.fillPressed : ds.surface),
+        ),
+      );
 
       for (final brightness in Brightness.values) {
         testWidgets('the counts are readable on the pill and on the capsule (${brightness.name})', (tester) async {
@@ -403,13 +423,13 @@ void main() {
 
       testWidgets('a rebuild does not pull the row back from where the person dragged it', (tester) async {
         Widget page(int bump) => Padding(
-              padding: const EdgeInsets.all(16),
-              child: Segmented<int>(
-                value: 3,
-                onChanged: (_) {},
-                options: [for (var i = 0; i < 4; i++) SegmentOption(i, 'Kind number $i', count: 10 + i + bump)],
-              ),
-            );
+          padding: const EdgeInsets.all(16),
+          child: Segmented<int>(
+            value: 3,
+            onChanged: (_) {},
+            options: [for (var i = 0; i < 4; i++) SegmentOption(i, 'Kind number $i', count: 10 + i + bump)],
+          ),
+        );
         await pumpCore(tester, page(0));
         await tester.pumpAndSettle();
         final scrollable = find.descendant(of: find.byType(Segmented<int>), matching: find.byType(Scrollable));
@@ -438,7 +458,11 @@ void main() {
           tester,
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Segmented<int>(value: 9, onChanged: (_) {}, options: const [SegmentOption(1, 'Key'), SegmentOption(2, 'Password')]),
+            child: Segmented<int>(
+              value: 9,
+              onChanged: (_) {},
+              options: const [SegmentOption(1, 'Key'), SegmentOption(2, 'Password')],
+            ),
           ),
         );
         await tester.pumpAndSettle();
@@ -456,7 +480,13 @@ void main() {
             alignment: Alignment.topLeft,
             child: Row(
               mainAxisSize: MainAxisSize.min,
-              children: [Segmented<int>(value: 0, onChanged: (_) {}, options: const [SegmentOption(0, 'Ab'), SegmentOption(1, 'Cd')])],
+              children: [
+                Segmented<int>(
+                  value: 0,
+                  onChanged: (_) {},
+                  options: const [SegmentOption(0, 'Ab'), SegmentOption(1, 'Cd')],
+                ),
+              ],
             ),
           ),
         );
@@ -477,17 +507,19 @@ void main() {
 
   group('SliverLargeTitle', () {
     Widget page(ScrollController c) => CustomScrollView(
-          controller: c,
-          slivers: [
-            SliverLargeTitle(
-              title: 'Agents',
-              subtitle: const Text('3 agents'),
-              bottomHeight: AppChip.height,
-              bottom: Row(children: [AppChip(label: 'Working', onTap: () {})]),
-            ),
-            SliverList.builder(itemCount: 40, itemBuilder: (_, i) => SizedBox(height: 80, child: Text('item $i'))),
-          ],
-        );
+      controller: c,
+      slivers: [
+        SliverLargeTitle(
+          title: 'Agents',
+          subtitle: const Text('3 agents'),
+          bottomHeight: AppChip.height,
+          bottom: Row(
+            children: [AppChip(label: 'Working', onTap: () {})],
+          ),
+        ),
+        SliverList.builder(itemCount: 40, itemBuilder: (_, i) => SizedBox(height: 80, child: Text('item $i'))),
+      ],
+    );
 
     testWidgets('extent matches the pinned header; chips are not tappable once hidden', (tester) async {
       final c = ScrollController();
@@ -510,9 +542,8 @@ void main() {
       await pumpCore(tester, page(c));
       c.jumpTo(40);
       await tester.pump();
-      bool faded(Finder of) => tester
-          .widgetList<Opacity>(find.ancestor(of: of, matching: find.byType(Opacity)))
-          .any((o) => o.opacity < 1);
+      bool faded(Finder of) =>
+          tester.widgetList<Opacity>(find.ancestor(of: of, matching: find.byType(Opacity))).any((o) => o.opacity < 1);
       expect(faded(find.byType(AppChip)), isFalse);
       expect(faded(find.text('Agents').first), isTrue);
     });
@@ -522,14 +553,16 @@ void main() {
     testWidgets('centres a small leading on the title line, not the whole block', (tester) async {
       await pumpCore(
         tester,
-        ListView(children: const [
-          ListRow(
-            leading: StatusGlyph(status: AgentStatus.working, size: 18),
-            title: 'Title',
-            subtitle: 'a second line',
-            subtitle2: 'and a third',
-          ),
-        ]),
+        ListView(
+          children: const [
+            ListRow(
+              leading: StatusGlyph(status: AgentStatus.working, size: 18),
+              title: 'Title',
+              subtitle: 'a second line',
+              subtitle2: 'and a third',
+            ),
+          ],
+        ),
       );
       final glyph = tester.getCenter(find.byType(StatusGlyph)).dy;
       final title = tester.getCenter(find.text('Title')).dy;
@@ -553,10 +586,12 @@ void main() {
         tester,
         Form(
           key: key,
-          child: Column(children: [
-            LabeledField(label: 'Host', validator: (v) => (v ?? '').isEmpty ? 'Required' : null),
-            const LabeledField(key: Key('below'), label: 'Port'),
-          ]),
+          child: Column(
+            children: [
+              LabeledField(label: 'Host', validator: (v) => (v ?? '').isEmpty ? 'Required' : null),
+              const LabeledField(key: Key('below'), label: 'Port'),
+            ],
+          ),
         ),
       );
       final before = tester.getTopLeft(find.byKey(const Key('below'))).dy;
@@ -578,12 +613,7 @@ void main() {
             color: Ds.paper.blocked,
             title: 'build-server',
             detail: 'Reconnecting…',
-            action: AppButton(
-              label: 'Retry',
-              compact: true,
-              kind: AppButtonKind.secondary,
-              onPressed: () => retried++,
-            ),
+            action: AppButton(label: 'Retry', compact: true, kind: AppButtonKind.secondary, onPressed: () => retried++),
           ),
         ),
       );
@@ -635,25 +665,25 @@ void main() {
 
   group('AnswerChip', () {
     Widget chip({AnswerChipState state = AnswerChipState.rest, bool hold = true}) => Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AnswerChip(
-                key: const Key('mode'),
-                label: 'Bypass permissions',
-                detail: 'Runs every command without asking',
-                reason: 'no checks',
-                risk: AnswerRisk.gate,
-                hold: hold,
-                state: state,
-                onTap: () {},
-                onHeld: () {},
-              ),
-              const SizedBox(key: Key('below'), height: 10),
-            ],
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnswerChip(
+            key: const Key('mode'),
+            label: 'Bypass permissions',
+            detail: 'Runs every command without asking',
+            reason: 'no checks',
+            risk: AnswerRisk.gate,
+            hold: hold,
+            state: state,
+            onTap: () {},
+            onHeld: () {},
           ),
-        );
+          const SizedBox(key: Key('below'), height: 10),
+        ],
+      ),
+    );
 
     testWidgets('a held dangerous mode keeps its warning and its height under the finger', (tester) async {
       // Wide enough that no state's words wrap in the test font: the height
@@ -738,7 +768,11 @@ void main() {
 
       // Scrub from Agents to Settings and let the spring land.
       final cell = tab('Machines') - tab('Agents');
-      await tester.timedDrag(find.byKey(FloatingTabBar.tabKey('Agents')), Offset(cell * 2, 0), const Duration(milliseconds: 300));
+      await tester.timedDrag(
+        find.byKey(FloatingTabBar.tabKey('Agents')),
+        Offset(cell * 2, 0),
+        const Duration(milliseconds: 300),
+      );
       await tester.pumpAndSettle();
       expect(index.value, 2);
 

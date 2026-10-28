@@ -35,7 +35,11 @@ Future<(FakeAgentHost, Future<void> Function())> _board(WidgetTester tester) asy
   );
   await tester.pumpWidget(
     MultiProvider(
-      providers: [...h.providers, ListenableProvider<AgentSessions>.value(value: repo), attentionSetProvider()],
+      providers: [
+        ...h.providers,
+        ListenableProvider<AgentSessions>.value(value: repo),
+        attentionSetProvider(),
+      ],
       child: MaterialApp(theme: AppTheme.dark(), home: const HomeShell()),
     ),
   );
@@ -55,7 +59,9 @@ Future<(FakeAgentHost, Future<void> Function())> _board(WidgetTester tester) asy
 void main() {
   final row = find.widgetWithText(AgentSessionRow, 'Fix login');
 
-  testWidgets('a finger down attaches at once; the tap opens the screen on that attach; leaving gives it back', (tester) async {
+  testWidgets('a finger down attaches at once; the tap opens the screen on that attach; leaving gives it back', (
+    tester,
+  ) async {
     final (host, done) = await _board(tester);
     expect(row, findsOneWidget);
     expect(host.openLinks, 0, reason: 'nothing is attached before a finger touches the row');

@@ -33,7 +33,13 @@ void main() {
     });
 
     test('junk becomes version 0 so the client refuses it', () {
-      for (final junk in <Object?>['x', null, 5, <Object?>[], {'protocolVersion': 'one'}]) {
+      for (final junk in <Object?>[
+        'x',
+        null,
+        5,
+        <Object?>[],
+        {'protocolVersion': 'one'},
+      ]) {
         expect(AcpInitializeResult.parse(junk).protocolVersion, 0, reason: '$junk');
       }
     });
@@ -41,7 +47,9 @@ void main() {
     test('unknown capability fields are kept in raw', () {
       final r = AcpInitializeResult.parse({
         'protocolVersion': 1,
-        'agentCapabilities': {'futureThing': {'a': 1}},
+        'agentCapabilities': {
+          'futureThing': {'a': 1},
+        },
         '_meta': {'x': 1},
       });
       expect(r.capabilities.raw['futureThing'], {'a': 1});
@@ -107,7 +115,13 @@ void main() {
             'junk',
           ],
         },
-        {'id': 'think', 'name': 'Think', 'type': 'boolean', 'currentValue': true, '_meta': {'k': 'v'}},
+        {
+          'id': 'think',
+          'name': 'Think',
+          'type': 'boolean',
+          'currentValue': true,
+          '_meta': {'k': 'v'},
+        },
         {'id': 'future', 'name': 'F', 'type': 'slider', 'currentValue': 3},
         {'name': 'no id', 'type': 'select'},
         'junk',
@@ -167,7 +181,11 @@ void main() {
 
     test('commands: skill entries, hints, nameless rows dropped', () {
       final commands = parseCommands([
-        {'name': 'compact', 'description': 'Compact the context', 'input': {'hint': 'what to keep'}},
+        {
+          'name': 'compact',
+          'description': 'Compact the context',
+          'input': {'hint': 'what to keep'},
+        },
         {'name': 'skill:review', 'description': 'Review code'},
         {'name': '', 'description': 'empty'},
         {'description': 'no name'},
@@ -190,10 +208,21 @@ void main() {
   group('content', () {
     test('every block kind survives a round trip', () {
       final blocks = <Json>[
-        {'type': 'text', 'text': 'hi', '_meta': {'a': 1}},
+        {
+          'type': 'text',
+          'text': 'hi',
+          '_meta': {'a': 1},
+        },
         {'type': 'image', 'data': 'AAAA', 'mimeType': 'image/png', 'uri': 'file:///a.png'},
         {'type': 'audio', 'data': 'BBBB', 'mimeType': 'audio/wav'},
-        {'type': 'resource_link', 'uri': 'file:///a.dart', 'name': 'a.dart', 'title': 'A', 'size': 10, 'mimeType': 'text/x-dart'},
+        {
+          'type': 'resource_link',
+          'uri': 'file:///a.dart',
+          'name': 'a.dart',
+          'title': 'A',
+          'size': 10,
+          'mimeType': 'text/x-dart',
+        },
         {
           'type': 'resource',
           'resource': {'uri': 'file:///a.txt', 'mimeType': 'text/plain', 'text': 'body'},
@@ -219,7 +248,10 @@ void main() {
 
     test('tool content: content, diff, terminal, unknown', () {
       final c = [
-        ToolContent.parse({'type': 'content', 'content': {'type': 'text', 'text': 'out'}}),
+        ToolContent.parse({
+          'type': 'content',
+          'content': {'type': 'text', 'text': 'out'},
+        }),
         ToolContent.parse({'type': 'diff', 'path': '/a', 'newText': 'n'}),
         ToolContent.parse({'type': 'diff', 'path': '/b', 'oldText': 'o', 'newText': 'n'}),
         ToolContent.parse({'type': 'terminal', 'terminalId': 'term-1'}),
@@ -323,7 +355,10 @@ void main() {
         'requestedSchema': {
           'type': 'object',
           'properties': {
-            'value': {'type': 'string', 'enum': ['red', 'green']},
+            'value': {
+              'type': 'string',
+              'enum': ['red', 'green'],
+            },
           },
           'required': ['value'],
         },
@@ -338,7 +373,9 @@ void main() {
         'message': 'Proceed?',
         'requestedSchema': {
           'type': 'object',
-          'properties': {'value': {'type': 'boolean'}},
+          'properties': {
+            'value': {'type': 'boolean'},
+          },
         },
       });
       expect(confirm.schema!.fields.single, isA<BooleanField>().having((f) => f.required, 'required', isFalse));
@@ -349,7 +386,9 @@ void main() {
         'message': 'Name?',
         'requestedSchema': {
           'type': 'object',
-          'properties': {'value': {'type': 'string', 'description': 'placeholder'}},
+          'properties': {
+            'value': {'type': 'string', 'description': 'placeholder'},
+          },
         },
       });
       expect((input.schema!.fields.single as StringField).description, 'placeholder');
@@ -375,7 +414,10 @@ void main() {
           'type': 'array',
           'minItems': 1,
           'maxItems': 2,
-          'items': {'type': 'string', 'enum': ['a', 'b', 'c']},
+          'items': {
+            'type': 'string',
+            'enum': ['a', 'b', 'c'],
+          },
           'default': ['a'],
         },
         'titled': {
@@ -424,24 +466,53 @@ void main() {
       expect(schema.validate({'name': 'abc', 'color': 'r', 'age': '3'})['age'], contains('number'));
       expect(schema.validate({'name': 'abc', 'color': 'r', 'ratio': 1.5})['ratio'], contains('at most'));
       expect(schema.validate({'name': 'abc', 'color': 'r', 'ratio': 0.5, 'ok': 'yes'})['ok'], isNotNull);
-      expect(schema.validate({'name': 'abc', 'color': 'r', 'tags': ['a', 'b', 'c']})['tags'], contains('at most 2'));
-      expect(schema.validate({'name': 'abc', 'color': 'r', 'tags': ['z']})['tags'], isNotNull);
+      expect(
+        schema.validate({
+          'name': 'abc',
+          'color': 'r',
+          'tags': ['a', 'b', 'c'],
+        })['tags'],
+        contains('at most 2'),
+      );
+      expect(
+        schema.validate({
+          'name': 'abc',
+          'color': 'r',
+          'tags': ['z'],
+        })['tags'],
+        isNotNull,
+      );
       expect(schema.validate({'name': 'abc', 'color': 'r', 'tags': <String>[]}), isEmpty, reason: 'optional and empty');
-      expect(schema.validate({'name': 'abc', 'color': 'r', 'when': 'whatever'}), isEmpty, reason: 'unknown fields are left to the agent');
+      expect(
+        schema.validate({'name': 'abc', 'color': 'r', 'when': 'whatever'}),
+        isEmpty,
+        reason: 'unknown fields are left to the agent',
+      );
     });
 
     test('a pattern the engine cannot read does not fail the answer', () {
       final s = ElicitationSchema.parse({
-        'properties': {'x': {'type': 'string', 'pattern': '(['}},
+        'properties': {
+          'x': {'type': 'string', 'pattern': '(['},
+        },
       });
       expect(s.validate({'x': 'a'}), isEmpty);
     });
 
     test('responses encode as the spec says', () {
-      expect(const ElicitationAccept({'value': 'red', 'tags': ['a']}).toJson(), {
-        'action': 'accept',
-        'content': {'value': 'red', 'tags': ['a']},
-      });
+      expect(
+        const ElicitationAccept({
+          'value': 'red',
+          'tags': ['a'],
+        }).toJson(),
+        {
+          'action': 'accept',
+          'content': {
+            'value': 'red',
+            'tags': ['a'],
+          },
+        },
+      );
       expect(const ElicitationDecline().toJson(), {'action': 'decline'});
       expect(const ElicitationCancel().toJson(), {'action': 'cancel'});
     });
@@ -477,7 +548,11 @@ void main() {
 
   group('session updates parse', () {
     test('a tool call update keeps exactly the keys it named', () {
-      final u = SessionUpdate.parse({'sessionUpdate': 'tool_call_update', 'toolCallId': 'x', 'title': null}) as ToolCallPatchUpdate;
+      final u = SessionUpdate.parse({
+        'sessionUpdate': 'tool_call_update',
+        'toolCallId': 'x',
+        'title': null,
+      }) as ToolCallPatchUpdate;
       expect(u.patch.has('title'), isTrue);
       expect(u.patch.has('status'), isFalse);
     });
@@ -501,7 +576,13 @@ void main() {
         },
       }) as PlanUpdate;
       expect(plan.entries.single.status, PlanStatus.completed);
-      expect(SessionUpdate.parse({'sessionUpdate': 'plan_update', 'plan': {'type': 'markdown'}}), isA<UnknownUpdate>());
+      expect(
+        SessionUpdate.parse({
+          'sessionUpdate': 'plan_update',
+          'plan': {'type': 'markdown'},
+        }),
+        isA<UnknownUpdate>(),
+      );
     });
   });
 }

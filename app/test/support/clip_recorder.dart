@@ -69,7 +69,12 @@ class ClipRecorder {
   }
 
   /// Holds a finger on the centre of [target] for [hold], captioned [label].
-  Future<void> longPress(WidgetTester t, Finder target, String label, {Duration hold = const Duration(milliseconds: 700)}) async {
+  Future<void> longPress(
+    WidgetTester t,
+    Finder target,
+    String label, {
+    Duration hold = const Duration(milliseconds: 700),
+  }) async {
     final at = t.getCenter(target);
     _steps.add({'t': _now, ..._norm(t, at), 'kind': 'tap', 'label': label});
     final g = await t.startGesture(at);
@@ -107,23 +112,56 @@ class ClipRecorder {
     _steps.add({'t': _now, ..._norm(t, from + by), 'kind': 'release', 'label': label});
   }
 
+  /// Holds a finger at [from] for [press] (a long press), then drags it by
+  /// [by] over [over] without lifting, and lifts after [rest]. Captioned
+  /// [label]: this is how a person selects text.
+  Future<void> pressDrag(
+    WidgetTester t,
+    Offset from,
+    Offset by,
+    String label, {
+    Duration press = const Duration(milliseconds: 700),
+    Duration over = const Duration(milliseconds: 1400),
+    Duration rest = const Duration(milliseconds: 300),
+  }) async {
+    _steps.add({'t': _now, ..._norm(t, from), 'kind': 'tap', 'label': label});
+    final g = await t.startGesture(from);
+    await hold(t, press);
+    final moves = over.inMicroseconds ~/ frame.inMicroseconds;
+    _steps.add({
+      't': _now,
+      ..._norm(t, from),
+      'kind': 'drag',
+      'to': _norm(t, from + by),
+      'until': _now + moves / 30,
+      'label': label,
+    });
+    for (var i = 1; i <= moves; i++) {
+      await g.moveBy(by / moves.toDouble(), timeStamp: press + frame * i);
+      await t.pump(frame);
+      await _capture(t);
+    }
+    await hold(t, rest);
+    await g.up(timeStamp: press + frame * (moves + rest.inMicroseconds ~/ frame.inMicroseconds));
+    _steps.add({'t': _now, ..._norm(t, from + by), 'kind': 'release', 'label': label});
+  }
+
   /// Starts change [index] of [total] of a release walkthrough, captioned
   /// [label]: make_clip.sh shows it as a chapter with a progress mark. Put the
   /// card at the top ([top]) when the change itself appears low on screen (a
   /// toast, a sheet), so the caption never covers what it describes.
   void chapter(int index, int total, String label, {bool top = false}) => _steps.add({
-        't': _now,
-        'kind': 'chapter',
-        'label': label,
-        'index': index,
-        'total': total,
-        if (top) 'place': 'top',
-      });
+    't': _now,
+    'kind': 'chapter',
+    'label': label,
+    'index': index,
+    'total': total,
+    if (top) 'place': 'top',
+  });
 
   /// Writes touches.json next to the frames.
-  void finish() => File('${out.path}/touches.json').writeAsStringSync(
-        const JsonEncoder.withIndent('  ').convert({'fps': 30, 'frames': _frames, 'steps': _steps}),
-      );
+  void finish() => File('${out.path}/touches.json')
+      .writeAsStringSync(const JsonEncoder.withIndent('  ').convert({'fps': 30, 'frames': _frames, 'steps': _steps}));
 
   Map<String, double> _norm(WidgetTester t, Offset o) {
     final size = t.view.physicalSize / t.view.devicePixelRatio;
@@ -137,7 +175,8 @@ class ClipRecorder {
       final ui.Image image = await boundary.toImage(pixelRatio: width / boundary.size.width);
       final data = await image.toByteData(format: ui.ImageByteFormat.png);
       _frames++;
-      await File('${out.path}/frames/${_frames.toString().padLeft(5, '0')}.png').writeAsBytes(data!.buffer.asUint8List());
+      await File('${out.path}/frames/${_frames.toString().padLeft(5, '0')}.png')
+          .writeAsBytes(data!.buffer.asUint8List());
     });
   }
 }

@@ -62,8 +62,7 @@ List<ThreadPhoto> threadPhotos(AgentSessionState state, {required String agentLa
   return out;
 }
 
-bool _listable(ImageBlock block) =>
-    block is LogImageBlock ? DiskCache.shared.knows(block.key) : block.data.isNotEmpty;
+bool _listable(ImageBlock block) => block is LogImageBlock ? DiskCache.shared.knows(block.key) : block.data.isNotEmpty;
 
 /// What a tap on a picture in the transcript can page through: the session
 /// whose transcript it is. Read when the tap happens, never while the rows
@@ -105,10 +104,7 @@ PhotoItem chatPhotoItem(ThreadPhoto photo, int number, {ImagePreviewCache? cache
     origin: photo.origin,
     source: block is LogImageBlock
         ? MemoryPhotoSource(() => _logPicture(session, block), size: block.ref.bytes)
-        : MemoryPhotoSource(
-            () => decodeImageDataFor(block),
-            size: base64DecodedLength(block.data),
-          ),
+        : MemoryPhotoSource(() => decodeImageDataFor(block), size: base64DecodedLength(block.data)),
     placeholder: () => previews.cloneOf(block),
   );
 }

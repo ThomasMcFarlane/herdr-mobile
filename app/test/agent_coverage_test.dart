@@ -54,7 +54,9 @@ void main() {
       // Tools of the build that the SDK schema does not list are marked as such in the table.
       final stale = [
         for (final MapEntry(:key) in claudeToolCoverage.entries)
-          if (!sdk.contains(key) && !const {'Skill', 'ToolSearch', 'SendMessage', 'ListAgents', 'KillShell', 'BashOutput'}.contains(key)) key,
+          if (!sdk.contains(key) &&
+              !const {'Skill', 'ToolSearch', 'SendMessage', 'ListAgents', 'KillShell', 'BashOutput'}.contains(key))
+            key,
       ];
       expect(stale, isEmpty, reason: 'remove them from claudeToolCoverage (the agent dropped them)');
     });
@@ -75,7 +77,9 @@ void main() {
           final d = jsonDecode(l) as Map;
           final p = d['payload'];
           if (p is! Map) continue;
-          if (d['type'] == 'event_msg' && p['type'] == 'item_completed') items.add((p['item'] as Map)['type'] as String);
+          if (d['type'] == 'event_msg' && p['type'] == 'item_completed') {
+            items.add((p['item'] as Map)['type'] as String);
+          }
           if (d['type'] == 'response_item' && p['type'] == 'function_call') functions.add(p['name'] as String);
         }
       }
@@ -85,7 +89,10 @@ void main() {
 
     test('no row of the table names an item type that no longer exists', () {
       final items = _kinds('codex-items.txt', 'item').map(_pascal).toSet();
-      expect([for (final t in codexItemCoverage.keys) if (!items.contains(t)) t], isEmpty);
+      expect([
+        for (final t in codexItemCoverage.keys)
+          if (!items.contains(t)) t,
+      ], isEmpty);
     });
   });
 }

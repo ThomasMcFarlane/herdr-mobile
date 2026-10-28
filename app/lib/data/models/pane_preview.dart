@@ -21,12 +21,8 @@ class PreviewLine {
 /// One tap-to-answer option of a [PromptInfo].
 @immutable
 class QuickReply {
-  const QuickReply({
-    required this.label,
-    required this.keys,
-    this.needsConfirm = false,
-    this.risk,
-  }) : assert(risk == null || needsConfirm, 'a risk reason needs the second tap');
+  const QuickReply({required this.label, required this.keys, this.needsConfirm = false, this.risk})
+    : assert(risk == null || needsConfirm, 'a risk reason needs the second tap');
 
   /// Short chip text, e.g. `1. Yes`, `No`, `Enter`.
   final String label;
@@ -55,8 +51,7 @@ class QuickReply {
   int get hashCode => Object.hash(label, needsConfirm, risk, Object.hashAll(keys));
 
   @override
-  String toString() =>
-      'QuickReply($label, $keys${needsConfirm ? ', confirm' : ''}${risk == null ? '' : ': $risk'})';
+  String toString() => 'QuickReply($label, $keys${needsConfirm ? ', confirm' : ''}${risk == null ? '' : ': $risk'})';
 }
 
 /// A question a blocked agent is waiting on, with one-tap answers.
@@ -94,11 +89,7 @@ class PromptInfo {
 /// The tail of a pane's terminal, as shown on a card or tab.
 @immutable
 class PanePreview {
-  const PanePreview({
-    required this.lines,
-    required this.updatedAt,
-    this.prompt,
-  });
+  const PanePreview({required this.lines, required this.updatedAt, this.prompt});
 
   /// Last (at most 8) non-empty rows, oldest first.
   final List<PreviewLine> lines;
@@ -113,14 +104,10 @@ class PanePreview {
 
   /// Same rows and prompt; [updatedAt] is deliberately ignored, so listeners
   /// only wake for something visible.
-  bool sameContent(PanePreview other) =>
-      listEquals(lines, other.lines) && prompt == other.prompt;
+  bool sameContent(PanePreview other) => listEquals(lines, other.lines) && prompt == other.prompt;
 
   @override
-  bool operator ==(Object other) =>
-      other is PanePreview &&
-      other.updatedAt == updatedAt &&
-      sameContent(other);
+  bool operator ==(Object other) => other is PanePreview && other.updatedAt == updatedAt && sameContent(other);
 
   @override
   int get hashCode => Object.hash(updatedAt, prompt, Object.hashAll(lines));

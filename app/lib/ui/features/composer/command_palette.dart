@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/models/slash_command.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'command_model.dart';
 
 /// Two lines of text: the row grows with the text size.
@@ -118,48 +120,48 @@ class _Row extends StatelessWidget {
       // The list's itemExtent sets the height.
       minHeight: 0,
       padding: const EdgeInsets.symmetric(horizontal: Gap.lg - PressRow.inset),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text.rich(
-                      TextSpan(
-                        text: command.text,
-                        style: Mono.input.copyWith(color: ds.text),
-                        children: [
-                          if (hint != null && hint.isNotEmpty)
-                            TextSpan(
-                              text: '  $hint',
-                              style: Mono.base.copyWith(color: ds.textMuted),
-                            ),
-                        ],
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (command.description.isNotEmpty)
-                      Text(
-                        command.description,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Type.caption.copyWith(color: ds.textMuted),
-                      ),
-                  ],
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text.rich(
+                  TextSpan(
+                    text: command.text,
+                    style: Mono.input.copyWith(color: ds.text),
+                    children: [
+                      if (hint != null && hint.isNotEmpty)
+                        TextSpan(
+                          text: '  $hint',
+                          style: Mono.base.copyWith(color: ds.textMuted),
+                        ),
+                    ],
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              if (tag != null) ...[
-                const SizedBox(width: Gap.sm),
-                Text(tag, maxLines: 1, style: Type.caption.copyWith(color: ds.textMuted)),
+                if (command.description.isNotEmpty)
+                  Text(
+                    command.description,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Type.caption.copyWith(color: ds.textMuted),
+                  ),
               ],
-              if (pinned) ...[
-                const SizedBox(width: Gap.sm),
-                Icon(LucideIcons.pin, size: IconSize.inline, color: ds.textTertiary, semanticLabel: 'Pinned'),
-              ],
-            ],
+            ),
           ),
+          if (tag != null) ...[
+            const SizedBox(width: Gap.sm),
+            Text(tag, maxLines: 1, style: Type.caption.copyWith(color: ds.textMuted)),
+          ],
+          if (pinned) ...[
+            const SizedBox(width: Gap.sm),
+            Icon(LucideIcons.pin, size: IconSize.inline, color: ds.textTertiary, semanticLabel: 'Pinned'),
+          ],
+        ],
+      ),
     );
   }
 }

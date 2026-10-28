@@ -27,7 +27,10 @@ void main() {
         expect(names, contains('$agent/$scenario.jsonl'));
       }
     }
-    expect(names, containsAll(['omp/ask.jsonl', 'omp/permission.jsonl', 'claude/subagent.jsonl', 'claude/permission.jsonl']));
+    expect(
+      names,
+      containsAll(['omp/ask.jsonl', 'omp/permission.jsonl', 'claude/subagent.jsonl', 'claude/permission.jsonl']),
+    );
   });
 
   for (final file in traces) {
@@ -58,7 +61,10 @@ void main() {
       test('carries no home directory, host or token', () {
         expect(text, isNot(contains('/home/')));
         expect(text, isNot(contains('/media/')));
-        expect(text, isNot(matches(RegExp(r'eyJ[A-Za-z0-9_-]{10,}\.|Bearer [A-Za-z0-9._~+/=-]{12,}|sk-[A-Za-z0-9_-]{16,}'))));
+        expect(
+          text,
+          isNot(matches(RegExp(r'eyJ[A-Za-z0-9_-]{10,}\.|Bearer [A-Za-z0-9._~+/=-]{12,}|sk-[A-Za-z0-9_-]{16,}'))),
+        );
       });
 
       test('its updates parse and fold into a transcript', () {
@@ -72,7 +78,9 @@ void main() {
           if (update is UnknownUpdate) unknown++;
           state = state.apply(update);
           final content = u['content'];
-          if (u['sessionUpdate'] == 'agent_message_chunk' && content is Map) chars += (content['text'] as String? ?? '').length;
+          if (u['sessionUpdate'] == 'agent_message_chunk' && content is Map) {
+            chars += (content['text'] as String? ?? '').length;
+          }
         }
         expect(unknown, 0, reason: 'a variant the app does not know');
         if (chars > 0) {

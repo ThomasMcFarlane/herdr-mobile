@@ -60,11 +60,7 @@ class SessionLauncher {
   Future<LaunchedSession> launch(LaunchRequest request) async {
     final api = machine.api;
     final home = isHomeFolder(request.folder);
-    final created = await api.createWorkspace(
-      cwd: home ? null : request.folder,
-      label: request.label,
-      focus: false,
-    );
+    final created = await api.createWorkspace(cwd: home ? null : request.folder, label: request.label, focus: false);
 
     final actual = created.cwd;
     if (!home && actual != null && _trimSlash(actual) != _trimSlash(request.folder)) {

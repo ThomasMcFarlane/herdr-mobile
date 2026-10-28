@@ -22,10 +22,7 @@ class _Probe implements HerdrTransport {
   var liveStreams = 0;
 
   @override
-  Future<Map<String, dynamic>> request(
-    String method, [
-    Map<String, dynamic> params = const {},
-  ]) async {
+  Future<Map<String, dynamic>> request(String method, [Map<String, dynamic> params = const {}]) async {
     switch (method) {
       case 'echo':
         return {'params': params};
@@ -43,15 +40,12 @@ class _Probe implements HerdrTransport {
         onPin('SHA256:abc');
         return {};
       case 'notice':
-        onNotice('# Tailscale SSH requires an additional check.\n# To authenticate, visit: https://login.tailscale.com/a/abc');
+        onNotice(
+          '# Tailscale SSH requires an additional check.\n# To authenticate, visit: https://login.tailscale.com/a/abc',
+        );
         return {};
       case 'probe':
-        return {
-          'resets': resets,
-          'liveStreams': liveStreams,
-          'closed': closed,
-          'background': backgrounds,
-        };
+        return {'resets': resets, 'liveStreams': liveStreams, 'closed': closed, 'background': backgrounds};
       case 'die':
         Isolate.exit();
     }
@@ -100,15 +94,14 @@ class _Probe implements HerdrTransport {
 
   /// Paths pick the behaviour, so one probe covers the ways files can fail.
   Never _failFor(String path) => switch (path) {
-        '/denied' =>
-          throw RemoteFileException(RemoteFileErrorKind.permission, 'Permission denied', path: path),
-        '/gone' => throw RemoteFileException(RemoteFileErrorKind.notFound, 'No such file', path: path),
-        '/flaky' => throw RemoteFileException(RemoteFileErrorKind.network, 'link dropped', path: path),
-        '/offline' => throw const HerdrTransportException('network down'),
-        '/fatal' => throw const HerdrTransportException('bad key', fatal: true),
-        '/die' => Isolate.exit(),
-        _ => throw StateError('boom'),
-      };
+    '/denied' => throw RemoteFileException(RemoteFileErrorKind.permission, 'Permission denied', path: path),
+    '/gone' => throw RemoteFileException(RemoteFileErrorKind.notFound, 'No such file', path: path),
+    '/flaky' => throw RemoteFileException(RemoteFileErrorKind.network, 'link dropped', path: path),
+    '/offline' => throw const HerdrTransportException('network down'),
+    '/fatal' => throw const HerdrTransportException('bad key', fatal: true),
+    '/die' => Isolate.exit(),
+    _ => throw StateError('boom'),
+  };
 
   @override
   Future<RemoteStat> statFile(String path) async {
@@ -175,26 +168,13 @@ class _Probe implements HerdrTransport {
   Future<void> close() async => closed = true;
 }
 
-HerdrTransport _buildProbe(
-  Object? config,
-  void Function(String) onPin,
-  void Function(String) onNotice,
-) {
+HerdrTransport _buildProbe(Object? config, void Function(String) onPin, void Function(String) onNotice) {
   if (config == 'throw') throw ArgumentError('invalid session name');
   return _Probe(onPin, onNotice);
 }
 
-IsolateTransport _transport({
-  Object? config,
-  void Function(String)? onPin,
-  void Function(String)? onNotice,
-}) =>
-    IsolateTransport(
-      builder: _buildProbe,
-      config: () => config,
-      onPin: onPin ?? (_) {},
-      onNotice: onNotice,
-    );
+IsolateTransport _transport({Object? config, void Function(String)? onPin, void Function(String)? onNotice}) =>
+    IsolateTransport(builder: _buildProbe, config: () => config, onPin: onPin ?? (_) {}, onNotice: onNotice);
 
 void main() {
   late IsolateTransport t;
@@ -204,11 +184,21 @@ void main() {
     t = _transport();
 
     final r = await t.request('echo', {
-      'nested': {'list': [1, 'two', {'three': 3.0}]},
+      'nested': {
+        'list': [
+          1,
+          'two',
+          {'three': 3.0},
+        ],
+      },
     });
 
     final nested = (r['params'] as Map<String, dynamic>)['nested'] as Map<String, dynamic>;
-    expect(nested['list'], [1, 'two', {'three': 3.0}]);
+    expect(nested['list'], [
+      1,
+      'two',
+      {'three': 3.0},
+    ]);
   });
 
   test('the worker is built from config asked at its first request, and again '
@@ -231,9 +221,11 @@ void main() {
 
     await expectLater(
       t.request('echo'),
-      throwsA(isA<HerdrTransportException>()
-          .having((e) => e.fatal, 'fatal', isFalse)
-          .having((e) => e.message, 'message', 'keychain unavailable')),
+      throwsA(
+        isA<HerdrTransportException>()
+            .having((e) => e.fatal, 'fatal', isFalse)
+            .having((e) => e.message, 'message', 'keychain unavailable'),
+      ),
     );
 
     final r = await t.request('echo', {'again': true});
@@ -259,8 +251,7 @@ void main() {
       for (var i = 0; i < 25; i++) t.request('echo', {'i': i}),
     ]);
 
-    expect([for (final r in results) (r['params'] as Map)['i']],
-        [for (var i = 0; i < 25; i++) i]);
+    expect([for (final r in results) (r['params'] as Map)['i']], [for (var i = 0; i < 25; i++) i]);
   });
 
   group('errors keep their meaning', () {
@@ -269,18 +260,22 @@ void main() {
     test('API errors stay API errors with code and message', () async {
       await expectLater(
         t.request('api_error'),
-        throwsA(isA<HerdrApiException>()
-            .having((e) => e.code, 'code', 'pane_not_found')
-            .having((e) => e.message, 'message', 'no such pane')),
+        throwsA(
+          isA<HerdrApiException>()
+              .having((e) => e.code, 'code', 'pane_not_found')
+              .having((e) => e.message, 'message', 'no such pane'),
+        ),
       );
     });
 
     test('fatal transport errors stay fatal', () async {
       await expectLater(
         t.request('fatal'),
-        throwsA(isA<HerdrTransportException>()
-            .having((e) => e.fatal, 'fatal', isTrue)
-            .having((e) => e.message, 'message', 'bad key')),
+        throwsA(
+          isA<HerdrTransportException>()
+              .having((e) => e.fatal, 'fatal', isTrue)
+              .having((e) => e.message, 'message', 'bad key'),
+        ),
       );
     });
 
@@ -294,9 +289,11 @@ void main() {
     test('an unexpected exception becomes a retryable transport error', () async {
       await expectLater(
         t.request('weird'),
-        throwsA(isA<HerdrTransportException>()
-            .having((e) => e.fatal, 'fatal', isFalse)
-            .having((e) => e.message, 'message', contains('boom'))),
+        throwsA(
+          isA<HerdrTransportException>()
+              .having((e) => e.fatal, 'fatal', isFalse)
+              .having((e) => e.message, 'message', contains('boom')),
+        ),
       );
     });
 
@@ -330,13 +327,22 @@ void main() {
     setUp(() => t = _transport());
 
     test('are forwarded in order', () async {
-      final got = await t.events(const [{'type': 'x'}]).take(3).toList();
+      final got = await t
+          .events(const [
+            {'type': 'x'},
+          ])
+          .take(3)
+          .toList();
 
       expect([for (final e in got) e['n']], [0, 1, 2]);
     });
 
     test('cancelling releases the stream inside the worker', () async {
-      final sub = t.events(const [{'type': 'x'}]).listen((_) {});
+      final sub = t
+          .events(const [
+            {'type': 'x'},
+          ])
+          .listen((_) {});
       await Future<void>.delayed(const Duration(milliseconds: 80));
       expect((await t.request('probe'))['liveStreams'], 1);
 
@@ -349,16 +355,15 @@ void main() {
     test('a channel error reaches the listener, then the stream ends', () async {
       final seen = <Object>[];
       final done = Completer<void>();
-      t.events(const [{'type': 'fail'}]).listen(
-        (_) {},
-        onError: seen.add,
-        onDone: done.complete,
-      );
+      t
+          .events(const [
+            {'type': 'fail'},
+          ])
+          .listen((_) {}, onError: seen.add, onDone: done.complete);
 
       await done.future.timeout(const Duration(seconds: 5));
 
-      expect(seen.single, isA<HerdrTransportException>()
-          .having((e) => e.message, 'message', 'channel dropped'));
+      expect(seen.single, isA<HerdrTransportException>().having((e) => e.message, 'message', 'channel dropped'));
     });
   });
 
@@ -400,14 +405,17 @@ void main() {
       t = _transport();
       final errors = <Object>[];
       final done = Completer<void>();
-      t.events(const [{'type': 'x'}]).listen((_) {}, onError: errors.add, onDone: done.complete);
+      t
+          .events(const [
+            {'type': 'x'},
+          ])
+          .listen((_) {}, onError: errors.add, onDone: done.complete);
       await Future<void>.delayed(const Duration(milliseconds: 80));
 
       await expectLater(t.request('die'), throwsA(anything));
       await done.future.timeout(const Duration(seconds: 5));
 
-      expect(errors.single, isA<HerdrTransportException>()
-          .having((e) => e.fatal, 'fatal', isFalse));
+      expect(errors.single, isA<HerdrTransportException>().having((e) => e.fatal, 'fatal', isFalse));
     });
   });
 
@@ -418,9 +426,11 @@ void main() {
       for (var i = 0; i < 2; i++) {
         await expectLater(
           t.request('echo'),
-          throwsA(isA<HerdrTransportException>()
-              .having((e) => e.fatal, 'fatal', isTrue)
-              .having((e) => e.message, 'message', contains('invalid session name'))),
+          throwsA(
+            isA<HerdrTransportException>()
+                .having((e) => e.fatal, 'fatal', isTrue)
+                .having((e) => e.message, 'message', contains('invalid session name')),
+          ),
         );
       }
     });
@@ -428,7 +438,12 @@ void main() {
     test('an event stream reports it too', () async {
       t = _transport(config: 'throw');
 
-      await expectLater(t.events(const [{'type': 'x'}]).first, throwsA(isA<HerdrTransportException>()));
+      await expectLater(
+        t.events(const [
+          {'type': 'x'},
+        ]).first,
+        throwsA(isA<HerdrTransportException>()),
+      );
     });
   });
 
@@ -502,10 +517,12 @@ void main() {
       for (final MapEntry(key: path, value: (kind, fatal)) in cases.entries) {
         await expectLater(
           t.statFile(path),
-          throwsA(isA<RemoteFileException>()
-              .having((e) => e.kind, 'kind', kind)
-              .having((e) => e.fatal, 'fatal', fatal)
-              .having((e) => e.path, 'path', path)),
+          throwsA(
+            isA<RemoteFileException>()
+                .having((e) => e.kind, 'kind', kind)
+                .having((e) => e.fatal, 'fatal', fatal)
+                .having((e) => e.path, 'path', path),
+          ),
           reason: path,
         );
       }
@@ -536,9 +553,7 @@ void main() {
     test('concurrent file calls are matched to their callers', () async {
       t = _transport();
 
-      final results = await Future.wait([
-        for (var i = 0; i < 12; i++) t.readFile('/bytes', offset: i * 10, length: 4),
-      ]);
+      final results = await Future.wait([for (var i = 0; i < 12; i++) t.readFile('/bytes', offset: i * 10, length: 4)]);
 
       expect([for (final r in results) r.first], [for (var i = 0; i < 12; i++) (i * 10) % 251]);
     });
@@ -564,8 +579,7 @@ void main() {
 
     await expectLater(
       t.request('echo'),
-      throwsA(isA<HerdrTransportException>()
-          .having((e) => e.message, 'message', 'Transport closed')),
+      throwsA(isA<HerdrTransportException>().having((e) => e.message, 'message', 'Transport closed')),
     );
   });
 

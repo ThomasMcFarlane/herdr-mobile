@@ -46,11 +46,66 @@ const _imageExt = pictureExtensions;
 const _videoExt = {'mp4', 'm4v', 'mov', 'mkv', 'webm', 'avi', '3gp', '3g2'};
 
 const _binaryExt = {
-  'zip', 'tar', 'gz', 'tgz', 'bz2', 'xz', '7z', 'rar', 'zst', 'jar', 'war', 'apk', 'aab', 'ipa', 'deb', 'rpm',
-  'so', 'dylib', 'dll', 'exe', 'o', 'a', 'class', 'pyc', 'wasm', 'bin', 'dat', 'db', 'sqlite', 'sqlite3',
-  'mp3', 'wav', 'flac', 'ogg', 'm4a',
-  'ttf', 'otf', 'woff', 'woff2', 'ico', 'icns', 'psd', 'heic', 'heif', 'tiff', 'tif', 'avif',
-  'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'odt', 'iso', 'img', 'dmg', 'pkl', 'npy', 'parquet',
+  'zip',
+  'tar',
+  'gz',
+  'tgz',
+  'bz2',
+  'xz',
+  '7z',
+  'rar',
+  'zst',
+  'jar',
+  'war',
+  'apk',
+  'aab',
+  'ipa',
+  'deb',
+  'rpm',
+  'so',
+  'dylib',
+  'dll',
+  'exe',
+  'o',
+  'a',
+  'class',
+  'pyc',
+  'wasm',
+  'bin',
+  'dat',
+  'db',
+  'sqlite',
+  'sqlite3',
+  'mp3',
+  'wav',
+  'flac',
+  'ogg',
+  'm4a',
+  'ttf',
+  'otf',
+  'woff',
+  'woff2',
+  'ico',
+  'icns',
+  'psd',
+  'heic',
+  'heif',
+  'tiff',
+  'tif',
+  'avif',
+  'doc',
+  'docx',
+  'xls',
+  'xlsx',
+  'ppt',
+  'pptx',
+  'odt',
+  'iso',
+  'img',
+  'dmg',
+  'pkl',
+  'npy',
+  'parquet',
 };
 
 /// Audio that lives in the same container as MP4 video.
@@ -108,7 +163,12 @@ FileType? sniffSignature(Uint8List head) {
   if (_videoBrand(head) case final label?) return FileType(FileKind.video, label);
   // "BM" alone is too weak (plain text can start with it): also require the
   // reserved fields of a BITMAPFILEHEADER to be zero.
-  if (_starts(head, const [0x42, 0x4D]) && head.length >= 14 && head[6] == 0 && head[7] == 0 && head[8] == 0 && head[9] == 0) {
+  if (_starts(head, const [0x42, 0x4D]) &&
+      head.length >= 14 &&
+      head[6] == 0 &&
+      head[7] == 0 &&
+      head[8] == 0 &&
+      head[9] == 0) {
     return const FileType(FileKind.image, 'BMP image');
   }
   if (_starts(head, const [0x25, 0x50, 0x44, 0x46, 0x2D])) {
@@ -135,7 +195,22 @@ String? _videoBrand(Uint8List head) {
   final brand = String.fromCharCodes(head.sublist(8, 12));
   if (brand == 'qt  ') return 'QuickTime video';
   if (brand.startsWith('3g')) return '3GP video';
-  const mp4 = ['isom', 'iso2', 'iso4', 'iso5', 'iso6', 'mp41', 'mp42', 'avc1', 'M4V ', 'M4VH', 'M4VP', 'mmp4', 'dash', 'f4v '];
+  const mp4 = [
+    'isom',
+    'iso2',
+    'iso4',
+    'iso5',
+    'iso6',
+    'mp41',
+    'mp42',
+    'avc1',
+    'M4V ',
+    'M4VH',
+    'M4VP',
+    'mmp4',
+    'dash',
+    'f4v ',
+  ];
   return mp4.contains(brand) ? 'MP4 video' : null;
 }
 
@@ -145,14 +220,14 @@ bool looksBinary(Uint8List head) {
   if (head.isEmpty) return false;
   final sample = head.length > 8192 ? Uint8List.sublistView(head, 0, 8192) : head;
   if (sample.contains(0)) return true;
-  final text = const Utf8Decoder(allowMalformed: true).convert(
-    Uint8List.sublistView(sample, 0, utf8SafeLength(sample)),
-  );
+  final text = const Utf8Decoder(allowMalformed: true)
+      .convert(Uint8List.sublistView(sample, 0, utf8SafeLength(sample)));
   if (text.isEmpty) return false;
   var bad = 0;
   for (final unit in text.codeUnits) {
     // U+FFFD from malformed input, or a C0 control that text never uses.
-    if (unit == 0xFFFD || (unit < 0x20 && unit != 9 && unit != 10 && unit != 13 && unit != 12 && unit != 27 && unit != 8)) {
+    if (unit == 0xFFFD ||
+        (unit < 0x20 && unit != 9 && unit != 10 && unit != 13 && unit != 12 && unit != 27 && unit != 8)) {
       bad++;
     }
   }
@@ -199,10 +274,10 @@ int utf8SafeLength(Uint8List bytes) {
     final need = b >= 0xF0
         ? 4
         : b >= 0xE0
-            ? 3
-            : b >= 0xC0
-                ? 2
-                : 1;
+        ? 3
+        : b >= 0xC0
+        ? 2
+        : 1;
     return need > back ? end - back : end;
   }
   return end;

@@ -85,8 +85,7 @@ class PrefsProfileStore implements ProfileStore {
 }
 
 class KeychainSecretStore implements SecretStore {
-  KeychainSecretStore([FlutterSecureStorage? storage])
-      : _s = storage ?? const FlutterSecureStorage();
+  KeychainSecretStore([FlutterSecureStorage? storage]) : _s = storage ?? const FlutterSecureStorage();
 
   final FlutterSecureStorage _s;
 
@@ -102,16 +101,11 @@ class KeychainSecretStore implements SecretStore {
       _s.read(key: _k(id, 'passphrase')),
       _s.read(key: _k(id, 'password')),
     ]);
-    return MachineSecrets(
-      privateKeyPem: fields[0],
-      passphrase: fields[1],
-      password: fields[2],
-    );
+    return MachineSecrets(privateKeyPem: fields[0], passphrase: fields[1], password: fields[2]);
   }
 
-  Future<void> _put(String id, String field, String? value) => value == null
-      ? _s.delete(key: _k(id, field))
-      : _s.write(key: _k(id, field), value: value);
+  Future<void> _put(String id, String field, String? value) =>
+      value == null ? _s.delete(key: _k(id, field)) : _s.write(key: _k(id, field), value: value);
 
   @override
   Future<void> write(String id, MachineSecrets s) async {
@@ -167,13 +161,11 @@ class MachineRepository extends ChangeNotifier {
     }
   }
 
-  Future<MachineSecrets> secretsFor(String id) =>
-      _warm.remove(id) ?? _secrets.read(id);
+  Future<MachineSecrets> secretsFor(String id) => _warm.remove(id) ?? _secrets.read(id);
 
   String newId() {
     final r = Random.secure();
-    return List.generate(8, (_) => r.nextInt(256).toRadixString(16).padLeft(2, '0'))
-        .join();
+    return List.generate(8, (_) => r.nextInt(256).toRadixString(16).padLeft(2, '0')).join();
   }
 
   // A key generated in the machine form and not saved yet. It is kept with the
@@ -242,10 +234,7 @@ class MachineRepository extends ChangeNotifier {
     }
     _machines = [
       for (var j = 0; j < _machines.length; j++)
-        if (j == i)
-          _machines[j].copyWith(hostKeyFingerprint: fingerprint)
-        else
-          _machines[j],
+        if (j == i) _machines[j].copyWith(hostKeyFingerprint: fingerprint) else _machines[j],
     ];
     await _profiles.write(_machines);
     notifyListeners();

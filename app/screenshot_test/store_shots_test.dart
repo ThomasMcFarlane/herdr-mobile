@@ -106,21 +106,33 @@ void main() {
 
     testWidgets('board $tone', (tester) async {
       final h = await DemoFleet.create(timed: true);
-      await shot(tester, 'board', const HomeShell(), fleet: h, pump: (t) async {
-        await h.ageStatuses(t);
-        // Previews are read one after the other, a few at a time.
-        await _pumpFor(t, const Duration(seconds: 4));
-      });
+      await shot(
+        tester,
+        'board',
+        const HomeShell(),
+        fleet: h,
+        pump: (t) async {
+          await h.ageStatuses(t);
+          // Previews are read one after the other, a few at a time.
+          await _pumpFor(t, const Duration(seconds: 4));
+        },
+      );
       await tester.pumpWidget(const SizedBox());
       h.dispose();
     });
 
     testWidgets('machines $tone', (tester) async {
       final h = await DemoFleet.create();
-      await shot(tester, 'machines', const HomeShell(), fleet: h, pump: (t) async {
-        await t.tap(find.byKey(FloatingTabBar.tabKey('Machines')));
-        await t.pump(const Duration(milliseconds: 600));
-      });
+      await shot(
+        tester,
+        'machines',
+        const HomeShell(),
+        fleet: h,
+        pump: (t) async {
+          await t.tap(find.byKey(FloatingTabBar.tabKey('Machines')));
+          await t.pump(const Duration(milliseconds: 600));
+        },
+      );
       await tester.pumpWidget(const SizedBox());
       h.dispose();
     });
@@ -134,11 +146,17 @@ void main() {
 
     testWidgets('reply $tone', (tester) async {
       final h = await DemoFleet.create();
-      await shot(tester, 'reply', const HomeShell(), fleet: h, pump: (t) async {
-        await _openPane(t, h, 'a', 'a1:p1');
-        await t.enterText(find.byType(TextField), '1');
-        await t.pump(const Duration(milliseconds: 300));
-      });
+      await shot(
+        tester,
+        'reply',
+        const HomeShell(),
+        fleet: h,
+        pump: (t) async {
+          await _openPane(t, h, 'a', 'a1:p1');
+          await t.enterText(find.byType(TextField), '1');
+          await t.pump(const Duration(milliseconds: 300));
+        },
+      );
       await tester.pumpWidget(const SizedBox());
       h.dispose();
     });
@@ -149,26 +167,39 @@ void main() {
       addTearDown(() {
         if (!pending.isCompleted) pending.completeError(const HerdrTransportException('done'));
       });
-      HerdrTransport factory(MachineProfile profile, MachineSecrets s, void Function(String) onPin,
-          void Function(String) onNotice) {
-        scheduleMicrotask(() => onNotice(
-              '# Tailscale SSH requires an additional check.\n'
-              '# To authenticate, visit: https://login.tailscale.com/a/l3a91f0c2d7b5e',
-            ));
+      HerdrTransport factory(
+        MachineProfile profile,
+        MachineSecrets s,
+        void Function(String) onPin,
+        void Function(String) onNotice,
+      ) {
+        scheduleMicrotask(
+          () => onNotice(
+            '# Tailscale SSH requires an additional check.\n'
+            '# To authenticate, visit: https://login.tailscale.com/a/l3a91f0c2d7b5e',
+          ),
+        );
         return _HangingTransport(pending);
       }
 
-      await shot(tester, 'tailscale', const MachineFormScreen(), fleet: h, factory: factory, pump: (t) async {
-        final fields = find.byType(TextFormField);
-        await t.enterText(fields.at(0), 'studio-mac');
-        await t.enterText(fields.at(1), 'studio-mac.tail1a2b.ts.net');
-        await t.enterText(fields.at(3), 'maya');
-        await t.tap(find.text('Tailscale').first);
-        await t.pump(const Duration(milliseconds: 400));
-        await t.tap(find.text('Test connection'));
-        await t.pump(const Duration(milliseconds: 600));
-        await t.pump(const Duration(milliseconds: 600));
-      });
+      await shot(
+        tester,
+        'tailscale',
+        const MachineFormScreen(),
+        fleet: h,
+        factory: factory,
+        pump: (t) async {
+          final fields = find.byType(TextFormField);
+          await t.enterText(fields.at(0), 'studio-mac');
+          await t.enterText(fields.at(1), 'studio-mac.tail1a2b.ts.net');
+          await t.enterText(fields.at(3), 'maya');
+          await t.tap(find.text('Tailscale').first);
+          await t.pump(const Duration(milliseconds: 400));
+          await t.tap(find.text('Test connection'));
+          await t.pump(const Duration(milliseconds: 600));
+          await t.pump(const Duration(milliseconds: 600));
+        },
+      );
       await tester.pumpWidget(const SizedBox());
       h.dispose();
     });
@@ -200,7 +231,12 @@ void main() {
     testWidgets('browser $tone', (tester) async {
       final h = await DemoFleet.create();
       await h.online(tester);
-      await shot(tester, 'browser', FileBrowserScreen(machine: h.fleet.connection('a')!, path: projectDir), fleet: h);
+      await shot(
+        tester,
+        'browser',
+        FileBrowserScreen(machine: h.fleet.connection('a')!, path: projectDir),
+        fleet: h,
+      );
       await tester.pumpWidget(const SizedBox());
       h.dispose();
     });
@@ -229,13 +265,16 @@ void main() {
       final h = await DemoFleet.create();
       await h.online(tester);
       final hosts = <String, FakeAgentHost>{};
-      final agents = AgentSessionRepository(fleet: h.fleet, hostFor: (c) => hosts.putIfAbsent(c.profile.id, FakeAgentHost.new));
+      final agents = AgentSessionRepository(
+        fleet: h.fleet,
+        hostFor: (c) => hosts.putIfAbsent(c.profile.id, FakeAgentHost.new),
+      );
       final settings = AgentSessionSettings(MemorySessionStore());
       await settings.load();
       Finder field(String label) => find.descendant(
-            of: find.byWidgetPredicate((w) => w is LabeledField && w.label == label),
-            matching: find.byType(TextFormField),
-          );
+        of: find.byWidgetPredicate((w) => w is LabeledField && w.label == label),
+        matching: find.byType(TextFormField),
+      );
       await shot(
         tester,
         'new-session',
@@ -270,10 +309,7 @@ void main() {
       final session = FakeAgentSession(
         title: 'Fix the Hà Nội locale bug',
         state: stateWith(
-          items: [
-            ...richTurn(),
-            userAt('u2', 'Update the fixture and push the branch.', 60),
-          ],
+          items: [...richTurn(), userAt('u2', 'Update the fixture and push the branch.', 60)],
           turnActive: true,
           pending: [
             PendingPermission(
@@ -283,7 +319,13 @@ void main() {
           ],
         ),
       );
-      await shot(tester, 'chat', AgentSessionScreen(session: session), fleet: h, pump: (t) => t.pump(const Duration(seconds: 1)));
+      await shot(
+        tester,
+        'chat',
+        AgentSessionScreen(session: session),
+        fleet: h,
+        pump: (t) => t.pump(const Duration(seconds: 1)),
+      );
       await tester.pumpWidget(const SizedBox());
       await tester.pump(const Duration(seconds: 2));
       session.dispose();
@@ -299,6 +341,5 @@ class _HangingTransport extends UiTransport {
   final Completer<Map<String, dynamic>> _never;
 
   @override
-  Future<Map<String, dynamic>> request(String method, [Map<String, dynamic> params = const {}]) =>
-      _never.future;
+  Future<Map<String, dynamic>> request(String method, [Map<String, dynamic> params = const {}]) => _never.future;
 }

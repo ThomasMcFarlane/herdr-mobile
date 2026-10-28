@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../markdown/md_code_block.dart';
 import '../markdown/md_document.dart';
 import '../markdown/md_edge_fade.dart';
@@ -189,7 +190,10 @@ class _MdDiagramViewState extends State<MdDiagramView> {
             : null;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [ExcludeSemantics(child: tappable), ?more],
+          children: [
+            ExcludeSemantics(child: tappable),
+            ?more,
+          ],
         );
       },
     );
@@ -266,7 +270,12 @@ class _Header extends StatelessWidget {
           const SizedBox(width: Gap.md),
           Expanded(
             child: ExcludeSemantics(
-              child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Type.caption.copyWith(color: ds.textMuted)),
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Type.caption.copyWith(color: ds.textMuted),
+              ),
             ),
           ),
           if (onOpen != null)
@@ -274,7 +283,8 @@ class _Header extends StatelessWidget {
               onTap: onOpen,
               semanticLabel: 'Open diagram',
               minTapSize: kMinTap,
-              builder: (context, pressed) => Icon(LucideIcons.maximize2, size: 16, color: pressed ? ds.accentText : ds.textMuted),
+              builder: (context, pressed) =>
+                  Icon(LucideIcons.maximize2, size: 16, color: pressed ? ds.accentText : ds.textMuted),
             ),
           PressBuilder(
             onTap: onCopy,

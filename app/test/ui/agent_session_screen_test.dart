@@ -170,8 +170,13 @@ void main() {
     });
 
     testWidgets('a short user message wraps instead of being cut to one line', (tester) async {
-      const text = 'Rename the Vietnamese locale files and make sure everything about the payments service still renders properly afterwards';
-      await pumpScreen(tester, FakeAgentSession(state: stateWith(items: [userMsg('u', text)])), size: const Size(320, 640));
+      const text =
+          'Rename the Vietnamese locale files and make sure everything about the payments service still renders properly afterwards';
+      await pumpScreen(
+        tester,
+        FakeAgentSession(state: stateWith(items: [userMsg('u', text)])),
+        size: const Size(320, 640),
+      );
       expect(tester.getSize(find.text(text)).height, greaterThan(30));
     });
 
@@ -224,12 +229,19 @@ void main() {
       expect(find.text('${100 - toolTextLines} more lines'), findsOneWidget);
     });
 
-    testWidgets('an open tool folds from the rail beside its output, and its header comes back into view', (tester) async {
+    testWidgets('an open tool folds from the rail beside its output, and its header comes back into view', (
+      tester,
+    ) async {
       final output = List.generate(100, (i) => 'out $i').join('\n');
       final session = FakeAgentSession(
         state: stateWith(
           items: [
-            toolItem('t1', title: 'Run the build', kind: ToolKind.execute, content: [ToolContentBlock(TextBlock(output))]),
+            toolItem(
+              't1',
+              title: 'Run the build',
+              kind: ToolKind.execute,
+              content: [ToolContentBlock(TextBlock(output))],
+            ),
           ],
           turnActive: true,
         ),
@@ -305,14 +317,37 @@ void main() {
       final session = FakeAgentSession(
         state: stateWith(
           items: [
-            toolItem('t1', title: 'Waiting for CI', status: ToolStatus.inProgress, rawOutput: {
-              'content': [{'type': 'text', 'text': ''}],
-              'details': {'op': 'wait', 'jobs': [{'id': 'bg_20', 'status': 'running', 'durationMs': 91542}]},
-            }),
-            toolItem('t2', title: 'Jobs', rawOutput: {
-              'content': [{'type': 'text', 'text': 'bg_20 finished: success'}],
-              'details': {'op': 'wait', 'jobs': [{'id': 'bg_20', 'status': 'completed'}]},
-            }),
+            toolItem(
+              't1',
+              title: 'Waiting for CI',
+              status: ToolStatus.inProgress,
+              rawOutput: {
+                'content': [
+                  {'type': 'text', 'text': ''},
+                ],
+                'details': {
+                  'op': 'wait',
+                  'jobs': [
+                    {'id': 'bg_20', 'status': 'running', 'durationMs': 91542},
+                  ],
+                },
+              },
+            ),
+            toolItem(
+              't2',
+              title: 'Jobs',
+              rawOutput: {
+                'content': [
+                  {'type': 'text', 'text': 'bg_20 finished: success'},
+                ],
+                'details': {
+                  'op': 'wait',
+                  'jobs': [
+                    {'id': 'bg_20', 'status': 'completed'},
+                  ],
+                },
+              },
+            ),
           ],
           turnActive: true,
         ),
@@ -328,43 +363,57 @@ void main() {
       expect(find.textContaining('"details"', findRichText: true), findsNothing);
     });
 
-    testWidgets('a streaming answer is one live row: a chunk rebuilds it alone, a structural change rebuilds the rows it changed', (tester) async {
+    testWidgets(
+      'a streaming answer is one live row: a chunk rebuilds it alone, a structural change rebuilds the rows it changed',
+      (tester) async {
+        final built = <String>[];
+        debugRowBuilt = built.add;
+        final session = FakeAgentSession(
+          state: stateWith(
+            items: [
+              userMsg('u1', 'go'),
+              toolItem('t1', title: 'Read file', kind: ToolKind.read),
+            ],
+            turnActive: true,
+          ).apply(const MessageChunk(MessageRole.agent, 'a1', TextBlock('first paragraph\n\nsecond paragraph'))),
+        );
+        final key = session.state.liveKey!;
+        await pumpScreen(tester, session);
+        expect(built.toSet(), {'u1', 'tool:t1', '$key#live', '$key#0', '$key#1'});
+
+        built.clear();
+        session.apply(const MessageChunk(MessageRole.agent, 'a1', TextBlock(' grows')));
+        await tester.pumpAndSettle();
+        expect(built.toSet(), {'$key#live', '$key#1'}, reason: 'the live row and its open tail, nothing else');
+        expect(find.textContaining('second paragraph grows', findRichText: true), findsOneWidget);
+
+        // A tool call starts: the message is settled into the rows it keeps.
+        built.clear();
+        session.apply(ToolCallStart(const ToolCall(toolCallId: 't2', title: 'Next step')));
+        await tester.pump();
+        expect(built.toSet(), {
+          '$key#0',
+          '$key#1',
+          'tool:t2',
+        }, reason: 'the settled message and the new tool; not the rows above');
+
+        built.clear();
+        session.apply(ToolCallPatchUpdate(ToolCallPatch('t2', {'toolCallId': 't2', 'status': 'completed'})));
+        await tester.pump();
+        expect(built, ['tool:t2']);
+      },
+    );
+
+    testWidgets('follows the end while the agent writes, and the keyboard moving rebuilds none of the rows in view', (
+      tester,
+    ) async {
       final built = <String>[];
       debugRowBuilt = built.add;
       final session = FakeAgentSession(
         state: stateWith(
-          items: [userMsg('u1', 'go'), toolItem('t1', title: 'Read file', kind: ToolKind.read)],
-          turnActive: true,
-        ).apply(const MessageChunk(MessageRole.agent, 'a1', TextBlock('first paragraph\n\nsecond paragraph'))),
-      );
-      final key = session.state.liveKey!;
-      await pumpScreen(tester, session);
-      expect(built.toSet(), {'u1', 'tool:t1', '$key#live', '$key#0', '$key#1'});
-
-      built.clear();
-      session.apply(const MessageChunk(MessageRole.agent, 'a1', TextBlock(' grows')));
-      await tester.pumpAndSettle();
-      expect(built.toSet(), {'$key#live', '$key#1'}, reason: 'the live row and its open tail, nothing else');
-      expect(find.textContaining('second paragraph grows', findRichText: true), findsOneWidget);
-
-      // A tool call starts: the message is settled into the rows it keeps.
-      built.clear();
-      session.apply(ToolCallStart(const ToolCall(toolCallId: 't2', title: 'Next step')));
-      await tester.pump();
-      expect(built.toSet(), {'$key#0', '$key#1', 'tool:t2'}, reason: 'the settled message and the new tool; not the rows above');
-
-      built.clear();
-      session.apply(ToolCallPatchUpdate(ToolCallPatch('t2', {'toolCallId': 't2', 'status': 'completed'})));
-      await tester.pump();
-      expect(built, ['tool:t2']);
-    });
-
-    testWidgets('follows the end while the agent writes, and the keyboard moving rebuilds none of the rows in view', (tester) async {
-      final built = <String>[];
-      debugRowBuilt = built.add;
-      final session = FakeAgentSession(
-        state: stateWith(
-          items: [for (var i = 0; i < 300; i++) ...[userMsg('u$i', 'question $i'), agentMsg('a$i', 'message number $i')]],
+          items: [
+            for (var i = 0; i < 300; i++) ...[userMsg('u$i', 'question $i'), agentMsg('a$i', 'message number $i')],
+          ],
         ),
       );
       await pumpScreen(tester, session);
@@ -372,7 +421,9 @@ void main() {
       expect(find.text('message number 299'), findsOneWidget);
 
       // The newest message grows by several lines: the end stays in view.
-      session.apply(MessageChunk(MessageRole.agent, 'a299', TextBlock('\n\n${List.filled(12, 'more words here').join('\n\n')}')));
+      session.apply(
+        MessageChunk(MessageRole.agent, 'a299', TextBlock('\n\n${List.filled(12, 'more words here').join('\n\n')}')),
+      );
       await tester.pump();
       expect(transcriptPosition(tester).extentAfter, 0);
       expect(find.textContaining('more words here'), findsWidgets);
@@ -397,7 +448,9 @@ void main() {
     testWidgets('reading earlier output is left alone; a button jumps to the latest', (tester) async {
       final session = FakeAgentSession(
         state: stateWith(
-          items: [for (var i = 0; i < 300; i++) ...[userMsg('u$i', 'question $i'), agentMsg('a$i', 'message number $i')]],
+          items: [
+            for (var i = 0; i < 300; i++) ...[userMsg('u$i', 'question $i'), agentMsg('a$i', 'message number $i')],
+          ],
         ),
       );
       await pumpScreen(tester, session);
@@ -483,7 +536,9 @@ void main() {
       expect(find.text('hello there'), findsOneWidget, reason: 'the transcript shows the prompt');
     });
 
-    testWidgets('a send that fails gives the text back with no sent haptic; the next one goes and clears it', (tester) async {
+    testWidgets('a send that fails gives the text back with no sent haptic; the next one goes and clears it', (
+      tester,
+    ) async {
       final haptics = recordHaptics(tester);
       final session = FakeAgentSession()..refuseSends = 'Not connected. The message was not sent.';
       await pumpScreen(tester, session);
@@ -505,7 +560,9 @@ void main() {
       expect(haptics, contains('HapticFeedbackType.lightImpact'));
     });
 
-    testWidgets('the field empties at once; a failure puts the text back ahead of what was typed meanwhile', (tester) async {
+    testWidgets('the field empties at once; a failure puts the text back ahead of what was typed meanwhile', (
+      tester,
+    ) async {
       final session = FakeAgentSession()
         ..holdSends = Completer<void>()
         ..refuseSends = 'Not connected. The message was not sent.';
@@ -646,7 +703,9 @@ void main() {
       expect(names(const [], '/'), isEmpty);
     });
 
-    testWidgets('a session that knows more is asked on the first slash, and what it learns shows with its tag', (tester) async {
+    testWidgets('a session that knows more is asked on the first slash, and what it learns shows with its tag', (
+      tester,
+    ) async {
       final session = _CatalogSession();
       await pumpScreen(tester, session);
       expect(session.wanted, 0, reason: 'nothing is loaded for a chat that never starts a command');
@@ -734,7 +793,9 @@ void main() {
       expect(find.byType(StatusStrip), findsNothing);
     });
 
-    testWidgets('an error of the app’s own leads with what happened; only the agent’s own is the agent’s', (tester) async {
+    testWidgets('an error of the app’s own leads with what happened; only the agent’s own is the agent’s', (
+      tester,
+    ) async {
       final session = FakeAgentSession();
       await pumpScreen(tester, session);
       session.setLink(AgentLink.live, error: 'Not connected. The message was not sent.');
@@ -809,7 +870,11 @@ void main() {
       await pumpScreen(tester, FakeAgentSession(title: 'Fix payments'));
       expect(find.text('Fix payments'), findsOneWidget);
       expect(find.text('Claude Code · devbox · payments-api'), findsOneWidget);
-      expect(find.byTooltip('Session options'), findsOneWidget, reason: 'Duplicate lives there, whatever the agent exposes');
+      expect(
+        find.byTooltip('Session options'),
+        findsOneWidget,
+        reason: 'Duplicate lives there, whatever the agent exposes',
+      );
     });
 
     testWidgets('picking a choice from a long list searches lazily and sets the option', (tester) async {
@@ -828,7 +893,10 @@ void main() {
               name: 'Approval mode',
               category: 'mode',
               value: 'ask',
-              choices: [ConfigChoice(value: 'ask', name: 'Ask'), ConfigChoice(value: 'auto', name: 'Auto')],
+              choices: [
+                ConfigChoice(value: 'ask', name: 'Ask'),
+                ConfigChoice(value: 'auto', name: 'Auto'),
+              ],
             ),
             const BooleanConfigOption(id: 'fast', name: 'Fast mode', value: false),
           ],
@@ -840,7 +908,11 @@ void main() {
       // The chips above the composer say the same (they are the quick way in):
       // the sheet's own rows are what this test is about.
       final sheet = find.byType(BottomSheet);
-      expect(find.descendant(of: sheet, matching: find.text('Model 5')), findsOneWidget, reason: 'the current value is on the row');
+      expect(
+        find.descendant(of: sheet, matching: find.text('Model 5')),
+        findsOneWidget,
+        reason: 'the current value is on the row',
+      );
       expect(find.descendant(of: sheet, matching: find.text('Ask')), findsOneWidget);
 
       await tester.tap(find.descendant(of: sheet, matching: find.text('Fast mode')));
@@ -865,7 +937,10 @@ void main() {
         state: stateWith(
           modes: const ModeState(
             currentModeId: 'plan',
-            availableModes: [SessionMode(id: 'plan', name: 'Plan'), SessionMode(id: 'code', name: 'Code')],
+            availableModes: [
+              SessionMode(id: 'plan', name: 'Plan'),
+              SessionMode(id: 'code', name: 'Code'),
+            ],
           ),
         ),
       );
@@ -885,16 +960,19 @@ void main() {
       final old = List.generate(20, (i) => 'line $i').join('\n');
       final changed = old.replaceFirst('line 10', 'LINE 10');
       final lines = diffLines(old, changed);
-      expect([for (final l in lines) l.kind], [
-        DiffKind.gap,
-        DiffKind.same,
-        DiffKind.same,
-        DiffKind.del,
-        DiffKind.add,
-        DiffKind.same,
-        DiffKind.same,
-        DiffKind.gap,
-      ]);
+      expect(
+        [for (final l in lines) l.kind],
+        [
+          DiffKind.gap,
+          DiffKind.same,
+          DiffKind.same,
+          DiffKind.del,
+          DiffKind.add,
+          DiffKind.same,
+          DiffKind.same,
+          DiffKind.gap,
+        ],
+      );
       expect(lines.first.text, '8 unchanged lines');
       expect(lines.last.text, '7 unchanged lines');
     });
@@ -917,21 +995,27 @@ void main() {
       expect(coarse.where((l) => l.kind == DiffKind.add), hasLength(32));
       expect(coarse.where((l) => l.kind == DiffKind.same), isEmpty);
 
-      final huge = diffLines(List.generate(20000, (i) => 'a$i').join('\n'), List.generate(20000, (i) => 'b$i').join('\n'));
+      final huge = diffLines(
+        List.generate(20000, (i) => 'a$i').join('\n'),
+        List.generate(20000, (i) => 'b$i').join('\n'),
+      );
       expect(huge.where((l) => l.kind == DiffKind.del), hasLength(20000));
       expect(huge.where((l) => l.kind == DiffKind.add), hasLength(20000));
     });
 
     test('a change in the middle keeps its neighbours and folds the rest', () {
       final lines = diffLines('a\nb\nc\nd\ne\nf\ng', 'a\nb\nX\nd\ne\nf\ng', context: 1);
-      expect([for (final l in lines) (l.kind, l.text)], [
-        (DiffKind.same, 'a'),
-        (DiffKind.same, 'b'),
-        (DiffKind.del, 'c'),
-        (DiffKind.add, 'X'),
-        (DiffKind.same, 'd'),
-        (DiffKind.gap, '3 unchanged lines'),
-      ]);
+      expect(
+        [for (final l in lines) (l.kind, l.text)],
+        [
+          (DiffKind.same, 'a'),
+          (DiffKind.same, 'b'),
+          (DiffKind.del, 'c'),
+          (DiffKind.add, 'X'),
+          (DiffKind.same, 'd'),
+          (DiffKind.gap, '3 unchanged lines'),
+        ],
+      );
     });
   });
 
@@ -972,7 +1056,12 @@ void main() {
       final session = FakeAgentSession(
         state: stateWith(
           items: [
-            toolItem('t1', title: 'Write big.txt', kind: ToolKind.edit, content: [ToolDiff(path: 'big.txt', newText: big)]),
+            toolItem(
+              't1',
+              title: 'Write big.txt',
+              kind: ToolKind.edit,
+              content: [ToolDiff(path: 'big.txt', newText: big)],
+            ),
           ],
           turnActive: true,
         ),
@@ -998,7 +1087,12 @@ void main() {
         state: stateWith(
           items: [
             userMsg('u', 'Kiểm tra “Hà Nội” và Đà Nẵng'),
-            toolItem('t1', title: 'Run ${'a-very-long-command-name ' * 8}', kind: ToolKind.execute, status: ToolStatus.failed),
+            toolItem(
+              't1',
+              title: 'Run ${'a-very-long-command-name ' * 8}',
+              kind: ToolKind.execute,
+              status: ToolStatus.failed,
+            ),
             agentMsg('a1', '## Tiêu đề\n\nMột đoạn văn dài ${'từ ' * 60}\n\n```\n${'x' * 300}\n```'),
           ],
           plan: [for (var i = 0; i < 4; i++) PlanEntry(content: 'Một bước dài ${'chữ ' * 15}$i')],
@@ -1039,13 +1133,12 @@ void main() {
       expect(session.holds, 0);
     });
 
-    testWidgets('a short window keeps the composer in reach with the plan open and with the keyboard up', (tester) async {
+    testWidgets('a short window keeps the composer in reach with the plan open and with the keyboard up', (
+      tester,
+    ) async {
       final plan = [for (var i = 0; i < 7; i++) PlanEntry(content: 'Step $i', status: PlanStatus.pending)];
       final session = FakeAgentSession(
-        state: stateWith(
-          plan: plan,
-          items: [for (var i = 0; i < 20; i++) agentMsg('a$i', 'message $i')],
-        ),
+        state: stateWith(plan: plan, items: [for (var i = 0; i < 20; i++) agentMsg('a$i', 'message $i')]),
       );
       await pumpScreen(tester, session, size: const Size(640, 300));
       await tester.tap(find.textContaining('Plan', findRichText: true));
@@ -1072,7 +1165,9 @@ void main() {
       await pumpScreen(tester, session);
       expect(find.textContaining('evil.tld'), findsNothing, reason: 'the label says github.com/x');
       // The link is the start of a full-width row: tap its first letters.
-      await tester.tapAt(tester.getTopLeft(find.textContaining('github.com/x', findRichText: true)) + const Offset(12, 10));
+      await tester.tapAt(
+        tester.getTopLeft(find.textContaining('github.com/x', findRichText: true)) + const Offset(12, 10),
+      );
       await tester.pumpAndSettle();
       expect(find.textContaining('https://evil.tld/p?q=1'), findsWidgets);
       expect(find.text('Copy link'), findsOneWidget);
@@ -1089,7 +1184,10 @@ void main() {
 
     testWidgets('hidden characters in a tool title are shown as escapes', (tester) async {
       final session = FakeAgentSession(
-        state: stateWith(items: [toolItem('t1', title: 'Read\u202E txt.exe', kind: ToolKind.read)], turnActive: true),
+        state: stateWith(
+          items: [toolItem('t1', title: 'Read\u202E txt.exe', kind: ToolKind.read)],
+          turnActive: true,
+        ),
       );
       await pumpScreen(tester, session);
       expect(find.text('Read\u2039U+202E\u203a txt.exe'), findsOneWidget);

@@ -19,10 +19,9 @@ import 'package:herdr_mobile/data/observed/observed_contracts.dart';
 /// marks the active tab.
 class FakeOmpAsk {
   FakeOmpAsk(this.questions, {this.cols = 119, this.termRows = 40, this.headers = const {}})
-      : _states = [
-          for (final q in questions)
-            _Q(cursor: (q.recommended ?? 0).clamp(0, math.max(0, q.options.length - 1))),
-        ];
+    : _states = [
+        for (final q in questions) _Q(cursor: (q.recommended ?? 0).clamp(0, math.max(0, q.options.length - 1))),
+      ];
 
   final List<AskQuestion> questions;
   final int cols;
@@ -172,10 +171,7 @@ class FakeOmpAsk {
     closed = true;
     submitted = [
       for (var k = 0; k < questions.length; k++)
-        AskAnswer(
-          selected: ([..._states[k].selected]..sort()),
-          custom: _states[k].custom,
-        ),
+        AskAnswer(selected: ([..._states[k].selected]..sort()), custom: _states[k].custom),
     ];
   }
 
@@ -184,8 +180,7 @@ class FakeOmpAsk {
   static const _other = 'Other (type your own)';
   int get _w => cols - 4;
 
-  String _marker(AskQuestion q, bool checked) =>
-      q.multi ? (checked ? '☑' : '☐') : (checked ? '◉' : '○');
+  String _marker(AskQuestion q, bool checked) => q.multi ? (checked ? '☑' : '☐') : (checked ? '◉' : '○');
 
   List<String> _wrap(String text, int width) {
     width = math.max(1, width);
@@ -264,9 +259,9 @@ class FakeOmpAsk {
   }
 
   bool _descOverflow(AskQuestion q) => q.options.any((o) {
-        final d = o.description.trim();
-        return d.isNotEmpty && _wrap(_plain(d), math.max(1, _w - 6)).length > 2;
-      });
+    final d = o.description.trim();
+    return d.isNotEmpty && _wrap(_plain(d), math.max(1, _w - 6)).length > 2;
+  });
 
   int _measureHeight() {
     final maxHeight = math.max(12, (termRows * 0.7).floor());
@@ -290,7 +285,10 @@ class FakeOmpAsk {
   String _summary(int k) {
     final q = questions[k];
     final s = _states[k];
-    final sel = [for (var i = 0; i < q.options.length; i++) if (s.selected.contains(i)) _displayLabel(q, i)];
+    final sel = [
+      for (var i = 0; i < q.options.length; i++)
+        if (s.selected.contains(i)) _displayLabel(q, i),
+    ];
     String inline(String t) => t.replaceAll(RegExp(r'\s+'), ' ').trim();
     if (q.multi) {
       final all = [...sel, if (s.custom != null) 'Other: “${inline(s.custom!)}”'];
@@ -323,10 +321,7 @@ class FakeOmpAsk {
     final tabRows = _hasTabs ? 1 : 0;
     final header = <String>[];
     if (_hasTabs) {
-      header.add([
-        for (var k = 0; k < questions.length; k++) ' ${_tabLabel(k)} ',
-        ' Submit ',
-      ].join('  '));
+      header.add([for (var k = 0; k < questions.length; k++) ' ${_tabLabel(k)} ', ' Submit '].join('  '));
     }
     final review = _onReview;
     final q = review ? null : questions[_tab];
@@ -363,9 +358,8 @@ class FakeOmpAsk {
     } else {
       final s = _states[_tab];
       List<List<String>> render(int width) => [
-            for (var r = 0; r <= q!.options.length; r++)
-              _rowLines(q, s, r, width, selected: r == s.cursor),
-          ];
+        for (var r = 0; r <= q!.options.length; r++) _rowLines(q, s, r, width, selected: r == s.cursor),
+      ];
       var rows = render(_w);
       var count = rows.fold<int>(0, (a, b) => a + b.length);
       final scrollbar = count > bodyRows && _w > 1;

@@ -17,12 +17,11 @@ import 'board_support.dart';
 import 'ui_harness.dart';
 
 ({MachineProfile profile, Map<String, dynamic> snapshot}) _machine(int agents) => (
-      profile: MachineProfile(id: 'a', label: 'box-a', host: 'a.example', username: 'dev'),
-      snapshot: snapshotWith(
-        [for (var i = 1; i <= agents; i++) (id: 'w1:p$i', ws: 'w1', agent: 'claude', status: 'working')],
-        title: (id) => 'task ${id.split('p').last}',
-      ),
-    );
+  profile: MachineProfile(id: 'a', label: 'box-a', host: 'a.example', username: 'dev'),
+  snapshot: snapshotWith([
+    for (var i = 1; i <= agents; i++) (id: 'w1:p$i', ws: 'w1', agent: 'claude', status: 'working'),
+  ], title: (id) => 'task ${id.split('p').last}'),
+);
 
 void main() {
   setUpAll(loadAppFonts);
@@ -37,17 +36,21 @@ void main() {
     platformCalls = [];
     systemPops = 0;
     moves = 0;
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
-      platformCalls.add(call);
-      if (call.method == 'SystemNavigator.pop') systemPops++;
-      return null;
-    });
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        platformCalls.add(call);
+        if (call.method == 'SystemNavigator.pop') systemPops++;
+        return null;
+      },
+    );
   });
 
   tearDown(() {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(SystemChannels.platform, null);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      null,
+    );
   });
 
   Future<BoardHarness> pump(
@@ -97,9 +100,7 @@ void main() {
 
   // The fade over a tab's content, as the shell wraps it.
   double opacityOf(WidgetTester tester, Type screen) => tester
-      .widget<FadeTransition>(
-        find.ancestor(of: find.byType(screen), matching: find.byType(FadeTransition)).first,
-      )
+      .widget<FadeTransition>(find.ancestor(of: find.byType(screen), matching: find.byType(FadeTransition)).first)
       .opacity
       .value;
 
@@ -216,7 +217,9 @@ void main() {
       await tester.drag(find.byType(SettingsScreen), const Offset(0, -600));
       await tester.pumpAndSettle();
       final position = tester
-          .state<ScrollableState>(find.descendant(of: find.byType(SettingsScreen), matching: find.byType(Scrollable)).first)
+          .state<ScrollableState>(
+            find.descendant(of: find.byType(SettingsScreen), matching: find.byType(Scrollable)).first,
+          )
           .position;
       expect(position.pixels, greaterThan(200));
       platformCalls.clear();
@@ -351,18 +354,17 @@ void main() {
         ..devicePixelRatio = 2;
       addTearDown(tester.view.reset);
       if (platform) {
-        tester.platformDispatcher.accessibilityFeaturesTestValue =
-            const FakeAccessibilityFeatures(disableAnimations: true);
+        tester.platformDispatcher.accessibilityFeaturesTestValue = const FakeAccessibilityFeatures(
+          disableAnimations: true,
+        );
         addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
       }
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.dark(),
           builder: reduced
-              ? (context, child) => MediaQuery(
-                    data: MediaQuery.of(context).copyWith(disableAnimations: true),
-                    child: child!,
-                  )
+              ? (context, child) =>
+                    MediaQuery(data: MediaQuery.of(context).copyWith(disableAnimations: true), child: child!)
               : null,
           home: Builder(builder: home),
         ),
@@ -370,20 +372,20 @@ void main() {
     }
 
     Widget opener(void Function(BuildContext) open) => Builder(
-          builder: (context) => Scaffold(
-            body: Center(
-              child: TextButton(onPressed: () => open(context), child: const Text('open')),
-            ),
-          ),
-        );
+      builder: (context) => Scaffold(
+        body: Center(
+          child: TextButton(onPressed: () => open(context), child: const Text('open')),
+        ),
+      ),
+    );
 
     Widget pusher() => opener(
-          (c) => Navigator.of(c).push(MaterialPageRoute<void>(builder: (_) => const Scaffold(body: Text('page')))),
-        );
+      (c) => Navigator.of(c).push(MaterialPageRoute<void>(builder: (_) => const Scaffold(body: Text('page')))),
+    );
 
     FadeTransition pageFade(WidgetTester tester) => tester.widget<FadeTransition>(
-          find.ancestor(of: find.text('page'), matching: find.byType(FadeTransition)).first,
-        );
+      find.ancestor(of: find.text('page'), matching: find.byType(FadeTransition)).first,
+    );
 
     testWidgets('a sheet opens with the usual slide when motion is on', (tester) async {
       await pumpApp(tester, (_) => opener((c) => showAppSheet<void>(c, builder: (_) => const Text('sheet body'))));
