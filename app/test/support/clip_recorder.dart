@@ -112,6 +112,40 @@ class ClipRecorder {
     _steps.add({'t': _now, ..._norm(t, from + by), 'kind': 'release', 'label': label});
   }
 
+  /// Holds a finger at [from] for [press] (a long press), then drags it by
+  /// [by] over [over] without lifting, and lifts after [rest]. Captioned
+  /// [label]: this is how a person selects text.
+  Future<void> pressDrag(
+    WidgetTester t,
+    Offset from,
+    Offset by,
+    String label, {
+    Duration press = const Duration(milliseconds: 700),
+    Duration over = const Duration(milliseconds: 1400),
+    Duration rest = const Duration(milliseconds: 300),
+  }) async {
+    _steps.add({'t': _now, ..._norm(t, from), 'kind': 'tap', 'label': label});
+    final g = await t.startGesture(from);
+    await hold(t, press);
+    final moves = over.inMicroseconds ~/ frame.inMicroseconds;
+    _steps.add({
+      't': _now,
+      ..._norm(t, from),
+      'kind': 'drag',
+      'to': _norm(t, from + by),
+      'until': _now + moves / 30,
+      'label': label,
+    });
+    for (var i = 1; i <= moves; i++) {
+      await g.moveBy(by / moves.toDouble(), timeStamp: press + frame * i);
+      await t.pump(frame);
+      await _capture(t);
+    }
+    await hold(t, rest);
+    await g.up(timeStamp: press + frame * (moves + rest.inMicroseconds ~/ frame.inMicroseconds));
+    _steps.add({'t': _now, ..._norm(t, from + by), 'kind': 'release', 'label': label});
+  }
+
   /// Starts change [index] of [total] of a release walkthrough, captioned
   /// [label]: make_clip.sh shows it as a chapter with a progress mark. Put the
   /// card at the top ([top]) when the change itself appears low on screen (a

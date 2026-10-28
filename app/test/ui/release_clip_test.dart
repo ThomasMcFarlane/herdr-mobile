@@ -11,57 +11,48 @@
 library;
 
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:herdr_mobile/data/acp/acp_models.dart';
-import 'package:herdr_mobile/data/acp/background/background_work.dart';
-import 'package:herdr_mobile/data/acp/session_state.dart';
-import 'package:herdr_mobile/data/models/machine_profile.dart';
-import 'package:herdr_mobile/ui/features/photos/photo_viewer.dart' show PhotoViewer;
-import 'package:herdr_mobile/data/repositories/machine_connection.dart';
-import 'package:herdr_mobile/data/services/herdr_api.dart';
-import 'package:herdr_mobile/ui/features/agent_session/agent_session_screen.dart';
-import 'package:herdr_mobile/ui/features/agent_session/status_line.dart' show statusNow;
-import 'package:image/image.dart' as img;
+import 'package:herdr_mobile/data/repositories/agent_screens.dart' show PaneAgent;
+import 'package:herdr_mobile/ui/features/pane/pane_screen.dart';
 
 import '../../screenshot_test/demo_fleet.dart';
 import '../support/clip_recorder.dart';
-import '../support/fake_agent_session.dart';
-import '../support/fake_fs.dart';
-import '../support/fake_transport.dart';
 import '../support/shot.dart';
-import '../support/turn_fixtures.dart';
 
-TranscriptItem _launch(String command) => TranscriptTool(
-  ToolCall(
-    toolCallId: 't$command',
-    kind: ToolKind.execute,
-    status: ToolStatus.completed,
-    rawInput: {'command': command},
-  ),
-);
+const _esc = '\x1b';
+String _c(int r, int g, int b, String s) => '$_esc[38;2;$r;$g;${b}m$s$_esc[0m';
+String _dim(String s) => '$_esc[2m$s$_esc[0m';
+String _bold(String s) => '$_esc[1m$s$_esc[0m';
+String _row(int bg, String s) => '$_esc[48;2;${bg == 0 ? '30;58;40' : '66;30;34'}m${s.padRight(44)}$_esc[0m';
 
-TranscriptItem _say(String text) =>
-    TranscriptMessage(key: 'm$text', role: MessageRole.agent, blocks: [TextBlock(text)]);
+String _green(String s) => _c(76, 183, 130, s);
 
-TranscriptItem _wrote(String path) => TranscriptTool(
-  ToolCall(
-    toolCallId: 't$path',
-    kind: ToolKind.edit,
-    status: ToolStatus.completed,
-    content: [ToolDiff(path: path, newText: '<h1>x</h1>')],
-  ),
-);
-
-Uint8List _png(int hue) {
-  final image = img.Image(width: 160, height: 120);
-  for (final p in image) {
-    p.setRgb((60 + p.x + hue) % 256, (200 - p.y + hue) % 256, (90 + hue * 3) % 256);
-  }
-  return Uint8List.fromList(img.encodePng(image));
-}
+/// What an agent that finished a change has on screen: a diff in colour, the
+/// test run, and a numbered list of what it could do next.
+String _output() => [
+  ' ${_c(154, 163, 242, '>')} Fix the flaky retry test in checkout.',
+  '',
+  ' ${_green('●')} ${_bold('Update')}(services/checkout/retry.go)',
+  _dim('   └ Updated with 3 additions and 1 removal'),
+  _dim('     31   func NewRetrier(c Clock, cfg Config) {'),
+  _row(1, '     32 -   return &Retrier{cfg: cfg}'),
+  _row(0, '     32 +   r := &Retrier{clock: c, cfg: cfg}'),
+  _row(0, '     33 +   r.jitter = 0'),
+  _row(0, '     34 +   return r'),
+  _dim('     35   }'),
+  '',
+  ' ${_green('●')} ${_bold('Bash')}(go test ./services/checkout)',
+  '   └ ${_green('ok')} payments/checkout ${_dim('0.84s')}',
+  '',
+  ' ${_green('●')} The test now passes 50 runs in a row.',
+  '   I can go on with:',
+  '',
+  '   1. Run the whole checkout suite',
+  '   2. Open a pull request for the fix',
+  '   3. Stop here',
+].join('\n');
 
 void main() {
   if (Platform.environment['RELEASE_CLIP'] == null) {
@@ -71,125 +62,47 @@ void main() {
   final dir = Platform.environment['RELEASE_CLIP_DIR'] ?? '/tmp/release_clip';
   setUpAll(loadAppFonts);
 
-  // 0.1.29: `Made` names an app by what runs and keeps its pages under it, its
-  // tabs swipe, and a picture opens over the list with the others to swipe to.
-  testWidgets('0.1.29 walkthrough', (tester) async {
+  // 0.1.42: text selected in a pane shows in a brighter indigo on the dark
+  // terminal (it was almost the colour of the page).
+  testWidgets('0.1.42 walkthrough', (tester) async {
     final h = await DemoFleet.create();
-    statusNow = () => at(100);
-    addTearDown(() => statusNow = DateTime.now);
-    const base = '/home/dev/payments-api';
-    final fs = FakeFs();
-    for (var i = 0; i < 6; i++) {
-      fs.addFile('$base/screenshots/checkout_${i + 1}.png', _png(i * 31));
-    }
-    fs.addFile('$base/reports/q3.html', '<h1>q3</h1>');
-    final machine = MachineConnection(
-      profile: const MachineProfile(id: 'm', label: 'devbox', host: 'h', username: 'u'),
-      api: HerdrApi(FakeTransport()..fs = fs),
-      backoff: (_) => const Duration(hours: 1),
-      pollInterval: const Duration(hours: 1),
-    );
-    final session = FakeAgentSession(
-      title: 'Fix the checkout totals',
-      machine: machine,
-      state: stateWith(
-        items: [
-          ...richTurn(),
-          _launch('cd /w && nohup python label_server.py --port 8765 > log 2>&1 &'),
-          _say('Labelling is on http://localhost:8765/ and the review queue on http://localhost:8765/review.'),
-          _launch('npm run dev'),
-          _say('The storefront is on http://localhost:5173/ and its checkout on http://localhost:5173/checkout.'),
-          _wrote('$base/reports/q3.html'),
-          for (var i = 1; i <= 6; i++) _say('I saved screenshots/checkout_$i.png'),
-        ],
-      ),
-    );
-    session.setBackground(
-      BackgroundWork(
-        tasks: const [
-          BackgroundTask(
-            id: 'bg1',
-            kind: BackgroundKind.shell,
-            status: BackgroundStatus.running,
-            title: 'npm run dev -- --port 5173',
-          ),
-        ],
-      ),
-    );
+    h.transports['a']!.paneTexts['a1:p2'] = _output();
     final rec = ClipRecorder(dir);
-    const total = 3;
 
     await shoot(
       tester,
-      AgentSessionScreen(session: session),
+      PaneScreen(agent: PaneAgent('a', 'a1:p2')),
       '$dir/last.png',
+      brightness: Brightness.dark,
       wrap: (app) => demoProviders(h)(rec.wrap(app)),
       pump: (t) async {
-        Future<void> real() async {
-          // Thumbnails and pictures are read and decoded on the engine's real clock.
-          for (var i = 0; i < 8; i++) {
-            await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
-            await rec.hold(t, const Duration(milliseconds: 100));
-          }
-        }
-
+        await h.online(t);
+        await h.setStatus(t, 'a1:p2', 'idle');
         await t.pump(const Duration(seconds: 1));
-        await rec.hold(t, const Duration(milliseconds: 800));
+        await rec.hold(t, const Duration(milliseconds: 1200));
 
-        // 1. Apps say what is running, with their pages under them.
-        rec.chapter(1, total, 'Apps say what is running', top: true);
-        await rec.tap(t, find.text('Made'), 'Open Made');
-        await rec.hold(t, const Duration(milliseconds: 900));
-        await rec.tap(t, find.text('Apps'), 'Apps');
-        await rec.hold(t, const Duration(milliseconds: 2200));
-
-        // 2. The tabs swipe.
-        rec.chapter(2, total, 'Swipe between tabs', top: true);
-        final size = t.view.physicalSize / t.view.devicePixelRatio;
-        final list = Offset(size.width / 2, size.height * 0.72);
-        await rec.drag(
+        // 1. Selected text is easy to see.
+        rec.chapter(1, 1, 'Selected text is easy to see');
+        // Rows are ~14.9 dp apart from y = 100: start on the word `Updated` and
+        // end on the last menu row.
+        const from = Offset(85, 145);
+        await rec.hold(t, const Duration(milliseconds: 500));
+        await rec.pressDrag(
           t,
-          list,
-          const Offset(-240, 0),
-          'Swipe sideways',
-          over: const Duration(milliseconds: 500),
-          rest: const Duration(milliseconds: 600),
+          from,
+          const Offset(175, 223),
+          'Press and hold, then drag',
+          press: const Duration(milliseconds: 700),
+          over: const Duration(milliseconds: 1600),
+          // Held under the finger: lifting would open the copy toolbar, which a
+          // test draws in the placeholder font.
+          rest: const Duration(milliseconds: 1500),
         );
-        await rec.hold(t, const Duration(milliseconds: 700));
-        await rec.drag(
-          t,
-          list,
-          const Offset(-240, 0),
-          'Again',
-          over: const Duration(milliseconds: 500),
-          rest: const Duration(milliseconds: 600),
-        );
-        await real();
-        await rec.hold(t, const Duration(milliseconds: 1000));
-
-        // 3. A picture opens over the list; swipe to the next; Back returns to the list.
-        rec.chapter(3, total, 'Open a picture, swipe to the next', top: true);
-        await rec.tap(t, find.text('checkout_6.png'), 'Open a picture');
-        await real();
-        await rec.hold(t, const Duration(milliseconds: 900));
-        await rec.drag(
-          t,
-          Offset(size.width * 0.8, size.height * 0.45),
-          const Offset(-280, 0),
-          'Swipe to the next',
-          over: const Duration(milliseconds: 500),
-          rest: const Duration(milliseconds: 500),
-        );
-        await real();
-        await rec.hold(t, const Duration(milliseconds: 900));
-        Navigator.of(t.element(find.byType(PhotoViewer))).pop();
-        await rec.hold(t, const Duration(milliseconds: 1600));
       },
     );
     rec.finish();
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 2));
-    session.dispose();
     h.dispose();
   });
 }

@@ -4,11 +4,22 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
-## [Unreleased]
+## [0.1.42] - 2026-10-28
 
-- Text you select in a pane is easier to see on the dark terminal: the highlight is a
-  brighter indigo, where it was almost the colour of the page. The paper terminal is
-  unchanged.
+[![Watch what's new · 1 change · 0:07 · 2.3 MB](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.42/0.1.42-whats-new.jpg)](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.42/0.1.42-whats-new.mp4)
+
+### Selected text is easy to see
+
+Text you select in a pane now shows as a clear indigo band on the dark
+terminal. Before, it was almost the colour of the page, so it was hard to
+tell what you had selected.
+
+> [!TIP]
+> Try it: in a pane, press and hold on some output, then drag over it.
+
+- The paper terminal is unchanged.
+
+![A pane in the dark theme with a diff, a test line and a numbered list selected, shown as an indigo band](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.42/0.1.42-brighter-selection.png)
 
 ## [0.1.41] - 2026-10-28
 
