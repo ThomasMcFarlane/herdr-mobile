@@ -67,9 +67,7 @@ class SshAgentHost implements AgentHost {
 
   @override
   Future<Set<String>> available() async {
-    final out = await _withInstall(
-      () => _run(keeperProbeCommand(), quickTimeout, 'check the agents'),
-    );
+    final out = await _withInstall(() => _run(keeperProbeCommand(), quickTimeout, 'check the agents'));
     final answer = _json<Map<Object?, Object?>>(out, 'the agent check');
     final routes = answer['routes'];
     if (routes is! List) throw _unexpected(out, 'the agent check');
@@ -78,9 +76,7 @@ class SshAgentHost implements AgentHost {
 
   @override
   Future<List<KeeperInfo>> list() async {
-    final out = await _withInstall(
-      () => _run(keeperListCommand(), quickTimeout, 'list the sessions'),
-    );
+    final out = await _withInstall(() => _run(keeperListCommand(), quickTimeout, 'list the sessions'));
     final rows = _json<List<Object?>>(out, 'the session list');
     return KeeperInfo.listFromJson(rows);
   }
@@ -167,9 +163,7 @@ class SshAgentHost implements AgentHost {
 
   @override
   Future<void> kill(String keeperId) async {
-    await _withInstall(
-      () => _run(keeperKillCommand(keeperId), quickTimeout, 'end the session', needsOutput: false),
-    );
+    await _withInstall(() => _run(keeperKillCommand(keeperId), quickTimeout, 'end the session', needsOutput: false));
   }
 
   @override
@@ -213,10 +207,7 @@ class SshAgentHost implements AgentHost {
       throw AgentHostException(e.message, fatal: e.fatal);
     }
     if (_present || !verify) return channel;
-    final early = await channel.exitCode.then<int?>((c) => c).timeout(
-          attachCheck,
-          onTimeout: () => -1,
-        );
+    final early = await channel.exitCode.then<int?>((c) => c).timeout(attachCheck, onTimeout: () => -1);
     if (early == _notInstalledExit) {
       _present = false;
       unawaited(channel.close());
@@ -243,9 +234,7 @@ class SshAgentHost implements AgentHost {
       return await op();
     } on _NotInstalled {
       _present = false;
-      throw const AgentHostException(
-        'The agent helper is still missing on the machine after installing it.',
-      );
+      throw const AgentHostException('The agent helper is still missing on the machine after installing it.');
     }
   }
 
@@ -255,12 +244,7 @@ class SshAgentHost implements AgentHost {
   Future<void> _doInstall() async {
     final _Output out;
     try {
-      out = await _run(
-        keeperInstallCommand(),
-        installTimeout,
-        'set up agent sessions',
-        input: keeperInstallPayload(),
-      );
+      out = await _run(keeperInstallCommand(), installTimeout, 'set up agent sessions', input: keeperInstallPayload());
     } on _NotInstalled {
       throw const AgentHostException('The machine could not set up agent sessions.');
     }
@@ -268,14 +252,10 @@ class SshAgentHost implements AgentHost {
     try {
       answer = _json<Map<Object?, Object?>>(out, 'the agent setup');
     } on AgentHostException {
-      throw AgentHostException(
-        'The machine could not set up agent sessions.${_after(out.stderr)}',
-      );
+      throw AgentHostException('The machine could not set up agent sessions.${_after(out.stderr)}');
     }
     if (answer['ok'] != true) {
-      throw AgentHostException(
-        'The machine could not set up agent sessions.${_after(out.stderr)}',
-      );
+      throw AgentHostException('The machine could not set up agent sessions.${_after(out.stderr)}');
     }
     _installs++;
     _present = true;
@@ -285,13 +265,7 @@ class SshAgentHost implements AgentHost {
   /// The channel is closed on every path. With [input] the text is written to
   /// the command's stdin and stdin is then closed (a command that reads to
   /// end of input, then answers).
-  Future<_Output> _run(
-    String command,
-    Duration timeout,
-    String what, {
-    bool needsOutput = true,
-    String? input,
-  }) async {
+  Future<_Output> _run(String command, Duration timeout, String what, {bool needsOutput = true, String? input}) async {
     final ExecChannel channel;
     final opening = _transport.openExec(command);
     try {
@@ -305,11 +279,7 @@ class SshAgentHost implements AgentHost {
     }
     final lines = <String>[];
     final ended = Completer<void>();
-    final sub = channel.lines.listen(
-      lines.add,
-      onError: (Object _) {},
-      onDone: ended.complete,
-    );
+    final sub = channel.lines.listen(lines.add, onError: (Object _) {}, onDone: ended.complete);
     try {
       if (input != null) {
         // `send` adds the final newline itself.
@@ -318,9 +288,7 @@ class SshAgentHost implements AgentHost {
       }
       final int? code;
       try {
-        code = await Future.wait<Object?>([ended.future, channel.exitCode])
-            .then((r) => r[1] as int?)
-            .timeout(timeout);
+        code = await Future.wait<Object?>([ended.future, channel.exitCode]).then((r) => r[1] as int?).timeout(timeout);
       } on TimeoutException {
         throw AgentHostException('The machine did not answer in time ($what).');
       }
@@ -328,9 +296,7 @@ class SshAgentHost implements AgentHost {
       if (code == _notInstalledExit) throw const _NotInstalled();
       if (code != 0) throw _failure(code, out.stderr, what);
       if (needsOutput && lines.isEmpty) {
-        throw AgentHostException(
-          'The machine answered nothing ($what).${_after(out.stderr)}',
-        );
+        throw AgentHostException('The machine answered nothing ($what).${_after(out.stderr)}');
       }
       _present = true;
       return out;
@@ -348,9 +314,7 @@ class SshAgentHost implements AgentHost {
 
   static AgentHostException _unexpected(_Output out, String what) {
     final last = out.lines.isEmpty ? '' : _excerpt(out.lines.last, 120);
-    return AgentHostException(
-      'The machine answered something unexpected for $what${last.isEmpty ? '' : ': $last'}',
-    );
+    return AgentHostException('The machine answered something unexpected for $what${last.isEmpty ? '' : ': $last'}');
   }
 
   /// The last line of [out] that is a JSON [T]. Earlier lines are ignored:
@@ -387,23 +351,14 @@ AgentHostException _failure(int? code, String stderr, String what) {
   String or(String fallback) => said.isEmpty ? fallback : said;
   return switch (code) {
     null => const AgentHostException('The connection to the machine dropped.'),
-    66 => AgentHostException(
-        or('That folder or session does not exist on the machine.'),
-        fatal: true,
-      ),
+    66 => AgentHostException(or('That folder or session does not exist on the machine.'), fatal: true),
     67 => AgentHostException(or('The agent of this session has exited.'), fatal: true),
     69 => AgentHostException(or('That agent is not installed on the machine.'), fatal: true),
     65 => AgentHostException(or('The agent helper is not installed on the machine.')),
     70 => AgentHostException(or('The agent exited while starting.')),
     78 => AgentHostException(or('Agent sessions need python3 on this machine.'), fatal: true),
-    64 => AgentHostException(
-        or('The app asked the machine something it did not understand.'),
-        fatal: true,
-      ),
-    126 || 127 => AgentHostException(
-        or('The machine could not run the command (command not found).'),
-        fatal: true,
-      ),
+    64 => AgentHostException(or('The app asked the machine something it did not understand.'), fatal: true),
+    126 || 127 => AgentHostException(or('The machine could not run the command (command not found).'), fatal: true),
     _ => AgentHostException(or('Could not $what (exit status $code).')),
   };
 }
@@ -411,8 +366,7 @@ AgentHostException _failure(int? code, String stderr, String what) {
 /// The words for a keeper command that exited with [code] (null: the connection
 /// dropped) after it was running: [stderr] is its last words, [what] says what
 /// the person was doing ("follow the session").
-AgentHostException keeperCommandFailure(int? code, String stderr, String what) =>
-    _failure(code, stderr, what);
+AgentHostException keeperCommandFailure(int? code, String stderr, String what) => _failure(code, stderr, what);
 
 class _Output {
   const _Output(this.lines, this.stderr);
@@ -433,21 +387,14 @@ class _Output {
 /// keeper's own notifications and the connection state say why.
 class KeeperAttachment implements AcpTransport {
   KeeperAttachment._(this._channel) {
-    _channel.lines.listen(
-      _out.add,
-      onError: _out.addError,
-      onDone: _ended,
-    );
+    _channel.lines.listen(_out.add, onError: _out.addError, onDone: _ended);
   }
 
   final ExecChannel _channel;
   final _endReason = Completer<AgentHostException?>();
 
   // Synchronous, like the stream it forwards: see `splitLines`.
-  late final StreamController<String> _out = StreamController<String>(
-    sync: true,
-    onCancel: close,
-  );
+  late final StreamController<String> _out = StreamController<String>(sync: true, onCancel: close);
 
   Future<void> _ended() async {
     AgentHostException? reason;

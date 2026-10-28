@@ -43,8 +43,12 @@ const acpProtocolVersion = 1;
 class AcpImplementation {
   const AcpImplementation({required this.name, this.title, this.version = '', this.meta});
 
-  factory AcpImplementation.parse(Json j) =>
-      AcpImplementation(name: _s(j['name']) ?? '', title: _s(j['title']), version: _s(j['version']) ?? '', meta: _m(j['_meta']));
+  factory AcpImplementation.parse(Json j) => AcpImplementation(
+    name: _s(j['name']) ?? '',
+    title: _s(j['title']),
+    version: _s(j['version']) ?? '',
+    meta: _m(j['_meta']),
+  );
 
   final String name;
   final String? title;
@@ -151,8 +155,12 @@ class AcpAgentCapabilities {
 class AcpAuthMethod {
   const AcpAuthMethod({required this.id, required this.name, this.description, this.type});
 
-  factory AcpAuthMethod.parse(Json j) =>
-      AcpAuthMethod(id: _s(j['id']) ?? '', name: _s(j['name']) ?? '', description: _s(j['description']), type: _s(j['type']));
+  factory AcpAuthMethod.parse(Json j) => AcpAuthMethod(
+    id: _s(j['id']) ?? '',
+    name: _s(j['name']) ?? '',
+    description: _s(j['description']),
+    type: _s(j['type']),
+  );
 
   final String id;
   final String name;
@@ -474,7 +482,14 @@ List<ToolLocation> _locations(Object? v) =>
 /// capped at [outputKeep] characters; the start is dropped first and
 /// [cutChars] says how much.
 class ToolOutput {
-  const ToolOutput({this.text = '', this.cutChars = 0, this.progress = '', this.exited = false, this.exitCode, this.signal});
+  const ToolOutput({
+    this.text = '',
+    this.cutChars = 0,
+    this.progress = '',
+    this.exited = false,
+    this.exitCode,
+    this.signal,
+  });
 
   /// What the command printed, in arrival order, escape sequences untouched.
   final String text;
@@ -948,7 +963,14 @@ sealed class ConfigOption {
           value: _b(j['currentValue']),
         );
       default:
-        return UnknownConfigOption(id: id, name: name, description: description, category: category, meta: meta, raw: j);
+        return UnknownConfigOption(
+          id: id,
+          name: name,
+          description: description,
+          category: category,
+          meta: meta,
+          raw: j,
+        );
     }
   }
 
@@ -1259,7 +1281,12 @@ class PermissionRequest {
         final id = _s(o['optionId']);
         if (id == null) return null;
         final kind = _s(o['kind']);
-        return PermissionOption(optionId: id, name: _s(o['name']) ?? id, kind: PermissionOptionKind.parse(kind), rawKind: kind);
+        return PermissionOption(
+          optionId: id,
+          name: _s(o['name']) ?? id,
+          kind: PermissionOptionKind.parse(kind),
+          rawKind: kind,
+        );
       }),
       title: _s(j['title']),
       description: _s(j['description']),
@@ -1431,7 +1458,14 @@ class BooleanField extends ElicitationField {
 }
 
 class UnknownField extends ElicitationField {
-  const UnknownField({required super.name, super.title, super.description, super.required, required this.type, required this.raw});
+  const UnknownField({
+    required super.name,
+    super.title,
+    super.description,
+    super.required,
+    required this.type,
+    required this.raw,
+  });
 
   final String type;
   final Json raw;
@@ -1455,10 +1489,15 @@ class ElicitationSchema {
   final String? description;
   final List<ElicitationField> fields;
 
-  static List<EnumChoice> _titled(Object? v) =>
-      _parseList(v, (o) => _s(o['const']) == null ? null : EnumChoice(_s(o['const'])!, _s(o['title']) ?? _s(o['const'])!));
+  static List<EnumChoice> _titled(Object? v) => _parseList(
+    v,
+    (o) => _s(o['const']) == null ? null : EnumChoice(_s(o['const'])!, _s(o['title']) ?? _s(o['const'])!),
+  );
 
-  static List<EnumChoice> _plain(Object? v) => [for (final e in _l(v)) if (e is String) EnumChoice(e, e)];
+  static List<EnumChoice> _plain(Object? v) => [
+    for (final e in _l(v))
+      if (e is String) EnumChoice(e, e),
+  ];
 
   static ElicitationField _parseField(String name, Json p, bool required) {
     final title = _s(p['title']);
@@ -1533,9 +1572,7 @@ class ElicitationSchema {
     final errors = <String, String>{};
     for (final f in fields) {
       final v = content[f.name];
-      if (v == null ||
-          (v is String && v.isEmpty) ||
-          (v is List && v.isEmpty)) {
+      if (v == null || (v is String && v.isEmpty) || (v is List && v.isEmpty)) {
         if (f.required) errors[f.name] = 'required';
         continue;
       }
@@ -1695,11 +1732,26 @@ sealed class SessionUpdate {
   static SessionUpdate _parse(String type, Json j) {
     switch (type) {
       case 'user_message_chunk':
-        return MessageChunk(MessageRole.user, _s(j['messageId']), ContentBlock.parse(j['content']), meta: _m(j['_meta']));
+        return MessageChunk(
+          MessageRole.user,
+          _s(j['messageId']),
+          ContentBlock.parse(j['content']),
+          meta: _m(j['_meta']),
+        );
       case 'agent_message_chunk':
-        return MessageChunk(MessageRole.agent, _s(j['messageId']), ContentBlock.parse(j['content']), meta: _m(j['_meta']));
+        return MessageChunk(
+          MessageRole.agent,
+          _s(j['messageId']),
+          ContentBlock.parse(j['content']),
+          meta: _m(j['_meta']),
+        );
       case 'agent_thought_chunk':
-        return MessageChunk(MessageRole.thought, _s(j['messageId']), ContentBlock.parse(j['content']), meta: _m(j['_meta']));
+        return MessageChunk(
+          MessageRole.thought,
+          _s(j['messageId']),
+          ContentBlock.parse(j['content']),
+          meta: _m(j['_meta']),
+        );
       case 'user_message':
       case 'agent_message':
       case 'agent_thought':
@@ -2034,7 +2086,12 @@ class AsyncTaskStateUpdate extends SessionUpdate {
 
 /// One entry of Claude Code's `background_tasks_changed`.
 class SdkBackgroundTask {
-  const SdkBackgroundTask({required this.taskId, required this.taskType, required this.description, this.ambient = false});
+  const SdkBackgroundTask({
+    required this.taskId,
+    required this.taskType,
+    required this.description,
+    this.ambient = false,
+  });
 
   final String taskId;
 

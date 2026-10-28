@@ -50,14 +50,11 @@ void main() {
     content: [ToolDiff(path: path, oldText: old ?? 'old', newText: text)],
   );
 
-  TranscriptTool read(String id, String path) => toolItem(
-    id,
-    title: 'Read',
-    kind: ToolKind.read,
-    rawInput: {'file_path': path},
-  );
+  TranscriptTool read(String id, String path) =>
+      toolItem(id, title: 'Read', kind: ToolKind.read, rawInput: {'file_path': path});
 
-  TranscriptTool failedRun(String id) => toolItem(id, title: 'flutter test', kind: ToolKind.execute, status: ToolStatus.failed);
+  TranscriptTool failedRun(String id) =>
+      toolItem(id, title: 'flutter test', kind: ToolKind.execute, status: ToolStatus.failed);
 
   group('the plan of a turn', () {
     test('planned in steps it is the plan of a full pass, after every event of every recorded turn', () {
@@ -215,7 +212,17 @@ void main() {
       open.add('tool:r1:group');
       plan.refresh('tool:r1:group');
       plan.update(items);
-      expect(keys(plan), ['u', 'u:log', 'tool:r1:group', 'tool:r1', 'tool:r2', 'tool:s1', 'tool:bad', 'tool:r3', 'a#0']);
+      expect(keys(plan), [
+        'u',
+        'u:log',
+        'tool:r1:group',
+        'tool:r1',
+        'tool:r2',
+        'tool:s1',
+        'tool:bad',
+        'tool:r3',
+        'a#0',
+      ]);
       expect(plan.rows[3].nested, isTrue);
     });
 
@@ -270,7 +277,12 @@ void main() {
       final plan = TranscriptPlan()
         ..update([
           userMsg('u', 'go'),
-          toolItem('e', kind: ToolKind.edit, status: ToolStatus.failed, content: const [ToolDiff(path: '/a/x', newText: 'x')]),
+          toolItem(
+            'e',
+            kind: ToolKind.edit,
+            status: ToolStatus.failed,
+            content: const [ToolDiff(path: '/a/x', newText: 'x')],
+          ),
           agentMsg('a', 'Failed.'),
         ]);
       expect(plan.rows.where((r) => r.kind == TranscriptRowKind.changedHead), isEmpty);
@@ -278,7 +290,11 @@ void main() {
 
     test('only the turns from the first changed one are planned again', () {
       final items = <TranscriptItem>[
-        for (var i = 0; i < 300; i++) ...[userMsg('u$i', 'q$i'), read('r$i', '/a/f.dart'), agentMsg('a$i', 'answer $i')],
+        for (var i = 0; i < 300; i++) ...[
+          userMsg('u$i', 'q$i'),
+          read('r$i', '/a/f.dart'),
+          agentMsg('a$i', 'answer $i'),
+        ],
       ];
       final plan = TranscriptPlan()..update(items);
       expect(plan.plannedTurns, 300);
@@ -340,14 +356,20 @@ void main() {
     });
 
     test('a message with no text has no rows, and does not push the next gap', () {
-      final plan = TranscriptPlan()..update([userMsg('u', 'hi'), agentMsg('a', ''), toolItem('t', title: 'Run')], live: true);
+      final plan = TranscriptPlan()
+        ..update([userMsg('u', 'hi'), agentMsg('a', ''), toolItem('t', title: 'Run')], live: true);
       expect(keys(plan), ['u', 'tool:t']);
       expect(plan.rows.last.gap, 6, reason: 'measured from the prompt: the empty message made no row');
     });
 
     test('the answer that becomes narration (a call starts after it) keeps its key and its gap', () {
-      var s = stateWith(items: [userMsg('u', 'go'), toolItem('t1', title: 'Read', kind: ToolKind.read)], turnActive: true)
-          .apply(const MessageChunk(MessageRole.agent, 'a', TextBlock('I will run the tests now.')));
+      var s = stateWith(
+        items: [
+          userMsg('u', 'go'),
+          toolItem('t1', title: 'Read', kind: ToolKind.read),
+        ],
+        turnActive: true,
+      ).apply(const MessageChunk(MessageRole.agent, 'a', TextBlock('I will run the tests now.')));
       final key = s.liveKey!;
       final answer = TranscriptPlan()..update(s.items, live: true);
       expect(keys(answer), ['u', 'tool:t1', '$key#live']);

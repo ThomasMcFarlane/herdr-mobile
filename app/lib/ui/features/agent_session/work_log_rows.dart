@@ -3,7 +3,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/acp/session_state.dart';
 import '../../../data/acp/turns/turns.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../render/markdown/markdown.dart';
 import 'code_panel.dart';
 import 'transcript_rows.dart';
@@ -50,28 +52,28 @@ class FoldRow extends StatelessWidget {
           semanticLabel: parts.join(', '),
           minHeight: kMinTap,
           padding: const EdgeInsets.symmetric(horizontal: Gap.xs, vertical: Gap.xs),
-            child: Row(
-              children: [
-                Caret(open: open),
-                const SizedBox(width: Gap.sm),
-                Expanded(
-                  child: Text.rich(
-                    TextSpan(
-                      style: base,
-                      children: [
-                        for (final (i, part) in parts.indexed) ...[
-                          if (i > 0) const TextSpan(text: ' \u00b7 '),
-                          TextSpan(
-                            text: part,
-                            style: part.endsWith(' failed') ? base.copyWith(color: ds.dangerText) : null,
-                          ),
-                        ],
+          child: Row(
+            children: [
+              Caret(open: open),
+              const SizedBox(width: Gap.sm),
+              Expanded(
+                child: Text.rich(
+                  TextSpan(
+                    style: base,
+                    children: [
+                      for (final (i, part) in parts.indexed) ...[
+                        if (i > 0) const TextSpan(text: ' \u00b7 '),
+                        TextSpan(
+                          text: part,
+                          style: part.endsWith(' failed') ? base.copyWith(color: ds.dangerText) : null,
+                        ),
                       ],
-                    ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -124,7 +126,9 @@ class ThinkingRow extends StatelessWidget {
       padding: const EdgeInsets.only(left: Gap.sm + Gap.xs, bottom: Gap.sm),
       child: Container(
         padding: const EdgeInsets.only(left: Gap.md),
-        decoration: BoxDecoration(border: Border(left: BorderSide(color: ds.hairline, width: 2))),
+        decoration: BoxDecoration(
+          border: Border(left: BorderSide(color: ds.hairline, width: 2)),
+        ),
         child: MdToneScope(
           tone: MdTone.quiet,
           child: Column(
@@ -151,16 +155,13 @@ class ThinkingRow extends StatelessWidget {
               semanticLabel: 'Thinking',
               minHeight: kMinTap,
               padding: const EdgeInsets.symmetric(horizontal: Gap.xs),
-                child: Row(
-                  children: [
-                    Icon(LucideIcons.brain, size: IconSize.row, color: ds.textSecondary),
-                    const SizedBox(width: Gap.sm),
-                    Text(
-                      'Thinking',
-                      style: Type.secondaryStrong.copyWith(color: ds.textSecondary),
-                    ),
-                  ],
-                ),
+              child: Row(
+                children: [
+                  Icon(LucideIcons.brain, size: IconSize.row, color: ds.textSecondary),
+                  const SizedBox(width: Gap.sm),
+                  Text('Thinking', style: Type.secondaryStrong.copyWith(color: ds.textSecondary)),
+                ],
+              ),
             ),
           ),
           if (open)
@@ -204,20 +205,21 @@ class GroupRow extends StatelessWidget {
           semanticLabel: label,
           minHeight: kMinTap,
           padding: const EdgeInsets.symmetric(horizontal: Gap.xs, vertical: Gap.xs),
-            child: Row(
-              children: [
-                Icon(group.reads > 0 ? LucideIcons.fileText : LucideIcons.search, size: IconSize.row, color: ds.textSecondary),
-                const SizedBox(width: Gap.sm),
-                Expanded(
-                  child: Text(
-                    visibleText(label),
-                    style: Type.secondaryStrong.copyWith(color: ds.textSecondary),
-                  ),
-                ),
-                const SizedBox(width: Gap.sm),
-                Caret(open: open),
-              ],
-            ),
+          child: Row(
+            children: [
+              Icon(
+                group.reads > 0 ? LucideIcons.fileText : LucideIcons.search,
+                size: IconSize.row,
+                color: ds.textSecondary,
+              ),
+              const SizedBox(width: Gap.sm),
+              Expanded(
+                child: Text(visibleText(label), style: Type.secondaryStrong.copyWith(color: ds.textSecondary)),
+              ),
+              const SizedBox(width: Gap.sm),
+              Caret(open: open),
+            ],
+          ),
         ),
       ),
     );

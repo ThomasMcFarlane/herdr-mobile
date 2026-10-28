@@ -114,10 +114,19 @@ void main() {
 
   group('colours', () {
     testWidgets('every token kind reads on the block background, light and dark', (tester) async {
-      for (final (name, theme) in [('light', AppTheme.light()), ('dark', AppTheme.dark()), ('dark terminal on paper', AppTheme.light(terminal: TerminalPalette.dark)), ('light terminal on ink', AppTheme.dark(terminal: TerminalPalette.light))]) {
+      for (final (name, theme) in [
+        ('light', AppTheme.light()),
+        ('dark', AppTheme.dark()),
+        ('dark terminal on paper', AppTheme.light(terminal: TerminalPalette.dark)),
+        ('light terminal on ink', AppTheme.dark(terminal: TerminalPalette.light)),
+      ]) {
         final colors = await _colors(tester, theme);
         for (final kind in TokenKind.values) {
-          expect(_contrast(colors.of(kind), colors.background), greaterThanOrEqualTo(4.5), reason: '$name ${kind.name}');
+          expect(
+            _contrast(colors.of(kind), colors.background),
+            greaterThanOrEqualTo(4.5),
+            reason: '$name ${kind.name}',
+          );
         }
         expect(_contrast(colors.muted, colors.background), greaterThanOrEqualTo(4.5), reason: '$name label');
       }

@@ -37,12 +37,11 @@ typedef _P = ({String id, String ws, String? agent, String status});
 
 /// The panes of [ids] as the board orders its Working section.
 List<String> _workingOrder(MachineConnection c, List<String> ids) => [
-      for (final r in groupByStatus([
-        for (final id in ids)
-          agentRow(FleetAgent(machine: c, pane: c.paneById(id)!, workspace: null), showMachine: false),
-      ])[AgentStatus.working]!)
-        r.paneId,
-    ];
+  for (final r in groupByStatus([
+    for (final id in ids) agentRow(FleetAgent(machine: c, pane: c.paneById(id)!, workspace: null), showMachine: false),
+  ])[AgentStatus.working]!)
+    r.paneId,
+];
 
 _P _pane(String id, String status) => (id: id, ws: 'w1', agent: 'claude', status: status);
 
@@ -60,9 +59,9 @@ class _Rig {
     Duration poll = const Duration(hours: 1),
     Map<String, int> seq = const {},
     FakeTransport? transport,
-  })  : now = start ?? _t0,
-        reviewed = reviewed ?? ReviewedState(),
-        t = transport ?? FakeTransport(snapshotJson(panes: panes, completionSeq: seq)) {
+  }) : now = start ?? _t0,
+       reviewed = reviewed ?? ReviewedState(),
+       t = transport ?? FakeTransport(snapshotJson(panes: panes, completionSeq: seq)) {
     c = MachineConnection(
       profile: const MachineProfile(id: 'm', label: 'box', host: 'h', username: 'u'),
       api: HerdrApi(t),
@@ -124,16 +123,14 @@ class _Rig {
 
   /// A `pane_updated` event identical to what the snapshot says of [id].
   Map<String, dynamic> event(String id) => {
-        'event': 'pane_updated',
-        'data': {
-          'type': 'pane_updated',
-          'pane': Map<String, dynamic>.of(
-            (t.snapshot['panes'] as List)
-                .cast<Map<String, dynamic>>()
-                .firstWhere((p) => p['pane_id'] == id),
-          ),
-        },
-      };
+    'event': 'pane_updated',
+    'data': {
+      'type': 'pane_updated',
+      'pane': Map<String, dynamic>.of(
+        (t.snapshot['panes'] as List).cast<Map<String, dynamic>>().firstWhere((p) => p['pane_id'] == id),
+      ),
+    },
+  };
 
   AgentStatus status(String id) => c.paneById(id)!.status;
 }
@@ -144,15 +141,14 @@ void _rig(
   void Function(_Rig r) body, {
   Duration poll = const Duration(hours: 1),
   Map<String, int> seq = const {},
-}) =>
-    test(name, () {
-      fakeAsync((async) {
-        final r = _Rig(async, panes, poll: poll, seq: seq);
-        body(r);
-        r.c.dispose();
-        async.flushMicrotasks();
-      });
-    });
+}) => test(name, () {
+  fakeAsync((async) {
+    final r = _Rig(async, panes, poll: poll, seq: seq);
+    body(r);
+    r.c.dispose();
+    async.flushMicrotasks();
+  });
+});
 
 /// Previews never read: these tests send typed text and keys, which go
 /// without re-reading the pane.
@@ -305,9 +301,7 @@ void main() {
         expect(await PrefsReviewedStore().read(), isNull, reason: garbage);
       }
       SharedPreferences.resetStatic();
-      SharedPreferences.setMockInitialValues({
-        'reviewed.v1': '{"m": {"w1:p1": "seq:1", "w1:p2": 7}, "n": "x"}',
-      });
+      SharedPreferences.setMockInitialValues({'reviewed.v1': '{"m": {"w1:p1": "seq:1", "w1:p2": 7}, "n": "x"}'});
       expect(await PrefsReviewedStore().read(), {
         'm': {'w1:p1': 'seq:1'},
       }, reason: 'only well-formed entries survive');
@@ -315,82 +309,88 @@ void main() {
   });
 
   group('one effective status', () {
-    _rig('a reviewed done shows as idle in panes and roll-ups, and herdr is told nothing', [
-      _pane('w1:p1', 'done'),
-      _pane('w1:p2', 'working'),
-    ], (r) {
-      r.rollup('done');
-      expect(r.c.snapshot.workspaces.single.status, AgentStatus.done);
+    _rig(
+      'a reviewed done shows as idle in panes and roll-ups, and herdr is told nothing',
+      [_pane('w1:p1', 'done'), _pane('w1:p2', 'working')],
+      (r) {
+        r.rollup('done');
+        expect(r.c.snapshot.workspaces.single.status, AgentStatus.done);
 
-      expect(r.c.markReviewed('w1:p1'), isTrue);
+        expect(r.c.markReviewed('w1:p1'), isTrue);
 
-      expect(r.status('w1:p1'), AgentStatus.idle);
-      expect(r.status('w1:p2'), AgentStatus.working);
-      expect(r.c.snapshot.agentPanes.map((p) => p.status), [AgentStatus.idle, AgentStatus.working]);
-      expect(r.c.snapshot.workspaces.single.status, AgentStatus.working,
-          reason: 'the roll-up is worked out again from what its panes show');
-      expect(r.c.snapshot.tabs.single.status, AgentStatus.working);
-      expect(r.t.calls.map((c) => c.$1).toSet(), {'session.snapshot'},
-          reason: 'only reads: never a focus, which would move the desktop view');
-    });
+        expect(r.status('w1:p1'), AgentStatus.idle);
+        expect(r.status('w1:p2'), AgentStatus.working);
+        expect(r.c.snapshot.agentPanes.map((p) => p.status), [AgentStatus.idle, AgentStatus.working]);
+        expect(
+          r.c.snapshot.workspaces.single.status,
+          AgentStatus.working,
+          reason: 'the roll-up is worked out again from what its panes show',
+        );
+        expect(r.c.snapshot.tabs.single.status, AgentStatus.working);
+        expect(r.t.calls.map((c) => c.$1).toSet(), {
+          'session.snapshot',
+        }, reason: 'only reads: never a focus, which would move the desktop view');
+      },
+    );
 
-    _rig('unmarkReviewed takes back the review of the same finished state only', [
-      _pane('w1:p1', 'done'),
-      _pane('w1:p2', 'done'),
-    ], seq: {'w1:p1': 3}, (r) {
-      r.rollup('done');
-      expect(r.c.unmarkReviewed('w1:p1'), isFalse, reason: 'nothing was reviewed');
-      expect(r.c.unmarkReviewed('nope'), isFalse);
+    _rig(
+      'unmarkReviewed takes back the review of the same finished state only',
+      [_pane('w1:p1', 'done'), _pane('w1:p2', 'done')],
+      seq: {'w1:p1': 3},
+      (r) {
+        r.rollup('done');
+        expect(r.c.unmarkReviewed('w1:p1'), isFalse, reason: 'nothing was reviewed');
+        expect(r.c.unmarkReviewed('nope'), isFalse);
 
-      r.c.markReviewed('w1:p1');
-      r.c.markReviewed('w1:p2');
-      expect(r.status('w1:p1'), AgentStatus.idle);
+        r.c.markReviewed('w1:p1');
+        r.c.markReviewed('w1:p2');
+        expect(r.status('w1:p1'), AgentStatus.idle);
 
-      expect(r.c.unmarkReviewed('w1:p1'), isTrue);
-      expect(r.status('w1:p1'), AgentStatus.done, reason: 'shown as finished again, at once');
-      expect(r.status('w1:p2'), AgentStatus.idle, reason: 'the other review stays');
-      expect(r.reviewed.length, 1);
-      expect(r.c.unmarkReviewed('w1:p1'), isFalse, reason: 'already taken back');
+        expect(r.c.unmarkReviewed('w1:p1'), isTrue);
+        expect(r.status('w1:p1'), AgentStatus.done, reason: 'shown as finished again, at once');
+        expect(r.status('w1:p2'), AgentStatus.idle, reason: 'the other review stays');
+        expect(r.reviewed.length, 1);
+        expect(r.c.unmarkReviewed('w1:p1'), isFalse, reason: 'already taken back');
 
-      // It finished anew since (another completion): the old review is not
-      // the one on show, so an undo takes nothing back.
-      r.c.markReviewed('w1:p1');
-      r.server([_pane('w1:p1', 'done'), _pane('w1:p2', 'done')], seq: {'w1:p1': 4});
-      expect(r.status('w1:p1'), AgentStatus.done);
-      expect(r.c.unmarkReviewed('w1:p1'), isFalse);
-    });
+        // It finished anew since (another completion): the old review is not
+        // the one on show, so an undo takes nothing back.
+        r.c.markReviewed('w1:p1');
+        r.server([_pane('w1:p1', 'done'), _pane('w1:p2', 'done')], seq: {'w1:p1': 4});
+        expect(r.status('w1:p1'), AgentStatus.done);
+        expect(r.c.unmarkReviewed('w1:p1'), isFalse);
+      },
+    );
 
-    _rig('a roll-up stays done while another finished agent is unreviewed', [
-      _pane('w1:p1', 'done'),
-      _pane('w1:p2', 'done'),
-    ], (r) {
-      r.rollup('done');
-      r.c.markReviewed('w1:p1');
-      expect(r.c.snapshot.workspaces.single.status, AgentStatus.done);
+    _rig(
+      'a roll-up stays done while another finished agent is unreviewed',
+      [_pane('w1:p1', 'done'), _pane('w1:p2', 'done')],
+      (r) {
+        r.rollup('done');
+        r.c.markReviewed('w1:p1');
+        expect(r.c.snapshot.workspaces.single.status, AgentStatus.done);
 
-      r.c.markReviewed('w1:p2');
-      expect(r.c.snapshot.workspaces.single.status, AgentStatus.idle);
-    });
+        r.c.markReviewed('w1:p2');
+        expect(r.c.snapshot.workspaces.single.status, AgentStatus.idle);
+      },
+    );
 
-    _rig('only done can be reviewed, and only a pane that exists', [
-      _pane('w1:p1', 'blocked'),
-      _pane('w1:p2', 'working'),
-      _pane('w1:p3', 'done'),
-    ], (r) {
-      expect(r.c.markReviewed('w1:p1'), isFalse);
-      expect(r.c.markReviewed('w1:p2'), isFalse);
-      expect(r.c.markReviewed('nope'), isFalse);
-      expect(r.reviewed.length, 0);
-      expect(r.status('w1:p1'), AgentStatus.blocked);
+    _rig(
+      'only done can be reviewed, and only a pane that exists',
+      [_pane('w1:p1', 'blocked'), _pane('w1:p2', 'working'), _pane('w1:p3', 'done')],
+      (r) {
+        expect(r.c.markReviewed('w1:p1'), isFalse);
+        expect(r.c.markReviewed('w1:p2'), isFalse);
+        expect(r.c.markReviewed('nope'), isFalse);
+        expect(r.reviewed.length, 0);
+        expect(r.status('w1:p1'), AgentStatus.blocked);
 
-      // A review of a blocked pane must not linger and hide its next Done.
-      r.server([_pane('w1:p1', 'done'), _pane('w1:p2', 'working'), _pane('w1:p3', 'done')]);
-      expect(r.status('w1:p1'), AgentStatus.done);
-    });
+        // A review of a blocked pane must not linger and hide its next Done.
+        r.server([_pane('w1:p1', 'done'), _pane('w1:p2', 'working'), _pane('w1:p3', 'done')]);
+        expect(r.status('w1:p1'), AgentStatus.done);
+      },
+    );
 
-    _rig('the next completion asks again (herdr completion_seq)', [
-      _pane('w1:p1', 'done'),
-    ], seq: {'w1:p1': 5}, (r) {
+    _rig('the next completion asks again (herdr completion_seq)', [_pane('w1:p1', 'done')], seq: {'w1:p1': 5}, (r) {
       expect(r.c.paneById('w1:p1')!.completionSeq, 5, reason: 'from the snapshot agents list');
       r.c.markReviewed('w1:p1');
       expect(r.status('w1:p1'), AgentStatus.idle);
@@ -403,9 +403,7 @@ void main() {
       expect(r.status('w1:p1'), AgentStatus.done, reason: 'a new completion');
     });
 
-    _rig('without completion_seq the observed start of Done is the key', [
-      _pane('w1:p1', 'working'),
-    ], (r) {
+    _rig('without completion_seq the observed start of Done is the key', [_pane('w1:p1', 'working')], (r) {
       r.advance(_min);
       r.server([_pane('w1:p1', 'done')]);
       expect(r.c.paneById('w1:p1')!.completionSeq, isNull);
@@ -421,9 +419,7 @@ void main() {
       expect(r.status('w1:p1'), AgentStatus.done, reason: 'finished again, later');
     });
 
-    _rig('a pane already done at first sight is keyed by a per-pane marker', [
-      _pane('w1:p1', 'done'),
-    ], (r) {
+    _rig('a pane already done at first sight is keyed by a per-pane marker', [_pane('w1:p1', 'done')], (r) {
       expect(r.c.statusTime('w1:p1'), isNull);
       r.c.markReviewed('w1:p1');
       expect(r.status('w1:p1'), AgentStatus.idle);
@@ -435,9 +431,7 @@ void main() {
       expect(r.status('w1:p1'), AgentStatus.done, reason: 'the finish was seen, so it has its own key');
     });
 
-    _rig('events about a reviewed done pane do not cause refetches', [
-      _pane('w1:p1', 'done'),
-    ], seq: {'w1:p1': 2}, (r) {
+    _rig('events about a reviewed done pane do not cause refetches', [_pane('w1:p1', 'done')], seq: {'w1:p1': 2}, (r) {
       r.c.markReviewed('w1:p1');
       final before = r.t.snapshotCalls;
 
@@ -446,22 +440,22 @@ void main() {
       }
       r.async.elapse(const Duration(seconds: 10));
 
-      expect(r.t.snapshotCalls, before,
-          reason: 'compared with what herdr said (done, seq 2), not with the idle shown');
+      expect(r.t.snapshotCalls, before, reason: 'compared with what herdr said (done, seq 2), not with the idle shown');
     });
 
-    _rig('a pane herdr no longer has loses its review; the others keep theirs', [
-      _pane('w1:p1', 'done'),
-      _pane('w1:p2', 'done'),
-    ], (r) {
-      r.c.markReviewed('w1:p1');
-      r.c.markReviewed('w1:p2');
-      expect(r.reviewed.length, 2);
+    _rig(
+      'a pane herdr no longer has loses its review; the others keep theirs',
+      [_pane('w1:p1', 'done'), _pane('w1:p2', 'done')],
+      (r) {
+        r.c.markReviewed('w1:p1');
+        r.c.markReviewed('w1:p2');
+        expect(r.reviewed.length, 2);
 
-      r.server([_pane('w1:p2', 'done')]);
-      expect(r.reviewed.length, 1);
-      expect(r.status('w1:p2'), AgentStatus.idle);
-    });
+        r.server([_pane('w1:p2', 'done')]);
+        expect(r.reviewed.length, 1);
+        expect(r.status('w1:p2'), AgentStatus.idle);
+      },
+    );
 
     test('an offline machine showing its cache does not prune what it cannot see', () {
       fakeAsync((async) {
@@ -469,13 +463,14 @@ void main() {
         final cache = MemorySnapshotCache({
           'm': Snapshot.fromJson(snapshotJson(panes: [_pane('w1:p1', 'done')])),
         });
-        final c = MachineConnection(
-          profile: const MachineProfile(id: 'm', label: 'box', host: 'h', username: 'u'),
-          api: HerdrApi(FakeTransport()),
-          cache: cache,
-        )
-          ..attachReviewed(reviewed)
-          ..goOffline();
+        final c =
+            MachineConnection(
+                profile: const MachineProfile(id: 'm', label: 'box', host: 'h', username: 'u'),
+                api: HerdrApi(FakeTransport()),
+                cache: cache,
+              )
+              ..attachReviewed(reviewed)
+              ..goOffline();
         async.flushMicrotasks();
 
         expect(c.snapshot.agentPanes, hasLength(1), reason: 'the cache is shown');
@@ -484,9 +479,7 @@ void main() {
       });
     });
 
-    _rig('herdr restarting its sequence cannot revive a review', [
-      _pane('w1:p1', 'done'),
-    ], seq: {'w1:p1': 5}, (r) {
+    _rig('herdr restarting its sequence cannot revive a review', [_pane('w1:p1', 'done')], seq: {'w1:p1': 5}, (r) {
       r.c.markReviewed('w1:p1');
       expect(r.status('w1:p1'), AgentStatus.idle);
 
@@ -498,36 +491,42 @@ void main() {
       expect(r.status('w1:p1'), AgentStatus.done, reason: 'a different completion with the same number');
     });
 
-    _rig('without a sequence, a pane that finishes again is a new finish, with a key of its own', [
-      _pane('w1:p1', 'done'),
-    ], (r) {
-      r.c.markReviewed('w1:p1');
-      expect(r.reviewed.isReviewed('m', 'w1:p1', 'pane'), isTrue, reason: 'done at first sight: no start known');
+    _rig(
+      'without a sequence, a pane that finishes again is a new finish, with a key of its own',
+      [_pane('w1:p1', 'done')],
+      (r) {
+        r.c.markReviewed('w1:p1');
+        expect(r.reviewed.isReviewed('m', 'w1:p1', 'pane'), isTrue, reason: 'done at first sight: no start known');
 
-      r.advance(_min);
-      r.server([_pane('w1:p1', 'working')]);
-      expect(r.reviewed.length, 0);
-      r.advance(_min);
-      r.server([_pane('w1:p1', 'done')]);
-      expect(r.status('w1:p1'), AgentStatus.done);
+        r.advance(_min);
+        r.server([_pane('w1:p1', 'working')]);
+        expect(r.reviewed.length, 0);
+        r.advance(_min);
+        r.server([_pane('w1:p1', 'done')]);
+        expect(r.status('w1:p1'), AgentStatus.done);
 
-      r.c.markReviewed('w1:p1');
-      expect(r.status('w1:p1'), AgentStatus.idle);
-      expect(r.reviewed.isReviewed('m', 'w1:p1', 'pane'), isFalse,
-          reason: 'the second finish was seen to begin, so it is keyed by that');
-    });
+        r.c.markReviewed('w1:p1');
+        expect(r.status('w1:p1'), AgentStatus.idle);
+        expect(
+          r.reviewed.isReviewed('m', 'w1:p1', 'pane'),
+          isFalse,
+          reason: 'the second finish was seen to begin, so it is keyed by that',
+        );
+      },
+    );
 
-    _rig('a live snapshot drops the mark of a pane that is gone, with no event telling it so', [
-      _pane('w1:p1', 'done'),
-      _pane('w1:p2', 'done'),
-    ], (r) {
-      r.c.markReviewed('w1:p1');
-      r.c.markReviewed('w1:p2');
-      r.server([_pane('w1:p1', 'done')]);
+    _rig(
+      'a live snapshot drops the mark of a pane that is gone, with no event telling it so',
+      [_pane('w1:p1', 'done'), _pane('w1:p2', 'done')],
+      (r) {
+        r.c.markReviewed('w1:p1');
+        r.c.markReviewed('w1:p2');
+        r.server([_pane('w1:p1', 'done')]);
 
-      expect(r.reviewed.length, 1);
-      expect(r.status('w1:p1'), AgentStatus.idle);
-    });
+        expect(r.reviewed.length, 1);
+        expect(r.status('w1:p1'), AgentStatus.idle);
+      },
+    );
 
     test('a cached snapshot never ends a review; the first live one does, and prunes too', () {
       fakeAsync((async) {
@@ -537,8 +536,7 @@ void main() {
         final cache = MemorySnapshotCache({
           'm': Snapshot.fromJson(snapshotJson(panes: [_pane('w1:p1', 'working')])),
         });
-        final held = TestTransport(snapshotJson(panes: [_pane('w1:p1', 'working')]))
-          ..gate = Completer<void>();
+        final held = TestTransport(snapshotJson(panes: [_pane('w1:p1', 'working')]))..gate = Completer<void>();
         final r = _Rig(async, const [], cache: cache, reviewed: reviewed, transport: held);
 
         expect(r.c.snapshot.agentPanes, hasLength(1), reason: 'the cache is shown');
@@ -569,8 +567,7 @@ void main() {
       fakeAsync((async) {
         final reviewed = ReviewedState();
         final cache = MemorySnapshotCache();
-        final first = _Rig(async, [_pane('w1:p1', 'done')],
-            cache: cache, reviewed: reviewed, seq: {'w1:p1': 8});
+        final first = _Rig(async, [_pane('w1:p1', 'done')], cache: cache, reviewed: reviewed, seq: {'w1:p1': 8});
         first.c.markReviewed('w1:p1');
         first.c.dispose();
         async.flushMicrotasks();
@@ -578,8 +575,7 @@ void main() {
         // The same state on disk, a new process, the network still pending.
         final held = TestTransport(snapshotJson(panes: [_pane('w1:p1', 'done')], completionSeq: {'w1:p1': 8}))
           ..gate = Completer<void>();
-        final second = _Rig(async, const [],
-            cache: cache, reviewed: reviewed, transport: held);
+        final second = _Rig(async, const [], cache: cache, reviewed: reviewed, transport: held);
 
         expect(second.c.isLive, isFalse);
         expect(second.status('w1:p1'), AgentStatus.idle, reason: 'the cached pane, already reviewed');
@@ -735,14 +731,16 @@ void main() {
 
       f.screens.shown(Object(), const PaneAgent('a', 'w1:p1'), AgentView.terminal);
       await pumpEventQueue();
-      expect(f.fleet.connection('a')!.paneById('w1:p1')!.status, AgentStatus.done,
-          reason: 'the phone is in a pocket');
+      expect(f.fleet.connection('a')!.paneById('w1:p1')!.status, AgentStatus.done, reason: 'the phone is in a pocket');
 
       f.fleet.onLifecycleState(AppLifecycleState.resumed);
       f.transports['a']!.snapshot = snapshotJson(panes: [_pane('w1:p1', 'done'), _pane('w1:p2', 'working')]);
       await f.fleet.connection('a')!.refresh();
-      expect(f.fleet.connection('a')!.paneById('w1:p1')!.status, AgentStatus.idle,
-          reason: 'back in front, the next change on the machine reads it');
+      expect(
+        f.fleet.connection('a')!.paneById('w1:p1')!.status,
+        AgentStatus.idle,
+        reason: 'back in front, the next change on the machine reads it',
+      );
     });
 
     test('a reviewed state with a store comes back with the fleet', () async {
@@ -767,9 +765,7 @@ void main() {
   });
 
   group('honest wait time', () {
-    _rig('a change found after a 30-minute gap reads ≤ 30m, never <1m', [
-      _pane('w1:p1', 'working'),
-    ], (r) {
+    _rig('a change found after a 30-minute gap reads ≤ 30m, never <1m', [_pane('w1:p1', 'working')], (r) {
       final lastSeen = r.now;
       r.c.goOffline();
       r.t.snapshot = snapshotJson(panes: [_pane('w1:p1', 'blocked')]);
@@ -780,13 +776,10 @@ void main() {
       final time = r.c.statusTime('w1:p1')!;
       expect(time, StatusTime.after(lastSeen));
       expect(time.exact, isFalse);
-      expect(timeInState(AgentStatus.blocked, time.since(r.now), exact: time.exact),
-          '≤ 30m');
+      expect(timeInState(AgentStatus.blocked, time.since(r.now), exact: time.exact), '≤ 30m');
     });
 
-    _rig('suspended in the background for 25 minutes is a gap too', [
-      _pane('w1:p1', 'working'),
-    ], (r) {
+    _rig('suspended in the background for 25 minutes is a gap too', [_pane('w1:p1', 'working')], (r) {
       r.c.suspend();
       r.t.snapshot = snapshotJson(panes: [_pane('w1:p1', 'blocked')]);
       r.advance(const Duration(minutes: 25));
@@ -794,25 +787,26 @@ void main() {
       r.async.flushMicrotasks();
 
       final time = r.c.statusTime('w1:p1')!;
-      expect(timeInState(AgentStatus.blocked, time.since(r.now), exact: time.exact),
-          '≤ 25m');
+      expect(timeInState(AgentStatus.blocked, time.since(r.now), exact: time.exact), '≤ 25m');
     });
 
-    _rig('a short blip is dated as it happened: under the observation gap the error is invisible', [
-      _pane('w1:p1', 'working'),
-    ], (r) {
-      r.c.goOffline();
-      r.t.snapshot = snapshotJson(panes: [_pane('w1:p1', 'blocked')]);
-      r.advance(const Duration(seconds: 20));
-      r.c.reconnect();
-      r.async.flushMicrotasks();
+    _rig(
+      'a short blip is dated as it happened: under the observation gap the error is invisible',
+      [_pane('w1:p1', 'working')],
+      (r) {
+        r.c.goOffline();
+        r.t.snapshot = snapshotJson(panes: [_pane('w1:p1', 'blocked')]);
+        r.advance(const Duration(seconds: 20));
+        r.c.reconnect();
+        r.async.flushMicrotasks();
 
-      expect(r.c.statusTime('w1:p1'), StatusTime.exact(r.now));
-    });
+        expect(r.c.statusTime('w1:p1'), StatusTime.exact(r.now));
+      },
+    );
 
-    _rig('a change seen on the live stream is exact, however long the quiet before it', [
-      _pane('w1:p1', 'working'),
-    ], (r) {
+    _rig('a change seen on the live stream is exact, however long the quiet before it', [_pane('w1:p1', 'working')], (
+      r,
+    ) {
       r.advance(const Duration(minutes: 40));
       r.server([_pane('w1:p1', 'blocked')]);
 
@@ -823,9 +817,7 @@ void main() {
       expect(timeInState(AgentStatus.blocked, time.since(r.now)), '12m');
     });
 
-    _rig('panes already there at the very first sight have no known start', [
-      _pane('w1:p1', 'blocked'),
-    ], (r) {
+    _rig('panes already there at the very first sight have no known start', [_pane('w1:p1', 'blocked')], (r) {
       expect(r.c.statusTime('w1:p1'), isNull);
       expect(timeInState(AgentStatus.unknown, _min), '');
     });
@@ -847,11 +839,7 @@ void main() {
           _pane('w1:p3', 'idle'),
         ], cache: cache);
         first.advance(const Duration(minutes: 2));
-        first.server([
-          _pane('w1:p1', 'blocked'),
-          _pane('w1:p2', 'working'),
-          _pane('w1:p3', 'idle'),
-        ]);
+        first.server([_pane('w1:p1', 'blocked'), _pane('w1:p2', 'working'), _pane('w1:p3', 'idle')]);
         final blockedAt = first.now;
         expect(first.c.statusTime('w1:p1'), StatusTime.exact(blockedAt));
         first.c.dispose();
@@ -860,29 +848,37 @@ void main() {
 
         // 40 minutes later, a new process. While it was away p3 started
         // working and a new pane showed up.
-        final held = TestTransport(snapshotJson(panes: [
-          _pane('w1:p1', 'blocked'),
-          _pane('w1:p2', 'working'),
-          _pane('w1:p3', 'working'),
-          _pane('w1:p4', 'blocked'),
-        ]))
-          ..gate = Completer<void>();
-        final second = _Rig(async, const [],
-            cache: cache, start: blockedAt.add(const Duration(minutes: 40)), transport: held);
+        final held = TestTransport(
+          snapshotJson(
+            panes: [
+              _pane('w1:p1', 'blocked'),
+              _pane('w1:p2', 'working'),
+              _pane('w1:p3', 'working'),
+              _pane('w1:p4', 'blocked'),
+            ],
+          ),
+        )..gate = Completer<void>();
+        final second = _Rig(
+          async,
+          const [],
+          cache: cache,
+          start: blockedAt.add(const Duration(minutes: 40)),
+          transport: held,
+        );
         held.gate!.complete();
         async.flushMicrotasks();
         held.gate = null;
 
         expect(second.c.isLive, isTrue);
-        expect(second.c.statusTime('w1:p1'), StatusTime.exact(blockedAt),
-            reason: 'still blocked: the time carries over');
-        expect(timeInState(AgentStatus.blocked, second.c.statusTime('w1:p1')!.since(second.now)),
-            '40m');
+        expect(
+          second.c.statusTime('w1:p1'),
+          StatusTime.exact(blockedAt),
+          reason: 'still blocked: the time carries over',
+        );
+        expect(timeInState(AgentStatus.blocked, second.c.statusTime('w1:p1')!.since(second.now)), '40m');
         expect(second.c.statusTime('w1:p2'), isNull, reason: 'its start was never known, and is not made up');
-        expect(second.c.statusTime('w1:p3'), StatusTime.after(blockedAt),
-            reason: 'changed while the app was away');
-        expect(second.c.statusTime('w1:p4'), StatusTime.after(blockedAt),
-            reason: 'appeared while the app was away');
+        expect(second.c.statusTime('w1:p3'), StatusTime.after(blockedAt), reason: 'changed while the app was away');
+        expect(second.c.statusTime('w1:p4'), StatusTime.after(blockedAt), reason: 'appeared while the app was away');
         second.c.dispose();
         async.flushMicrotasks();
       });
@@ -893,8 +889,7 @@ void main() {
         final cache = MemorySnapshotCache({
           'm': Snapshot.fromJson(snapshotJson(panes: [_pane('w1:p1', 'blocked')])),
         });
-        final held = TestTransport(snapshotJson(panes: [_pane('w1:p1', 'blocked')]))
-          ..gate = Completer<void>();
+        final held = TestTransport(snapshotJson(panes: [_pane('w1:p1', 'blocked')]))..gate = Completer<void>();
         final r = _Rig(async, const [], cache: cache, transport: held);
         expect(r.c.snapshot.agentPanes, hasLength(1));
         held.gate!.complete();
@@ -909,20 +904,24 @@ void main() {
       SharedPreferences.resetStatic();
       SharedPreferences.setMockInitialValues({});
       final cache = PrefsSnapshotCache();
-      final snapshot = Snapshot.fromJson(snapshotJson(panes: [
-        _pane('w1:p1', 'blocked'),
-        _pane('w1:p2', 'working'),
-        _pane('w1:p3', 'idle'),
-      ], completionSeq: {'w1:p1': 9}));
+      final snapshot = Snapshot.fromJson(
+        snapshotJson(
+          panes: [_pane('w1:p1', 'blocked'), _pane('w1:p2', 'working'), _pane('w1:p3', 'idle')],
+          completionSeq: {'w1:p1': 9},
+        ),
+      );
       final seen = DateTime.utc(2026, 3, 4, 5, 6, 7);
       await cache.write(
         'm',
         snapshot,
-        observed: ObservedStatuses(seenAt: seen, panes: {
-          'w1:p1': (status: AgentStatus.blocked, since: StatusTime.exact(seen)),
-          'w1:p2': (status: AgentStatus.working, since: StatusTime.after(seen)),
-          'w1:p3': (status: AgentStatus.idle, since: null),
-        }),
+        observed: ObservedStatuses(
+          seenAt: seen,
+          panes: {
+            'w1:p1': (status: AgentStatus.blocked, since: StatusTime.exact(seen)),
+            'w1:p2': (status: AgentStatus.working, since: StatusTime.after(seen)),
+            'w1:p3': (status: AgentStatus.idle, since: null),
+          },
+        ),
       );
 
       final read = (await PrefsSnapshotCache().read('m'))!;
@@ -948,8 +947,7 @@ void main() {
     test('quiet polls rewrite the cache only every two minutes, to keep "last seen" honest', () {
       fakeAsync((async) {
         final cache = MemorySnapshotCache();
-        final r = _Rig(async, [_pane('w1:p1', 'working')],
-            cache: cache, poll: const Duration(seconds: 20));
+        final r = _Rig(async, [_pane('w1:p1', 'working')], cache: cache, poll: const Duration(seconds: 20));
         expect(cache.writes, hasLength(1));
         final first = cache.observed['m']!.seenAt;
 
@@ -967,104 +965,111 @@ void main() {
   });
 
   group('quiet', () {
-    _rig('a working agent is quiet after five minutes without an event, in whole minutes', [
-      _pane('w1:p1', 'working'),
-      _pane('w1:p2', 'blocked'),
-    ], poll: const Duration(seconds: 20), (r) {
-      r.minutes(4);
-      expect(r.c.quietMinutes('w1:p1'), 0, reason: 'under five minutes');
+    _rig(
+      'a working agent is quiet after five minutes without an event, in whole minutes',
+      [_pane('w1:p1', 'working'), _pane('w1:p2', 'blocked')],
+      poll: const Duration(seconds: 20),
+      (r) {
+        r.minutes(4);
+        expect(r.c.quietMinutes('w1:p1'), 0, reason: 'under five minutes');
 
-      r.minutes(1);
-      expect(r.c.quietMinutes('w1:p1'), 5);
-      r.minutes(2);
-      expect(r.c.quietMinutes('w1:p1'), 7);
-      expect(r.c.lastActivity('w1:p1'), _t0, reason: 'since the stream went live');
-      expect(r.c.quietMinutes('w1:p2'), 0, reason: 'only a working agent can be quiet');
-    });
+        r.minutes(1);
+        expect(r.c.quietMinutes('w1:p1'), 5);
+        r.minutes(2);
+        expect(r.c.quietMinutes('w1:p1'), 7);
+        expect(r.c.lastActivity('w1:p1'), _t0, reason: 'since the stream went live');
+        expect(r.c.quietMinutes('w1:p2'), 0, reason: 'only a working agent can be quiet');
+      },
+    );
 
-    _rig('a burst of events moves nothing: no notification, the order waits for the next poll', [
-      _pane('w1:p1', 'working'),
-      _pane('w1:p2', 'working'),
-    ], poll: const Duration(seconds: 20), (r) {
-      // p1 is heard from every step; p2 never.
-      for (var i = 0; i < 18; i++) {
-        r.t.emit(r.event('w1:p1'));
+    _rig(
+      'a burst of events moves nothing: no notification, the order waits for the next poll',
+      [_pane('w1:p1', 'working'), _pane('w1:p2', 'working')],
+      poll: const Duration(seconds: 20),
+      (r) {
+        // p1 is heard from every step; p2 never.
+        for (var i = 0; i < 18; i++) {
+          r.t.emit(r.event('w1:p1'));
+          r.advance(const Duration(seconds: 20));
+        }
+        r.advance(const Duration(milliseconds: 500));
+        List<String> order() => groupByStatus([
+          for (final p in ['w1:p1', 'w1:p2'])
+            agentRow(FleetAgent(machine: r.c, pane: r.c.paneById(p)!, workspace: null), showMachine: false),
+        ])[AgentStatus.working]!.map((a) => a.paneId).toList();
+
+        expect(r.c.quietMinutes('w1:p2'), 6);
+        expect(r.c.quietMinutes('w1:p1'), 0);
+        expect(order(), ['w1:p2', 'w1:p1'], reason: 'the quiet one first, whatever the pane ids say');
+
+        var notified = 0;
+        r.c.addListener(() => notified++);
+        final burstAt = r.now;
+        for (var i = 0; i < 500; i++) {
+          r.t.emit(r.event('w1:p2'));
+        }
+        r.async.flushMicrotasks();
+        r.advance(const Duration(seconds: 5));
+
+        expect(r.c.lastActivity('w1:p2'), burstAt, reason: 'the event was noted, cheaply');
+        expect(r.c.quietMinutes('w1:p2'), 6, reason: 'but nothing re-evaluated it');
+        expect(notified, 0, reason: 'no listener is woken per event');
+        expect(order(), ['w1:p2', 'w1:p1'], reason: 'no reshuffle under the burst');
+
         r.advance(const Duration(seconds: 20));
-      }
-      r.advance(const Duration(milliseconds: 500));
-      List<String> order() => groupByStatus([
-            for (final p in ['w1:p1', 'w1:p2'])
-              agentRow(
-                FleetAgent(machine: r.c, pane: r.c.paneById(p)!, workspace: null),
-                showMachine: false,
-              ),
-          ])[AgentStatus.working]!
-              .map((a) => a.paneId)
-              .toList();
+        expect(r.c.quietMinutes('w1:p2'), 0, reason: 'the next poll takes it into account');
+        expect(notified, 1, reason: 'one notification, from that refresh');
+        expect(order(), ['w1:p1', 'w1:p2'], reason: 'both quiet for no time: machine, then pane');
+      },
+    );
 
-      expect(r.c.quietMinutes('w1:p2'), 6);
-      expect(r.c.quietMinutes('w1:p1'), 0);
-      expect(order(), ['w1:p2', 'w1:p1'], reason: 'the quiet one first, whatever the pane ids say');
+    _rig(
+      'the order changes only when a poll moves a minute count, not between',
+      [_pane('w1:p1', 'working'), _pane('w1:p2', 'working')],
+      poll: const Duration(seconds: 20),
+      (r) {
+        var notified = 0;
+        r.c.addListener(() => notified++);
 
-      var notified = 0;
-      r.c.addListener(() => notified++);
-      final burstAt = r.now;
-      for (var i = 0; i < 500; i++) {
-        r.t.emit(r.event('w1:p2'));
-      }
-      r.async.flushMicrotasks();
-      r.advance(const Duration(seconds: 5));
+        r.minutes(5);
+        final afterFive = notified;
+        expect(afterFive, 1, reason: 'both crossed five minutes at one poll');
 
-      expect(r.c.lastActivity('w1:p2'), burstAt, reason: 'the event was noted, cheaply');
-      expect(r.c.quietMinutes('w1:p2'), 6, reason: 'but nothing re-evaluated it');
-      expect(notified, 0, reason: 'no listener is woken per event');
-      expect(order(), ['w1:p2', 'w1:p1'], reason: 'no reshuffle under the burst');
+        r.advance(const Duration(seconds: 20));
+        r.advance(const Duration(seconds: 20));
+        expect(notified, afterFive, reason: 'the whole-minute number did not move');
+        r.advance(const Duration(seconds: 20));
+        expect(notified, afterFive + 1, reason: 'six minutes');
+      },
+    );
 
-      r.advance(const Duration(seconds: 20));
-      expect(r.c.quietMinutes('w1:p2'), 0, reason: 'the next poll takes it into account');
-      expect(notified, 1, reason: 'one notification, from that refresh');
-      expect(order(), ['w1:p1', 'w1:p2'], reason: 'both quiet for no time: machine, then pane');
-    });
+    _rig(
+      'an agent that just started working is not quiet because the app has been watching a while',
+      [_pane('w1:p1', 'idle')],
+      poll: const Duration(seconds: 20),
+      (r) {
+        r.minutes(10);
+        r.server([_pane('w1:p1', 'working')]);
+        r.advance(const Duration(seconds: 20));
 
-    _rig('the order changes only when a poll moves a minute count, not between', [
-      _pane('w1:p1', 'working'),
-      _pane('w1:p2', 'working'),
-    ], poll: const Duration(seconds: 20), (r) {
-      var notified = 0;
-      r.c.addListener(() => notified++);
+        expect(r.c.quietMinutes('w1:p1'), 0);
+        expect(r.c.lastActivity('w1:p1'), isNot(_t0));
+        expect(r.c.lastActivity('w1:p1'), r.c.statusTime('w1:p1')!.at, reason: 'it began working then');
+      },
+    );
 
-      r.minutes(5);
-      final afterFive = notified;
-      expect(afterFive, 1, reason: 'both crossed five minutes at one poll');
+    _rig(
+      'an agent that stops working has no quiet to report',
+      [_pane('w1:p1', 'working')],
+      poll: const Duration(seconds: 20),
+      (r) {
+        r.minutes(6);
+        expect(r.c.quietMinutes('w1:p1'), 6);
 
-      r.advance(const Duration(seconds: 20));
-      r.advance(const Duration(seconds: 20));
-      expect(notified, afterFive, reason: 'the whole-minute number did not move');
-      r.advance(const Duration(seconds: 20));
-      expect(notified, afterFive + 1, reason: 'six minutes');
-    });
-
-    _rig('an agent that just started working is not quiet because the app has been watching a while', [
-      _pane('w1:p1', 'idle'),
-    ], poll: const Duration(seconds: 20), (r) {
-      r.minutes(10);
-      r.server([_pane('w1:p1', 'working')]);
-      r.advance(const Duration(seconds: 20));
-
-      expect(r.c.quietMinutes('w1:p1'), 0);
-      expect(r.c.lastActivity('w1:p1'), isNot(_t0));
-      expect(r.c.lastActivity('w1:p1'), r.c.statusTime('w1:p1')!.at, reason: 'it began working then');
-    });
-
-    _rig('an agent that stops working has no quiet to report', [
-      _pane('w1:p1', 'working'),
-    ], poll: const Duration(seconds: 20), (r) {
-      r.minutes(6);
-      expect(r.c.quietMinutes('w1:p1'), 6);
-
-      r.server([_pane('w1:p1', 'idle')]);
-      expect(r.c.quietMinutes('w1:p1'), 0);
-    });
+        r.server([_pane('w1:p1', 'idle')]);
+        expect(r.c.quietMinutes('w1:p1'), 0);
+      },
+    );
 
     test('a restart with an old cached start claims no quiet until the stream has proven itself', () {
       fakeAsync((async) {
@@ -1073,10 +1078,13 @@ void main() {
         final cache = MemorySnapshotCache(
           {'m': Snapshot.fromJson(snapshotJson(panes: working))},
           {
-            'm': ObservedStatuses(seenAt: longAgo, panes: {
-              'w1:p1': (status: AgentStatus.working, since: StatusTime.exact(longAgo)),
-              'w1:p2': (status: AgentStatus.working, since: StatusTime.exact(longAgo)),
-            }),
+            'm': ObservedStatuses(
+              seenAt: longAgo,
+              panes: {
+                'w1:p1': (status: AgentStatus.working, since: StatusTime.exact(longAgo)),
+                'w1:p2': (status: AgentStatus.working, since: StatusTime.exact(longAgo)),
+              },
+            ),
           },
         );
         final held = TestTransport(snapshotJson(panes: working))..gate = Completer<void>();
@@ -1114,26 +1122,29 @@ void main() {
       });
     });
 
-    _rig('after a reconnect nothing is quiet until the new stream has proven itself', [
-      _pane('w1:p1', 'working'),
-    ], poll: const Duration(seconds: 20), (r) {
-      r.minutes(6);
-      expect(r.c.quietMinutes('w1:p1'), 6);
+    _rig(
+      'after a reconnect nothing is quiet until the new stream has proven itself',
+      [_pane('w1:p1', 'working')],
+      poll: const Duration(seconds: 20),
+      (r) {
+        r.minutes(6);
+        expect(r.c.quietMinutes('w1:p1'), 6);
 
-      r.c.goOffline();
-      expect(r.c.lastActivity('w1:p1'), isNull, reason: 'no stream, no claim');
-      r.advance(const Duration(minutes: 30));
-      r.c.reconnect();
-      r.async.flushMicrotasks();
-      expect(r.c.isLive, isTrue);
-      expect(r.c.quietMinutes('w1:p1'), 0, reason: 'the 6 minutes before the gap do not carry over');
-      expect(r.c.lastActivity('w1:p1'), r.now);
+        r.c.goOffline();
+        expect(r.c.lastActivity('w1:p1'), isNull, reason: 'no stream, no claim');
+        r.advance(const Duration(minutes: 30));
+        r.c.reconnect();
+        r.async.flushMicrotasks();
+        expect(r.c.isLive, isTrue);
+        expect(r.c.quietMinutes('w1:p1'), 0, reason: 'the 6 minutes before the gap do not carry over');
+        expect(r.c.lastActivity('w1:p1'), r.now);
 
-      r.minutes(4);
-      expect(r.c.quietMinutes('w1:p1'), 0);
-      r.minutes(1);
-      expect(r.c.quietMinutes('w1:p1'), 5);
-    });
+        r.minutes(4);
+        expect(r.c.quietMinutes('w1:p1'), 0);
+        r.minutes(1);
+        expect(r.c.quietMinutes('w1:p1'), 5);
+      },
+    );
   });
 
   group('ordering inside a section', () {
@@ -1154,28 +1165,20 @@ void main() {
       }
     });
 
-    AgentRowData row(
-      MachineConnection m,
-      String pane,
-      AgentStatus status, {
-      StatusTime? since,
-      int quiet = 0,
-    }) =>
-        (
-          key: '${m.profile.id}/$pane',
-          machine: m,
-          paneId: pane,
-          status: status,
-          title: pane,
-          subtitle: '',
-          stale: false,
-          since: since,
-          quietMinutes: quiet,
-        );
+    AgentRowData row(MachineConnection m, String pane, AgentStatus status, {StatusTime? since, int quiet = 0}) => (
+      key: '${m.profile.id}/$pane',
+      machine: m,
+      paneId: pane,
+      status: status,
+      title: pane,
+      subtitle: '',
+      stale: false,
+      since: since,
+      quietMinutes: quiet,
+    );
 
     final noon = DateTime.utc(2026, 1, 1, 12);
-    List<String> keys(Map<AgentStatus, List<AgentRowData>> g, AgentStatus s) =>
-        [for (final r in g[s]!) r.key];
+    List<String> keys(Map<AgentStatus, List<AgentRowData>> g, AgentStatus s) => [for (final r in g[s]!) r.key];
 
     test('Needs you and Done: longest waiting first, a bound counts from when it begins', () {
       final a = machine('a');
@@ -1188,8 +1191,12 @@ void main() {
         row(a, 'p6', AgentStatus.done, since: StatusTime.exact(noon.subtract(_min))),
       ]);
 
-      expect(keys(g, AgentStatus.blocked), ['a/p2', 'a/p4', 'a/p1', 'a/p3'],
-          reason: 'bound (3 h) first, then exact oldest to newest, unknown last');
+      expect(keys(g, AgentStatus.blocked), [
+        'a/p2',
+        'a/p4',
+        'a/p1',
+        'a/p3',
+      ], reason: 'bound (3 h) first, then exact oldest to newest, unknown last');
       expect(keys(g, AgentStatus.done), ['a/p6', 'a/p5']);
     });
 
@@ -1232,9 +1239,13 @@ void main() {
         row(b, 'p2', AgentStatus.idle, since: StatusTime.exact(noon.subtract(const Duration(days: 9)))),
       ]);
 
-      expect(keys(g, AgentStatus.idle), ['b/p1', 'a/p4', 'a/p3', 'a/p2', 'a/p1', 'b/p2'],
-          reason: '12 min, 47 min, at most 5 h; then the one nobody dated, '
-              'which may be an hour old or a month, so it is not put under 3 days; then 3 days, 9 days');
+      expect(
+        keys(g, AgentStatus.idle),
+        ['b/p1', 'a/p4', 'a/p3', 'a/p2', 'a/p1', 'b/p2'],
+        reason:
+            '12 min, 47 min, at most 5 h; then the one nobody dated, '
+            'which may be an hour old or a month, so it is not put under 3 days; then 3 days, 9 days',
+      );
     });
 
     test('Idle with equal or unknown times, and Unknown, keep machine then pane', () {
@@ -1250,25 +1261,37 @@ void main() {
         row(a, 'p1', AgentStatus.unknown),
       ]);
       expect(keys(g, AgentStatus.idle), ['a/p9', 'b/p1', 'a/p8', 'b/p0']);
-      expect(keys(g, AgentStatus.unknown), ['a/p1', 'a/p2'],
-          reason: 'Unknown has no state to date: machine, then pane');
+      expect(keys(g, AgentStatus.unknown), [
+        'a/p1',
+        'a/p2',
+      ], reason: 'Unknown has no state to date: machine, then pane');
     });
 
     test('how recent is recent: the day is measured from now', () {
       final a = machine('a');
       final stopped = StatusTime.exact(noon.subtract(const Duration(hours: 23, minutes: 59)));
-      expect(keys(groupByStatus(now: noon, [row(a, 'p1', AgentStatus.idle), row(a, 'p2', AgentStatus.idle, since: stopped)]), AgentStatus.idle),
-          ['a/p2', 'a/p1'], reason: 'just inside the day: above the undated one');
+      expect(
+        keys(
+          groupByStatus(now: noon, [row(a, 'p1', AgentStatus.idle), row(a, 'p2', AgentStatus.idle, since: stopped)]),
+          AgentStatus.idle,
+        ),
+        ['a/p2', 'a/p1'],
+        reason: 'just inside the day: above the undated one',
+      );
       final later = noon.add(const Duration(minutes: 2));
-      expect(keys(groupByStatus(now: later, [row(a, 'p1', AgentStatus.idle), row(a, 'p2', AgentStatus.idle, since: stopped)]), AgentStatus.idle),
-          ['a/p1', 'a/p2'], reason: 'two minutes on it is a day old: below it');
+      expect(
+        keys(
+          groupByStatus(now: later, [row(a, 'p1', AgentStatus.idle), row(a, 'p2', AgentStatus.idle, since: stopped)]),
+          AgentStatus.idle,
+        ),
+        ['a/p1', 'a/p2'],
+        reason: 'two minutes on it is a day old: below it',
+      );
     });
 
     test('the sections: Needs you, Done, Working, Idle, Unknown; the enum is not reordered', () {
       final a = machine('a');
-      final g = groupByStatus([
-        for (final s in AgentStatus.values.reversed) row(a, s.name, s),
-      ]);
+      final g = groupByStatus([for (final s in AgentStatus.values.reversed) row(a, s.name, s)]);
 
       expect(g.keys, [
         AgentStatus.blocked,
@@ -1277,12 +1300,7 @@ void main() {
         AgentStatus.idle,
         AgentStatus.unknown,
       ]);
-      expect(filterableStatuses, [
-        AgentStatus.blocked,
-        AgentStatus.done,
-        AgentStatus.working,
-        AgentStatus.idle,
-      ]);
+      expect(filterableStatuses, [AgentStatus.blocked, AgentStatus.done, AgentStatus.working, AgentStatus.idle]);
       // Collapsed sections are stored as bits of this index.
       expect(AgentStatus.values, [
         AgentStatus.blocked,
@@ -1316,8 +1334,7 @@ void main() {
 
       expect(settings.density, BoardDensity.auto);
       expect(AppSettings.autoCompactFrom, 5);
-      expect([for (var n = 0; n <= 6; n++) settings.cardsFor(n)],
-          [true, true, true, true, true, false, false]);
+      expect([for (var n = 0; n <= 6; n++) settings.cardsFor(n)], [true, true, true, true, true, false, false]);
     });
 
     test('a choice wins over the count, both ways', () async {
@@ -1366,10 +1383,9 @@ void main() {
 
   group('snapshot wire', () {
     test('completion_seq comes from the agents list, and an older herdr sends none', () {
-      final withSeq = Snapshot.fromJson(snapshotJson(
-        panes: [_pane('w1:p1', 'done'), _pane('w1:p2', 'done')],
-        completionSeq: {'w1:p1': 12},
-      ));
+      final withSeq = Snapshot.fromJson(
+        snapshotJson(panes: [_pane('w1:p1', 'done'), _pane('w1:p2', 'done')], completionSeq: {'w1:p1': 12}),
+      );
       expect(withSeq.panes.map((p) => p.completionSeq), [12, null]);
 
       final older = Snapshot.fromJson(snapshotJson(panes: [_pane('w1:p1', 'done')]));
@@ -1377,12 +1393,7 @@ void main() {
     });
 
     test('a pane that carries completion_seq itself keeps it', () {
-      final pane = Pane.fromJson({
-        'pane_id': 'p',
-        'workspace_id': 'w',
-        'tab_id': 't',
-        'completion_seq': 4,
-      });
+      final pane = Pane.fromJson({'pane_id': 'p', 'workspace_id': 'w', 'tab_id': 't', 'completion_seq': 4});
       expect(pane.completionSeq, 4);
       expect(Pane.fromJson(pane.toJson()), pane);
       expect(pane.withCompletionSeq(5), isNot(pane));

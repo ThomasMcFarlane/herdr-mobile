@@ -5,9 +5,11 @@ import 'words.dart';
 // Keywords after which another command may follow (cmd stays true) are listed
 // as `operator` in the word table (a marker, they are emitted as keywords).
 final Words _shellWords = Words({
-  TokenKind.operator: 'if then else elif while until do time ! { export local '
+  TokenKind.operator:
+      'if then else elif while until do time ! { export local '
       'declare typeset readonly',
-  TokenKind.keyword: 'for case select function in fi done esac [[ ]] coproc '
+  TokenKind.keyword:
+      'for case select function in fi done esac [[ ]] coproc '
       'return exit break continue',
 });
 
@@ -40,8 +42,7 @@ final class ShellCore {
   int _assignEnd = -1;
   bool _pendingDash = false;
 
-  int get packed =>
-      smode | (dash ? 4 : 0) | (cont ? 8 : 0) | (cmdEnd ? 16 : 0);
+  int get packed => smode | (dash ? 4 : 0) | (cont ? 8 : 0) | (cmdEnd ? 16 : 0);
 
   void unpack(int m, String? tg) {
     smode = m & 3;
@@ -210,11 +211,7 @@ final class ShellCore {
           var redirect = c == 0x3C || c == 0x3E;
           while (j < n) {
             final d = t.codeUnitAt(j);
-            if (d != 0x3C &&
-                d != 0x3E &&
-                d != 0x7C &&
-                d != 0x26 &&
-                d != 0x3B) {
+            if (d != 0x3C && d != 0x3E && d != 0x7C && d != 0x26 && d != 0x3B) {
               break;
             }
             if (d == 0x3C || d == 0x3E) redirect = true;
@@ -276,8 +273,7 @@ final class ShellCore {
     return end;
   }
 
-  ({int end, bool cmd}) _dollar(
-      String t, int i, int n, List<Token> out, bool cmd) {
+  ({int end, bool cmd}) _dollar(String t, int i, int n, List<Token> out, bool cmd) {
     if (i + 1 >= n) return (end: i + 1, cmd: cmd);
     final c1 = t.codeUnitAt(i + 1);
     if (c1 == 0x7B) {
@@ -365,8 +361,7 @@ final class ShellCore {
     return (end: i + 2, cmd: false);
   }
 
-  ({int end, bool cmd}) _word(
-      String t, int s, int n, List<Token> out, bool cmd) {
+  ({int end, bool cmd}) _word(String t, int s, int n, List<Token> out, bool cmd) {
     final c = t.codeUnitAt(s);
     if (cmd && isIdentStart(c) && c != 0x24) {
       // NAME=value / NAME+=value
@@ -433,8 +428,7 @@ final class ShellCore {
     return true;
   }
 
-  bool _isWord(String t, int s, int e, String w) =>
-      e - s == w.length && t.startsWith(w, s);
+  bool _isWord(String t, int s, int e, String w) => e - s == w.length && t.startsWith(w, s);
 }
 
 /// Shell, bash, zsh, sh and `console` (a session: only `$ ` prompt lines are
@@ -457,8 +451,7 @@ final class ShellHighlighter extends LineScanner {
     } else if (core.cont) {
       cmd = core.cmdEnd;
       final k = skipBlanks(t, 0, n);
-      if (console && k + 1 < n && t.codeUnitAt(k) == 0x3E &&
-          t.codeUnitAt(k + 1) == 0x20) {
+      if (console && k + 1 < n && t.codeUnitAt(k) == 0x3E && t.codeUnitAt(k + 1) == 0x20) {
         emit(out, k, k + 1, TokenKind.punctuation);
         i = k + 1;
       }
@@ -491,7 +484,8 @@ final class DockerfileHighlighter extends LineScanner {
   final ShellCore _core = ShellCore(docker: true);
 
   static final Words _instructions = Words({
-    TokenKind.keyword: 'from run cmd label maintainer expose env add copy '
+    TokenKind.keyword:
+        'from run cmd label maintainer expose env add copy '
         'entrypoint volume user workdir arg onbuild stopsignal healthcheck '
         'shell',
   }, ignoreCase: true);
@@ -582,7 +576,8 @@ final class MakefileHighlighter extends LineScanner {
   final ShellCore _core = ShellCore(make: true);
 
   static final Words _directives = Words({
-    TokenKind.keyword: 'ifeq ifneq ifdef ifndef else endif include -include '
+    TokenKind.keyword:
+        'ifeq ifneq ifdef ifndef else endif include -include '
         'sinclude define endef export unexport override vpath undefine',
   });
 
@@ -697,9 +692,7 @@ final class MakefileHighlighter extends LineScanner {
       while (e < to && !isSpace(t.codeUnitAt(e))) {
         e++;
       }
-      final special = t.codeUnitAt(i) == 0x2E &&
-          i + 1 < e &&
-          isUpper(t.codeUnitAt(i + 1));
+      final special = t.codeUnitAt(i) == 0x2E && i + 1 < e && isUpper(t.codeUnitAt(i + 1));
       emit(out, i, e, special ? TokenKind.keyword : TokenKind.function);
       i = e;
     }

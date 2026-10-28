@@ -62,10 +62,17 @@ Future<void> _pump(
     ..physicalSize = Size(width, height) * 2
     ..devicePixelRatio = 2;
   addTearDown(tester.view.reset);
-  e.repo = AgentSessionRepository(fleet: e.h.fleet, hostFor: (c) => e.hosts.putIfAbsent(c.profile.id, FakeAgentHost.new));
+  e.repo = AgentSessionRepository(
+    fleet: e.h.fleet,
+    hostFor: (c) => e.hosts.putIfAbsent(c.profile.id, FakeAgentHost.new),
+  );
   await tester.pumpWidget(
     MultiProvider(
-      providers: [...e.h.providers, ListenableProvider<AgentSessions>.value(value: e.repo), attentionSetProvider()],
+      providers: [
+        ...e.h.providers,
+        ListenableProvider<AgentSessions>.value(value: e.repo),
+        attentionSetProvider(),
+      ],
       child: MaterialApp(
         theme: AppTheme.dark(),
         builder: (context, child) => MediaQuery(
@@ -125,15 +132,24 @@ void main() {
       expect(tester.widget<SectionLabel>(_section('Idle')).count, 1);
       expect(_row('Fix login'), findsOneWidget);
       expect(find.descendant(of: _row('Fix login'), matching: find.text('omp · studio-mac · api')), findsOneWidget);
-      expect(find.descendant(of: _row('Refactor billing'), matching: find.text('Claude Code · studio-mac · billing')), findsOneWidget);
+      expect(
+        find.descendant(of: _row('Refactor billing'), matching: find.text('Claude Code · studio-mac · billing')),
+        findsOneWidget,
+      );
       expect(find.descendant(of: _row('Refactor billing'), matching: _said('working, under a minute')), findsOneWidget);
       expect(find.descendant(of: _row('Fix login'), matching: _said('idle, under a minute')), findsOneWidget);
-      expect(_top(tester, _row('Refactor billing')), lessThan(_top(tester, _section('Idle'))), reason: 'working before idle');
+      expect(
+        _top(tester, _row('Refactor billing')),
+        lessThan(_top(tester, _section('Idle'))),
+        reason: 'working before idle',
+      );
       expect(_top(tester, _row('Fix login')), greaterThan(_top(tester, _section('Idle'))));
       await _teardown(tester, e);
     });
 
-    testWidgets('a session that starts waiting joins Needs you after those waiting longer: nothing above moves', (tester) async {
+    testWidgets('a session that starts waiting joins Needs you after those waiting longer: nothing above moves', (
+      tester,
+    ) async {
       final e = await _env(panes: [_pane(1, 'working'), _pane(2, 'working')]);
       final keeper = e.host.add(id: 'k1', title: 'Deploy');
       await _pump(tester, e);
@@ -192,7 +208,9 @@ void main() {
       await _teardown(tester, e);
     });
 
-    testWidgets('the tab badge counts what needs you, panes and sessions; the pill adds what is to review', (tester) async {
+    testWidgets('the tab badge counts what needs you, panes and sessions; the pill adds what is to review', (
+      tester,
+    ) async {
       final semantics = tester.ensureSemantics();
       final e = await _env(panes: [_pane(1, 'blocked'), _pane(2, 'done')]);
       final blocked = e.host.add(id: 'k1', title: 'Blocked one');
@@ -336,7 +354,9 @@ void main() {
   });
 
   group('listing', () {
-    testWidgets('the hosts are listed every refresh interval while the Agents tab is on screen, and not otherwise', (tester) async {
+    testWidgets('the hosts are listed every refresh interval while the Agents tab is on screen, and not otherwise', (
+      tester,
+    ) async {
       final e = await _env();
       e.host.add(id: 'k1', title: 'One');
       await _pump(tester, e);
@@ -445,7 +465,11 @@ void main() {
       expect(actions('Finished'), ['Mark reviewed']);
 
       final node = tester.getSemantics(find.text('Finished'));
-      node.owner!.performAction(node.id, SemanticsAction.customAction, node.getSemanticsData().customSemanticsActionIds!.single);
+      node.owner!.performAction(
+        node.id,
+        SemanticsAction.customAction,
+        node.getSemanticsData().customSemanticsActionIds!.single,
+      );
       await _settle(tester, 10);
       expect(idleLabel('Finished'), findsOneWidget);
       expect(find.text('Marked reviewed'), findsOneWidget);
@@ -591,5 +615,4 @@ void main() {
 
 /// A time label by what a screen reader hears: the visible text is the time
 /// only, the words carry the state.
-Finder _said(String label) =>
-    find.byWidgetPredicate((w) => w is Semantics && w.properties.label == label);
+Finder _said(String label) => find.byWidgetPredicate((w) => w is Semantics && w.properties.label == label);

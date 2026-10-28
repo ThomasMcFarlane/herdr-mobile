@@ -7,8 +7,9 @@ import '../../tool/design_lint.dart' show lintSource;
 const _feature = 'lib/ui/features/demo/demo.dart';
 
 /// `rule@line` for every finding in [source], as a feature file.
-List<String> _lint(String source, {String path = _feature}) =>
-    [for (final f in lintSource(path, source)) '${f.rule}@${f.line}'];
+List<String> _lint(String source, {String path = _feature}) => [
+  for (final f in lintSource(path, source)) '${f.rule}@${f.line}',
+];
 
 void main() {
   test('raw values split over lines are caught on the line that holds them', () {

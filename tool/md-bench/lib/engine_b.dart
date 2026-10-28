@@ -14,7 +14,8 @@ List<DInline> _inl(List<MD$Span> spans) {
       out.add(DImage('${s.extra?['src'] ?? ''}', s.text));
       continue;
     }
-    final flags = (st.contains(MD$Style.bold) ? dumpBold : 0) |
+    final flags =
+        (st.contains(MD$Style.bold) ? dumpBold : 0) |
         (st.contains(MD$Style.italic) ? dumpItalic : 0) |
         (st.contains(MD$Style.strikethrough) ? dumpStrike : 0) |
         (st.contains(MD$Style.monospace) ? dumpCode : 0) |
@@ -32,18 +33,21 @@ void _items(DumpOut out, int depth, List<MD$ListItem> items) {
   final m = RegExp(r'^(\d+)').firstMatch(items.first.marker);
   out.add(depth, m == null ? 'ul tight' : 'ol ${m.group(1)} tight');
   for (final it in items) {
-    out.add(depth + 1, it.checked == null ? 'li' : (it.checked! ? 'li [x]' : 'li [ ]'));
+    out.add(
+      depth + 1,
+      it.checked == null ? 'li' : (it.checked! ? 'li [x]' : 'li [ ]'),
+    );
     out.add(depth + 2, 'p', dumpInlines(_inl(it.spans)));
     _items(out, depth + 2, it.children);
   }
 }
 
 String _align(MD$TableColumnAlign a) => switch (a) {
-      MD$TableColumnAlign.left => 'l',
-      MD$TableColumnAlign.center => 'c',
-      MD$TableColumnAlign.right => 'r',
-      MD$TableColumnAlign.none => '-',
-    };
+  MD$TableColumnAlign.left => 'l',
+  MD$TableColumnAlign.center => 'c',
+  MD$TableColumnAlign.right => 'r',
+  MD$TableColumnAlign.none => '-',
+};
 
 String dumpB(String md, {bool softSpace = false}) {
   final out = DumpOut();
@@ -61,8 +65,11 @@ String dumpB(String md, {bool softSpace = false}) {
         out.add(1, 'p', dumpInlines(_inl(b.spans)));
       case MD$Code():
         final lang = b.language;
-        out.add(0, lang == null || lang.isEmpty ? 'code' : 'code[$lang]',
-            dumpQuote(b.text));
+        out.add(
+          0,
+          lang == null || lang.isEmpty ? 'code' : 'code[$lang]',
+          dumpQuote(b.text),
+        );
       case MD$List():
         _items(out, 0, b.items);
       case MD$Divider():
@@ -71,7 +78,10 @@ String dumpB(String md, {bool softSpace = false}) {
         break;
       case MD$Table():
         final cols = b.header.cells.length;
-        out.add(0, 'table ${[for (var i = 0; i < cols; i++) _align(b.alignmentFor(i))].join(',')}');
+        out.add(
+          0,
+          'table ${[for (var i = 0; i < cols; i++) _align(b.alignmentFor(i))].join(',')}',
+        );
         String row(MD$TableRow r) => dumpCells(r.cells.map(_inl));
         out.add(1, 'th', row(b.header));
         for (final r in b.rows) {

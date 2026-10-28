@@ -265,7 +265,11 @@ class ComposerAttachments extends ChangeNotifier {
     _items.insertAll(0, back);
     final lost = taken.length - back.length;
     if (lost > 0) {
-      _problem(lost == 1 ? 'One attachment did not fit back and was removed.' : '$lost attachments did not fit back and were removed.');
+      _problem(
+        lost == 1
+            ? 'One attachment did not fit back and was removed.'
+            : '$lost attachments did not fit back and were removed.',
+      );
     }
     notifyListeners();
   }
@@ -435,8 +439,9 @@ class ComposerAttachments extends ChangeNotifier {
       '$name is ${formatBytes(bytes)}. Files up to ${formatBytes(attachRefuseBytes)} can be attached.';
 
   /// `Large file: uploading may take a while.`
-  static String largeMessage(String name, {int count = 1}) =>
-      count == 1 ? '$name is large; uploading it may take a while.' : '$count large files; uploading them may take a while.';
+  static String largeMessage(String name, {int count = 1}) => count == 1
+      ? '$name is large; uploading it may take a while.'
+      : '$count large files; uploading them may take a while.';
 
   void _stageHost(int id, String path) {
     final name = path.split('/').lastWhere((s) => s.isNotEmpty, orElse: () => path);
@@ -453,7 +458,9 @@ class ComposerAttachments extends ChangeNotifier {
         ),
       );
     } else {
-      _items.add(Attachment(id: id, kind: AttachmentKind.file, label: name, detail: detail, phase: AttachPhase.preparing));
+      _items.add(
+        Attachment(id: id, kind: AttachmentKind.file, label: name, detail: detail, phase: AttachPhase.preparing),
+      );
     }
   }
 
@@ -581,7 +588,10 @@ class ComposerAttachments extends ChangeNotifier {
   /// copy, not the original: downscaled, and without its metadata (location).
   Future<void> _pictureReady(int id, PreparedImage image) async {
     if (target.attachMode == AttachMode.blocks) {
-      _replace(id, (a) => a._with(block: image.toBlock(), thumb: image.bytes, phase: AttachPhase.ready, size: image.bytes.length));
+      _replace(
+        id,
+        (a) => a._with(block: image.toBlock(), thumb: image.bytes, phase: AttachPhase.ready, size: image.bytes.length),
+      );
       return;
     }
     final chip = _items.where((a) => a.id == id).firstOrNull;

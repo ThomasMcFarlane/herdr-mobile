@@ -45,16 +45,10 @@ class KeeperProcessHost implements AgentHost {
     Directory('${home.path}/work').createSync();
     final fake = File('test/support/fake_acp_agent.py').absolute.path;
     expect(File(fake).existsSync(), isTrue, reason: fake);
-    final omp = File('${bin.path}/omp')
-      ..writeAsStringSync('#!/bin/sh\nexec python3 \'$fake\' "\$@"\n');
+    final omp = File('${bin.path}/omp')..writeAsStringSync('#!/bin/sh\nexec python3 \'$fake\' "\$@"\n');
     await Process.run('chmod', ['755', omp.path]);
     var python = '/usr/bin';
-    for (final d in [
-      '/usr/bin',
-      '/bin',
-      '/usr/local/bin',
-      '/opt/homebrew/bin',
-    ]) {
+    for (final d in ['/usr/bin', '/bin', '/usr/local/bin', '/opt/homebrew/bin']) {
       if (File('$d/python3').existsSync()) {
         python = d;
         break;
@@ -126,13 +120,8 @@ class KeeperProcessHost implements AgentHost {
   ];
 
   @override
-  Future<KeeperInfo> start({
-    required String agent,
-    required String cwd,
-  }) async => KeeperInfo.fromJson(
-    Map<String, Object?>.from(
-      jsonDecode(await _run(keeperStartCommand(agent: agent, cwd: cwd))) as Map,
-    ),
+  Future<KeeperInfo> start({required String agent, required String cwd}) async => KeeperInfo.fromJson(
+    Map<String, Object?>.from(jsonDecode(await _run(keeperStartCommand(agent: agent, cwd: cwd))) as Map),
   );
 
   /// What the fake agent remembers (`FAKE_ACP_STORE`, see `fake_acp_agent.py`):
@@ -175,9 +164,7 @@ class KeeperProcessHost implements AgentHost {
 
   @override
   Future<PastSessions> history({required String agent, String? cwd}) async => PastSessions.fromJson(
-    Map<String, Object?>.from(
-      jsonDecode(await _run(keeperHistoryCommand(agent: agent, cwd: cwd))) as Map,
-    ),
+    Map<String, Object?>.from(jsonDecode(await _run(keeperHistoryCommand(agent: agent, cwd: cwd))) as Map),
   );
 
   /// How many channels were opened to keepers.
@@ -186,10 +173,7 @@ class KeeperProcessHost implements AgentHost {
   /// The phone's links all die at once (the SSH connection dropped); the
   /// keepers live on.
   Future<void> dropLinks() => Future.wait([
-    for (final t in _transports)
-      t
-          .close(grace: const Duration(milliseconds: 500))
-          .catchError((Object _) {}),
+    for (final t in _transports) t.close(grace: const Duration(milliseconds: 500)).catchError((Object _) {}),
   ]);
 
   @override
@@ -215,11 +199,7 @@ class KeeperProcessHost implements AgentHost {
   /// the temp HOME.
   Future<void> dispose() async {
     for (final t in _transports) {
-      unawaited(
-        t
-            .close(grace: const Duration(milliseconds: 200))
-            .catchError((Object _) {}),
-      );
+      unawaited(t.close(grace: const Duration(milliseconds: 200)).catchError((Object _) {}));
     }
     try {
       for (final k in await list()) {

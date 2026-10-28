@@ -6,7 +6,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/models/remote_file.dart';
 import '../../../data/repositories/attach_target.dart';
 import '../../../data/services/remote_files.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../render/visible_text.dart';
 import '../files/file_browser_screen.dart';
 import '../files/file_browser_view_model.dart';
@@ -156,7 +158,9 @@ class _HostTabState extends State<HostTab> {
       _open(e.path);
     } else if (!e.isFile) {
       Haptics.failed();
-      widget.onProblem(e.isBrokenLink ? '$name points to something that no longer exists.' : '$name can’t be attached.');
+      widget.onProblem(
+        e.isBrokenLink ? '$name points to something that no longer exists.' : '$name can’t be attached.',
+      );
     } else if (vm.isDenied(e)) {
       Haptics.failed();
       widget.onProblem('No permission to read $name');
@@ -193,10 +197,7 @@ class _HostTabState extends State<HostTab> {
   Widget build(BuildContext context) {
     final clearance = SheetScope.of(context).bottomClearance;
     // The find field is a Material text field; the sheet is not a Material.
-    return Material(
-      type: MaterialType.transparency,
-      child: _supported ? _browser(clearance) : _unavailable(clearance),
-    );
+    return Material(type: MaterialType.transparency, child: _supported ? _browser(clearance) : _unavailable(clearance));
   }
 
   Widget _unavailable(double clearance) => SheetScroll(
@@ -257,11 +258,7 @@ class _HostTabState extends State<HostTab> {
                       onTap: () => _options.setRecentOnly(!_options.recentOnly),
                     ),
                     const SizedBox(width: Gap.sm),
-                    AppChip(
-                      label: 'Browse all…',
-                      icon: LucideIcons.folderTree,
-                      onTap: () => unawaited(_browseAll()),
-                    ),
+                    AppChip(label: 'Browse all…', icon: LucideIcons.folderTree, onTap: () => unawaited(_browseAll())),
                   ],
                 ),
               ),
@@ -325,7 +322,12 @@ class _HostTabState extends State<HostTab> {
         controller: controller,
         physics: physics,
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        slivers: [SliverPadding(padding: EdgeInsets.only(bottom: clearance), sliver: state)],
+        slivers: [
+          SliverPadding(
+            padding: EdgeInsets.only(bottom: clearance),
+            sliver: state,
+          ),
+        ],
       ),
     );
   }

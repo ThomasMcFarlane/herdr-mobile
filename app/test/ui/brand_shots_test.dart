@@ -27,9 +27,9 @@ const _paperText = Color(0xFF37352F);
 const _inkText = Color(0xFFECEDEF);
 
 Future<ui.Image> _load(WidgetTester tester, String path) async => (await tester.runAsync(() async {
-      final codec = await ui.instantiateImageCodec(File(path).readAsBytesSync());
-      return (await codec.getNextFrame()).image;
-    }))!;
+  final codec = await ui.instantiateImageCodec(File(path).readAsBytesSync());
+  return (await codec.getNextFrame()).image;
+}))!;
 
 enum _Mask { circle, squircle }
 
@@ -87,56 +87,63 @@ class _Status extends CustomPainter {
 const _label = TextStyle(fontFamily: 'Inter', fontSize: 13, height: 1.3, color: Color(0xFF5F5E5A));
 
 Widget _cell(String caption, Widget child, {Color bg = const Color(0xFFF1F0EE)}) => Container(
-      width: 190,
-      height: 220,
-      margin: const EdgeInsets.only(right: 12),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
-      child: Column(
-        children: [
-          Expanded(child: Center(child: child)),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Text(caption, style: _label.copyWith(color: bg.computeLuminance() < 0.3 ? const Color(0xFFB8BAC0) : null)),
-          ),
-        ],
+  width: 190,
+  height: 220,
+  margin: const EdgeInsets.only(right: 12),
+  decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
+  child: Column(
+    children: [
+      Expanded(child: Center(child: child)),
+      Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Text(
+          caption,
+          style: _label.copyWith(color: bg.computeLuminance() < 0.3 ? const Color(0xFFB8BAC0) : null),
+        ),
       ),
-    );
+    ],
+  ),
+);
 
 Widget _home(CustomPainter p, Color text) => Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        CustomPaint(size: const Size.square(56), painter: p),
-        const SizedBox(height: 6),
-        Text('herdr', style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: text)),
-      ],
-    );
+  mainAxisSize: MainAxisSize.min,
+  children: [
+    CustomPaint(size: const Size.square(56), painter: p),
+    const SizedBox(height: 6),
+    Text(
+      'herdr',
+      style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: text),
+    ),
+  ],
+);
 
 Widget _firstRun({int badge = 0}) => Stack(
-      children: [
-        EmptyState(
-          mark: const BrandMark(animate: false),
-          title: 'Your agents, in your pocket',
-          message: 'Connect a machine running herdr to see every coding '
-              'agent, know the moment one needs you, and reply from anywhere.',
-          action: AppButton(label: 'Add your first machine', icon: LucideIcons.plus, onPressed: () {}),
+  children: [
+    EmptyState(
+      mark: const BrandMark(animate: false),
+      title: 'Your agents, in your pocket',
+      message:
+          'Connect a machine running herdr to see every coding '
+          'agent, know the moment one needs you, and reply from anywhere.',
+      action: AppButton(label: 'Add your first machine', icon: LucideIcons.plus, onPressed: () {}),
+    ),
+    Align(
+      alignment: Alignment.bottomCenter,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 28),
+        child: FloatingTabBar(
+          tabs: [
+            TabSpec(icon: HerdrIcons.agents, label: 'Agents', badge: badge),
+            const TabSpec(icon: HerdrIcons.machines, label: 'Machines'),
+            const TabSpec(icon: HerdrIcons.settings, label: 'Settings'),
+          ],
+          index: badge == 0 ? 0 : 1,
+          onChanged: (_) {},
         ),
-        Align(
-          alignment: Alignment.bottomCenter,
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 28),
-            child: FloatingTabBar(
-              tabs: [
-                TabSpec(icon: HerdrIcons.agents, label: 'Agents', badge: badge),
-                const TabSpec(icon: HerdrIcons.machines, label: 'Machines'),
-                const TabSpec(icon: HerdrIcons.settings, label: 'Settings'),
-              ],
-              index: badge == 0 ? 0 : 1,
-              onChanged: (_) {},
-            ),
-          ),
-        ),
-      ],
-    );
+      ),
+    ),
+  ],
+);
 
 void main() {
   if (Platform.environment['ICON_SHOTS'] == null) {
@@ -174,16 +181,38 @@ void main() {
               children: [
                 Row(
                   children: [
-                    _cell('Master', CustomPaint(size: const Size.square(150), painter: _Launcher(fg, bg, mask: _Mask.squircle))),
+                    _cell(
+                      'Master',
+                      CustomPaint(
+                        size: const Size.square(150),
+                        painter: _Launcher(fg, bg, mask: _Mask.squircle),
+                      ),
+                    ),
                     _cell('Light wallpaper · 56 dp', _home(_Launcher(fg, bg), _paperText), bg: const Color(0xFFE6DFD3)),
-                    _cell('Dark wallpaper · 56 dp', _home(_Launcher(fg, bg, mask: _Mask.squircle), _inkText), bg: const Color(0xFF1E2230)),
-                    _cell('Themed (Android 13)', _home(_Launcher(fg, bg, mono: mono), _paperText), bg: const Color(0xFFEEF0F8)),
+                    _cell(
+                      'Dark wallpaper · 56 dp',
+                      _home(_Launcher(fg, bg, mask: _Mask.squircle), _inkText),
+                      bg: const Color(0xFF1E2230),
+                    ),
+                    _cell(
+                      'Themed (Android 13)',
+                      _home(_Launcher(fg, bg, mono: mono), _paperText),
+                      bg: const Color(0xFFEEF0F8),
+                    ),
                     _cell(
                       'Status bar · 24 dp',
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('9:41', style: TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFFFFFFFF))),
+                          const Text(
+                            '9:41',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFFFFFFFF),
+                            ),
+                          ),
                           const SizedBox(width: 10),
                           CustomPaint(size: const Size.square(18), painter: _Status()),
                           const SizedBox(width: 18),
@@ -192,14 +221,24 @@ void main() {
                       ),
                       bg: const Color(0xFF000000),
                     ),
-                    _cell('Launch (paper)', CustomPaint(size: const Size.square(88), painter: _Launcher(fg, bg)), bg: _paperBg),
+                    _cell(
+                      'Launch (paper)',
+                      CustomPaint(size: const Size.square(88), painter: _Launcher(fg, bg)),
+                      bg: _paperBg,
+                    ),
                   ],
                 ),
                 const SizedBox(height: 18),
                 Row(
                   children: [
                     _cell('Legacy mipmap (xxhdpi)', RawImage(image: legacy, width: 96, height: 96)),
-                    _cell('iOS 60@3x', ClipRRect(borderRadius: BorderRadius.circular(22), child: RawImage(image: ios, width: 96, height: 96))),
+                    _cell(
+                      'iOS 60@3x',
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(22),
+                        child: RawImage(image: ios, width: 96, height: 96),
+                      ),
+                    ),
                     _cell('Web maskable 192', ClipOval(child: RawImage(image: web, width: 96, height: 96))),
                   ],
                 ),
@@ -221,9 +260,12 @@ void main() {
   for (final brightness in Brightness.values) {
     for (final badge in const [0, 1]) {
       testWidgets('first run · ${brightness.name} · badge $badge', (tester) async {
-        await shoot(tester, Material(child: _firstRun(badge: badge)),
-            '$out/first_run_${brightness.name}_$badge.png',
-            brightness: brightness);
+        await shoot(
+          tester,
+          Material(child: _firstRun(badge: badge)),
+          '$out/first_run_${brightness.name}_$badge.png',
+          brightness: brightness,
+        );
       });
     }
   }

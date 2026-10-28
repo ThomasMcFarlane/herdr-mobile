@@ -99,7 +99,10 @@ void main() {
     final session = StreamBenchSession(historyState(300));
     addTearDown(session.dispose);
     await tester.pumpWidget(
-      MaterialApp(theme: AppTheme.light(), home: AgentSessionScreen(session: session)),
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: AgentSessionScreen(session: session),
+      ),
     );
     await tester.pump(const Duration(milliseconds: 100));
     final scrollables = tester.stateList<ScrollableState>(find.byType(Scrollable)).toList()
@@ -124,14 +127,19 @@ void main() {
     expect(probe.lag(us + 1000).pending, probe.received - probe.painted);
   });
 
-  testWidgets('the probe sees the reveal of the live row: text waits behind the pacing, then all of it is shown', (tester) async {
+  testWidgets('the probe sees the reveal of the live row: text waits behind the pacing, then all of it is shown', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(412, 892) * 2;
     tester.view.devicePixelRatio = 2;
     addTearDown(tester.view.reset);
     final session = StreamBenchSession(historyState(300));
     addTearDown(session.dispose);
     await tester.pumpWidget(
-      MaterialApp(theme: AppTheme.light(), home: AgentSessionScreen(session: session)),
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: AgentSessionScreen(session: session),
+      ),
     );
     await tester.pump(const Duration(milliseconds: 100));
     final scrollables = tester.stateList<ScrollableState>(find.byType(Scrollable)).toList()

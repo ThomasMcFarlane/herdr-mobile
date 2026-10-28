@@ -39,7 +39,8 @@ class _AskingNotifier extends NullNotifier {
 
 const _title = 'Notify me when an agent needs me';
 const _alsoTitle = 'Also when an agent finishes';
-const _blockedLine = 'Android is blocking notifications for herdr. '
+const _blockedLine =
+    'Android is blocking notifications for herdr. '
     'Allow them in the system settings for this app.';
 
 Future<NotificationSettings> _pump(
@@ -159,11 +160,7 @@ void main() {
 
   testWidgets('turning it off needs no permission and clears the line', (tester) async {
     final notifier = _AskingNotifier(current: NotifyPermission.denied);
-    final settings = await _pump(
-      tester,
-      notifier,
-      choice: const NotificationChoice(enabled: true, alsoDone: true),
-    );
+    final settings = await _pump(tester, notifier, choice: const NotificationChoice(enabled: true, alsoDone: true));
     expect(find.text(_blockedLine), findsOneWidget, reason: 'on, but Android blocks them since');
 
     await _tap(tester, _title);
@@ -255,17 +252,9 @@ void main() {
   });
 
   for (final brightness in Brightness.values) {
-    testWidgets('320 dp at 2x text: no overflow, 44 dp targets, nothing clipped (${brightness.name})',
-        (tester) async {
+    testWidgets('320 dp at 2x text: no overflow, 44 dp targets, nothing clipped (${brightness.name})', (tester) async {
       final notifier = _AskingNotifier();
-      await _pump(
-        tester,
-        notifier,
-        width: 320,
-        height: 640,
-        textScale: 2,
-        brightness: brightness,
-      );
+      await _pump(tester, notifier, width: 320, height: 640, textScale: 2, brightness: brightness);
       await _tap(tester, _title);
       notifier.answer!.complete(NotifyPermission.denied);
       await tester.pump(const Duration(milliseconds: 300));

@@ -33,6 +33,7 @@ import 'package:url_launcher_platform_interface/url_launcher_platform_interface.
 import 'package:provider/provider.dart';
 
 import 'package:herdr_mobile/ui/features/web/web_preview_screen.dart';
+
 import 'support/fake_dictation.dart';
 import 'support/fake_fs.dart';
 import 'support/fake_network.dart';
@@ -62,10 +63,7 @@ class _Launcher extends UrlLauncherPlatform {
 
 /// Answers `pane.read` with text that depends on the requested source.
 class _PaneTransport extends FakeTransport {
-  _PaneTransport()
-      : super(snapshotJson(
-          panes: [(id: _pane, ws: 'w1', agent: 'claude', status: 'working')],
-        ));
+  _PaneTransport() : super(snapshotJson(panes: [(id: _pane, ws: 'w1', agent: 'claude', status: 'working')]));
 
   /// Fails every `pane.send_input` with this while set.
   Object? sendFailure;
@@ -84,30 +82,27 @@ class _PaneTransport extends FakeTransport {
 
   /// `lines` of every `pane.read`.
   List<int> get lines => [
-        for (final (method, params) in calls)
-          if (method == 'pane.read') params['lines']! as int,
-      ];
+    for (final (method, params) in calls)
+      if (method == 'pane.read') params['lines']! as int,
+  ];
 
   /// `source` of every `pane.read`.
   List<String> get sources => [
-        for (final (method, params) in calls)
-          if (method == 'pane.read') params['source']! as String,
-      ];
+    for (final (method, params) in calls)
+      if (method == 'pane.read') params['source']! as String,
+  ];
 
   /// What was typed or pressed in the pane: `line:<text>`, `keys:<combo>`.
   List<String> get sent => [
-        for (final (method, params) in calls)
-          if (method == 'pane.send_input')
-            'line:${params['text']}'
-          else if (method == 'pane.send_keys')
-            'keys:${(params['keys']! as List).join('+')}',
-      ];
+    for (final (method, params) in calls)
+      if (method == 'pane.send_input')
+        'line:${params['text']}'
+      else if (method == 'pane.send_keys')
+        'keys:${(params['keys']! as List).join('+')}',
+  ];
 
   @override
-  Future<Map<String, dynamic>> request(
-    String method, [
-    Map<String, dynamic> params = const {},
-  ]) {
+  Future<Map<String, dynamic>> request(String method, [Map<String, dynamic> params = const {}]) {
     if (method == 'pane.send_input' && sendFailure != null) {
       calls.add((method, params));
       return Future.error(sendFailure!);
@@ -120,11 +115,10 @@ class _PaneTransport extends FakeTransport {
     calls.add((method, params));
     if (readFailure != null) return Future.error(readFailure!);
     final custom = readFor?.call(params);
-    final text = custom?.$1 ??
+    final text =
+        custom?.$1 ??
         readText ??
-        (params['source'] == 'recent_unwrapped'
-            ? 'joined line from herdr'
-            : 'rows as the terminal has them');
+        (params['source'] == 'recent_unwrapped' ? 'joined line from herdr' : 'rows as the terminal has them');
     return Future.value({
       'type': 'pane_read',
       'read': {'text': text, 'truncated': custom?.$2 ?? false},
@@ -160,11 +154,11 @@ void main() {
   Dictation? dictation;
 
   MachineConnection newMachine(String label) => MachineConnection(
-        profile: MachineProfile(id: 'm', label: label, host: 'h', username: 'u'),
-        api: HerdrApi(transport),
-        backoff: (_) => const Duration(hours: 1),
-        pollInterval: const Duration(hours: 1),
-      );
+    profile: MachineProfile(id: 'm', label: label, host: 'h', username: 'u'),
+    api: HerdrApi(transport),
+    backoff: (_) => const Duration(hours: 1),
+    pollInterval: const Duration(hours: 1),
+  );
 
   setUp(() {
     transport = _PaneTransport();
@@ -184,16 +178,9 @@ void main() {
   /// The pane screen as the app opens it: [machine] in a fleet, its pane's
   /// screen in front. [home] replaces the screen (to test opening it).
   Future<void> pumpPane(WidgetTester tester, {Widget? home}) async {
-    final repo = MachineRepository(
-      profiles: MemoryProfileStore(),
-      secrets: MemorySecretStore(),
-    );
+    final repo = MachineRepository(profiles: MemoryProfileStore(), secrets: MemorySecretStore());
     await repo.load();
-    fleet = FleetRepository(
-      machines: repo,
-      network: FakeNetwork(),
-      connect: (profile, secrets) => machine,
-    );
+    fleet = FleetRepository(machines: repo, network: FakeNetwork(), connect: (profile, secrets) => machine);
     await repo.save(machine.profile, secrets: const MachineSecrets(password: 'x'));
     await fleet.settled();
     screens = AgentScreens();
@@ -229,16 +216,12 @@ void main() {
     const failure = HerdrTransportException('network down');
     transport.failure = failure;
     transport.dropEvents(failure);
-    await tester.runAsync(() => eventually(
-          () => machine.state == LinkState.reconnecting,
-          reason: 'reconnecting',
-        ));
+    await tester.runAsync(() => eventually(() => machine.state == LinkState.reconnecting, reason: 'reconnecting'));
     await _settle(tester);
   }
 
   /// Text in the top bar.
-  Finder inBar(String text) =>
-      find.descendant(of: find.byType(PaneTopBar), matching: find.text(text));
+  Finder inBar(String text) => find.descendant(of: find.byType(PaneTopBar), matching: find.text(text));
 
   /// The strip's message is rich text (title, then quieter detail).
   Finder banner(String text) => find.textContaining(text, findRichText: true);
@@ -281,25 +264,20 @@ void main() {
     await teardown(tester);
   });
 
-  testWidgets('a pane without a task title is named by its agent',
-      (tester) async {
+  testWidgets('a pane without a task title is named by its agent', (tester) async {
     final panes = transport.snapshot['panes']! as List;
     (panes.single as Map<String, dynamic>)['terminal_title_stripped'] = '';
 
     await pumpPane(tester);
 
     expect(inBar('Claude Code'), findsOneWidget);
-    expect(inBar('box'), findsOneWidget,
-        reason: 'the agent is not repeated on the subtitle line');
+    expect(inBar('box'), findsOneWidget, reason: 'the agent is not repeated on the subtitle line');
     await teardown(tester);
   });
 
-  testWidgets('a very long machine label gives way instead of overflowing',
-      (tester) async {
+  testWidgets('a very long machine label gives way instead of overflowing', (tester) async {
     machine.dispose();
-    machine = newMachine(
-      'bartholomew.fitzgerald@northwind-industries-holdings.example.com',
-    );
+    machine = newMachine('bartholomew.fitzgerald@northwind-industries-holdings.example.com');
     tester.view.physicalSize = const Size(412, 892);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -308,8 +286,7 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(inBar('title $_pane'), findsOneWidget);
-    expect(find.byTooltip('Pane options'), findsOneWidget,
-        reason: 'the buttons keep their room');
+    expect(find.byTooltip('Pane options'), findsOneWidget, reason: 'the buttons keep their room');
     await teardown(tester);
   });
 
@@ -377,8 +354,7 @@ void main() {
     await teardown(tester);
   });
 
-  testWidgets('pinching sets the font size, and saves it when the fingers lift',
-      (tester) async {
+  testWidgets('pinching sets the font size, and saves it when the fingers lift', (tester) async {
     await pumpPane(tester);
     final center = tester.getCenter(find.byType(TerminalView));
 
@@ -390,8 +366,7 @@ void main() {
     await tester.pump();
 
     expect(settings.fontSize, closeTo(defaultTerminalFontSize * 1.5, 0.3));
-    expect(tester.widget<TerminalView>(find.byType(TerminalView)).fontSize,
-        settings.fontSize);
+    expect(tester.widget<TerminalView>(find.byType(TerminalView)).fontSize, settings.fontSize);
     expect(store.fontSize, isNull, reason: 'not saved mid-pinch');
 
     await a.up();
@@ -428,8 +403,7 @@ void main() {
       await teardown(tester);
     });
 
-    testWidgets('asks for the keyboard when the finger lands, not when it lifts',
-        (tester) async {
+    testWidgets('asks for the keyboard when the finger lands, not when it lifts', (tester) async {
       await pumpPane(tester);
       final focus = tester.widget<TextField>(composer()).focusNode!;
       expect(focus.hasFocus, isFalse);
@@ -446,8 +420,7 @@ void main() {
       await teardown(tester);
     });
 
-    testWidgets('the send button does nothing while empty or only spaces',
-        (tester) async {
+    testWidgets('the send button does nothing while empty or only spaces', (tester) async {
       final semantics = tester.ensureSemantics();
       await pumpPane(tester);
 
@@ -459,14 +432,12 @@ void main() {
       await _settle(tester);
 
       expect(transport.sent, isEmpty);
-      expect(tester.widget<TextField>(composer()).controller!.text, '   ',
-          reason: 'what was typed stays put');
+      expect(tester.widget<TextField>(composer()).controller!.text, '   ', reason: 'what was typed stays put');
       semantics.dispose();
       await teardown(tester);
     });
 
-    testWidgets("the keyboard's send key on an empty field presses enter",
-        (tester) async {
+    testWidgets("the keyboard's send key on an empty field presses enter", (tester) async {
       await pumpPane(tester);
 
       await tester.showKeyboard(composer());
@@ -498,8 +469,7 @@ void main() {
       await tester.tap(send());
       await _settle(tester);
 
-      expect(tester.widget<TextField>(composer()).controller!.text,
-          'important command');
+      expect(tester.widget<TextField>(composer()).controller!.text, 'important command');
       expect(banner('write failed'), findsOneWidget);
       semantics.dispose();
       await teardown(tester);
@@ -657,10 +627,7 @@ void main() {
       await tester.tap(find.text('ctrl+c'));
       await tester.pump();
 
-      expect(
-        transport.sent,
-        ['keys:esc', 'keys:up', 'keys:enter', 'keys:space', 'keys:ctrl+c'],
-      );
+      expect(transport.sent, ['keys:esc', 'keys:up', 'keys:enter', 'keys:space', 'keys:ctrl+c']);
       semantics.dispose();
       await teardown(tester);
     });
@@ -674,8 +641,7 @@ void main() {
       await tester.pump();
 
       expect(transport.sent, ['keys:ctrl+r']);
-      expect(tester.widget<TextField>(composer()).controller!.text, isEmpty,
-          reason: 'the letter is a key, not text');
+      expect(tester.widget<TextField>(composer()).controller!.text, isEmpty, reason: 'the letter is a key, not text');
 
       await tester.enterText(composer(), 'x');
       await tester.pump();
@@ -701,8 +667,7 @@ void main() {
       await teardown(tester);
     });
 
-    testWidgets('a key that is already a combo ignores the armed modifier but keeps it',
-        (tester) async {
+    testWidgets('a key that is already a combo ignores the armed modifier but keeps it', (tester) async {
       await pumpPane(tester);
 
       await tester.tap(find.text('ctrl'));
@@ -719,8 +684,7 @@ void main() {
       await teardown(tester);
     });
 
-    testWidgets('the new line key breaks the line in the composer and sends nothing',
-        (tester) async {
+    testWidgets('the new line key breaks the line in the composer and sends nothing', (tester) async {
       final semantics = tester.ensureSemantics();
       await pumpPane(tester);
 
@@ -735,8 +699,7 @@ void main() {
       await teardown(tester);
     });
 
-    testWidgets('a held arrow repeats and its release is not one more press',
-        (tester) async {
+    testWidgets('a held arrow repeats and its release is not one more press', (tester) async {
       final semantics = tester.ensureSemantics();
       await pumpPane(tester);
 
@@ -799,15 +762,16 @@ void main() {
       await teardown(tester);
     });
 
-    testWidgets('a read failure is shown and goes away once it succeeds',
-        (tester) async {
+    testWidgets('a read failure is shown and goes away once it succeeds', (tester) async {
       await pumpPane(tester);
       expect(find.text('Retry'), findsNothing);
 
       transport.readFailure = const HerdrTransportException('read failed');
       transport.emit({
         'event': 'pane_updated',
-        'data': {'pane': {'pane_id': _pane}},
+        'data': {
+          'pane': {'pane_id': _pane},
+        },
       });
       await _settle(tester);
       expect(banner('read failed'), findsOneWidget);
@@ -824,9 +788,7 @@ void main() {
   group('the live edge', () {
     // What the terminal is dimmed with while it is not live (or closed).
     final dim = find.byWidgetPredicate(
-      (w) =>
-          w is ColoredBox &&
-          w.color == TerminalPalette.dark.background.withValues(alpha: 0.6),
+      (w) => w is ColoredBox && w.color == TerminalPalette.dark.background.withValues(alpha: 0.6),
     );
     final staleLabel = find.textContaining('stale · ');
 
@@ -834,7 +796,9 @@ void main() {
       transport.readFailure = const HerdrTransportException('read failed');
       transport.emit({
         'event': 'pane_updated',
-        'data': {'pane': {'pane_id': _pane}},
+        'data': {
+          'pane': {'pane_id': _pane},
+        },
       });
       await _settle(tester);
     }
@@ -855,8 +819,7 @@ void main() {
       expect(dim, findsOneWidget);
       expect(staleLabel, findsOneWidget);
       expect(find.text('stale · 0s'), findsOneWidget);
-      expect(terminalRow('rows as the terminal has them'), findsOneWidget,
-          reason: 'the last text stays, dimmed');
+      expect(terminalRow('rows as the terminal has them'), findsOneWidget, reason: 'the last text stays, dimmed');
 
       transport.readFailure = null;
       await tester.tap(find.text('Retry'));
@@ -876,8 +839,7 @@ void main() {
       await teardown(tester);
     });
 
-    testWidgets('a pane that was closed is dimmed once and is not "stale"',
-        (tester) async {
+    testWidgets('a pane that was closed is dimmed once and is not "stale"', (tester) async {
       await pumpPane(tester);
       (transport.snapshot['panes']! as List).clear();
       await tester.runAsync(machine.refresh);
@@ -903,8 +865,7 @@ void main() {
       expect(terminalRow('line 119'), findsNothing);
       expect(find.text('Needs you'), findsNothing);
 
-      ((transport.snapshot['panes']! as List).single as Map<String, dynamic>)['agent_status'] =
-          'blocked';
+      ((transport.snapshot['panes']! as List).single as Map<String, dynamic>)['agent_status'] = 'blocked';
       await tester.runAsync(machine.refresh);
       await _settle(tester);
 
@@ -926,8 +887,7 @@ void main() {
       await _settle(tester);
 
       expect(transport.sent, ['line:ls']);
-      expect(tester.state<EditableTextState>(find.byType(EditableText)).widget.focusNode.hasFocus,
-          isTrue);
+      expect(tester.state<EditableTextState>(find.byType(EditableText)).widget.focusNode.hasFocus, isTrue);
       expect(tester.testTextInput.isVisible, isTrue);
       await teardown(tester);
     });
@@ -949,8 +909,7 @@ void main() {
       await teardown(tester);
     });
 
-    testWidgets('leaving the pane mid-send does not touch the composer',
-        (tester) async {
+    testWidgets('leaving the pane mid-send does not touch the composer', (tester) async {
       transport.sendGate = Completer<void>();
       await pumpPane(tester);
 
@@ -975,8 +934,7 @@ void main() {
       await _settle(tester);
     }
 
-    testWidgets('says so, disables the composer and the keys, and keeps its name',
-        (tester) async {
+    testWidgets('says so, disables the composer and the keys, and keeps its name', (tester) async {
       final semantics = tester.ensureSemantics();
       await pumpPane(tester);
       expect(banner('This pane was closed'), findsNothing);
@@ -986,10 +944,8 @@ void main() {
       expect(banner('This pane was closed'), findsOneWidget);
       expect(find.text('Pane closed'), findsOneWidget);
       expect(tester.widget<TextField>(composer()).enabled, isFalse);
-      expect(inBar('title $_pane'), findsOneWidget,
-          reason: 'still says which task this was');
-      expect(find.text('title $_pane'), findsOneWidget,
-          reason: 'the bar is the only place that names it now');
+      expect(inBar('title $_pane'), findsOneWidget, reason: 'still says which task this was');
+      expect(find.text('title $_pane'), findsOneWidget, reason: 'the bar is the only place that names it now');
       expect(find.text('Retry'), findsNothing, reason: 'there is nothing to retry');
 
       await tester.tap(find.text('esc'));
@@ -1002,8 +958,7 @@ void main() {
   });
 
   group('the banner', () {
-    testWidgets('closes with its content instead of emptying first',
-        (tester) async {
+    testWidgets('closes with its content instead of emptying first', (tester) async {
       await pumpPane(tester);
       await goOffline(tester);
       expect(banner('network down'), findsOneWidget);
@@ -1014,8 +969,11 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 60));
 
-      expect(banner('network down'), findsOneWidget,
-          reason: 'mid-animation the message is still there, fading with the strip');
+      expect(
+        banner('network down'),
+        findsOneWidget,
+        reason: 'mid-animation the message is still there, fading with the strip',
+      );
       await _settle(tester);
       expect(banner('network down'), findsNothing);
       await teardown(tester);
@@ -1030,8 +988,7 @@ void main() {
       await pumpPane(tester);
 
       Rect rectOf(Finder f) => tester.getRect(f);
-      Finder key(IconData icon) =>
-          find.descendant(of: find.byType(ListView), matching: find.byIcon(icon));
+      Finder key(IconData icon) => find.descendant(of: find.byType(ListView), matching: find.byIcon(icon));
       expect(rectOf(find.text('esc')).right, lessThan(412));
       expect(rectOf(key(LucideIcons.arrowUp)).right, lessThan(412));
       expect(rectOf(key(LucideIcons.arrowDown)).right, lessThan(412));
@@ -1042,8 +999,7 @@ void main() {
       await teardown(tester);
     });
 
-    testWidgets('the send button and the keys have 44dp touch targets',
-        (tester) async {
+    testWidgets('the send button and the keys have 44dp touch targets', (tester) async {
       final semantics = tester.ensureSemantics();
       await pumpPane(tester);
 
@@ -1096,13 +1052,8 @@ void main() {
 
     /// Taps the cell of [needle]'s row where [column] of the row is.
     Future<void> tapText(WidgetTester tester, String needle, {int column = 8}) async {
-      final row = find.byWidgetPredicate(
-        (w) => w is TerminalLineView && w.line.span.toPlainText().contains(needle),
-      );
-      final metrics = CellMetrics.measure(
-        settings.fontSize,
-        tester.view.devicePixelRatio,
-      );
+      final row = find.byWidgetPredicate((w) => w is TerminalLineView && w.line.span.toPlainText().contains(needle));
+      final metrics = CellMetrics.measure(settings.fontSize, tester.view.devicePixelRatio);
       final rect = tester.getRect(row.first);
       await tester.tapAt(Offset(rect.left + (column + 0.5) * metrics.advance, rect.center.dy));
       await _settle(tester);
@@ -1135,17 +1086,15 @@ void main() {
       testWidgets('copies the address', (tester) async {
         transport.readText = 'see $docs for more';
         String? copied;
-        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-          SystemChannels.platform,
-          (call) async {
-            if (call.method == 'Clipboard.setData') {
-              copied = (call.arguments as Map)['text'] as String?;
-            }
-            return null;
-          },
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+          if (call.method == 'Clipboard.setData') {
+            copied = (call.arguments as Map)['text'] as String?;
+          }
+          return null;
+        });
+        addTearDown(
+          () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null),
         );
-        addTearDown(() => tester.binding.defaultBinaryMessenger
-            .setMockMethodCallHandler(SystemChannels.platform, null));
         await pumpPane(tester);
         await tapText(tester, 'for more');
 
@@ -1158,20 +1107,23 @@ void main() {
         await teardown(tester);
       });
 
-      for (final local in [
-        'http://localhost:3000/app',
-        'http://127.0.0.1:8080',
-        'http://[::1]:5173/',
-      ]) {
+      for (final local in ['http://localhost:3000/app', 'http://127.0.0.1:8080', 'http://[::1]:5173/']) {
         testWidgets('on the machine itself ($local) is opened on the phone, or copied', (tester) async {
           transport.readText = 'listening on $local now';
           await pumpPane(tester);
 
           await tapText(tester, 'listening on', column: 16);
 
-          expect(find.textContaining('This address is on box. Open page shows it in herdr, over your SSH connection.'), findsOneWidget);
+          expect(
+            find.textContaining('This address is on box. Open page shows it in herdr, over your SSH connection.'),
+            findsOneWidget,
+          );
           expect(find.text('Open page'), findsOneWidget);
-          expect(find.text('Open in browser'), findsNothing, reason: 'the phone cannot reach the machine\'s localhost itself');
+          expect(
+            find.text('Open in browser'),
+            findsNothing,
+            reason: 'the phone cannot reach the machine\'s localhost itself',
+          );
           expect(find.text('Copy link'), findsOneWidget);
           await teardown(tester);
         });
@@ -1179,10 +1131,7 @@ void main() {
 
       // A forward dials the host from the machine: a `.local` name would reach
       // other devices on its network, another 127.x is not what `localhost` reads as.
-      for (final local in [
-        'http://devbox.local:4000/ui',
-        'http://127.1.2.3:3000',
-      ]) {
+      for (final local in ['http://devbox.local:4000/ui', 'http://127.1.2.3:3000']) {
         testWidgets('a name on the machine that is not the machine itself ($local) can only be copied', (tester) async {
           transport.readText = 'listening on $local now';
           await pumpPane(tester);
@@ -1254,8 +1203,7 @@ void main() {
         await teardown(tester);
       });
 
-      testWidgets('plain http is shown, with a warning, before it can be opened',
-          (tester) async {
+      testWidgets('plain http is shown, with a warning, before it can be opened', (tester) async {
         transport.readText = 'see http://example.org/a for more';
         await pumpPane(tester);
         await tapText(tester, 'for more');
@@ -1265,8 +1213,7 @@ void main() {
         await teardown(tester);
       });
 
-      testWidgets('a very long address wraps in the sheet and the sheet scrolls',
-          (tester) async {
+      testWidgets('a very long address wraps in the sheet and the sheet scrolls', (tester) async {
         final long = 'https://example.com/${'segment/' * 40}file.html?x=${'1234567890' * 8}';
         transport.readText = 'go $long';
         await pumpPane(tester);
@@ -1369,8 +1316,7 @@ void main() {
         await teardown(tester);
       });
 
-      testWidgets('goes with the top bar in landscape with the keyboard up',
-          (tester) async {
+      testWidgets('goes with the top bar in landscape with the keyboard up', (tester) async {
         filesystem();
         tester.view.physicalSize = const Size(740, 360);
         tester.view.devicePixelRatio = 1;
@@ -1398,8 +1344,7 @@ void main() {
     });
 
     group('scrollback', () {
-      testWidgets('reads 300 rows until the user nears the top, then 1000',
-          (tester) async {
+      testWidgets('reads 300 rows until the user nears the top, then 1000', (tester) async {
         final rows = [for (var i = 0; i < 2000; i++) 'row $i'];
         transport.readFor = (params) {
           final n = (params['lines']! as int).clamp(0, 1000);
@@ -1409,10 +1354,9 @@ void main() {
         expect(transport.lines.toSet(), {300});
 
         final position = tester
-            .state<ScrollableState>(find
-                .descendant(
-                    of: find.byType(CustomScrollView), matching: find.byType(Scrollable))
-                .first)
+            .state<ScrollableState>(
+              find.descendant(of: find.byType(CustomScrollView), matching: find.byType(Scrollable)).first,
+            )
             .position;
         position.jumpTo(position.maxScrollExtent - 3000);
         await _settle(tester);
@@ -1433,18 +1377,16 @@ void main() {
   });
 
   group('rebuild scope', () {
-    testWidgets('a notify about another pane rebuilds none of this pane',
-        (tester) async {
+    testWidgets('a notify about another pane rebuilds none of this pane', (tester) async {
       List<({String id, String ws, String? agent, String status})> panes(String other) => [
-            (id: _pane, ws: 'w1', agent: 'claude', status: 'working'),
-            (id: 'w1:p2', ws: 'w1', agent: 'omp', status: other),
-          ];
+        (id: _pane, ws: 'w1', agent: 'claude', status: 'working'),
+        (id: 'w1:p2', ws: 'w1', agent: 'omp', status: other),
+      ];
       transport.snapshot = snapshotJson(panes: panes('idle'));
       await pumpPane(tester);
 
       final rebuilt = <String>[];
-      debugOnRebuildDirtyWidget = (element, builtOnce) =>
-          rebuilt.add(element.widget.runtimeType.toString());
+      debugOnRebuildDirtyWidget = (element, builtOnce) => rebuilt.add(element.widget.runtimeType.toString());
       addTearDown(() => debugOnRebuildDirtyWidget = null);
 
       var notified = 0;
@@ -1457,20 +1399,32 @@ void main() {
 
       expect(notified, greaterThan(0), reason: 'the machine did notify');
       expect(
-        rebuilt.where({'PaneTopBar', '_Banner', 'QuickKeys', '_Composer', '_TerminalPanel', '_PaneView', 'AnswerDock', '_Dock'}.contains),
+        rebuilt.where(
+          {
+            'PaneTopBar',
+            '_Banner',
+            'QuickKeys',
+            '_Composer',
+            '_TerminalPanel',
+            '_PaneView',
+            'AnswerDock',
+            '_Dock',
+          }.contains,
+        ),
         isEmpty,
       );
 
       // The hook sees rebuilds at all, and this pane's own change reaches
       // only the part that shows it.
-      transport.snapshot = snapshotJson(panes: [
-        (id: _pane, ws: 'w1', agent: 'claude', status: 'idle'),
-        (id: 'w1:p2', ws: 'w1', agent: 'omp', status: 'blocked'),
-      ]);
+      transport.snapshot = snapshotJson(
+        panes: [
+          (id: _pane, ws: 'w1', agent: 'claude', status: 'idle'),
+          (id: 'w1:p2', ws: 'w1', agent: 'omp', status: 'blocked'),
+        ],
+      );
       await tester.runAsync(machine.refresh);
       await tester.pump();
-      expect(rebuilt, contains('${ValueListenableBuilder<PaneTitle?>}'),
-          reason: 'the title block follows the pane');
+      expect(rebuilt, contains('${ValueListenableBuilder<PaneTitle?>}'), reason: 'the title block follows the pane');
       expect(rebuilt.where({'QuickKeys', '_Composer', '_Banner'}.contains), isEmpty);
       await teardown(tester);
     });
@@ -1486,7 +1440,9 @@ void main() {
       return engine;
     }
 
-    testWidgets('an agent\'s pane has the mic where Send waits; speaking fills the box and sends nothing', (tester) async {
+    testWidgets('an agent\'s pane has the mic where Send waits; speaking fills the box and sends nothing', (
+      tester,
+    ) async {
       final semantics = tester.ensureSemantics();
       final engine = await withMic(tester);
       expect(find.byIcon(LucideIcons.mic), findsOneWidget);
@@ -1530,7 +1486,9 @@ void main() {
         tester,
         home: PaneScreen(
           agent: agent(),
-          picker: _CameraPicker(PickedPhoto(path: '/cache/image_picker/IMG_2031.jpg', name: 'IMG_2031.jpg', size: jpeg.length)),
+          picker: _CameraPicker(
+            PickedPhoto(path: '/cache/image_picker/IMG_2031.jpg', name: 'IMG_2031.jpg', size: jpeg.length),
+          ),
           prepare: (input) async => PreparedImage(bytes: input, width: 8, height: 8),
           attachKit: kit.kit,
           readFile: (_) async => jpeg,
@@ -1582,7 +1540,9 @@ void main() {
       await teardown(tester);
     });
 
-    testWidgets('a ready picture and text: the path is pasted, then the line goes, and the chips are gone', (tester) async {
+    testWidgets('a ready picture and text: the path is pasted, then the line goes, and the chips are gone', (
+      tester,
+    ) async {
       await pumpWithKit(tester);
       await takePhoto(tester);
       kit.uploader.last.finish();
@@ -1594,10 +1554,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
       await _settle(tester);
 
-      expect(transport.sent, [
-        'line:/home/dev/.herdr-mobile/inbox/abc/2026-05-20-IMG_2031.jpg',
-        'line: what is this?',
-      ]);
+      expect(transport.sent, ['line:/home/dev/.herdr-mobile/inbox/abc/2026-05-20-IMG_2031.jpg', 'line: what is this?']);
       final calls = transport.calls.where((c) => c.$1 == 'pane.send_input').toList();
       expect(calls[0].$2.containsKey('keys'), isFalse, reason: 'a paste, not a line');
       expect(calls[1].$2['keys'], ['enter']);
@@ -1618,11 +1575,16 @@ void main() {
 
       final calls = transport.calls.where((c) => c.$1 == 'pane.send_input').toList();
       expect(calls, hasLength(2));
-      expect(calls[1].$2, {'pane_id': _pane, 'keys': ['enter']});
+      expect(calls[1].$2, {
+        'pane_id': _pane,
+        'keys': ['enter'],
+      });
       await teardown(tester);
     });
 
-    testWidgets('chips are not typed into a pane that stopped being an agent: they stay, with the reason', (tester) async {
+    testWidgets('chips are not typed into a pane that stopped being an agent: they stay, with the reason', (
+      tester,
+    ) async {
       await pumpWithKit(tester);
       await takePhoto(tester);
       kit.uploader.last.finish();
@@ -1647,7 +1609,9 @@ void main() {
       await teardown(tester);
     });
 
-    testWidgets('a send that fails keeps the chips and the text, and says the picture may be in the input', (tester) async {
+    testWidgets('a send that fails keeps the chips and the text, and says the picture may be in the input', (
+      tester,
+    ) async {
       await pumpWithKit(tester);
       await takePhoto(tester);
       kit.uploader.last.finish();

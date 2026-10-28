@@ -90,21 +90,18 @@ const _activityEvery = Duration(milliseconds: 100);
 /// [paneReadAt] of the current [step].
 class _BenchTransport extends FakeTransport {
   _BenchTransport()
-      : super(
-          snapshotJson(
-            workspaces: [(id: 'w1', label: 'herdr-mobile')],
-            panes: [(id: _paneId, ws: 'w1', agent: 'claude', status: 'working')],
-          ),
-        );
+    : super(
+        snapshotJson(
+          workspaces: [(id: 'w1', label: 'herdr-mobile')],
+          panes: [(id: _paneId, ws: 'w1', agent: 'claude', status: 'working')],
+        ),
+      );
 
   final _rows = <int, String>{};
   var step = 0;
 
   @override
-  Future<Map<String, dynamic>> request(
-    String method, [
-    Map<String, dynamic> params = const {},
-  ]) {
+  Future<Map<String, dynamic>> request(String method, [Map<String, dynamic> params = const {}]) {
     if (method != 'pane.read') return super.request(method, params);
     final text = paneReadAt(1000 + step * paneSlide, step, rows: _rows);
     return Future.value({
@@ -121,31 +118,28 @@ class _BenchTransport extends FakeTransport {
     step++;
     emit({
       'event': 'pane_updated',
-      'data': {
-        'type': 'pane_updated',
-        'pane': (snapshot['panes'] as List).first,
-      },
+      'data': {'type': 'pane_updated', 'pane': (snapshot['panes'] as List).first},
     });
   }
 }
 
 Map<String, Object> _seed() => {
-      'machines.v1': jsonEncode([
-        {
-          'id': _machineId,
-          'label': 'workstation',
-          'host': 'bench.invalid',
-          'port': 22,
-          'username': 'bench',
-          'auth': 'password',
-          'session': 'default',
-          'enabled': true,
-        },
-      ]),
-      // The agent's terminal was in front: the app puts it back, as on a launch.
-      'frontAgent.v1': FrontAgent(const PaneAgent(_machineId, _paneId), AgentView.terminal).encode(),
-      'app.homeTab': 0,
-    };
+  'machines.v1': jsonEncode([
+    {
+      'id': _machineId,
+      'label': 'workstation',
+      'host': 'bench.invalid',
+      'port': 22,
+      'username': 'bench',
+      'auth': 'password',
+      'session': 'default',
+      'enabled': true,
+    },
+  ]),
+  // The agent's terminal was in front: the app puts it back, as on a launch.
+  'frontAgent.v1': FrontAgent(const PaneAgent(_machineId, _paneId), AgentView.terminal).encode(),
+  'app.homeTab': 0,
+};
 
 /// The smallest screen a keyboard can be asked for: a field under a filler.
 class _ControlApp extends StatelessWidget {
@@ -153,26 +147,24 @@ class _ControlApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: Scaffold(
-          body: Column(
-            children: [
-              const Expanded(
-                child: ColoredBox(color: Color(0xFFEEEEEE), child: SizedBox.expand()),
-              ),
-              SafeArea(
-                top: false,
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: TextField(
-                    decoration: const InputDecoration(hintText: 'Message control…'),
-                  ),
-                ),
-              ),
-            ],
+    debugShowCheckedModeBanner: false,
+    home: Scaffold(
+      body: Column(
+        children: [
+          const Expanded(
+            child: ColoredBox(color: Color(0xFFEEEEEE), child: SizedBox.expand()),
           ),
-        ),
-      );
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: TextField(decoration: const InputDecoration(hintText: 'Message control…')),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 Future<void> main() async {
@@ -184,8 +176,7 @@ Future<void> main() async {
     return;
   }
   final transport = _BenchTransport();
-  final secrets = MemorySecretStore()
-    ..secrets[_machineId] = const MachineSecrets(password: 'x');
+  final secrets = MemorySecretStore()..secrets[_machineId] = const MachineSecrets(password: 'x');
   SharedPreferences.setMockInitialValues(_seed());
   final app = await bootApp(
     network: FakeNetwork(),
@@ -318,8 +309,7 @@ class _Driver with WidgetsBindingObserver {
   /// The window as the framework sees it, in physical px.
   void _geometry(String label) {
     final v = _view;
-    String edges(ui.ViewPadding p) =>
-        '${p.left.toInt()},${p.top.toInt()},${p.right.toInt()},${p.bottom.toInt()}';
+    String edges(ui.ViewPadding p) => '${p.left.toInt()},${p.top.toInt()},${p.right.toInt()},${p.bottom.toInt()}';
     print(
       'KBBENCH_GEOM $label size=${v.physicalSize.width.toInt()}x${v.physicalSize.height.toInt()} '
       'display=${v.display.size.width.toInt()}x${v.display.size.height.toInt()} '
@@ -337,40 +327,26 @@ class _Driver with WidgetsBindingObserver {
     final us = Timeline.now;
     if ((inset - _inset).abs() > 0.5) _lastChangeUs = us;
     _inset = inset;
-    _samples.add((
-      us: us,
-      inset: inset,
-      layout: math.max(inset, v.viewPadding.bottom),
-      height: v.physicalSize.height,
-    ));
+    _samples.add((us: us, inset: inset, layout: math.max(inset, v.viewPadding.bottom), height: v.physicalSize.height));
   }
 
   @override
   void didChangeMetrics() {
     final v = _view;
-    _updates.add((
-      us: Timeline.now,
-      layout: math.max(v.viewInsets.bottom, v.viewPadding.bottom),
-    ));
+    _updates.add((us: Timeline.now, layout: math.max(v.viewInsets.bottom, v.viewPadding.bottom)));
   }
 
   void _onTimings(List<ui.FrameTiming> timings) {
     _timings.addAll(timings);
     if (timings.isNotEmpty) {
-      _skewUs.add(
-        Timeline.now - timings.last.timestampInMicroseconds(ui.FramePhase.rasterFinish),
-      );
+      _skewUs.add(Timeline.now - timings.last.timestampInMicroseconds(ui.FramePhase.rasterFinish));
     }
   }
 
   // -------------------------------------------------------------------------
   // Driving.
 
-  Future<void> _scenario(
-    String name, {
-    required bool busy,
-    required List<_Mark> marks,
-  }) async {
+  Future<void> _scenario(String name, {required bool busy, required List<_Mark> marks}) async {
     _activity?.cancel();
     if (busy) _activity = Timer.periodic(_activityEvery, (_) => transport?.activity());
     // Let the first update (or the quiet) settle in.
@@ -469,10 +445,7 @@ class _Driver with WidgetsBindingObserver {
       await Future<void>.delayed(const Duration(milliseconds: 20));
       final now = _view.viewInsets.bottom;
       final there = open ? now > 50 : now < 0.5;
-      if (there &&
-          now == _inset &&
-          _lastChangeUs > since &&
-          Timeline.now - _lastChangeUs >= _quiet.inMicroseconds) {
+      if (there && now == _inset && _lastChangeUs > since && Timeline.now - _lastChangeUs >= _quiet.inMicroseconds) {
         return true;
       }
     }
@@ -485,9 +458,7 @@ class _Driver with WidgetsBindingObserver {
     void visit(Element e) {
       if (found != null) return;
       final w = e.widget;
-      if (w is TextField &&
-          (w.enabled ?? true) &&
-          (w.decoration?.hintText?.startsWith('Message') ?? false)) {
+      if (w is TextField && (w.enabled ?? true) && (w.decoration?.hintText?.startsWith('Message') ?? false)) {
         found = e;
         return;
       }
@@ -545,9 +516,7 @@ class _Driver with WidgetsBindingObserver {
     w.animMs = (last.us - first.us) / 1000;
     w.insets = [before / _dpr, for (final s in moved) s.layout / _dpr];
     w.stepMs = [for (final s in moved) (s.us - first.us) / 1000];
-    final deltas = [
-      for (var i = 1; i < w.insets.length; i++) (w.insets[i] - w.insets[i - 1]).abs(),
-    ];
+    final deltas = [for (var i = 1; i < w.insets.length; i++) (w.insets[i] - w.insets[i - 1]).abs()];
     w.firstStepDp = deltas.first;
     w.lastStepDp = deltas.last;
     w.maxStepDp = deltas.fold<double>(0, math.max);
@@ -567,8 +536,7 @@ class _Driver with WidgetsBindingObserver {
       final start = t.timestampInMicroseconds(ui.FramePhase.buildStart);
       final finish = t.timestampInMicroseconds(ui.FramePhase.buildFinish);
       return finish >= first.us && start <= last.us;
-    }).toList()
-      ..sort((a, b) => _raster(a).compareTo(_raster(b)));
+    }).toList()..sort((a, b) => _raster(a).compareTo(_raster(b)));
     for (var i = 0; i < frames.length; i++) {
       final f = frames[i];
       final build = f.buildDuration.inMicroseconds / 1000;
@@ -601,9 +569,8 @@ class _Driver with WidgetsBindingObserver {
 
   static String _list(List<double> v) => v.map((x) => x.toStringAsFixed(1)).join(',');
 
-  void _metric(String name, num value) => print(
-        'KBBENCH_METRIC $name=${value is int ? value : value.toStringAsFixed(3)}',
-      );
+  void _metric(String name, num value) =>
+      print('KBBENCH_METRIC $name=${value is int ? value : value.toStringAsFixed(3)}');
 
   void _report(List<_Mark> marks) {
     if (_timings.isEmpty) throw StateError('no FrameTiming arrived');
@@ -684,13 +651,8 @@ class _Driver with WidgetsBindingObserver {
         _metric('${p}_max_step_dp', med((w) => w.maxStepDp));
         _metric('${p}_platform_steps', med((w) => w.platformSteps.toDouble()));
         _metric('${p}_skipped', med((w) => w.skipped.toDouble()));
-        _metric(
-          '${p}_render_ratio',
-          med((w) => w.platformSteps == 0 ? 1 : 1 - w.skipped / w.platformSteps),
-        );
-        snap[p] = kind == 'open'
-            ? med((w) => w.lastStepDp)
-            : med((w) => w.firstStepDp);
+        _metric('${p}_render_ratio', med((w) => w.platformSteps == 0 ? 1 : 1 - w.skipped / w.platformSteps));
+        snap[p] = kind == 'open' ? med((w) => w.lastStepDp) : med((w) => w.firstStepDp);
       }
     }
     _metric('failed_cycles', failed);

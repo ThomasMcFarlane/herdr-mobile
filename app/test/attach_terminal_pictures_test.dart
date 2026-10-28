@@ -23,7 +23,8 @@ final _prepared = Uint8List.fromList([0xff, 0xd8, 1, 2, 3, 0xff, 0xd9]);
 
 class _Picker implements AttachPicker {
   @override
-  Future<PickedPhoto?> camera() async => PickedPhoto(path: '/cache/image_picker/IMG_7.heic', name: 'IMG_7.heic', size: 900);
+  Future<PickedPhoto?> camera() async =>
+      PickedPhoto(path: '/cache/image_picker/IMG_7.heic', name: 'IMG_7.heic', size: 900);
 
   @override
   Future<PickedPhoto?> photo() async => camera();
@@ -69,26 +70,29 @@ class _Rig {
 }
 
 void main() {
-  test('a gallery picture goes up as the prepared JPEG, named after the picture, and ends as a link to the host copy', () async {
-    final rig = _Rig();
-    addTearDown(rig.model.dispose);
-    rig.model
-      ..stage([GalleryPick(rig.fake.gallery.assetAt(0))])
-      ..startStaged();
-    await rig.settle();
+  test(
+    'a gallery picture goes up as the prepared JPEG, named after the picture, and ends as a link to the host copy',
+    () async {
+      final rig = _Rig();
+      addTearDown(rig.model.dispose);
+      rig.model
+        ..stage([GalleryPick(rig.fake.gallery.assetAt(0))])
+        ..startStaged();
+      await rig.settle();
 
-    final chip = rig.model.items.single;
-    expect(chip.ready, isTrue);
-    expect(chip.thumb, _prepared, reason: 'the chip shows what will be sent');
-    expect(chip.note, startsWith('Uploaded'), reason: 'no "takes no images" note');
-    expect(chip.block, isA<ResourceLinkBlock>());
-    expect((chip.block! as ResourceLinkBlock).uri, startsWith('file:///home/dev/.herdr-mobile/inbox/'));
+      final chip = rig.model.items.single;
+      expect(chip.ready, isTrue);
+      expect(chip.thumb, _prepared, reason: 'the chip shows what will be sent');
+      expect(chip.note, startsWith('Uploaded'), reason: 'no "takes no images" note');
+      expect(chip.block, isA<ResourceLinkBlock>());
+      expect((chip.block! as ResourceLinkBlock).uri, startsWith('file:///home/dev/.herdr-mobile/inbox/'));
 
-    final upload = rig.fake.uploader.started.single;
-    expect(upload.fileName, rig.fake.gallery.assetAt(0).name);
-    expect(rig.written[upload.localPath], _prepared, reason: 'the prepared copy, not the original');
-    expect(rig.deleted, [upload.localPath], reason: 'the phone keeps no copy once it is up');
-  });
+      final upload = rig.fake.uploader.started.single;
+      expect(upload.fileName, rig.fake.gallery.assetAt(0).name);
+      expect(rig.written[upload.localPath], _prepared, reason: 'the prepared copy, not the original');
+      expect(rig.deleted, [upload.localPath], reason: 'the phone keeps no copy once it is up');
+    },
+  );
 
   test('a camera or system-picker photo is the same: its stem with .jpg', () async {
     for (final camera in [true, false]) {

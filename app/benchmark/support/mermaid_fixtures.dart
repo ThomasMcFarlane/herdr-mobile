@@ -4,7 +4,9 @@
 /// span what the corpus holds (`tool/mermaid-bench`): from 4 to 30 nodes.
 library;
 
-String _chain(int n) => [for (var i = 0; i < n - 1; i++) '    N$i[Step $i: do the work] --> N${i + 1}[Step ${i + 1}: do the work]'].join('\n');
+String _chain(int n) =>
+    [for (var i = 0; i < n - 1; i++) '    N$i[Step $i: do the work] --> N${i + 1}[Step ${i + 1}: do the work]']
+        .join('\n');
 
 String _fan(int n) => [for (var i = 0; i < n; i++) '    Root[Root service] --> L$i[Leaf $i]'].join('\n');
 

@@ -39,7 +39,14 @@ List<String> _sliceNames(String text, int index, int total) {
     'all',
     if (n <= 40) 'len <= 40' else if (n <= 100) 'len 41-100' else 'len > 100',
     'lang ${_lang(text)}',
-    if (index < 500) 'msgs 0-499' else if (index < 2000) 'msgs 500-1999' else if (index < 5000) 'msgs 2000-4999' else 'msgs 5000+',
+    if (index < 500)
+      'msgs 0-499'
+    else if (index < 2000)
+      'msgs 500-1999'
+    else if (index < 5000)
+      'msgs 2000-4999'
+    else
+      'msgs 5000+',
   ];
 }
 
@@ -77,14 +84,20 @@ void main(List<String> args) {
     tapCost: double.parse(_flag(args, 'tap-cost') ?? '1'),
     notice: double.parse(_flag(args, 'notice') ?? '1'),
   );
-  final taus = (_flag(args, 'tau') ?? '0.1,0.25,0.4').split(',').map(double.parse).toList();
+  final taus = (_flag(args, 'tau') ?? '0.1,0.25,0.4')
+      .split(',')
+      .map(double.parse)
+      .toList();
   final sliceTau = double.parse(_flag(args, 'slice-tau') ?? '0.25');
   final only = _flag(args, 'only')?.split(',').toSet();
-  final dir = File(_flag(args, 'corpus') ?? 'corpus/messages.jsonl').parent.path;
+  final dir = File(_flag(args, 'corpus') ?? 'corpus/messages.jsonl')
+      .parent
+      .path;
 
   var msgs = loadMessages(_flag(args, 'corpus') ?? 'corpus/messages.jsonl');
   final limit = int.tryParse(_flag(args, 'limit') ?? '');
-  if (limit != null && limit < msgs.length) msgs = msgs.sublist(msgs.length - limit);
+  if (limit != null && limit < msgs.length)
+    msgs = msgs.sublist(msgs.length - limit);
   if (msgs.isEmpty) {
     stderr.writeln('no messages: run extract_corpus.py first');
     exit(1);
@@ -96,24 +109,30 @@ void main(List<String> args) {
     false: WordPrior.build(en, vi, viShare: 0.05, fold: false),
     true: WordPrior.build(en, vi, viShare: 0.05, fold: true),
   };
-  NgramPredictor ngram(NgramParams p, String label) => NgramPredictor(p, priors[p.fold]!, label: label);
+  NgramPredictor ngram(NgramParams p, String label) =>
+      NgramPredictor(p, priors[p.fold]!, label: label);
 
   final configs = <String, _Factory>{
     'none': (_) => NonePredictor(),
     'chips-default': (_) => StaticPhrases(),
     'phrase': (tau) => PhrasePredictor(tau: tau),
-    'generic-words': (tau) => ngram(NgramParams(tau: tau, personal: false), 'generic-words'),
+    'generic-words': (tau) =>
+        ngram(NgramParams(tau: tau, personal: false), 'generic-words'),
     'ngram': (tau) => ngram(NgramParams(tau: tau), 'ngram'),
-    'ngram-nextword': (tau) => ngram(NgramParams(tau: tau, nextWord: true, minPrefix: 0), 'ngram-nextword'),
-    'ngram-fold': (tau) => ngram(NgramParams(tau: tau, fold: true), 'ngram-fold'),
+    'ngram-nextword': (tau) => ngram(
+      NgramParams(tau: tau, nextWord: true, minPrefix: 0),
+      'ngram-nextword',
+    ),
+    'ngram-fold': (tau) =>
+        ngram(NgramParams(tau: tau, fold: true), 'ngram-fold'),
     'blend': (tau) => BlendPredictor([
-          PhrasePredictor(tau: tau),
-          ngram(NgramParams(tau: tau), 'ngram'),
-        ]),
+      PhrasePredictor(tau: tau),
+      ngram(NgramParams(tau: tau), 'ngram'),
+    ]),
     'blend-nextword': (tau) => BlendPredictor([
-          PhrasePredictor(tau: tau),
-          ngram(NgramParams(tau: tau, nextWord: true, minPrefix: 0), 'ngram'),
-        ], label: 'blend-nextword'),
+      PhrasePredictor(tau: tau),
+      ngram(NgramParams(tau: tau, nextWord: true, minPrefix: 0), 'ngram'),
+    ], label: 'blend-nextword'),
   };
   const noTau = {'none', 'chips-default'};
 
@@ -126,39 +145,60 @@ void main(List<String> args) {
   stdout
     ..writeln('# Prediction replay')
     ..writeln()
-    ..writeln('${msgs.length} messages, $chars characters, median length '
-        '${(msgs.map((m) => m.text.length).toList()..sort())[msgs.length ~/ 2]}; '
-        '${_pct(repeats / msgs.length)}% repeat an earlier message exactly '
-        '(the ceiling of whole-message prediction).')
-    ..writeln('Style `${style.name}`, ${sim.slots} chips, a tap costs ${sim.tapCost} keys, '
-        'the person notices a right chip ${_pct(sim.notice)}% of the time. '
-        'Latency is this computer, not a phone.')
+    ..writeln(
+      '${msgs.length} messages, $chars characters, median length '
+      '${(msgs.map((m) => m.text.length).toList()..sort())[msgs.length ~/ 2]}; '
+      '${_pct(repeats / msgs.length)}% repeat an earlier message exactly '
+      '(the ceiling of whole-message prediction).',
+    )
+    ..writeln(
+      'Style `${style.name}`, ${sim.slots} chips, a tap costs ${sim.tapCost} keys, '
+      'the person notices a right chip ${_pct(sim.notice)}% of the time. '
+      'Latency is this computer, not a phone.',
+    )
     ..writeln();
 
   final rows = <(String, double?, _Run)>[];
   for (final entry in configs.entries) {
     if (only != null && !only.contains(entry.key)) continue;
     for (final tau in noTau.contains(entry.key) ? [null] : taus) {
-      stderr.writeln('replaying ${entry.key}${tau == null ? '' : ' tau=$tau'} ...');
+      stderr.writeln(
+        'replaying ${entry.key}${tau == null ? '' : ' tau=$tau'} ...',
+      );
       rows.add((entry.key, tau, _replay(msgs, entry.value(tau ?? 0), sim)));
     }
   }
 
   stdout
-    ..writeln('| idea | τ | keys saved % | taps / msg | answered by taps % | noisy words / 100 | flips / 100 | chips on screen % | p50 µs | p99 µs |')
+    ..writeln(
+      '| idea | τ | keys saved % | taps / msg | answered by taps % | noisy words / 100 | flips / 100 | chips on screen % | p50 µs | p99 µs |',
+    )
     ..writeln('|---|---|---|---|---|---|---|---|---|---|');
   for (final (name, tau, run) in rows) {
     final a = run.all;
-    stdout.writeln('| $name | ${tau ?? '-'} | ${_pct(a.ksr)} | ${(a.taps / a.messages).toStringAsFixed(2)} '
-        '| ${_pct(a.tapOnly / a.messages)} | ${a.per100Words(a.noisyWords).toStringAsFixed(1)} '
-        '| ${a.per100Words(a.flips).toStringAsFixed(1)} | ${_pct(a.chipsOnScreen)} '
-        '| ${run.percentile(0.5)} | ${run.percentile(0.99)} |');
+    stdout.writeln(
+      '| $name | ${tau ?? '-'} | ${_pct(a.ksr)} | ${(a.taps / a.messages).toStringAsFixed(2)} '
+      '| ${_pct(a.tapOnly / a.messages)} | ${a.per100Words(a.noisyWords).toStringAsFixed(1)} '
+      '| ${a.per100Words(a.flips).toStringAsFixed(1)} | ${_pct(a.chipsOnScreen)} '
+      '| ${run.percentile(0.5)} | ${run.percentile(0.99)} |',
+    );
   }
 
-  final atTau = [for (final r in rows) if (r.$2 == null || r.$2 == sliceTau) r];
+  final atTau = [
+    for (final r in rows)
+      if (r.$2 == null || r.$2 == sliceTau) r,
+  ];
   const order = [
-    'all', 'len <= 40', 'len 41-100', 'len > 100', 'lang en', 'lang vi',
-    'msgs 0-499', 'msgs 500-1999', 'msgs 2000-4999', 'msgs 5000+',
+    'all',
+    'len <= 40',
+    'len 41-100',
+    'len > 100',
+    'lang en',
+    'lang vi',
+    'msgs 0-499',
+    'msgs 500-1999',
+    'msgs 2000-4999',
+    'msgs 5000+',
   ];
   stdout
     ..writeln()
@@ -169,6 +209,8 @@ void main(List<String> args) {
   for (final slice in order) {
     final n = atTau.first.$3.slices[slice]?.messages ?? 0;
     if (n == 0) continue;
-    stdout.writeln('| $slice | $n | ${atTau.map((r) => _pct(r.$3.slices[slice]?.ksr ?? 0)).join(' | ')} |');
+    stdout.writeln(
+      '| $slice | $n | ${atTau.map((r) => _pct(r.$3.slices[slice]?.ksr ?? 0)).join(' | ')} |',
+    );
   }
 }

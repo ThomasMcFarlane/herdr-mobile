@@ -6,7 +6,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/app_info.dart';
 import '../../../data/models/release_history.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../render/markdown/markdown.dart';
 import 'update_group.dart' show ClipCard;
 
@@ -78,9 +80,11 @@ class _ReleaseHistoryScreenState extends State<ReleaseHistoryScreen> {
                       ),
                     )
                   : releases == null
-                      ? const SizedBox.shrink()
-                      : CustomScrollView(slivers: [
-                          RowList(rows: [
+                  ? const SizedBox.shrink()
+                  : CustomScrollView(
+                      slivers: [
+                        RowList(
+                          rows: [
                             for (final r in releases)
                               EntityRow(
                                 id: r.version,
@@ -91,9 +95,11 @@ class _ReleaseHistoryScreenState extends State<ReleaseHistoryScreen> {
                                 trailing: Icon(LucideIcons.chevronRight, size: IconSize.row, color: ds.textTertiary),
                                 onTap: () => unawaited(_openNotes(context, r)),
                               ),
-                          ]),
-                          const SliverToBoxAdapter(child: SizedBox(height: Gap.xl)),
-                        ]),
+                          ],
+                        ),
+                        const SliverToBoxAdapter(child: SizedBox(height: Gap.xl)),
+                      ],
+                    ),
             ),
           ],
         ),
@@ -101,10 +107,8 @@ class _ReleaseHistoryScreenState extends State<ReleaseHistoryScreen> {
     );
   }
 
-  Future<void> _openNotes(BuildContext context, ReleaseNotes release) => showAppSheet<void>(
-        context,
-        builder: (context) => _NotesSheet(release: release),
-      );
+  Future<void> _openNotes(BuildContext context, ReleaseNotes release) =>
+      showAppSheet<void>(context, builder: (context) => _NotesSheet(release: release));
 }
 
 const _inset = Gap.gutter - Gap.xs;

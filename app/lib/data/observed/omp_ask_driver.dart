@@ -200,31 +200,27 @@ class AskScreenState {
 
   /// Same dialog, same cursor, same checks, same text.
   String get fingerprint => [
-        kind.name,
-        tabs.join('|'),
-        title,
-        for (final r in rows) '${r.cursor}${r.checked}${r.label}${r.description}',
-        for (final l in review) '${l.index}${l.answer}',
-        editorText,
-      ].join('\n');
+    kind.name,
+    tabs.join('|'),
+    title,
+    for (final r in rows) '${r.cursor}${r.checked}${r.label}${r.description}',
+    for (final l in review) '${l.index}${l.answer}',
+    editorText,
+  ].join('\n');
 }
 
-final _ansi = RegExp(
-  r'\x1B\[[0-9;:?<=>]*[ -/]*[@-~]|\x1B\][^\x07\x1B]*(?:\x07|\x1B\\)|\x1B[()][A-Za-z0-9]|\x1B[=>]',
-);
+final _ansi = RegExp(r'\x1B\[[0-9;:?<=>]*[ -/]*[@-~]|\x1B\][^\x07\x1B]*(?:\x07|\x1B\\)|\x1B[()][A-Za-z0-9]|\x1B[=>]');
 
 List<String> _screenLines(String screen) => [
-      for (final l in screen.split('\n')) l.replaceAll('\r', '').replaceAll(_ansi, '').trimRight(),
-    ];
+  for (final l in screen.split('\n')) l.replaceAll('\r', '').replaceAll(_ansi, '').trimRight(),
+];
 
 final _topBox = RegExp(r'^╭─+ (.+?) ─*╮$');
 final _askTitle = RegExp(r'^Ask(?: \((\d+)s\))?$');
 final _editorTitle = RegExp(r'^(Custom answer|Note for .*?)(?:: (.*))?$');
 
 // cursor slot, marker, label
-final _rowRe = RegExp(
-  r'^([❯>\uf054]|\s) (○|◉|☐|☑|\( \)|\(o\)|\[ \]|\[x\]|[\uf14a\uf096\uf192\uf10c])(?: (.*))?$',
-);
+final _rowRe = RegExp(r'^([❯>\uf054]|\s) (○|◉|☐|☑|\( \)|\(o\)|\[ \]|\[x\]|[\uf14a\uf096\uf192\uf10c])(?: (.*))?$');
 const _checkedMarkers = {'◉', '☑', '(o)', '[x]', '\uf14a', '\uf192'};
 const _multiMarkers = {'☐', '☑', '[ ]', '[x]', '\uf14a', '\uf096'};
 
@@ -353,13 +349,15 @@ AskScreenState parseAskScreen(String screen) {
   var cursor = false, checked = false, multi = false;
   void flush() {
     if (label != null) {
-      rows.add(AskScreenRow(
-        label: label!.trim(),
-        cursor: cursor,
-        checked: checked,
-        multi: multi,
-        description: description.trim(),
-      ));
+      rows.add(
+        AskScreenRow(
+          label: label!.trim(),
+          cursor: cursor,
+          checked: checked,
+          multi: multi,
+          description: description.trim(),
+        ),
+      );
     }
     label = null;
     description = '';
@@ -473,7 +471,7 @@ bool _previewMatches(String preview, String custom) {
 /// fresh screen.
 class OmpAskDriver {
   OmpAskDriver(this.ask, this.answers, {this.maxSteps = 80})
-      : assert(answers.length == ask.questions.length, 'one answer per question');
+    : assert(answers.length == ask.questions.length, 'one answer per question');
 
   final PendingAsk ask;
   final List<AskAnswer> answers;
@@ -567,8 +565,7 @@ class OmpAskDriver {
     return AskSend(text: custom, why: 'type the custom answer');
   }
 
-  List<String> _moves(int from, int to) =>
-      List.filled((to - from).abs(), to > from ? 'down' : 'up');
+  List<String> _moves(int from, int to) => List.filled((to - from).abs(), to > from ? 'down' : 'up');
 
   AskStep _question(AskScreenState s) {
     final k = _which(s, editor: false);
@@ -581,7 +578,10 @@ class OmpAskDriver {
     if (cr == null || align[cr] == null) return const AskMismatch('cannot find the cursor row');
     final cursor = align[cr]! == -1 ? n : align[cr]!;
     final custom = a.custom?.trim() ?? '';
-    final wants = {for (final i in a.selected) if (i >= 0 && i < n) i}.toList()..sort();
+    final wants = {
+      for (final i in a.selected)
+        if (i >= 0 && i < n) i,
+    }.toList()..sort();
     final multiTab = s.rows.any((r) => r.multi);
     if (multiTab != q.multi) {
       return AskMismatch('${q.multi ? 'checkboxes' : 'radios'} expected, the other drawn');
@@ -665,18 +665,17 @@ class OmpAskDriver {
           ? const AskSend(keys: ['tab'], why: 'no answer wanted, next tab')
           : const AskMismatch('nothing to answer');
     }
-    return AskSend(
-      keys: [if (cursor == n) 'up', 'enter'],
-      submits: _n == 1,
-      why: _n == 1 ? 'submit' : 'next tab',
-    );
+    return AskSend(keys: [if (cursor == n) 'up', 'enter'], submits: _n == 1, why: _n == 1 ? 'submit' : 'next tab');
   }
 
   String _expectedSummary(int k) {
     final q = ask.questions[k];
     final a = answers[k];
     final custom = a.custom?.trim() ?? '';
-    final wants = {for (final i in a.selected) if (i >= 0 && i < q.options.length) i}.toList()..sort();
+    final wants = {
+      for (final i in a.selected)
+        if (i >= 0 && i < q.options.length) i,
+    }.toList()..sort();
     String label(int i) => q.recommended == i ? '${q.options[i].label} (Recommended)' : q.options[i].label;
     if (!q.multi) {
       if (custom.isNotEmpty) return '“${_inline(custom)}”';
@@ -714,8 +713,7 @@ class OmpAskDriver {
 
 /// [OmpAskDriver.next] without memory: right for lists that fit in the box
 /// (rows scrolled out of view are only remembered by an instance).
-AskStep nextAskStep(PendingAsk ask, List<AskAnswer> answers, String screen) =>
-    OmpAskDriver(ask, answers).next(screen);
+AskStep nextAskStep(PendingAsk ask, List<AskAnswer> answers, String screen) => OmpAskDriver(ask, answers).next(screen);
 
 // ------------------------------------------------------------------ menus
 
@@ -757,7 +755,7 @@ abstract class OmpMenuScreen {
 /// omp's tool approval (`Allow tool: bash`): `Approve` / `Deny`.
 class OmpApprovalScreen extends OmpMenuScreen {
   const OmpApprovalScreen({required this.tool, required this.detail, required List<OmpMenuOption> options})
-      : super(options);
+    : super(options);
 
   /// The tool name from the title.
   final String tool;
@@ -835,7 +833,12 @@ _Keep _keepState(String label) {
   // the line, and counting `down` over a disabled row quits omp.
   if (m == null) return label.trim() == 'Approve and keep context' ? _Keep.enabled : _Keep.unknown;
   (double, double) range(String number, String suffix) {
-    final unit = switch (suffix) { 'k' => 1e3, 'm' => 1e6, 'b' => 1e9, _ => 1.0 };
+    final unit = switch (suffix) {
+      'k' => 1e3,
+      'm' => 1e6,
+      'b' => 1e9,
+      _ => 1.0,
+    };
     final v = double.parse(number);
     final half = suffix.isEmpty || v >= 10 ? 0.5 : 0.05;
     return ((v - half) * unit, (v + half) * unit);

@@ -34,9 +34,9 @@ Future<RawReply> rawRequest(
 }) async {
   final socket = await Socket.connect(InternetAddress.loopbackIPv4, port);
   final h = {'Host': host ?? 'localhost:$port', 'Connection': 'close', ...headers};
-  socket.add(latin1.encode(
-    '$method $target HTTP/1.1\r\n${[for (final e in h.entries) '${e.key}: ${e.value}\r\n'].join()}\r\n',
-  ));
+  socket.add(
+    latin1.encode('$method $target HTTP/1.1\r\n${[for (final e in h.entries) '${e.key}: ${e.value}\r\n'].join()}\r\n'),
+  );
   final bytes = BytesBuilder(copy: false);
   final done = Completer<void>();
   // An error (a reset after the answer) is followed by done: complete once.
@@ -46,10 +46,13 @@ Future<RawReply> rawRequest(
 
   socket.listen(bytes.add, onDone: finish, onError: (Object _) => finish());
   var timedOut = false;
-  await done.future.timeout(timeout, onTimeout: () {
-    timedOut = true;
-    socket.destroy();
-  });
+  await done.future.timeout(
+    timeout,
+    onTimeout: () {
+      timedOut = true;
+      socket.destroy();
+    },
+  );
   socket.destroy();
   final all = bytes.takeBytes();
   var split = -1;

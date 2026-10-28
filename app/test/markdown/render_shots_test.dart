@@ -20,6 +20,7 @@ import 'package:herdr_mobile/ui/core/kit.dart';
 
 import '../support/shot.dart' show loadAppFonts;
 import 'support/render_corpus.dart';
+
 import 'package:herdr_mobile/ui/render/mermaid/mermaid_cache.dart';
 import 'package:herdr_mobile/ui/render/mermaid/md_diagram_opener.dart';
 import 'package:herdr_mobile/ui/render/mermaid/mermaid_layout.dart';
@@ -48,27 +49,27 @@ class _PageState extends State<_Page> {
       child: MdDiagramOpener(
         open: (context, drawn) async {},
         child: MdActions(
-        onLink: (context, url) {},
-        onPath: (context, path, line) {},
-        child: MdToneScope(
-          tone: widget.tone,
-          child: SelectionArea(
-          child: ListView.builder(
-            controller: widget.controller,
-            padding: EdgeInsets.fromLTRB(Gap.lg, MediaQuery.paddingOf(context).top + Gap.md, Gap.lg, Gap.xl),
-            itemCount: blocks.length,
-            itemBuilder: (context, i) => Padding(
-              padding: EdgeInsets.only(top: mdBlockGap(i == 0 ? null : blocks[i - 1], blocks[i])),
-              child: MdBlockView(
-                block: blocks[i],
-                expanded: _open.contains(i),
-                onToggleExpanded: () => setState(() => _open.contains(i) ? _open.remove(i) : _open.add(i)),
+          onLink: (context, url) {},
+          onPath: (context, path, line) {},
+          child: MdToneScope(
+            tone: widget.tone,
+            child: SelectionArea(
+              child: ListView.builder(
+                controller: widget.controller,
+                padding: EdgeInsets.fromLTRB(Gap.lg, MediaQuery.paddingOf(context).top + Gap.md, Gap.lg, Gap.xl),
+                itemCount: blocks.length,
+                itemBuilder: (context, i) => Padding(
+                  padding: EdgeInsets.only(top: mdBlockGap(i == 0 ? null : blocks[i - 1], blocks[i])),
+                  child: MdBlockView(
+                    block: blocks[i],
+                    expanded: _open.contains(i),
+                    onToggleExpanded: () => setState(() => _open.contains(i) ? _open.remove(i) : _open.add(i)),
+                  ),
+                ),
               ),
             ),
           ),
-          ),
         ),
-      ),
       ),
     );
   }
@@ -260,7 +261,16 @@ void main() {
     'mermaid': _mermaid,
   };
 
-  Future<void> shoot(WidgetTester tester, String name, String markdown, Size size, double scale, Brightness brightness, {double offset = 0, String suffix = ''}) async {
+  Future<void> shoot(
+    WidgetTester tester,
+    String name,
+    String markdown,
+    Size size,
+    double scale,
+    Brightness brightness, {
+    double offset = 0,
+    String suffix = '',
+  }) async {
     const dpr = 2.625;
     tester.view.physicalSize = size * dpr;
     tester.view.devicePixelRatio = dpr;
@@ -317,7 +327,16 @@ void main() {
           }
           if (entry.key == 'mermaid') {
             for (var i = 1; i <= 7; i++) {
-              await shoot(tester, entry.key, entry.value, size, scale, brightness, offset: 800.0 * i, suffix: '-${i + 1}');
+              await shoot(
+                tester,
+                entry.key,
+                entry.value,
+                size,
+                scale,
+                brightness,
+                offset: 800.0 * i,
+                suffix: '-${i + 1}',
+              );
             }
           }
         });

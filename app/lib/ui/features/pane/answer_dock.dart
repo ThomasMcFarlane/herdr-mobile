@@ -8,7 +8,9 @@ import '../../../data/models/pane_preview.dart';
 import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/pane_previews.dart';
 import '../../support/tap_guard.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../agents/answer_surface.dart';
 import '../agents/quick_reply_controller.dart';
 import '../agents/reply_chips.dart';
@@ -84,9 +86,7 @@ class _AnswerDockState extends State<AnswerDock> with TapGuardState<AnswerDock>,
   }
 
   bool get _wantsWatch =>
-      _onScreen &&
-      _machine.isLive &&
-      _machine.paneById(widget.paneId)?.status == AgentStatus.blocked;
+      _onScreen && _machine.isLive && _machine.paneById(widget.paneId)?.status == AgentStatus.blocked;
 
   void _onMachine() {
     if (!mounted) return;

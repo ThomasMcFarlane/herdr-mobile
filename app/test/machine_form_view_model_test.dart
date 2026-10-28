@@ -19,17 +19,16 @@ MachineFormValues _values({
   String password = '',
   SshAuth auth = SshAuth.key,
   String label = '',
-}) =>
-    MachineFormValues(
-      label: label,
-      host: host,
-      port: port,
-      username: 'me',
-      auth: auth,
-      privateKey: privateKey,
-      passphrase: passphrase,
-      password: password,
-    );
+}) => MachineFormValues(
+  label: label,
+  host: host,
+  port: port,
+  username: 'me',
+  auth: auth,
+  privateKey: privateKey,
+  passphrase: passphrase,
+  password: password,
+);
 
 /// A keychain that can be made to refuse reads or writes.
 class _FlakySecrets extends MemorySecretStore {
@@ -69,28 +68,23 @@ void main() {
     Object? failure,
     List<({MachineProfile profile, MachineSecrets secrets})>? attempts,
     List<String> banners = const [],
-  }) =>
-      MachineFormViewModel(
-        repo: repo,
-        existing: existing,
-        transportFactory: (profile, s, onPin, onNotice) {
-          attempts?.add((profile: profile, secrets: s));
-          if (judgeHostKey(pinned: profile.hostKeyFingerprint, seen: fingerprint) == HostKeyVerdict.trustFirstUse) {
-            onPin(fingerprint);
-          }
-          banners.forEach(onNotice);
-          return FakeTransport()..failure = failure;
-        },
-      );
+  }) => MachineFormViewModel(
+    repo: repo,
+    existing: existing,
+    transportFactory: (profile, s, onPin, onNotice) {
+      attempts?.add((profile: profile, secrets: s));
+      if (judgeHostKey(pinned: profile.hostKeyFingerprint, seen: fingerprint) == HostKeyVerdict.trustFirstUse) {
+        onPin(fingerprint);
+      }
+      banners.forEach(onNotice);
+      return FakeTransport()..failure = failure;
+    },
+  );
 
   group('tailscale (no credentials)', () {
     test('stores no secrets even if other fields were filled in', () async {
       final vm = form();
-      final values = _values(
-        auth: SshAuth.none,
-        privateKey: 'LEFTOVER KEY',
-        password: 'leftover',
-      );
+      final values = _values(auth: SshAuth.none, privateKey: 'LEFTOVER KEY', password: 'leftover');
       await vm.test(values);
       await vm.save(values);
 
@@ -103,10 +97,12 @@ void main() {
 
     test('a sign-in banner during the test exposes the approval link', () async {
       final seen = <String?>[];
-      final vm = form(banners: const [
-        '# Tailscale SSH requires an additional check.\n'
-            '# To authenticate, visit: https://login.tailscale.com/a/abc123',
-      ]);
+      final vm = form(
+        banners: const [
+          '# Tailscale SSH requires an additional check.\n'
+              '# To authenticate, visit: https://login.tailscale.com/a/abc123',
+        ],
+      );
       vm.addListener(() => seen.add(vm.approvalUrl));
 
       await vm.test(_values(auth: SshAuth.none));
@@ -115,11 +111,7 @@ void main() {
     });
 
     test('a banner without a web link, or with a non-https one, is ignored', () async {
-      final vm = form(banners: const [
-        'Welcome!',
-        'javascript:alert(1)',
-        'http://login.tailscale.com/a/abc',
-      ]);
+      final vm = form(banners: const ['Welcome!', 'javascript:alert(1)', 'http://login.tailscale.com/a/abc']);
 
       await vm.test(_values(auth: SshAuth.none));
 
@@ -138,8 +130,7 @@ void main() {
   });
 
   group('add', () {
-    test('a successful test reports version and pins the seen host key on save',
-        () async {
+    test('a successful test reports version and pins the seen host key on save', () async {
       final vm = form();
       await vm.test(_values(privateKey: 'KEY'));
 
@@ -227,13 +218,11 @@ void main() {
       await vm.test(_values());
       await vm.save(_values());
 
-      expect(attempts.single.profile.hostKeyFingerprint, 'SHA256:pinned',
-          reason: 'test must verify against the pin');
+      expect(attempts.single.profile.hostKeyFingerprint, 'SHA256:pinned', reason: 'test must verify against the pin');
       expect(repo.machines.single.hostKeyFingerprint, 'SHA256:pinned');
     });
 
-    test('changing the host discards the pin and trusts the new machine afresh',
-        () async {
+    test('changing the host discards the pin and trusts the new machine afresh', () async {
       final vm = form(existing: existing, fingerprint: 'SHA256:other');
       await vm.test(_values(host: 'elsewhere.local'));
       await vm.save(_values(host: 'elsewhere.local'));

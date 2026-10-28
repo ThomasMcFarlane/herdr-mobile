@@ -9,7 +9,9 @@ import '../../../data/models/herdr_models.dart' show AgentStatus;
 import '../../../data/acp/turns/turns.dart';
 import '../../../data/acp/turns/plain_text.dart' show safeEnd;
 import '../../../data/words/plural.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'code_panel.dart';
 import 'content_blocks.dart';
 import 'content_locations.dart';
@@ -146,23 +148,22 @@ class ToolRow extends StatelessWidget {
               semanticLabel: _toolLabel(summary, state, call.detailTrimmed),
               minHeight: kMinTap,
               padding: const EdgeInsets.symmetric(horizontal: Gap.xs, vertical: Gap.xs),
-                child: Row(
-                  children: [
-                    Icon(toolIcon(call.kind), size: IconSize.row, color: ds.textSecondary),
+              child: Row(
+                children: [
+                  Icon(toolIcon(call.kind), size: IconSize.row, color: ds.textSecondary),
+                  const SizedBox(width: Gap.sm),
+                  Expanded(
+                    child: _ToolLine(summary: summary, failed: failed, trimmed: call.detailTrimmed),
+                  ),
+                  if (stats) ...[
                     const SizedBox(width: Gap.sm),
-                    Expanded(child: _ToolLine(summary: summary, failed: failed, trimmed: call.detailTrimmed)),
-                    if (stats) ...[
-                      const SizedBox(width: Gap.sm),
-                      DiffStats(added: summary.added ?? 0, removed: summary.removed ?? 0),
-                    ],
-                    // Success is the default and says nothing; a call that is
-                    // waiting, running, failed or cancelled shows its shape.
-                    if (state != ToolStatus.completed) ...[
-                      const SizedBox(width: Gap.sm),
-                      ToolStatusGlyph(status: state),
-                    ],
+                    DiffStats(added: summary.added ?? 0, removed: summary.removed ?? 0),
                   ],
-                ),
+                  // Success is the default and says nothing; a call that is
+                  // waiting, running, failed or cancelled shows its shape.
+                  if (state != ToolStatus.completed) ...[const SizedBox(width: Gap.sm), ToolStatusGlyph(status: state)],
+                ],
+              ),
             ),
           ),
           if (open)
@@ -425,7 +426,15 @@ List<_Part> _partsOf(ToolCall call) {
   void flush() {
     final text = run?.toString();
     run = null;
-    if (text != null) out.add(_TextPart(textLines(text, fromEnd: tail), label: tail ? 'Output' : null, fromEnd: tail));
+    if (text != null) {
+      out.add(
+        _TextPart(
+          textLines(text, fromEnd: tail),
+          label: tail ? 'Output' : null,
+          fromEnd: tail,
+        ),
+      );
+    }
   }
 
   // What the command printed, from `_meta` (codex-acp, pi-acp): its output,
@@ -435,7 +444,11 @@ List<_Part> _partsOf(ToolCall call) {
     if (o.text.isNotEmpty) {
       final lines = textLines(terminalText(o.text), fromEnd: true);
       out.add(
-        _TextPart([if (o.cutChars > 0) CodeLine('${countOf(o.cutChars, 'character')} not shown'), ...lines], label: 'Output', fromEnd: true),
+        _TextPart(
+          [if (o.cutChars > 0) CodeLine('${countOf(o.cutChars, 'character')} not shown'), ...lines],
+          label: 'Output',
+          fromEnd: true,
+        ),
       );
     }
     if (o.progress.isNotEmpty) out.add(_TextPart(textLines(terminalText(o.progress)), label: 'Progress'));
@@ -493,7 +506,13 @@ List<_Part> _partsOf(ToolCall call) {
       final printedText = rawOutputText(output);
       final text = printedText ?? compactJson(output);
       if (text.trim().isNotEmpty) {
-        out.add(_TextPart(textLines(text, fromEnd: tail), label: 'Output', fromEnd: tail));
+        out.add(
+          _TextPart(
+            textLines(text, fromEnd: tail),
+            label: 'Output',
+            fromEnd: tail,
+          ),
+        );
       }
     } else if (command == null && call.rawInput != null) {
       final text = compactJson(call.rawInput);
@@ -520,19 +539,25 @@ class _ToolBody extends StatelessWidget {
     final term = context.terminal;
     final parts = _partsOf(call);
 
-    Widget panel(List<CodeLine> lines, {bool fromEnd = false, int cap = 40, String? body, String copyLabel = 'Copy output', String copied = 'Output copied'}) =>
-        CodePanel(
-          lines: lines,
-          background: term.background,
-          foreground: term.foreground,
-          border: term.border,
-          all: all,
-          fromEnd: fromEnd,
-          cap: cap,
-          onToggleAll: onToggleAll,
-          onCopy: () => copyText(context, body ?? [for (final l in lines) l.text].join('\n'), what: copied),
-          copyLabel: copyLabel,
-        );
+    Widget panel(
+      List<CodeLine> lines, {
+      bool fromEnd = false,
+      int cap = 40,
+      String? body,
+      String copyLabel = 'Copy output',
+      String copied = 'Output copied',
+    }) => CodePanel(
+      lines: lines,
+      background: term.background,
+      foreground: term.foreground,
+      border: term.border,
+      all: all,
+      fromEnd: fromEnd,
+      cap: cap,
+      onToggleAll: onToggleAll,
+      onCopy: () => copyText(context, body ?? [for (final l in lines) l.text].join('\n'), what: copied),
+      copyLabel: copyLabel,
+    );
 
     Widget label(String text) => Padding(
       padding: const EdgeInsets.only(bottom: Gap.xs),
@@ -549,7 +574,13 @@ class _ToolBody extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               label('Command'),
-              panel(textLines('\$ ${visibleText(part.command)}'), cap: 12, body: part.command, copyLabel: 'Copy command', copied: 'Command copied'),
+              panel(
+                textLines('\$ ${visibleText(part.command)}'),
+                cap: 12,
+                body: part.command,
+                copyLabel: 'Copy command',
+                copied: 'Command copied',
+              ),
             ],
           ),
           _TextPart() => Column(
@@ -578,10 +609,7 @@ class _ToolBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final (i, c) in children.indexed) ...[
-          if (i > 0) const SizedBox(height: Gap.sm),
-          c,
-        ],
+        for (final (i, c) in children.indexed) ...[if (i > 0) const SizedBox(height: Gap.sm), c],
       ],
     );
   }
@@ -640,7 +668,11 @@ class DiffPanel extends StatelessWidget {
           fromEnd: false,
           cap: 60,
           onToggleAll: onToggleAll,
-          onCopy: () => copyText(context, [for (final l in _colourDiff(part, term, context.ds)) l.text].join('\n'), what: 'Diff copied'),
+          onCopy: () => copyText(
+            context,
+            [for (final l in _colourDiff(part, term, context.ds)) l.text].join('\n'),
+            what: 'Diff copied',
+          ),
           copyLabel: 'Copy diff',
         ),
       ],

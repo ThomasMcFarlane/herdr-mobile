@@ -53,13 +53,10 @@ class _DrawCheckState extends State<DrawCheck> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) => ExcludeSemantics(
-        child: RepaintBoundary(
-          child: CustomPaint(
-            size: Size.square(widget.size),
-            painter: _DrawCheckPainter(_controller, widget.color),
-          ),
-        ),
-      );
+    child: RepaintBoundary(
+      child: CustomPaint(size: Size.square(widget.size), painter: _DrawCheckPainter(_controller, widget.color)),
+    ),
+  );
 }
 
 class _DrawCheckPainter extends CustomPainter {

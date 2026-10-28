@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'md_document.dart';
 import 'md_highlight.dart';
 import 'md_more_row.dart';
@@ -159,11 +160,18 @@ class _MdCodeBlockState extends State<MdCodeBlock> {
       final spans = <InlineSpan>[
         for (var i = 0; i < shown; i++) ...[_lines.span(i, colors), if (i < shown - 1) const TextSpan(text: '\n')],
       ];
-      final text = Text.rich(TextSpan(children: spans), softWrap: _wrap, style: style);
+      final text = Text.rich(
+        TextSpan(children: spans),
+        softWrap: _wrap,
+        style: style,
+      );
       body = Padding(
         padding: const EdgeInsets.only(bottom: Gap.sm),
         child: _wrap
-            ? Padding(padding: const EdgeInsets.symmetric(horizontal: Gap.md), child: text)
+            ? Padding(
+                padding: const EdgeInsets.symmetric(horizontal: Gap.md),
+                child: text,
+              )
             : SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: Gap.md),
@@ -252,11 +260,8 @@ class _Header extends StatelessWidget {
               selected: wrap,
               semanticLabel: 'Wrap long lines',
               minTapSize: kMinTap,
-              builder: (context, pressed) => Icon(
-                LucideIcons.textWrap,
-                size: 16,
-                color: wrap || pressed ? context.ds.accentText : colors.muted,
-              ),
+              builder: (context, pressed) =>
+                  Icon(LucideIcons.textWrap, size: 16, color: wrap || pressed ? context.ds.accentText : colors.muted),
             ),
           PressBuilder(
             onTap: onCopy,

@@ -21,7 +21,9 @@ import '../../../data/repositories/sent_phrases.dart';
 import '../../../data/repositories/slash_usage.dart';
 import '../../../data/services/dictation.dart';
 import '../../../data/models/herdr_models.dart' show AgentStatus;
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../attach/attach_kit.dart';
 import 'attach_model.dart';
 import 'attach_picker.dart';
@@ -414,11 +416,7 @@ class _AgentSessionScreenState extends State<AgentSessionScreen> with WidgetsBin
   /// do, in one toast. Hearing nothing is not a failure.
   void _dictationProblem(DictationProblem problem) {
     if (!mounted) return;
-    showToast(
-      context,
-      problem.message,
-      kind: problem == DictationProblem.silence ? ToastKind.info : ToastKind.failed,
-    );
+    showToast(context, problem.message, kind: problem == DictationProblem.silence ? ToastKind.info : ToastKind.failed);
   }
 
   /// Sends the draft and what is attached to it. A live session takes it
@@ -469,7 +467,16 @@ class _AgentSessionScreenState extends State<AgentSessionScreen> with WidgetsBin
     }
     _input.clear();
     unawaited(
-      _send(session, text, chips, composePrompt(text, _attachments.take()), context.read<SentPhrases?>(), toaster, screens, after: after),
+      _send(
+        session,
+        text,
+        chips,
+        composePrompt(text, _attachments.take()),
+        context.read<SentPhrases?>(),
+        toaster,
+        screens,
+        after: after,
+      ),
     );
   }
 
@@ -548,7 +555,10 @@ class _AgentSessionScreenState extends State<AgentSessionScreen> with WidgetsBin
       screens.keepDraft(agent, newer.isEmpty ? text : '$text\n$newer');
     }
     final lost = chips.isEmpty ? '' : ' Its attachments were not kept: attach them again.';
-    toaster?.show('${keep ? 'Not sent. Your message is back in the draft.' : 'Not sent.'}$lost', kind: ToastKind.failed);
+    toaster?.show(
+      '${keep ? 'Not sent. Your message is back in the draft.' : 'Not sent.'}$lost',
+      kind: ToastKind.failed,
+    );
   }
 
   /// Puts the text of a send that failed back in the field. What was typed
@@ -558,7 +568,10 @@ class _AgentSessionScreenState extends State<AgentSessionScreen> with WidgetsBin
     if (text.isEmpty) return;
     final now = _input.value;
     if (now.text.isEmpty) {
-      _input.value = TextEditingValue(text: text, selection: TextSelection.collapsed(offset: text.length));
+      _input.value = TextEditingValue(
+        text: text,
+        selection: TextSelection.collapsed(offset: text.length),
+      );
       return;
     }
     final joined = '$text\n${now.text}';
@@ -674,37 +687,40 @@ class _Bottom extends StatelessWidget {
     return ToastShelf(
       aboveKeyboard: true,
       child: Column(
-    mainAxisSize: MainAxisSize.min,
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Flexible(
-        // The palette is capped at what the column is given, and the request
-        // takes what remains: two flexible children would split the room in
-        // half even while the palette is empty.
-        child: LayoutBuilder(
-          builder: (context, room) => Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ConstrainedBox(constraints: BoxConstraints(maxHeight: room.maxHeight), child: palette),
-              Flexible(child: dock),
-            ],
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Flexible(
+            // The palette is capped at what the column is given, and the request
+            // takes what remains: two flexible children would split the room in
+            // half even while the palette is empty.
+            child: LayoutBuilder(
+              builder: (context, room) => Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: room.maxHeight),
+                    child: palette,
+                  ),
+                  Flexible(child: dock),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
-      SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.sm),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [strip, composer],
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.sm),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [strip, composer],
+              ),
+            ),
           ),
-        ),
+        ],
       ),
-    ],
-    ),
     );
   }
 }
@@ -792,12 +808,22 @@ class _LinkStrip extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => SessionSelect<(AgentLink, String?, bool, bool, bool, AuthNeeded?, DateTime?, bool, bool)>(
-    session: session,
-    select: (s) =>
-        (s.link, s.error, s.evicted, s.isObserved, s.needsTerminal, s.authNeeded, s.cachedAsOf, s.resumeTarget != null, s.errorFromAgent),
-    builder: (context, v) => _Folds(child: _content(context, v)),
-  );
+  Widget build(BuildContext context) =>
+      SessionSelect<(AgentLink, String?, bool, bool, bool, AuthNeeded?, DateTime?, bool, bool)>(
+        session: session,
+        select: (s) => (
+          s.link,
+          s.error,
+          s.evicted,
+          s.isObserved,
+          s.needsTerminal,
+          s.authNeeded,
+          s.cachedAsOf,
+          s.resumeTarget != null,
+          s.errorFromAgent,
+        ),
+        builder: (context, v) => _Folds(child: _content(context, v)),
+      );
 
   /// The strip for [v], or null when the link needs no word (live, no error).
   Widget? _content(BuildContext context, (AgentLink, String?, bool, bool, bool, AuthNeeded?, DateTime?, bool, bool) v) {
@@ -846,13 +872,7 @@ class _LinkStrip extends StatelessWidget {
         // Only what the agent answered is its error; the app's own trouble
         // (not connected, the message not sent) leads with what happened.
         final (title, detail) = fromAgent ? ('The agent reported an error', error) : _firstSentence(error);
-        return _strip(
-          color: ds.danger,
-          state: LinkState.attention,
-          title: title,
-          detail: detail,
-          action: openTerminal,
-        );
+        return _strip(color: ds.danger, state: LinkState.attention, title: title, detail: detail, action: openTerminal);
       }
       return null;
     }
@@ -868,12 +888,7 @@ class _LinkStrip extends StatelessWidget {
         'Reconnecting…',
         observed ? 'The agent keeps running in its terminal.' : 'The agent keeps running on the machine.',
       ),
-      AgentLink.ended => (
-        ds.textTertiary,
-        LinkState.offline,
-        evicted ? 'Taken over' : 'Session ended',
-        null,
-      ),
+      AgentLink.ended => (ds.textTertiary, LinkState.offline, evicted ? 'Taken over' : 'Session ended', null),
       AgentLink.failed => (
         ds.danger,
         LinkState.attention,

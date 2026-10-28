@@ -33,7 +33,12 @@ void main() {
     final web = FakeWebView.install();
     const link = 'https://login.tailscale.com/a/l3503a0535f1bf';
     await tester.pumpWidget(
-      MaterialApp(theme: AppTheme.light(), home: const Scaffold(body: Center(child: ApprovalButton(url: link)))),
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: const Scaffold(
+          body: Center(child: ApprovalButton(url: link)),
+        ),
+      ),
     );
 
     await tester.tap(find.text('Open sign-in page'));

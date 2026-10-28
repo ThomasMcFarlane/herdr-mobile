@@ -101,7 +101,12 @@ class AppTopBar extends StatelessWidget {
     if (second == null && (subtitle != null || alert != null)) {
       final subtitleText = subtitle == null
           ? null
-          : Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: Type.secondary.copyWith(color: quiet));
+          : Text(
+              subtitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Type.secondary.copyWith(color: quiet),
+            );
       second = alert == null
           ? subtitleText
           : LayoutBuilder(
@@ -143,7 +148,12 @@ class AppTopBar extends StatelessWidget {
                 Semantics(
                   header: true,
                   liveRegion: announceTitle,
-                  child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: Type.barTitle.copyWith(color: fg)),
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Type.barTitle.copyWith(color: fg),
+                  ),
                 ),
                 ?second,
               ],
@@ -176,7 +186,10 @@ class AppTopBar extends StatelessWidget {
               ],
             ),
             if (bottom != null)
-              Padding(padding: const EdgeInsets.only(left: _titleInset), child: bottom),
+              Padding(
+                padding: const EdgeInsets.only(left: _titleInset),
+                child: bottom,
+              ),
           ],
         ),
       ),
@@ -191,7 +204,10 @@ class AppTopBar extends StatelessWidget {
           colors: [ds.photoScrim, ds.photoScrim.withAlpha(0)],
         ),
       ),
-      child: Padding(padding: const EdgeInsets.only(bottom: Gap.md), child: bar),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: Gap.md),
+        child: bar,
+      ),
     );
   }
 }

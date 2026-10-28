@@ -18,15 +18,13 @@ class MachineActions {
   Future<String?> renameWorkspace(String workspaceId, String label) =>
       _run(() => machine.api.renameWorkspace(workspaceId, label));
 
-  Future<String?> renamePane(String paneId, String label) =>
-      _run(() => machine.api.renamePane(paneId, label));
+  Future<String?> renamePane(String paneId, String label) => _run(() => machine.api.renamePane(paneId, label));
 
   /// Already gone counts as closed: that is what the person wanted.
   Future<String?> closeWorkspace(String workspaceId) =>
       _run(() => machine.api.closeWorkspace(workspaceId), goneIsFine: true);
 
-  Future<String?> closePane(String paneId) =>
-      _run(() => machine.api.closePane(paneId), goneIsFine: true);
+  Future<String?> closePane(String paneId) => _run(() => machine.api.closePane(paneId), goneIsFine: true);
 
   /// Removes the linked worktree that [workspace] is: its folder goes, its
   /// branch stays. Never forced: a checkout with uncommitted changes is
@@ -52,11 +50,7 @@ class MachineActions {
   Future<({String? error, String? paneId})> newTab(Workspace workspace) async {
     String? paneId;
     final error = await _run(() async {
-      paneId = (await machine.api.createTab(
-        workspaceId: workspace.id,
-        cwd: _folderOf(workspace),
-      ))
-          .rootPaneId;
+      paneId = (await machine.api.createTab(workspaceId: workspace.id, cwd: _folderOf(workspace))).rootPaneId;
     });
     return (error: error, paneId: error == null ? paneId : null);
   }
@@ -79,7 +73,8 @@ class MachineActions {
       await call();
     } on HerdrUnsupportedException {
       final v = machine.snapshot.version;
-      problem = 'herdr${v.isEmpty ? '' : ' $v'} on ${machine.profile.label} can’t do this. '
+      problem =
+          'herdr${v.isEmpty ? '' : ' $v'} on ${machine.profile.label} can’t do this. '
           'Update herdr on that machine.';
     } on HerdrApiException catch (e) {
       if (e.isNotFound) {

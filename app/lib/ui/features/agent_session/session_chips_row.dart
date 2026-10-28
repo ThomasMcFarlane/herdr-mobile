@@ -8,7 +8,9 @@ import '../../../data/decision/mode_danger.dart';
 import '../../../data/decision/session_chips.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/words/plural.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../composer/composer_frame.dart' show showComposerKeyboard;
 import 'session_bar.dart' show showSessionOptions;
 import 'session_select.dart';
@@ -164,5 +166,6 @@ class _ChipView extends StatelessWidget {
   /// The words of a risky mode, with why.
   String _said(String head) => chip.reason == null ? head : '$head. ${chip.reason}';
 
-  VoidCallback? _open(BuildContext context) => live ? () => unawaited(_choose(context, session, focus, at: chip)) : null;
+  VoidCallback? _open(BuildContext context) =>
+      live ? () => unawaited(_choose(context, session, focus, at: chip)) : null;
 }

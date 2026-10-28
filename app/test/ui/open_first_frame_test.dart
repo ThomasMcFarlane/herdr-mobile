@@ -20,7 +20,10 @@ import '../support/fake_agent_session.dart';
 List<TranscriptItem> _turns(int n) => [
   for (var i = 0; i < n; i++) ...[
     userMsg('u$i', 'question $i'),
-    agentMsg('a$i', 'Answer $i with a list:\n\n- one\n- two\n\n```dart\nvoid f$i() {}\n```\n\nand a closing line for $i.'),
+    agentMsg(
+      'a$i',
+      'Answer $i with a list:\n\n- one\n- two\n\n```dart\nvoid f$i() {}\n```\n\nand a closing line for $i.',
+    ),
   ],
 ];
 
@@ -47,7 +50,10 @@ Future<void> _open(WidgetTester tester, FakeAgentSession session) async {
   tester.view.devicePixelRatio = 2;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
-    MaterialApp(theme: AppTheme.light(), home: AgentSessionScreen(key: ObjectKey(session), session: session)),
+    MaterialApp(
+      theme: AppTheme.light(),
+      home: AgentSessionScreen(key: ObjectKey(session), session: session),
+    ),
   );
 }
 
@@ -133,7 +139,11 @@ void main() {
 
       // The route is done, the older turns are made ready, the plan is whole.
       await tester.pump(const Duration(seconds: 3));
-      expect(position.pixels, closeTo(position.maxScrollExtent, 1), reason: 'still at the end: nothing moved under the reader');
+      expect(
+        position.pixels,
+        closeTo(position.maxScrollExtent, 1),
+        reason: 'still at the end: nothing moved under the reader',
+      );
       expect(position.maxScrollExtent, closeTo(max, 40), reason: 'the end is where it was (rows below are the same)');
       expect(position.minScrollExtent, lessThan(min1 - 5000), reason: '242 more turns above the first one');
       expect(min1, closeTo(min, 1));
@@ -151,7 +161,9 @@ void main() {
       expect(find.textContaining('question 0', findRichText: true), findsOneWidget);
     });
 
-    testWidgets('the replay replacing a saved copy: the reader at the end sees no jump, the older turns follow', (tester) async {
+    testWidgets('the replay replacing a saved copy: the reader at the end sees no jump, the older turns follow', (
+      tester,
+    ) async {
       final session = FakeAgentSession(state: stateWith(items: _turns(250)));
       await _open(tester, session);
       await tester.pump(const Duration(seconds: 3)); // the saved copy is whole
@@ -159,7 +171,9 @@ void main() {
       expect(position.pixels, closeTo(position.maxScrollExtent, 1));
 
       // The keeper's replay: the same thread, every item a new object, one more turn.
-      session.push(stateWith(items: [..._turns(250), userMsg('u250', 'question 250'), agentMsg('a250', 'Answer 250 is new.')]));
+      session.push(
+        stateWith(items: [..._turns(250), userMsg('u250', 'question 250'), agentMsg('a250', 'Answer 250 is new.')]),
+      );
       await tester.pump();
       expect(find.textContaining('Answer 250 is new.', findRichText: true), findsOneWidget);
       expect(position.pixels, closeTo(position.maxScrollExtent, 1), reason: 'still following the end');
@@ -205,10 +219,22 @@ void main() {
     test('the first frame plans its newest items only; a finished turn is never cut', () {
       final items = running(250); // 501 items
       expect(firstFrameStart(items, live: true), 501 - planWholeUpTo);
-      expect(firstFrameStart(items, live: false), 0, reason: 'a finished turn folds to one line: a cut would give it wrong figures');
-      expect(firstFrameStart(_turns(10), live: true), tailStart(_turns(10), firstFrameTurns), reason: 'a short last turn: the turns rule');
+      expect(
+        firstFrameStart(items, live: false),
+        0,
+        reason: 'a finished turn folds to one line: a cut would give it wrong figures',
+      );
+      expect(
+        firstFrameStart(_turns(10), live: true),
+        tailStart(_turns(10), firstFrameTurns),
+        reason: 'a short last turn: the turns rule',
+      );
       final small = [..._turns(20), userMsg('last', 'go'), for (var i = 0; i < 25; i++) toolItem('x$i')];
-      expect(firstFrameStart(small, live: true), tailStart(small, firstFrameTurns), reason: 'the last turn holds under $planWholeUpTo items');
+      expect(
+        firstFrameStart(small, live: true),
+        tailStart(small, firstFrameTurns),
+        reason: 'the last turn holds under $planWholeUpTo items',
+      );
     });
 
     test('the head is made ready in pieces, one per step', () {
@@ -233,12 +259,24 @@ void main() {
       expect(find.textContaining('Step 249 narration.', findRichText: true), findsOneWidget);
 
       await _toTop(tester);
-      expect(find.textContaining('Step 0 narration.', findRichText: true), findsNothing, reason: 'not planned for the first frame');
-      expect(find.textContaining('Step 190 narration.', findRichText: true), findsOneWidget, reason: 'the oldest planned message (item 382)');
+      expect(
+        find.textContaining('Step 0 narration.', findRichText: true),
+        findsNothing,
+        reason: 'not planned for the first frame',
+      );
+      expect(
+        find.textContaining('Step 190 narration.', findRichText: true),
+        findsOneWidget,
+        reason: 'the oldest planned message (item 382)',
+      );
 
       await tester.pump(const Duration(seconds: 3));
       await _toTop(tester, find.textContaining('Step 0 narration.', findRichText: true));
-      expect(find.textContaining('Step 0 narration.', findRichText: true), findsOneWidget, reason: 'the plan is whole now');
+      expect(
+        find.textContaining('Step 0 narration.', findRichText: true),
+        findsOneWidget,
+        reason: 'the plan is whole now',
+      );
     });
   });
 }

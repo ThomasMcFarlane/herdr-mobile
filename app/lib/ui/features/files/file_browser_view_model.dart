@@ -292,11 +292,7 @@ class FileBrowserViewModel extends ChangeNotifier {
     final home = _home;
     if (home == null || home == '/' || !(path == home || path.startsWith('$home/'))) return all;
     final homeDepth = RemotePath.breadcrumbs(home).length;
-    return [
-      all.first,
-      (path: home, label: '~'),
-      ...all.skip(homeDepth),
-    ];
+    return [all.first, (path: home, label: '~'), ...all.skip(homeDepth)];
   }
 
   @override

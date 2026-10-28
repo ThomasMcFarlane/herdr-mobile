@@ -97,8 +97,7 @@ String runLine(SubagentRun run, RunTone tone, {required DateTime now, bool withT
     RunTone.starting => ['starting', ?time],
     RunTone.running => [
       time == null ? 'running' : 'running $time',
-      if (retry != null)
-        retry.maxAttempts == null ? 'retrying' : 'retrying ${retry.attempt} of ${retry.maxAttempts}',
+      if (retry != null) retry.maxAttempts == null ? 'retrying' : 'retrying ${retry.attempt} of ${retry.maxAttempts}',
       if (run.percent != null) '${run.percent}%',
       ?last,
       ?tools,

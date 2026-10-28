@@ -178,7 +178,8 @@ class _Gen {
     _Json details = {};
     if (kind < 0.34) {
       name = 'read';
-      final path = '$cwd/${_pick(const ['lib', 'test', 'docs'])}/${_pick(const ['alpha', 'beta', 'gamma', 'delta'])}_${_between(1, 60)}.dart';
+      final path =
+          '$cwd/${_pick(const ['lib', 'test', 'docs'])}/${_pick(const ['alpha', 'beta', 'gamma', 'delta'])}_${_between(1, 60)}.dart';
       intent = 'Reading ${path.split('/').last}';
       args = {'path': path, 'i': intent};
       final (numbered, plain, numbers) = _file(_resultChars());
@@ -296,8 +297,23 @@ class _Gen {
 
   List<String> build(int bytes) {
     final out = <String>[
-      jsonEncode({'type': 'title', 'v': 1, 'title': 'Fix the retry loop', 'source': 'auto', 'updatedAt': _t.toIso8601String(), 'pad': ' ' * 121}),
-      jsonEncode({'type': 'session', 'version': 3, 'id': '01a1116a-8cba-7280-9342-${_id(12)}', 'timestamp': _t.toIso8601String(), 'cwd': cwd, 'title': 'Fix the retry loop', 'titleSource': 'auto'}),
+      jsonEncode({
+        'type': 'title',
+        'v': 1,
+        'title': 'Fix the retry loop',
+        'source': 'auto',
+        'updatedAt': _t.toIso8601String(),
+        'pad': ' ' * 121,
+      }),
+      jsonEncode({
+        'type': 'session',
+        'version': 3,
+        'id': '01a1116a-8cba-7280-9342-${_id(12)}',
+        'timestamp': _t.toIso8601String(),
+        'cwd': cwd,
+        'title': 'Fix the retry loop',
+        'titleSource': 'auto',
+      }),
       _line(_entry('model_change', {'model': 'anthropic/claude-opus-4-5', 'resolvedModelIsFallback': false})),
       _line(_entry('thinking_level_change', {'thinkingLevel': 'high', 'configured': null})),
     ];

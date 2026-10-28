@@ -112,10 +112,16 @@ void main() {
     builds.clear();
     final taps = <double>[];
     // Circles in the upper half of the screen, clear of the bars.
-    final reachable = find.byType(SelectionCircle).evaluate().where((e) {
-      final y = tester.getCenter(find.byWidget(e.widget)).dy;
-      return y > 220 && y < 560;
-    }).take(5).map((e) => e.widget).toList();
+    final reachable = find
+        .byType(SelectionCircle)
+        .evaluate()
+        .where((e) {
+          final y = tester.getCenter(find.byWidget(e.widget)).dy;
+          return y > 220 && y < 560;
+        })
+        .take(5)
+        .map((e) => e.widget)
+        .toList();
     expect(reachable, hasLength(5));
     for (final circle in reachable) {
       final sw = Stopwatch()..start();

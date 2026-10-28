@@ -112,17 +112,17 @@ class _Host extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ChangeNotifierProvider<AppSettings>.value(
-        value: settings,
-        child: MaterialApp(
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.light(),
-          home: ValueListenableBuilder<StreamBenchSession?>(
-            valueListenable: shown,
-            builder: (context, session, _) =>
-                session == null ? const SizedBox.shrink() : AgentSessionScreen(key: ObjectKey(session), session: session),
-          ),
-        ),
-      );
+    value: settings,
+    child: MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light(),
+      home: ValueListenableBuilder<StreamBenchSession?>(
+        valueListenable: shown,
+        builder: (context, session, _) =>
+            session == null ? const SizedBox.shrink() : AgentSessionScreen(key: ObjectKey(session), session: session),
+      ),
+    ),
+  );
 }
 
 /// One frame as the post-frame probe saw it.
@@ -151,7 +151,10 @@ class _Driver {
   ui.FlutterView get _view => ui.PlatformDispatcher.instance.implicitView!;
 
   Future<void> run() async {
-    final watchdog = Timer(const Duration(minutes: 40), () => print('STREAMBENCH_ERROR watchdog: the run did not finish'));
+    final watchdog = Timer(
+      const Duration(minutes: 40),
+      () => print('STREAMBENCH_ERROR watchdog: the run did not finish'),
+    );
     try {
       await _run();
     } catch (e, s) {
@@ -171,7 +174,11 @@ class _Driver {
     final hz = view.display.refreshRate;
     if (hz >= 30 && hz <= 240) _budgetMs = 1000 / hz;
     print(
-      'STREAMBENCH_ENV mode=${kProfileMode ? 'profile' : kDebugMode ? 'DEBUG' : 'release'} dpr=$_dpr '
+      'STREAMBENCH_ENV mode=${kProfileMode
+          ? 'profile'
+          : kDebugMode
+          ? 'DEBUG'
+          : 'release'} dpr=$_dpr '
       'hz=${hz.toStringAsFixed(1)} budget_ms=${_budgetMs.toStringAsFixed(2)} rows=$_rows kb=$_kb '
       'closed=$_closedProfiles keyboard=$_keyboardProfiles smooth=$_smooth',
     );
@@ -318,7 +325,9 @@ class _Driver {
     void visit(Element e) {
       if (e is StatefulElement && e.state is ScrollableState) {
         final s = e.state as ScrollableState;
-        if (s.position.axis == Axis.vertical && s.position.hasViewportDimension && s.position.viewportDimension > bestHeight) {
+        if (s.position.axis == Axis.vertical &&
+            s.position.hasViewportDimension &&
+            s.position.viewportDimension > bestHeight) {
           best = s;
           bestHeight = s.position.viewportDimension;
         }
@@ -404,11 +413,27 @@ class _Driver {
     final binding = GestureBinding.instance;
     PointerEvent event(PointerEvent Function(Duration) make) => make(Duration(microseconds: Timeline.now));
     binding.handlePointerEvent(
-      event((t) => PointerDownEvent(viewId: _view.viewId, timeStamp: t, pointer: id, kind: PointerDeviceKind.touch, position: at)),
+      event(
+        (t) => PointerDownEvent(
+          viewId: _view.viewId,
+          timeStamp: t,
+          pointer: id,
+          kind: PointerDeviceKind.touch,
+          position: at,
+        ),
+      ),
     );
     await Future<void>.delayed(const Duration(milliseconds: 60));
     binding.handlePointerEvent(
-      event((t) => PointerUpEvent(viewId: _view.viewId, timeStamp: t, pointer: id, kind: PointerDeviceKind.touch, position: at)),
+      event(
+        (t) => PointerUpEvent(
+          viewId: _view.viewId,
+          timeStamp: t,
+          pointer: id,
+          kind: PointerDeviceKind.touch,
+          position: at,
+        ),
+      ),
     );
   }
 
@@ -467,11 +492,15 @@ class _Driver {
     print('STREAMBENCH_CASE $name send_path=$sendPath');
 
     // Frames whose build started in the window, in order.
-    final frames = _timings.where((t) {
-      final start = t.timestampInMicroseconds(ui.FramePhase.buildStart);
-      return start >= startUs && start <= endUs;
-    }).toList()
-      ..sort((a, b) => a.timestampInMicroseconds(ui.FramePhase.buildStart).compareTo(b.timestampInMicroseconds(ui.FramePhase.buildStart)));
+    final frames =
+        _timings.where((t) {
+          final start = t.timestampInMicroseconds(ui.FramePhase.buildStart);
+          return start >= startUs && start <= endUs;
+        }).toList()..sort(
+          (a, b) => a
+              .timestampInMicroseconds(ui.FramePhase.buildStart)
+              .compareTo(b.timestampInMicroseconds(ui.FramePhase.buildStart)),
+        );
     final build = <double>[], raster = <double>[], total = <double>[];
     var late = 0;
     var jankMs = 0.0;

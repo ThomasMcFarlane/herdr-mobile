@@ -92,6 +92,12 @@ Future<Uint8List?> encodeThumbnail(ui.Image image, {required bool png}) async {
 }
 
 Uint8List _encodeThumbnail(({Uint8List rgba, int width, int height, bool png}) job) {
-  final image = img.Image.fromBytes(width: job.width, height: job.height, bytes: job.rgba.buffer, bytesOffset: job.rgba.offsetInBytes, numChannels: 4);
+  final image = img.Image.fromBytes(
+    width: job.width,
+    height: job.height,
+    bytes: job.rgba.buffer,
+    bytesOffset: job.rgba.offsetInBytes,
+    numChannels: 4,
+  );
   return job.png ? img.encodePng(image, level: 6) : img.encodeJpg(image, quality: 80);
 }

@@ -14,11 +14,7 @@ typedef TraceMessage = ({String name, List<String> chunks});
 List<TraceMessage> loadTraceMessages(String dir) {
   final root = Directory(dir);
   if (!root.existsSync()) return const [];
-  final files = root
-      .listSync(recursive: true)
-      .whereType<File>()
-      .where((f) => f.path.endsWith('.jsonl'))
-      .toList()
+  final files = root.listSync(recursive: true).whereType<File>().where((f) => f.path.endsWith('.jsonl')).toList()
     ..sort((a, b) => a.path.compareTo(b.path));
   final out = <TraceMessage>[];
   for (final f in files) {

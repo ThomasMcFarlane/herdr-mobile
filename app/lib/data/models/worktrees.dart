@@ -36,10 +36,10 @@ class WorktreeInfo {
   /// The usable checkouts of a `worktree.list` answer: a bare repo has nothing
   /// to work in and a prunable one is a folder that is already gone.
   static List<WorktreeInfo> parseList(Object? json) => [
-        if (json is List)
-          for (final row in json)
-            if (tryParse(row) case final w? when !w.isBare && !w.isPrunable) w,
-      ];
+    if (json is List)
+      for (final row in json)
+        if (tryParse(row) case final w? when !w.isBare && !w.isPrunable) w,
+  ];
 
   final String path;
   final String label;

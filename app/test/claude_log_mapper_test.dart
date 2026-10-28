@@ -85,7 +85,11 @@ void main() {
       final once = _feed(mapper, lines);
       final twice = _feed(mapper, lines, once);
       expect(twice.items.length, once.items.length, reason: name);
-      expect([for (final c in _tools(twice)) (c.toolCallId, c.status)], [for (final c in _tools(once)) (c.toolCallId, c.status)], reason: name);
+      expect(
+        [for (final c in _tools(twice)) (c.toolCallId, c.status)],
+        [for (final c in _tools(once)) (c.toolCallId, c.status)],
+        reason: name,
+      );
     }
   });
 
@@ -106,7 +110,11 @@ void main() {
 
       final call = _tools(s).single;
       expect((call.status, call.kind, call.name), (ToolStatus.inProgress, ToolKind.execute, 'Bash'));
-      expect((call.rawInput as Map)['command'], 'touch /tmp/hm-capture-claude/x.txt', reason: 'the approval card compares with it');
+      expect(
+        (call.rawInput as Map)['command'],
+        'touch /tmp/hm-capture-claude/x.txt',
+        reason: 'the approval card compares with it',
+      );
       expect(m.openToolCalls, {call.toolCallId});
       expect(m.turnEnded, isFalse);
 
@@ -170,7 +178,10 @@ void main() {
       final m = ClaudeLogMapper();
       var s = _feed(m, [
         jsonEncode({'type': 'ai-title', 'aiTitle': 'Auto title', 'sessionId': 'x'}),
-        user('a', '<command-name>/rename</command-name>\n<command-message>rename</command-message>\n<command-args>My name</command-args>'),
+        user(
+          'a',
+          '<command-name>/rename</command-name>\n<command-message>rename</command-message>\n<command-args>My name</command-args>',
+        ),
         user('b', '<local-command-stdout>Session renamed to: My name</local-command-stdout>'),
         jsonEncode({'type': 'custom-title', 'customTitle': 'My name', 'sessionId': 'x'}),
         // Claude appends both titles again later, the AI one last.
@@ -197,8 +208,7 @@ void main() {
           'uuid': 'u1',
           'message': {
             'role': 'user',
-            'content':
-                '<command-message>review is running…</command-message>\n<command-name>/review</command-name>\n<command-args>the diff</command-args>',
+            'content': '<command-message>review is running…</command-message>\n<command-name>/review</command-name>\n<command-args>the diff</command-args>',
           },
         }),
       ]);
@@ -222,7 +232,10 @@ void main() {
           {'type': 'text', 'text': '<system-reminder>context</system-reminder>'},
           {'type': 'text', 'text': 'fix the build'},
         ]),
-        user('g', '<teammate-message teammate_id="reviewer" color="blue" summary="Found 2 issues">long body</teammate-message>'),
+        user(
+          'g',
+          '<teammate-message teammate_id="reviewer" color="blue" summary="Found 2 issues">long body</teammate-message>',
+        ),
       ]);
 
       expect(_texts(s, MessageRole.user), ['!ls /tmp', '# use tabs', 'fix the build']);
@@ -233,8 +246,12 @@ void main() {
       final (s, _) = _run('queued-tool');
       expect(_messages(s, MessageRole.user).where((m) => m.text.contains('PINEAPPLE')), hasLength(1));
       // Shown when typed (before the agent's reply), not seconds later.
-      final typed = s.items.indexWhere((i) => i is TranscriptMessage && i.role == MessageRole.user && i.text.contains('PINEAPPLE'));
-      final reply = s.items.indexWhere((i) => i is TranscriptMessage && i.role == MessageRole.agent && i.text.contains('PINEAPPLE'));
+      final typed = s.items.indexWhere(
+        (i) => i is TranscriptMessage && i.role == MessageRole.user && i.text.contains('PINEAPPLE'),
+      );
+      final reply = s.items.indexWhere(
+        (i) => i is TranscriptMessage && i.role == MessageRole.agent && i.text.contains('PINEAPPLE'),
+      );
       expect(typed, lessThan(reply));
     });
 
@@ -265,7 +282,13 @@ void main() {
         'uuid': 'u1',
         'isSidechain': false,
         'isApiErrorMessage': true,
-        'message': {'model': '<synthetic>', 'id': 'x', 'content': [{'type': 'text', 'text': 'API Error: 529 overloaded'}]},
+        'message': {
+          'model': '<synthetic>',
+          'id': 'x',
+          'content': [
+            {'type': 'text', 'text': 'API Error: 529 overloaded'},
+          ],
+        },
       });
       final s = _feed(m, [line]);
 
@@ -320,7 +343,11 @@ void main() {
       final ask = m.pendingAsk!;
       expect(ask.questions.single.id, 'Color');
       expect(ask.questions.single.question, 'Which color do you prefer?');
-      expect(ask.questions.single.options.map((o) => o.label), ['Red', 'Green', 'Blue'], reason: 'Claude adds its own Other row');
+      expect(ask.questions.single.options.map((o) => o.label), [
+        'Red',
+        'Green',
+        'Blue',
+      ], reason: 'Claude adds its own Other row');
       expect(ask.questions.single.multi, isFalse);
 
       final s = _feed(m, _lines('ask-single'), waiting);
@@ -373,11 +400,10 @@ void main() {
       final (tasks, _) = _run('tasks');
       final (todos, _) = _run('todowrite');
 
-      expect([for (final e in tasks.plan) (e.content, e.status)], [
-        ('Research', PlanStatus.completed),
-        ('Build', PlanStatus.completed),
-        ('Test', PlanStatus.completed),
-      ]);
+      expect(
+        [for (final e in tasks.plan) (e.content, e.status)],
+        [('Research', PlanStatus.completed), ('Build', PlanStatus.completed), ('Test', PlanStatus.completed)],
+      );
       expect(todos.plan.map((e) => e.status), everyElement(PlanStatus.completed));
     });
   });
@@ -425,7 +451,10 @@ void main() {
       _feed(m, lines.sublist(0, notice));
 
       final t = m.backgroundTasks.single;
-      expect((t.id, t.kind, t.status, t.stop), ('bwn5dp2o7', BackgroundKind.shell, BackgroundStatus.running, StopRoute.message));
+      expect(
+        (t.id, t.kind, t.status, t.stop),
+        ('bwn5dp2o7', BackgroundKind.shell, BackgroundStatus.running, StopRoute.message),
+      );
       expect(t.title, 'sleep 25 && echo finished');
       expect(m.turnEnded, isTrue, reason: 'the turn is over; only the job runs');
 
@@ -447,12 +476,27 @@ void main() {
     // either tool in the capture.
     test('a workflow and a monitor are background tasks of their kinds, ended by their notice', () {
       String call(String id, String name, Map<String, Object?> input) => jsonEncode({
-        'type': 'assistant', 'uuid': 'a-$id', 'isSidechain': false,
-        'message': {'id': 'm-$id', 'model': 'x', 'content': [{'type': 'tool_use', 'id': id, 'name': name, 'input': input}]},
+        'type': 'assistant',
+        'uuid': 'a-$id',
+        'isSidechain': false,
+        'message': {
+          'id': 'm-$id',
+          'model': 'x',
+          'content': [
+            {'type': 'tool_use', 'id': id, 'name': name, 'input': input},
+          ],
+        },
       });
       String result(String id, Map<String, Object?> out) => jsonEncode({
-        'type': 'user', 'uuid': 'r-$id', 'isSidechain': false,
-        'message': {'role': 'user', 'content': [{'type': 'tool_result', 'tool_use_id': id, 'content': 'launched'}]},
+        'type': 'user',
+        'uuid': 'r-$id',
+        'isSidechain': false,
+        'message': {
+          'role': 'user',
+          'content': [
+            {'type': 'tool_result', 'tool_use_id': id, 'content': 'launched'},
+          ],
+        },
         'toolUseResult': out,
       });
       final m = ClaudeLogMapper();
@@ -463,15 +507,25 @@ void main() {
         result('t2', {'taskId': 'mon9xyz', 'timeoutMs': 300000}),
       ]);
 
-      expect([for (final t in m.backgroundTasks) (t.id, t.kind, t.title, t.status)], [
-        ('wf1abc', BackgroundKind.workflow, 'release-check', BackgroundStatus.running),
-        ('mon9xyz', BackgroundKind.monitor, 'Watch the deploy log', BackgroundStatus.running),
-      ]);
+      expect(
+        [for (final t in m.backgroundTasks) (t.id, t.kind, t.title, t.status)],
+        [
+          ('wf1abc', BackgroundKind.workflow, 'release-check', BackgroundStatus.running),
+          ('mon9xyz', BackgroundKind.monitor, 'Watch the deploy log', BackgroundStatus.running),
+        ],
+      );
 
       _feed(m, [
         jsonEncode({
-          'type': 'user', 'uuid': 'n1', 'isSidechain': false, 'origin': {'kind': 'task-notification'},
-          'message': {'role': 'user', 'content': '<task-notification>\n<task-id>wf1abc</task-id>\n<status>completed</status>\n</task-notification>'},
+          'type': 'user',
+          'uuid': 'n1',
+          'isSidechain': false,
+          'origin': {'kind': 'task-notification'},
+          'message': {
+            'role': 'user',
+            'content':
+                '<task-notification>\n<task-id>wf1abc</task-id>\n<status>completed</status>\n</task-notification>',
+          },
         }),
       ]);
       expect(m.backgroundTasks.map((t) => t.status), [BackgroundStatus.finished, BackgroundStatus.running]);
@@ -485,7 +539,9 @@ void main() {
         'isSidechain': false,
         'message': {
           'role': 'user',
-          'content': [{'type': 'tool_result', 'tool_use_id': 't1', 'content': 'x'}],
+          'content': [
+            {'type': 'tool_result', 'tool_use_id': 't1', 'content': 'x'},
+          ],
         },
         'toolUseResult': {'backgroundTaskId': 'a b; rm -rf /'},
       });
@@ -493,7 +549,18 @@ void main() {
         'type': 'assistant',
         'uuid': 'a1',
         'isSidechain': false,
-        'message': {'id': 'm1', 'model': 'x', 'content': [{'type': 'tool_use', 'id': 't1', 'name': 'Bash', 'input': {'command': 'x'}}]},
+        'message': {
+          'id': 'm1',
+          'model': 'x',
+          'content': [
+            {
+              'type': 'tool_use',
+              'id': 't1',
+              'name': 'Bash',
+              'input': {'command': 'x'},
+            },
+          ],
+        },
       });
       _feed(m, [start, line]);
       expect(m.backgroundTasks, isEmpty);
@@ -503,7 +570,15 @@ void main() {
   group('robustness', () {
     test('garbage and unknown shapes map to nothing', () {
       final m = ClaudeLogMapper();
-      for (final l in ['', 'not json', '[]', '{}', '{"type":"assistant"}', '{"type":"user","message":5}', '{"type":"mystery","uuid":"x"}']) {
+      for (final l in [
+        '',
+        'not json',
+        '[]',
+        '{}',
+        '{"type":"assistant"}',
+        '{"type":"user","message":5}',
+        '{"type":"mystery","uuid":"x"}',
+      ]) {
         expect(m.map(l), isEmpty, reason: l);
       }
     });
@@ -521,14 +596,21 @@ void main() {
   });
 
   group('a message with a picture', () {
-    test('the captured paste shows once, with the agent\'s own placeholder, and not the companion line naming the file', () {
-      final (s, _) = _run('image-paste');
-      final texts = _texts(s, MessageRole.user);
-      expect(texts.first, '[Image #1] what colour is this picture?');
-      expect(texts.where((t) => t.startsWith('[Image #1]')), hasLength(1));
-      expect(texts.where((t) => t.contains('[Image: source:')), isEmpty, reason: 'the isMeta companion is housekeeping');
-      expect(texts.where((t) => t.contains('[image]')), isEmpty, reason: 'the placeholder already marks the picture');
-    });
+    test(
+      'the captured paste shows once, with the agent\'s own placeholder, and not the companion line naming the file',
+      () {
+        final (s, _) = _run('image-paste');
+        final texts = _texts(s, MessageRole.user);
+        expect(texts.first, '[Image #1] what colour is this picture?');
+        expect(texts.where((t) => t.startsWith('[Image #1]')), hasLength(1));
+        expect(
+          texts.where((t) => t.contains('[Image: source:')),
+          isEmpty,
+          reason: 'the isMeta companion is housekeeping',
+        );
+        expect(texts.where((t) => t.contains('[image]')), isEmpty, reason: 'the placeholder already marks the picture');
+      },
+    );
 
     test('a picture the text does not mark gets an [image] line; a picture alone is not an empty message', () {
       String user(String id, List<Object> content) => jsonEncode({
@@ -583,7 +665,9 @@ void main() {
     });
 
     test('a picture alone is a message of its own, not an empty one', () {
-      final s = _feed(ClaudeLogMapper(), [user('b', [image('[40 bytes of data not sent; ref=0.0123456789abcdef]')])]);
+      final s = _feed(ClaudeLogMapper(), [
+        user('b', [image('[40 bytes of data not sent; ref=0.0123456789abcdef]')]),
+      ]);
       final m = s.items.whereType<TranscriptMessage>().single;
       expect(m.blocks.single, isA<LogImageBlock>());
     });
@@ -606,19 +690,17 @@ void main() {
       final mapper = ClaudeLogMapper();
       final once = _feed(mapper, [line]);
       final twice = _feed(ClaudeLogMapper(), [line, line], once);
-      expect(twice.items.whereType<TranscriptMessage>().expand((m) => m.blocks).whereType<LogImageBlock>(), hasLength(1));
+      expect(
+        twice.items.whereType<TranscriptMessage>().expand((m) => m.blocks).whereType<LogImageBlock>(),
+        hasLength(1),
+      );
     });
   });
 
   group('the skills Claude lists', () {
     String listing({List<String>? names, String? content, bool? isInitial}) => jsonEncode({
       'type': 'attachment',
-      'attachment': {
-        'type': 'skill_listing',
-        'names': ?names,
-        'content': ?content,
-        'isInitial': ?isInitial,
-      },
+      'attachment': {'type': 'skill_listing', 'names': ?names, 'content': ?content, 'isInitial': ?isInitial},
     });
 
     test('the captured listing becomes the session\'s commands, with their descriptions', () {
@@ -637,22 +719,30 @@ void main() {
           content: '- superpowers:brainstorming: Explore ideas: before building\n- review: Review a pull request',
         ),
       ]);
-      expect([for (final c in s.commands) (c.name, c.description)], [
-        ('superpowers:brainstorming', 'Explore ideas: before building'),
-        ('review', 'Review a pull request'),
-      ]);
+      expect(
+        [for (final c in s.commands) (c.name, c.description)],
+        [('superpowers:brainstorming', 'Explore ideas: before building'), ('review', 'Review a pull request')],
+      );
     });
 
     test('a later listing adds to the set, a new first one replaces it, and a reset forgets it', () {
       final m = ClaudeLogMapper();
-      var s = _feed(m, [listing(names: ['a', 'b'], isInitial: true)]);
-      s = _feed(m, [listing(names: ['c'], isInitial: false)], s);
+      var s = _feed(m, [
+        listing(names: ['a', 'b'], isInitial: true),
+      ]);
+      s = _feed(m, [
+        listing(names: ['c'], isInitial: false),
+      ], s);
       expect([for (final c in s.commands) c.name], ['a', 'b', 'c']);
-      s = _feed(m, [listing(names: ['d'], isInitial: true)], s);
+      s = _feed(m, [
+        listing(names: ['d'], isInitial: true),
+      ], s);
       expect([for (final c in s.commands) c.name], ['d']);
 
       m.reset();
-      s = _feed(m, [listing(names: ['e'], isInitial: false)]);
+      s = _feed(m, [
+        listing(names: ['e'], isInitial: false),
+      ]);
       expect([for (final c in s.commands) c.name], ['e'], reason: 'nothing of before the reset is merged');
     });
 

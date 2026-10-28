@@ -17,10 +17,7 @@ class TestTransport extends FakeTransport {
   int liveEventStreams = 0;
 
   @override
-  Future<Map<String, dynamic>> request(
-    String method, [
-    Map<String, dynamic> params = const {},
-  ]) async {
+  Future<Map<String, dynamic>> request(String method, [Map<String, dynamic> params = const {}]) async {
     if (method == 'session.snapshot') {
       snapshotStarted++;
       await gate?.future;

@@ -7,23 +7,23 @@ import 'package:herdr_mobile/data/models/remote_file.dart';
 
 class FakeNode {
   FakeNode.dir({DateTime? modified, int? mode})
-      : isDir = true,
-        bytes = Uint8List(0),
-        linkTarget = null,
-        mode = mode ?? 0x41ED,
-        modified = modified ?? DateTime.utc(2026, 5, 20, 9, 30);
+    : isDir = true,
+      bytes = Uint8List(0),
+      linkTarget = null,
+      mode = mode ?? 0x41ED,
+      modified = modified ?? DateTime.utc(2026, 5, 20, 9, 30);
 
   FakeNode.file(this.bytes, {DateTime? modified, int? mode})
-      : isDir = false,
-        linkTarget = null,
-        mode = mode ?? 0x81A4,
-        modified = modified ?? DateTime.utc(2026, 5, 20, 9, 30);
+    : isDir = false,
+      linkTarget = null,
+      mode = mode ?? 0x81A4,
+      modified = modified ?? DateTime.utc(2026, 5, 20, 9, 30);
 
   FakeNode.link(this.linkTarget)
-      : isDir = false,
-        bytes = Uint8List(0),
-        mode = 0xA1FF,
-        modified = DateTime.utc(2026, 5, 20, 9, 30);
+    : isDir = false,
+      bytes = Uint8List(0),
+      mode = 0xA1FF,
+      modified = DateTime.utc(2026, 5, 20, 9, 30);
 
   final bool isDir;
 
@@ -96,9 +96,7 @@ class FakeFs {
 
   void addFile(String path, Object content, {DateTime? modified, int? mode}) {
     mkdirs(RemotePath.parent(path));
-    final bytes = content is Uint8List
-        ? content
-        : Uint8List.fromList(utf8.encode(content as String));
+    final bytes = content is Uint8List ? content : Uint8List.fromList(utf8.encode(content as String));
     nodes[path] = FakeNode.file(bytes, modified: modified, mode: mode);
   }
 
@@ -113,8 +111,7 @@ class FakeFs {
     nodes[path] = FakeNode.link(target);
   }
 
-  bool _denied(String path) =>
-      deny.any((d) => path == d || path.startsWith(d.endsWith('/') ? d : '$d/'));
+  bool _denied(String path) => deny.any((d) => path == d || path.startsWith(d.endsWith('/') ? d : '$d/'));
 
   Future<void> _enter(String call) async {
     calls.add(call);
@@ -124,7 +121,9 @@ class FakeFs {
       if (fail != null) throw fail!;
       await gate?.future;
       final path = call.substring(call.indexOf(' ') + 1).split('@').first;
-      if (hang.any((h) => path == h || path.startsWith('$h/')) || hangExact.contains(path)) await Completer<void>().future;
+      if (hang.any((h) => path == h || path.startsWith('$h/')) || hangExact.contains(path)) {
+        await Completer<void>().future;
+      }
       if (latency != null) await Future<void>.delayed(latency!);
     } finally {
       inFlight--;
@@ -153,8 +152,8 @@ class FakeFs {
   RemoteEntryKind _kind(FakeNode n) => n.linkTarget != null
       ? RemoteEntryKind.link
       : n.isDir
-          ? RemoteEntryKind.dir
-          : RemoteEntryKind.file;
+      ? RemoteEntryKind.dir
+      : RemoteEntryKind.file;
 
   Never _notFound(String path) =>
       throw RemoteFileException(RemoteFileErrorKind.notFound, 'No such file or directory', path: path);
@@ -193,22 +192,24 @@ class FakeFs {
       if (p == real || !p.startsWith(prefix) || p.substring(prefix.length).contains('/')) continue;
       final target = _follow(p);
       final name = p.substring(prefix.length);
-      out.add(RemoteEntry(
-        name: name,
-        path: RemotePath.join(path, name),
-        kind: _kind(n),
-        resolvedKind: n.linkTarget == null
-            ? _kind(n)
-            : target == null
-                ? null
-                : target.isDir
-                    ? RemoteEntryKind.dir
-                    : RemoteEntryKind.file,
-        size: n.isDir ? 4096 : (target ?? n).bytes.length,
-        modified: n.modified,
-        mode: n.mode,
-        linkTarget: n.linkTarget,
-      ));
+      out.add(
+        RemoteEntry(
+          name: name,
+          path: RemotePath.join(path, name),
+          kind: _kind(n),
+          resolvedKind: n.linkTarget == null
+              ? _kind(n)
+              : target == null
+              ? null
+              : target.isDir
+              ? RemoteEntryKind.dir
+              : RemoteEntryKind.file,
+          size: n.isDir ? 4096 : (target ?? n).bytes.length,
+          modified: n.modified,
+          mode: n.mode,
+          linkTarget: n.linkTarget,
+        ),
+      );
     }
     return out;
   }

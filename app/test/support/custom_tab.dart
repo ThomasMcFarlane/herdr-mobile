@@ -33,18 +33,13 @@ class TabVisit {
 /// cookie the first one set. With [clickContinue] the person taps the entry
 /// page's Continue link instead of waiting for the `Refresh` (a click on a
 /// `localhost` page: same-site). Follows at most [hops] answers.
-Future<TabVisit> openInCustomTab(
-  Uri entry, {
-  int hops = 5,
-  CookieJar? jar,
-  bool clickContinue = false,
-}) async {
+Future<TabVisit> openInCustomTab(Uri entry, {int hops = 5, CookieJar? jar, bool clickContinue = false}) async {
   jar ??= {};
   final steps = <String>[];
   var url = entry;
   // The Custom Tab's own navigation: an opaque initiator.
   var sameSiteInitiator = false;
-  for (var i = 0;; i++) {
+  for (var i = 0; ; i++) {
     final cookies = [
       for (final c in jar.entries)
         if (!c.value.strict || sameSiteInitiator) '${c.key}=${c.value.value}',

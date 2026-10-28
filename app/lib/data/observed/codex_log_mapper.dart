@@ -227,16 +227,37 @@ class CodexLogMapper implements SessionLogMapper {
         return _attach(_searchRow(item), id, null);
       case 'DynamicToolCall':
         final tool = item['tool'] is String ? item['tool'] as String : 'tool';
-        final ns = item['namespace'] is String && (item['namespace'] as String).isNotEmpty ? '${item['namespace']}: ' : '';
+        final ns = item['namespace'] is String && (item['namespace'] as String).isNotEmpty
+            ? '${item['namespace']}: '
+            : '';
         return _attach(
-          _Row(cutText('$ns$tool', _titleChars), ToolKind.other, status: item['success'] == false ? ToolStatus.failed : ToolStatus.completed, raw: item['arguments'] == null ? null : {'arguments': capJson(item['arguments'])}),
+          _Row(
+            cutText('$ns$tool', _titleChars),
+            ToolKind.other,
+            status: item['success'] == false ? ToolStatus.failed : ToolStatus.completed,
+            raw: item['arguments'] == null ? null : {'arguments': capJson(item['arguments'])},
+          ),
           id,
           null,
         );
       case 'ImageGeneration':
-        return _attach(_Row('Generated an image', ToolKind.other, status: item['status'] == 'failed' ? ToolStatus.failed : ToolStatus.completed), id, null);
+        return _attach(
+          _Row(
+            'Generated an image',
+            ToolKind.other,
+            status: item['status'] == 'failed' ? ToolStatus.failed : ToolStatus.completed,
+          ),
+          id,
+          null,
+        );
       case 'EnteredReviewMode' || 'ExitedReviewMode':
-        return [messageUpsert(MessageRole.agent, id, item['type'] == 'EnteredReviewMode' ? 'Review started' : 'Review finished')];
+        return [
+          messageUpsert(
+            MessageRole.agent,
+            id,
+            item['type'] == 'EnteredReviewMode' ? 'Review started' : 'Review finished',
+          ),
+        ];
       case 'SubAgentActivity':
         _subagentActivity(item);
         return const [];
@@ -248,7 +269,11 @@ class CodexLogMapper implements SessionLogMapper {
         // is never lost silently: it says what it is.
         final type = item['type'];
         if (type is! String || type.isEmpty) return const [];
-        return _attach(_Row(type, ToolKind.other, status: ToolStatus.completed, raw: {'item': capJson(item)}), id, null);
+        return _attach(
+          _Row(type, ToolKind.other, status: ToolStatus.completed, raw: {'item': capJson(item)}),
+          id,
+          null,
+        );
     }
   }
 
@@ -257,9 +282,7 @@ class CodexLogMapper implements SessionLogMapper {
       return const [];
     }
     _turnEnded = false;
-    final out = <SessionUpdate>[
-      userMessageUpsert(id, text, pictures),
-    ];
+    final out = <SessionUpdate>[userMessageUpsert(id, text, pictures)];
     if (!_titled && text.trim().isNotEmpty) {
       _titled = true;
       out.add(SessionInfoUpdate(hasTitle: true, title: cutText(firstLine(text.trim()), 80), hasUpdatedAt: false));
@@ -360,7 +383,11 @@ class CodexLogMapper implements SessionLogMapper {
         return _start(
           id,
           name,
-          _Row(cutText(firstLine(text), _titleChars), ToolKind.execute, raw: {'command': capText(text), 'workdir': ?args?['workdir']}),
+          _Row(
+            cutText(firstLine(text), _titleChars),
+            ToolKind.execute,
+            raw: {'command': capText(text), 'workdir': ?args?['workdir']},
+          ),
           command: text,
         );
       case 'spawn_agent':
@@ -372,7 +399,15 @@ class CodexLogMapper implements SessionLogMapper {
       case 'request_user_input':
         final qs = args?['questions'];
         final first = qs is List && qs.isNotEmpty && qs.first is Map ? (qs.first as Map)['question'] : null;
-        return _start(id, name, _Row(first is String ? cutText(firstLine(first), _titleChars) : 'Question', ToolKind.other, raw: args == null ? null : {'arguments': capJson(args)}));
+        return _start(
+          id,
+          name,
+          _Row(
+            first is String ? cutText(firstLine(first), _titleChars) : 'Question',
+            ToolKind.other,
+            raw: args == null ? null : {'arguments': capJson(args)},
+          ),
+        );
       default:
         final target = args?['task_name'] ?? args?['target'];
         return _start(id, name, _Row(target is String ? '$name: $target' : name, ToolKind.other));
@@ -443,11 +478,16 @@ class CodexLogMapper implements SessionLogMapper {
   /// the key is quoted or not and the string is `"..."` or `'...'`; null when
   /// there is none.
   static String? _jsString(String js, String key) {
-    final m = RegExp('(?:^|[{,\\s])["\']?$key["\']?\\s*:\\s*("(?:[^"\\\\]|\\\\.)*"|\'(?:[^\'\\\\]|\\\\.)*\')').firstMatch(js);
+    final m = RegExp('(?:^|[{,\\s])["\']?$key["\']?\\s*:\\s*("(?:[^"\\\\]|\\\\.)*"|\'(?:[^\'\\\\]|\\\\.)*\')')
+        .firstMatch(js);
     if (m == null) return null;
     final lit = m.group(1)!;
     try {
-      return jsonDecode(lit.startsWith('"') ? lit : '"${lit.substring(1, lit.length - 1).replaceAll('"', '\\"').replaceAll("\\'", "'")}"') as String;
+      return jsonDecode(
+        lit.startsWith('"')
+            ? lit
+            : '"${lit.substring(1, lit.length - 1).replaceAll('"', '\\"').replaceAll("\\'", "'")}"',
+      ) as String;
     } on Object {
       return null;
     }
@@ -487,7 +527,9 @@ class CodexLogMapper implements SessionLogMapper {
         ? command[2] as String
         : (command is List ? command.join(' ') : (command is String ? command : ''));
     final cwd = item['cwd'] is String ? (item['cwd'] as String).replaceFirst('file://', '') : null;
-    final output = item['aggregated_output'] is String ? item['aggregated_output'] as String : (item['formatted_output'] is String ? item['formatted_output'] as String : '');
+    final output = item['aggregated_output'] is String
+        ? item['aggregated_output'] as String
+        : (item['formatted_output'] is String ? item['formatted_output'] as String : '');
     final exit = item['exit_code'];
     final status = switch (item['status']) {
       'declined' => ToolStatus.cancelled,
@@ -523,7 +565,9 @@ class CodexLogMapper implements SessionLogMapper {
         case 'add':
           diffs.add(ToolDiff(path: path, newText: capText(c['content'] is String ? c['content'] as String : '')));
         case 'delete':
-          diffs.add(ToolDiff(path: path, oldText: c['content'] is String ? capText(c['content'] as String) : null, newText: ''));
+          diffs.add(
+            ToolDiff(path: path, oldText: c['content'] is String ? capText(c['content'] as String) : null, newText: ''),
+          );
         default:
           final u = c['unified_diff'];
           if (u is String) diffs.add(diffFromUnified(path, capText(u)));
@@ -542,7 +586,13 @@ class CodexLogMapper implements SessionLogMapper {
       _ => ToolStatus.completed,
     };
     return _attach(
-      _Row('Edited $first${more > 0 ? ' and $more more' : ''}', ToolKind.edit, status: status, diffs: diffs, output: stdout),
+      _Row(
+        'Edited $first${more > 0 ? ' and $more more' : ''}',
+        ToolKind.edit,
+        status: status,
+        diffs: diffs,
+        output: stdout,
+      ),
       id,
       null,
     );
@@ -741,7 +791,10 @@ class CodexLogMapper implements SessionLogMapper {
     final id = _cells.remove(cell);
     final failed = header.group(1) == 'failed';
     final stopped = header.group(1) == 'terminated';
-    _finishTask('cell$cell', stopped ? BackgroundStatus.stopped : (failed ? BackgroundStatus.failed : BackgroundStatus.finished));
+    _finishTask(
+      'cell$cell',
+      stopped ? BackgroundStatus.stopped : (failed ? BackgroundStatus.failed : BackgroundStatus.finished),
+    );
     if (id == null || !_open.remove(id)) return const [];
     final call = _calls[id];
     final text = parts.length > 1 ? parts.sublist(1).join('\n') : '';
@@ -842,7 +895,10 @@ class CodexLogMapper implements SessionLogMapper {
         ToolCallPatch(id, {
           'toolCallId': id,
           'status': p['success'] == false ? 'failed' : 'completed',
-          'content': [...diffs.map((d) => d.toJson()), if (stdout.isNotEmpty) ToolContentBlock(TextBlock(capText(stdout))).toJson()],
+          'content': [
+            ...diffs.map((d) => d.toJson()),
+            if (stdout.isNotEmpty) ToolContentBlock(TextBlock(capText(stdout))).toJson(),
+          ],
           if (stdout.isNotEmpty) 'rawOutput': capText(stdout),
         }),
       ),
@@ -855,7 +911,9 @@ class CodexLogMapper implements SessionLogMapper {
     final thread = item['agent_thread_id'];
     final path = item['agent_path'];
     if (thread is! String || thread.isEmpty) return;
-    final name = path is String && path.isNotEmpty ? path.split('/').where((s) => s.isNotEmpty).lastOrNull ?? thread : thread;
+    final name = path is String && path.isNotEmpty
+        ? path.split('/').where((s) => s.isNotEmpty).lastOrNull ?? thread
+        : thread;
     final old = _subagents[thread] ?? _subagents.remove('pending:$name');
     final status = switch (item['kind']) {
       'started' || 'interacted' => 'running',

@@ -8,7 +8,9 @@ import '../../../data/models/machine_layout.dart';
 import '../../../data/repositories/agent_screens.dart';
 import '../../../data/repositories/machine_connection.dart';
 import '../../../data/words/plural.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../agents/agent_navigation.dart';
 import 'machine_actions.dart';
 import 'machine_field.dart' show shortPath;
@@ -19,11 +21,7 @@ import 'session_prefill.dart';
 /// What can be done to a workspace: a new tab, a new name, closing it. A
 /// worktree's workspace also starts a session in its folder, and a linked one
 /// can be removed (held, never forced).
-Future<void> showWorkspaceActions(
-  BuildContext context,
-  MachineConnection machine,
-  Workspace workspace,
-) {
+Future<void> showWorkspaceActions(BuildContext context, MachineConnection machine, Workspace workspace) {
   final name = workspace.label.isEmpty ? workspace.id : workspace.label;
   final actions = MachineActions(machine);
   final toaster = Toaster.of(context);
@@ -68,11 +66,13 @@ Future<void> showWorkspaceActions(
 
   void newSessionHere(WorkspaceWorktree worktree) {
     // The navigator outlives the sheet that started this.
-    unawaited(openNewAgentSession(
-      navigator.context,
-      machine: machine,
-      prefill: SessionPrefill(machineId: machine.profile.id, folder: worktree.checkoutPath),
-    ));
+    unawaited(
+      openNewAgentSession(
+        navigator.context,
+        machine: machine,
+        prefill: SessionPrefill(machineId: machine.profile.id, folder: worktree.checkoutPath),
+      ),
+    );
   }
 
   Future<void> removeWorktree(WorkspaceWorktree worktree) async {
@@ -85,7 +85,8 @@ Future<void> showWorkspaceActions(
       title: 'Remove $worktreeName?',
       confirmLabel: 'Remove worktree',
       hold: true,
-      message: 'Deletes the folder ${shortPath(folder)} on ${machine.profile.label}. '
+      message:
+          'Deletes the folder ${shortPath(folder)} on ${machine.profile.label}. '
           '${branch == null ? 'The branch stays. ' : 'The branch $branch stays. '}'
           '${working.stop > 0 ? '${countOf(working.stop, 'agent')} working there will stop. ' : ''}'
           '${working.lose > 0 ? '${countOf(working.lose, 'phone session')} running there will lose the folder. ' : ''}'
@@ -100,10 +101,15 @@ Future<void> showWorkspaceActions(
   // A primary that still has linked worktrees open cannot be closed alone:
   // herdr refuses (`workspace_group_close_required`) and the phone never sends
   // `close_group`, so the row says what to do first.
-  final worktreesOpen = worktree != null &&
+  final worktreesOpen =
+      worktree != null &&
       !worktree.isLinked &&
       machine.snapshot.workspaces.any(
-        (o) => o.id != workspace.id && o.worktree != null && o.worktree!.isLinked && o.worktree!.repoKey == worktree.repoKey,
+        (o) =>
+            o.id != workspace.id &&
+            o.worktree != null &&
+            o.worktree!.isLinked &&
+            o.worktree!.repoKey == worktree.repoKey,
       );
 
   return showActionSheet(
@@ -143,9 +149,9 @@ Future<void> showWorkspaceActions(
     for (final item in items)
       ...switch (item) {
         RepoItem() => [
-            for (final b in item.blocks)
-              if (b.workspace.id == workspaceId) ...b.panes,
-          ],
+          for (final b in item.blocks)
+            if (b.workspace.id == workspaceId) ...b.panes,
+        ],
         WorkspaceItem() => item.workspace.id == workspaceId ? item.panes : const <PaneEntry>[],
       },
   ];
@@ -164,12 +170,7 @@ Future<void> showWorkspaceActions(
 }
 
 /// What can be done to a pane: a new name, closing it.
-Future<void> showPaneActions(
-  BuildContext context,
-  MachineConnection machine,
-  Pane pane, {
-  required String title,
-}) {
+Future<void> showPaneActions(BuildContext context, MachineConnection machine, Pane pane, {required String title}) {
   final actions = MachineActions(machine);
   final toaster = Toaster.of(context);
   final navigator = Navigator.of(context);
@@ -196,7 +197,7 @@ Future<void> showPaneActions(
       title: 'Close this pane?',
       message: last
           ? 'It is the last pane in its workspace, so the workspace closes too. '
-              'What is running in it stops.'
+                'What is running in it stops.'
           : 'What is running in it stops. This cannot be undone.',
       confirmLabel: 'Close pane',
     );
@@ -209,12 +210,7 @@ Future<void> showPaneActions(
     title: title,
     actions: [
       SheetAction(label: 'Rename', icon: LucideIcons.pencil, onTap: rename),
-      SheetAction(
-        label: 'Close pane',
-        icon: LucideIcons.trash2,
-        destructive: true,
-        onTap: close,
-      ),
+      SheetAction(label: 'Close pane', icon: LucideIcons.trash2, destructive: true, onTap: close),
     ],
   );
 }

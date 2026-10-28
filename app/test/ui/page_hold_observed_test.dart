@@ -62,17 +62,19 @@ void main() {
     );
     final app = AppSettings(MemoryAppSettingsStore());
     await app.load();
-    await tester.pumpWidget(HerdrMobileApp(
-      machines: machines,
-      network: network,
-      snapshotCache: MemorySnapshotCache(),
-      terminalSettings: TerminalSettings(MemoryTerminalSettingsStore()),
-      appSettings: app,
-      agentScreens: screens,
-      fleet: fleet,
-      previews: previews,
-      observedSessions: observed,
-    ));
+    await tester.pumpWidget(
+      HerdrMobileApp(
+        machines: machines,
+        network: network,
+        snapshotCache: MemorySnapshotCache(),
+        terminalSettings: TerminalSettings(MemoryTerminalSettingsStore()),
+        appSettings: app,
+        agentScreens: screens,
+        fleet: fleet,
+        previews: previews,
+        observedSessions: observed,
+      ),
+    );
     await tester.pump(const Duration(milliseconds: 100));
 
     final release = fleet.holdAlive('m', page: 'localhost:3000 on build-box');

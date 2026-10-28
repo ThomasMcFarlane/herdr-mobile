@@ -5,7 +5,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/models/machine_layout.dart';
 import '../../../data/repositories/machine_connection.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../create/management_sheets.dart';
 import '../create/new_agent_session_screen.dart';
 import '../create/session_prefill.dart';
@@ -56,11 +58,13 @@ class MachineRepoSection extends StatelessWidget {
               filled: false,
               size: CircleButton.compact,
               onPressed: live
-                  ? () => unawaited(openNewAgentSession(
+                  ? () => unawaited(
+                      openNewAgentSession(
                         context,
                         machine: machine,
                         prefill: SessionPrefill(machineId: machine.profile.id, folder: primary.place.checkoutPath),
-                      ))
+                      ),
+                    )
                   : null,
             ),
           ),
@@ -131,14 +135,27 @@ class _CheckoutBlockView extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.md, Gap.gutter, Gap.xs),
           child: Row(
             children: [
-              Icon(place.isLinked ? LucideIcons.gitBranch : LucideIcons.folder, size: IconSize.row, color: ds.textSecondary),
+              Icon(
+                place.isLinked ? LucideIcons.gitBranch : LucideIcons.folder,
+                size: IconSize.row,
+                color: ds.textSecondary,
+              ),
               const SizedBox(width: Gap.sm),
               Expanded(
                 child: Text.rich(
-                  TextSpan(children: [
-                    TextSpan(text: title, style: Type.labelStrong.copyWith(color: ds.textSecondary)),
-                    if (branch != null) TextSpan(text: ' · $branch', style: Type.secondary.copyWith(color: ds.textMuted)),
-                  ]),
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: title,
+                        style: Type.labelStrong.copyWith(color: ds.textSecondary),
+                      ),
+                      if (branch != null)
+                        TextSpan(
+                          text: ' · $branch',
+                          style: Type.secondary.copyWith(color: ds.textMuted),
+                        ),
+                    ],
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),

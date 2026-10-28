@@ -68,7 +68,8 @@ void main() {
       }
       canvas.drawRect(
         rect,
-        Paint()..shader = ui.Gradient.linear(rect.topLeft, rect.bottomRight, const [Color(0xFF1B4DB3), Color(0xFF8A5CF6)]),
+        Paint()
+          ..shader = ui.Gradient.linear(rect.topLeft, rect.bottomRight, const [Color(0xFF1B4DB3), Color(0xFF8A5CF6)]),
       );
       final bar = Paint()..color = const Color(0xCCFFFFFF);
       for (var i = 0; i < 6; i++) {
@@ -148,7 +149,9 @@ void main() {
 
   FakeAgentSession session(List<TranscriptItem> items, {bool live = false}) {
     statusNow = () => at(live ? 95 : 100);
-    return FakeAgentSession(state: stateWith(items: items, turnActive: live))..turnStart = live ? t0 : null;
+    return FakeAgentSession(
+      state: stateWith(items: items, turnActive: live),
+    )..turnStart = live ? t0 : null;
   }
 
   TranscriptMessage agentBlocks(String key, List<ContentBlock> blocks, int seconds) => TranscriptMessage(
@@ -160,13 +163,8 @@ void main() {
     endedAt: at(seconds + 1),
   );
 
-  TranscriptMessage userBlocks(String key, List<ContentBlock> blocks, int seconds) => TranscriptMessage(
-    key: key,
-    role: MessageRole.user,
-    blocks: blocks,
-    at: at(seconds),
-    endedAt: at(seconds),
-  );
+  TranscriptMessage userBlocks(String key, List<ContentBlock> blocks, int seconds) =>
+      TranscriptMessage(key: key, role: MessageRole.user, blocks: blocks, at: at(seconds), endedAt: at(seconds));
 
   /// Opens every tool row on screen (a turn that runs shows its log open).
   Future<void> openTools(WidgetTester tester) async {
@@ -178,7 +176,8 @@ void main() {
     }
   }
 
-  final longUri = 'https://cdn.example.com/${List.filled(40, 'segment-very-long').join('/')}/final-image.png?token=${'x' * 200}';
+  final longUri =
+      'https://cdn.example.com/${List.filled(40, 'segment-very-long').join('/')}/final-image.png?token=${'x' * 200}';
   const bidi = 'báo\u202Egnp.cáo\u202C dài.png';
 
   final scenarios = <String, Future<(FakeAgentSession, Future<void> Function()?)> Function(WidgetTester)>{
@@ -257,9 +256,14 @@ void main() {
             EmbeddedResourceBlock(
               uri: 'file:///home/dev/payments-api/NOTES.txt',
               mimeType: 'text/plain',
-              text: [for (var i = 1; i <= 11; i++) 'Dòng $i: ghi chú về Hà Nội và việc chuẩn hóa tiếng Việt'].join('\n'),
+              text: [for (var i = 1; i <= 11; i++) 'Dòng $i: ghi chú về Hà Nội và việc chuẩn hóa tiếng Việt']
+                  .join('\n'),
             ),
-            EmbeddedResourceBlock(uri: 'file:///home/dev/data.bin', mimeType: 'application/octet-stream', blob: 'A' * 4096),
+            EmbeddedResourceBlock(
+              uri: 'file:///home/dev/data.bin',
+              mimeType: 'application/octet-stream',
+              blob: 'A' * 4096,
+            ),
           ], 3),
         ]),
         null,
@@ -277,7 +281,10 @@ void main() {
               ToolLocation(path: '/home/dev/payments-api/lib/locale/parse.dart', line: 42),
               ToolLocation(path: 'lib/b.dart'),
               ToolLocation(path: '/home/dev/Hà Nội/tệp báo cáo.dart', line: 7),
-              ToolLocation(path: '/home/dev/payments-api/packages/very-long-package-name/lib/src/some/deep/folder/final_file.dart', line: 1234),
+              ToolLocation(
+                path: '/home/dev/payments-api/packages/very-long-package-name/lib/src/some/deep/folder/final_file.dart',
+                line: 1234,
+              ),
               ToolLocation(path: 'lib/e.dart', line: 2),
               ToolLocation(path: 'lib/f.dart', line: 3),
             ],
@@ -300,7 +307,13 @@ void main() {
             exitCode: 1,
             output: [for (var i = 1; i <= 14; i++) '00:0$i +$i -1: locale handles Hà Nội line $i'].join('\n'),
           ),
-          editAt('e', '/home/dev/payments-api/lib/locale/parse.dart', 50, before: 'a\nb\nc\nd\ne\nf\ng\n', after: 'a\nB\nc\nd\ne\nf\ng\nh\n'),
+          editAt(
+            'e',
+            '/home/dev/payments-api/lib/locale/parse.dart',
+            50,
+            before: 'a\nb\nc\nd\ne\nf\ng\n',
+            after: 'a\nB\nc\nd\ne\nf\ng\nh\n',
+          ),
           agentAt('a', 'One failure left.', 60),
         ], live: true),
         () => openTools(tester),

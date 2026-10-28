@@ -123,8 +123,7 @@ class JsonRpcException implements Exception {
 
   JsonRpcException.methodNotFound(String method) : this(JsonRpcCode.methodNotFound, 'Method not found: $method');
 
-  const JsonRpcException.invalidParams(String message, [Object? data])
-    : this(JsonRpcCode.invalidParams, message, data);
+  const JsonRpcException.invalidParams(String message, [Object? data]) : this(JsonRpcCode.invalidParams, message, data);
 
   final int code;
   final String message;
@@ -452,7 +451,11 @@ class JsonRpcConnection {
         final code = error['code'];
         final text = error['message'];
         pending.completer.completeError(
-          JsonRpcException(code is int ? code : JsonRpcCode.internalError, text is String ? text : 'error', error['data']),
+          JsonRpcException(
+            code is int ? code : JsonRpcCode.internalError,
+            text is String ? text : 'error',
+            error['data'],
+          ),
         );
       } else {
         pending.completer.completeError(JsonRpcException(JsonRpcCode.internalError, '$error'));

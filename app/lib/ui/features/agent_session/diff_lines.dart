@@ -51,10 +51,7 @@ List<String> _lines(String text) {
 
 List<DiffLine> _middle(List<String> a, List<String> b, int maxCells) {
   if (a.isEmpty || b.isEmpty || (a.length + 1) * (b.length + 1) > maxCells) {
-    return [
-      for (final line in a) DiffLine(DiffKind.del, line),
-      for (final line in b) DiffLine(DiffKind.add, line),
-    ];
+    return [for (final line in a) DiffLine(DiffKind.del, line), for (final line in b) DiffLine(DiffKind.add, line)];
   }
   final w = b.length + 1;
   // lcs[i * w + j]: the longest common subsequence of a[i..] and b[j..].

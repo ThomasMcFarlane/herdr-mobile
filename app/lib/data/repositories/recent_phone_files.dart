@@ -67,9 +67,7 @@ class PrefsRecentPhoneFilesStore implements RecentPhoneFilesStore {
     try {
       final json = jsonDecode(raw);
       if (json is! List) return const [];
-      return [
-        for (final item in json) ?RecentPhoneFile.fromJson(item),
-      ];
+      return [for (final item in json) ?RecentPhoneFile.fromJson(item)];
     } on FormatException {
       return const [];
     }
@@ -116,7 +114,10 @@ class RecentPhoneFiles extends ChangeNotifier {
 
   Future<void> remove(RecentPhoneFile file) async {
     await load();
-    _files = [for (final f in _files) if (f != file) f];
+    _files = [
+      for (final f in _files)
+        if (f != file) f,
+    ];
     notifyListeners();
     await _store.write(_files);
   }

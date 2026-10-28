@@ -28,12 +28,7 @@ typedef TransportBuilder = HerdrTransport Function(
 /// The worker starts on first use and is replaced if it ever dies. A request
 /// in flight when it dies fails with a retryable [HerdrTransportException].
 class IsolateTransport implements HerdrTransport {
-  IsolateTransport({
-    required this.builder,
-    required this.config,
-    required this.onPin,
-    this.onNotice,
-  });
+  IsolateTransport({required this.builder, required this.config, required this.onPin, this.onNotice});
 
   final TransportBuilder builder;
 
@@ -73,21 +68,18 @@ class IsolateTransport implements HerdrTransport {
 
   Future<_Worker> _start() async {
     try {
-      final worker = await _Worker.spawn(
-        builder,
-        await config(),
-        onPin,
-        onNotice ?? (_) {},
-      );
+      final worker = await _Worker.spawn(builder, await config(), onPin, onNotice ?? (_) {});
       _live = worker;
       if (_background) worker.post(const ['bg', true]);
       // A dead worker is replaced by the next call.
-      unawaited(worker.gone.then((_) {
-        if (identical(_live, worker)) {
-          _live = null;
-          _worker = null;
-        }
-      }));
+      unawaited(
+        worker.gone.then((_) {
+          if (identical(_live, worker)) {
+            _live = null;
+            _worker = null;
+          }
+        }),
+      );
       return worker;
     } on Object {
       _worker = null;
@@ -96,22 +88,19 @@ class IsolateTransport implements HerdrTransport {
   }
 
   @override
-  Future<Map<String, dynamic>> request(
-    String method, [
-    Map<String, dynamic> params = const {},
-  ]) async => (await _ensure()).request(method, params);
+  Future<Map<String, dynamic>> request(String method, [Map<String, dynamic> params = const {}]) async =>
+      (await _ensure()).request(method, params);
 
   @override
   bool get supportsFiles => true;
 
   @override
-  Future<RemoteStat> statFile(String path) async =>
-      RemoteStat.fromJson(await _op('stat', [path]) as Map);
+  Future<RemoteStat> statFile(String path) async => RemoteStat.fromJson(await _op('stat', [path]) as Map);
 
   @override
   Future<List<RemoteEntry>> listDirectory(String path) async => [
-        for (final e in await _op('list', [path]) as List) RemoteEntry.fromJson(e as Map),
-      ];
+    for (final e in await _op('list', [path]) as List) RemoteEntry.fromJson(e as Map),
+  ];
 
   @override
   Future<Uint8List> readFile(String path, {int offset = 0, int length = remoteReadCap}) async {
@@ -127,11 +116,7 @@ class IsolateTransport implements HerdrTransport {
       StaticSite() => ['static', spec.machineName, spec.root],
       PortForward() => ['forward', spec.machineName, spec.host, spec.port],
     }) as List;
-    return WebBridgeInfo(
-      port: out[0]! as int,
-      token: out[1]! as String,
-      entryPort: out[2]! as int,
-    );
+    return WebBridgeInfo(port: out[0]! as int, token: out[1]! as String, entryPort: out[2]! as int);
   }
 
   @override
@@ -154,10 +139,7 @@ class IsolateTransport implements HerdrTransport {
     void Function(int sent, int total)? onProgress,
   }) {
     final job = _MainUpload(onProgress);
-    _ensure().then(
-      (worker) => worker.startUpload(job, localPath, remotePath),
-      onError: (Object e) => job.fail(e),
-    );
+    _ensure().then((worker) => worker.startUpload(job, localPath, remotePath), onError: (Object e) => job.fail(e));
     return job;
   }
 
@@ -174,8 +156,7 @@ class IsolateTransport implements HerdrTransport {
   /// each. For tests and diagnostics.
   int get execBatchesReceived => _live?.execBatches ?? 0;
 
-  Future<Object?> _op(String name, List<Object?> args) async =>
-      (await _ensure()).op(name, args);
+  Future<Object?> _op(String name, List<Object?> args) async => (await _ensure()).op(name, args);
 
   @override
   Stream<Map<String, dynamic>> events(List<Map<String, dynamic>> subscriptions) {
@@ -251,10 +232,7 @@ class _Worker {
         if (message is SendPort) {
           handshake.complete(message);
         } else if (message is List && message.first == 'fatal') {
-          handshake.completeError(HerdrTransportException(
-            message[1] as String,
-            fatal: true,
-          ));
+          handshake.completeError(HerdrTransportException(message[1] as String, fatal: true));
         }
         return;
       }
@@ -358,10 +336,7 @@ class _Worker {
   }
 
   /// Forwards the worker's events into [out]; returns the cancel callback.
-  void Function() subscribe(
-    List<Map<String, dynamic>> subscriptions,
-    StreamController<Map<String, dynamic>> out,
-  ) {
+  void Function() subscribe(List<Map<String, dynamic>> subscriptions, StreamController<Map<String, dynamic>> out) {
     if (_dead) {
       out
         ..addError(const HerdrTransportException('herdr connection lost'))
@@ -510,11 +485,7 @@ void _workerMain(List<Object?> init) {
 
   final HerdrTransport transport;
   try {
-    transport = builder(
-      init[2],
-      (fp) => main.send(['pin', fp]),
-      (banner) => main.send(['notice', banner]),
-    );
+    transport = builder(init[2], (fp) => main.send(['pin', fp]), (banner) => main.send(['notice', banner]));
   } on Object catch (e) {
     main.send(['fatal', '$e']);
     commands.close();
@@ -567,27 +538,24 @@ void _workerMain(List<Object?> init) {
       return;
     }
     uploads[id] = job;
-    job.done.then((_) {
-      if (uploads.remove(id) != null) main.send(['udone', id]);
-    }, onError: (Object e) {
-      if (uploads.remove(id) != null) main.send(['uerr', id, ..._encodeOpError(e)]);
-    });
+    job.done.then(
+      (_) {
+        if (uploads.remove(id) != null) main.send(['udone', id]);
+      },
+      onError: (Object e) {
+        if (uploads.remove(id) != null) main.send(['uerr', id, ..._encodeOpError(e)]);
+      },
+    );
   }
 
   Future<void> serveOp(int id, String name, List<Object?> args) async {
     try {
       final Object out = switch (name) {
         'stat' => (await transport.statFile(args[0]! as String)).toJson(),
-        'list' => [
-            for (final e in await transport.listDirectory(args[0]! as String)) e.toJson(),
-          ],
+        'list' => [for (final e in await transport.listDirectory(args[0]! as String)) e.toJson()],
         'read' => TransferableTypedData.fromList([
-            await transport.readFile(
-              args[0]! as String,
-              offset: args[1]! as int,
-              length: args[2]! as int,
-            ),
-          ]),
+          await transport.readFile(args[0]! as String, offset: args[1]! as int, length: args[2]! as int),
+        ]),
         'real' => await transport.realPath(args[0]! as String),
         'web' => await _openWeb(transport, args),
         'mkdirs' => await transport.makeDirs(args[0]! as String).then((_) => true),
@@ -624,16 +592,18 @@ void _workerMain(List<Object?> init) {
       case 'sub':
         final id = m[1]! as int;
         final subs = (m[2]! as List).cast<Map<String, dynamic>>();
-        subscriptions[id] = transport.events(subs).listen(
-          (event) => main.send(['evt', id, event]),
-          onError: (Object e) {
-            subscriptions.remove(id);
-            main.send(['evtErr', id, ..._encodeError(e)]);
-          },
-          onDone: () {
-            if (subscriptions.remove(id) != null) main.send(['evtDone', id]);
-          },
-        );
+        subscriptions[id] = transport
+            .events(subs)
+            .listen(
+              (event) => main.send(['evt', id, event]),
+              onError: (Object e) {
+                subscriptions.remove(id);
+                main.send(['evtErr', id, ..._encodeError(e)]);
+              },
+              onDone: () {
+                if (subscriptions.remove(id) != null) main.send(['evtDone', id]);
+              },
+            );
       case 'cancel':
         subscriptions.remove(m[1])?.cancel();
       case 'bg':
@@ -656,9 +626,9 @@ void _workerMain(List<Object?> init) {
             .timeout(const Duration(milliseconds: 500), onTimeout: () => const <void>[])
             .then((_) => transport.close())
             .whenComplete(() {
-          main.send(const ['closed']);
-          commands.close();
-        });
+              main.send(const ['closed']);
+              commands.close();
+            });
     }
   });
 }
@@ -788,7 +758,6 @@ class _MainExec implements ExecChannel {
     if (!_ended) _worker.post(['xeof', _id]);
   }
 
-
   @override
   Future<int?> get exitCode => _exit.future;
 
@@ -889,12 +858,11 @@ Future<List<Object?>> _openWeb(HerdrTransport transport, List<Object?> args) asy
 /// `[kind, a, b]` for [Object]s that cannot cross the isolate boundary.
 /// A file operation's error: `['file', kind, message, fatal, path]`, or the
 /// shapes of [_encodeError].
-List<Object?> _encodeOpError(Object e) => e is RemoteFileException
-    ? ['file', e.kind.name, e.message, e.fatal, e.path]
-    : _encodeError(e);
+List<Object?> _encodeOpError(Object e) =>
+    e is RemoteFileException ? ['file', e.kind.name, e.message, e.fatal, e.path] : _encodeError(e);
 
 List<Object?> _encodeError(Object e) => switch (e) {
-      HerdrApiException(:final code, :final message) => ['api', code, message],
-      HerdrTransportException(:final message, :final fatal) => ['transport', message, fatal],
-      _ => ['transport', '$e', false],
-    };
+  HerdrApiException(:final code, :final message) => ['api', code, message],
+  HerdrTransportException(:final message, :final fatal) => ['transport', message, fatal],
+  _ => ['transport', '$e', false],
+};

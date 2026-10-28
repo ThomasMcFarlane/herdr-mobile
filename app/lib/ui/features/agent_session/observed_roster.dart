@@ -8,7 +8,9 @@ import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/observed_session.dart';
 import '../../../data/words/elapsed.dart';
 import '../../../data/words/plural.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../render/visible_text.dart';
 import '../../support/step_clock.dart';
 import 'agent_session_navigation.dart';
@@ -25,9 +27,10 @@ import 'transcript_view.dart' show EarlierRow;
 /// `subagent_roster.dart`.)
 Future<void> showObservedSubagents(BuildContext context, AgentSessionView session) {
   session.watchSubagents(true);
-  return showAppSheet<void>(context, builder: (ctx) => ObservedRoster(session: session)).whenComplete(
-    () => session.watchSubagents(false),
-  );
+  return showAppSheet<void>(
+    context,
+    builder: (ctx) => ObservedRoster(session: session),
+  ).whenComplete(() => session.watchSubagents(false));
 }
 
 /// Done rows listed before `Show more`: a swarm leaves dozens, and the person
@@ -50,7 +53,10 @@ class RosterSections {
 /// lists them: waiting and running as they came, done with the failed first,
 /// each newest first.
 RosterSections rosterSections(List<SubagentEntry> entries) {
-  List<SubagentEntry> of(SubagentState s) => [for (final e in entries) if (e.state == s) e];
+  List<SubagentEntry> of(SubagentState s) => [
+    for (final e in entries)
+      if (e.state == s) e,
+  ];
   return RosterSections(
     waiting: of(SubagentState.waiting),
     running: of(SubagentState.running),
@@ -132,8 +138,14 @@ class _ObservedRosterState extends State<ObservedRoster> {
   /// Reads the work when the hold completes, not when the sheet was built.
   void _stopAll() {
     final work = _session.backgroundWork;
-    final agents = [for (final t in work.running) if (t.kind == BackgroundKind.agent) t];
-    final targets = [for (final t in agents) if (t.stop != StopRoute.none) t];
+    final agents = [
+      for (final t in work.running)
+        if (t.kind == BackgroundKind.agent) t,
+    ];
+    final targets = [
+      for (final t in agents)
+        if (t.stop != StopRoute.none) t,
+    ];
     unawaited(_stopper.stopAll(targets: targets, skipped: agents.length - targets.length, only: BackgroundKind.agent));
   }
 
@@ -168,9 +180,16 @@ class _ObservedRosterState extends State<ObservedRoster> {
         if (done.length > rosterDoneShown) _More(done.length - rosterDoneShown, _moreDone),
         if (earlier != EarlierHistory.none) const _Earlier(),
       ];
-      final agents = [for (final t in work.running) if (t.kind == BackgroundKind.agent) t];
-      final targets = [for (final t in agents) if (t.stop != StopRoute.none) t];
-      final stopAll = live && targets.length >= 2 && targets.any((t) => _stopper.stops[t.key]?.phase != StopPhase.stopping);
+      final agents = [
+        for (final t in work.running)
+          if (t.kind == BackgroundKind.agent) t,
+      ];
+      final targets = [
+        for (final t in agents)
+          if (t.stop != StopRoute.none) t,
+      ];
+      final stopAll =
+          live && targets.length >= 2 && targets.any((t) => _stopper.stops[t.key]?.phase != StopPhase.stopping);
       final summary = _stopper.summary;
       final pre = [
         if (stopAll)
@@ -179,7 +198,8 @@ class _ObservedRosterState extends State<ObservedRoster> {
             child: StopAllChip(
               count: targets.length,
               primed: _stopper.primed == BackgroundStopper.all,
-              onTap: () => _stopper.primed == BackgroundStopper.all ? _stopAll() : _stopper.prime(BackgroundStopper.all),
+              onTap: () =>
+                  _stopper.primed == BackgroundStopper.all ? _stopAll() : _stopper.prime(BackgroundStopper.all),
               onHeld: _stopAll,
             ),
           ),
@@ -352,13 +372,22 @@ class _RosterRow extends StatelessWidget {
                     style: Type.secondary.copyWith(color: ds.textSecondary),
                   ),
                 if (tools != null)
-                  Text(tools, maxLines: 1, overflow: TextOverflow.ellipsis, style: Mono.small.copyWith(color: ds.textMuted)),
+                  Text(
+                    tools,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Mono.small.copyWith(color: ds.textMuted),
+                  ),
                 ?note,
               ],
             ),
           ),
         ),
-        if (trailing != null) Padding(padding: const EdgeInsets.only(top: Gap.sm, right: Gap.sm), child: trailing),
+        if (trailing != null)
+          Padding(
+            padding: const EdgeInsets.only(top: Gap.sm, right: Gap.sm),
+            child: trailing,
+          ),
       ],
     );
   }

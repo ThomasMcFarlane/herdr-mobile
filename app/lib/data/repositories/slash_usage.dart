@@ -12,8 +12,7 @@ class SlashUse {
   final DateTime lastUsed;
 
   @override
-  bool operator ==(Object other) =>
-      other is SlashUse && other.count == count && other.lastUsed == lastUsed;
+  bool operator ==(Object other) => other is SlashUse && other.count == count && other.lastUsed == lastUsed;
 
   @override
   int get hashCode => Object.hash(count, lastUsed);
@@ -48,7 +47,10 @@ class SlashUsageMemory {
     if (rawPinned is Map) {
       for (final MapEntry(key: agent, value: names) in rawPinned.entries) {
         if (agent is! String || names is! List) continue;
-        final parsed = {for (final n in names) if (n is String) n};
+        final parsed = {
+          for (final n in names)
+            if (n is String) n,
+        };
         if (parsed.isNotEmpty) pinned[agent] = parsed;
       }
     }
@@ -62,17 +64,15 @@ class SlashUsageMemory {
   final Map<String, Set<String>> pinned;
 
   Map<String, Object?> toJson() => {
-        'uses': {
-          for (final MapEntry(key: agent, value: byName) in uses.entries)
-            agent: {
-              for (final MapEntry(key: name, value: use) in byName.entries)
-                name: [use.count, use.lastUsed.millisecondsSinceEpoch],
-            },
+    'uses': {
+      for (final MapEntry(key: agent, value: byName) in uses.entries)
+        agent: {
+          for (final MapEntry(key: name, value: use) in byName.entries)
+            name: [use.count, use.lastUsed.millisecondsSinceEpoch],
         },
-        'pinned': {
-          for (final MapEntry(key: agent, value: names) in pinned.entries) agent: names.toList(),
-        },
-      };
+    },
+    'pinned': {for (final MapEntry(key: agent, value: names) in pinned.entries) agent: names.toList()},
+  };
 }
 
 /// Where [SlashUsage] is kept between launches.
@@ -137,11 +137,9 @@ class SlashUsage extends ChangeNotifier {
   static String _agent(String label) => label.trim().toLowerCase();
 
   /// Pinned command names of [agent], in the order they were pinned.
-  List<String> pinned(String agent) =>
-      List.unmodifiable(_memory.pinned[_agent(agent)] ?? const <String>{});
+  List<String> pinned(String agent) => List.unmodifiable(_memory.pinned[_agent(agent)] ?? const <String>{});
 
-  bool isPinned(String agent, String name) =>
-      _memory.pinned[_agent(agent)]?.contains(name) ?? false;
+  bool isPinned(String agent, String name) => _memory.pinned[_agent(agent)]?.contains(name) ?? false;
 
   /// How many times [name] was sent to [agent].
   int count(String agent, String name) => _memory.uses[_agent(agent)]?[name]?.count ?? 0;
@@ -157,9 +155,9 @@ class SlashUsage extends ChangeNotifier {
   /// Up to [limit] command names sent to [agent], newest first, without the
   /// ones in [exclude].
   List<String> recent(String agent, {int limit = 5, Set<String> exclude = const {}}) => [
-        for (final name in used(agent))
-          if (!exclude.contains(name)) name,
-      ].take(limit).toList();
+    for (final name in used(agent))
+      if (!exclude.contains(name)) name,
+  ].take(limit).toList();
 
   /// Notes that [name] (no slash) was sent to [agent].
   Future<void> record(String agent, String name) {
@@ -185,14 +183,8 @@ class SlashUsage extends ChangeNotifier {
     return _set(pinned: pinned);
   }
 
-  Future<void> _set({
-    Map<String, Map<String, SlashUse>>? uses,
-    Map<String, Set<String>>? pinned,
-  }) {
-    _memory = SlashUsageMemory(
-      uses: uses ?? _memory.uses,
-      pinned: pinned ?? _memory.pinned,
-    );
+  Future<void> _set({Map<String, Map<String, SlashUse>>? uses, Map<String, Set<String>>? pinned}) {
+    _memory = SlashUsageMemory(uses: uses ?? _memory.uses, pinned: pinned ?? _memory.pinned);
     notifyListeners();
     return _store.write(_memory).catchError((Object _) {});
   }

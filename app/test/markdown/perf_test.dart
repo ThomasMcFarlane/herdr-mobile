@@ -25,27 +25,24 @@ String _message(int bytes) {
 
 /// Worst cases (`herdr-screen-check`) for the Markdown renderer.
 Map<String, String> _worstCases() => {
-      'code block of 1000 lines': '```dart\n${[
-        for (var i = 0; i < 1000; i++) '  final value$i = compute($i, "line $i");',
-      ].join('\n')}\n```\n\nafter',
-      'table of 40 columns': () {
-        final head = [for (var c = 0; c < 40; c++) 'col$c'];
-        return '| ${head.join(' | ')} |\n|${List.filled(40, '---').join('|')}|\n${[
-          for (var r = 0; r < 30; r++) '| ${[for (var c = 0; c < 40; c++) '$r,$c'].join(' | ')} |',
-        ].join('\n')}\n\nafter';
-      }(),
-      'list of 300 items': [
-        for (var i = 0; i < 300; i++) '- item $i with **bold** and `code` and [a link](https://x.y/$i)',
-      ].join('\n'),
-      '5 levels of nesting': [
-        for (var d = 0; d < 5; d++) '${'  ' * d}- level $d\n${'  ' * d}  > quote $d',
-      ].join('\n'),
-      'quotes in quotes': '> 1\n> > 2\n> > > 3\n> > > > 4\n> > > > > 5\n> > > > > > 6 deep',
-      'Vietnamese and RTL': '**Đã sửa** lỗi `Hà Nội`.\n\nنص عربي **غامق** و `code` ثم עברית.\n\nTiếng Việt: ${'ặ ế ữ ọ ' * 200}',
-      'bidi overrides': 'a \u202eevil\u202c b `c\u2066d\u2069` [x\u202e](https://x.y/\u202e)',
-      'a very long line': 'word ' * 20000,
-      '200 KB message': _message(200 * 1024),
-    };
+  'code block of 1000 lines':
+      '```dart\n${[for (var i = 0; i < 1000; i++) '  final value$i = compute($i, "line $i");'].join('\n')}\n```\n\nafter',
+  'table of 40 columns': () {
+    final head = [for (var c = 0; c < 40; c++) 'col$c'];
+    return '| ${head.join(' | ')} |\n|${List.filled(40, '---').join('|')}|\n${[
+      for (var r = 0; r < 30; r++) '| ${[for (var c = 0; c < 40; c++) '$r,$c'].join(' | ')} |',
+    ].join('\n')}\n\nafter';
+  }(),
+  'list of 300 items': [for (var i = 0; i < 300; i++) '- item $i with **bold** and `code` and [a link](https://x.y/$i)']
+      .join('\n'),
+  '5 levels of nesting': [for (var d = 0; d < 5; d++) '${'  ' * d}- level $d\n${'  ' * d}  > quote $d'].join('\n'),
+  'quotes in quotes': '> 1\n> > 2\n> > > 3\n> > > > 4\n> > > > > 5\n> > > > > > 6 deep',
+  'Vietnamese and RTL':
+      '**Đã sửa** lỗi `Hà Nội`.\n\nنص عربي **غامق** و `code` ثم עברית.\n\nTiếng Việt: ${'ặ ế ữ ọ ' * 200}',
+  'bidi overrides': 'a \u202eevil\u202c b `c\u2066d\u2069` [x\u202e](https://x.y/\u202e)',
+  'a very long line': 'word ' * 20000,
+  '200 KB message': _message(200 * 1024),
+};
 
 void main() {
   group('worst cases', () {
@@ -64,8 +61,7 @@ void main() {
           final end = (at + step).clamp(0, text.length);
           s.append(text.substring(at, end));
           if ((at ~/ step) % 15 == 0) {
-            expect(dumpDocument(s.document()), dumpDocument(parseMd(text.substring(0, end))),
-                reason: '${e.key} @$end');
+            expect(dumpDocument(s.document()), dumpDocument(parseMd(text.substring(0, end))), reason: '${e.key} @$end');
           }
           // Healing the tail of a half-written message never throws.
           s.tail(heal: true);

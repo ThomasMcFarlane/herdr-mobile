@@ -14,7 +14,9 @@ import '../../../data/words/agent_names.dart';
 import '../../../data/words/plural.dart';
 import '../../../data/words/place_name.dart';
 import '../../../data/words/where_line.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../create/new_agent_session_screen.dart' show openNewAgentSession;
 import '../create/session_prefill.dart' show SessionPrefill;
 import '../files/files_navigation.dart' show machineSupportsFiles, openFileBrowser;
@@ -54,7 +56,6 @@ class SessionBar extends StatelessWidget {
   const SessionBar({super.key, required this.session});
 
   final AgentSessionView session;
-
 
   @override
   Widget build(BuildContext context) => SessionSelect<(String, AgentPhase, bool, AgentLink, int?)>(
@@ -172,7 +173,9 @@ List<_Setting> _settings(AgentSessionState state) {
         id: _modeId,
         name: 'Mode',
         kind: _Kind.select,
-        choices: [for (final m in modes.availableModes) ConfigChoice(value: m.id, name: m.name, description: m.description)],
+        choices: [
+          for (final m in modes.availableModes) ConfigChoice(value: m.id, name: m.name, description: m.description),
+        ],
         value: modes.currentModeId,
         isMode: true,
       ),
@@ -186,7 +189,11 @@ List<_Setting> _settings(AgentSessionState state) {
 /// catalogue scrolls lazily and can be searched) or a switch, then Duplicate.
 /// True when a choice was picked (the sheet closes on a pick).
 Future<bool> showSessionOptions(BuildContext context, AgentSessionView session, {SessionChip? at}) async =>
-    await showAppSheet<bool>(context, builder: (ctx) => _OptionsSheet(session: session, at: at)) == true;
+    await showAppSheet<bool>(
+      context,
+      builder: (ctx) => _OptionsSheet(session: session, at: at),
+    ) ==
+    true;
 
 class _OptionsSheet extends StatefulWidget {
   const _OptionsSheet({required this.session, this.at});
@@ -224,11 +231,7 @@ class _OptionsSheetState extends State<_OptionsSheet> {
     unawaited(
       openNewAgentSession(
         navigator.context,
-        prefill: SessionPrefill(
-          machineId: session.machine.profile.id,
-          folder: session.cwd,
-          agent: session.agent,
-        ),
+        prefill: SessionPrefill(machineId: session.machine.profile.id, folder: session.cwd, agent: session.agent),
       ),
     );
   }
@@ -282,7 +285,13 @@ class _OptionsSheetState extends State<_OptionsSheet> {
     builder: (context, _) {
       final settings = _settings(widget.session.state);
       final picking = settings.where((s) => s.id == _picking).firstOrNull;
-      if (picking != null) return _Picker(setting: picking, onBack: () => setState(() => _picking = null), onPick: (c) => _pick(picking, c));
+      if (picking != null) {
+        return _Picker(
+          setting: picking,
+          onBack: () => setState(() => _picking = null),
+          onPick: (c) => _pick(picking, c),
+        );
+      }
       return SheetScaffold(
         title: settings.isEmpty ? 'Session' : 'Mode and model',
         kind: SheetKind.actions,
@@ -531,7 +540,10 @@ class _PickerState extends State<_Picker> {
         if (e is String) {
           return Padding(
             padding: const EdgeInsets.fromLTRB(Gap.lg, Gap.md, Gap.lg, Gap.xs),
-            child: Semantics(header: true, child: Text(e, style: Type.caption.copyWith(color: ds.textSecondary))),
+            child: Semantics(
+              header: true,
+              child: Text(e, style: Type.caption.copyWith(color: ds.textSecondary)),
+            ),
           );
         }
         final choice = e as ConfigChoice;
@@ -566,12 +578,7 @@ class _PickerState extends State<_Picker> {
 /// with a quiet shield, a dangerous one with a triangle in the danger words,
 /// and each with its reason in a line.
 class _ChoiceRow extends StatelessWidget {
-  const _ChoiceRow({
-    required this.choice,
-    required this.risk,
-    required this.selected,
-    required this.onTap,
-  });
+  const _ChoiceRow({required this.choice, required this.risk, required this.selected, required this.onTap});
 
   final ConfigChoice choice;
   final ModeAssessment risk;
@@ -599,7 +606,10 @@ class _ChoiceRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (marker != null) ...[
-            Padding(padding: const EdgeInsets.only(top: Gap.hair), child: marker),
+            Padding(
+              padding: const EdgeInsets.only(top: Gap.hair),
+              child: marker,
+            ),
             const SizedBox(width: Gap.sm),
           ],
           Expanded(
@@ -627,11 +637,6 @@ class _ChoiceRow extends StatelessWidget {
         ],
       ),
     );
-    return PressRow(
-      onTap: onTap,
-      selected: selected,
-      minHeight: _minHeight,
-      child: content,
-    );
+    return PressRow(onTap: onTap, selected: selected, minHeight: _minHeight, child: content);
   }
 }

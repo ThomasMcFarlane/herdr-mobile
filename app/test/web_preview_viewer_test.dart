@@ -29,7 +29,13 @@ void main() {
     final machine = pageMachine(transport..fs = fs, label: 'devbox');
     final stat = RemoteStat(path: path, kind: RemoteEntryKind.file, size: fs.nodes[path]!.bytes.length);
     await tester.pumpWidget(
-      withFleet(fleet, MaterialApp(theme: AppTheme.light(), home: FileViewerScreen(machine: machine, stat: stat))),
+      withFleet(
+        fleet,
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: FileViewerScreen(machine: machine, stat: stat),
+        ),
+      ),
     );
     await _settle(tester);
   }

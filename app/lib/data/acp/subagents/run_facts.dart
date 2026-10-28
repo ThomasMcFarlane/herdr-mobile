@@ -270,7 +270,8 @@ List<RunFacts> _omp(ToolCall call, List<SubagentRun> known) {
     final item = i < items.length ? items[i] : null;
     final id = '${call.toolCallId}#$i';
     final name = _s(p?['id']) ?? _s(r?['id']) ?? _s(item?['name']);
-    final assignment = _s(p?['assignment']) ?? _s(p?['task']) ?? _s(r?['assignment']) ?? _s(r?['task']) ?? _s(item?['task']);
+    final assignment =
+        _s(p?['assignment']) ?? _s(p?['task']) ?? _s(r?['assignment']) ?? _s(r?['task']) ?? _s(item?['task']);
     final description = _firstLine(_s(p?['description']) ?? _s(r?['description']));
     final title = description ?? name ?? _firstLine(assignment);
 

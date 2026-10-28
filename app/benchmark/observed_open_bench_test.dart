@@ -76,11 +76,7 @@ final _logKb = int.parse(_env['OBS_LOG_KB'] ?? '800');
 const execRtts = 2;
 
 /// (name, round trip ms, megabits a second towards the phone)
-const _links = [
-  ('fast', 40.0, 30.0),
-  ('mid', 120.0, 10.0),
-  ('slow', 300.0, 2.0),
-];
+const _links = [('fast', 40.0, 30.0), ('mid', 120.0, 10.0), ('slow', 300.0, 2.0)];
 
 final _out = <String>[];
 
@@ -123,7 +119,9 @@ class _LocalChannel implements ExecChannel {
     });
     _lines = StreamController<String>(onListen: () => probe.listenedAt ??= _clock.now);
     splitLines(counted).listen(_lines.add, onError: _lines.addError, onDone: _lines.close);
-    _stderr = utf8.decodeStream(_process.stderr).then((s) => _tail = s.length > 2048 ? s.substring(s.length - 2048) : s);
+    _stderr = utf8
+        .decodeStream(_process.stderr)
+        .then((s) => _tail = s.length > 2048 ? s.substring(s.length - 2048) : s);
   }
 
   final Process _process;

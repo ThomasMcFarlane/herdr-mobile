@@ -99,7 +99,10 @@ void main() {
 
       // The same answer applied again does not add a second line.
       expect(dropped.withSetup(_setup(dropped: 3)).items.where((i) => i.key == hostDroppedKey), hasLength(1));
-      expect(_replay([5], setup: _setup(dropped: 1)).items.first, isA<TranscriptNote>().having((n) => n.text, 'text', contains('(1 turn)')));
+      expect(
+        _replay([5], setup: _setup(dropped: 1)).items.first,
+        isA<TranscriptNote>().having((n) => n.text, 'text', contains('(1 turn)')),
+      );
     });
 
     test('the live message keeps its place under the line', () {
@@ -211,7 +214,11 @@ void main() {
       }
       final merged = replay.withSetup(_setup()).withHeld(held).state;
       expect(_names(merged), contains(_earlierNote));
-      expect(_names(merged).where((n) => n == 'user:question 0'), hasLength(2), reason: 'both are real: they differ after it');
+      expect(
+        _names(merged).where((n) => n == 'user:question 0'),
+        hasLength(2),
+        reason: 'both are real: they differ after it',
+      );
     });
 
     test('the divider is not written again once the next replay overlaps what the first one brought', () {
@@ -219,7 +226,11 @@ void main() {
       final first = _replay([10, 11], setup: _setup(dropped: 10)).withHeld(held).state;
       final second = _replay([10, 11, 12], setup: _setup(dropped: 10)).withHeld(first).state;
       expect(_names(second).where((n) => n == _earlierNote), hasLength(1));
-      expect(_names(second).skip(1), [..._turnNames([0, 1, 2]), _earlierNote, ..._turnNames([10, 11, 12])]);
+      expect(_names(second).skip(1), [
+        ..._turnNames([0, 1, 2]),
+        _earlierNote,
+        ..._turnNames([10, 11, 12]),
+      ]);
       _expectUniqueKeys(second);
     });
   });
@@ -235,7 +246,12 @@ void main() {
     )..remove('rawInput');
 
     test('a call the replay holds trimmed keeps the phone\'s fuller copy', () {
-      final held = _replay([0, 1, 2], tools: {1: _tool('c1', extra: {'rawOutput': 'the whole output'})});
+      final held = _replay(
+        [0, 1, 2],
+        tools: {
+          1: _tool('c1', extra: {'rawOutput': 'the whole output'}),
+        },
+      );
       final replay = _replay([1, 2], tools: {1: trimmed('c1')}, setup: _setup(dropped: 1, trimmed: 1));
       final merged = replay.withHeld(held).state;
       final call = merged.toolCall('c1')!;
@@ -256,11 +272,16 @@ void main() {
       expect(ToolCall.parse(trimmed('t')).detailTrimmed, isTrue);
       expect(ToolCall.parse(_tool('t')).detailTrimmed, isFalse);
       expect(
-        ToolCall.parse(_tool('t', extra: {
-          '_meta': {
-            'herdr': {'trimmed': 'yes'},
-          },
-        })).detailTrimmed,
+        ToolCall.parse(
+          _tool(
+            't',
+            extra: {
+              '_meta': {
+                'herdr': {'trimmed': 'yes'},
+              },
+            },
+          ),
+        ).detailTrimmed,
         isFalse,
       );
     });

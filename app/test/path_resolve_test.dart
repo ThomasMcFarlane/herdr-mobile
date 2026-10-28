@@ -36,7 +36,9 @@ Future<void> _host(
       theme: AppTheme.light(),
       home: Scaffold(
         body: Builder(
-          builder: (context) => Center(child: GestureDetector(onTap: () => onTap(context), child: const Text('go'))),
+          builder: (context) => Center(
+            child: GestureDetector(onTap: () => onTap(context), child: const Text('go')),
+          ),
         ),
       ),
     ),
@@ -85,7 +87,9 @@ void main() {
 
       expect(find.text('main copy'), findsOneWidget);
       expect(find.textContaining('From worktree'), findsNothing);
-      expect(fs.calls.where((c) => !c.startsWith('read ')), ['stat $_cwd/docs/PROFILE_NOTES.txt'], reason: 'the first attempt is the only lookup');
+      expect(fs.calls.where((c) => !c.startsWith('read ')), [
+        'stat $_cwd/docs/PROFILE_NOTES.txt',
+      ], reason: 'the first attempt is the only lookup');
     });
 
     testWidgets('the same name in two worktrees offers a sheet, newest first; a tap opens that one', (tester) async {
@@ -143,7 +147,9 @@ void main() {
       expect(find.text('Found in app'), findsOneWidget);
     });
 
-    testWidgets('a distinctive name is searched for at once; nothing found says so and offers no Search', (tester) async {
+    testWidgets('a distinctive name is searched for at once; nothing found says so and offers no Search', (
+      tester,
+    ) async {
       final fs = _fs()..addFile('$_cwd/a/b/UNIQUE_REPORT.txt', 'report');
       final machine = machineWithFiles(fs);
       await _tap(tester, machine, 'UNIQUE_REPORT.txt');
@@ -151,7 +157,10 @@ void main() {
       expect(find.text('Found in a/b'), findsOneWidget);
 
       await _tap(tester, machine, 'MISSING_REPORT.txt');
-      expect(find.text('MISSING_REPORT.txt isn’t in proj (also looked in 2 worktrees and searched by name)'), findsOneWidget);
+      expect(
+        find.text('MISSING_REPORT.txt isn’t in proj (also looked in 2 worktrees and searched by name)'),
+        findsOneWidget,
+      );
       expect(find.text('Search'), findsNothing);
     });
 
@@ -192,7 +201,11 @@ void main() {
       await tester.pump(); // the route builds, the lookup starts
       await tester.pump(const Duration(milliseconds: 280));
       expect(fs.calls.any((c) => c.contains('worktrees')), isTrue, reason: 'it was in the worktree search');
-      expect(find.text('Looking in other checkouts…'), findsOneWidget, reason: 'the skeleton says what the wait is for');
+      expect(
+        find.text('Looking in other checkouts…'),
+        findsOneWidget,
+        reason: 'the skeleton says what the wait is for',
+      );
 
       await tester.tap(find.byTooltip('Back'));
       await tester.pump(const Duration(milliseconds: 50));
@@ -229,10 +242,12 @@ void main() {
       final fs = _fs();
       await expectLater(
         resolveRemotePath(machineWithFiles(fs), 'nope.txt', cwd: _cwd),
-        throwsA(isA<PathNotFound>()
-            .having((e) => e.kind, 'kind', RemoteFileErrorKind.notFound)
-            .having((e) => e.canSearch, 'canSearch', isTrue)
-            .having((e) => e.message, 'message', 'nope.txt isn’t in proj (also looked in 2 worktrees)')),
+        throwsA(
+          isA<PathNotFound>()
+              .having((e) => e.kind, 'kind', RemoteFileErrorKind.notFound)
+              .having((e) => e.canSearch, 'canSearch', isTrue)
+              .having((e) => e.message, 'message', 'nope.txt isn’t in proj (also looked in 2 worktrees)'),
+        ),
       );
     });
 

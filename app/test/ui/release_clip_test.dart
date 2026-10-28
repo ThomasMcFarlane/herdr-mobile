@@ -35,19 +35,25 @@ import '../support/shot.dart';
 import '../support/turn_fixtures.dart';
 
 TranscriptItem _launch(String command) => TranscriptTool(
-      ToolCall(toolCallId: 't$command', kind: ToolKind.execute, status: ToolStatus.completed, rawInput: {'command': command}),
-    );
+  ToolCall(
+    toolCallId: 't$command',
+    kind: ToolKind.execute,
+    status: ToolStatus.completed,
+    rawInput: {'command': command},
+  ),
+);
 
-TranscriptItem _say(String text) => TranscriptMessage(key: 'm$text', role: MessageRole.agent, blocks: [TextBlock(text)]);
+TranscriptItem _say(String text) =>
+    TranscriptMessage(key: 'm$text', role: MessageRole.agent, blocks: [TextBlock(text)]);
 
 TranscriptItem _wrote(String path) => TranscriptTool(
-      ToolCall(
-        toolCallId: 't$path',
-        kind: ToolKind.edit,
-        status: ToolStatus.completed,
-        content: [ToolDiff(path: path, newText: '<h1>x</h1>')],
-      ),
-    );
+  ToolCall(
+    toolCallId: 't$path',
+    kind: ToolKind.edit,
+    status: ToolStatus.completed,
+    content: [ToolDiff(path: path, newText: '<h1>x</h1>')],
+  ),
+);
 
 Uint8List _png(int hue) {
   final image = img.Image(width: 160, height: 120);
@@ -100,7 +106,14 @@ void main() {
     );
     session.setBackground(
       BackgroundWork(
-        tasks: const [BackgroundTask(id: 'bg1', kind: BackgroundKind.shell, status: BackgroundStatus.running, title: 'npm run dev -- --port 5173')],
+        tasks: const [
+          BackgroundTask(
+            id: 'bg1',
+            kind: BackgroundKind.shell,
+            status: BackgroundStatus.running,
+            title: 'npm run dev -- --port 5173',
+          ),
+        ],
       ),
     );
     final rec = ClipRecorder(dir);
@@ -134,9 +147,23 @@ void main() {
         rec.chapter(2, total, 'Swipe between tabs', top: true);
         final size = t.view.physicalSize / t.view.devicePixelRatio;
         final list = Offset(size.width / 2, size.height * 0.72);
-        await rec.drag(t, list, const Offset(-240, 0), 'Swipe sideways', over: const Duration(milliseconds: 500), rest: const Duration(milliseconds: 600));
+        await rec.drag(
+          t,
+          list,
+          const Offset(-240, 0),
+          'Swipe sideways',
+          over: const Duration(milliseconds: 500),
+          rest: const Duration(milliseconds: 600),
+        );
         await rec.hold(t, const Duration(milliseconds: 700));
-        await rec.drag(t, list, const Offset(-240, 0), 'Again', over: const Duration(milliseconds: 500), rest: const Duration(milliseconds: 600));
+        await rec.drag(
+          t,
+          list,
+          const Offset(-240, 0),
+          'Again',
+          over: const Duration(milliseconds: 500),
+          rest: const Duration(milliseconds: 600),
+        );
         await real();
         await rec.hold(t, const Duration(milliseconds: 1000));
 
@@ -145,7 +172,14 @@ void main() {
         await rec.tap(t, find.text('checkout_6.png'), 'Open a picture');
         await real();
         await rec.hold(t, const Duration(milliseconds: 900));
-        await rec.drag(t, Offset(size.width * 0.8, size.height * 0.45), const Offset(-280, 0), 'Swipe to the next', over: const Duration(milliseconds: 500), rest: const Duration(milliseconds: 500));
+        await rec.drag(
+          t,
+          Offset(size.width * 0.8, size.height * 0.45),
+          const Offset(-280, 0),
+          'Swipe to the next',
+          over: const Duration(milliseconds: 500),
+          rest: const Duration(milliseconds: 500),
+        );
         await real();
         await rec.hold(t, const Duration(milliseconds: 900));
         Navigator.of(t.element(find.byType(PhotoViewer))).pop();

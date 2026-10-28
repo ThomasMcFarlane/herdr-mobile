@@ -4,6 +4,7 @@ import '../../../data/repositories/machine_connection.dart';
 import '../../../data/services/herdr_api.dart' show HerdrUnsupportedException;
 import '../../../data/services/herdr_transport.dart' show HerdrApiException, HerdrTransportException;
 import '../../../data/words/agent_names.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// Offers to install herdr's hook for [target] on [machine], which makes the

@@ -69,12 +69,12 @@ void main() {
   testWidgets('confirming installs once and tells what herdr said', (tester) async {
     final (h, t) = await _open(tester, target: 'codex');
     t.on['integration.install'] = (_) => {
-          'type': 'integration_install',
-          'target': 'codex',
-          'details': {
-            'messages': ['Installed the Codex hook', 'Restart Codex'],
-          },
-        };
+      'type': 'integration_install',
+      'target': 'codex',
+      'details': {
+        'messages': ['Installed the Codex hook', 'Restart Codex'],
+      },
+    };
 
     await tester.tap(_button('Install herdr hook'));
     await _settle(tester);

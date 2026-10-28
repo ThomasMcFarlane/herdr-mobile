@@ -66,8 +66,7 @@ class DartSftp implements SftpApi {
   final SftpClient _client;
 
   @override
-  Future<SftpFileAttrs> stat(String path, {bool followLink = true}) =>
-      _client.stat(path, followLink: followLink);
+  Future<SftpFileAttrs> stat(String path, {bool followLink = true}) => _client.stat(path, followLink: followLink);
 
   @override
   Future<List<SftpName>> listdir(String path) => _client.listdir(path);
@@ -106,8 +105,7 @@ class DartSftp implements SftpApi {
   }
 
   @override
-  Future<void> mkdir(String path) =>
-      _client.mkdir(path, SftpFileAttrs(mode: const SftpFileMode.value(_dirMode)));
+  Future<void> mkdir(String path) => _client.mkdir(path, SftpFileAttrs(mode: const SftpFileMode.value(_dirMode)));
 
   @override
   Future<void> remove(String path) => _client.remove(path);
@@ -174,9 +172,7 @@ class SftpFiles {
   /// drain over the wire. Browsing therefore wins: while any browse request
   /// is in flight the window drops to [browseWindow] (128 KB ahead); several
   /// uploads split the full window between them.
-  int get _windowCap => _browsing > 0
-      ? browseWindow
-      : math.max(browseWindow, uploadWindow ~/ math.max(1, _uploads));
+  int get _windowCap => _browsing > 0 ? browseWindow : math.max(browseWindow, uploadWindow ~/ math.max(1, _uploads));
 
   /// Links resolved at once while listing a directory.
   static const _linkBatch = 24;
@@ -198,43 +194,49 @@ class SftpFiles {
   }
 
   Future<RemoteStat> stat(String path) => _run(path, metaTimeout, (s) async {
-        final attrs = await s.stat(path);
-        return _statOf(path, attrs);
-      });
+    final attrs = await s.stat(path);
+    return _statOf(path, attrs);
+  });
 
   Future<String> realPath(String path) => _run(path, metaTimeout, (s) => s.absolute(path));
 
   Future<List<RemoteEntry>> list(String path) => _run(path, metaTimeout, (s) async {
-        final names = await s.listdir(path);
-        final entries = <RemoteEntry>[];
-        final links = <int>[];
-        for (final n in names) {
-          if (n.filename == '.' || n.filename == '..') continue;
-          final kind = _kindOf(n.attr.mode?.type);
-          entries.add(RemoteEntry(
-            name: n.filename,
-            path: RemotePath.join(path, n.filename),
-            kind: kind,
-            resolvedKind: kind == RemoteEntryKind.link ? null : kind,
-            size: n.attr.size,
-            modified: _time(n.attr.modifyTime),
-            mode: n.attr.mode?.value,
-          ));
-          if (kind == RemoteEntryKind.link) links.add(entries.length - 1);
-        }
-        for (var i = 0; i < links.length; i += _linkBatch) {
-          final batch = links.sublist(i, math.min(i + _linkBatch, links.length));
-          await Future.wait([for (final at in batch) _resolveLink(s, entries, at)]);
-        }
-        return entries;
-      }, onFailure: (s, e) => _notADirectoryIfFile(s, path, e));
+    final names = await s.listdir(path);
+    final entries = <RemoteEntry>[];
+    final links = <int>[];
+    for (final n in names) {
+      if (n.filename == '.' || n.filename == '..') continue;
+      final kind = _kindOf(n.attr.mode?.type);
+      entries.add(
+        RemoteEntry(
+          name: n.filename,
+          path: RemotePath.join(path, n.filename),
+          kind: kind,
+          resolvedKind: kind == RemoteEntryKind.link ? null : kind,
+          size: n.attr.size,
+          modified: _time(n.attr.modifyTime),
+          mode: n.attr.mode?.value,
+        ),
+      );
+      if (kind == RemoteEntryKind.link) links.add(entries.length - 1);
+    }
+    for (var i = 0; i < links.length; i += _linkBatch) {
+      final batch = links.sublist(i, math.min(i + _linkBatch, links.length));
+      await Future.wait([for (final at in batch) _resolveLink(s, entries, at)]);
+    }
+    return entries;
+  }, onFailure: (s, e) => _notADirectoryIfFile(s, path, e));
 
   Future<Uint8List> read(String path, int offset, int length) {
     final from = math.max(0, offset);
     final n = length.clamp(0, remoteReadCap);
     if (n == 0) return Future.value(Uint8List(0));
-    return _run(path, readTimeout, (s) => s.readBytes(path, from, n),
-        onFailure: (s, e) => _notAFileIfDirectory(s, path, e));
+    return _run(
+      path,
+      readTimeout,
+      (s) => s.readBytes(path, from, n),
+      onFailure: (s, e) => _notAFileIfDirectory(s, path, e),
+    );
   }
 
   /// `mkdir -p`, new folders readable by their owner only. A folder that is
@@ -252,9 +254,11 @@ class SftpFiles {
         try {
           final attrs = await s.stat(dir);
           if (attrs.mode?.type != SftpFileType.directory) {
-            throw RemoteFileException(RemoteFileErrorKind.notADirectory,
-                '${RemotePath.basename(dir)} is not a folder',
-                path: dir);
+            throw RemoteFileException(
+              RemoteFileErrorKind.notADirectory,
+              '${RemotePath.basename(dir)} is not a folder',
+              path: dir,
+            );
           }
           break;
         } on SftpStatusError catch (e) {
@@ -285,16 +289,13 @@ class SftpFiles {
   Future<void> remove(String path) => _run(path, metaTimeout, (s) => s.remove(path));
 
   /// Starts copying [localPath] to [remotePath] now (see [_SftpUpload]).
-  UploadJob upload(
-    String localPath,
-    String remotePath, {
-    void Function(int sent, int total)? onProgress,
-  }) => _SftpUpload(this, localPath, remotePath, onProgress).._start();
+  UploadJob upload(String localPath, String remotePath, {void Function(int sent, int total)? onProgress}) =>
+      _SftpUpload(this, localPath, remotePath, onProgress).._start();
 
   /// A session to open an upload's file on: one fresh session after a dead
   /// channel, like [_run].
   Future<(SftpApi, SftpUploadFile)> _openForWrite(String path) async {
-    for (var attempt = 0;; attempt++) {
+    for (var attempt = 0; ; attempt++) {
       final SftpApi session;
       try {
         session = await (_session ??= open());
@@ -323,12 +324,10 @@ class SftpFiles {
         return e;
       case SftpAbortError():
         if (session != null) _forget(session);
-        return RemoteFileException(RemoteFileErrorKind.network, 'The connection was lost',
-            path: path);
+        return RemoteFileException(RemoteFileErrorKind.network, 'The connection was lost', path: path);
       case TimeoutException():
         if (session != null) _forget(session);
-        return RemoteFileException(RemoteFileErrorKind.network, 'The machine did not answer in time',
-            path: path);
+        return RemoteFileException(RemoteFileErrorKind.network, 'The machine did not answer in time', path: path);
       case SftpStatusError():
         if ((e.code == 6 || e.code == 7) && session != null) _forget(session);
         return _mapStatus(e, path);
@@ -340,8 +339,8 @@ class SftpFiles {
           code == 2
               ? RemoteFileErrorKind.notFound
               : code == 13
-                  ? RemoteFileErrorKind.permission
-                  : RemoteFileErrorKind.failed,
+              ? RemoteFileErrorKind.permission
+              : RemoteFileErrorKind.failed,
           code == 2 ? 'The file is gone' : 'Cannot read the file: ${e.message}',
         );
       default:
@@ -398,11 +397,11 @@ class SftpFiles {
   }
 
   static RemoteEntryKind _kindOf(SftpFileType? type) => switch (type) {
-        SftpFileType.directory => RemoteEntryKind.dir,
-        SftpFileType.symbolicLink => RemoteEntryKind.link,
-        SftpFileType.regularFile || SftpFileType.unknown || null => RemoteEntryKind.file,
-        _ => RemoteEntryKind.other,
-      };
+    SftpFileType.directory => RemoteEntryKind.dir,
+    SftpFileType.symbolicLink => RemoteEntryKind.link,
+    SftpFileType.regularFile || SftpFileType.unknown || null => RemoteEntryKind.file,
+    _ => RemoteEntryKind.other,
+  };
 
   static DateTime? _time(int? seconds) =>
       seconds == null ? null : DateTime.fromMillisecondsSinceEpoch(seconds * 1000, isUtc: true);
@@ -413,8 +412,11 @@ class SftpFiles {
     try {
       final attrs = await s.stat(path);
       if (_kindOf(attrs.mode?.type) != RemoteEntryKind.dir) {
-        return RemoteFileException(RemoteFileErrorKind.notADirectory,
-            '${RemotePath.basename(path)} is not a folder', path: path);
+        return RemoteFileException(
+          RemoteFileErrorKind.notADirectory,
+          '${RemotePath.basename(path)} is not a folder',
+          path: path,
+        );
       }
     } on Object {
       // the original error stands
@@ -428,8 +430,11 @@ class SftpFiles {
     try {
       final attrs = await s.stat(path);
       if (_kindOf(attrs.mode?.type) != RemoteEntryKind.file) {
-        return RemoteFileException(RemoteFileErrorKind.notAFile,
-            '${RemotePath.basename(path)} is not a regular file', path: path);
+        return RemoteFileException(
+          RemoteFileErrorKind.notAFile,
+          '${RemotePath.basename(path)} is not a regular file',
+          path: path,
+        );
       }
     } on Object {
       // the original error stands
@@ -443,7 +448,7 @@ class SftpFiles {
     Future<T> Function(SftpApi s) op, {
     Future<RemoteFileException?> Function(SftpApi s, Object error)? onFailure,
   }) async {
-    for (var attempt = 0;; attempt++) {
+    for (var attempt = 0; ; attempt++) {
       final SftpApi session;
       try {
         session = await (_session ??= open());
@@ -465,8 +470,7 @@ class SftpFiles {
         throw RemoteFileException(RemoteFileErrorKind.network, 'The connection was lost', path: path);
       } on TimeoutException {
         _forget(session);
-        throw RemoteFileException(RemoteFileErrorKind.network, 'The machine did not answer in time',
-            path: path);
+        throw RemoteFileException(RemoteFileErrorKind.network, 'The machine did not answer in time', path: path);
       } on SftpStatusError catch (e) {
         if (e.code == 6 || e.code == 7) _forget(session);
         final refined = await onFailure?.call(session, e);
@@ -488,20 +492,17 @@ class SftpFiles {
   }
 
   static RemoteFileException _mapStatus(SftpStatusError e, String path) => switch (e.code) {
-        2 => RemoteFileException(RemoteFileErrorKind.notFound, 'No such file or directory', path: path),
-        3 => RemoteFileException(RemoteFileErrorKind.permission, 'Permission denied', path: path),
-        8 => RemoteFileException(RemoteFileErrorKind.unsupported,
-            'The server does not support this operation',
-            path: path),
-        6 || 7 => RemoteFileException(RemoteFileErrorKind.network, 'The connection was lost', path: path),
-        _ => RemoteFileException(
-            RemoteFileErrorKind.failed,
-            e.message.isEmpty ? 'The server could not complete the request' : e.message,
-            path: path,
-          ),
-      };
+    2 => RemoteFileException(RemoteFileErrorKind.notFound, 'No such file or directory', path: path),
+    3 => RemoteFileException(RemoteFileErrorKind.permission, 'Permission denied', path: path),
+    8 => RemoteFileException(RemoteFileErrorKind.unsupported, 'The server does not support this operation', path: path),
+    6 || 7 => RemoteFileException(RemoteFileErrorKind.network, 'The connection was lost', path: path),
+    _ => RemoteFileException(
+      RemoteFileErrorKind.failed,
+      e.message.isEmpty ? 'The server could not complete the request' : e.message,
+      path: path,
+    ),
+  };
 }
-
 
 /// How many WRITE requests an upload keeps unanswered. Every 100 ms it takes
 /// the rate the host acknowledged and the shortest answer time seen (the
@@ -513,9 +514,7 @@ class SftpFiles {
 /// rises with the window) and never passes [max]. [start] >= [max] is a fixed
 /// window.
 class _Window {
-  _Window(int start, this.max, this.block)
-      : size = math.min(start, max),
-        _fixed = start >= max;
+  _Window(int start, this.max, this.block) : size = math.min(start, max), _fixed = start >= max;
 
   final int max;
   final int block;
@@ -545,9 +544,9 @@ class _Window {
 
 /// A settled future: neither a value nor an error escapes unobserved.
 Future<({T? value, Object? error, StackTrace? trace})> _settle<T>(Future<T> f) => f.then(
-      (v) => (value: v as T?, error: null, trace: null),
-      onError: (Object e, StackTrace st) => (value: null, error: e, trace: st),
-    );
+  (v) => (value: v as T?, error: null, trace: null),
+  onError: (Object e, StackTrace st) => (value: null, error: e, trace: st),
+);
 
 /// One file going to the host on [SftpFiles]' channel.
 ///
@@ -618,8 +617,7 @@ class _SftpUpload implements UploadJob {
       }
       final total = await local!.length();
       if (total > uploadMaxBytes) {
-        throw RemoteFileException(
-            RemoteFileErrorKind.tooLarge, 'The file is bigger than 200 MB', path: _remotePath);
+        throw RemoteFileException(RemoteFileErrorKind.tooLarge, 'The file is bigger than 200 MB', path: _remotePath);
       }
       await _pump(local, remote!, total);
       if (_cancelled) return;
@@ -694,30 +692,35 @@ class _SftpUpload implements UploadJob {
       }
       if (_cancelled) return;
       if (got < want) {
-        throw RemoteFileException(RemoteFileErrorKind.failed, 'The file changed while sending',
-            path: _remotePath);
+        throw RemoteFileException(RemoteFileErrorKind.failed, 'The file changed while sending', path: _remotePath);
       }
       final at = offset;
       offset += got;
       inflight++;
       final sentAt = window.nowUs;
-      remote.write(at, Uint8List.sublistView(buf, 0, got)).then((_) {
-        acked += got;
-        window.acked(got, window.nowUs - sentAt);
-        if (_cancelled || error != null) return;
-        final ms = clock.elapsedMilliseconds;
-        if (lastReport < 0 || ms - lastReport >= _files.progressInterval.inMilliseconds) {
-          lastReport = ms;
-          _progress(acked, total);
-        }
-      }, onError: (Object e, StackTrace st) {
-        error ??= e;
-        errorTrace ??= st;
-      }).whenComplete(() {
-        inflight--;
-        free.add(buf);
-        wake();
-      });
+      remote
+          .write(at, Uint8List.sublistView(buf, 0, got))
+          .then(
+            (_) {
+              acked += got;
+              window.acked(got, window.nowUs - sentAt);
+              if (_cancelled || error != null) return;
+              final ms = clock.elapsedMilliseconds;
+              if (lastReport < 0 || ms - lastReport >= _files.progressInterval.inMilliseconds) {
+                lastReport = ms;
+                _progress(acked, total);
+              }
+            },
+            onError: (Object e, StackTrace st) {
+              error ??= e;
+              errorTrace ??= st;
+            },
+          )
+          .whenComplete(() {
+            inflight--;
+            free.add(buf);
+            wake();
+          });
     }
     // A write that failed while it was the last one in flight ended the loop
     // (nothing left in flight) before the check at its top saw the error:

@@ -8,7 +8,9 @@ import '../../../data/repositories/attach_target.dart';
 import '../../../data/repositories/recent_phone_files.dart';
 import '../../../data/services/attach_limits.dart';
 import '../../../data/services/phone_files.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../agent_session/attach_model.dart' show ComposerAttachments;
 import '../../render/visible_text.dart';
 import '../files/file_format.dart';
@@ -27,13 +29,7 @@ import 'tray.dart';
 /// from here: the composer's model decides about uploads when the person taps
 /// Attach.
 class FilesTab extends StatefulWidget {
-  const FilesTab({
-    super.key,
-    required this.kit,
-    required this.target,
-    required this.tray,
-    required this.onProblem,
-  });
+  const FilesTab({super.key, required this.kit, required this.target, required this.tray, required this.onProblem});
 
   final AttachKit kit;
   final AttachTarget target;
@@ -243,33 +239,33 @@ class _ChooseTile extends StatelessWidget {
       },
       minHeight: _rowHeight,
       padding: const EdgeInsets.symmetric(horizontal: Gap.gutter - _rowInset, vertical: Gap.md),
-          child: Row(
-            children: [
-              IconTile(icon: LucideIcons.folderOpen, color: ds.accentText),
-              const SizedBox(width: Gap.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Choose files…',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Type.row.copyWith(color: ds.text),
-                    ),
-                    const SizedBox(height: Gap.hair),
-                    Text(
-                      'Opens the phone’s file picker',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Type.secondary.copyWith(color: ds.textSecondary),
-                    ),
-                  ],
+      child: Row(
+        children: [
+          IconTile(icon: LucideIcons.folderOpen, color: ds.accentText),
+          const SizedBox(width: Gap.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Choose files…',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Type.row.copyWith(color: ds.text),
                 ),
-              ),
-            ],
+                const SizedBox(height: Gap.hair),
+                Text(
+                  'Opens the phone’s file picker',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Type.secondary.copyWith(color: ds.textSecondary),
+                ),
+              ],
+            ),
           ),
+        ],
+      ),
     );
   }
 }
@@ -322,28 +318,28 @@ class _FileRow extends StatelessWidget {
               semanticLabel: label,
               minHeight: _rowHeight,
               padding: EdgeInsets.fromLTRB(Gap.gutter - _rowInset, Gap.md, trailing + Gap.xs, Gap.md),
-                  child: Row(
-                    children: [
-                      IconTile(icon: fileIconForName(shown)),
-                      const SizedBox(width: Gap.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            MiddleEllipsisText(shown, style: Type.row.copyWith(color: ds.text)),
-                            const SizedBox(height: Gap.hair),
-                            Text(
-                              detail,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: Type.secondary.copyWith(color: ds.textSecondary),
-                            ),
-                          ],
+              child: Row(
+                children: [
+                  IconTile(icon: fileIconForName(shown)),
+                  const SizedBox(width: Gap.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        MiddleEllipsisText(shown, style: Type.row.copyWith(color: ds.text)),
+                        const SizedBox(height: Gap.hair),
+                        Text(
+                          detail,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Type.secondary.copyWith(color: ds.textSecondary),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
+                ],
+              ),
             ),
             Positioned(
               top: 0,
@@ -352,11 +348,7 @@ class _FileRow extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  SelectionCircle(
-                    number: number,
-                    onTap: onTap,
-                    label: picked ? 'Deselect $shown' : 'Select $shown',
-                  ),
+                  SelectionCircle(number: number, onTap: onTap, label: picked ? 'Deselect $shown' : 'Select $shown'),
                   if (onForget != null)
                     PressBuilder(
                       onTap: onForget,

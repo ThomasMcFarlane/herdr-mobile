@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/scheduler.dart';
 
 import '../../data/streaming/flush_scheduler.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// A [FlushScheduler] aligned to frames: [nextFrame] runs the flush as a

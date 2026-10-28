@@ -57,9 +57,14 @@ class _HostState extends State<_Host> with SingleTickerProviderStateMixin {
 }
 
 class _Rig {
-  _Rig({List<RecentPhoneFile> recents = const [], FakeFs? fs, int capacity = 5, bool images = true, FakePhoneFilePicker? picker})
-    : kit = FakeKit(store: MemoryRecentStore(recents), picker: picker),
-      fs = fs ?? FakeFs() {
+  _Rig({
+    List<RecentPhoneFile> recents = const [],
+    FakeFs? fs,
+    int capacity = 5,
+    bool images = true,
+    FakePhoneFilePicker? picker,
+  }) : kit = FakeKit(store: MemoryRecentStore(recents), picker: picker),
+       fs = fs ?? FakeFs() {
     session = FakeAgentSession(machine: machineWithFiles(this.fs))..imagesAccepted = images;
     tray = AttachTray(capacity: capacity, onFull: () => full++);
   }
@@ -97,7 +102,9 @@ PhoneFile phoneFile(String name, int size) => PhoneFile(path: '/cache/file_picke
 RecentPhoneFile recent(String name, {int size = 2 * _mb, String? path, String machine = 'm'}) =>
     RecentPhoneFile(name: name, size: size, machineId: path == null ? null : machine, hostPath: path);
 
-List<int?> circleNumbers(WidgetTester tester) => [for (final c in tester.widgetList<SelectionCircle>(find.byType(SelectionCircle))) c.number];
+List<int?> circleNumbers(WidgetTester tester) => [
+  for (final c in tester.widgetList<SelectionCircle>(find.byType(SelectionCircle))) c.number,
+];
 
 void main() {
   setUpAll(loadAppFonts);
@@ -274,7 +281,9 @@ void main() {
       expect(find.text('2 MB · choose it again'), findsNWidgets(2));
     });
 
-    testWidgets('a copy that is still on the host attaches without the picker, and a second tap takes it out', (tester) async {
+    testWidgets('a copy that is still on the host attaches without the picker, and a second tap takes it out', (
+      tester,
+    ) async {
       final rig = _Rig(
         recents: [recent('here.pdf', path: '/inbox/here.pdf')],
         fs: FakeFs()..addFile('/inbox/here.pdf', 'x'),
@@ -289,7 +298,11 @@ void main() {
       expect(pick.fromPhone, isTrue);
       expect(pick.name, 'here.pdf');
       expect(pick.size, 2 * _mb);
-      expect(find.text('Picked'), findsOneWidget, reason: 'an upload of the phone, attached again, is a pick of this tab');
+      expect(
+        find.text('Picked'),
+        findsOneWidget,
+        reason: 'an upload of the phone, attached again, is a pick of this tab',
+      );
       expect(circleNumbers(tester), [1, 1], reason: 'the pick and the recent entry it came from');
 
       await tester.tap(find.text('here.pdf').last);
@@ -299,7 +312,10 @@ void main() {
 
     testWidgets('a quick second tap while the host is asked toggles nothing twice', (tester) async {
       final fs = FakeFs()..addFile('/inbox/here.pdf', 'x');
-      final rig = _Rig(recents: [recent('here.pdf', path: '/inbox/here.pdf')], fs: fs);
+      final rig = _Rig(
+        recents: [recent('here.pdf', path: '/inbox/here.pdf')],
+        fs: fs,
+      );
       await _pumpTab(tester, rig);
       fs.gate = Completer<void>();
 
@@ -315,7 +331,12 @@ void main() {
     });
 
     testWidgets('a copy that is gone says so and leaves the list', (tester) async {
-      final rig = _Rig(recents: [recent('gone.pdf', path: '/inbox/gone.pdf'), recent('kept.pdf')]);
+      final rig = _Rig(
+        recents: [
+          recent('gone.pdf', path: '/inbox/gone.pdf'),
+          recent('kept.pdf'),
+        ],
+      );
       await _pumpTab(tester, rig);
 
       await tester.tap(find.text('gone.pdf'));
@@ -330,7 +351,10 @@ void main() {
 
     testWidgets('a dropped link says why but keeps the entry', (tester) async {
       final fs = FakeFs()..addFile('/inbox/here.pdf', 'x');
-      final rig = _Rig(recents: [recent('here.pdf', path: '/inbox/here.pdf')], fs: fs);
+      final rig = _Rig(
+        recents: [recent('here.pdf', path: '/inbox/here.pdf')],
+        fs: fs,
+      );
       await _pumpTab(tester, rig);
       fs.fail = RemoteFileException(RemoteFileErrorKind.network, 'Connection lost');
 
@@ -408,7 +432,8 @@ void main() {
   });
 
   testWidgets('the list ends clear of the floating bars, and worst-case names do not overflow', (tester) async {
-    final long = 'Báo cáo tổng kết quý bốn năm hai nghìn hai mươi sáu của phòng kế hoạch và đầu tư — bản cuối cùng đã chỉnh sửa ${'rất dài ' * 10}.docx';
+    final long =
+        'Báo cáo tổng kết quý bốn năm hai nghìn hai mươi sáu của phòng kế hoạch và đầu tư — bản cuối cùng đã chỉnh sửa ${'rất dài ' * 10}.docx';
     expect(long.length, greaterThan(120));
     final rig = _Rig(
       recents: [for (var i = 0; i < 10; i++) recent(i == 3 ? long : 'Ảnh chụp màn hình $i.png', size: i * 7 * _mb)],
@@ -422,7 +447,11 @@ void main() {
     await tester.pumpAndSettle();
     final last = find.text('Ảnh chụp màn hình 9.png');
     expect(last, findsOneWidget);
-    expect(tester.getBottomLeft(last).dy, lessThanOrEqualTo(892 - 120), reason: 'the last row clears the 120 dp of bars');
+    expect(
+      tester.getBottomLeft(last).dy,
+      lessThanOrEqualTo(892 - 120),
+      reason: 'the last row clears the 120 dp of bars',
+    );
     expect(find.textContaining('‹U+202E›'), findsOneWidget, reason: 'hidden characters in a name show as escapes');
   });
 
@@ -430,7 +459,10 @@ void main() {
     for (final dark in [false, true]) {
       final rig = _Rig(
         recents: [
-          recent('Báo cáo tổng kết quý bốn năm 2026 của phòng kế hoạch và đầu tư — bản cuối cùng.docx', size: 1536 * 1024),
+          recent(
+            'Báo cáo tổng kết quý bốn năm 2026 của phòng kế hoạch và đầu tư — bản cuối cùng.docx',
+            size: 1536 * 1024,
+          ),
           recent('IMG_2031.jpg', size: 4 * _mb, path: '/home/dev/.herdr-mobile/inbox/abc/IMG_2031.jpg'),
           recent('release-notes.md', size: 3 * 1024),
           recent('Ảnh màn hình 2026-05-20.png', size: 812 * 1024),

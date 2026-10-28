@@ -42,12 +42,15 @@ String _notificationXml() {
   const o = _G.canvas / 2 - side / 2;
   String x(double v) => _n(v - o);
   final r = _n(_G.curl);
-  final crook = 'M${x(_G.stemX)},${x(_G.foot)} L${x(_G.stemX)},${x(_G.top)} '
+  final crook =
+      'M${x(_G.stemX)},${x(_G.foot)} L${x(_G.stemX)},${x(_G.top)} '
       'A$r,$r 0 0,0 ${x(_G.crookX)},${x(_G.top)} L${x(_G.crookX)},${x(_G.tipY)}';
-  final shoulder = 'M${x(_G.stemX)},${x(_G.shoulderY)} '
+  final shoulder =
+      'M${x(_G.stemX)},${x(_G.shoulderY)} '
       'A$r,$r 0 0,1 ${x(_G.legX)},${x(_G.shoulderY)} L${x(_G.legX)},${x(_G.foot)}';
   const d = _G.dotRadius;
-  final dot = 'M${x(_G.dot.dx - d)},${x(_G.dot.dy)} a${_n(d)},${_n(d)} 0 1,0 ${_n(2 * d)},0 '
+  final dot =
+      'M${x(_G.dot.dx - d)},${x(_G.dot.dy)} a${_n(d)},${_n(d)} 0 1,0 ${_n(2 * d)},0 '
       'a${_n(d)},${_n(d)} 0 1,0 -${_n(2 * d)},0';
   return '''
 <?xml version="1.0" encoding="utf-8"?>

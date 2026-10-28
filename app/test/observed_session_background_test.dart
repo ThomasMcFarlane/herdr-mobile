@@ -70,10 +70,25 @@ void main() {
     final proc = [_task('proc27850', kind: BackgroundKind.terminal)];
 
     test('an idle agent does not make it ended; a gone agent does', () {
-      final alive = BackgroundView.derive(herdr: AgentStatus.idle, turnEnded: true, tasks: proc, now: DateTime.utc(2026, 10, 4, 12), wakeLabel: 'Codex', wakes: false);
+      final alive = BackgroundView.derive(
+        herdr: AgentStatus.idle,
+        turnEnded: true,
+        tasks: proc,
+        now: DateTime.utc(2026, 10, 4, 12),
+        wakeLabel: 'Codex',
+        wakes: false,
+      );
       expect(alive.work.running.map((t) => t.id), ['proc27850']);
 
-      final gone = BackgroundView.derive(herdr: AgentStatus.idle, turnEnded: true, tasks: proc, now: DateTime.utc(2026, 10, 4, 12), wakeLabel: 'Codex', wakes: false, agentGone: true);
+      final gone = BackgroundView.derive(
+        herdr: AgentStatus.idle,
+        turnEnded: true,
+        tasks: proc,
+        now: DateTime.utc(2026, 10, 4, 12),
+        wakeLabel: 'Codex',
+        wakes: false,
+        agentGone: true,
+      );
       expect(gone.work.running, isEmpty);
     });
   });
@@ -89,7 +104,10 @@ void main() {
     });
 
     test('turn over, herdr working, nothing listed: waiting with details unavailable', () {
-      for (final tasks in [<BackgroundTask>[], [_task('bg_1', status: BackgroundStatus.finished)]]) {
+      for (final tasks in [
+        <BackgroundTask>[],
+        [_task('bg_1', status: BackgroundStatus.finished)],
+      ]) {
         final v = _derive(AgentStatus.working, turnEnded: true, tasks: tasks);
         expect(v.waiting, isTrue);
         expect(v.work.unknownRunning, isTrue);
@@ -136,7 +154,11 @@ void main() {
     });
 
     test('a subagent the roster confirms running is not ended? even with herdr idle', () {
-      final agents = [_task('Alpha', kind: BackgroundKind.agent), _task('Beta', kind: BackgroundKind.agent), _task('bg_2')];
+      final agents = [
+        _task('Alpha', kind: BackgroundKind.agent),
+        _task('Beta', kind: BackgroundKind.agent),
+        _task('bg_2'),
+      ];
       final v = _derive(AgentStatus.idle, turnEnded: true, tasks: agents, watched: {'Alpha', 'bg_2'});
       expect(v.work.running.map((t) => t.id), ['Alpha'], reason: 'only a subagent can be vouched for');
       expect(v.work.byId('Beta')!.status, BackgroundStatus.stopped);
@@ -153,7 +175,12 @@ void main() {
         final early = _derive(s, turnEnded: false, tasks: [t], now: start.add(const Duration(seconds: 119)));
         expect(early.work.running.length, 1, reason: '$s');
       }
-      final waiting = _derive(AgentStatus.working, turnEnded: true, tasks: [t], now: start.add(const Duration(hours: 1)));
+      final waiting = _derive(
+        AgentStatus.working,
+        turnEnded: true,
+        tasks: [t],
+        now: start.add(const Duration(hours: 1)),
+      );
       expect(waiting.waiting, isTrue);
       expect(waiting.work.unknownRunning, isTrue, reason: 'herdr still says working: something is awaited');
     });
@@ -229,7 +256,11 @@ void main() {
         if (session.state.items.isNotEmpty && session.link == AgentLink.live) shown++;
       });
       session.acquire();
-      await eventually(() => shown > 0, timeout: const Duration(seconds: 2), reason: 'the transcript told to the screen');
+      await eventually(
+        () => shown > 0,
+        timeout: const Duration(seconds: 2),
+        reason: 'the transcript told to the screen',
+      );
     });
 
     test('herdr working, turn over, bg_6 running: waiting, phase still working, wakes', () async {
@@ -320,7 +351,9 @@ void main() {
       final (rig, s) = await open([sessionLine(), userLine('u1', 'go'), ..._bgStart('1', 'sleep 1')]);
       var told = 0;
       s.addListener(() => told++);
-      rig.source.push([waitLine('w1', {'bg_1': 'completed'})]);
+      rig.source.push([
+        waitLine('w1', {'bg_1': 'completed'}),
+      ]);
       await eventually(() => told > 0, reason: 'told');
       expect(s.backgroundWork.tasks.single.status, BackgroundStatus.finished);
     });
@@ -391,9 +424,15 @@ void main() {
           userLine('u1', 'go'),
           ..._bgStart('1', 'sleep 1'),
           toolCallLine('ax', 'cx', 'bash', {'command': 'x'}),
-          toolResultLine('rx', 'cx', 'bash', 'Backgrounded', details: {
-            'async': {'state': 'running', 'jobId': 'bg_1; rm -rf ~', 'type': 'bash'},
-          }),
+          toolResultLine(
+            'rx',
+            'cx',
+            'bash',
+            'Backgrounded',
+            details: {
+              'async': {'state': 'running', 'jobId': 'bg_1; rm -rf ~', 'type': 'bash'},
+            },
+          ),
           assistantLine('a9', 'waiting'),
         ]);
         expect(s.backgroundWork.running.map((t) => t.id), ['bg_1', 'bg_1; rm -rf ~']);
@@ -434,18 +473,31 @@ void main() {
               {'name': 'Alpha', 'agent': 'task', 'task': 'review'},
             ],
           }),
-          toolResultLine('tr1', 'ct1', 'task', 'Backgrounded', details: {
-            'async': {'state': 'running', 'jobId': 'Alpha', 'type': 'task'},
-          }),
+          toolResultLine(
+            'tr1',
+            'ct1',
+            'task',
+            'Backgrounded',
+            details: {
+              'async': {'state': 'running', 'jobId': 'Alpha', 'type': 'task'},
+            },
+          ),
           assistantLine('a9', 'waiting'),
         ]);
-        expect(s.backgroundWork.running.map((t) => (t.id, t.kind)), [('bg_1', BackgroundKind.shell), ('Alpha', BackgroundKind.agent)]);
+        expect(s.backgroundWork.running.map((t) => (t.id, t.kind)), [
+          ('bg_1', BackgroundKind.shell),
+          ('Alpha', BackgroundKind.agent),
+        ]);
         final result = await s.stopAllBackground(only: BackgroundKind.agent);
         expect(result, isA<BackgroundStopped>());
         expect(rig.sent('pane.send_input').map((p) => p['text']), [
           'Stop these background job now: Alpha (write proc://Alpha/kill). Do nothing else.',
         ]);
-        expect(await s.stopAllBackground(only: BackgroundKind.workflow), isA<BackgroundAlreadyDone>(), reason: 'nothing of that kind runs');
+        expect(
+          await s.stopAllBackground(only: BackgroundKind.workflow),
+          isA<BackgroundAlreadyDone>(),
+          reason: 'nothing of that kind runs',
+        );
         expect(rig.sent('pane.send_input'), hasLength(1));
       });
 
@@ -485,7 +537,8 @@ String finishedLine(String id, String job) => _line({
   'type': 'custom_message',
   'id': id,
   'customType': 'async-result',
-  'content': '<system-notice>\nBackground job $job has completed. Resume your work using the result below.\nok\n</system-notice>',
+  'content':
+      '<system-notice>\nBackground job $job has completed. Resume your work using the result below.\nok\n</system-notice>',
   'timestamp': '2026-10-04T10:05:00.000Z',
   'details': {
     'jobs': [
@@ -502,7 +555,9 @@ String waitLine(String id, Map<String, String> jobs) => toolResultLine(
   '## Completed',
   details: {
     'op': 'wait',
-    'jobs': [for (final e in jobs.entries) {'id': e.key, 'type': 'bash', 'status': e.value}],
+    'jobs': [
+      for (final e in jobs.entries) {'id': e.key, 'type': 'bash', 'status': e.value},
+    ],
   },
 );
 

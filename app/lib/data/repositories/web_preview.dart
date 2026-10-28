@@ -41,16 +41,16 @@ class MachinePage {
 
   /// Where it is, short: `localhost:8790`, or the file's name.
   String get place => switch (url) {
-        final u? => u.hasPort ? '${u.host}:${u.port}' : u.host,
-        null => RemotePath.basename(file!),
-      };
+    final u? => u.hasPort ? '${u.host}:${u.port}' : u.host,
+    null => RemotePath.basename(file!),
+  };
 
   /// The page without a title: `localhost:8790/page2.html` (the root is the
   /// bare host and port), or the file's name.
   String get label => switch (url) {
-        final u? => u.path.isEmpty || u.path == '/' ? place : '$place${u.path}',
-        null => place,
-      };
+    final u? => u.path.isEmpty || u.path == '/' ? place : '$place${u.path}',
+    null => place,
+  };
 }
 
 /// Gives the app a URL for something an agent made on a machine: an HTML
@@ -131,7 +131,11 @@ class WebPreview {
       onNote?.call('Opened on port ${info.port}: a page that expects localhost:$target may not work.');
     }
     final path = link.path.isEmpty ? '/' : link.path;
-    return _entry(info, link.hasQuery ? '$path?${link.query}' : path, link.hasFragment ? _decoded(link.fragment) : null);
+    return _entry(
+      info,
+      link.hasQuery ? '$path?${link.query}' : path,
+      link.hasFragment ? _decoded(link.fragment) : null,
+    );
   }
 
   /// [url], a page the phone shows from one of this machine's listeners, as
@@ -141,8 +145,8 @@ class WebPreview {
     return switch (_specs[url.port]) {
       PortForward(:final host, :final port) => MachinePage.server(url.replace(host: host, port: port)),
       StaticSite(:final root) => MachinePage.file(
-          url.pathSegments.every((s) => s.isEmpty) ? root : RemotePath.join(root, url.pathSegments.join('/')),
-        ),
+        url.pathSegments.every((s) => s.isEmpty) ? root : RemotePath.join(root, url.pathSegments.join('/')),
+      ),
       null => null,
     };
   }
@@ -216,13 +220,13 @@ class WebPreview {
   /// entry URL's own fragment across a redirect, but not when a page sends it
   /// on (see `WebBridgeHost._enter`).
   static Uri _entry(WebBridgeInfo info, String to, String? fragment) => Uri(
-        scheme: 'http',
-        host: 'localhost',
-        port: info.entryPort,
-        path: _entryPath,
-        queryParameters: {
-          't': info.token,
-          'to': fragment == null || fragment.isEmpty ? to : '$to${Uri(fragment: fragment)}',
-        },
-      );
+    scheme: 'http',
+    host: 'localhost',
+    port: info.entryPort,
+    path: _entryPath,
+    queryParameters: {
+      't': info.token,
+      'to': fragment == null || fragment.isEmpty ? to : '$to${Uri(fragment: fragment)}',
+    },
+  );
 }

@@ -286,8 +286,7 @@ final class MdChunker {
 
   /// A bullet or ordered list marker at the start of [s] (indentation already
   /// removed), thematic breaks excluded.
-  static bool isListMarker(String s) =>
-      _markerPrefix.matchAsPrefix(s) != null && !_thematic.hasMatch(s);
+  static bool isListMarker(String s) => _markerPrefix.matchAsPrefix(s) != null && !_thematic.hasMatch(s);
 
   /// The code fence [s] (indentation and quote markers removed) opens, also
   /// after a list marker (`- ```sh`): its character and run length.
@@ -325,8 +324,7 @@ final class MdChunker {
     } else {
       for (final tag in const ['script', 'pre', 'style', 'textarea']) {
         if (lower.startsWith('<$tag') &&
-            (lower.length == tag.length + 1 ||
-                const [0x20, 0x09, 0x3e].contains(lower.codeUnitAt(tag.length + 1)))) {
+            (lower.length == tag.length + 1 || const [0x20, 0x09, 0x3e].contains(lower.codeUnitAt(tag.length + 1)))) {
           end = '</$tag>';
         }
       }

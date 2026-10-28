@@ -10,11 +10,7 @@ class FakeExecChannel implements ExecChannel {
 
   /// A command that prints [stdout] and exits with [code] (null: the link
   /// dropped) as soon as the channel exists.
-  FakeExecChannel.run({
-    List<String> stdout = const [],
-    int? code = 0,
-    String stderr = '',
-  }) {
+  FakeExecChannel.run({List<String> stdout = const [], int? code = 0, String stderr = ''}) {
     stdout.forEach(emit);
     exit(code, stderr: stderr);
   }

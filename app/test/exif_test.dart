@@ -14,8 +14,7 @@ class _Tag {
   final List<int> data;
 }
 
-List<int> _u16(int v, bool le) =>
-    le ? [v & 0xFF, (v >> 8) & 0xFF] : [(v >> 8) & 0xFF, v & 0xFF];
+List<int> _u16(int v, bool le) => le ? [v & 0xFF, (v >> 8) & 0xFF] : [(v >> 8) & 0xFF, v & 0xFF];
 
 List<int> _u32(int v, bool le) {
   final b = [(v >> 24) & 0xFF, (v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF];
@@ -63,11 +62,7 @@ Uint8List _tiff({
   final data = <int>[];
 
   List<int> entry(_Tag t) {
-    final bytes = <int>[
-      ..._u16(t.tag, le),
-      ..._u16(t.type, le),
-      ..._u32(t.count, le),
-    ];
+    final bytes = <int>[..._u16(t.tag, le), ..._u16(t.type, le), ..._u32(t.count, le)];
     if (t.data.length <= 4) {
       return [...bytes, ...t.data, ...List.filled(4 - t.data.length, 0)];
     }
@@ -140,30 +135,18 @@ Uint8List _webp(Uint8List tiff, {bool prefix = false}) {
     ...body,
     if (body.length.isOdd) 0,
   ];
-  return Uint8List.fromList([
-    ...'RIFF'.codeUnits,
-    ..._u32(chunks.length + 4, true),
-    ...'WEBP'.codeUnits,
-    ...chunks,
-  ]);
+  return Uint8List.fromList([...'RIFF'.codeUnits, ..._u32(chunks.length + 4, true), ...'WEBP'.codeUnits, ...chunks]);
 }
 
-ExifInfo _read(
-  List<_TagMaker> ifd0, {
-  List<_TagMaker> exif = const [],
-  bool le = true,
-}) => readExif(_jpeg(_tiff(le: le, ifd0: ifd0, exif: exif)))!;
+ExifInfo _read(List<_TagMaker> ifd0, {List<_TagMaker> exif = const [], bool le = true}) =>
+    readExif(_jpeg(_tiff(le: le, ifd0: ifd0, exif: exif)))!;
 
 void main() {
   group('byte order', () {
     for (final le in [true, false]) {
       test(le ? 'little endian' : 'big endian', () {
         final info = _read(
-          [
-            _short(0x0112, 6),
-            _ascii(0x010F, 'Canon'),
-            _ascii(0x0110, 'Canon EOS R5'),
-          ],
+          [_short(0x0112, 6), _ascii(0x010F, 'Canon'), _ascii(0x0110, 'Canon EOS R5')],
           exif: [
             _ascii(0x9003, '2024:03:09 14:05:59'),
             _rational(0x829D, 18, 10),
@@ -193,9 +176,7 @@ void main() {
     }
     for (final o in [0, 9, 65535]) {
       test('$o is null', () {
-        final info = readExif(
-          _jpeg(_tiff(ifd0: [_short(0x0112, o), _ascii(0x0110, 'X')])),
-        )!;
+        final info = readExif(_jpeg(_tiff(ifd0: [_short(0x0112, o), _ascii(0x0110, 'X')])))!;
         expect(info.orientation, isNull);
         expect(info.camera, 'X');
       });
@@ -207,40 +188,20 @@ void main() {
 
   group('camera', () {
     test('make is dropped when the model starts with it', () {
-      expect(
-        _read([_ascii(0x010F, 'Canon'), _ascii(0x0110, 'Canon EOS R5')]).camera,
-        'Canon EOS R5',
-      );
+      expect(_read([_ascii(0x010F, 'Canon'), _ascii(0x0110, 'Canon EOS R5')]).camera, 'Canon EOS R5');
     });
     test('make and model are joined otherwise', () {
-      expect(
-        _read([_ascii(0x010F, 'Apple'), _ascii(0x0110, 'iPhone 15 Pro')])
-            .camera,
-        'Apple iPhone 15 Pro',
-      );
+      expect(_read([_ascii(0x010F, 'Apple'), _ascii(0x0110, 'iPhone 15 Pro')]).camera, 'Apple iPhone 15 Pro');
     });
     test('make alone, model alone', () {
       expect(_read([_ascii(0x010F, 'Leica')]).camera, 'Leica');
       expect(_read([_ascii(0x0110, 'Q3')]).camera, 'Q3');
     });
     test('blank values are absent; padding is trimmed', () {
-      final info = _read([
-        _ascii(0x010F, '   '),
-        _ascii(0x0110, '  Pixel 8  '),
-      ]);
+      final info = _read([_ascii(0x010F, '   '), _ascii(0x0110, '  Pixel 8  ')]);
       expect(info.camera, 'Pixel 8');
       expect(
-        readExif(
-          _jpeg(
-            _tiff(
-              ifd0: [
-                _ascii(0x010F, '  '),
-                _ascii(0x0110, ''),
-                _short(0x0112, 1),
-              ],
-            ),
-          ),
-        )!.camera,
+        readExif(_jpeg(_tiff(ifd0: [_ascii(0x010F, '  '), _ascii(0x0110, ''), _short(0x0112, 1)])))!.camera,
         isNull,
       );
     });
@@ -251,25 +212,16 @@ void main() {
   });
 
   group('settings', () {
-    String? settings(List<_TagMaker> exif) =>
-        _read([_short(0x0112, 1)], exif: exif).settings;
+    String? settings(List<_TagMaker> exif) => _read([_short(0x0112, 1)], exif: exif).settings;
 
     test('full line', () {
       expect(
-        settings([
-          _rational(0x829D, 9, 5),
-          _rational(0x829A, 1, 120),
-          _short(0x8827, 100),
-          _rational(0x920A, 27, 5),
-        ]),
+        settings([_rational(0x829D, 9, 5), _rational(0x829A, 1, 120), _short(0x8827, 100), _rational(0x920A, 27, 5)]),
         'f/1.8 · 1/120 s · ISO 100 · 5.4 mm',
       );
     });
     test('whole f-number and focal length drop the decimal', () {
-      expect(
-        settings([_rational(0x829D, 2, 1), _rational(0x920A, 24, 1)]),
-        'f/2 · 24 mm',
-      );
+      expect(settings([_rational(0x829D, 2, 1), _rational(0x920A, 24, 1)]), 'f/2 · 24 mm');
     });
     test('f-number rounds to one decimal', () {
       expect(settings([_rational(0x829D, 28, 10)]), 'f/2.8');
@@ -285,10 +237,7 @@ void main() {
       expect(settings([_rational(0x829A, 3, 10)]), '1/3 s'); // 3.33
     });
     test('absent parts are skipped', () {
-      expect(
-        settings([_short(0x8827, 400), _rational(0x829D, 14, 10)]),
-        'f/1.4 · ISO 400',
-      );
+      expect(settings([_short(0x8827, 400), _rational(0x829D, 14, 10)]), 'f/1.4 · ISO 400');
       expect(settings([_short(0x8827, 64)]), 'ISO 64');
     });
     test('ISO stored as LONG', () {
@@ -299,12 +248,7 @@ void main() {
     });
     test('zero denominator and zero values are ignored', () {
       expect(
-        settings([
-          _rational(0x829D, 1, 0),
-          _rational(0x829A, 0, 1),
-          _short(0x8827, 0),
-          _rational(0x920A, 5, 0),
-        ]),
+        settings([_rational(0x829D, 1, 0), _rational(0x829A, 0, 1), _short(0x8827, 0), _rational(0x920A, 5, 0)]),
         isNull,
       );
     });
@@ -315,38 +259,25 @@ void main() {
   });
 
   group('taken', () {
-    ExifInfo withDates(List<_TagMaker> ifd0, List<_TagMaker> exif) =>
-        _read([_short(0x0112, 1), ...ifd0], exif: exif);
+    ExifInfo withDates(List<_TagMaker> ifd0, List<_TagMaker> exif) => _read([_short(0x0112, 1), ...ifd0], exif: exif);
 
     test('DateTimeOriginal wins over digitized and DateTime', () {
       final info = withDates(
         [_ascii(0x0132, '2020:01:01 01:01:01')],
-        [
-          _ascii(0x9004, '2021:02:02 02:02:02'),
-          _ascii(0x9003, '2022:03:03 03:03:03'),
-        ],
+        [_ascii(0x9004, '2021:02:02 02:02:02'), _ascii(0x9003, '2022:03:03 03:03:03')],
       );
       expect(info.taken, DateTime(2022, 3, 3, 3, 3, 3));
     });
     test('falls back to digitized, then to DateTime', () {
       expect(
-        withDates(
-          [_ascii(0x0132, '2020:01:01 01:01:01')],
-          [_ascii(0x9004, '2021:02:02 02:02:02')],
-        ).taken,
+        withDates([_ascii(0x0132, '2020:01:01 01:01:01')], [_ascii(0x9004, '2021:02:02 02:02:02')]).taken,
         DateTime(2021, 2, 2, 2, 2, 2),
       );
-      expect(
-        withDates([_ascii(0x0132, '2020:01:01 01:01:01')], const []).taken,
-        DateTime(2020, 1, 1, 1, 1, 1),
-      );
+      expect(withDates([_ascii(0x0132, '2020:01:01 01:01:01')], const []).taken, DateTime(2020, 1, 1, 1, 1, 1));
     });
     test('an invalid original falls through to a valid one', () {
       expect(
-        withDates(
-          [_ascii(0x0132, '2020:01:01 01:01:01')],
-          [_ascii(0x9003, '0000:00:00 00:00:00')],
-        ).taken,
+        withDates([_ascii(0x0132, '2020:01:01 01:01:01')], [_ascii(0x9003, '0000:00:00 00:00:00')]).taken,
         DateTime(2020, 1, 1, 1, 1, 1),
       );
     });
@@ -381,18 +312,10 @@ void main() {
     test('jpeg', () => expectFixture(readExif(_jpeg(tiff))));
     test('png eXIf chunk', () => expectFixture(readExif(_png(tiff))));
     test('webp EXIF chunk', () => expectFixture(readExif(_webp(tiff))));
-    test(
-      'webp EXIF chunk with Exif prefix',
-      () => expectFixture(readExif(_webp(tiff, prefix: true))),
-    );
+    test('webp EXIF chunk with Exif prefix', () => expectFixture(readExif(_webp(tiff, prefix: true))));
 
     test('jpeg with other APPn segments before the EXIF one', () {
-      List<int> app(int marker, List<int> body) => [
-        0xFF,
-        marker,
-        ..._u16(body.length + 2, false),
-        ...body,
-      ];
+      List<int> app(int marker, List<int> body) => [0xFF, marker, ..._u16(body.length + 2, false), ...body];
       final bytes = _jpeg(
         tiff,
         before: [
@@ -432,19 +355,11 @@ void main() {
       expect(readExif(Uint8List(0)), isNull);
       expect(readExif(Uint8List.fromList([1, 2, 3])), isNull);
       expect(readExif(Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xD9])), isNull);
-      expect(
-        readExif(
-          Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xE0, 0, 4, 0, 0, 0xFF, 0xD9]),
-        ),
-        isNull,
-      );
+      expect(readExif(Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xE0, 0, 4, 0, 0, 0xFF, 0xD9])), isNull);
     });
 
     test('EXIF holding none of the fields is null', () {
-      expect(
-        readExif(_jpeg(_tiff(ifd0: [_ascii(0x010E, 'a description')]))),
-        isNull,
-      );
+      expect(readExif(_jpeg(_tiff(ifd0: [_ascii(0x010E, 'a description')]))), isNull);
       expect(readExif(_jpeg(_tiff())), isNull);
     });
 
@@ -459,11 +374,7 @@ void main() {
 
   group('hostile input', () {
     final tiff = _tiff(
-      ifd0: [
-        _short(0x0112, 3),
-        _ascii(0x010F, 'Make'),
-        _ascii(0x0110, 'A long enough model name'),
-      ],
+      ifd0: [_short(0x0112, 3), _ascii(0x010F, 'Make'), _ascii(0x0110, 'A long enough model name')],
       exif: [
         _ascii(0x9003, '2024:03:09 14:05:59'),
         _rational(0x829D, 18, 10),
@@ -498,11 +409,7 @@ void main() {
     });
 
     test('IFDs whose next-pointers loop to themselves terminate', () {
-      final looping = _tiff(
-        ifd0: [_short(0x0112, 2)],
-        exif: [_rational(0x829D, 4, 1)],
-        selfLoop: true,
-      );
+      final looping = _tiff(ifd0: [_short(0x0112, 2)], exif: [_rational(0x829D, 4, 1)], selfLoop: true);
       final info = readExif(_jpeg(looping));
       expect(info!.orientation, 2);
       expect(info.settings, 'f/4');
@@ -529,25 +436,14 @@ void main() {
     });
 
     test('an IFD offset past the end is ignored', () {
-      final bytes = Uint8List.fromList([
-        0x49,
-        0x49,
-        42,
-        0,
-        0xFF,
-        0xFF,
-        0xFF,
-        0x7F,
-      ]);
+      final bytes = Uint8List.fromList([0x49, 0x49, 42, 0, 0xFF, 0xFF, 0xFF, 0x7F]);
       expect(readExif(_jpeg(bytes)), isNull);
     });
 
     test('random garbage and corrupted fixtures never throw', () {
       final rnd = Random(7);
       for (var i = 0; i < 300; i++) {
-        final junk = Uint8List.fromList(
-          List.generate(rnd.nextInt(400), (_) => rnd.nextInt(256)),
-        );
+        final junk = Uint8List.fromList(List.generate(rnd.nextInt(400), (_) => rnd.nextInt(256)));
         expect(() => readExif(junk), returnsNormally);
       }
       for (final build in [_jpeg, _png, _webp]) {

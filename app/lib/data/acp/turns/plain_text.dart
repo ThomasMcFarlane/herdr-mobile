@@ -15,14 +15,17 @@ String stripTerminalEscapes(String raw) {
   if (text.contains('\r')) {
     text = text.replaceAll('\r\n', '\n');
     if (text.contains('\r')) {
-      text = text.split('\n').map((line) {
-        var end = line.length;
-        while (end > 0 && line.codeUnitAt(end - 1) == 0x0D) {
-          end--;
-        }
-        final cr = end == 0 ? -1 : line.lastIndexOf('\r', end - 1);
-        return cr < 0 ? line.substring(0, end) : line.substring(cr + 1, end);
-      }).join('\n');
+      text = text
+          .split('\n')
+          .map((line) {
+            var end = line.length;
+            while (end > 0 && line.codeUnitAt(end - 1) == 0x0D) {
+              end--;
+            }
+            final cr = end == 0 ? -1 : line.lastIndexOf('\r', end - 1);
+            return cr < 0 ? line.substring(0, end) : line.substring(cr + 1, end);
+          })
+          .join('\n');
     }
   }
   return text;

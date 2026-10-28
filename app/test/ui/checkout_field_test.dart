@@ -40,21 +40,23 @@ Future<CreateHarness> _open(WidgetTester tester, {required bool repo}) async {
     ..physicalSize = const Size(360, 800) * 2
     ..devicePixelRatio = 2;
   addTearDown(tester.view.reset);
-  await tester.pumpWidget(MultiProvider(
-    providers: [
-      ChangeNotifierProvider.value(value: h.machines),
-      ChangeNotifierProvider.value(value: h.fleet),
-      ListenableProvider<AgentSessions>.value(value: h.agents),
-      ChangeNotifierProvider.value(value: h.agentSettings),
-    ],
-    child: MaterialApp(
-      theme: AppTheme.dark(),
-      home: const NewAgentSessionScreen(
-        machineId: 'a',
-        prefill: SessionPrefill(machineId: 'a', folder: '/r/app'),
+  await tester.pumpWidget(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: h.machines),
+        ChangeNotifierProvider.value(value: h.fleet),
+        ListenableProvider<AgentSessions>.value(value: h.agents),
+        ChangeNotifierProvider.value(value: h.agentSettings),
+      ],
+      child: MaterialApp(
+        theme: AppTheme.dark(),
+        home: const NewAgentSessionScreen(
+          machineId: 'a',
+          prefill: SessionPrefill(machineId: 'a', folder: '/r/app'),
+        ),
       ),
     ),
-  ));
+  );
   await _flush(tester);
   return h;
 }
@@ -91,12 +93,16 @@ void main() {
     await _teardown(tester, h);
   });
 
-  testWidgets('a new worktree starts with a suggested branch; typed text is kept, a taken branch is replaced', (tester) async {
+  testWidgets('a new worktree starts with a suggested branch; typed text is kept, a taken branch is replaced', (
+    tester,
+  ) async {
     final semantics = tester.ensureSemantics();
     final h = await _open(tester, repo: true);
 
     String branch() => tester
-        .widget<EditableText>(find.descendant(of: find.widgetWithText(LabeledField, 'Branch'), matching: find.byType(EditableText)))
+        .widget<EditableText>(
+          find.descendant(of: find.widgetWithText(LabeledField, 'Branch'), matching: find.byType(EditableText)),
+        )
         .controller
         .text;
     Future<void> pick(String row) async {
@@ -109,13 +115,19 @@ void main() {
     await pick('New worktree…');
     expect(branch(), matches(RegExp(r'^worktree/[a-z]+-[a-z]+-[0-9a-f]{4}$')));
 
-    await tester.enterText(find.descendant(of: find.widgetWithText(LabeledField, 'Branch'), matching: find.byType(EditableText)), 'fix/mine');
+    await tester.enterText(
+      find.descendant(of: find.widgetWithText(LabeledField, 'Branch'), matching: find.byType(EditableText)),
+      'fix/mine',
+    );
     await pick('app-wt');
     await pick('New worktree…');
     expect(branch(), 'fix/mine', reason: 'what the person typed is theirs');
 
     // `feat/x` is the branch of a checkout that exists: a second worktree on it would fail.
-    await tester.enterText(find.descendant(of: find.widgetWithText(LabeledField, 'Branch'), matching: find.byType(EditableText)), 'feat/x');
+    await tester.enterText(
+      find.descendant(of: find.widgetWithText(LabeledField, 'Branch'), matching: find.byType(EditableText)),
+      'feat/x',
+    );
     await pick('app-wt');
     await pick('New worktree…');
     expect(branch(), startsWith('worktree/'));

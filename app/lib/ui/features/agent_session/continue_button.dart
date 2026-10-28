@@ -6,7 +6,9 @@ import 'package:provider/provider.dart';
 import '../../../data/acp/agent_host.dart';
 import '../../../data/repositories/agent_screens.dart';
 import '../../../data/repositories/agent_session.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../agents/agent_navigation.dart';
 
 /// `Continue` on an ended session whose keeper is gone: starts a new keeper in
@@ -51,10 +53,6 @@ class _ContinueButtonState extends State<ContinueButton> {
   }
 
   @override
-  Widget build(BuildContext context) => AppButton(
-    label: 'Continue',
-    compact: true,
-    loading: _busy,
-    onPressed: _continue,
-  );
+  Widget build(BuildContext context) =>
+      AppButton(label: 'Continue', compact: true, loading: _busy, onPressed: _continue);
 }

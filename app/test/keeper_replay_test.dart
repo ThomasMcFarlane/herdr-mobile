@@ -40,11 +40,9 @@ void main() {
       final b = await h.attach(info.id);
       await b.initialize();
       await b.load(h);
-      expect(
-        updatesOf(b.seen).where((u) => u['sessionUpdate'] == 'user_message_chunk').map(updateText),
-        ['quiet'],
-        reason: 'the agent has said nothing yet, the message is already part of the conversation',
-      );
+      expect(updatesOf(b.seen).where((u) => u['sessionUpdate'] == 'user_message_chunk').map(updateText), [
+        'quiet',
+      ], reason: 'the agent has said nothing yet, the message is already part of the conversation');
       b.write({
         'method': 'session/cancel',
         'params': {'sessionId': 'sess-1'},
@@ -82,12 +80,22 @@ void main() {
 
       final question = await b.next(isMethod('elicitation/create'));
       expect(asJson(question['params'])['message'], 'Pick one?\nsecond line');
-      b.reply(question['id'], {'action': 'accept', 'content': {'value': 'a'}});
+      b.reply(question['id'], {
+        'action': 'accept',
+        'content': {'value': 'a'},
+      });
 
       // The turn ended while no prompt request of this client was waiting.
       final idle = await b.next(isUpdate('state_update'));
-      expect(asJson(asJson(idle['params'])['update']), {'sessionUpdate': 'state_update', 'state': 'idle', 'stopReason': 'end_turn'});
-      expect(updatesOf(b.seen).map((u) => u['sessionUpdate'] == 'agent_message_chunk' ? updateText(u) : ''), contains('answered:allow/accept'));
+      expect(asJson(asJson(idle['params'])['update']), {
+        'sessionUpdate': 'state_update',
+        'state': 'idle',
+        'stopReason': 'end_turn',
+      });
+      expect(
+        updatesOf(b.seen).map((u) => u['sessionUpdate'] == 'agent_message_chunk' ? updateText(u) : ''),
+        contains('answered:allow/accept'),
+      );
 
       final log = h.agentLog();
       final permission = log.where((m) => !m.containsKey('method') && m['id'] == 7001).toList();
@@ -170,7 +178,10 @@ void main() {
       final b = await h.attach(info.id);
       await b.initialize();
       b.post('session/list');
-      await eventually(() => h.agentLog().any((m) => m['method'] == 'session/list'), what: 'the agent to read b\'s session/list');
+      await eventually(
+        () => h.agentLog().any((m) => m['method'] == 'session/list'),
+        what: 'the agent to read b\'s session/list',
+      );
       expect(h.agentLog().where((m) => m['method'] == 'session/cancel'), isEmpty);
 
       await b.load(h);
@@ -181,7 +192,11 @@ void main() {
         'params': {'sessionId': 'sess-1'},
       });
       final idle = await b.next(isUpdate('state_update'));
-      expect(asJson(asJson(idle['params'])['update']), {'sessionUpdate': 'state_update', 'state': 'idle', 'stopReason': 'cancelled'});
+      expect(asJson(asJson(idle['params'])['update']), {
+        'sessionUpdate': 'state_update',
+        'state': 'idle',
+        'stopReason': 'cancelled',
+      });
       expect(h.agentLog().where((m) => m['method'] == 'session/cancel'), hasLength(1));
     });
 
@@ -252,7 +267,10 @@ void main() {
       final h = await newHost();
       final info = await h.start();
       Process.killPid(info.pid!, ProcessSignal.sigkill);
-      await eventually(() async => (await h.list()).single.state == KeeperState.exited, what: 'keeper to be marked exited');
+      await eventually(
+        () async => (await h.list()).single.state == KeeperState.exited,
+        what: 'keeper to be marked exited',
+      );
       final gone = (await h.list()).single;
       expect(gone.state, KeeperState.exited);
       expect(gone.exitReason, contains('gone'));

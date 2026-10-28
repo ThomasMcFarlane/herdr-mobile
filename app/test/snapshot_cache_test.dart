@@ -9,14 +9,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'support/fake_transport.dart';
 
 Snapshot _snapshot(String version, {int panes = 1}) => Snapshot.fromJson(
-      snapshotJson(
-        version: version,
-        panes: [
-          for (var i = 0; i < panes; i++)
-            (id: 'w1:p$i', ws: 'w1', agent: 'claude', status: 'working'),
-        ],
-      ),
-    );
+  snapshotJson(
+    version: version,
+    panes: [for (var i = 0; i < panes; i++) (id: 'w1:p$i', ws: 'w1', agent: 'claude', status: 'working')],
+  ),
+);
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
@@ -50,12 +47,7 @@ void main() {
   test('corrupt or foreign data reads as null instead of throwing', () async {
     final prefs = await SharedPreferences.getInstance();
     final key = await _keyFor(prefs, 'a');
-    for (final garbage in const [
-      'not json {',
-      '[1, 2, 3]',
-      '"a string"',
-      '{"panes": "not a list"}',
-    ]) {
+    for (final garbage in const ['not json {', '[1, 2, 3]', '"a string"', '{"panes": "not a list"}']) {
       await prefs.setString(key, garbage);
       expect(await PrefsSnapshotCache().read('a'), isNull, reason: garbage);
     }
@@ -100,10 +92,7 @@ void main() {
     /// JSON plus [observed] when given) and reads it back through the cache.
     Future<CachedSnapshot?> readRecord({Object? observed, bool withObserved = true}) async {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(
-        key,
-        jsonEncode({...snapshot.toJson(), if (withObserved) 'observed': observed}),
-      );
+      await prefs.setString(key, jsonEncode({...snapshot.toJson(), if (withObserved) 'observed': observed}));
       return PrefsSnapshotCache().read('m');
     }
 
@@ -115,38 +104,43 @@ void main() {
     });
 
     test('a 0.4.5 record (local time as ISO text, no offset) still reads', () async {
-      final read = await readRecord(observed: {
-        'seen': '2026-03-04T05:06:07.000',
-        'panes': {
-          'w1:p0': {
-            's': 'blocked',
-            't': {'at': '2026-03-04T05:00:00.000'},
-          },
-          'w1:p1': {
-            's': 'working',
-            't': {'at': '2026-03-04T05:01:00.000', 'bound': true},
+      final read = await readRecord(
+        observed: {
+          'seen': '2026-03-04T05:06:07.000',
+          'panes': {
+            'w1:p0': {
+              's': 'blocked',
+              't': {'at': '2026-03-04T05:00:00.000'},
+            },
+            'w1:p1': {
+              's': 'working',
+              't': {'at': '2026-03-04T05:01:00.000', 'bound': true},
+            },
           },
         },
-      });
+      );
 
       final observed = read!.observed!;
       expect(observed.seenAt, DateTime(2026, 3, 4, 5, 6, 7), reason: 'no offset: local time');
-      expect(observed.panes['w1:p0'],
-          (status: AgentStatus.blocked, since: StatusTime.exact(DateTime(2026, 3, 4, 5))));
-      expect(observed.panes['w1:p1'],
-          (status: AgentStatus.working, since: StatusTime.after(DateTime(2026, 3, 4, 5, 1))));
+      expect(observed.panes['w1:p0'], (status: AgentStatus.blocked, since: StatusTime.exact(DateTime(2026, 3, 4, 5))));
+      expect(observed.panes['w1:p1'], (
+        status: AgentStatus.working,
+        since: StatusTime.after(DateTime(2026, 3, 4, 5, 1)),
+      ));
     });
 
     test('ISO text that does carry an offset is the same moment whatever it is written in', () async {
-      final read = await readRecord(observed: {
-        'seen': '2026-03-04T05:06:07.000Z',
-        'panes': {
-          'w1:p0': {
-            's': 'idle',
-            't': {'at': '2026-03-04T07:06:07.000+02:00'},
+      final read = await readRecord(
+        observed: {
+          'seen': '2026-03-04T05:06:07.000Z',
+          'panes': {
+            'w1:p0': {
+              's': 'idle',
+              't': {'at': '2026-03-04T07:06:07.000+02:00'},
+            },
           },
         },
-      });
+      );
 
       final observed = read!.observed!;
       expect(observed.seenAt.isAtSameMomentAs(DateTime.utc(2026, 3, 4, 5, 6, 7)), isTrue);
@@ -169,21 +163,23 @@ void main() {
         expect(read.observed, isNull, reason: '$bad');
       }
 
-      final read = await readRecord(observed: {
-        'seen': 1000,
-        'panes': {
-          'w1:p0': {
-            's': 'working',
-            't': {'at': 'garbage'},
+      final read = await readRecord(
+        observed: {
+          'seen': 1000,
+          'panes': {
+            'w1:p0': {
+              's': 'working',
+              't': {'at': 'garbage'},
+            },
+            'w1:p1': 'not a map',
+            'w1:p2': {
+              's': 'blocked',
+              't': {'at': true},
+            },
+            'w1:p3': {'s': 'dancing'},
           },
-          'w1:p1': 'not a map',
-          'w1:p2': {
-            's': 'blocked',
-            't': {'at': true},
-          },
-          'w1:p3': {'s': 'dancing'},
         },
-      });
+      );
       expect(read!.observed!.panes.keys, ['w1:p0', 'w1:p2', 'w1:p3'], reason: 'the non-map entry is dropped');
       expect(read.observed!.panes['w1:p0'], (status: AgentStatus.working, since: null));
       expect(read.observed!.panes['w1:p2'], (status: AgentStatus.blocked, since: null));
@@ -196,11 +192,14 @@ void main() {
       await PrefsSnapshotCache().write(
         'm',
         snapshot,
-        observed: ObservedStatuses(seenAt: seen, panes: {
-          'w1:p0': (status: AgentStatus.blocked, since: StatusTime.exact(began)),
-          'w1:p1': (status: AgentStatus.working, since: StatusTime.after(began)),
-          'w1:p2': (status: AgentStatus.idle, since: null),
-        }),
+        observed: ObservedStatuses(
+          seenAt: seen,
+          panes: {
+            'w1:p0': (status: AgentStatus.blocked, since: StatusTime.exact(began)),
+            'w1:p1': (status: AgentStatus.working, since: StatusTime.after(began)),
+            'w1:p2': (status: AgentStatus.idle, since: null),
+          },
+        ),
       );
 
       final stored = jsonDecode((await SharedPreferences.getInstance()).getString(key)!) as Map<String, dynamic>;

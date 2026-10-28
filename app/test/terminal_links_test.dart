@@ -6,23 +6,12 @@ import 'package:herdr_mobile/ui/render/terminal/cell_width.dart';
 import 'package:herdr_mobile/ui/render/terminal/terminal_links.dart';
 
 /// A URL link whose displayed text is its target, starting at cell [start].
-TerminalLink _url(String text, int start) => TerminalLink(
-  kind: TerminalLinkKind.url,
-  text: text,
-  target: text,
-  start: start,
-  end: start + columnsOf(text),
-);
+TerminalLink _url(String text, int start) =>
+    TerminalLink(kind: TerminalLinkKind.url, text: text, target: text, start: start, end: start + columnsOf(text));
 
 /// A path link displayed as [text] starting at cell [start]; [target] defaults
 /// to the text (no `:line:col` suffix).
-TerminalLink _path(
-  String text,
-  int start, {
-  String? target,
-  int? line,
-  int? column,
-}) => TerminalLink(
+TerminalLink _path(String text, int start, {String? target, int? line, int? column}) => TerminalLink(
   kind: TerminalLinkKind.path,
   text: text,
   target: target ?? text,
@@ -66,44 +55,20 @@ final List<_Case> _positive = [
   ('https://x.dev/a))', [_url('https://x.dev/a', 0)]),
   ('https://x.dev/a]', [_url('https://x.dev/a', 0)]),
   ('https://x.dev/a}', [_url('https://x.dev/a', 0)]),
-  (
-    'https://en.wikipedia.org/wiki/Foo_(bar)',
-    [_url('https://en.wikipedia.org/wiki/Foo_(bar)', 0)],
-  ),
-  (
-    '(https://en.wikipedia.org/wiki/Foo_(bar))',
-    [_url('https://en.wikipedia.org/wiki/Foo_(bar)', 1)],
-  ),
-  (
-    'https://en.wikipedia.org/wiki/Foo_(bar).',
-    [_url('https://en.wikipedia.org/wiki/Foo_(bar)', 0)],
-  ),
+  ('https://en.wikipedia.org/wiki/Foo_(bar)', [_url('https://en.wikipedia.org/wiki/Foo_(bar)', 0)]),
+  ('(https://en.wikipedia.org/wiki/Foo_(bar))', [_url('https://en.wikipedia.org/wiki/Foo_(bar)', 1)]),
+  ('https://en.wikipedia.org/wiki/Foo_(bar).', [_url('https://en.wikipedia.org/wiki/Foo_(bar)', 0)]),
   ('https://x.dev/[a]', [_url('https://x.dev/[a]', 0)]),
   ('https://x.dev/{a}', [_url('https://x.dev/{a}', 0)]),
   // A URL with a path-looking tail is one URL, never a URL plus a path.
   ('https://x.dev/a/b.md', [_url('https://x.dev/a/b.md', 0)]),
-  (
-    'https://x.dev/src/main.dart:42',
-    [_url('https://x.dev/src/main.dart:42', 0)],
-  ),
+  ('https://x.dev/src/main.dart:42', [_url('https://x.dev/src/main.dart:42', 0)]),
   // -- several links on a line -----------------------------------------------
-  (
-    'https://x.dev/a https://y.dev/b',
-    [_url('https://x.dev/a', 0), _url('https://y.dev/b', 16)],
-  ),
-  (
-    'https://x.dev/a src/b.dart',
-    [_url('https://x.dev/a', 0), _path('src/b.dart', 16)],
-  ),
-  (
-    'src/b.dart https://x.dev/a',
-    [_path('src/b.dart', 0), _url('https://x.dev/a', 11)],
-  ),
+  ('https://x.dev/a https://y.dev/b', [_url('https://x.dev/a', 0), _url('https://y.dev/b', 16)]),
+  ('https://x.dev/a src/b.dart', [_url('https://x.dev/a', 0), _path('src/b.dart', 16)]),
+  ('src/b.dart https://x.dev/a', [_path('src/b.dart', 0), _url('https://x.dev/a', 11)]),
   ('a.dart b.dart', [_path('a.dart', 0), _path('b.dart', 7)]),
-  (
-    'lib/a.dart and lib/b.dart',
-    [_path('lib/a.dart', 0), _path('lib/b.dart', 15)],
-  ),
+  ('lib/a.dart and lib/b.dart', [_path('lib/a.dart', 0), _path('lib/b.dart', 15)]),
   // -- absolute, home and dot-relative paths ---------------------------------
   ('/tmp/x.txt', [_path('/tmp/x.txt', 0)]),
   ('/etc/hosts', [_path('/etc/hosts', 0)]),
@@ -158,64 +123,23 @@ final List<_Case> _positive = [
   ('lib/a.dart!', [_path('lib/a.dart', 0)]),
   ('lib/a.dart?', [_path('lib/a.dart', 0)]),
   ('lib/a.dart)', [_path('lib/a.dart', 0)]),
-  (
-    'lib/a.dart#L10',
-    [_path('lib/a.dart#L10', 0, target: 'lib/a.dart', line: 10)],
-  ),
+  ('lib/a.dart#L10', [_path('lib/a.dart#L10', 0, target: 'lib/a.dart', line: 10)]),
   // -- :line:col and (line,col) suffixes -------------------------------------
-  (
-    'src/main.dart:42:7',
-    [
-      _path(
-        'src/main.dart:42:7',
-        0,
-        target: 'src/main.dart',
-        line: 42,
-        column: 7,
-      ),
-    ],
-  ),
-  (
-    'src/main.dart:42',
-    [_path('src/main.dart:42', 0, target: 'src/main.dart', line: 42)],
-  ),
-  (
-    'lib/a.dart(12)',
-    [_path('lib/a.dart(12)', 0, target: 'lib/a.dart', line: 12)],
-  ),
-  (
-    'lib/a.dart(12,3)',
-    [_path('lib/a.dart(12,3)', 0, target: 'lib/a.dart', line: 12, column: 3)],
-  ),
-  (
-    'lib/a.dart(12, 3)',
-    [_path('lib/a.dart(12, 3)', 0, target: 'lib/a.dart', line: 12, column: 3)],
-  ),
+  ('src/main.dart:42:7', [_path('src/main.dart:42:7', 0, target: 'src/main.dart', line: 42, column: 7)]),
+  ('src/main.dart:42', [_path('src/main.dart:42', 0, target: 'src/main.dart', line: 42)]),
+  ('lib/a.dart(12)', [_path('lib/a.dart(12)', 0, target: 'lib/a.dart', line: 12)]),
+  ('lib/a.dart(12,3)', [_path('lib/a.dart(12,3)', 0, target: 'lib/a.dart', line: 12, column: 3)]),
+  ('lib/a.dart(12, 3)', [_path('lib/a.dart(12, 3)', 0, target: 'lib/a.dart', line: 12, column: 3)]),
   ('a.dart:12:', [_path('a.dart:12', 0, target: 'a.dart', line: 12)]),
-  (
-    'lib/a.dart:12:5.',
-    [_path('lib/a.dart:12:5', 0, target: 'lib/a.dart', line: 12, column: 5)],
-  ),
-  (
-    'lib/a.dart:1234567',
-    [_path('lib/a.dart:1234567', 0, target: 'lib/a.dart', line: 1234567)],
-  ),
+  ('lib/a.dart:12:5.', [_path('lib/a.dart:12:5', 0, target: 'lib/a.dart', line: 12, column: 5)]),
+  ('lib/a.dart:1234567', [_path('lib/a.dart:1234567', 0, target: 'lib/a.dart', line: 1234567)]),
   ('lib/a.dart:', [_path('lib/a.dart', 0)]),
   ('lib/a.dart:x', [_path('lib/a.dart', 0)]),
   ('lib/a.dart:12345678', [_path('lib/a.dart', 0)]),
   ('lib/a.dart (12)', [_path('lib/a.dart', 0)]),
-  (
-    'src/a.dart:12:5: error',
-    [_path('src/a.dart:12:5', 0, target: 'src/a.dart', line: 12, column: 5)],
-  ),
-  (
-    '    at foo (src/a.ts:10:5)',
-    [_path('src/a.ts:10:5', 12, target: 'src/a.ts', line: 10, column: 5)],
-  ),
-  (
-    'lib/x.dart:12:34 • message • rule',
-    [_path('lib/x.dart:12:34', 0, target: 'lib/x.dart', line: 12, column: 34)],
-  ),
+  ('src/a.dart:12:5: error', [_path('src/a.dart:12:5', 0, target: 'src/a.dart', line: 12, column: 5)]),
+  ('    at foo (src/a.ts:10:5)', [_path('src/a.ts:10:5', 12, target: 'src/a.ts', line: 10, column: 5)]),
+  ('lib/x.dart:12:34 • message • rule', [_path('lib/x.dart:12:34', 0, target: 'lib/x.dart', line: 12, column: 34)]),
   ('File "/x/y.py", line 12', [_path('/x/y.py', 6, line: 12)]),
   ('File "/x/y.py", line 12, in <module>', [_path('/x/y.py', 6, line: 12)]),
   ('/x/y.py, line 3', [_path('/x/y.py', 0, line: 3)]),
@@ -225,10 +149,7 @@ final List<_Case> _positive = [
   // git's own `a/` and `b/` are not part of the target; the text keeps them.
   (
     'diff --git a/lib/x.dart b/lib/x.dart',
-    [
-      _path('a/lib/x.dart', 11, target: 'lib/x.dart'),
-      _path('b/lib/x.dart', 24, target: 'lib/x.dart'),
-    ],
+    [_path('a/lib/x.dart', 11, target: 'lib/x.dart'), _path('b/lib/x.dart', 24, target: 'lib/x.dart')],
   ),
   ('--- a/lib/x.dart', [_path('a/lib/x.dart', 4, target: 'lib/x.dart')]),
   ('+++ b/lib/x.dart', [_path('b/lib/x.dart', 4, target: 'lib/x.dart')]),
@@ -413,9 +334,7 @@ void main() {
 
     test('every box and block glyph ends a URL', () {
       final glyph = String.fromCharCode(0x2502);
-      expect(detectLinks('https://x.dev/a${glyph}b'), [
-        _url('https://x.dev/a', 0),
-      ]);
+      expect(detectLinks('https://x.dev/a${glyph}b'), [_url('https://x.dev/a', 0)]);
     });
   });
 
@@ -460,12 +379,8 @@ void main() {
 
     test('only the first 2000 UTF-16 units are scanned', () {
       expect(detectLinks('${'x ' * 1100}lib/a.dart'), isEmpty);
-      expect(detectLinks('lib/a.dart ${'y ' * 50000}'), [
-        _path('lib/a.dart', 0),
-      ]);
-      expect(detectLinks('${'x ' * 900}lib/a.dart'), [
-        _path('lib/a.dart', 1800),
-      ]);
+      expect(detectLinks('lib/a.dart ${'y ' * 50000}'), [_path('lib/a.dart', 0)]);
+      expect(detectLinks('${'x ' * 900}lib/a.dart'), [_path('lib/a.dart', 1800)]);
     });
   });
 
@@ -526,10 +441,8 @@ void main() {
       final random = Random(20251003);
       var linked = 0;
       for (var n = 0; n < 5000; n++) {
-        final text = [
-          for (var k = random.nextInt(14) + 1; k > 0; k--)
-            fragments[random.nextInt(fragments.length)],
-        ].join();
+        final text = [for (var k = random.nextInt(14) + 1; k > 0; k--) fragments[random.nextInt(fragments.length)]]
+            .join();
         final links = detectLinks(text);
         linked += links.length;
         _expectInvariants(text, links);

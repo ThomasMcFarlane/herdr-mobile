@@ -36,7 +36,10 @@ void main() {
         testWidgets('$target ${brightness.name} x$scale', (tester) async {
           final h = await CreateHarness.create([
             (
-              profile: profileOf('a', 'Máy trạm văn phòng Hà Nội, tầng 12 — phòng thí nghiệm AI (workstation-long-name)'),
+              profile: profileOf(
+                'a',
+                'Máy trạm văn phòng Hà Nội, tầng 12 — phòng thí nghiệm AI (workstation-long-name)',
+              ),
               snapshot: snapshotJson(
                 workspaces: const [(id: 'w1', label: 'api')],
                 panes: [(id: 'w1:p0', ws: 'w1', agent: target, status: 'idle')],

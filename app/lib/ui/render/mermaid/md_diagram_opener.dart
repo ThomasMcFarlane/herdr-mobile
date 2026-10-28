@@ -13,7 +13,8 @@ class MdDiagramOpener extends InheritedWidget {
 
   final OpenDiagram open;
 
-  static MdDiagramOpener? maybeOf(BuildContext context) => context.dependOnInheritedWidgetOfExactType<MdDiagramOpener>();
+  static MdDiagramOpener? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<MdDiagramOpener>();
 
   @override
   bool updateShouldNotify(MdDiagramOpener oldWidget) => open != oldWidget.open;

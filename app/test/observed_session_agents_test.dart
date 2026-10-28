@@ -40,7 +40,8 @@ List<String> _claudeThrough(String name, String tool) {
 }
 
 const _claudeLog = '/home/u/.claude/projects/-tmp-x/3f1c9a52-7d0e-4b6a-9a11-0c5d2e8b7f41.jsonl';
-const _codexLog = '/home/u/.codex/sessions/2026/10/09/rollout-2026-10-09T19-43-18-01a120b0-76ea-7a42-a868-59d0ab120afc.jsonl';
+const _codexLog =
+    '/home/u/.codex/sessions/2026/10/09/rollout-2026-10-09T19-43-18-01a120b0-76ea-7a42-a868-59d0ab120afc.jsonl';
 
 Future<(ObservedRig, ObservedAgentSession)> _open(
   ObservedKind kind,
@@ -48,7 +49,11 @@ Future<(ObservedRig, ObservedAgentSession)> _open(
   required String status,
   required String screen,
 }) async {
-  final rig = await ObservedRig.create(status: status, agent: kind.id, log: kind.id == 'claude' ? _claudeLog : _codexLog);
+  final rig = await ObservedRig.create(
+    status: status,
+    agent: kind.id,
+    log: kind.id == 'claude' ? _claudeLog : _codexLog,
+  );
   addTearDown(rig.dispose);
   // The agent's log is on the host (the follower itself is the fake source).
   rig.transport.fs = FakeFs()..addFile(kind.id == 'claude' ? _claudeLog : _codexLog, '{}\n');
@@ -87,7 +92,11 @@ void main() {
 
       final request = (session.state.pending.single as PendingPermission).request;
       expect(describePermission(request).subject, 'touch /tmp/hm-capture-claude/x.txt');
-      expect(request.toolCall.toolCallId, startsWith('toolu_'), reason: 'the open call of the log is the one asked about');
+      expect(
+        request.toolCall.toolCallId,
+        startsWith('toolu_'),
+        reason: 'the open call of the log is the one asked about',
+      );
       expect(session.agentLabel, 'Claude Code');
     });
 
@@ -170,7 +179,12 @@ void main() {
     });
 
     test('Stop is esc, and not twice within a moment: a second one opens the rewind menu', () async {
-      final (rig, session) = await _open(claudeKind, _claudeThrough('bash-approve', 'Bash'), status: 'working', screen: '');
+      final (rig, session) = await _open(
+        claudeKind,
+        _claudeThrough('bash-approve', 'Bash'),
+        status: 'working',
+        screen: '',
+      );
 
       session.cancel();
       session.cancel();
@@ -224,7 +238,10 @@ void main() {
         q.id,
         ElicitationAccept({
           'q0': '${langs.indexWhere((o) => o.label == 'Go')}',
-          'q1': [for (final l in ['Tests', 'CI']) '${extras.indexWhere((o) => o.label == l)}', 'other'],
+          'q1': [
+            for (final l in ['Tests', 'CI']) '${extras.indexWhere((o) => o.label == l)}',
+            'other',
+          ],
           'q1_other': 'Docs please',
         }),
       );
@@ -260,7 +277,11 @@ void main() {
       await eventually(() => session.state.pending.isNotEmpty, reason: 'the dialog is understood');
 
       final request = (session.state.pending.single as PendingPermission).request;
-      expect(request.toolCall.fields['title'], 'curl -sI https://example.com | head -1', reason: 'the `\$ ` of the screen matched the call');
+      expect(
+        request.toolCall.fields['title'],
+        'curl -sI https://example.com | head -1',
+        reason: 'the `\$ ` of the screen matched the call',
+      );
       expect(session.agentLabel, 'Codex');
     });
 
@@ -274,7 +295,11 @@ void main() {
       );
       await eventually(() => session.state.pending.isNotEmpty, reason: 'the dialog is understood');
 
-      expect(session.state.pending.single, isA<PendingPermission>(), reason: 'Codex has no question driver: no PendingQuestion');
+      expect(
+        session.state.pending.single,
+        isA<PendingPermission>(),
+        reason: 'Codex has no question driver: no PendingQuestion',
+      );
       session.answerPermission(session.state.pending.single.id, const PermissionSelected('1'));
       await eventually(() => rig.sent('pane.send_keys').isNotEmpty, reason: 'keys sent');
 
@@ -301,13 +326,20 @@ void main() {
       await eventually(() => locator.asked > 0, reason: 'looked for the log');
 
       expect(session.waiting, 'Claude has not written this session yet.');
-      expect(session.link, AgentLink.live, reason: 'an empty chat the person can type into, not a connection that never comes');
+      expect(
+        session.link,
+        AgentLink.live,
+        reason: 'an empty chat the person can type into, not a connection that never comes',
+      );
       expect(rig.source.calls, isEmpty, reason: 'nothing to follow yet');
 
       locator.found = _claudeLog;
       await rig.setLog(_claudeLog);
 
-      await eventually(() => rig.source.calls.isNotEmpty && session.state.toolCalls.isNotEmpty, reason: 'followed once the session is known');
+      await eventually(
+        () => rig.source.calls.isNotEmpty && session.state.toolCalls.isNotEmpty,
+        reason: 'followed once the session is known',
+      );
       expect(rig.source.calls.single.path, _claudeLog);
       expect(session.waiting, isNull);
       expect(session.state.toolCalls, hasLength(1));
@@ -371,10 +403,18 @@ void main() {
       addTearDown(sessions.dispose);
 
       expect(sessions.supports(machine, 'w1:p1'), isTrue, reason: 'a claude pane may be found by its process');
-      expect(sessions.supports(machine, 'w1:p2'), isFalse, reason: 'Codex without a session reference cannot be linked');
+      expect(
+        sessions.supports(machine, 'w1:p2'),
+        isFalse,
+        reason: 'Codex without a session reference cannot be linked',
+      );
       expect(sessions.supports(machine, 'w1:p3'), isFalse, reason: 'omp reports no log');
       expect(sessions.integrationFor(machine, 'w1:p2'), 'codex');
-      expect(sessions.integrationFor(machine, 'w1:p1'), 'claude', reason: 'offered while herdr reports no session, whatever happened to a look');
+      expect(
+        sessions.integrationFor(machine, 'w1:p1'),
+        'claude',
+        reason: 'offered while herdr reports no session, whatever happened to a look',
+      );
       expect(sessions.integrationFor(machine, 'w1:p3'), isNull, reason: 'omp needs no offer');
 
       sessions.markUnlinked(machine, 'w1:p1');

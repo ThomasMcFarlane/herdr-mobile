@@ -61,10 +61,7 @@ PromptInfo? detectPrompt(List<String> rows) {
   }
   final body = lines.sublist(0, end);
 
-  return _numberedMenu(body, scrolled) ??
-      _markerMenu(body, scrolled) ??
-      _inlineYesNo(body) ??
-      _enterToContinue(lines);
+  return _numberedMenu(body, scrolled) ?? _markerMenu(body, scrolled) ?? _inlineYesNo(body) ?? _enterToContinue(lines);
 }
 
 /// A terminal row as shown in a preview: side bars of a box removed,
@@ -120,8 +117,14 @@ final _fileHeader = RegExp(
 /// under the header, the description and the tip left out); a dialog about a
 /// file, or one that does not look like this, only loses its rules.
 List<String> _withoutDashedRules(List<String> lines) {
-  List<String> plain() => [for (final l in lines) if (!isDashedRule(l)) l];
-  final marks = [for (var i = 0; i < lines.length; i++) if (isDashedRule(lines[i])) i];
+  List<String> plain() => [
+    for (final l in lines)
+      if (!isDashedRule(l)) l,
+  ];
+  final marks = [
+    for (var i = 0; i < lines.length; i++)
+      if (isDashedRule(lines[i])) i,
+  ];
   if (marks.isEmpty) return lines;
   if (marks.length < 2) return plain();
   final a = marks[marks.length - 2];
@@ -181,8 +184,7 @@ final _footer = RegExp(
   caseSensitive: false,
 );
 
-bool _isFooter(String line) =>
-    line.length <= 140 && !_numbered.hasMatch(line) && _footer.hasMatch(line);
+bool _isFooter(String line) => line.length <= 140 && !_numbered.hasMatch(line) && _footer.hasMatch(line);
 
 final _yesNoRe = RegExp(
   r'[\[(]\s*(y(?:es)?)\s*/\s*(n(?:o)?)(?:\s*/\s*\[?fingerprint\]?)?\s*[\])]'
@@ -214,16 +216,14 @@ bool _isNegative(String text) => _negative.hasMatch(text.trim());
 /// Whether [reply] declines: its label, without the number in front, starts
 /// as a refusal does ("No", "Deny", "Cancel"). The observed chat shows such a
 /// reply as a rejection and every other one as an allow.
-bool isNegativeReply(QuickReply reply) =>
-    _isNegative(reply.label.replaceFirst(RegExp(r'^\s*\d{1,2}[.)]\s*'), ''));
+bool isNegativeReply(QuickReply reply) => _isNegative(reply.label.replaceFirst(RegExp(r'^\s*\d{1,2}[.)]\s*'), ''));
 
 bool _questionish(String line) {
   final t = line.trim().replaceFirst(RegExp('["\'”’)\\]]+\$'), '');
   return t.endsWith('?') || t.endsWith(':') || _questionPhrase.hasMatch(t);
 }
 
-String _cap(String s, int max) =>
-    s.length <= max ? s : '${s.substring(0, max - 1).trimRight()}…';
+String _cap(String s, int max) => s.length <= max ? s : '${s.substring(0, max - 1).trimRight()}…';
 
 // ---------------------------------------------------------------- numbered
 
@@ -298,10 +298,10 @@ PromptInfo? _buildNumbered(List<String> body, int start, List<_Opt> options, boo
   final block = at == null
       ? const <String>[]
       : at == above.length - 1
-          ? _subjectAbove(above, at)
-          // Codex: the command is the rows between the question and the menu,
-          // after its `Environment:` / `Reason:` rows.
-          : _rowsAfterReason(above, at);
+      ? _subjectAbove(above, at)
+      // Codex: the command is the rows between the question and the menu,
+      // after its `Environment:` / `Reason:` rows.
+      : _rowsAfterReason(above, at);
   // Codex's question tool ("Question 1/2" above the question): the digit
   // selects, and on the last question submits; with more questions to come an
   // `enter` after it would answer the next one with its first option.
@@ -309,7 +309,10 @@ PromptInfo? _buildNumbered(List<String> body, int start, List<_Opt> options, boo
   final digitOnly = header != null;
   // A row that is a place to type feedback ("Tell Claude what to change") is
   // not an answer a tap can give.
-  final offered = [for (final o in options) if (!_needsTyping.hasMatch(o.text)) o];
+  final offered = [
+    for (final o in options)
+      if (!_needsTyping.hasMatch(o.text)) o,
+  ];
   if (offered.length < 2) return null;
   final prompt = _promptOf(
     body: above,
@@ -371,13 +374,7 @@ PromptInfo _promptOf({
   required List<QuickReply> Function(String? reason, bool cut) replies,
 }) {
   final subject = block.isNotEmpty ? block : _rowAbove(body, q);
-  final reason = _scopeRisk(
-    commands: block,
-    sentences: [
-      if (q >= 0) body[q],
-      if (block.isEmpty && q > 0) body[q - 1],
-    ],
-  );
+  final reason = _scopeRisk(commands: block, sentences: [if (q >= 0) body[q], if (block.isEmpty && q > 0) body[q - 1]]);
   final topCut = scrolled && block.isNotEmpty && q - block.length == 0;
   return PromptInfo(
     question: q < 0 ? '' : _cap(body[q].trim(), _questionMax),
@@ -431,8 +428,7 @@ const _previewRowMax = 160;
 /// A row (untrimmed) that is longer than shown, or about as long as the
 /// previews allow, which means it was probably cut there (a box's side bars
 /// were already taken off it).
-bool _rowCut(String row) =>
-    row.trim().length > _subjectRowMax || row.length >= _previewRowMax - 4;
+bool _rowCut(String row) => row.trim().length > _subjectRowMax || row.length >= _previewRowMax - 4;
 
 /// Whether [rows] (untrimmed) hold more than [_subjectText] shows.
 bool _isCut(List<String> rows) => rows.length > _subjectRows || rows.any(_rowCut);
@@ -454,8 +450,8 @@ QuickReply _quickReply({
   final risk = _isNegative(negativeText ?? optionText)
       ? null
       : grantsStandingPermission(optionText)
-          ? standingPermission
-          : scopeRisk ?? riskOf(optionText) ?? cutRisk;
+      ? standingPermission
+      : scopeRisk ?? riskOf(optionText) ?? cutRisk;
   return QuickReply(label: label, keys: keys, needsConfirm: risk != null, risk: risk);
 }
 
@@ -504,20 +500,17 @@ bool _isHeader(String row, int questionIndent) {
       !_marker.hasMatch(t);
 }
 
-final _trailingHint = RegExp(
-  r'\s*\((?:esc|[a-z]|tab|enter|shift\+tab|ctrl\+\w|alt\+\w)\)\s*$',
-  caseSensitive: false,
-);
+final _trailingHint = RegExp(r'\s*\((?:esc|[a-z]|tab|enter|shift\+tab|ctrl\+\w|alt\+\w)\)\s*$', caseSensitive: false);
 final _noAndTell = RegExp(r'^(no),\s+and\s+tell\b.*$', caseSensitive: false);
-final _yesDontAsk = RegExp(
-  r"^(yes),?\s+and\s+(don.t\s+ask\s+again)\b.*$",
-  caseSensitive: false,
-);
+final _yesDontAsk = RegExp(r"^(yes),?\s+and\s+(don.t\s+ask\s+again)\b.*$", caseSensitive: false);
 
 String _shortLabel(String text) {
   // Codex's question rows pad the label and its description into columns, and
   // tell about notes the phone cannot add.
-  var t = text.replaceFirst(RegExp(r'\s+Optionally, add details in notes \(tab\)\.?'), '').replaceFirst(_trailingHint, '').trim();
+  var t = text
+      .replaceFirst(RegExp(r'\s+Optionally, add details in notes \(tab\)\.?'), '')
+      .replaceFirst(_trailingHint, '')
+      .trim();
   t = t.replaceAll(RegExp(r'\s{2,}'), ' · ');
   t = t.replaceFirstMapped(_noAndTell, (m) => m[1]!);
   t = t.replaceFirstMapped(_yesDontAsk, (m) => "${m[1]}, ${m[2]!.toLowerCase()}");
@@ -541,8 +534,7 @@ bool _isQuestionRow(String line) {
   return t.endsWith('?') || t.endsWith(':');
 }
 
-PromptInfo? _markerMenu(List<String> body, bool scrolled) =>
-    _radioMenu(body, scrolled) ?? _pointerMenu(body, scrolled);
+PromptInfo? _markerMenu(List<String> body, bool scrolled) => _radioMenu(body, scrolled) ?? _pointerMenu(body, scrolled);
 
 /// Short enough to be a choice rather than prose.
 bool _choiceLength(String line) => line.trim().length <= 60;
@@ -559,9 +551,7 @@ PromptInfo? _pointerMenu(List<String> body, bool scrolled) {
     if (!_choiceLength(body[p])) return null;
     final column = body[p].indexOf(m[3]!, m[1]!.length + m[2]!.length);
     bool sibling(int i) =>
-        _choiceLength(body[i]) &&
-        !_isQuestionRow(body[i]) &&
-        body[i].length - body[i].trimLeft().length == column;
+        _choiceLength(body[i]) && !_isQuestionRow(body[i]) && body[i].length - body[i].trimLeft().length == column;
     for (var i = p + 1; i < body.length; i++) {
       if (!sibling(i)) return null;
     }
@@ -569,10 +559,7 @@ PromptInfo? _pointerMenu(List<String> body, bool scrolled) {
     while (start > 0 && sibling(start - 1)) {
       start--;
     }
-    final texts = [
-      for (var i = start; i < body.length; i++)
-        i == p ? m[3]!.trim() : body[i].trim(),
-    ];
+    final texts = [for (var i = start; i < body.length; i++) i == p ? m[3]!.trim() : body[i].trim()];
     return _arrowMenu(body, start, texts, p - start, scrolled);
   }
   return null;
@@ -599,13 +586,7 @@ PromptInfo? _radioMenu(List<String> body, bool scrolled) {
 
 /// A menu answered with up/down to the wanted row, then enter. Needs a
 /// question row right above it.
-PromptInfo? _arrowMenu(
-  List<String> body,
-  int start,
-  List<String> texts,
-  int selected,
-  bool scrolled,
-) {
+PromptInfo? _arrowMenu(List<String> body, int start, List<String> texts, int selected, bool scrolled) {
   if (texts.length < 2 || texts.length > _maxReplies) return null;
   if (start == 0 || !_isQuestionRow(body[start - 1])) return null;
   // The question and what it is about (rows under a header, else the row
@@ -620,10 +601,7 @@ PromptInfo? _arrowMenu(
       for (var k = 0; k < texts.length; k++)
         _quickReply(
           label: _shortLabel(texts[k]),
-          keys: [
-            ...List.filled((k - selected).abs(), k > selected ? 'down' : 'up'),
-            'enter',
-          ],
+          keys: [...List.filled((k - selected).abs(), k > selected ? 'down' : 'up'), 'enter'],
           optionText: texts[k],
           scopeRisk: reason,
           cutRisk: cut ? longCommand : null,
@@ -645,19 +623,26 @@ PromptInfo? _inlineYesNo(List<String> lines) {
   // refers to. Only Yes can carry a reason.
   final reason = riskOf(last) ?? (prev.isEmpty ? null : riskOf(prev));
   // A short "Continue? [y/N]" is meaningless without the row that says what.
-  final question = last.trim().length < 40 && prev.isNotEmpty
-      ? '$prev\n${last.trim()}'
-      : last.trim();
+  final question = last.trim().length < 40 && prev.isNotEmpty ? '$prev\n${last.trim()}' : last.trim();
   return PromptInfo(
     question: _cap(question, _questionMax * 2),
     replies: [
       QuickReply(
         label: 'Yes',
-        keys: [...(full ? ['y', 'e', 's'] : ['y']), 'enter'],
+        keys: [
+          ...(full ? ['y', 'e', 's'] : ['y']),
+          'enter',
+        ],
         needsConfirm: reason != null,
         risk: reason,
       ),
-      QuickReply(label: 'No', keys: [...(full ? ['n', 'o'] : ['n']), 'enter']),
+      QuickReply(
+        label: 'No',
+        keys: [
+          ...(full ? ['n', 'o'] : ['n']),
+          'enter',
+        ],
+      ),
     ],
   );
 }
@@ -668,6 +653,8 @@ PromptInfo? _enterToContinue(List<String> lines) {
   if (RegExp(r'esc|cancel', caseSensitive: false).hasMatch(last)) return null;
   return PromptInfo(
     question: _cap(last.trim(), _questionMax),
-    replies: const [QuickReply(label: 'Enter', keys: ['enter'])],
+    replies: const [
+      QuickReply(label: 'Enter', keys: ['enter']),
+    ],
   );
 }

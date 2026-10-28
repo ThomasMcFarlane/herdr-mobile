@@ -52,9 +52,12 @@ class RemoteFiles {
     if (cached != null) return cached;
     final ask = _guard('~', () => _transport.realPath('.'));
     _home = ask;
-    ask.then((_) {}, onError: (Object _) {
-      if (identical(_home, ask)) _home = null;
-    });
+    ask.then(
+      (_) {},
+      onError: (Object _) {
+        if (identical(_home, ask)) _home = null;
+      },
+    );
     return ask;
   }
 
@@ -139,8 +142,11 @@ class RemoteFiles {
   /// no connection).
   RemoteFileException? _refuse(String localPath, String remotePath) {
     if (!_transport.supportsFiles) {
-      return RemoteFileException(RemoteFileErrorKind.unsupported,
-          'Files are not available on this machine.', path: remotePath);
+      return RemoteFileException(
+        RemoteFileErrorKind.unsupported,
+        'Files are not available on this machine.',
+        path: remotePath,
+      );
     }
     final FileStat stat;
     try {
@@ -150,15 +156,16 @@ class RemoteFiles {
     }
     if (stat.type != FileSystemEntityType.file) {
       return RemoteFileException(
-          stat.type == FileSystemEntityType.notFound
-              ? RemoteFileErrorKind.notFound
-              : RemoteFileErrorKind.notAFile,
-          stat.type == FileSystemEntityType.notFound ? 'The file is gone' : 'Not a regular file');
+        stat.type == FileSystemEntityType.notFound ? RemoteFileErrorKind.notFound : RemoteFileErrorKind.notAFile,
+        stat.type == FileSystemEntityType.notFound ? 'The file is gone' : 'Not a regular file',
+      );
     }
     if (stat.size > uploadMaxBytes) {
-      return RemoteFileException(RemoteFileErrorKind.tooLarge,
-          'The file is bigger than ${uploadMaxBytes ~/ (1024 * 1024)} MB',
-          path: remotePath);
+      return RemoteFileException(
+        RemoteFileErrorKind.tooLarge,
+        'The file is bigger than ${uploadMaxBytes ~/ (1024 * 1024)} MB',
+        path: remotePath,
+      );
     }
     return null;
   }
@@ -181,13 +188,9 @@ class RemoteFiles {
     if (text.isEmpty) {
       throw RemoteFileException(RemoteFileErrorKind.notFound, 'No path given');
     }
-    final needsHome = RemotePath.usesHome(text) ||
-        (!RemotePath.isAbsolute(text) && !(cwd != null && RemotePath.isAbsolute(cwd)));
-    final resolved = RemotePath.resolve(
-      text,
-      cwd: cwd,
-      home: needsHome ? await home() : null,
-    );
+    final needsHome =
+        RemotePath.usesHome(text) || (!RemotePath.isAbsolute(text) && !(cwd != null && RemotePath.isAbsolute(cwd)));
+    final resolved = RemotePath.resolve(text, cwd: cwd, home: needsHome ? await home() : null);
     if (resolved == null) {
       throw RemoteFileException(RemoteFileErrorKind.notFound, 'Cannot place $text', path: text);
     }
@@ -260,8 +263,12 @@ class _Upload implements UploadJob {
     if (_done.isCompleted) return;
     _done.completeError(switch (error) {
       RemoteFileException() => error,
-      HerdrTransportException(:final message, :final fatal) =>
-        RemoteFileException(RemoteFileErrorKind.network, message, fatal: fatal, path: _remotePath),
+      HerdrTransportException(:final message, :final fatal) => RemoteFileException(
+        RemoteFileErrorKind.network,
+        message,
+        fatal: fatal,
+        path: _remotePath,
+      ),
       _ => RemoteFileException(RemoteFileErrorKind.network, '$error', path: _remotePath),
     });
     _release();

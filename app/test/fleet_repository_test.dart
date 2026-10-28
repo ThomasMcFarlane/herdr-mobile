@@ -20,20 +20,14 @@ import 'support/memory_stores.dart';
 MachineProfile _machine(String id, String label) =>
     MachineProfile(id: id, label: label, host: '$id.local', username: 'u');
 
-({String id, String ws, String? agent, String status}) _pane(
-        String id, String status,
-        {String? agent = 'claude'}) =>
+({String id, String ws, String? agent, String status}) _pane(String id, String status, {String? agent = 'claude'}) =>
     (id: id, ws: 'w1', agent: agent, status: status);
 
 class _Harness {
-  _Harness({
-    Duration backoff = const Duration(milliseconds: 10),
-    FakeNetwork? network,
-    MemorySnapshotCache? cache,
-  })  : network = network ?? FakeNetwork(),
-        cache = cache ?? MemorySnapshotCache() {
-    machines = MachineRepository(
-        profiles: MemoryProfileStore(), secrets: MemorySecretStore());
+  _Harness({Duration backoff = const Duration(milliseconds: 10), FakeNetwork? network, MemorySnapshotCache? cache})
+    : network = network ?? FakeNetwork(),
+      cache = cache ?? MemorySnapshotCache() {
+    machines = MachineRepository(profiles: MemoryProfileStore(), secrets: MemorySecretStore());
     fleet = FleetRepository(
       machines: machines,
       network: this.network,
@@ -85,19 +79,20 @@ void main() {
   tearDown(() => h.dispose());
 
   test('merges agents from every machine, most urgent first', () async {
-    await h.add(_machine('a', 'alpha'),
-        snapshot: snapshotJson(panes: [
+    await h.add(
+      _machine('a', 'alpha'),
+      snapshot: snapshotJson(
+        panes: [
           _pane('w1:p1', 'idle'),
           _pane('w1:p2', 'working'),
           _pane('w1:p3', 'unknown', agent: null), // plain terminal: excluded
-        ]));
-    await h.add(_machine('b', 'beta'),
-        snapshot: snapshotJson(panes: [_pane('w1:p1', 'blocked')]));
+        ],
+      ),
+    );
+    await h.add(_machine('b', 'beta'), snapshot: snapshotJson(panes: [_pane('w1:p1', 'blocked')]));
     await eventually(() => h.fleet.connections.every((c) => c.isLive));
 
-    final order = [
-      for (final a in h.fleet.agents) '${a.machine.profile.label}:${a.pane.status.name}'
-    ];
+    final order = [for (final a in h.fleet.agents) '${a.machine.profile.label}:${a.pane.status.name}'];
     expect(order, ['beta:blocked', 'alpha:working', 'alpha:idle']);
   });
 
@@ -112,13 +107,12 @@ void main() {
   });
 
   test('what needs you and what is to review are the blocked and unseen-done agents only', () async {
-    await h.add(_machine('a', 'alpha'),
-        snapshot: snapshotJson(panes: [
-          _pane('w1:p1', 'blocked'),
-          _pane('w1:p2', 'done'),
-          _pane('w1:p3', 'working'),
-          _pane('w1:p4', 'idle'),
-        ]));
+    await h.add(
+      _machine('a', 'alpha'),
+      snapshot: snapshotJson(
+        panes: [_pane('w1:p1', 'blocked'), _pane('w1:p2', 'done'), _pane('w1:p3', 'working'), _pane('w1:p4', 'idle')],
+      ),
+    );
     await eventually(() => h.fleet.connections.single.isLive);
 
     final set = AttentionSet(fleet: h.fleet);
@@ -128,12 +122,9 @@ void main() {
   });
 
   test('one machine failing does not affect the others', () async {
-    await h.add(_machine('a', 'alpha'),
-        snapshot: snapshotJson(panes: [_pane('w1:p1', 'working')]));
-    h.transports['b'] = FakeTransport()
-      ..failure = const HerdrTransportException('unreachable');
-    await h.machines.save(_machine('b', 'beta'),
-        secrets: const MachineSecrets(password: 'x'));
+    await h.add(_machine('a', 'alpha'), snapshot: snapshotJson(panes: [_pane('w1:p1', 'working')]));
+    h.transports['b'] = FakeTransport()..failure = const HerdrTransportException('unreachable');
+    await h.machines.save(_machine('b', 'beta'), secrets: const MachineSecrets(password: 'x'));
     await h.fleet.settled();
 
     await eventually(() => h.fleet.connection('b')!.state == LinkState.reconnecting);
@@ -142,8 +133,7 @@ void main() {
   });
 
   test('removing a machine drops its connection and agents', () async {
-    await h.add(_machine('a', 'alpha'),
-        snapshot: snapshotJson(panes: [_pane('w1:p1', 'working')]));
+    await h.add(_machine('a', 'alpha'), snapshot: snapshotJson(panes: [_pane('w1:p1', 'working')]));
     await eventually(() => h.fleet.connection('a')!.isLive);
     final transport = h.transports['a']!;
 
@@ -155,8 +145,7 @@ void main() {
     await eventually(() => transport.closed, reason: 'transport closed');
   });
 
-  test('editing connection details reconnects; pinning a host key does not',
-      () async {
+  test('editing connection details reconnects; pinning a host key does not', () async {
     await h.add(_machine('a', 'alpha'));
     await eventually(() => h.fleet.connection('a')!.isLive);
     final first = h.fleet.connection('a')!;
@@ -166,8 +155,7 @@ void main() {
     expect(h.fleet.connection('a'), same(first), reason: 'pin keeps connection');
 
     h.transports['a'] = FakeTransport();
-    await h.machines.save(
-        h.machines.machines.single.copyWith(host: 'new.local'));
+    await h.machines.save(h.machines.machines.single.copyWith(host: 'new.local'));
     await h.fleet.settled();
     expect(h.fleet.connection('a'), isNot(same(first)));
   });
@@ -178,8 +166,7 @@ void main() {
     final first = h.fleet.connection('a')!;
 
     h.transports['a'] = FakeTransport();
-    await h.machines.save(h.machines.machines.single,
-        secrets: const MachineSecrets(password: 'rotated'));
+    await h.machines.save(h.machines.machines.single, secrets: const MachineSecrets(password: 'rotated'));
     await h.fleet.settled();
 
     expect(h.fleet.connection('a'), isNot(same(first)));
@@ -188,8 +175,7 @@ void main() {
   test('removing a machine deletes its cached snapshot; editing keeps it', () {
     fakeAsync((async) {
       final h = _Harness();
-      h.add(_machine('a', 'alpha'),
-          snapshot: snapshotJson(panes: [_pane('w1:p1', 'working')]));
+      h.add(_machine('a', 'alpha'), snapshot: snapshotJson(panes: [_pane('w1:p1', 'working')]));
       async.flushMicrotasks();
       expect(h.cache.entries.keys, ['a'], reason: 'fresh snapshot persisted');
 
@@ -211,8 +197,7 @@ void main() {
   });
 
   group('network', () {
-    test('offline pauses every machine without retries; online reconnects at once',
-        () {
+    test('offline pauses every machine without retries; online reconnects at once', () {
       fakeAsync((async) {
         // A backoff this long means a quick reconnect cannot be a retry.
         final h = _Harness(backoff: const Duration(hours: 1));
@@ -220,11 +205,12 @@ void main() {
         h.add(_machine('b', 'beta'));
         async.flushMicrotasks();
         expect(h.allLive, isTrue);
-        final calls = {for (final id in ['a', 'b']) id: h.transports[id]!.calls.length};
+        final calls = {
+          for (final id in ['a', 'b']) id: h.transports[id]!.calls.length,
+        };
 
         h.network.goOffline();
-        expect(h.fleet.connections.map((c) => c.state),
-            everyElement(LinkState.offline));
+        expect(h.fleet.connections.map((c) => c.state), everyElement(LinkState.offline));
         async.elapse(const Duration(minutes: 10));
         for (final id in ['a', 'b']) {
           expect(h.transports[id]!.calls.length, calls[id], reason: id);
@@ -262,8 +248,7 @@ void main() {
     test('offline keeps the stale snapshot visible', () {
       fakeAsync((async) {
         final h = _Harness();
-        h.add(_machine('a', 'alpha'),
-            snapshot: snapshotJson(panes: [_pane('w1:p1', 'blocked')]));
+        h.add(_machine('a', 'alpha'), snapshot: snapshotJson(panes: [_pane('w1:p1', 'blocked')]));
         async.flushMicrotasks();
 
         h.network.goOffline();
@@ -275,15 +260,12 @@ void main() {
       });
     });
 
-    test('only "none" pauses retries: a failing host keeps retrying while online',
-        () {
+    test('only "none" pauses retries: a failing host keeps retrying while online', () {
       fakeAsync((async) {
         final h = _Harness(backoff: const Duration(seconds: 10));
         h.network.goOnline('vpn'); // a VPN-only route, no internet needed
-        h.transports['a'] = FakeTransport()
-          ..failure = const HerdrTransportException('unreachable');
-        h.machines.save(_machine('a', 'alpha'),
-            secrets: const MachineSecrets(password: 'x'));
+        h.transports['a'] = FakeTransport()..failure = const HerdrTransportException('unreachable');
+        h.machines.save(_machine('a', 'alpha'), secrets: const MachineSecrets(password: 'x'));
         async.flushMicrotasks();
         final calls = h.transports['a']!.calls.length;
 
@@ -296,9 +278,7 @@ void main() {
 
     test('a machine added while offline waits, then connects when online', () {
       fakeAsync((async) {
-        final h = _Harness(
-          network: FakeNetwork(const NetworkState(online: false, signature: '')),
-        );
+        final h = _Harness(network: FakeNetwork(const NetworkState(online: false, signature: '')));
         h.add(_machine('a', 'alpha'));
         async.flushMicrotasks();
         expect(h.fleet.connection('a')!.state, LinkState.offline);
@@ -313,8 +293,7 @@ void main() {
 
     test('a cold start offline still shows the cached agents, stale', () {
       fakeAsync((async) {
-        final cached = Snapshot.fromJson(
-            snapshotJson(panes: [_pane('w1:p1', 'blocked')]));
+        final cached = Snapshot.fromJson(snapshotJson(panes: [_pane('w1:p1', 'blocked')]));
         final h = _Harness(
           network: FakeNetwork(const NetworkState(online: false, signature: '')),
           cache: MemorySnapshotCache({'a': cached}),
@@ -432,8 +411,7 @@ void main() {
       });
     });
 
-    test('90 s in the background suspends every connection; foreground resumes',
-        () {
+    test('90 s in the background suspends every connection; foreground resumes', () {
       fakeAsync((async) {
         final h = _Harness();
         addTwo(h);
@@ -509,8 +487,7 @@ void main() {
         h.fleet.onLifecycleState(AppLifecycleState.resumed);
         async.flushMicrotasks();
 
-        expect(h.fleet.connections.map((c) => c.state),
-            everyElement(LinkState.offline));
+        expect(h.fleet.connections.map((c) => c.state), everyElement(LinkState.offline));
         expect(h.snapshotCalls('a'), calls);
         h.dispose();
       });

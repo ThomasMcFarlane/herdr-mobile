@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../data/words/plural.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'kit_catalog.dart';
 
 /// The hidden Kit screen: every token sheet and kit component of
@@ -18,14 +20,13 @@ class KitScreen extends StatelessWidget {
     final tokens = kitCatalog.where((e) => e.tokens).toList();
     final components = kitCatalog.where((e) => !e.tokens).toList();
     ActionRow row(KitEntry e) => ActionRow(
-          id: e.slug,
-          title: e.name,
-          value: e.status.name,
-          chevron: true,
-          onTap: () => unawaited(Navigator.of(context).push(
-            MaterialPageRoute<void>(builder: (_) => KitEntryPage(entry: e)),
-          )),
-        );
+      id: e.slug,
+      title: e.name,
+      value: e.status.name,
+      chevron: true,
+      onTap: () =>
+          unawaited(Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => KitEntryPage(entry: e)))),
+    );
     return Scaffold(
       backgroundColor: ds.bg,
       body: Column(
@@ -34,13 +35,15 @@ class KitScreen extends StatelessWidget {
           Expanded(
             child: CustomScrollView(
               slivers: [
-                RowList(rows: [
-                  HeaderRow(id: 'tokens', label: 'Tokens', count: tokens.length),
-                  for (final e in tokens) row(e),
-                  const GapRow(id: 'gap'),
-                  HeaderRow(id: 'components', label: 'Components', count: components.length),
-                  for (final e in components) row(e),
-                ]),
+                RowList(
+                  rows: [
+                    HeaderRow(id: 'tokens', label: 'Tokens', count: tokens.length),
+                    for (final e in tokens) row(e),
+                    const GapRow(id: 'gap'),
+                    HeaderRow(id: 'components', label: 'Components', count: components.length),
+                    for (final e in components) row(e),
+                  ],
+                ),
                 SliverToBoxAdapter(child: SizedBox(height: MediaQuery.paddingOf(context).bottom + Gap.xl)),
               ],
             ),

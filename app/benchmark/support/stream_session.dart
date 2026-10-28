@@ -31,9 +31,16 @@ import 'trace_cadence.dart';
 /// cost is not in the numbers.
 class StreamBenchSession extends FakeAgentSession {
   StreamBenchSession(AgentSessionState initial, {FlushScheduler flush = const TimerFlush()})
-      : _pending = initial,
-        _scheduler = flush,
-        super(state: initial, key: 'bench/stream', agent: 'omp', agentLabel: 'omp', cwd: '/tmp/scratch', title: 'scratch');
+    : _pending = initial,
+      _scheduler = flush,
+      super(
+        state: initial,
+        key: 'bench/stream',
+        agent: 'omp',
+        agentLabel: 'omp',
+        cwd: '/tmp/scratch',
+        title: 'scratch',
+      );
 
   final FlushScheduler _scheduler;
   AgentSessionState _pending;
@@ -77,10 +84,10 @@ class StreamBenchSession extends FakeAgentSession {
 
   /// One text chunk of the answer.
   void ingestText(String text) => ingest({
-        'sessionUpdate': 'agent_message_chunk',
-        'messageId': 'bench-answer',
-        'content': {'type': 'text', 'text': text},
-      });
+    'sessionUpdate': 'agent_message_chunk',
+    'messageId': 'bench-answer',
+    'content': {'type': 'text', 'text': text},
+  });
 
   /// The turn ended.
   void finish() {
@@ -117,8 +124,8 @@ AgentSessionState historyState(int rows) {
       agentMsg(
         'ha$n',
         '## Result $n\n\nThe parser **lowercased** before normalising, so `Hà Nội` lost its marks '
-        '(see `lib/feature_$n/parse.dart:${40 + n % 50}`).\n\n- moved the call below `normalize()`\n'
-        '  - added a regression test\n- left the public API alone\n\nDetails in the [notes](https://example.com/n/$n).',
+            '(see `lib/feature_$n/parse.dart:${40 + n % 50}`).\n\n- moved the call below `normalize()`\n'
+            '  - added a regression test\n- left the public API alone\n\nDetails in the [notes](https://example.com/n/$n).',
       ),
     ];
     items.addAll(batch.take(rows - items.length));

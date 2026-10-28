@@ -39,6 +39,7 @@ import 'data/services/transcript_cache.dart';
 import 'ui/support/frame_flush.dart';
 import 'ui/render/visible_text.dart' show visibleText;
 import 'data/services/system_clipboard.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// Runs the app: boots it and shows it with [show]. When booting throws (a
@@ -46,15 +47,17 @@ import 'package:herdr_mobile/ui/core/kit.dart';
 /// gets [BootFailedApp], which says so and boots again on Retry, instead of
 /// the blank window a thrown error leaves behind. `main` calls it; the
 /// arguments are for tests.
-Future<void> launchApp({
-  Future<Widget> Function() boot = bootApp,
-  void Function(Widget app) show = runApp,
-}) async {
+Future<void> launchApp({Future<Widget> Function() boot = bootApp, void Function(Widget app) show = runApp}) async {
   try {
     show(await boot());
   } on Object catch (e, s) {
     debugPrint('herdr: could not start: $e\n$s');
-    show(BootFailedApp(error: e, retry: () => launchApp(boot: boot, show: show)));
+    show(
+      BootFailedApp(
+        error: e,
+        retry: () => launchApp(boot: boot, show: show),
+      ),
+    );
   }
 }
 
@@ -87,41 +90,40 @@ class _BootFailedAppState extends State<BootFailedApp> {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.light(),
-        darkTheme: AppTheme.dark(),
-        home: Scaffold(
-          body: SafeArea(
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(Gap.lg),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Builder(
-                      builder: (context) => StatusPanel(
-                        color: context.ds.danger,
-                        title: 'Could not start',
-                        message: '${widget.error}',
-                        messageMaxLines: 6,
-                      ),
-                    ),
-                    const SizedBox(height: Gap.md),
-                    AppButton(label: 'Retry', onPressed: _retry, loading: _retrying),
-                  ],
+    debugShowCheckedModeBanner: false,
+    theme: AppTheme.light(),
+    darkTheme: AppTheme.dark(),
+    home: Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(Gap.lg),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Builder(
+                  builder: (context) => StatusPanel(
+                    color: context.ds.danger,
+                    title: 'Could not start',
+                    message: '${widget.error}',
+                    messageMaxLines: 6,
+                  ),
                 ),
-              ),
+                const SizedBox(height: Gap.md),
+                AppButton(label: 'Retry', onPressed: _retry, loading: _retrying),
+              ],
             ),
           ),
         ),
-      );
+      ),
+    ),
+  );
 }
 
 /// How the app sits under the system bars. `main` and the keyboard benchmark
 /// both call it, so the benchmark measures the window the app really has.
-Future<void> configureSystemUi() =>
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+Future<void> configureSystemUi() => SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
 /// Loads what the first frame needs from the stores and builds the app around
 /// it. `main` runs it before `runApp`; the arguments exist so tests and the
@@ -134,10 +136,7 @@ Future<HerdrMobileApp> bootApp({
   ConnectionFactory? connect,
   Notifier? notifier,
 }) async {
-  final machines = MachineRepository(
-    profiles: PrefsProfileStore(),
-    secrets: secrets ?? KeychainSecretStore(),
-  );
+  final machines = MachineRepository(profiles: PrefsProfileStore(), secrets: secrets ?? KeychainSecretStore());
   await machines.load();
   // The keychain starts on every machine's secrets now, while the rest of the
   // stores load and the first frame is built; connections pick them up later.

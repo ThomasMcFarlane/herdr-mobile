@@ -17,12 +17,9 @@ import 'ui_harness.dart';
 const _tall = 2400.0;
 
 ({MachineProfile profile, Map<String, dynamic> snapshot}) _machine() => (
-      profile: const MachineProfile(id: 'a', label: 'box-a', host: 'a.example', username: 'dev'),
-      snapshot: snapshotWith(
-        [(id: 'w1:p1', ws: 'w1', agent: 'claude', status: 'blocked')],
-        title: (_) => 'task 1',
-      ),
-    );
+  profile: const MachineProfile(id: 'a', label: 'box-a', host: 'a.example', username: 'dev'),
+  snapshot: snapshotWith([(id: 'w1:p1', ws: 'w1', agent: 'claude', status: 'blocked')], title: (_) => 'task 1'),
+);
 
 const _question = 'Do you want to proceed?';
 const _command = 'git push origin main\nPush to remote';
@@ -54,9 +51,7 @@ double _cardHeight(WidgetTester tester) => tester.getSize(find.byType(AgentCard)
 
 Finder _inCard(Finder f) => find.descendant(of: find.byType(AgentCard), matching: f);
 
-Finder _monoText() => _inCard(
-      find.byWidgetPredicate((w) => w is Text && w.style?.fontFamily == monoFamily),
-    );
+Finder _monoText() => _inCard(find.byWidgetPredicate((w) => w is Text && w.style?.fontFamily == monoFamily));
 
 void main() {
   setUpAll(loadAppFonts);
@@ -70,8 +65,11 @@ void main() {
         final subject = find.text(_command);
         expect(question, findsOneWidget);
         expect(subject, findsOneWidget);
-        expect(tester.getTopLeft(question).dy, lessThan(tester.getTopLeft(subject).dy),
-            reason: 'the question reads first, the command under it');
+        expect(
+          tester.getTopLeft(question).dy,
+          lessThan(tester.getTopLeft(subject).dy),
+          reason: 'the question reads first, the command under it',
+        );
 
         final text = tester.widget<Text>(subject);
         expect(text.style!.fontFamily, monoFamily);
@@ -100,20 +98,23 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('without a subject only the question shows, and the label has no stray full stop',
-        (tester) async {
+    testWidgets('without a subject only the question shows, and the label has no stray full stop', (tester) async {
       final semantics = tester.ensureSemantics();
       const edit = PromptInfo(
         question: 'Do you want to make this edit to main.dart?',
-        replies: [QuickReply(label: '1. Yes', keys: ['1', 'enter'])],
+        replies: [
+          QuickReply(label: '1. Yes', keys: ['1', 'enter']),
+        ],
       );
       final h = await _board(tester, edit);
 
       expect(_monoText(), findsNothing);
-      expect(tester.widget<Text>(find.text(edit.question)).maxLines, 2,
-          reason: 'a compact wash holds the question to two lines; Read all shows the rest');
-      expect(find.bySemanticsLabel(RegExp(r'Asks: Do you want to make this edit to main\.dart\?$')),
-          findsOneWidget);
+      expect(
+        tester.widget<Text>(find.text(edit.question)).maxLines,
+        2,
+        reason: 'a compact wash holds the question to two lines; Read all shows the rest',
+      );
+      expect(find.bySemanticsLabel(RegExp(r'Asks: Do you want to make this edit to main\.dart\?$')), findsOneWidget);
       semantics.dispose();
       await teardownBoard(tester, h);
     });
@@ -140,8 +141,7 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('a 400 character command and Vietnamese diacritics ellipsize without overflow',
-        (tester) async {
+    testWidgets('a 400 character command and Vietnamese diacritics ellipsize without overflow', (tester) async {
       final subject = [
         'x' * 400,
         'Đường dẫn rất dài: /home/user/dự-án/thư-mục-rất-dài/ngày-hôm-nay/${'tệp-tin/' * 12}',
@@ -167,10 +167,15 @@ void main() {
       expect(text.maxLines, 2);
       expect(text.overflow, TextOverflow.ellipsis);
       // Two lines of Mono.base at 2x and no more.
-      expect(tester.getSize(find.text(subject)).height,
-          lessThanOrEqualTo(2 * Mono.base.fontSize! * Mono.base.height! * 2 + 1));
-      expect(tester.getSize(find.text(prompt.question)).height, lessThanOrEqualTo(2 * 14 * 1.35 * 2 + 1),
-          reason: 'with a subject the question is held to two lines');
+      expect(
+        tester.getSize(find.text(subject)).height,
+        lessThanOrEqualTo(2 * Mono.base.fontSize! * Mono.base.height! * 2 + 1),
+      );
+      expect(
+        tester.getSize(find.text(prompt.question)).height,
+        lessThanOrEqualTo(2 * 14 * 1.35 * 2 + 1),
+        reason: 'with a subject the question is held to two lines',
+      );
 
       // The long reason fits the chip too.
       await quickTap(tester, find.textContaining('Có, và đừng hỏi lại'));
@@ -184,8 +189,7 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('the card keeps its height through every chip state and while lines stream',
-        (tester) async {
+    testWidgets('the card keeps its height through every chip state and while lines stream', (tester) async {
       final h = await _board(tester, _push);
       final idle = _cardHeight(tester);
 
@@ -213,9 +217,9 @@ void main() {
 
   group('confirm chip', () {
     List<Object?> sentKeys(BoardHarness h) => [
-          for (final (m, p) in h.transports['a']!.calls)
-            if (m == 'pane.send_keys') p['keys'],
-        ];
+      for (final (m, p) in h.transports['a']!.calls)
+        if (m == 'pane.send_keys') p['keys'],
+    ];
 
     testWidgets('names the reason in the hint, and sends only when held', (tester) async {
       final semantics = tester.ensureSemantics();
@@ -255,7 +259,9 @@ void main() {
       final semantics = tester.ensureSemantics();
       const unknown = PromptInfo(
         question: _question,
-        replies: [QuickReply(label: '1. Yes', keys: ['1', 'enter'], needsConfirm: true)],
+        replies: [
+          QuickReply(label: '1. Yes', keys: ['1', 'enter'], needsConfirm: true),
+        ],
       );
       final h = await _board(tester, unknown);
 
@@ -292,8 +298,11 @@ void main() {
       expect(text.overflow, isNot(TextOverflow.ellipsis));
       expect(text.style!.fontFamily, monoFamily);
       expect(text.style!.fontSize, Mono.base.fontSize);
-      expect(tester.getSize(inSheet).height, greaterThan(3 * 12.5 * 1.35 * 1.5),
-          reason: 'six wrapped rows are taller than the card allows');
+      expect(
+        tester.getSize(inSheet).height,
+        greaterThan(3 * 12.5 * 1.35 * 1.5),
+        reason: 'six wrapped rows are taller than the card allows',
+      );
       expect(
         tester.getTopLeft(find.descendant(of: find.byType(ReplySheet), matching: find.text(_question))).dy,
         lessThan(tester.getTopLeft(inSheet).dy),
@@ -307,14 +316,10 @@ void main() {
       await tester.tap(find.byTooltip('Reply to task 1'));
       await settle(tester);
 
-      Finder inSheet(String text) =>
-          find.descendant(of: find.byType(ReplySheet), matching: find.text(text));
+      Finder inSheet(String text) => find.descendant(of: find.byType(ReplySheet), matching: find.text(text));
       await quickTap(tester, inSheet('1. Yes'));
       expect(inSheet('Hold to send · pushes to a remote'), findsOneWidget);
-      expect(
-        [for (final (m, _) in h.transports['a']!.calls) m].where((m) => m == 'pane.send_keys'),
-        isEmpty,
-      );
+      expect([for (final (m, _) in h.transports['a']!.calls) m].where((m) => m == 'pane.send_keys'), isEmpty);
 
       await holdFor(tester, inSheet('Hold to send · pushes to a remote'));
       await tester.pump(const Duration(seconds: 4));

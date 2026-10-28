@@ -3,9 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/ui/support/keyboard_frames.dart';
 
 void main() {
-  testWidgets(
-      'a frame is asked for at every vsync while the keyboard moves, and none once it is still',
-      (tester) async {
+  testWidgets('a frame is asked for at every vsync while the keyboard moves, and none once it is still', (
+    tester,
+  ) async {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(const KeyboardFrames(child: SizedBox()));
     expect(tester.binding.hasScheduledFrame, isFalse, reason: 'nothing moves');

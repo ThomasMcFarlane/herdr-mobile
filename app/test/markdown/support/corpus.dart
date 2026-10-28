@@ -66,14 +66,16 @@ List<MdCase> parseCaseFile(String file, String text) {
   void finish() {
     final n = name;
     if (n == null) return;
-    out.add(MdCase(
-      file: file,
-      name: n,
-      flags: flags,
-      input: _section(input),
-      expect: _section(expect),
-      display: part == 2 ? _section(display) : null,
-    ));
+    out.add(
+      MdCase(
+        file: file,
+        name: n,
+        flags: flags,
+        input: _section(input),
+        expect: _section(expect),
+        display: part == 2 ? _section(display) : null,
+      ),
+    );
   }
 
   for (final line in const LineSplitter().convert(text)) {
@@ -93,7 +95,12 @@ List<MdCase> parseCaseFile(String file, String text) {
     } else if (line == '--- display' && part == 1) {
       part = 2;
     } else {
-      (part == 0 ? input : part == 1 ? expect : display).add(line);
+      (part == 0
+              ? input
+              : part == 1
+              ? expect
+              : display)
+          .add(line);
     }
   }
   finish();
@@ -102,16 +109,9 @@ List<MdCase> parseCaseFile(String file, String text) {
 
 /// All cases of every `*.case` file under [dir], sorted by file name.
 List<MdCase> loadCorpus(String dir) {
-  final files = Directory(dir)
-      .listSync()
-      .whereType<File>()
-      .where((f) => f.path.endsWith('.case'))
-      .toList()
+  final files = Directory(dir).listSync().whereType<File>().where((f) => f.path.endsWith('.case')).toList()
     ..sort((a, b) => a.path.compareTo(b.path));
-  return [
-    for (final f in files)
-      ...parseCaseFile(f.uri.pathSegments.last, f.readAsStringSync()),
-  ];
+  return [for (final f in files) ...parseCaseFile(f.uri.pathSegments.last, f.readAsStringSync())];
 }
 
 /// Larger realistic messages (`corpus/messages/*.md`), for the prefix, size
@@ -119,14 +119,7 @@ List<MdCase> loadCorpus(String dir) {
 List<({String name, String text})> loadMessages(String dir) {
   final d = Directory(dir);
   if (!d.existsSync()) return const [];
-  final files = d
-      .listSync()
-      .whereType<File>()
-      .where((f) => f.path.endsWith('.md'))
-      .toList()
+  final files = d.listSync().whereType<File>().where((f) => f.path.endsWith('.md')).toList()
     ..sort((a, b) => a.path.compareTo(b.path));
-  return [
-    for (final f in files)
-      (name: f.uri.pathSegments.last, text: f.readAsStringSync()),
-  ];
+  return [for (final f in files) (name: f.uri.pathSegments.last, text: f.readAsStringSync())];
 }

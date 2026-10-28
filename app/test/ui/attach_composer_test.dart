@@ -59,7 +59,8 @@ final _jpeg = Uint8List.fromList(img.encodeJpg(img.Image(width: 8, height: 8)));
 
 /// A picture the system picker left in the app's cache; [pump]'s screen reads
 /// every picture of the phone as [_jpeg].
-PickedPhoto photo([String name = 'IMG_2031.jpg']) => PickedPhoto(path: '/cache/image_picker/$name', name: name, size: _jpeg.length);
+PickedPhoto photo([String name = 'IMG_2031.jpg']) =>
+    PickedPhoto(path: '/cache/image_picker/$name', name: name, size: _jpeg.length);
 
 Future<PreparedImage> instantly(Uint8List input) async => PreparedImage(bytes: input, width: 8, height: 8);
 
@@ -126,11 +127,13 @@ Future<void> focusField(WidgetTester tester) async {
 Future<void> attach(WidgetTester tester, String item) async {
   await tester.tap(attachButton);
   await settle(tester);
-  await tester.tap(find.text(switch (item) {
-    'Photo library' => 'Open the system picker',
-    'Camera' => 'Take a photo',
-    _ => item,
-  }));
+  await tester.tap(
+    find.text(switch (item) {
+      'Photo library' => 'Open the system picker',
+      'Camera' => 'Take a photo',
+      _ => item,
+    }),
+  );
   await settle(tester);
   await settle(tester);
 }
@@ -200,26 +203,33 @@ void main() {
       expect(find.textContaining('Goes into the turn'), findsNothing);
     });
 
-    testWidgets('on an agent that steers, Send puts the message into the turn and a hold on Send sends it after the turn', (tester) async {
-      final session = working()..steerable = true;
-      await pump(tester, session);
-      final send = find.byKey(const ValueKey('send'));
+    testWidgets(
+      'on an agent that steers, Send puts the message into the turn and a hold on Send sends it after the turn',
+      (tester) async {
+        final session = working()..steerable = true;
+        await pump(tester, session);
+        final send = find.byKey(const ValueKey('send'));
 
-      await tester.enterText(field, 'use the other table');
-      await tester.pump();
-      await tester.tap(send);
-      await settle(tester);
-      expect(session.steeredBlocks, hasLength(1), reason: 'a tap steers');
-      expect(session.queued, isEmpty);
+        await tester.enterText(field, 'use the other table');
+        await tester.pump();
+        await tester.tap(send);
+        await settle(tester);
+        expect(session.steeredBlocks, hasLength(1), reason: 'a tap steers');
+        expect(session.queued, isEmpty);
 
-      await tester.enterText(field, 'then update the docs');
-      await tester.pump();
-      await tester.longPress(send);
-      await settle(tester);
-      expect(session.steeredBlocks, hasLength(1), reason: 'a hold does not steer');
-      expect([for (final q in session.queued) q.text], ['then update the docs'], reason: 'it waits on the phone, where it can be edited');
-      expect(tester.widget<TextField>(field).controller!.text, isEmpty);
-    });
+        await tester.enterText(field, 'then update the docs');
+        await tester.pump();
+        await tester.longPress(send);
+        await settle(tester);
+        expect(session.steeredBlocks, hasLength(1), reason: 'a hold does not steer');
+        expect(
+          [for (final q in session.queued) q.text],
+          ['then update the docs'],
+          reason: 'it waits on the phone, where it can be edited',
+        );
+        expect(tester.widget<TextField>(field).controller!.text, isEmpty);
+      },
+    );
 
     testWidgets('nothing is said when the message would go out at once, or the agent is in a terminal', (tester) async {
       final idle = FakeAgentSession();
@@ -293,10 +303,22 @@ void main() {
       expect(find.text('Files are unavailable on this machine'), findsOneWidget);
     });
 
-    testWidgets('is offered to an agent in a terminal, not to a subagent run, and is dimmed while the link is down', (tester) async {
-      await pump(tester, FakeAgentSession()..observed = true..mode = AttachMode.paths);
+    testWidgets('is offered to an agent in a terminal, not to a subagent run, and is dimmed while the link is down', (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        FakeAgentSession()
+          ..observed = true
+          ..mode = AttachMode.paths,
+      );
       expect(attachButton, findsOneWidget);
-      await pump(tester, FakeAgentSession()..observed = true..mode = AttachMode.none);
+      await pump(
+        tester,
+        FakeAgentSession()
+          ..observed = true
+          ..mode = AttachMode.none,
+      );
       expect(attachButton, findsNothing);
 
       final down = FakeAgentSession(link: AgentLink.reconnecting);
@@ -676,39 +698,61 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('a login locked in the Mac\u2019s Keychain asks for a token instead of another sign-in, and copies the token command', (tester) async {
-      final copied = <String>[];
-      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
-        if (call.method == 'Clipboard.setData') copied.add((call.arguments as Map)['text'] as String);
-        return null;
-      });
-      addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
-      final keychain = authNeededFrom(
-        const JsonRpcException(-32000, 'Authentication required'),
-        agentLabel: 'Claude Code',
-        advertised: [
-          {'id': 'claude-login', 'name': 'Log in with Claude', '_meta': {'terminal-auth': {'command': 'claude', 'args': ['/login']}}},
-        ],
-        keychain: true,
-      );
-      await pump(tester, FakeAgentSession()..auth = keychain);
+    testWidgets(
+      'a login locked in the Mac\u2019s Keychain asks for a token instead of another sign-in, and copies the token command',
+      (tester) async {
+        final copied = <String>[];
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+          if (call.method == 'Clipboard.setData') copied.add((call.arguments as Map)['text'] as String);
+          return null;
+        });
+        addTearDown(
+          () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null),
+        );
+        final keychain = authNeededFrom(
+          const JsonRpcException(-32000, 'Authentication required'),
+          agentLabel: 'Claude Code',
+          advertised: [
+            {
+              'id': 'claude-login',
+              'name': 'Log in with Claude',
+              '_meta': {
+                'terminal-auth': {
+                  'command': 'claude',
+                  'args': ['/login'],
+                },
+              },
+            },
+          ],
+          keychain: true,
+        );
+        await pump(tester, FakeAgentSession()..auth = keychain);
 
-      expect(find.text('Claude Code needs a token'), findsOneWidget);
-      expect(find.textContaining('claude setup-token'), findsWidgets);
-      expect(find.textContaining('CLAUDE_CODE_OAUTH_TOKEN'), findsOneWidget);
-      expect(find.textContaining('Log in with Claude'), findsNothing, reason: 'signing in again would store it in the Keychain again');
-      expect(find.text('claude /login'), findsNothing);
-      expect(find.text('Open a terminal on devbox'), findsOneWidget);
+        expect(find.text('Claude Code needs a token'), findsOneWidget);
+        expect(find.textContaining('claude setup-token'), findsWidgets);
+        expect(find.textContaining('CLAUDE_CODE_OAUTH_TOKEN'), findsOneWidget);
+        expect(
+          find.textContaining('Log in with Claude'),
+          findsNothing,
+          reason: 'signing in again would store it in the Keychain again',
+        );
+        expect(find.text('claude /login'), findsNothing);
+        expect(find.text('Open a terminal on devbox'), findsOneWidget);
 
-      await tester.tap(find.text('Copy command'));
-      await settle(tester);
-      expect(copied, ['claude setup-token']);
-    });
+        await tester.tap(find.text('Copy command'));
+        await settle(tester);
+        expect(copied, ['claude setup-token']);
+      },
+    );
 
     testWidgets('the token steps fit 320 px wide at 1.6 text scale', (tester) async {
       tester.platformDispatcher.textScaleFactorTestValue = 1.6;
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-      final keychain = authNeededFrom(const JsonRpcException(-32000, 'Authentication required'), agentLabel: 'Claude Code', keychain: true);
+      final keychain = authNeededFrom(
+        const JsonRpcException(-32000, 'Authentication required'),
+        agentLabel: 'Claude Code',
+        keychain: true,
+      );
       await pump(tester, FakeAgentSession(link: AgentLink.failed)..auth = keychain, size: const Size(320, 640));
       expect(tester.takeException(), isNull);
     });

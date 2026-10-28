@@ -91,10 +91,26 @@ void main() {
       );
       expect(whereLine(agent: 'Claude Code', machine: 'mac', folder: 'api', title: 'Claude Code'), 'mac · api');
       expect(whereLine(agent: 'Codex', machine: 'mac', folder: 'api', showMachine: false), 'Codex · api');
-      expect(whereLine(agent: 'Codex', folder: 'api', workspace: 'api'), 'Codex · api', reason: 'folder equal to workspace: said once');
-      expect(whereLine(agent: 'Codex', folder: 'api', workspace: 'main'), 'Codex · api', reason: 'the folder wins over the workspace');
-      expect(whereLine(agent: 'Codex', workspace: 'infra'), 'Codex · infra', reason: 'workspace only without a folder');
-      expect(whereLine(folder: 'api', title: 'API'), '', reason: 'nothing left to say');
+      expect(
+        whereLine(agent: 'Codex', folder: 'api', workspace: 'api'),
+        'Codex · api',
+        reason: 'folder equal to workspace: said once',
+      );
+      expect(
+        whereLine(agent: 'Codex', folder: 'api', workspace: 'main'),
+        'Codex · api',
+        reason: 'the folder wins over the workspace',
+      );
+      expect(
+        whereLine(agent: 'Codex', workspace: 'infra'),
+        'Codex · infra',
+        reason: 'workspace only without a folder',
+      );
+      expect(
+        whereLine(folder: 'api', title: 'API'),
+        '',
+        reason: 'nothing left to say',
+      );
     });
   });
 }

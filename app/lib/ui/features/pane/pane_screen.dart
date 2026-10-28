@@ -23,7 +23,9 @@ import '../../../data/repositories/terminal_settings.dart';
 import '../../../data/services/dictation.dart';
 import '../../../data/services/image_prep.dart' show PreparedImage, prepareImage;
 import '../../../data/words/agent_names.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../render/terminal/terminal_links.dart';
 import '../../render/terminal/terminal_view.dart';
 import '../agents/agent_navigation.dart';
@@ -204,11 +206,7 @@ class _PaneScreenState extends State<PaneScreen> {
         unawaited(
           openNewAgentSession(
             context,
-            prefill: SessionPrefill(
-              machineId: widget.agent.machineId,
-              folder: pane.cwd ?? '',
-              agent: pane.agent,
-            ),
+            prefill: SessionPrefill(machineId: widget.agent.machineId, folder: pane.cwd ?? '', agent: pane.agent),
           ),
         );
       },
@@ -231,12 +229,8 @@ class _PaneScreenState extends State<PaneScreen> {
         footer: [
           ListenableBuilder(
             listenable: _settings,
-            builder: (context, _) => SwitchRow(
-              title: 'Wrap lines',
-              value: _settings.wrap,
-              enabled: _vm != null,
-              onChanged: _setWrap,
-            ),
+            builder: (context, _) =>
+                SwitchRow(title: 'Wrap lines', value: _settings.wrap, enabled: _vm != null, onChanged: _setWrap),
           ),
         ],
         actions: [
@@ -371,10 +365,9 @@ class CompactScope extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _Compact(
-        compact: MediaQuery.orientationOf(context) == Orientation.landscape &&
-            MediaQuery.viewInsetsOf(context).bottom > 0,
-        child: child,
-      );
+    compact: MediaQuery.orientationOf(context) == Orientation.landscape && MediaQuery.viewInsetsOf(context).bottom > 0,
+    child: child,
+  );
 }
 
 class _Compact extends InheritedWidget {
@@ -387,8 +380,7 @@ class _Compact extends InheritedWidget {
 }
 
 /// Whether the screen shows only the terminal and composer (see [CompactScope]).
-bool compactLayout(BuildContext context) =>
-    context.dependOnInheritedWidgetOfExactType<_Compact>()?.compact ?? false;
+bool compactLayout(BuildContext context) => context.dependOnInheritedWidgetOfExactType<_Compact>()?.compact ?? false;
 
 /// Owns what outlives a rebuild (the composer's text, the keys toggle) and
 /// composes the regions. Every region selects only what it shows, so a
@@ -441,10 +433,10 @@ class _PaneViewState extends State<_PaneView> {
   late final _unknown = UnknownCommandGuard(input: _input, model: _commands);
 
   CatalogCommandSource _newCommandSource(MachineConnection machine) => CatalogCommandSource(
-        agent: () => machine.paneById(_paneId)?.agent,
-        cwd: () => machine.paneById(_paneId)?.cwd,
-        catalog: SlashCatalog(machine.files),
-      );
+    agent: () => machine.paneById(_paneId)?.agent,
+    cwd: () => machine.paneById(_paneId)?.cwd,
+    catalog: SlashCatalog(machine.files),
+  );
 
   @override
   void initState() {
@@ -568,7 +560,11 @@ class _PaneViewState extends State<_PaneView> {
       // The paperclip is gone from a pane that stopped being an agent, but the
       // chips are the person's: they stay, and nothing is typed into a shell.
       if (context.read<MachineConnection>().paneById(_paneId)?.agent == null) {
-        showToast(context, 'This pane no longer runs an agent. Remove the attachments to send the line.', kind: ToastKind.failed);
+        showToast(
+          context,
+          'This pane no longer runs an agent. Remove the attachments to send the line.',
+          kind: ToastKind.failed,
+        );
         Haptics.failed();
         return;
       }
@@ -591,7 +587,10 @@ class _PaneViewState extends State<_PaneView> {
     }
     if (sent) _commands.recordSent(text);
     // A line typed into a shell is a command, not a phrase: only an agent's prompt is learned.
-    if (sent && text.trim().isNotEmpty && mounted && context.read<MachineConnection>().paneById(_paneId)?.agent != null) {
+    if (sent &&
+        text.trim().isNotEmpty &&
+        mounted &&
+        context.read<MachineConnection>().paneById(_paneId)?.agent != null) {
       unawaited(context.read<SentPhrases?>()?.learn(text) ?? Future<void>.value());
     }
     // Leaving mid-send disposes the controller. What was typed while it was in
@@ -602,7 +601,10 @@ class _PaneViewState extends State<_PaneView> {
         _input.clear();
       } else if (now.startsWith(text)) {
         final rest = now.substring(text.length);
-        _input.value = TextEditingValue(text: rest, selection: TextSelection.collapsed(offset: rest.length));
+        _input.value = TextEditingValue(
+          text: rest,
+          selection: TextSelection.collapsed(offset: rest.length),
+        );
       }
     }
   }
@@ -611,11 +613,7 @@ class _PaneViewState extends State<_PaneView> {
   /// do, in one toast. Hearing nothing is not a failure.
   void _dictationProblem(DictationProblem problem) {
     if (!mounted) return;
-    showToast(
-      context,
-      problem.message,
-      kind: problem == DictationProblem.silence ? ToastKind.info : ToastKind.failed,
-    );
+    showToast(context, problem.message, kind: problem == DictationProblem.silence ? ToastKind.info : ToastKind.failed);
   }
 
   void _retry() {
@@ -634,68 +632,55 @@ class _PaneViewState extends State<_PaneView> {
       case TerminalLinkKind.url:
         unawaited(showLinkSheet(context, link.target, machine: machine));
       case TerminalLinkKind.path:
-        unawaited(
-          openRemoteFile(
-            context,
-            machine,
-            link.target,
-            cwd: machine.paneById(_paneId)?.cwd,
-            line: link.line,
-          ),
-        );
+        unawaited(openRemoteFile(context, machine, link.target, cwd: machine.paneById(_paneId)?.cwd, line: link.line));
     }
   }
 
   @override
   Widget build(BuildContext context) => _PaneLayout(
-        keysOpen: _keysOpen,
-        onToggleKeys: () => setState(() => _keysOpen = !_keysOpen),
-        banner: _Banner(paneId: _paneId, onRetry: _retry),
-        // A table wider than the view, or a terminal wider than the phone
-        // with wrap off, scrolls sideways: that swipe is theirs, not a step
-        // to the next agent.
-        terminal: AgentSwipe(
-          agent: widget.agent,
-          child: _TerminalPanel(paneId: _paneId, onLinkTap: _openLink),
+    keysOpen: _keysOpen,
+    onToggleKeys: () => setState(() => _keysOpen = !_keysOpen),
+    banner: _Banner(paneId: _paneId, onRetry: _retry),
+    // A table wider than the view, or a terminal wider than the phone
+    // with wrap off, scrolls sideways: that swipe is theirs, not a step
+    // to the next agent.
+    terminal: AgentSwipe(
+      agent: widget.agent,
+      child: _TerminalPanel(paneId: _paneId, onLinkTap: _openLink),
+    ),
+    palette: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        UnknownCommandNote(guard: _unknown, onSend: _submit),
+        Flexible(
+          child: CommandPalette(
+            input: _input,
+            model: _commands,
+            onPick: (command) => fillCommand(_input, _focus, command),
+          ),
         ),
-        palette: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            UnknownCommandNote(guard: _unknown, onSend: _submit),
-            Flexible(
-              child: CommandPalette(
-                input: _input,
-                model: _commands,
-                onPick: (command) => fillCommand(_input, _focus, command),
-              ),
-            ),
-          ],
-        ),
-        dock: AnswerDock(paneId: _paneId, asking: _dockAsking),
-        keys: QuickKeys(
-          paneId: _paneId,
-          modifiers: _mods,
-          onKeys: _pressKeys,
-          onInsert: _insert,
-        ),
-        phrases: QuickPhrasesRow(
-          input: _input,
-          focus: _focus,
-          padding: const EdgeInsets.symmetric(horizontal: Gap.lg),
-        ),
-        chips: AttachmentChips(attachments: _attachments),
-        composer: _Composer(
-          paneId: _paneId,
-          controller: _input,
-          focusNode: _focus,
-          typing: _typing,
-          onSubmit: _submit,
-          dictation: _dictation,
-          attachments: _attachments,
-          onAttach: _openAttach,
-        ),
-      );
+      ],
+    ),
+    dock: AnswerDock(paneId: _paneId, asking: _dockAsking),
+    keys: QuickKeys(paneId: _paneId, modifiers: _mods, onKeys: _pressKeys, onInsert: _insert),
+    phrases: QuickPhrasesRow(
+      input: _input,
+      focus: _focus,
+      padding: const EdgeInsets.symmetric(horizontal: Gap.lg),
+    ),
+    chips: AttachmentChips(attachments: _attachments),
+    composer: _Composer(
+      paneId: _paneId,
+      controller: _input,
+      focusNode: _focus,
+      typing: _typing,
+      onSubmit: _submit,
+      dictation: _dictation,
+      attachments: _attachments,
+      onAttach: _openAttach,
+    ),
+  );
 }
 
 /// Stacks the regions under the screen's bar. With the keyboard up in
@@ -739,62 +724,61 @@ class _PaneLayout extends StatelessWidget {
     // would leave the terminal a few rows.
     final short = AppTopBar.isShort(context);
     return Column(
-        children: [
-          banner,
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                Gap.lg,
-                compact ? top + Gap.xs : Gap.xs,
-                Gap.lg,
-                compact ? Gap.xs : Gap.sm,
-              ),
-              child: terminal,
-            ),
+      children: [
+        banner,
+        Expanded(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(Gap.lg, compact ? top + Gap.xs : Gap.xs, Gap.lg, compact ? Gap.xs : Gap.sm),
+            child: terminal,
           ),
-          // Toasts stand above all of this (the keys and the composer), not
-          // over it.
-          ToastShelf(
-            aboveKeyboard: true,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-          if (!compact) palette,
-          if (!compact && !short) dock,
-          if (!compact || keysOpen) keys,
-          if (!compact && !short) phrases,
-          if (!compact) Padding(padding: const EdgeInsets.symmetric(horizontal: Gap.lg), child: chips),
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: compact ? Gap.xs : Gap.sm),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  if (compact)
-                    SizedBox(
-                      height: composerMinHeight,
-                      child: Center(
-                        child: Padding(
-                          padding: const EdgeInsets.only(right: Gap.sm),
-                          child: CircleButton(
-                            icon: LucideIcons.keyboard,
-                            tooltip: keysOpen ? 'Hide keys' : 'Show keys',
-                            active: keysOpen,
-                            onPressed: onToggleKeys,
+        ),
+        // Toasts stand above all of this (the keys and the composer), not
+        // over it.
+        ToastShelf(
+          aboveKeyboard: true,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!compact) palette,
+              if (!compact && !short) dock,
+              if (!compact || keysOpen) keys,
+              if (!compact && !short) phrases,
+              if (!compact)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: Gap.lg),
+                  child: chips,
+                ),
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: compact ? Gap.xs : Gap.sm),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      if (compact)
+                        SizedBox(
+                          height: composerMinHeight,
+                          child: Center(
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: Gap.sm),
+                              child: CircleButton(
+                                icon: LucideIcons.keyboard,
+                                tooltip: keysOpen ? 'Hide keys' : 'Show keys',
+                                active: keysOpen,
+                                onPressed: onToggleKeys,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                  Expanded(child: composer),
-                ],
+                      Expanded(child: composer),
+                    ],
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
-              ],
-            ),
-          ),
-        ],
+        ),
+      ],
     );
   }
 }
@@ -823,19 +807,14 @@ class _TerminalPanel extends StatelessWidget {
           color: palette.background,
           child: Builder(
             builder: (context) {
-              final (fontSize, wrap) = context.select<TerminalSettings, (double, bool)>(
-                (s) => (s.fontSize, s.wrap),
-              );
+              final (fontSize, wrap) = context.select<TerminalSettings, (double, bool)>((s) => (s.fontSize, s.wrap));
               // What it shows is a pane that is gone, or a link or read that
               // is down: dimmed, not live. A closed pane is not "stale".
-              final machine = context.select<
-                  MachineConnection,
-                  ({bool closed, bool linkDown, bool blocked})>(
+              final machine = context.select<MachineConnection, ({bool closed, bool linkDown, bool blocked})>(
                 (m) => (
                   closed: m.isLive && m.paneById(paneId) == null,
                   linkDown: !m.isLive,
-                  blocked: m.isLive &&
-                      m.paneById(paneId)?.status == AgentStatus.blocked,
+                  blocked: m.isLive && m.paneById(paneId)?.status == AgentStatus.blocked,
                 ),
               );
               final read = context.select<PaneViewModel, ({bool failed, bool streaming})>(
@@ -845,9 +824,7 @@ class _TerminalPanel extends StatelessWidget {
               final stale = !closed && (read.failed || machine.linkDown);
               final settings = context.read<TerminalSettings>();
               final vm = context.read<PaneViewModel>();
-              final content = context.select<
-                  PaneViewModel,
-                  ({List<String> history, String text, TerminalTop top})>(
+              final content = context.select<PaneViewModel, ({List<String> history, String text, TerminalTop top})>(
                 (v) => (history: v.history, text: v.text, top: v.top),
               );
               return Stack(
@@ -859,10 +836,7 @@ class _TerminalPanel extends StatelessWidget {
                     top: content.top,
                     blocked: machine.blocked,
                     onLinkTap: onLinkTap,
-                    onScrollChanged: (s) => vm.viewChanged(
-                      nearTop: s.nearTop,
-                      following: s.following,
-                    ),
+                    onScrollChanged: (s) => vm.viewChanged(nearTop: s.nearTop, following: s.following),
                     // design-lint: allow(raw-type) the terminal's own font size, which the person sets
                     fontSize: fontSize,
                     wrap: wrap,
@@ -901,13 +875,7 @@ class _TerminalPanel extends StatelessWidget {
 /// What is wrong, if anything: the link, a pane that is gone, or the last
 /// read or send.
 class _Problem {
-  const _Problem({
-    required this.title,
-    this.detail,
-    required this.color,
-    required this.icon,
-    required this.retry,
-  });
+  const _Problem({required this.title, this.detail, required this.color, required this.icon, required this.retry});
 
   final String title;
   final String? detail;
@@ -964,12 +932,7 @@ class _BannerState extends State<_Banner> {
         retry: false,
       );
     } else if (readError != null) {
-      problem = _Problem(
-        title: readError,
-        color: ds.danger,
-        icon: LucideIcons.circleAlert,
-        retry: true,
-      );
+      problem = _Problem(title: readError, color: ds.danger, icon: LucideIcons.circleAlert, retry: true);
     } else {
       problem = null;
     }
@@ -988,12 +951,7 @@ class _BannerState extends State<_Banner> {
                 title: shown.title,
                 detail: shown.detail,
                 action: shown.retry
-                    ? AppButton(
-                        label: 'Retry',
-                        kind: AppButtonKind.secondary,
-                        compact: true,
-                        onPressed: widget.onRetry,
-                      )
+                    ? AppButton(label: 'Retry', kind: AppButtonKind.secondary, compact: true, onPressed: widget.onRetry)
                     : null,
               ),
             ),
@@ -1034,12 +992,10 @@ class _Composer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (state, open, agent) = context.select<MachineConnection, (LinkState, bool, String?)>(
-      (m) {
-        final pane = m.paneById(paneId);
-        return (m.state, pane != null, pane?.agent);
-      },
-    );
+    final (state, open, agent) = context.select<MachineConnection, (LinkState, bool, String?)>((m) {
+      final pane = m.paneById(paneId);
+      return (m.state, pane != null, pane?.agent);
+    });
     final sending = context.select<PaneViewModel, bool>((v) => v.sending);
     final enabled = state == LinkState.online && open;
     final hint = composerHint(

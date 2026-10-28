@@ -10,7 +10,9 @@ import '../../../data/repositories/attention_set.dart';
 import '../../../data/words/elapsed.dart';
 import '../../../data/words/place_name.dart';
 import '../../../data/words/where_line.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../support/step_clock.dart';
 import 'agent_navigation.dart';
 import 'agents_grouping.dart' show boardStatus, timeInState, timeInStateWords;
@@ -21,8 +23,7 @@ import 'swipe_review.dart';
 /// A finished session that a swipe or "Mark all reviewed" may mark seen: done
 /// on the board and reachable (`AttentionSet.sessionReachable`: a session
 /// whose machine or link is down shows what it knew and is not acted on).
-bool sessionReviewable(AgentSessionView s) =>
-    AttentionSet.sessionToReview(s) && AttentionSet.sessionReachable(s);
+bool sessionReviewable(AgentSessionView s) => AttentionSet.sessionToReview(s) && AttentionSet.sessionReachable(s);
 
 /// What the oldest waiting request of [s] is about, on one line: the command
 /// of a permission (else the tool's title), the message of a question. Null
@@ -31,9 +32,8 @@ bool sessionReviewable(AgentSessionView s) =>
 String? blockedSummary(AgentSessionView s) {
   final line = switch (s.state.pending.firstOrNull) {
     PendingPermission(:final request) => _permissionLine(request),
-    PendingQuestion(:final request) => request.message.isNotEmpty
-        ? request.message
-        : (request.schema?.title ?? 'A question for you'),
+    PendingQuestion(:final request) =>
+      request.message.isNotEmpty ? request.message : (request.schema?.title ?? 'A question for you'),
     null => null,
   };
   if (line == null) return null;
@@ -53,11 +53,11 @@ String _permissionLine(PermissionRequest r) {
 
 /// `Claude Code · studio-mac · herdr-mobile`.
 String sessionMeta(AgentSessionView s) => whereLine(
-      agent: s.agentLabel,
-      machine: s.machine.profile.label,
-      folder: placeName(s.machine.places, s.cwd),
-      title: s.title,
-    );
+  agent: s.agentLabel,
+  machine: s.machine.profile.label,
+  folder: placeName(s.machine.places, s.cwd),
+  title: s.title,
+);
 
 /// "3m", "12m", "idle · jobs 14m" (the turn is over and the agent waits on
 /// background work), "reconnecting": the time in the phase while the link is
@@ -173,7 +173,13 @@ class AgentSessionRow extends StatelessWidget {
       ),
     );
     if (!divider) return row;
-    return Column(mainAxisSize: MainAxisSize.min, children: [row, Hairline(indent: ListRow.textIndent())]);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        row,
+        Hairline(indent: ListRow.textIndent()),
+      ],
+    );
   }
 }
 

@@ -48,7 +48,8 @@ class _CountingMachine extends MachineConnection {
 }
 
 /// omp's tool approval for bash as it draws it, asking for [command].
-String _approval(String command) => fixtureScreen('approval-bash').replaceAll('echo hello from omq && date -u +%Y', command);
+String _approval(String command) =>
+    fixtureScreen('approval-bash').replaceAll('echo hello from omq && date -u +%Y', command);
 
 const _working = '  ⠋ Working… (esc to interrupt)\n';
 
@@ -143,7 +144,8 @@ void main() {
       return session;
     }
 
-    String shown(ObservedAgentSession s) => describePermission((s.state.pending.single as PendingPermission).request).subject;
+    String shown(ObservedAgentSession s) =>
+        describePermission((s.state.pending.single as PendingPermission).request).subject;
 
     test('with two calls open, the one the screen asks about, not the latest one', () async {
       final session = await asking('rm -rf /srv/data');
@@ -161,7 +163,12 @@ void main() {
     });
 
     test('a longer command in the log does not pass for a shorter one on the screen', () async {
-      final session = await asking('ls', lines: _log([toolCallLine('a1', 'c1', 'bash', {'command': 'ls; rm -rf /srv/data'})]));
+      final session = await asking(
+        'ls',
+        lines: _log([
+          toolCallLine('a1', 'c1', 'bash', {'command': 'ls; rm -rf /srv/data'}),
+        ]),
+      );
       expect(shown(session), 'ls');
     });
   });
@@ -169,7 +176,9 @@ void main() {
   group('an answer is checked against the terminal before a key is sent', () {
     Future<(ObservedRig, ObservedAgentSession, Object)> blocked() async {
       final (rig, session) = await _open(
-        _log([toolCallLine('a1', 'c1', 'bash', {'command': 'ls -la'})]),
+        _log([
+          toolCallLine('a1', 'c1', 'bash', {'command': 'ls -la'}),
+        ]),
         status: 'blocked',
         screen: _approval('ls -la'),
       );
@@ -222,11 +231,19 @@ void main() {
   // so nothing but the screen says the agent waits. The log of a real plan-mode
   // turn (plan_proposal.jsonl) has the plan the review is about.
   group('the plan review of a pane herdr calls done', () {
-    final planLog = File('test/fixtures/omp_logs/plan_proposal.jsonl').readAsLinesSync().where((l) => l.isNotEmpty).toList();
+    final planLog = File('test/fixtures/omp_logs/plan_proposal.jsonl')
+        .readAsLinesSync()
+        .where((l) => l.isNotEmpty)
+        .toList();
     final waits = {'omp': ompWaitsOnPlanReview};
 
     Future<(ObservedRig, ObservedAgentSession)> reviewing() async {
-      final (rig, session) = await _open(planLog, status: 'done', screen: fixtureScreen('plan-review'), screenWaits: waits);
+      final (rig, session) = await _open(
+        planLog,
+        status: 'done',
+        screen: fixtureScreen('plan-review'),
+        screenWaits: waits,
+      );
       await eventually(() => session.state.pending.isNotEmpty, reason: 'the review is a request');
       return (rig, session);
     }
@@ -247,14 +264,25 @@ void main() {
     });
 
     test('the plan reaches the card when the log delivers it after the screen was understood', () async {
-      final (rig, session) = await _open(planLog.take(3).toList(), status: 'done', screen: fixtureScreen('plan-review'), screenWaits: waits);
+      final (rig, session) = await _open(
+        planLog.take(3).toList(),
+        status: 'done',
+        screen: fixtureScreen('plan-review'),
+        screenWaits: waits,
+      );
       await eventually(() => session.state.pending.isNotEmpty, reason: 'the review is a request');
       final first = session.state.pending.single.id;
       expect(permissionEvidence((session.state.pending.single as PendingPermission).request).planMarkdown, isNull);
 
       rig.source.push(planLog.skip(3).toList());
-      await eventually(() => session.state.pending.single.id != first, reason: 'the request is made again with the plan');
-      expect(permissionEvidence((session.state.pending.single as PendingPermission).request).planMarkdown, contains('## Verification'));
+      await eventually(
+        () => session.state.pending.single.id != first,
+        reason: 'the request is made again with the plan',
+      );
+      expect(
+        permissionEvidence((session.state.pending.single as PendingPermission).request).planMarkdown,
+        contains('## Verification'),
+      );
     });
 
     test('is no request once the review is gone from the screen', () async {
@@ -293,7 +321,11 @@ void main() {
       expect(ok, isTrue);
       expect(rig.sent('pane.send_input'), [
         {'pane_id': 'w1:p1', 'text': '/h/.herdr-mobile/inbox/ab/x.jpg'},
-        {'pane_id': 'w1:p1', 'text': ' look', 'keys': ['enter']},
+        {
+          'pane_id': 'w1:p1',
+          'text': ' look',
+          'keys': ['enter'],
+        },
       ]);
     });
 
@@ -304,7 +336,11 @@ void main() {
         const ResourceLinkBlock(uri: 'file:///w/lib/a.dart', name: 'lib/a.dart'),
       ]);
       expect(rig.sent('pane.send_input'), [
-        {'pane_id': 'w1:p1', 'text': 'read @lib/a.dart', 'keys': ['enter']},
+        {
+          'pane_id': 'w1:p1',
+          'text': 'read @lib/a.dart',
+          'keys': ['enter'],
+        },
       ]);
     });
 
@@ -312,7 +348,11 @@ void main() {
       final (rig, session) = await _open(_log(const []), status: 'idle', screen: '');
       expect(await session.sendBlocks([const TextBlock('hello')]), isTrue);
       expect(rig.sent('pane.send_input'), [
-        {'pane_id': 'w1:p1', 'text': 'hello', 'keys': ['enter']},
+        {
+          'pane_id': 'w1:p1',
+          'text': 'hello',
+          'keys': ['enter'],
+        },
       ]);
     });
 

@@ -14,7 +14,6 @@ import 'package:herdr_mobile/data/services/keeper_command.dart';
 
 import 'support/transcript_fingerprint.dart';
 
-
 // Runs the real keeper script (python3) `follow` against files in a temp HOME,
 // the way an SSH server would run it (`sh -c`).
 
@@ -108,19 +107,27 @@ class _Rec {
 
 class _Follow {
   _Follow(this.process) {
-    process.stdout.transform(utf8.decoder).transform(const LineSplitter()).listen(
-      (l) {
-        final r = _Rec(l);
-        // The caught-up and head records are notes about the stream, not
-        // records of the log.
-        (r.isCaughtUp ? caughtUp : r.isHead ? heads : _records).add(r);
-        _wake();
-      },
-      onDone: () {
-        _done = true;
-        _wake();
-      },
-    );
+    process.stdout
+        .transform(utf8.decoder)
+        .transform(const LineSplitter())
+        .listen(
+          (l) {
+            final r = _Rec(l);
+            // The caught-up and head records are notes about the stream, not
+            // records of the log.
+            (r.isCaughtUp
+                    ? caughtUp
+                    : r.isHead
+                    ? heads
+                    : _records)
+                .add(r);
+            _wake();
+          },
+          onDone: () {
+            _done = true;
+            _wake();
+          },
+        );
     process.stderr.transform(utf8.decoder).listen(_err.write);
   }
 
@@ -213,12 +220,13 @@ class _Host {
 
   static Future<_Host> create() async {
     final home = Directory.systemTemp.createTempSync('follow_test_');
-    final host = _Host(home, {
-      'HOME': home.path,
-      'PATH': '${_pythonDir()}:/usr/bin:/bin',
-    });
-    final p = await Process.start('/bin/sh', ['-c', keeperInstallCommand()],
-        environment: host._env, includeParentEnvironment: false);
+    final host = _Host(home, {'HOME': home.path, 'PATH': '${_pythonDir()}:/usr/bin:/bin'});
+    final p = await Process.start(
+      '/bin/sh',
+      ['-c', keeperInstallCommand()],
+      environment: host._env,
+      includeParentEnvironment: false,
+    );
     p.stdin.write(keeperInstallPayload());
     await p.stdin.close();
     final out = await utf8.decodeStream(p.stdout);
@@ -243,16 +251,26 @@ class _Host {
   }
 
   Future<_Follow> startCommand(String command, {Map<String, String> env = const {}}) async {
-    final p = await Process.start('/bin/sh', ['-c', command],
-        environment: {..._env, ...env}, includeParentEnvironment: false, workingDirectory: home.path);
+    final p = await Process.start(
+      '/bin/sh',
+      ['-c', command],
+      environment: {..._env, ...env},
+      includeParentEnvironment: false,
+      workingDirectory: home.path,
+    );
     _started.add(p);
     return _Follow(p);
   }
 
   /// Runs a follow that is expected to end by itself.
   Future<({int code, String out, String err})> runToEnd(String command) async {
-    final p = await Process.start('/bin/sh', ['-c', command],
-        environment: _env, includeParentEnvironment: false, workingDirectory: home.path);
+    final p = await Process.start(
+      '/bin/sh',
+      ['-c', command],
+      environment: _env,
+      includeParentEnvironment: false,
+      workingDirectory: home.path,
+    );
     await p.stdin.close();
     final out = utf8.decodeStream(p.stdout);
     final err = utf8.decodeStream(p.stderr);
@@ -543,31 +561,35 @@ void main() {
       await run.stop();
     });
 
-    test('the poll backs off to 1 s after 60 s and 2 s after 10 min without growth, and any growth resets it', () async {
-      final f = File(host.path());
-      _write(f, [_json(1)]);
-      final r = await host.runToEnd(host.harness(f.path, 'backoff'));
-      expect(r.code, 0, reason: r.err);
-      final result = jsonDecode(r.out.trim().split('\n').last) as Map;
-      final waits = (result['waits'] as List).cast<num>();
-      expect(waits.take(240).toSet(), {0.25});
-      expect(waits.skip(240).take(540).toSet(), {1.0});
-      expect(waits[780], 2.0);
-      expect(waits.skip(780).take(20).toSet(), {2.0}); // up to the append after wait 800
-      expect(waits.skip(800).take(240).toSet(), {0.25}, reason: 'growth resets to the base interval');
-      expect(waits[1040], 1.0);
-      // A quiet file is one stat per wait, no read.
-      final reads = (result['reads'] as List).cast<int>();
-      expect(reads[1] - reads[0], 0, reason: 'no read between the first and the 799th quiet wait');
-      expect(reads[2], greaterThan(reads[1]), reason: 'the append was read');
-    });
+    test(
+      'the poll backs off to 1 s after 60 s and 2 s after 10 min without growth, and any growth resets it',
+      () async {
+        final f = File(host.path());
+        _write(f, [_json(1)]);
+        final r = await host.runToEnd(host.harness(f.path, 'backoff'));
+        expect(r.code, 0, reason: r.err);
+        final result = jsonDecode(r.out.trim().split('\n').last) as Map;
+        final waits = (result['waits'] as List).cast<num>();
+        expect(waits.take(240).toSet(), {0.25});
+        expect(waits.skip(240).take(540).toSet(), {1.0});
+        expect(waits[780], 2.0);
+        expect(waits.skip(780).take(20).toSet(), {2.0}); // up to the append after wait 800
+        expect(waits.skip(800).take(240).toSet(), {0.25}, reason: 'growth resets to the base interval');
+        expect(waits[1040], 1.0);
+        // A quiet file is one stat per wait, no read.
+        final reads = (result['reads'] as List).cast<int>();
+        expect(reads[1] - reads[0], 0, reason: 'no read between the first and the 799th quiet wait');
+        expect(reads[2], greaterThan(reads[1]), reason: 'the append was read');
+      },
+    );
 
     test('--idle-exit counts quiet time on the same clock, from the last growth', () async {
       final f = File(host.path());
       _write(f, [_json(1)]);
       final quiet = jsonDecode((await host.runToEnd(host.harness(f.path, 'idle'))).out.trim().split('\n').last) as Map;
       expect(quiet['total'], 300.0);
-      final grew = jsonDecode((await host.runToEnd(host.harness(f.path, 'idle-grow'))).out.trim().split('\n').last) as Map;
+      final grew =
+          jsonDecode((await host.runToEnd(host.harness(f.path, 'idle-grow'))).out.trim().split('\n').last) as Map;
       expect(grew['total'], 325.0);
     });
 
@@ -796,7 +818,12 @@ void main() {
           'content': [
             {'type': 'thinking', 'thinking': 'secret ' * 500, 'thinkingSignature': 'sig' * 300},
             {'type': 'text', 'text': 'Open http://localhost:8765/synth'},
-            {'type': 'toolCall', 'id': 'c1', 'name': 'bash', 'arguments': {'command': 'npm run dev', 'blob': 'y' * 30000}},
+            {
+              'type': 'toolCall',
+              'id': 'c1',
+              'name': 'bash',
+              'arguments': {'command': 'npm run dev', 'blob': 'y' * 30000},
+            },
           ],
         },
       });
@@ -807,7 +834,10 @@ void main() {
         _json(7),
       ]);
       final r = await bounded(f, until: offsets.last, digest: true);
-      expect(r.lines.map((l) => l.$1), [offsets[1], offsets[3]], reason: 'each kept line says where it ends in the file');
+      expect(r.lines.map((l) => l.$1), [
+        offsets[1],
+        offsets[3],
+      ], reason: 'each kept line says where it ends in the file');
       final content = (r.lines.first.$2['message'] as Map)['content'] as List;
       expect(content[0], {'type': 'thinking', 'thinking': ''});
       expect(content[1]['text'], 'Open http://localhost:8765/synth');
@@ -906,7 +936,10 @@ void main() {
     });
 
     test('the command is short and rejects what cannot be a path', () {
-      expect(keeperFollowCommand('/home/u/.omp/agent/sessions/${'x' * 200}/a.jsonl', from: 123456789).length, lessThan(1024));
+      expect(
+        keeperFollowCommand('/home/u/.omp/agent/sessions/${'x' * 200}/a.jsonl', from: 123456789).length,
+        lessThan(1024),
+      );
       for (final bad in ['', 'a\nb.jsonl', 'a\u0000b.jsonl', 'a\rb.jsonl', 'x' * 5000, 'a\u007fb']) {
         expect(() => keeperFollowCommand(bad), throwsArgumentError, reason: bad.length > 50 ? 'long' : bad);
       }
@@ -950,37 +983,56 @@ void main() {
       return base64.decode(text);
     }
 
-    test('the bytes of a Claude picture, an omp-style one and a data URI come back whole, whatever lines come before', () async {
-      final f = File(host.path());
-      final lines = [
-        _json(1, pad: 'héllo 日本語 ' * 30),
-        jsonEncode({
-          'type': 'user',
-          'message': {
-            'content': [
-              {'type': 'image', 'source': {'type': 'base64', 'media_type': 'image/png', 'data': b64}},
-              {'type': 'text', 'text': 'look'},
-            ],
-          },
-        }),
-        jsonEncode({'message': {'content': [{'type': 'image', 'mimeType': 'image/jpeg', 'data': b64}]}}),
-        jsonEncode({'type': 'image', 'image_url': 'data:image/png;base64,$b64'}),
-        jsonEncode({'details': {'blob': 'data:image/png;base64,$b64'}}),
-      ];
-      final found = await refs(f, lines);
-      expect(found, hasLength(4));
-      final offsets = _write(f, lines);
-      expect([for (final r in found) r.start], [offsets[0], offsets[1], offsets[2], offsets[3]]);
-      for (final r in found) {
-        expect(await fetched(f.path, r.start, r.hash), bytes);
-      }
-    });
+    test(
+      'the bytes of a Claude picture, an omp-style one and a data URI come back whole, whatever lines come before',
+      () async {
+        final f = File(host.path());
+        final lines = [
+          _json(1, pad: 'héllo 日本語 ' * 30),
+          jsonEncode({
+            'type': 'user',
+            'message': {
+              'content': [
+                {
+                  'type': 'image',
+                  'source': {'type': 'base64', 'media_type': 'image/png', 'data': b64},
+                },
+                {'type': 'text', 'text': 'look'},
+              ],
+            },
+          }),
+          jsonEncode({
+            'message': {
+              'content': [
+                {'type': 'image', 'mimeType': 'image/jpeg', 'data': b64},
+              ],
+            },
+          }),
+          jsonEncode({'type': 'image', 'image_url': 'data:image/png;base64,$b64'}),
+          jsonEncode({
+            'details': {'blob': 'data:image/png;base64,$b64'},
+          }),
+        ];
+        final found = await refs(f, lines);
+        expect(found, hasLength(4));
+        final offsets = _write(f, lines);
+        expect([for (final r in found) r.start], [offsets[0], offsets[1], offsets[2], offsets[3]]);
+        for (final r in found) {
+          expect(await fetched(f.path, r.start, r.hash), bytes);
+        }
+      },
+    );
 
     test('two pictures in one line are told apart by their hash', () async {
       final f = File(host.path());
       final other = base64.encode(List.generate(2000, (i) => (i * 3) % 251));
       final found = await refs(f, [
-        jsonEncode({'content': [{'type': 'image', 'data': b64}, {'type': 'image', 'data': other}]}),
+        jsonEncode({
+          'content': [
+            {'type': 'image', 'data': b64},
+            {'type': 'image', 'data': other},
+          ],
+        }),
       ]);
       expect(found, hasLength(2));
       expect(await fetched(f.path, found[0].start, found[0].hash), bytes);
@@ -989,8 +1041,12 @@ void main() {
 
     test('a payload with line breaks does not break the records', () async {
       final f = File(host.path());
-      final wrapped = [for (var i = 0; i < b64.length; i += 76) b64.substring(i, i + 76 > b64.length ? b64.length : i + 76)].join('\n');
-      final found = await refs(f, [jsonEncode({'type': 'image', 'data': wrapped})]);
+      final wrapped = [
+        for (var i = 0; i < b64.length; i += 76) b64.substring(i, i + 76 > b64.length ? b64.length : i + 76),
+      ].join('\n');
+      final found = await refs(f, [
+        jsonEncode({'type': 'image', 'data': wrapped}),
+      ]);
       expect(await fetched(f.path, found.single.start, found.single.hash), bytes);
     });
 
@@ -1004,7 +1060,10 @@ void main() {
 
     test('a wrong hash, a start that is not a line start and a start past the end are gone', () async {
       final f = File(host.path());
-      final found = await refs(f, [_json(1), jsonEncode({'type': 'image', 'data': b64})]);
+      final found = await refs(f, [
+        _json(1),
+        jsonEncode({'type': 'image', 'data': b64}),
+      ]);
       final ref = found.single;
       await gone(f.path, ref.start, '0123456789abcdef', why: 'not in the log');
       await gone(f.path, ref.start + 3, ref.hash, why: 'changed');
@@ -1015,7 +1074,9 @@ void main() {
 
     test('a log that was rewritten under the ref, and a line that is not JSON, are gone', () async {
       final f = File(host.path());
-      final ref = (await refs(f, [jsonEncode({'type': 'image', 'data': b64})])).single;
+      final ref = (await refs(f, [
+        jsonEncode({'type': 'image', 'data': b64}),
+      ])).single;
       f.writeAsStringSync('not json at all\n');
       await gone(f.path, ref.start, ref.hash, why: 'not in the log');
       f.writeAsStringSync('${_json(1)}\n${jsonEncode({'type': 'image', 'data': b64.substring(0, 5000)})}\n');
@@ -1031,7 +1092,9 @@ void main() {
 
     test('what the person reads for a log that is gone has no host path in it', () async {
       final f = File(host.path());
-      final ref = (await refs(f, [jsonEncode({'type': 'image', 'data': b64})])).single;
+      final ref = (await refs(f, [
+        jsonEncode({'type': 'image', 'data': b64}),
+      ])).single;
       f.deleteSync();
       final r = await host.runToEnd(keeperBlobCommand(f.path, start: ref.start, hash: ref.hash));
       expect(r.code, 66);
@@ -1048,7 +1111,10 @@ void main() {
     test('a picture in a line longer than follow sends has no ref at all, so none is fetched', () async {
       final f = File(host.path());
       final huge = base64.encode(List.filled(5 * 1024 * 1024, 7));
-      _write(f, [jsonEncode({'type': 'image', 'data': huge}), _json(2)]);
+      _write(f, [
+        jsonEncode({'type': 'image', 'data': huge}),
+        _json(2),
+      ]);
       final run = await host.follow(f.path, from: 0);
       final got = await run.take(2);
       await run.stop();
@@ -1060,20 +1126,27 @@ void main() {
       final f = File(host.path());
       final found = await refs(f, [
         jsonEncode({'type': 'image', 'image_url': 'data:image/png;base64,$b64'}),
-        jsonEncode({'details': {'blob': 'data:image/jpeg;base64,$b64'}}),
+        jsonEncode({
+          'details': {'blob': 'data:image/jpeg;base64,$b64'},
+        }),
       ]);
       expect(found, hasLength(2));
       final run = await host.follow(f.path, from: 0);
       final got = await run.take(2);
       await run.stop();
-      expect(got[0].body, contains('data:image/png;base64,[${'data:image/png;base64,'.length + b64.length} bytes of data not sent; ref='));
+      expect(
+        got[0].body,
+        contains('data:image/png;base64,[${'data:image/png;base64,'.length + b64.length} bytes of data not sent; ref='),
+      );
       expect(got[1].body, contains('data:image/jpeg;base64,['));
     });
 
     test('a payload that is not text a picture can be made of is refused', () async {
       final f = File(host.path());
       final odd = 'é' * 400;
-      final ref = (await refs(f, [jsonEncode({'type': 'image', 'data': odd})])).single;
+      final ref = (await refs(f, [
+        jsonEncode({'type': 'image', 'data': odd}),
+      ])).single;
       await gone(f.path, ref.start, ref.hash, why: 'not a picture');
     });
 
@@ -1081,7 +1154,9 @@ void main() {
       final marker = '${host.home.path}/blob_pwned';
       final dir = Directory('${host.home.path}/it\'s a "dir" \$(touch blob_pwned) `touch blob_pwned`; x')..createSync();
       final f = File('${dir.path}/we ird\\ \$HOME.jsonl');
-      final found = await refs(f, [jsonEncode({'type': 'image', 'data': b64})]);
+      final found = await refs(f, [
+        jsonEncode({'type': 'image', 'data': b64}),
+      ]);
       expect(await fetched(f.path, found.single.start, found.single.hash), bytes);
       for (final evil in ["x'; touch $marker; '.jsonl", '\$(touch $marker).jsonl', '`touch $marker`.jsonl']) {
         await gone('${host.home.path}/$evil', 0, '0123456789abcdef');
@@ -1102,7 +1177,9 @@ void main() {
 
     test('a long string keeps its first 16 KB and says how much was cut', () async {
       final big = 'a' * 100000;
-      final got = (await follow([jsonEncode({'type': 'message', 'text': big, 'short': 'ok'})])).single;
+      final got = (await follow([
+        jsonEncode({'type': 'message', 'text': big, 'short': 'ok'}),
+      ])).single;
       final text = got.json['text']! as String;
       expect(text.startsWith('a' * 16384), isTrue);
       expect(text.substring(16384), '... [83616 bytes cut]');
@@ -1120,7 +1197,9 @@ void main() {
     });
 
     test('the cut counts bytes and never splits a character', () async {
-      final got = (await follow([jsonEncode({'t': '日' * 20000})])).single; // 60000 bytes
+      final got = (await follow([
+        jsonEncode({'t': '日' * 20000}),
+      ])).single; // 60000 bytes
       final text = got.json['t']! as String;
       final kept = text.substring(0, text.indexOf('...'));
       expect(utf8.encode(kept).length, lessThanOrEqualTo(16384));
@@ -1135,7 +1214,10 @@ void main() {
         jsonEncode({
           'message': {
             'content': [
-              {'type': 'toolCall', 'arguments': {'cmd': big, 'n': 3, 'ok': true, 'none': null, 'f': 1.5}},
+              {
+                'type': 'toolCall',
+                'arguments': {'cmd': big, 'n': 3, 'ok': true, 'none': null, 'f': 1.5},
+              },
               {'type': 'text', 'text': big},
             ],
           },
@@ -1145,7 +1227,12 @@ void main() {
       final root = got.json;
       final content = ((root['message']! as Map)['content']! as List).cast<Map>();
       expect((content[0]['arguments'] as Map)['cmd'], endsWith('... [33616 bytes cut]'));
-      expect(((content[0]['arguments'] as Map)).entries.where((e) => e.key != 'cmd').map((e) => e.value), [3, true, null, 1.5]);
+      expect(((content[0]['arguments'] as Map)).entries.where((e) => e.key != 'cmd').map((e) => e.value), [
+        3,
+        true,
+        null,
+        1.5,
+      ]);
       expect(content[1]['text'], endsWith('bytes cut]'));
       expect(root.keys.where((k) => k.length > 17000), isEmpty);
       expect(got.body.length, lessThan(5 * 16384));
@@ -1158,26 +1245,41 @@ void main() {
           'message': {
             'content': [
               {'type': 'image', 'mimeType': 'image/png', 'data': b64, 'width': 640},
-              {'type': 'image', 'source': {'type': 'base64', 'media_type': 'image/jpeg', 'data': b64}},
+              {
+                'type': 'image',
+                'source': {'type': 'base64', 'media_type': 'image/jpeg', 'data': b64},
+              },
               {'type': 'text', 'text': 'see'},
             ],
           },
         }),
-        jsonEncode({'details': {'blob': 'data:image/png;base64,$b64'}, 'data': b64}),
+        jsonEncode({
+          'details': {'blob': 'data:image/png;base64,$b64'},
+          'data': b64,
+        }),
       ];
       final got = await follow(lines);
       final content = (((got[0].json['message']! as Map)['content']!) as List).cast<Map>();
       expect(content[0]['type'], 'image');
       expect(content[0]['mimeType'], 'image/png');
       expect(content[0]['width'], 640);
-      expect(content[0]['data'], matches(RegExp('^\\[${b64.length} bytes of data not sent; ref=0\\.[0-9a-f]{16}\\]\$')));
+      expect(
+        content[0]['data'],
+        matches(RegExp('^\\[${b64.length} bytes of data not sent; ref=0\\.[0-9a-f]{16}\\]\$')),
+      );
       expect((content[1]['source'] as Map)['media_type'], 'image/jpeg');
-      expect((content[1]['source'] as Map)['data'], matches(RegExp('^\\[${b64.length} bytes of data not sent; ref=0\\.[0-9a-f]{16}\\]\$')));
+      expect(
+        (content[1]['source'] as Map)['data'],
+        matches(RegExp('^\\[${b64.length} bytes of data not sent; ref=0\\.[0-9a-f]{16}\\]\$')),
+      );
       expect(content[2]['text'], 'see');
       expect(got[0].body.length, lessThan(700));
       final second = got[1].json;
       final secondStart = got[0].offset;
-      expect(second['data'], matches(RegExp('^\\[${b64.length} bytes of data not sent; ref=$secondStart\\.[0-9a-f]{16}\\]\$')));
+      expect(
+        second['data'],
+        matches(RegExp('^\\[${b64.length} bytes of data not sent; ref=$secondStart\\.[0-9a-f]{16}\\]\$')),
+      );
       expect(
         ((second['details']! as Map)['blob']! as String),
         matches(
@@ -1204,7 +1306,9 @@ void main() {
     });
 
     test('a small data field and ordinary text named data are left alone', () async {
-      final got = (await follow([jsonEncode({'data': 'QUJD', 'bytes': 'hello world ' * 200, 'type': 'text'})])).single;
+      final got = (await follow([
+        jsonEncode({'data': 'QUJD', 'bytes': 'hello world ' * 200, 'type': 'text'}),
+      ])).single;
       expect(got.json['data'], 'QUJD');
       expect((got.json['bytes']! as String).startsWith('hello world'), isTrue);
     });
@@ -1214,7 +1318,9 @@ void main() {
       final f = File(host.path());
       f.writeAsBytesSync([
         ...utf8.encode('plain words\n$longRaw\n{"broken":\n'),
-        0xff, 0xfe, ...utf8.encode(' bad utf8 {"a":1}\n'),
+        0xff,
+        0xfe,
+        ...utf8.encode(' bad utf8 {"a":1}\n'),
         ...utf8.encode('{"n":NaN}\n{"n":Infinity}\n{"n":1e999}\n{"ok":1}\n'),
       ]);
       final run = await host.follow(f.path);
@@ -1301,9 +1407,13 @@ void main() {
     });
 
     test('with an exit status of 64 for arguments it was not given', () async {
-      final r = await host.runToEnd('python3 ${host.home.path}/.herdr-mobile/keeper-${keeperScriptVersion(keeperScript())}.py follow');
+      final r = await host.runToEnd(
+        'python3 ${host.home.path}/.herdr-mobile/keeper-${keeperScriptVersion(keeperScript())}.py follow',
+      );
       expect(r.code, 64);
-      final bad = await host.runToEnd('python3 ${host.home.path}/.herdr-mobile/keeper-${keeperScriptVersion(keeperScript())}.py follow /x.jsonl --from x');
+      final bad = await host.runToEnd(
+        'python3 ${host.home.path}/.herdr-mobile/keeper-${keeperScriptVersion(keeperScript())}.py follow /x.jsonl --from x',
+      );
       expect(bad.code, 64);
     });
   });
@@ -1352,7 +1462,10 @@ void main() {
 
     test('a big tail travels as Z lines that read back to exactly the plain records', () async {
       final f = File(host.path());
-      _write(f, [for (var i = 0; i < 3000; i++) jsonEncode({'n': i, 'text': 'line $i of the log, with words that repeat ${i % 7}'})]);
+      _write(f, [
+        for (var i = 0; i < 3000; i++)
+          jsonEncode({'n': i, 'text': 'line $i of the log, with words that repeat ${i % 7}'}),
+      ]);
       final plain = await output(f, zipped: false);
       final zipped = await output(f, zipped: true);
 
@@ -1374,8 +1487,15 @@ void main() {
 
       expect(first.single.text, startsWith('Z'));
       expect(later.single.text, startsWith('Z'), reason: 'its own line, not part of the first');
-      final read = await zippedLines(Stream.fromIterable([for (final r in [...first, ...later]) r.text])).toList();
-      expect([for (final l in read) jsonDecode(l.substring(l.indexOf('\t') + 1))['n']], [for (var i = 0; i < 340; i++) i]);
+      final read = await zippedLines(
+        Stream.fromIterable([
+          for (final r in [...first, ...later]) r.text,
+        ]),
+      ).toList();
+      expect(
+        [for (final l in read) jsonDecode(l.substring(l.indexOf('\t') + 1))['n']],
+        [for (var i = 0; i < 340; i++) i],
+      );
       await run.stop();
     });
   });
@@ -1417,7 +1537,11 @@ void main() {
           },
         },
       };
-      final foreign = {'type': 'assistant', 'usage': {'input': 3}, 'message': {'usage': 1}};
+      final foreign = {
+        'type': 'assistant',
+        'usage': {'input': 3},
+        'message': {'usage': 1},
+      };
       final offsets = _write(f, [
         jsonEncode(assistant),
         jsonEncode({'type': 'credential_pin', 'id': 'p1', 'hash': '0' * 64}),
@@ -1440,7 +1564,11 @@ void main() {
     });
 
     test('every fixture log reads the same on the phone with and without it', () async {
-      final fixtures = Directory('test/fixtures/omp_logs').listSync().whereType<File>().where((f) => f.path.endsWith('.jsonl')).toList();
+      final fixtures = Directory('test/fixtures/omp_logs')
+          .listSync()
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.jsonl'))
+          .toList();
       expect(fixtures, isNotEmpty);
       for (final fixture in fixtures) {
         final name = fixture.uri.pathSegments.last;

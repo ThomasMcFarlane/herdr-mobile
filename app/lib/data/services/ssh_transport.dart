@@ -46,8 +46,7 @@ HostKeyVerdict judgeHostKey({required String? pinned, required String seen}) {
 /// The server hung up after showing a sign-in link, so the link was refused,
 /// expired, or the connection dropped while waiting. Fatal: each retry would
 /// issue a new link and another prompt.
-const signInEndedMessage =
-    'The sign-in ended before it was approved. Retry to get a new link.';
+const signInEndedMessage = 'The sign-in ended before it was approved. Retry to get a new link.';
 
 /// The server closed the connection during login without saying why.
 const closedBeforeSignInMessage =
@@ -60,19 +59,13 @@ const closedBeforeSignInMessage =
 /// Remote Login). No credentials can sign in there, so the cause is the
 /// choice of sign-in, not a policy.
 bool answeredByAnotherServer(MachineProfile profile, String? server) =>
-    profile.auth == SshAuth.none &&
-    server != null &&
-    !server.toLowerCase().contains('tailscale');
+    profile.auth == SshAuth.none && server != null && !server.toLowerCase().contains('tailscale');
 
 /// A refused sign-in. [reason] is what the machine said (see
 /// `refusalReasonFrom`): Tailscale SSH names its cause that way (a tailnet
 /// policy that does not allow the user, a user the machine does not have), and
 /// the person can act on it. Fatal: asking again gets the same answer.
-HerdrTransportException signInRefused(
-  MachineProfile profile,
-  String? reason, {
-  String? server,
-}) {
+HerdrTransportException signInRefused(MachineProfile profile, String? reason, {String? server}) {
   if (answeredByAnotherServer(profile, server)) {
     // The Tailscale apps for macOS cannot run Tailscale SSH, so a Mac reached
     // over Tailscale answers as plain OpenSSH. Its name is the machine's text.
@@ -85,14 +78,17 @@ HerdrTransportException signInRefused(
   }
   final tailscale = profile.auth == SshAuth.none;
   final message = switch ((tailscale, reason)) {
-    (true, null) => 'Tailscale SSH did not accept this sign-in. Check that '
-        'Tailscale is connected on this phone and that your tailnet policy '
-        'lets you SSH to this machine as "${profile.username}".',
+    (true, null) =>
+      'Tailscale SSH did not accept this sign-in. Check that '
+          'Tailscale is connected on this phone and that your tailnet policy '
+          'lets you SSH to this machine as "${profile.username}".',
     (false, null) => 'SSH authentication failed (check username and key/password).',
-    (true, final r?) => 'Tailscale refused the sign-in: $r. Check the username '
-        'and your tailnet\'s SSH policy.',
-    (false, final r?) => 'The machine refused the sign-in: $r. Check the '
-        'username and key/password.',
+    (true, final r?) =>
+      'Tailscale refused the sign-in: $r. Check the username '
+          'and your tailnet\'s SSH policy.',
+    (false, final r?) =>
+      'The machine refused the sign-in: $r. Check the '
+          'username and key/password.',
   };
   return HerdrTransportException(message, fatal: true);
 }
@@ -138,21 +134,12 @@ class SshTransport implements HerdrTransport {
     Future<SSHClient> Function(void Function() onInbound)? connectClient,
     Future<MuxChannel> Function(String command)? openMuxChannel,
     Duration Function()? livenessClock,
-  })  : _connectClient = connectClient, // ignore: prefer_initializing_formals
-        _openMuxChannel = openMuxChannel, // ignore: prefer_initializing_formals
-        _livenessClock = livenessClock, // ignore: prefer_initializing_formals
-        _command = buildBridgeCommand(
-          session: profile.session,
-          socketPath: profile.socketPath,
-        ),
-        _muxCommand = buildMuxCommand(
-          session: profile.session,
-          socketPath: profile.socketPath,
-        ),
-        _eventsCommand = buildEventsCommand(
-          session: profile.session,
-          socketPath: profile.socketPath,
-        );
+  }) : _connectClient = connectClient, // ignore: prefer_initializing_formals
+       _openMuxChannel = openMuxChannel, // ignore: prefer_initializing_formals
+       _livenessClock = livenessClock, // ignore: prefer_initializing_formals
+       _command = buildBridgeCommand(session: profile.session, socketPath: profile.socketPath),
+       _muxCommand = buildMuxCommand(session: profile.session, socketPath: profile.socketPath),
+       _eventsCommand = buildEventsCommand(session: profile.session, socketPath: profile.socketPath);
 
   final MachineProfile profile;
   final MachineSecrets secrets;
@@ -205,19 +192,17 @@ class SshTransport implements HerdrTransport {
     final existing = _client;
     if (existing != null) return existing;
     final t = _timing;
-    final liveness = LinkLiveness(
-      interval: t.linkInterval,
-      timeout: t.linkTimeout,
-      clock: _livenessClock,
-    );
-    return _client = (_connectClient?.call(liveness.inbound) ?? _connect(liveness)).then((c) {
-      _ready = c;
-      _watchLink(c, liveness);
-      return c;
-    }).catchError((Object e) {
-      _client = null;
-      throw e;
-    });
+    final liveness = LinkLiveness(interval: t.linkInterval, timeout: t.linkTimeout, clock: _livenessClock);
+    return _client = (_connectClient?.call(liveness.inbound) ?? _connect(liveness))
+        .then((c) {
+          _ready = c;
+          _watchLink(c, liveness);
+          return c;
+        })
+        .catchError((Object e) {
+          _client = null;
+          throw e;
+        });
   }
 
   Future<SSHClient> _connect(LinkLiveness liveness) async {
@@ -238,28 +223,25 @@ class SshTransport implements HerdrTransport {
         if (!authenticated.isCompleted) authenticated.completeError(error);
       });
     }
+
     try {
       final socket = _ActivitySocket(
-        await SSHSocket.connect(
-          profile.host,
-          profile.port,
-          timeout: connectTimeout,
-        ),
+        await SSHSocket.connect(profile.host, profile.port, timeout: connectTimeout),
         liveness.inbound,
       );
       final List<SSHKeyPair>? identities;
       if (profile.auth == SshAuth.key) {
         final pem = secrets.privateKeyPem;
         if (pem == null || pem.isEmpty) {
-          throw const HerdrTransportException('No private key saved for this machine.',
-              fatal: true);
+          throw const HerdrTransportException('No private key saved for this machine.', fatal: true);
         }
         try {
           identities = SSHKeyPair.fromPem(pem, secrets.passphrase);
         } on Object {
           throw const HerdrTransportException(
-              'Private key could not be read (wrong passphrase, incomplete paste or unsupported format).',
-              fatal: true);
+            'Private key could not be read (wrong passphrase, incomplete paste or unsupported format).',
+            fatal: true,
+          );
         }
       } else {
         identities = null;
@@ -275,18 +257,14 @@ class SshTransport implements HerdrTransport {
         keepAliveInterval: null,
         // With neither a key nor a password only the `none` method is tried,
         // which is what Tailscale SSH expects: it already knows who we are.
-        onPasswordRequest:
-            profile.auth == SshAuth.password ? () => secrets.password : null,
+        onPasswordRequest: profile.auth == SshAuth.password ? () => secrets.password : null,
         onUserauthBanner: (banner) {
           onNotice?.call(banner);
           if (approvalUrlFrom(banner) != null) {
             approvalOffered = true;
             expectAuthWithin(
               approvalTimeout,
-              const HerdrTransportException(
-                'Sign-in was not approved in time. Retry to get a new link.',
-                fatal: true,
-              ),
+              const HerdrTransportException('Sign-in was not approved in time. Retry to get a new link.', fatal: true),
             );
           } else {
             refusal = refusalReasonFrom(banner) ?? refusal;
@@ -393,10 +371,7 @@ class SshTransport implements HerdrTransport {
       client.close();
       return;
     }
-    current.then(
-      (c) => identical(c, client) ? reset() : client.close(),
-      onError: (Object _) => client.close(),
-    );
+    current.then((c) => identical(c, client) ? reset() : client.close(), onError: (Object _) => client.close());
   }
 
   void _drop(SSHClient client) {
@@ -470,10 +445,10 @@ class SshTransport implements HerdrTransport {
   }
 
   static RemoteFileException _noSftp() => RemoteFileException(
-        RemoteFileErrorKind.unsupported,
-        'This host does not allow SFTP, so its files cannot be shown. Enable the '
-        '"sftp" subsystem in its sshd_config to use Files.',
-      );
+    RemoteFileErrorKind.unsupported,
+    'This host does not allow SFTP, so its files cannot be shown. Enable the '
+    '"sftp" subsystem in its sshd_config to use Files.',
+  );
 
   @override
   bool get supportsFiles => true;
@@ -508,10 +483,7 @@ class SshTransport implements HerdrTransport {
       '${jsonEncode({'id': 'm${_nextId++}', 'method': method, 'params': params})}\n';
 
   @override
-  Future<Map<String, dynamic>> request(
-    String method, [
-    Map<String, dynamic> params = const {},
-  ]) async {
+  Future<Map<String, dynamic>> request(String method, [Map<String, dynamic> params = const {}]) async {
     final mux = await _muxClient();
     if (mux != null) return mux.request(method, params);
     return _bridgeRequest(method, params);
@@ -540,13 +512,14 @@ class SshTransport implements HerdrTransport {
     final epoch = _epoch;
     final started = _timing;
     final open = _openMuxChannel;
-    final MuxChannel channel =
-        open != null ? await open(_muxCommand) : _SshMuxChannel(await _open(_muxCommand));
-    final mux = await MuxClient.connect(channel,
-        requestTimeout: requestTimeout,
-        heartbeatInterval: started.muxInterval,
-        heartbeatTimeout: started.muxTimeout,
-        clock: _livenessClock);
+    final MuxChannel channel = open != null ? await open(_muxCommand) : _SshMuxChannel(await _open(_muxCommand));
+    final mux = await MuxClient.connect(
+      channel,
+      requestTimeout: requestTimeout,
+      heartbeatInterval: started.muxInterval,
+      heartbeatTimeout: started.muxTimeout,
+      clock: _livenessClock,
+    );
     if (epoch != _epoch) {
       mux.close();
       throw const HerdrTransportException('Connection reset');
@@ -566,10 +539,7 @@ class SshTransport implements HerdrTransport {
     return mux;
   }
 
-  Future<Map<String, dynamic>> _bridgeRequest(
-    String method,
-    Map<String, dynamic> params,
-  ) async {
+  Future<Map<String, dynamic>> _bridgeRequest(String method, Map<String, dynamic> params) async {
     final session = await _open(_command);
     final stderr = utf8.decodeStream(session.stderr).catchError((Object _) => '');
     try {
@@ -588,10 +558,7 @@ class SshTransport implements HerdrTransport {
     }
   }
 
-  Future<HerdrTransportException> _bridgeFailure(
-    SSHSession session,
-    Future<String> stderr,
-  ) async {
+  Future<HerdrTransportException> _bridgeFailure(SSHSession session, Future<String> stderr) async {
     final text = (await stderr.timeout(const Duration(seconds: 2), onTimeout: () => '')).trim();
     final code = session.exitCode;
     return HerdrTransportException(
@@ -629,8 +596,7 @@ class SshTransport implements HerdrTransport {
             return;
           }
           final stderr = utf8.decodeStream(s.stderr).catchError((Object _) => '');
-          s.stdin.add(utf8.encode(
-              _frame('events.subscribe', {'subscriptions': subscriptions})));
+          s.stdin.add(utf8.encode(_frame('events.subscribe', {'subscriptions': subscriptions})));
           var acked = false;
           sub = muxMessages(s.stdout).listen(
             (line) {
@@ -672,9 +638,7 @@ class SshTransport implements HerdrTransport {
         try {
           final retryAt = _muxRetryAt;
           final scriptsDown = retryAt != null && DateTime.now().isBefore(retryAt);
-          await (scriptsDown
-              ? subscribe(_command, script: false)
-              : subscribe(_eventsCommand, script: true));
+          await (scriptsDown ? subscribe(_command, script: false) : subscribe(_eventsCommand, script: true));
         } on Object catch (e) {
           if (out.isClosed) return;
           _liveEvents.remove(fail);
@@ -771,10 +735,7 @@ HerdrTransportException? channelRefusal(Object error) {
 /// browser gets says so and a server that starts later works.
 HerdrTransportException forwardRefusal(SSHChannelOpenError error) {
   if (error.code == 1) {
-    return const HerdrTransportException(
-      'the machine does not allow port forwarding',
-      fatal: true,
-    );
+    return const HerdrTransportException('the machine does not allow port forwarding', fatal: true);
   }
   return HerdrTransportException('The machine could not reach that port: ${error.description}');
 }
@@ -783,10 +744,10 @@ HerdrTransportException forwardRefusal(SSHChannelOpenError error) {
 /// for [LinkLiveness]. It adds no pause/resume handling of its own.
 class _ActivitySocket implements SSHSocket {
   _ActivitySocket(this._inner, void Function() onData)
-      : stream = _inner.stream.map((chunk) {
-          onData();
-          return chunk;
-        });
+    : stream = _inner.stream.map((chunk) {
+        onData();
+        return chunk;
+      });
 
   final SSHSocket _inner;
 
@@ -852,18 +813,15 @@ class _SshSessionAdapter implements ExecSession {
 class SshExecChannel implements ExecChannel {
   SshExecChannel(this._session) {
     // Unread stderr would stall the channel's flow control; keep its tail.
-    _session.stderr.listen(
-      _onStderr,
-      onError: (Object _) {},
-      onDone: _stderrDone.complete,
-    );
-    _exitCode = Future.wait<Object?>([
-      _session.done.then<Object?>((_) => null, onError: (Object _) => null),
-      _stderrDone.future,
-    ]).then((_) {
-      _ended = true;
-      return _session.exitCode;
-    });
+    _session.stderr.listen(_onStderr, onError: (Object _) {}, onDone: _stderrDone.complete);
+    _exitCode =
+        Future.wait<Object?>([
+          _session.done.then<Object?>((_) => null, onError: (Object _) => null),
+          _stderrDone.future,
+        ]).then((_) {
+          _ended = true;
+          return _session.exitCode;
+        });
   }
 
   /// How much of stderr [stderrTail] keeps.
@@ -953,6 +911,5 @@ class _SshMuxChannel implements MuxChannel {
   Future<void> close() async => _session.close();
 
   @override
-  late final Future<int?> exitCode =
-      _session.done.then((_) => _session.exitCode, onError: (Object _) => null);
+  late final Future<int?> exitCode = _session.done.then((_) => _session.exitCode, onError: (Object _) => null);
 }

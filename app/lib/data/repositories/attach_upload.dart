@@ -33,8 +33,11 @@ class HostUploader implements AttachUploader {
   final String sessionKey;
 
   @override
-  AttachUpload start({required String localPath, required String fileName, void Function(int sent, int total)? onProgress}) =>
-      _HostUpload(machine, sessionKey, localPath, fileName, onProgress);
+  AttachUpload start({
+    required String localPath,
+    required String fileName,
+    void Function(int sent, int total)? onProgress,
+  }) => _HostUpload(machine, sessionKey, localPath, fileName, onProgress);
 }
 
 class _HostUpload implements AttachUpload {

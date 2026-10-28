@@ -40,7 +40,8 @@ String bigMessage(int chars) {
 Map<String, String> worstCases() => {
   'code1000': _code1000(),
   'table40': _table(40, 24),
-  'list300': [for (var i = 1; i <= 300; i++) '- item $i with **bold**, `code` and a [link](https://example.com/$i)'].join('\n'),
+  'list300': [for (var i = 1; i <= 300; i++) '- item $i with **bold**, `code` and a [link](https://example.com/$i)']
+      .join('\n'),
   'nesting5': _nesting(),
   'vietnamese': _vietnamese(),
   'rtl': _rtl(),
@@ -67,7 +68,9 @@ String _table(int columns, int rows) {
   final b = StringBuffer('| ${head.join(' | ')} |\n');
   b.writeln('| ${[for (var c = 0; c < columns; c++) c == 0 ? ':--' : (c.isEven ? '--:' : ':-:')].join(' | ')} |');
   for (var r = 1; r <= rows; r++) {
-    b.writeln('| ${[for (var c = 1; c <= columns; c++) c == 1 ? 'row $r, a longer first cell that wraps' : '${r * c}.${c % 10}'].join(' | ')} |');
+    b.writeln(
+      '| ${[for (var c = 1; c <= columns; c++) c == 1 ? 'row $r, a longer first cell that wraps' : '${r * c}.${c % 10}'].join(' | ')} |',
+    );
   }
   return 'A wide table follows.\n\n$b\nAfter the table.';
 }

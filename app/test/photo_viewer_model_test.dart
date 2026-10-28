@@ -17,7 +17,8 @@ import 'support/photo_support.dart';
 /// the box is 150 x 300 px, so a 600 x 400 photo decodes at 150 x 100.
 const _base = (150, 100);
 
-Future<void> _idle(WidgetTester tester) => tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 10)));
+Future<void> _idle(WidgetTester tester) =>
+    tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 10)));
 
 PhotoViewerViewModel _model(
   List<PhotoItem> items,
@@ -42,7 +43,9 @@ void main() {
       final log = <String>[];
       final decoder = FakeDecoder();
       await decoder.prepare(tester, [_base]);
-      final gates = {for (final n in ['a', 'b', 'c', 'd', 'e']) n: Completer<void>()};
+      final gates = {
+        for (final n in ['a', 'b', 'c', 'd', 'e']) n: Completer<void>(),
+      };
       final model = _model([for (final n in gates.keys) fakePhoto(n, log, gate: gates[n])], decoder, index: 2);
       addTearDown(model.dispose);
       await _idle(tester);
@@ -58,8 +61,11 @@ void main() {
       gates['b']!.complete();
       await _idle(tester);
       expect(log.last, 'done b');
-      expect(log.where((l) => l.startsWith('start')).toList(), ['start c', 'start d', 'start b'],
-          reason: 'a and e are two away: never read');
+      expect(log.where((l) => l.startsWith('start')).toList(), [
+        'start c',
+        'start d',
+        'start b',
+      ], reason: 'a and e are two away: never read');
       expect(model.entryAt(0), isNull);
       expect(model.entryAt(4), isNull);
     });
@@ -68,7 +74,13 @@ void main() {
       final log = <String>[];
       final decoder = FakeDecoder();
       await decoder.prepare(tester, [_base]);
-      final model = _model([for (final n in ['a', 'b', 'c', 'd', 'e']) fakePhoto(n, log)], decoder, index: 3);
+      final model = _model(
+        [
+          for (final n in ['a', 'b', 'c', 'd', 'e']) fakePhoto(n, log),
+        ],
+        decoder,
+        index: 3,
+      );
       addTearDown(model.dispose);
       await _idle(tester);
       log.clear();
@@ -76,8 +88,10 @@ void main() {
       model.goTo(1);
       await _idle(tester);
       await _idle(tester);
-      expect(log.where((l) => l.startsWith('start')).toList(), ['start b', 'start a'],
-          reason: 'the open one, then the one in the direction of travel; c was held already and is not read twice');
+      expect(log.where((l) => l.startsWith('start')).toList(), [
+        'start b',
+        'start a',
+      ], reason: 'the open one, then the one in the direction of travel; c was held already and is not read twice');
     });
 
     testWidgets('moving on cancels the read of a photo that is no longer a neighbour and frees it', (tester) async {
@@ -85,14 +99,18 @@ void main() {
       final decoder = FakeDecoder();
       await decoder.prepare(tester, [_base]);
       final hold = Completer<void>();
-      final model = _model([
-        fakePhoto('a', log),
-        fakePhoto('b', log),
-        fakePhoto('c', log, gate: hold),
-        fakePhoto('d', log),
-        fakePhoto('e', log),
-        fakePhoto('f', log),
-      ], decoder, index: 1);
+      final model = _model(
+        [
+          fakePhoto('a', log),
+          fakePhoto('b', log),
+          fakePhoto('c', log, gate: hold),
+          fakePhoto('d', log),
+          fakePhoto('e', log),
+          fakePhoto('f', log),
+        ],
+        decoder,
+        index: 1,
+      );
       addTearDown(model.dispose);
       await _idle(tester);
       // b done, c is held (a preload in flight).
@@ -134,11 +152,11 @@ void main() {
       final log = <String>[];
       final decoder = FakeDecoder();
       await decoder.prepare(tester, [_base]);
-      final model = _model([
-        fakePhoto('a', log),
-        fakePhoto('big', log, size: 30 * 1024 * 1024),
-        fakePhoto('c', log),
-      ], decoder, index: 0);
+      final model = _model(
+        [fakePhoto('a', log), fakePhoto('big', log, size: 30 * 1024 * 1024), fakePhoto('c', log)],
+        decoder,
+        index: 0,
+      );
       addTearDown(model.dispose);
       await _idle(tester);
       await _idle(tester);
@@ -282,7 +300,11 @@ void main() {
     testWidgets('a dropped connection can be retried and then loads', (tester) async {
       final decoder = FakeDecoder();
       await decoder.prepare(tester, [_base]);
-      final item = fakePhoto('a', [], error: RemoteFileException(RemoteFileErrorKind.network, 'The connection was lost'));
+      final item = fakePhoto(
+        'a',
+        [],
+        error: RemoteFileException(RemoteFileErrorKind.network, 'The connection was lost'),
+      );
       final model = _model([item], decoder);
       addTearDown(model.dispose);
       await _idle(tester);
@@ -378,14 +400,18 @@ void main() {
       final files = RemoteFiles(FakeTransport()..fs = fs);
       final export = FakeExport();
       final decoder = FakeDecoder();
-      final model = _model([
-        PhotoItem(
-          id: '/p/huge.jpg',
-          name: 'huge.jpg',
-          path: '/p/huge.jpg',
-          source: RemotePhotoSource(files, '/p/huge.jpg', size: bytes.length, cap: 1024 * 1024),
-        ),
-      ], decoder, export: export);
+      final model = _model(
+        [
+          PhotoItem(
+            id: '/p/huge.jpg',
+            name: 'huge.jpg',
+            path: '/p/huge.jpg',
+            source: RemotePhotoSource(files, '/p/huge.jpg', size: bytes.length, cap: 1024 * 1024),
+          ),
+        ],
+        decoder,
+        export: export,
+      );
       addTearDown(model.dispose);
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
 
@@ -444,11 +470,26 @@ void main() {
   group('real decode', () {
     testWidgets('EXIF orientation is applied: a landscape file flagged "rotate 90" is shown portrait', (tester) async {
       final upright = jpegWithExif(80, 40, orientation: 1);
-      final turned = jpegWithExif(80, 40, orientation: 6, make: 'Canon', model: 'Canon EOS R5', taken: '2026:05:20 09:30:00');
+      final turned = jpegWithExif(
+        80,
+        40,
+        orientation: 6,
+        make: 'Canon',
+        model: 'Canon EOS R5',
+        taken: '2026:05:20 09:30:00',
+      );
       final model = PhotoViewerViewModel(
         items: [
-          PhotoItem(id: 'u', name: 'u.jpg', source: MemoryPhotoSource(() async => upright, size: upright.length)),
-          PhotoItem(id: 't', name: 't.jpg', source: MemoryPhotoSource(() async => turned, size: turned.length)),
+          PhotoItem(
+            id: 'u',
+            name: 'u.jpg',
+            source: MemoryPhotoSource(() async => upright, size: upright.length),
+          ),
+          PhotoItem(
+            id: 't',
+            name: 't.jpg',
+            source: MemoryPhotoSource(() async => turned, size: turned.length),
+          ),
         ],
         export: FakeExport(),
       )..setViewport(const Size(412, 892), 2.625);
@@ -470,7 +511,13 @@ void main() {
     testWidgets('a PNG with see-through pixels is flagged so the viewer draws a checkerboard', (tester) async {
       final png = pngWithAlpha(64, 64);
       final model = PhotoViewerViewModel(
-        items: [PhotoItem(id: 'p', name: 'p.png', source: MemoryPhotoSource(() async => png, size: png.length))],
+        items: [
+          PhotoItem(
+            id: 'p',
+            name: 'p.png',
+            source: MemoryPhotoSource(() async => png, size: png.length),
+          ),
+        ],
         export: FakeExport(),
       )..setViewport(const Size(412, 892), 2.625);
       addTearDown(model.dispose);

@@ -66,11 +66,11 @@ void main() {
   const grace = Duration(seconds: 90);
 
   void run(void Function(_Harness h) body) => fakeAsync((async) {
-        final h = _Harness(async);
-        expect(h.connection.isLive, isTrue, reason: 'set-up');
-        body(h);
-        h.dispose();
-      });
+    final h = _Harness(async);
+    expect(h.connection.isLive, isTrue, reason: 'set-up');
+    body(h);
+    h.dispose();
+  });
 
   group('the 90 s suspension', () {
     test('applies by default', () {

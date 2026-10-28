@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../data/acp/turns/plain_text.dart' show safeEnd;
 import '../../../data/words/plural.dart';
 import '../../render/markdown/md_more_row.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../render/visible_text.dart';
 
 /// Longest text a panel works on. Anything beyond is cut (the end for a
@@ -114,16 +116,16 @@ class CodePanel extends StatelessWidget {
             label: all
                 ? countOf(total, 'line')
                 : fromEnd
-                    ? countOf(hidden, 'earlier line')
-                    : countOf(hidden, 'more line'),
+                ? countOf(hidden, 'earlier line')
+                : countOf(hidden, 'more line'),
             action: all ? 'Show less' : 'Show all',
             onTap: onToggleAll,
             onCopy: onCopy,
             copyLabel: copyLabel,
           )
         : (onCopy != null && total > copyRowFrom
-            ? MoreRow(label: countOf(total, 'line'), onCopy: onCopy, copyLabel: copyLabel)
-            : null);
+              ? MoreRow(label: countOf(total, 'line'), onCopy: onCopy, copyLabel: copyLabel)
+              : null);
 
     Widget line(CodeLine l) {
       final text = Text(
@@ -150,20 +152,12 @@ class CodePanel extends StatelessWidget {
         itemCount: total,
         itemBuilder: (context, i) => line(lines[i]),
       );
-      body = SizedBox(
-        height: _boundedHeight,
-        child: wrap ? list : _sideways(lines, style.fontSize!, list),
-      );
+      body = SizedBox(height: _boundedHeight, child: wrap ? list : _sideways(lines, style.fontSize!, list));
     } else {
-      final column = Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [for (final l in shown) line(l)],
-      );
+      final column = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [for (final l in shown) line(l)]);
       body = Padding(
         padding: const EdgeInsets.symmetric(vertical: Gap.sm),
-        child: wrap
-            ? column
-            : SingleChildScrollView(scrollDirection: Axis.horizontal, child: column),
+        child: wrap ? column : SingleChildScrollView(scrollDirection: Axis.horizontal, child: column),
       );
     }
     return DecoratedBox(

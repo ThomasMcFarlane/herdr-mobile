@@ -66,8 +66,7 @@ const _form = [
 
 const _deploy = AskQuestion(
   id: 'Deploy',
-  question:
-      'Which of the following deployment strategies would you prefer to use for the next production release of the mobile backend service?',
+  question: 'Which of the following deployment strategies would you prefer to use for the next production release of the mobile backend service?',
   options: [
     AskOption(label: 'Blue-green deployment with automated smoke tests and an instant rollback path if errors rise'),
     AskOption(label: 'Canary'),
@@ -100,14 +99,24 @@ List<AskSend> _drive(FakeClaudeAsk fake, List<AskAnswer> answers, {int max = 60}
 void main() {
   group('the screens', () {
     test('every captured question screen is read; the review is the review; nothing else is a dialog', () {
-      final dialogs = Directory('test/fixtures/prompts/claude').listSync().whereType<File>().map((f) => f.uri.pathSegments.last).where((n) => n.startsWith('askfull-') && n.endsWith('.txt'));
+      final dialogs = Directory('test/fixtures/prompts/claude')
+          .listSync()
+          .whereType<File>()
+          .map((f) => f.uri.pathSegments.last)
+          .where((n) => n.startsWith('askfull-') && n.endsWith('.txt'));
       expect(dialogs, isNotEmpty);
       for (final name in dialogs) {
         final s = parseClaudeAsk(_screen(name.replaceAll('.txt', '')));
         expect(s.kind, isNot(ClaudeAskKind.none), reason: name);
         expect(looksLikeClaudeAsk(_screen(name.replaceAll('.txt', ''))), isTrue, reason: name);
       }
-      for (final other in ['approval-bash', 'approval-edit', 'plan-approval', 'approvalfull-write', 'approvalfull-bash-multiline']) {
+      for (final other in [
+        'approval-bash',
+        'approval-edit',
+        'plan-approval',
+        'approvalfull-write',
+        'approvalfull-bash-multiline',
+      ]) {
         expect(looksLikeClaudeAsk(_screen(other)), isFalse, reason: other);
       }
       expect(looksLikeClaudeAsk(''), isFalse);
@@ -136,7 +145,11 @@ void main() {
       expect(submit.options.last.label, 'Elderberry', reason: 'the text typed on the Other row');
       expect(submit.options.last.checked, isTrue);
 
-      expect(parseClaudeAsk(_screen('askfull-multi-chat')).cursorNumber, 7, reason: 'Chat about this is the 7th row the arrows reach');
+      expect(
+        parseClaudeAsk(_screen('askfull-multi-chat')).cursorNumber,
+        7,
+        reason: 'Chat about this is the 7th row the arrows reach',
+      );
     });
 
     test('a form: both tabs, which are answered, and the answered option is marked', () {
@@ -190,7 +203,9 @@ void main() {
         ('askfull-two-q2', () => FakeClaudeAsk(_form)..press('right')),
         (
           'askfull-two-q2-toggled',
-          () => FakeClaudeAsk(_form)..press('right')..press('enter'),
+          () => FakeClaudeAsk(_form)
+            ..press('right')
+            ..press('enter'),
         ),
         (
           'askfull-two-review',
@@ -209,7 +224,14 @@ void main() {
             ..press('left')
             ..press('left'),
         ),
-        ('askfull-single-other', () => FakeClaudeAsk([_color])..press('down')..press('down')..press('down')..paste('purple')),
+        (
+          'askfull-single-other',
+          () => FakeClaudeAsk([_color])
+            ..press('down')
+            ..press('down')
+            ..press('down')
+            ..paste('purple'),
+        ),
         ('askfull-wrap', () => FakeClaudeAsk([_deploy])),
       ];
       for (final (name, build) in cases) {
@@ -222,7 +244,9 @@ void main() {
     test('a single choice: moves to the row and enters, never a digit that could be text', () {
       final fake = FakeClaudeAsk([_color]);
 
-      final sent = _drive(fake, const [AskAnswer(selected: [1])]);
+      final sent = _drive(fake, const [
+        AskAnswer(selected: [1]),
+      ]);
 
       expect(fake.submitted, isTrue);
       expect(fake.answerOf(0), 'Green');
@@ -243,7 +267,9 @@ void main() {
     test('a multi-select: toggles what differs, then goes to the review and submits', () {
       final fake = FakeClaudeAsk([_fruits]);
 
-      _drive(fake, const [AskAnswer(selected: [0, 2])]);
+      _drive(fake, const [
+        AskAnswer(selected: [0, 2]),
+      ]);
 
       expect(fake.submitted, isTrue);
       expect(fake.answerOf(0), 'Apple, Cherry');
@@ -252,7 +278,9 @@ void main() {
     test('a multi-select with a typed answer too', () {
       final fake = FakeClaudeAsk([_fruits]);
 
-      _drive(fake, const [AskAnswer(selected: [0, 2], custom: 'Elderberry')]);
+      _drive(fake, const [
+        AskAnswer(selected: [0, 2], custom: 'Elderberry'),
+      ]);
 
       expect(fake.answerOf(0), 'Apple, Cherry, Elderberry');
       expect(fake.submitted, isTrue);
@@ -261,7 +289,10 @@ void main() {
     test('a form: each question in its tab, then the review is checked and submitted', () {
       final fake = FakeClaudeAsk(_form);
 
-      _drive(fake, const [AskAnswer(selected: [1]), AskAnswer(selected: [0, 2])]);
+      _drive(fake, const [
+        AskAnswer(selected: [1]),
+        AskAnswer(selected: [0, 2]),
+      ]);
 
       expect(fake.submitted, isTrue);
       expect([fake.answerOf(0), fake.answerOf(1)], ['Go', 'Tests, CI']);
@@ -270,7 +301,10 @@ void main() {
     test('starting from a half-answered form: what was answered otherwise is answered again', () {
       final fake = FakeClaudeAsk(_form)..press('enter'); // Python, on to the second tab
 
-      _drive(fake, const [AskAnswer(selected: [1]), AskAnswer(selected: [1])]);
+      _drive(fake, const [
+        AskAnswer(selected: [1]),
+        AskAnswer(selected: [1]),
+      ]);
 
       expect(fake.submitted, isTrue);
       expect([fake.answerOf(0), fake.answerOf(1)], ['Go', 'Docs']);
@@ -279,7 +313,9 @@ void main() {
     test('a question that wraps is still that question', () {
       final fake = FakeClaudeAsk([_deploy]);
 
-      _drive(fake, const [AskAnswer(selected: [0])]);
+      _drive(fake, const [
+        AskAnswer(selected: [0]),
+      ]);
 
       expect(fake.answerOf(0), _deploy.options[0].label);
     });
@@ -292,9 +328,15 @@ void main() {
         for (var i = 0; i < fake.questions.single.options.length + (multi ? 2 : 1); i++) {
           fake.press('down');
         }
-        expect(parseClaudeAsk(fake.screen()).cursorNumber, q.options.length + (multi ? 3 : 2), reason: 'multi $multi: the cursor is on Chat');
+        expect(
+          parseClaudeAsk(fake.screen()).cursorNumber,
+          q.options.length + (multi ? 3 : 2),
+          reason: 'multi $multi: the cursor is on Chat',
+        );
 
-        _drive(fake, [AskAnswer(selected: multi ? const [0, 2] : const [1])]);
+        _drive(fake, [
+          AskAnswer(selected: multi ? const [0, 2] : const [1]),
+        ]);
 
         expect(fake.submitted, isTrue, reason: 'multi $multi');
         expect(fake.answerOf(0), multi ? 'Apple, Cherry' : 'Green', reason: 'multi $multi');
@@ -302,22 +344,49 @@ void main() {
     });
 
     test('no dialog on the screen is done', () {
-      expect(ClaudeAskDriver(_ask([_color]), const [AskAnswer(selected: [0])]).next('⏺ Done\n\n❯ '), isA<AskDone>());
+      expect(
+        ClaudeAskDriver(_ask([_color]), const [
+          AskAnswer(selected: [0]),
+        ]).next('⏺ Done\n\n❯ '),
+        isA<AskDone>(),
+      );
     });
 
     test('another question on the screen is not answered', () {
       final other = FakeClaudeAsk([
-        const AskQuestion(id: 'Color', question: 'Which animal?', options: [AskOption(label: 'Cat'), AskOption(label: 'Dog')]),
+        const AskQuestion(
+          id: 'Color',
+          question: 'Which animal?',
+          options: [
+            AskOption(label: 'Cat'),
+            AskOption(label: 'Dog'),
+          ],
+        ),
       ]);
-      final step = ClaudeAskDriver(_ask([_color]), const [AskAnswer(selected: [0])]).next(other.screen());
+      final step = ClaudeAskDriver(_ask([_color]), const [
+        AskAnswer(selected: [0]),
+      ]).next(other.screen());
       expect(step, isA<AskMismatch>());
     });
 
     test('options that are not the ones asked are not answered', () {
       final other = FakeClaudeAsk([
-        const AskQuestion(id: 'Color', question: 'Which color do you prefer?', options: [AskOption(label: 'Cyan'), AskOption(label: 'Magenta'), AskOption(label: 'Black')]),
+        const AskQuestion(
+          id: 'Color',
+          question: 'Which color do you prefer?',
+          options: [
+            AskOption(label: 'Cyan'),
+            AskOption(label: 'Magenta'),
+            AskOption(label: 'Black'),
+          ],
+        ),
       ]);
-      expect(ClaudeAskDriver(_ask([_color]), const [AskAnswer(selected: [0])]).next(other.screen()), isA<AskMismatch>());
+      expect(
+        ClaudeAskDriver(_ask([_color]), const [
+          AskAnswer(selected: [0]),
+        ]).next(other.screen()),
+        isA<AskMismatch>(),
+      );
     });
 
     test('text already in the Other row is never overwritten', () {
@@ -333,7 +402,9 @@ void main() {
 
     test('a dialog that does not react gives up instead of pressing forever', () {
       final fake = FakeClaudeAsk([_color]);
-      final driver = ClaudeAskDriver(_ask([_color]), const [AskAnswer(selected: [2])]);
+      final driver = ClaudeAskDriver(_ask([_color]), const [
+        AskAnswer(selected: [2]),
+      ]);
       final screen = fake.screen();
 
       AskStep? last;
@@ -350,7 +421,10 @@ void main() {
         ..press('enter')
         ..press('enter')
         ..press('right');
-      final driver = ClaudeAskDriver(_ask(_form), const [AskAnswer(selected: [1]), AskAnswer(selected: [0])]);
+      final driver = ClaudeAskDriver(_ask(_form), const [
+        AskAnswer(selected: [1]),
+        AskAnswer(selected: [0]),
+      ]);
 
       final step = driver.next(fake.screen()) as AskSend;
 
@@ -372,8 +446,18 @@ void main() {
     }
 
     test('says what was chosen, in either wording, for one question or two', () {
-      expect(claudeAskResultMatches(output('ask-single'), _ask([_color]), const [AskAnswer(selected: [1])]), isTrue);
-      expect(claudeAskResultMatches(output('ask-multi'), _ask([_fruits]), const [AskAnswer(selected: [0, 2])]), isTrue);
+      expect(
+        claudeAskResultMatches(output('ask-single'), _ask([_color]), const [
+          AskAnswer(selected: [1]),
+        ]),
+        isTrue,
+      );
+      expect(
+        claudeAskResultMatches(output('ask-multi'), _ask([_fruits]), const [
+          AskAnswer(selected: [0, 2]),
+        ]),
+        isTrue,
+      );
       expect(claudeAskResultMatches(output('ask-other'), _ask([_color]), const [AskAnswer(custom: 'purple')]), isTrue);
     });
 
@@ -381,7 +465,10 @@ void main() {
       // The questions are the ones the log itself asked.
       final m = ClaudeLogMapper();
       final lines = File('test/fixtures/claude_logs/ask-two.jsonl').readAsLinesSync();
-      for (final l in lines.sublist(0, lines.indexWhere((l) => l.contains('"type":"tool_use"') && l.contains('AskUserQuestion')) + 1)) {
+      for (final l in lines.sublist(
+        0,
+        lines.indexWhere((l) => l.contains('"type":"tool_use"') && l.contains('AskUserQuestion')) + 1,
+      )) {
         m.map(l);
       }
       final ask = m.pendingAsk!;
@@ -392,14 +479,42 @@ void main() {
       final tests = extras.indexWhere((o) => o.label == 'Tests');
       final ci = extras.indexWhere((o) => o.label == 'CI');
 
-      expect(claudeAskResultMatches(given, ask, [AskAnswer(selected: [go]), AskAnswer(selected: [tests, ci], custom: 'Docs please')]), isTrue);
-      expect(claudeAskResultMatches(given, ask, [AskAnswer(selected: [go]), AskAnswer(selected: [tests, ci])]), isFalse, reason: 'the typed part is missing');
+      expect(
+        claudeAskResultMatches(given, ask, [
+          AskAnswer(selected: [go]),
+          AskAnswer(selected: [tests, ci], custom: 'Docs please'),
+        ]),
+        isTrue,
+      );
+      expect(
+        claudeAskResultMatches(given, ask, [
+          AskAnswer(selected: [go]),
+          AskAnswer(selected: [tests, ci]),
+        ]),
+        isFalse,
+        reason: 'the typed part is missing',
+      );
     });
 
     test('catches an answer that is another one', () {
-      expect(claudeAskResultMatches(output('ask-single'), _ask([_color]), const [AskAnswer(selected: [0])]), isFalse);
-      expect(claudeAskResultMatches(output('ask-multi'), _ask([_fruits]), const [AskAnswer(selected: [0])]), isFalse);
-      expect(claudeAskResultMatches(null, _ask([_color]), const [AskAnswer(selected: [0])]), isFalse);
+      expect(
+        claudeAskResultMatches(output('ask-single'), _ask([_color]), const [
+          AskAnswer(selected: [0]),
+        ]),
+        isFalse,
+      );
+      expect(
+        claudeAskResultMatches(output('ask-multi'), _ask([_fruits]), const [
+          AskAnswer(selected: [0]),
+        ]),
+        isFalse,
+      );
+      expect(
+        claudeAskResultMatches(null, _ask([_color]), const [
+          AskAnswer(selected: [0]),
+        ]),
+        isFalse,
+      );
     });
   });
 }

@@ -25,10 +25,12 @@ class _Echo {
 
   Future<void> start() async {
     server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
-    server.listen((s) => s.listen((d) {
-          received.add(d);
-          s.add(d);
-        }, onError: (Object _) {}));
+    server.listen(
+      (s) => s.listen((d) {
+        received.add(d);
+        s.add(d);
+      }, onError: (Object _) {}),
+    );
     addTearDown(server.close);
   }
 
@@ -40,10 +42,7 @@ class _Echo {
 /// source added to it is paused while the reader is.
 class _SlowMachine implements SSHSocket {
   _SlowMachine() {
-    _reader = _inbound.stream.listen(
-      (d) => received += d.length,
-      onDone: _ended.complete,
-    );
+    _reader = _inbound.stream.listen((d) => received += d.length, onDone: _ended.complete);
     _reader.pause();
   }
 
@@ -125,9 +124,8 @@ _Rig _rig({
   return _Rig(host, dials);
 }
 
-Future<String> _signIn(WebBridgeInfo info) async => cookieFrom(
-      await rawRequest(info.entryPort, target: '/__herdr/open?t=${info.token}&to=%2F'),
-    );
+Future<String> _signIn(WebBridgeInfo info) async =>
+    cookieFrom(await rawRequest(info.entryPort, target: '/__herdr/open?t=${info.token}&to=%2F'));
 
 /// A browser connection to the listener that keeps what comes back.
 class _Conn {
@@ -150,8 +148,7 @@ class _Conn {
   var closed = false;
   final _waiters = <(int, Completer<void>)>[];
 
-  static Future<_Conn> open(int port) async =>
-      _Conn(await Socket.connect(InternetAddress.loopbackIPv4, port));
+  static Future<_Conn> open(int port) async => _Conn(await Socket.connect(InternetAddress.loopbackIPv4, port));
 
   void _check() {
     for (final w in _waiters.toList()) {
@@ -292,11 +289,11 @@ void main() {
       final front = await rig.host.open(const StaticSite('/site', machineName: 'build-box'));
       rig.dials.clear();
       Future<RawReply> call(int origin) => rawRequest(
-            api.port,
-            target: '/api',
-            headers: {'Sec-Fetch-Site': 'same-site', 'Origin': 'http://localhost:$origin'},
-            timeout: const Duration(seconds: 1),
-          );
+        api.port,
+        target: '/api',
+        headers: {'Sec-Fetch-Site': 'same-site', 'Origin': 'http://localhost:$origin'},
+        timeout: const Duration(seconds: 1),
+      );
       expect((await call(api.port)).status, 403);
       expect(rig.dials, isEmpty);
       expect(served, 0);
@@ -335,7 +332,10 @@ void main() {
       await conn.socket.close();
 
       // And the listener answers a good request afterwards.
-      expect(sendsTo(await rawRequest(info.entryPort, target: '/__herdr/open?t=${info.token}&to=%2Fok')), 'http://localhost:${info.port}/ok');
+      expect(
+        sendsTo(await rawRequest(info.entryPort, target: '/__herdr/open?t=${info.token}&to=%2Fok')),
+        'http://localhost:${info.port}/ok',
+      );
     });
   });
 
@@ -409,7 +409,8 @@ void main() {
       await conn.socket.close();
 
       // No Cookie at all (a page of the other listener, let through by origin).
-      final bare = 'GET /y HTTP/1.1\r\nHost: localhost:${info.port}\r\n'
+      final bare =
+          'GET /y HTTP/1.1\r\nHost: localhost:${info.port}\r\n'
           'Sec-Fetch-Site: same-site\r\nOrigin: http://localhost:${front.port}\r\n\r\n';
       conn = await _Conn.open(info.port);
       conn.socket.add(latin1.encode(bare));
@@ -460,13 +461,22 @@ void main() {
       );
       await expectLater(
         rig.host.open(spec),
-        throwsA(isA<HerdrTransportException>().having((e) => e.message, 'message', contains('does not allow port forwarding'))),
+        throwsA(
+          isA<HerdrTransportException>().having(
+            (e) => e.message,
+            'message',
+            contains('does not allow port forwarding'),
+          ),
+        ),
       );
       expect(rig.host.livePorts, isEmpty);
     });
 
     test('a target that is not up yet still opens: the page explains, and a later start works', () async {
-      final rig = _rig(targetPort: () => 1, failDial: (call) => call == 1 ? const HerdrTransportException('refused') : null);
+      final rig = _rig(
+        targetPort: () => 1,
+        failDial: (call) => call == 1 ? const HerdrTransportException('refused') : null,
+      );
       final info = await rig.host.open(spec);
       expect(info.port, greaterThan(0));
     });
@@ -583,7 +593,11 @@ void main() {
       expect('herdr_${info.port}=${info.token}'.allMatches(answers).length, 2);
 
       // Asked for by hand on the dev server's own port, it is refused here.
-      final direct = await rawRequest(info.port, target: '/__herdr/open?t=${info.token}&to=%2F', headers: {'Cookie': cookie});
+      final direct = await rawRequest(
+        info.port,
+        target: '/__herdr/open?t=${info.token}&to=%2F',
+        headers: {'Cookie': cookie},
+      );
       expect(direct.status, 404);
 
       final seen = latin1.decode(echo.received.toBytes());
@@ -593,32 +607,38 @@ void main() {
       await entry.socket.close();
     });
 
-    test('the token names the forward it opens, a static site is not one, and the listener goes with the last forward', () async {
-      final echo = _Echo();
-      await echo.start();
-      // Idle time only has to outlast the few requests below; the stops are awaited by polling.
-      final rig = _rig(targetPort: () => echo.port, idle: const Duration(seconds: 1));
-      final site = await rig.host.open(const StaticSite('/site', machineName: 'm'));
-      expect(site.entryPort, site.port, reason: 'a static site answers its own entry URL');
-      final a = await rig.host.open(const PortForward('localhost', 4998, machineName: 'm'));
-      final b = await rig.host.open(const PortForward('localhost', 4999, machineName: 'm'));
-      expect(b.entryPort, a.entryPort, reason: 'one entry listener serves every forward');
+    test(
+      'the token names the forward it opens, a static site is not one, and the listener goes with the last forward',
+      () async {
+        final echo = _Echo();
+        await echo.start();
+        // Idle time only has to outlast the few requests below; the stops are awaited by polling.
+        final rig = _rig(targetPort: () => echo.port, idle: const Duration(seconds: 1));
+        final site = await rig.host.open(const StaticSite('/site', machineName: 'm'));
+        expect(site.entryPort, site.port, reason: 'a static site answers its own entry URL');
+        final a = await rig.host.open(const PortForward('localhost', 4998, machineName: 'm'));
+        final b = await rig.host.open(const PortForward('localhost', 4999, machineName: 'm'));
+        expect(b.entryPort, a.entryPort, reason: 'one entry listener serves every forward');
 
-      Future<RawReply> entry(String token) =>
-          rawRequest(a.entryPort, target: '/__herdr/open?t=$token&to=%2Fx');
-      final forB = await entry(b.token);
-      expect(sendsTo(forB), 'http://localhost:${b.port}/x');
-      expect(forB.headers['set-cookie'], contains('herdr_${b.port}=${b.token}'));
-      expect((await entry(site.token)).status, 403, reason: 'the static site opens at its own port');
-      expect((await entry('0' * 32)).status, 403);
+        Future<RawReply> entry(String token) => rawRequest(a.entryPort, target: '/__herdr/open?t=$token&to=%2Fx');
+        final forB = await entry(b.token);
+        expect(sendsTo(forB), 'http://localhost:${b.port}/x');
+        expect(forB.headers['set-cookie'], contains('herdr_${b.port}=${b.token}'));
+        expect((await entry(site.token)).status, 403, reason: 'the static site opens at its own port');
+        expect((await entry('0' * 32)).status, 403);
 
-      await eventually(() => rig.host.livePorts.isEmpty, timeout: _idleStopBound, reason: 'every listener to stop idle');
-      await _expectRefused(a.entryPort);
+        await eventually(
+          () => rig.host.livePorts.isEmpty,
+          timeout: _idleStopBound,
+          reason: 'every listener to stop idle',
+        );
+        await _expectRefused(a.entryPort);
 
-      final back = await rig.host.open(const PortForward('localhost', 4998, machineName: 'm'));
-      expect((back.port, back.token), (a.port, a.token), reason: 'a tab left open still works');
-      expect((await rawRequest(back.entryPort, target: '/__herdr/open?t=${back.token}&to=%2F')).status, 200);
-    });
+        final back = await rig.host.open(const PortForward('localhost', 4998, machineName: 'm'));
+        expect((back.port, back.token), (a.port, a.token), reason: 'a tab left open still works');
+        expect((await rawRequest(back.entryPort, target: '/__herdr/open?t=${back.token}&to=%2F')).status, 200);
+      },
+    );
   });
 
   group('opened in a Custom Tab', () {
@@ -725,13 +745,20 @@ void main() {
 
       // The listener's cookie on the second line must still open the gate.
       final conn = await _Conn.open(info.port);
-      conn.socket.add(latin1.encode('GET /x HTTP/1.1\r\nHost: localhost:${info.port}\r\nCookie: theme=dark\r\nCookie: $cookie\r\n\r\n'));
+      conn.socket.add(
+        latin1.encode(
+          'GET /x HTTP/1.1\r\nHost: localhost:${info.port}\r\nCookie: theme=dark\r\nCookie: $cookie\r\n\r\n',
+        ),
+      );
       final arrived = 'GET /x HTTP/1.1\r\nHost: localhost:${info.port}\r\nCookie: theme=dark\r\n\r\n';
       expect(latin1.decode(await conn.waitFor(arrived.length)), arrived);
       await conn.socket.close();
 
       // A second Host line is no way around the allowlist, in either order.
-      for (final host in ['evil.example\r\nHost: localhost:${info.port}', 'localhost:${info.port}\r\nHost: evil.example']) {
+      for (final host in [
+        'evil.example\r\nHost: localhost:${info.port}',
+        'localhost:${info.port}\r\nHost: evil.example',
+      ]) {
         rig.dials.clear();
         final r = await rawRequest(info.port, target: '/x', host: host, headers: {'Cookie': cookie});
         expect(r.status, 403, reason: host);

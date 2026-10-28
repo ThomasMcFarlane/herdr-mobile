@@ -16,10 +16,7 @@ class NetworkState {
   final String signature;
 
   @override
-  bool operator ==(Object other) =>
-      other is NetworkState &&
-      other.online == online &&
-      other.signature == signature;
+  bool operator ==(Object other) => other is NetworkState && other.online == online && other.signature == signature;
 
   @override
   int get hashCode => Object.hash(online, signature);
@@ -37,10 +34,8 @@ abstract interface class NetworkMonitor {
 
 /// [NetworkMonitor] on `connectivity_plus`.
 class ConnectivityNetworkMonitor implements NetworkMonitor {
-  ConnectivityNetworkMonitor({
-    Connectivity? connectivity,
-    this.settle = const Duration(milliseconds: 300),
-  }) : _connectivity = connectivity ?? Connectivity() {
+  ConnectivityNetworkMonitor({Connectivity? connectivity, this.settle = const Duration(milliseconds: 300)})
+    : _connectivity = connectivity ?? Connectivity() {
     _sub = _connectivity.onConnectivityChanged.listen(_onResults);
     unawaited(_prime());
   }
@@ -69,8 +64,7 @@ class ConnectivityNetworkMonitor implements NetworkMonitor {
     final active = {
       for (final r in results)
         if (r != ConnectivityResult.none) r.name,
-    }.toList()
-      ..sort();
+    }.toList()..sort();
     return NetworkState(online: active.isNotEmpty, signature: active.join('+'));
   }
 

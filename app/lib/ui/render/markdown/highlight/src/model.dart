@@ -28,11 +28,7 @@ final class Token {
   final TokenKind kind;
 
   @override
-  bool operator ==(Object other) =>
-      other is Token &&
-      other.start == start &&
-      other.end == end &&
-      other.kind == kind;
+  bool operator ==(Object other) => other is Token && other.start == start && other.end == end && other.kind == kind;
 
   @override
   int get hashCode => Object.hash(start, end, kind);

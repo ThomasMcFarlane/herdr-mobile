@@ -443,5 +443,6 @@ class SubagentSummary {
   int get hashCode => Object.hash(total, waiting, running, finished, failed, cancelled);
 
   @override
-  String toString() => 'SubagentSummary($total: $running running, $waiting waiting, $finished finished, $failed failed, $cancelled cancelled)';
+  String toString() =>
+      'SubagentSummary($total: $running running, $waiting waiting, $finished finished, $failed failed, $cancelled cancelled)';
 }

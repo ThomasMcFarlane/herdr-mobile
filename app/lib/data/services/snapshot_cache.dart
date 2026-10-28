@@ -48,18 +48,18 @@ class PrefsSnapshotCache implements SnapshotCache {
 
   @override
   Future<CachedSnapshot?> read(String machineId) => _enqueue(() async {
-        final prefs = await SharedPreferences.getInstance();
-        final raw = prefs.getString('$_prefix$machineId');
-        if (raw == null) return null;
-        try {
-          final json = jsonDecode(raw) as Map<String, dynamic>;
-          // The record is the snapshot's own JSON plus an `observed` key an
-          // older cache lacks and an older reader ignores.
-          return CachedSnapshot(Snapshot.fromJson(json), _observed(json['observed']));
-        } on Object {
-          return null;
-        }
-      });
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('$_prefix$machineId');
+    if (raw == null) return null;
+    try {
+      final json = jsonDecode(raw) as Map<String, dynamic>;
+      // The record is the snapshot's own JSON plus an `observed` key an
+      // older cache lacks and an older reader ignores.
+      return CachedSnapshot(Snapshot.fromJson(json), _observed(json['observed']));
+    } on Object {
+      return null;
+    }
+  });
 
   static ObservedStatuses? _observed(Object? raw) {
     try {
@@ -70,20 +70,16 @@ class PrefsSnapshotCache implements SnapshotCache {
   }
 
   @override
-  Future<void> write(String machineId, Snapshot snapshot, {ObservedStatuses? observed}) =>
-      _enqueue(() async {
-        final raw = jsonEncode({
-          ...snapshot.toJson(),
-          if (observed != null) 'observed': observed.toJson(),
-        });
-        if (raw.length > maxBytes) return;
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('$_prefix$machineId', raw);
-      });
+  Future<void> write(String machineId, Snapshot snapshot, {ObservedStatuses? observed}) => _enqueue(() async {
+    final raw = jsonEncode({...snapshot.toJson(), if (observed != null) 'observed': observed.toJson()});
+    if (raw.length > maxBytes) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('$_prefix$machineId', raw);
+  });
 
   @override
   Future<void> delete(String machineId) => _enqueue(() async {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove('$_prefix$machineId');
-      });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('$_prefix$machineId');
+  });
 }

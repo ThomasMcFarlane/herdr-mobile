@@ -83,7 +83,9 @@ void main() {
   });
 
   testWidgets('an agent that advertises /clear is sent it, not replaced', (tester) async {
-    final old = _old(commands: const [AcpCommand(name: 'clear', description: 'Clear the conversation')]);
+    final old = _old(
+      commands: const [AcpCommand(name: 'clear', description: 'Clear the conversation')],
+    );
     final e = await _open(tester, old);
 
     await _type(tester, '/clear');

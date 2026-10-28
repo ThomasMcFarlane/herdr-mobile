@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/repositories/terminal_settings.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// The terminal font size: a stepper (smaller, the size, larger) over a sample
@@ -21,8 +22,7 @@ class FontSizeControl extends StatelessWidget {
   static const step = 1.0;
 
   /// "11.5", "12": no trailing zero.
-  static String format(double size) =>
-      size == size.roundToDouble() ? size.toStringAsFixed(0) : size.toStringAsFixed(1);
+  static String format(double size) => size == size.roundToDouble() ? size.toStringAsFixed(0) : size.toStringAsFixed(1);
 
   @override
   Widget build(BuildContext context) {
@@ -40,12 +40,8 @@ class FontSizeControl extends StatelessWidget {
         const SizedBox(height: Gap.sm),
         _Stepper(
           value: format(size),
-          onSmaller: size > minTerminalFontSize
-              ? () => set(math.max(minTerminalFontSize, size - step))
-              : null,
-          onLarger: size < maxTerminalFontSize
-              ? () => set(math.min(maxTerminalFontSize, size + step))
-              : null,
+          onSmaller: size > minTerminalFontSize ? () => set(math.max(minTerminalFontSize, size - step)) : null,
+          onLarger: size < maxTerminalFontSize ? () => set(math.min(maxTerminalFontSize, size + step)) : null,
         ),
         const SizedBox(height: Gap.sm),
         _Sample(size: size),
@@ -70,17 +66,10 @@ class _Stepper extends StatelessWidget {
       maxScaleFactor: 1.2,
       child: Container(
         height: kMinTap,
-        decoration: BoxDecoration(
-          color: ds.fill,
-          borderRadius: BorderRadius.circular(Radii.sm),
-        ),
+        decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.sm)),
         child: Row(
           children: [
-            _StepButton(
-              icon: LucideIcons.minus,
-              label: 'Decrease font size',
-              onTap: onSmaller,
-            ),
+            _StepButton(icon: LucideIcons.minus, label: 'Decrease font size', onTap: onSmaller),
             Expanded(
               child: Center(
                 child: Text(
@@ -90,11 +79,7 @@ class _Stepper extends StatelessWidget {
                 ),
               ),
             ),
-            _StepButton(
-              icon: LucideIcons.plus,
-              label: 'Increase font size',
-              onTap: onLarger,
-            ),
+            _StepButton(icon: LucideIcons.plus, label: 'Increase font size', onTap: onLarger),
           ],
         ),
       ),
@@ -145,8 +130,7 @@ class _Sample extends StatelessWidget {
 
   static const _lineHeight = 1.3;
 
-  static double _scaled(TextScaler scaler, double size) =>
-      math.min(math.max(scaler.scale(size), size), size * 1.6);
+  static double _scaled(TextScaler scaler, double size) => math.min(math.max(scaler.scale(size), size), size * 1.6);
 
   @override
   Widget build(BuildContext context) {

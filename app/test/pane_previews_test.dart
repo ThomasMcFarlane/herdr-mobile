@@ -16,16 +16,15 @@ import 'support/fake_transport.dart';
 
 typedef _P = ({String id, String ws, String? agent, String status});
 
-_P _pane(String id, [String status = 'working']) =>
-    (id: id, ws: 'w1', agent: 'claude', status: status);
+_P _pane(String id, [String status = 'working']) => (id: id, ws: 'w1', agent: 'claude', status: status);
 
 Map<String, dynamic> _paneUpdated(String id) => {
-      'event': 'pane_updated',
-      'data': {
-        'type': 'pane_updated',
-        'pane': {'pane_id': id},
-      },
-    };
+  'event': 'pane_updated',
+  'data': {
+    'type': 'pane_updated',
+    'pane': {'pane_id': id},
+  },
+};
 
 const _statusChanged = {'event': 'pane_agent_status_changed'};
 
@@ -68,10 +67,7 @@ class _PaneTransport extends FakeTransport {
   int readsOf(String pane) => reads.where((r) => r.pane == pane).length;
 
   @override
-  Future<Map<String, dynamic>> request(
-    String method, [
-    Map<String, dynamic> params = const {},
-  ]) async {
+  Future<Map<String, dynamic>> request(String method, [Map<String, dynamic> params = const {}]) async {
     if (method != 'pane.read') return super.request(method, params);
     final pane = params['pane_id'] as String;
     calls.add((method, params));
@@ -87,10 +83,7 @@ class _PaneTransport extends FakeTransport {
     if (readFailure != null) throw readFailure!;
     return {
       'type': 'pane_read',
-      'read': {
-        'text': dynamicText?.call(pane, nth) ?? texts[pane] ?? '',
-        'truncated': false,
-      },
+      'read': {'text': dynamicText?.call(pane, nth) ?? texts[pane] ?? '', 'truncated': false},
     };
   }
 }
@@ -127,10 +120,8 @@ class _Rig {
   _PaneTransport get t => _transports['m']!;
   MachineConnection get conn => _conns['m']!;
 
-  MachineConnection addMachine(String id, List<_P> panes,
-      {Duration latency = Duration.zero}) {
-    final transport = _PaneTransport(() => async.elapsed, snapshotJson(panes: panes))
-      ..latency = latency;
+  MachineConnection addMachine(String id, List<_P> panes, {Duration latency = Duration.zero}) {
+    final transport = _PaneTransport(() => async.elapsed, snapshotJson(panes: panes))..latency = latency;
     final c = MachineConnection(
       profile: MachineProfile(id: id, label: id, host: 'h', username: 'u'),
       api: HerdrApi(transport),
@@ -174,15 +165,13 @@ void _rig(
   List<_P> panes = const [],
   int retainReleased = 24,
   Duration latency = Duration.zero,
-}) =>
-    test(name, () {
-      fakeAsync((async) {
-        final rig = _Rig(async,
-            panes: panes, retainReleased: retainReleased, latency: latency);
-        body(async, rig);
-        rig.dispose();
-      });
-    });
+}) => test(name, () {
+  fakeAsync((async) {
+    final rig = _Rig(async, panes: panes, retainReleased: retainReleased, latency: latency);
+    body(async, rig);
+    rig.dispose();
+  });
+});
 
 PanePreview _value(PreviewHandle h) => h.preview.value!;
 
@@ -256,8 +245,7 @@ void main() {
   });
 
   group('throttle', () {
-    _rig('an event burst yields one read per 1.5 s, never a starved debounce',
-        (async, rig) {
+    _rig('an event burst yields one read per 1.5 s, never a starved debounce', (async, rig) {
       rig.t.dynamicText = (p, n) => 'output $n';
       final h = rig.previews.watch('m', 'w1:p1');
       async.flushMicrotasks();
@@ -271,8 +259,11 @@ void main() {
       for (var i = 1; i < at.length; i++) {
         expect(at[i] - at[i - 1], greaterThanOrEqualTo(const Duration(milliseconds: 1500)));
       }
-      expect(at[1], const Duration(milliseconds: 1500),
-          reason: 'the first event is served as soon as the throttle allows');
+      expect(
+        at[1],
+        const Duration(milliseconds: 1500),
+        reason: 'the first event is served as soon as the throttle allows',
+      );
       h.release();
     }, panes: [_pane('w1:p1')]);
 
@@ -287,8 +278,7 @@ void main() {
       h.release();
     }, panes: [_pane('w1:p1')]);
 
-    _rig('unchanged reads back off; a status change cuts the backoff short',
-        (async, rig) {
+    _rig('unchanged reads back off; a status change cuts the backoff short', (async, rig) {
       rig.t.texts['w1:p1'] = 'static';
       final h = rig.previews.watch('m', 'w1:p1');
       async.flushMicrotasks();
@@ -308,8 +298,7 @@ void main() {
       h.release();
     }, panes: [_pane('w1:p1')]);
 
-    _rig('releasing and re-watching at once does not defeat the throttle',
-        (async, rig) {
+    _rig('releasing and re-watching at once does not defeat the throttle', (async, rig) {
       rig.t.dynamicText = (p, n) => 'output $n';
       final first = rig.previews.watch('m', 'w1:p1');
       async.flushMicrotasks();
@@ -320,8 +309,7 @@ void main() {
       expect(rig.t.reads, hasLength(1));
       rig.ms(1200);
       expect(rig.t.reads, hasLength(2));
-      expect(rig.t.reads[1].at - rig.t.reads[0].at,
-          greaterThanOrEqualTo(const Duration(milliseconds: 1500)));
+      expect(rig.t.reads[1].at - rig.t.reads[0].at, greaterThanOrEqualTo(const Duration(milliseconds: 1500)));
       h.release();
     }, panes: [_pane('w1:p1')]);
 
@@ -335,34 +323,31 @@ void main() {
   });
 
   group('staggering', () {
-    _rig('20 cards appearing at once: <= 2 reads in flight, starts spaced',
-        (async, rig) {
-      rig.t.dynamicText = (p, n) => '$p output $n';
-      final handles = [
-        for (var i = 0; i < 20; i++) rig.previews.watch('m', 'w1:p$i'),
-      ];
-      rig.seconds(5);
-      expect(rig.t.reads.length, 20);
-      expect(rig.t.maxInFlight, lessThanOrEqualTo(2));
-      final starts = [for (final r in rig.t.reads) r.at];
-      for (var i = 1; i < starts.length; i++) {
-        expect(starts[i] - starts[i - 1], greaterThanOrEqualTo(const Duration(milliseconds: 40)));
-      }
-      for (final h in handles) {
-        expect(h.preview.value, isNotNull);
-        h.release();
-      }
-    },
-        panes: [for (var i = 0; i < 20; i++) _pane('w1:p$i')],
-        latency: const Duration(milliseconds: 300));
+    _rig(
+      '20 cards appearing at once: <= 2 reads in flight, starts spaced',
+      (async, rig) {
+        rig.t.dynamicText = (p, n) => '$p output $n';
+        final handles = [for (var i = 0; i < 20; i++) rig.previews.watch('m', 'w1:p$i')];
+        rig.seconds(5);
+        expect(rig.t.reads.length, 20);
+        expect(rig.t.maxInFlight, lessThanOrEqualTo(2));
+        final starts = [for (final r in rig.t.reads) r.at];
+        for (var i = 1; i < starts.length; i++) {
+          expect(starts[i] - starts[i - 1], greaterThanOrEqualTo(const Duration(milliseconds: 40)));
+        }
+        for (final h in handles) {
+          expect(h.preview.value, isNotNull);
+          h.release();
+        }
+      },
+      panes: [for (var i = 0; i < 20; i++) _pane('w1:p$i')],
+      latency: const Duration(milliseconds: 300),
+    );
 
-    _rig('queues are per machine: a slow machine does not hold up another',
-        (async, rig) {
+    _rig('queues are per machine: a slow machine does not hold up another', (async, rig) {
       rig.t.latency = const Duration(seconds: 3);
       rig.addMachine('n', [_pane('w2:p1')]);
-      final slow = [
-        for (var i = 0; i < 6; i++) rig.previews.watch('m', 'w1:p$i'),
-      ];
+      final slow = [for (var i = 0; i < 6; i++) rig.previews.watch('m', 'w1:p$i')];
       final fast = rig.previews.watch('n', 'w2:p1');
       rig.ms(200);
       expect(rig.t.readsOf('w1:p0'), 1);
@@ -374,8 +359,7 @@ void main() {
   });
 
   group('pausing', () {
-    _rig('an offline machine is not read; coming back refreshes at once',
-        (async, rig) {
+    _rig('an offline machine is not read; coming back refreshes at once', (async, rig) {
       rig.t.dynamicText = (p, n) => 'output $n';
       final h = rig.previews.watch('m', 'w1:p1');
       async.flushMicrotasks();
@@ -410,8 +394,7 @@ void main() {
       h.release();
     }, panes: [_pane('w1:p1')]);
 
-    _rig('backgrounded app: no reads; resumed: one refresh per watched pane',
-        (async, rig) {
+    _rig('backgrounded app: no reads; resumed: one refresh per watched pane', (async, rig) {
       rig.t.dynamicText = (p, n) => '$p output $n';
       final a = rig.previews.watch('m', 'w1:p1');
       final b = rig.previews.watch('m', 'w1:p2');
@@ -442,8 +425,7 @@ void main() {
       h.release();
     }, panes: [_pane('w1:p1')]);
 
-    _rig('a watch opened while the machine is not online reads when it comes up',
-        (async, rig) {
+    _rig('a watch opened while the machine is not online reads when it comes up', (async, rig) {
       rig.conn.goOffline();
       final h = rig.previews.watch('m', 'w1:p1');
       rig.seconds(5);
@@ -477,8 +459,7 @@ void main() {
   });
 
   group('content', () {
-    _rig('ANSI, OSC, CR progress, tabs, box bars and rules are cleaned',
-        (async, rig) {
+    _rig('ANSI, OSC, CR progress, tabs, box bars and rules are cleaned', (async, rig) {
       rig.t.texts['w1:p1'] = [
         '\x1B[1;32m✓\x1B[0m built \x1B[38;5;240min 3s\x1B[0m   ',
         '\x1B]0;window title\x07plain after osc',
@@ -519,8 +500,7 @@ void main() {
       ].join('\n');
       final h = rig.previews.watch('m', 'w1:p1');
       async.flushMicrotasks();
-      expect([for (final l in _value(h).lines) l.text],
-          [for (var i = 7; i < 15; i++) 'row $i']);
+      expect([for (final l in _value(h).lines) l.text], [for (var i = 7; i < 15; i++) 'row $i']);
       h.release();
     }, panes: [_pane('w1:p1')]);
 
@@ -567,8 +547,7 @@ void main() {
       h.release();
     }, panes: [_pane('w1:p1')]);
 
-    _rig('a failed read keeps the last preview and recovers on the next event',
-        (async, rig) {
+    _rig('a failed read keeps the last preview and recovers on the next event', (async, rig) {
       rig.t.texts['w1:p1'] = 'good';
       final h = rig.previews.watch('m', 'w1:p1');
       async.flushMicrotasks();
@@ -589,8 +568,7 @@ void main() {
     _rig('a pane that no longer exists is not hammered', (async, rig) {
       final h = rig.previews.watch('m', 'w1:p1');
       async.flushMicrotasks();
-      rig.t.readFailure =
-          const HerdrApiException('pane_not_found', 'pane w1:p1 not found');
+      rig.t.readFailure = const HerdrApiException('pane_not_found', 'pane w1:p1 not found');
       rig.t.emit(_paneUpdated('w1:p1'));
       rig.seconds(3);
       final before = rig.t.reads.length;
@@ -618,16 +596,18 @@ void main() {
       async.flushMicrotasks();
       final p = _value(h).prompt!;
       expect(p.question, 'Do you want to proceed?');
-      expect([for (final r in p.replies) r.keys], [
-        ['1', 'enter'],
-        ['2', 'enter'],
-        ['3', 'enter'],
-      ]);
+      expect(
+        [for (final r in p.replies) r.keys],
+        [
+          ['1', 'enter'],
+          ['2', 'enter'],
+          ['3', 'enter'],
+        ],
+      );
       h.release();
     }, panes: [_pane('w1:p1', 'blocked')]);
 
-    _rig('blocked then answered: the prompt vanishes without waiting for a read',
-        (async, rig) {
+    _rig('blocked then answered: the prompt vanishes without waiting for a read', (async, rig) {
       rig.t.texts['w1:p1'] = _claudePrompt;
       final h = rig.previews.watch('m', 'w1:p1');
       async.flushMicrotasks();
@@ -642,8 +622,7 @@ void main() {
       h.release();
     }, panes: [_pane('w1:p1', 'blocked')]);
 
-    _rig('working then blocked: the prompt shows at once from the last rows',
-        (async, rig) {
+    _rig('working then blocked: the prompt shows at once from the last rows', (async, rig) {
       rig.t.texts['w1:p1'] = _claudePrompt;
       final h = rig.previews.watch('m', 'w1:p1');
       async.flushMicrotasks();
@@ -656,8 +635,7 @@ void main() {
       h.release();
     }, panes: [_pane('w1:p1', 'working')]);
 
-    _rig('a recheck reads past the throttle, shows what it read and returns the question asked now',
-        (async, rig) {
+    _rig('a recheck reads past the throttle, shows what it read and returns the question asked now', (async, rig) {
       rig.t.texts['w1:p1'] = _claudePrompt;
       final h = rig.previews.watch('m', 'w1:p1');
       async.flushMicrotasks();
@@ -674,8 +652,7 @@ void main() {
       h.release();
     }, panes: [_pane('w1:p1', 'blocked')]);
 
-    _rig('a read that started before a recheck and lands after it does not bring the old question back',
-        (async, rig) {
+    _rig('a read that started before a recheck and lands after it does not bring the old question back', (async, rig) {
       rig.t.dynamicText = (pane, nth) => nth <= 2 ? _claudePrompt : _otherPrompt;
       final h = rig.previews.watch('m', 'w1:p1');
       async.flushMicrotasks();
@@ -721,23 +698,26 @@ void main() {
       h.release();
     }, panes: [_pane('w1:p1')]);
 
-    _rig('the LRU is bounded and drops the oldest', (async, rig) {
-      for (var i = 0; i < 6; i++) {
-        final h = rig.previews.watch('m', 'w1:p$i');
-        async.flushMicrotasks();
+    _rig(
+      'the LRU is bounded and drops the oldest',
+      (async, rig) {
+        for (var i = 0; i < 6; i++) {
+          final h = rig.previews.watch('m', 'w1:p$i');
+          async.flushMicrotasks();
+          h.release();
+          async.flushMicrotasks();
+        }
+        expect(rig.previews.retainedPanes, 3);
+        final h = rig.previews.watch('m', 'w1:p0');
+        expect(h.preview.value, isNull, reason: 'p0 was evicted');
+        final kept = rig.previews.watch('m', 'w1:p5');
+        expect(kept.preview.value, isNotNull);
         h.release();
-        async.flushMicrotasks();
-      }
-      expect(rig.previews.retainedPanes, 3);
-      final h = rig.previews.watch('m', 'w1:p0');
-      expect(h.preview.value, isNull, reason: 'p0 was evicted');
-      final kept = rig.previews.watch('m', 'w1:p5');
-      expect(kept.preview.value, isNotNull);
-      h.release();
-      kept.release();
-    },
-        panes: [for (var i = 0; i < 6; i++) _pane('w1:p$i')],
-        retainReleased: 3);
+        kept.release();
+      },
+      panes: [for (var i = 0; i < 6; i++) _pane('w1:p$i')],
+      retainReleased: 3,
+    );
   });
 
   group('cost', () {
@@ -747,9 +727,7 @@ void main() {
       fakeAsync((async) {
         final rig = _Rig(async, panes: [for (var i = 0; i < 20; i++) _pane('w1:p$i')]);
         rig.t.dynamicText = (p, n) => '$p streaming $n';
-        final handles = [
-          for (var i = 0; i < 20; i++) rig.previews.watch('m', 'w1:p$i'),
-        ];
+        final handles = [for (var i = 0; i < 20; i++) rig.previews.watch('m', 'w1:p$i')];
         async.flushMicrotasks();
         final start = rig.t.reads.length;
         for (var tick = 0; tick < 300; tick++) {
@@ -772,9 +750,7 @@ void main() {
       fakeAsync((async) {
         final rig = _Rig(async, panes: [for (var i = 0; i < 20; i++) _pane('w1:p$i', 'idle')]);
         rig.t.texts.addAll({for (var i = 0; i < 20; i++) 'w1:p$i': 'idle text'});
-        final handles = [
-          for (var i = 0; i < 20; i++) rig.previews.watch('m', 'w1:p$i'),
-        ];
+        final handles = [for (var i = 0; i < 20; i++) rig.previews.watch('m', 'w1:p$i')];
         async.flushMicrotasks();
         rig.seconds(2);
         final start = rig.t.reads.length;

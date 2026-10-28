@@ -3,13 +3,7 @@ import 'dart:typed_data';
 
 /// The photo details worth showing next to a picture, read from its EXIF.
 class ExifInfo {
-  const ExifInfo({
-    this.orientation,
-    this.taken,
-    this.camera,
-    this.lens,
-    this.settings,
-  });
+  const ExifInfo({this.orientation, this.taken, this.camera, this.lens, this.settings});
 
   /// EXIF orientation 1..8 (tag 0x0112), null when absent or out of range.
   final int? orientation;
@@ -26,12 +20,7 @@ class ExifInfo {
   /// One line such as `f/1.8 · 1/120 s · ISO 100 · 5.4 mm`.
   final String? settings;
 
-  bool get isEmpty =>
-      orientation == null &&
-      taken == null &&
-      camera == null &&
-      lens == null &&
-      settings == null;
+  bool get isEmpty => orientation == null && taken == null && camera == null && lens == null && settings == null;
 }
 
 /// Only this much of the input is ever examined.
@@ -80,9 +69,7 @@ const Set<int> _wanted = {
 /// [ExifInfo]. Never throws: every read is bounds-checked, loops are cut off,
 /// and only the first 256 KiB of [bytes] is looked at.
 ExifInfo? readExif(Uint8List bytes) {
-  final data = bytes.length > _maxBytes
-      ? Uint8List.sublistView(bytes, 0, _maxBytes)
-      : bytes;
+  final data = bytes.length > _maxBytes ? Uint8List.sublistView(bytes, 0, _maxBytes) : bytes;
   final tiff = _locateTiff(data);
   if (tiff == null) return null;
   final info = _Tiff.parse(tiff)?.info();
@@ -101,38 +88,25 @@ bool _startsWith(Uint8List d, int at, List<int> prefix) {
 
 int _u16be(Uint8List d, int at) => (d[at] << 8) | d[at + 1];
 
-int _u32be(Uint8List d, int at) =>
-    (d[at] << 24) | (d[at + 1] << 16) | (d[at + 2] << 8) | d[at + 3];
+int _u32be(Uint8List d, int at) => (d[at] << 24) | (d[at + 1] << 16) | (d[at + 2] << 8) | d[at + 3];
 
-int _u32le(Uint8List d, int at) =>
-    d[at] | (d[at + 1] << 8) | (d[at + 2] << 16) | (d[at + 3] << 24);
+int _u32le(Uint8List d, int at) => d[at] | (d[at + 1] << 8) | (d[at + 2] << 16) | (d[at + 3] << 24);
 
 /// The TIFF structure inside whichever container [d] is, or null.
 Uint8List? _locateTiff(Uint8List d) {
   if (d.length >= 2 && d[0] == 0xFF && d[1] == 0xD8) return _fromJpeg(d);
-  if (_startsWith(d, 0, const [
-    0x89,
-    0x50,
-    0x4E,
-    0x47,
-    0x0D,
-    0x0A,
-    0x1A,
-    0x0A,
-  ])) {
+  if (_startsWith(d, 0, const [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])) {
     return _fromPng(d);
   }
-  if (_startsWith(d, 0, const [0x52, 0x49, 0x46, 0x46]) &&
-      _startsWith(d, 8, const [0x57, 0x45, 0x42, 0x50])) {
+  if (_startsWith(d, 0, const [0x52, 0x49, 0x46, 0x46]) && _startsWith(d, 8, const [0x57, 0x45, 0x42, 0x50])) {
     return _fromWebp(d);
   }
   return null;
 }
 
 /// Strips the optional `Exif\0\0` prefix from a chunk payload.
-Uint8List _unprefixed(Uint8List payload) => _startsWith(payload, 0, _exifPrefix)
-    ? Uint8List.sublistView(payload, _exifPrefix.length)
-    : payload;
+Uint8List _unprefixed(Uint8List payload) =>
+    _startsWith(payload, 0, _exifPrefix) ? Uint8List.sublistView(payload, _exifPrefix.length) : payload;
 
 Uint8List? _fromJpeg(Uint8List d) {
   var pos = 2;
@@ -143,9 +117,7 @@ Uint8List? _fromJpeg(Uint8List d) {
       pos++; // fill byte
       continue;
     }
-    if (marker == 0xD8 ||
-        marker == 0x01 ||
-        (marker >= 0xD0 && marker <= 0xD7)) {
+    if (marker == 0xD8 || marker == 0x01 || (marker >= 0xD0 && marker <= 0xD7)) {
       pos += 2; // markers without a length
       continue;
     }
@@ -353,20 +325,13 @@ class _Tiff {
     return real && v[0] > 0 ? date : null;
   }
 
-  static final RegExp _dateRe = RegExp(
-    r'^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})',
-  );
+  static final RegExp _dateRe = RegExp(r'^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})');
 
   ExifInfo info() {
     final orientation = _int(_tagOrientation);
     return ExifInfo(
-      orientation: orientation != null && orientation >= 1 && orientation <= 8
-          ? orientation
-          : null,
-      taken:
-          _date(_tagDateOriginal) ??
-          _date(_tagDateDigitized) ??
-          _date(_tagDateTime),
+      orientation: orientation != null && orientation >= 1 && orientation <= 8 ? orientation : null,
+      taken: _date(_tagDateOriginal) ?? _date(_tagDateDigitized) ?? _date(_tagDateTime),
       camera: _camera(_text(_tagMake), _text(_tagModel)),
       lens: _text(_tagLensModel),
       settings: _settings(),
@@ -376,9 +341,7 @@ class _Tiff {
   static String? _camera(String? make, String? model) {
     if (make == null) return model;
     if (model == null) return make;
-    return model.toLowerCase().startsWith(make.toLowerCase())
-        ? model
-        : '$make $model';
+    return model.toLowerCase().startsWith(make.toLowerCase()) ? model : '$make $model';
   }
 
   String? _settings() {

@@ -7,7 +7,9 @@ import '../../../data/acp/auth_needed.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/session_launcher.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../create/session_start_support.dart' show describeLaunchFailure;
 import '../agents/agent_navigation.dart';
 import '../../../data/repositories/agent_screens.dart';
@@ -62,9 +64,9 @@ class _AuthPanelState extends State<AuthPanel> {
     final folder = _session.cwd.isEmpty ? '~' : _session.cwd;
     setState(() => _busy = true);
     try {
-      final launched = await widget.launcherFor(machine).launch(
-        LaunchRequest(folder: folder, label: 'Sign in to ${_session.agentLabel}'),
-      );
+      final launched = await widget
+          .launcherFor(machine)
+          .launch(LaunchRequest(folder: folder, label: 'Sign in to ${_session.agentLabel}'));
       if (!mounted) return;
       await widget.openPane(context, machine, launched.paneId);
     } on Exception catch (e) {

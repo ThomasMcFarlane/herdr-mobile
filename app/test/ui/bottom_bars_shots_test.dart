@@ -47,10 +47,15 @@ FakeAgentSession _subagents() {
   final updates = <Json>[];
   for (var i = 0; i < 25; i++) {
     updates.add(launch('r$i', description: 'Subagent number $i', type: 'Explore', status: 'in_progress'));
-    if (i >= 4) updates.add(i % 7 == 0 ? toolUpdate('r$i', status: 'failed') : finished('r$i', seconds: 20 + i, tools: i));
+    if (i >= 4) {
+      updates.add(i % 7 == 0 ? toolUpdate('r$i', status: 'failed') : finished('r$i', seconds: 20 + i, tools: i));
+    }
   }
   updates.add(childTool('askc', 'r0'));
-  return FakeAgentSession(title: 'payments-api', state: play(updates).withPending(PendingPermission(1, askFor('askc'))));
+  return FakeAgentSession(
+    title: 'payments-api',
+    state: play(updates).withPending(PendingPermission(1, askFor('askc'))),
+  );
 }
 
 void main() {
@@ -163,7 +168,14 @@ void main() {
 
         testWidgets('session bar $tag', (tester) async {
           final session = _subagents();
-          await shoot(tester, 'session-bar', () => Scaffold(body: SessionBar(session: session)), size, brightness, scale: scale);
+          await shoot(
+            tester,
+            'session-bar',
+            () => Scaffold(body: SessionBar(session: session)),
+            size,
+            brightness,
+            scale: scale,
+          );
         });
 
         testWidgets('session overview $tag', (tester) async {

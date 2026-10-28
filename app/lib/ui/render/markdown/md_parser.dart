@@ -60,8 +60,7 @@ MdDocument parseMdUnchunked(String source, {bool softBreaksAsNewlines = true}) =
     MdDocument(parseMdChunk(normalizeNewlines(source), softBreaksAsNewlines: softBreaksAsNewlines));
 
 /// `\r\n` and lone `\r` to `\n`.
-String normalizeNewlines(String s) =>
-    s.contains('\r') ? s.replaceAll('\r\n', '\n').replaceAll('\r', '\n') : s;
+String normalizeNewlines(String s) => s.contains('\r') ? s.replaceAll('\r\n', '\n').replaceAll('\r', '\n') : s;
 
 /// Parses one chunk (see `MdChunker`) into blocks. Internal: used by
 /// [parseMd] and `StreamingMd`, not exported by `markdown.dart`.
@@ -87,11 +86,15 @@ List<MdBlock> parseMdChunk(String chunk, {required bool softBreaksAsNewlines}) {
     // The engine throws an AssertionError when its block parser stops
     // advancing on a pathological input (seen on random input; it is thrown in
     // release builds too). Show the text rather than lose it.
-    return [MdParagraph(MdInlines([MdSpan(chunk)]))];
+    return [
+      MdParagraph(MdInlines([MdSpan(chunk)])),
+    ];
   }
   if (blocks.isEmpty) {
     // Only link reference definitions: keep what was written.
-    return [MdParagraph(MdInlines([MdSpan(chunk.trim())]))];
+    return [
+      MdParagraph(MdInlines([MdSpan(chunk.trim())])),
+    ];
   }
   return _markUnclosed(blocks, chunk);
 }
@@ -127,11 +130,7 @@ final md.ExtensionSet _extensions = md.ExtensionSet(
     const md.OrderedListWithCheckboxSyntax(),
     const md.AlertBlockSyntax(),
   ],
-  <md.InlineSyntax>[
-    _HtmlBreakSyntax(),
-    _StrikeSyntax(),
-    md.AutolinkExtensionSyntax(),
-  ],
+  <md.InlineSyntax>[_HtmlBreakSyntax(), _StrikeSyntax(), md.AutolinkExtensionSyntax()],
 );
 
 /// `<br>`, `<br/>`, `<br />` (any case) is a hard break.
@@ -148,13 +147,13 @@ class _HtmlBreakSyntax extends md.InlineSyntax {
 /// `~~x~~` only. GFM also accepts `~x~`, which agents never mean (`20~25`).
 class _StrikeSyntax extends md.DelimiterSyntax {
   _StrikeSyntax()
-      : super(
-          '~+',
-          requiresDelimiterRun: true,
-          allowIntraWord: true,
-          startCharacter: 0x7e,
-          tags: [md.DelimiterTag('del', 2)],
-        );
+    : super(
+        '~+',
+        requiresDelimiterRun: true,
+        allowIntraWord: true,
+        startCharacter: 0x7e,
+        tags: [md.DelimiterTag('del', 2)],
+      );
 }
 
 const _blockTags = {
@@ -222,13 +221,13 @@ class _Mapper {
   }
 
   MdAlertKind? _alertKind(String s) => switch (s) {
-        'note' => MdAlertKind.note,
-        'tip' => MdAlertKind.tip,
-        'important' => MdAlertKind.important,
-        'warning' => MdAlertKind.warning,
-        'caution' => MdAlertKind.caution,
-        _ => null,
-      };
+    'note' => MdAlertKind.note,
+    'tip' => MdAlertKind.tip,
+    'important' => MdAlertKind.important,
+    'warning' => MdAlertKind.warning,
+    'caution' => MdAlertKind.caution,
+    _ => null,
+  };
 
   MdCode _code(md.Element pre) {
     final kids = pre.children ?? const <md.Node>[];
@@ -289,10 +288,7 @@ class _Mapper {
       aligns: aligns,
       header: head,
       rows: [
-        for (final r in body)
-          [
-            for (var i = 0; i < aligns.length; i++) i < r.length ? r[i] : MdInlines.empty,
-          ],
+        for (final r in body) [for (var i = 0; i < aligns.length; i++) i < r.length ? r[i] : MdInlines.empty],
       ],
     );
   }

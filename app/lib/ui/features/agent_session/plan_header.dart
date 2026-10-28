@@ -4,7 +4,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/acp/acp_models.dart';
 import '../../../data/models/herdr_models.dart' show AgentStatus;
 import '../../../data/repositories/agent_session.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'session_select.dart';
 
 const _listHeight = 216.0;
@@ -113,49 +115,51 @@ class _PlanState extends State<_Plan> {
     final current = plan.where((e) => e.status == PlanStatus.inProgress).firstOrNull;
     // In whatever room the screen gives it (see the screen's layout): a plan
     // that does not fit scrolls there instead of overflowing.
-    return SingleChildScrollView(child: Padding(
-      padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.xs),
-      child: FoldPanel(
-        expanded: _open,
-        onToggle: (open) => setState(() => _open = open),
-        header: Row(
-          children: [
-            Icon(LucideIcons.listChecks, size: IconSize.row, color: ds.textSecondary),
-            const SizedBox(width: Gap.sm),
-            Expanded(
-              child: Text.rich(
-                TextSpan(
-                  text: 'Plan',
-                  style: Type.labelStrong.copyWith(color: ds.text),
-                  children: [
-                    TextSpan(
-                      text: '  $done of ${plan.length}',
-                      style: Type.label.copyWith(color: ds.textSecondary, fontFeatures: Type.tabular),
-                    ),
-                    if (current != null && !_open)
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.xs),
+        child: FoldPanel(
+          expanded: _open,
+          onToggle: (open) => setState(() => _open = open),
+          header: Row(
+            children: [
+              Icon(LucideIcons.listChecks, size: IconSize.row, color: ds.textSecondary),
+              const SizedBox(width: Gap.sm),
+              Expanded(
+                child: Text.rich(
+                  TextSpan(
+                    text: 'Plan',
+                    style: Type.labelStrong.copyWith(color: ds.text),
+                    children: [
                       TextSpan(
-                        text: '  ${current.content}',
-                        style: Type.secondary.copyWith(color: ds.textMuted),
+                        text: '  $done of ${plan.length}',
+                        style: Type.label.copyWith(color: ds.textSecondary, fontFeatures: Type.tabular),
                       ),
-                  ],
+                      if (current != null && !_open)
+                        TextSpan(
+                          text: '  ${current.content}',
+                          style: Type.secondary.copyWith(color: ds.textMuted),
+                        ),
+                    ],
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
+            ],
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: _listHeight),
+            child: ListView.builder(
+              shrinkWrap: true,
+              padding: EdgeInsets.zero,
+              itemCount: plan.length,
+              itemBuilder: (context, i) => _Step(entry: plan[i]),
             ),
-          ],
-        ),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxHeight: _listHeight),
-          child: ListView.builder(
-            shrinkWrap: true,
-            padding: EdgeInsets.zero,
-            itemCount: plan.length,
-            itemBuilder: (context, i) => _Step(entry: plan[i]),
           ),
         ),
       ),
-    ));
+    );
   }
 }
 
@@ -187,7 +191,10 @@ class _Step extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(padding: const EdgeInsets.only(top: Gap.hair), child: glyph),
+            Padding(
+              padding: const EdgeInsets.only(top: Gap.hair),
+              child: glyph,
+            ),
             const SizedBox(width: Gap.md),
             Expanded(
               child: Text(

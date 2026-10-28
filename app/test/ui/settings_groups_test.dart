@@ -36,13 +36,13 @@ import '../support/update_fakes.dart';
 const _base = 'https://github.com/tuan3w/herdr-mobile/releases/download/v99.0.0';
 
 ReleaseInfo _release({String notes = '### One new thing\n\nIt does what it says.'}) => ReleaseInfo(
-      version: '99.0.0',
-      apkUrl: 'https://example.invalid/herdr-mobile-99.0.0.apk',
-      size: 48 * 1024 * 1024,
-      pageUrl: 'https://example.invalid/releases/tag/v99.0.0',
-      notes: notes,
-      sha256: 'a' * 64,
-    );
+  version: '99.0.0',
+  apkUrl: 'https://example.invalid/herdr-mobile-99.0.0.apk',
+  size: 48 * 1024 * 1024,
+  pageUrl: 'https://example.invalid/releases/tag/v99.0.0',
+  notes: notes,
+  sha256: 'a' * 64,
+);
 
 /// An updater with the fakes behind it, its newer version not yet looked for.
 ({AppUpdate update, FakeReleaseFeed feed, FakeReleaseFiles files, FakeApkInstaller installer}) _updater(
@@ -119,7 +119,10 @@ Future<void> _pump(
         ),
         home: ValueListenableBuilder<bool>(
           valueListenable: front,
-          builder: (context, on, _) => TickerMode(enabled: on, child: SettingsScreen(update: update)),
+          builder: (context, on, _) => TickerMode(
+            enabled: on,
+            child: SettingsScreen(update: update),
+          ),
         ),
       ),
     ),
@@ -180,8 +183,9 @@ void main() {
 
     testWidgets('reduced motion: a group opens at once and nothing is left moving', (tester) async {
       await _pump(tester);
-      tester.platformDispatcher.accessibilityFeaturesTestValue =
-          const FakeAccessibilityFeatures(disableAnimations: true);
+      tester.platformDispatcher.accessibilityFeaturesTestValue = const FakeAccessibilityFeatures(
+        disableAnimations: true,
+      );
       addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
       await tester.pump();
       await tester.tap(find.text('Look'));
@@ -237,7 +241,9 @@ void main() {
       await tester.pump(const Duration(seconds: 6));
     });
 
-    testWidgets('the size is read again when the tab comes back and when the group opens, not once per run', (tester) async {
+    testWidgets('the size is read again when the tab comes back and when the group opens, not once per run', (
+      tester,
+    ) async {
       await tester.runAsync(() => store.ready);
       final showing = ValueNotifier(true);
       await _pump(tester, showing: showing);
@@ -315,8 +321,9 @@ void main() {
       expect(find.text('Cancel'), findsOneWidget);
     });
 
-    testWidgets('once downloaded it says what was checked and what Android does, and Install hands it over',
-        (tester) async {
+    testWidgets('once downloaded it says what was checked and what Android does, and Install hands it over', (
+      tester,
+    ) async {
       final u = _updater(tester);
       await u.update.check();
       await _pump(tester, update: u.update);
@@ -344,8 +351,9 @@ void main() {
       expect(find.text('Download 48 MB'), findsOneWidget, reason: 'never a dead end');
     });
 
-    testWidgets('found while the tab is behind another puts the row back in view when it is next shown',
-        (tester) async {
+    testWidgets('found while the tab is behind another puts the row back in view when it is next shown', (
+      tester,
+    ) async {
       final u = _updater(tester);
       final showing = ValueNotifier(true);
       await _pump(tester, update: u.update, showing: showing, size: const Size(320, 640), textScale: 2);
@@ -447,9 +455,11 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('leads with the release\'s walkthrough clip, which plays in the app; a failure offers Retry',
-        (tester) async {
-      const clip = "[![Watch what's new · 6 changes · 0:19 · 7.5 MB]($_base/99.0.0-whats-new.jpg)]($_base/99.0.0-whats-new.mp4)";
+    testWidgets('leads with the release\'s walkthrough clip, which plays in the app; a failure offers Retry', (
+      tester,
+    ) async {
+      const clip =
+          "[![Watch what's new · 6 changes · 0:19 · 7.5 MB]($_base/99.0.0-whats-new.jpg)]($_base/99.0.0-whats-new.mp4)";
       final u = _updater(tester, release: _release(notes: '$clip\n\n### One new thing\n\nIt does what it says.'));
       await u.update.check();
       await _pump(tester, update: u.update);
@@ -491,8 +501,9 @@ void main() {
     ScrollPosition position(WidgetTester tester) =>
         tester.state<ScrollableState>(find.byType(Scrollable).first).position;
 
-    testWidgets('a tall one at 320 dp and 2x text: its first row is above the tab bar, its row under the title bar',
-        (tester) async {
+    testWidgets('a tall one at 320 dp and 2x text: its first row is above the tab bar, its row under the title bar', (
+      tester,
+    ) async {
       await _pump(tester, size: const Size(320, 640), textScale: 2);
       // Tapped where it is, not scrolled to first: that is the person's tap.
       await tester.tap(find.text('About'));
@@ -527,8 +538,9 @@ void main() {
 
     testWidgets('reduced motion: it jumps there', (tester) async {
       await _pump(tester, size: const Size(320, 640), textScale: 2);
-      tester.platformDispatcher.accessibilityFeaturesTestValue =
-          const FakeAccessibilityFeatures(disableAnimations: true);
+      tester.platformDispatcher.accessibilityFeaturesTestValue = const FakeAccessibilityFeatures(
+        disableAnimations: true,
+      );
       addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
       await tester.pump();
       await tester.tap(find.text('About'));

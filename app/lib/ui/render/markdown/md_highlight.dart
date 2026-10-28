@@ -3,7 +3,9 @@ import 'dart:math' as math;
 import 'package:flutter/widgets.dart';
 
 import '../visible_text.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'highlight/highlight.dart';
 
 /// The colours of a code block: the page it is drawn on, the plain text, and
@@ -203,8 +205,13 @@ final class MdCodeLines {
         final e = t.end.clamp(s, text.length);
         if (s > at) children.add(TextSpan(text: text.substring(at, s)));
         if (e > s) {
-          // design-lint: allow(raw-type) colour-only overlay: a token keeps the code block's style
-          children.add(TextSpan(text: text.substring(s, e), style: t.kind == TokenKind.plain ? null : TextStyle(color: colors.of(t.kind))));
+          children.add(
+            TextSpan(
+              text: text.substring(s, e),
+              // design-lint: allow(raw-type) colour-only overlay: a token keeps the code block's style
+              style: t.kind == TokenKind.plain ? null : TextStyle(color: colors.of(t.kind)),
+            ),
+          );
         }
         at = e;
       }

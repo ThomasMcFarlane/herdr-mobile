@@ -47,11 +47,7 @@ typedef TransportFactory = HerdrTransport Function(
 );
 
 class MachineFormViewModel extends ChangeNotifier {
-  MachineFormViewModel({
-    required this._repo,
-    this.existing,
-    required this._transportFactory,
-  });
+  MachineFormViewModel({required this._repo, this.existing, required this._transportFactory});
 
   final MachineRepository _repo;
   final MachineProfile? existing;
@@ -209,8 +205,7 @@ class MachineFormViewModel extends ChangeNotifier {
       _publicKey = result.line;
       _publicKeyError = switch (result.failure) {
         null => null,
-        KeyReadFailure.needsPassphrase =>
-          'This key has a passphrase. Enter it in the field below, then try again.',
+        KeyReadFailure.needsPassphrase => 'This key has a passphrase. Enter it in the field below, then try again.',
         KeyReadFailure.wrongPassphrase => 'That passphrase does not open the saved key.',
         KeyReadFailure.unreadable => 'The saved key could not be read.',
       };
@@ -256,42 +251,36 @@ class MachineFormViewModel extends ChangeNotifier {
     return e.hostKeyFingerprint;
   }
 
-  MachineProfile _profile(MachineFormValues v, {String? fingerprint}) =>
-      MachineProfile(
-        // One id per form, so a save retried after a failure rewrites the
-        // same slot instead of leaving the first attempt's secrets behind.
-        id: existing?.id ?? (_newId ??= _repo.newId()),
-        label: v.label.isEmpty ? v.host : v.label,
-        host: v.host,
-        port: v.port,
-        username: v.username,
-        auth: v.auth,
-        session: v.session.isEmpty ? 'default' : v.session,
-        socketPath: v.socketPath.isEmpty ? null : v.socketPath,
-        hostKeyFingerprint: fingerprint,
-        enabled: existing?.enabled ?? true,
-      );
+  MachineProfile _profile(MachineFormValues v, {String? fingerprint}) => MachineProfile(
+    // One id per form, so a save retried after a failure rewrites the
+    // same slot instead of leaving the first attempt's secrets behind.
+    id: existing?.id ?? (_newId ??= _repo.newId()),
+    label: v.label.isEmpty ? v.host : v.label,
+    host: v.host,
+    port: v.port,
+    username: v.username,
+    auth: v.auth,
+    session: v.session.isEmpty ? 'default' : v.session,
+    socketPath: v.socketPath.isEmpty ? null : v.socketPath,
+    hostKeyFingerprint: fingerprint,
+    enabled: existing?.enabled ?? true,
+  );
 
   /// Blank secret fields keep the stored value when editing; secrets that do
   /// not apply to the chosen auth method are dropped.
   Future<MachineSecrets> _secrets(MachineFormValues v) async {
-    final old = existing == null
-        ? const MachineSecrets()
-        : await _repo.secretsFor(existing!.id);
-    String? pick(String fresh, String? stored) =>
-        fresh.isNotEmpty ? fresh : stored;
+    final old = existing == null ? const MachineSecrets() : await _repo.secretsFor(existing!.id);
+    String? pick(String fresh, String? stored) => fresh.isNotEmpty ? fresh : stored;
     // A key copied on a phone arrives with its line breaks gone or indented.
     final key = KeyGenerator.cleanPastedPem(v.privateKey);
     return switch (v.auth) {
       SshAuth.key => MachineSecrets(
-          privateKeyPem: pick(key, old.privateKeyPem),
-          // A passphrase protects one particular key. Replacing the key must
-          // not carry the old passphrase over: dartssh2 refuses a passphrase
-          // for a key that has none, which would lock the machine out.
-          passphrase: key.isNotEmpty
-              ? (v.passphrase.isEmpty ? null : v.passphrase)
-              : pick(v.passphrase, old.passphrase),
-        ),
+        privateKeyPem: pick(key, old.privateKeyPem),
+        // A passphrase protects one particular key. Replacing the key must
+        // not carry the old passphrase over: dartssh2 refuses a passphrase
+        // for a key that has none, which would lock the machine out.
+        passphrase: key.isNotEmpty ? (v.passphrase.isEmpty ? null : v.passphrase) : pick(v.passphrase, old.passphrase),
+      ),
       SshAuth.password => MachineSecrets(password: pick(v.password, old.password)),
       SshAuth.none => const MachineSecrets(),
     };
@@ -317,17 +306,12 @@ class MachineFormViewModel extends ChangeNotifier {
     HerdrTransport? transport;
     try {
       secrets = await _secrets(v);
-      transport = _transportFactory(
-        profile,
-        secrets,
-        (f) => seen = f,
-        (banner) {
-          final url = approvalUrlFrom(banner);
-          if (stale() || url == null || url == _approvalUrl) return;
-          _approvalUrl = url;
-          if (!_disposed) notifyListeners();
-        },
-      );
+      transport = _transportFactory(profile, secrets, (f) => seen = f, (banner) {
+        final url = approvalUrlFrom(banner);
+        if (stale() || url == null || url == _approvalUrl) return;
+        _approvalUrl = url;
+        if (!_disposed) notifyListeners();
+      });
       final api = HerdrApi(transport);
       final version = await api.ping();
       final workspaces = (await api.snapshot()).workspaces.length;
@@ -347,8 +331,9 @@ class MachineFormViewModel extends ChangeNotifier {
           _ when secrets == null =>
             'The saved secrets could not be read from this phone’s keystore (${_describe(e)}). '
                 'Test again; if it keeps failing, restart the app.',
-          TimeoutException() => 'The machine did not answer in time. Check that it is on and '
-              'reachable from this phone, then test again.',
+          TimeoutException() =>
+            'The machine did not answer in time. Check that it is on and '
+                'reachable from this phone, then test again.',
           _ => 'The test stopped: ${_describe(e)}. Check the host and port, then test again.',
         };
       }
@@ -392,7 +377,8 @@ class MachineFormViewModel extends ChangeNotifier {
       dropKeyDraft();
       return true;
     } on Object catch (e) {
-      _saveError = 'This phone’s storage refused it (${_describe(e)}). Everything you entered '
+      _saveError =
+          'This phone’s storage refused it (${_describe(e)}). Everything you entered '
           'is still here: save again. If it keeps failing, restart the app.';
       return false;
     } finally {
@@ -404,7 +390,7 @@ class MachineFormViewModel extends ChangeNotifier {
 
 /// A failure in words: a platform error's own message rather than its dump.
 String _describe(Object e) => switch (e) {
-      PlatformException(:final message?) => message,
-      PlatformException(:final code) => code,
-      _ => '$e',
-    };
+  PlatformException(:final message?) => message,
+  PlatformException(:final code) => code,
+  _ => '$e',
+};

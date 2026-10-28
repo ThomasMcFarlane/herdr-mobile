@@ -36,13 +36,10 @@ class FleetRepository extends ChangeNotifier {
     this.longAway = const Duration(seconds: 5),
     this.backgroundSuspendAfter = const Duration(seconds: 90),
     this._clock = DateTime.now,
-  })  : reviewed = reviewed ?? ReviewedState(),
-        _ownsReviewed = reviewed == null {
-    this.names = names ??
-        PaneSessionNames(
-          agents: () => agents,
-          canRead: () => _backgroundedAt == null && _suspended.isEmpty,
-        );
+  }) : reviewed = reviewed ?? ReviewedState(),
+       _ownsReviewed = reviewed == null {
+    this.names =
+        names ?? PaneSessionNames(agents: () => agents, canRead: () => _backgroundedAt == null && _suspended.isEmpty);
     this.names.addListener(notifyListeners);
     _machines.addListener(_onMachinesChanged);
     _screens?.addListener(_reviewShown);
@@ -172,10 +169,7 @@ class FleetRepository extends ChangeNotifier {
   }
 
   /// Connections in saved-machine order.
-  List<MachineConnection> get connections => [
-        for (final m in _machines.machines)
-          ?_connections[m.id],
-      ];
+  List<MachineConnection> get connections => [for (final m in _machines.machines) ?_connections[m.id]];
 
   MachineConnection? connection(String machineId) => _connections[machineId];
 
@@ -210,8 +204,7 @@ class FleetRepository extends ChangeNotifier {
           ),
     ];
     out.sort((a, b) {
-      final byStatus =
-          a.pane.status.attentionRank.compareTo(b.pane.status.attentionRank);
+      final byStatus = a.pane.status.attentionRank.compareTo(b.pane.status.attentionRank);
       if (byStatus != 0) return byStatus;
       final byMachine = a.machine.profile.label.compareTo(b.machine.profile.label);
       return byMachine != 0 ? byMachine : a.pane.id.compareTo(b.pane.id);
@@ -225,8 +218,7 @@ class FleetRepository extends ChangeNotifier {
   /// The person looked at [paneId] of [machineId] (opened or answered it): if
   /// it is done, it is reviewed and shows as idle from now on. herdr's own seen
   /// state is never touched (focusing would move the desktop's view).
-  void markReviewed(String machineId, String paneId) =>
-      _connections[machineId]?.markReviewed(paneId);
+  void markReviewed(String machineId, String paneId) => _connections[machineId]?.markReviewed(paneId);
 
   void _onConnectionChanged() {
     notifyListeners();
@@ -250,16 +242,16 @@ class FleetRepository extends ChangeNotifier {
   /// Everything except the host-key pin, which changes on first connect and
   /// must not restart the connection that just made it.
   String _keyOf(MachineProfile p) => [
-        _machines.credentialRevision(p.id),
-        p.label,
-        p.host,
-        p.port,
-        p.username,
-        p.auth.name,
-        p.session,
-        p.socketPath,
-        p.enabled,
-      ].join('|');
+    _machines.credentialRevision(p.id),
+    p.label,
+    p.host,
+    p.port,
+    p.username,
+    p.auth.name,
+    p.session,
+    p.socketPath,
+    p.enabled,
+  ].join('|');
 
   void _onMachinesChanged() {
     _reconciling = _reconciling.then((_) => _reconcile());
@@ -322,10 +314,7 @@ class FleetRepository extends ChangeNotifier {
     if (!_network.current.online) return;
     await Future.wait([
       for (final c in which)
-        if (c.state == LinkState.online)
-          c.refresh().catchError((Object _) {})
-        else
-          Future<void>.sync(c.retry),
+        if (c.state == LinkState.online) c.refresh().catchError((Object _) {}) else Future<void>.sync(c.retry),
     ]);
   }
 

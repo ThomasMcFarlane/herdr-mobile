@@ -36,16 +36,31 @@ void main() {
     test('the blob command rejects what cannot reach a remote shell safely, and quotes a path as one word', () {
       const hash = '0123456789abcdef';
       for (final bad in ['', 'a\nb.jsonl', 'a\rb.jsonl', 'a\u0000b.jsonl', 'a\u007fb.jsonl', 'x' * 5000]) {
-        expect(() => keeperBlobCommand(bad, start: 0, hash: hash), throwsArgumentError, reason: bad.length > 50 ? 'long' : bad);
+        expect(
+          () => keeperBlobCommand(bad, start: 0, hash: hash),
+          throwsArgumentError,
+          reason: bad.length > 50 ? 'long' : bad,
+        );
       }
       expect(() => keeperBlobCommand('/a.jsonl', start: -1, hash: hash), throwsArgumentError);
-      for (final bad in ['', '0123456789abcde', '0123456789abcdef0', '0123456789ABCDEF', '0123456789abcdeg', '0123456789abcde;', r'$(touch x)abcdefg']) {
+      for (final bad in [
+        '',
+        '0123456789abcde',
+        '0123456789abcdef0',
+        '0123456789ABCDEF',
+        '0123456789abcdeg',
+        '0123456789abcde;',
+        r'$(touch x)abcdefg',
+      ]) {
         expect(() => keeperBlobCommand('/a.jsonl', start: 0, hash: bad), throwsArgumentError, reason: bad);
       }
       // The command travels as base64 of a small script; its last line is the exec.
       final command = keeperBlobCommand("/home/u/it's \$(x).jsonl", start: 42, hash: hash);
       final script = utf8.decode(base64.decode(RegExp(r'echo (\S+) \|').firstMatch(command)![1]!));
-      expect(script.trimRight().split('\n').last, endsWith(r"""'blob' '/home/u/it'\''s $(x).jsonl' '42' '0123456789abcdef'"""));
+      expect(
+        script.trimRight().split('\n').last,
+        endsWith(r"""'blob' '/home/u/it'\''s $(x).jsonl' '42' '0123456789abcdef'"""),
+      );
     });
 
     test('every command but install is short', () {
@@ -105,7 +120,12 @@ void main() {
       expect(FileStat.statSync('${h.home.path}/.herdr-mobile').mode & 0x1ff, 0x1c0);
       await h.install();
       expect(file.readAsStringSync(), keeperScript());
-      expect(Directory('${h.home.path}/.herdr-mobile').listSync().map((e) => e.uri.pathSegments.where((s) => s.isNotEmpty).last), [file.uri.pathSegments.last]);
+      expect(
+        Directory('${h.home.path}/.herdr-mobile')
+            .listSync()
+            .map((e) => e.uri.pathSegments.where((s) => s.isNotEmpty).last),
+        [file.uri.pathSegments.last],
+      );
     });
 
     test('installing is atomic: a reader never sees half a script', () async {
@@ -165,10 +185,18 @@ void main() {
 
     test('rejects an unknown agent, a bad folder and a bad keeper id', () {
       for (final bad in ['', 'gpt', 'OMP', 'omp; id', r'$(id)', 'omp ', "omp'"]) {
-        expect(() => keeperStartCommand(agent: bad, cwd: '/tmp'), throwsArgumentError, reason: bad);
+        expect(
+          () => keeperStartCommand(agent: bad, cwd: '/tmp'),
+          throwsArgumentError,
+          reason: bad,
+        );
       }
       for (final bad in ['', 'a\nb', 'a\u0000b', 'a\rb', 'x' * 5000]) {
-        expect(() => keeperStartCommand(agent: 'omp', cwd: bad), throwsArgumentError, reason: bad.length > 20 ? 'long' : bad);
+        expect(
+          () => keeperStartCommand(agent: 'omp', cwd: bad),
+          throwsArgumentError,
+          reason: bad.length > 20 ? 'long' : bad,
+        );
       }
       for (final bad in ['', 'a b', r'$(id)', '../x', 'A1b2c3', "ab'c", 'a;b', 'ab', 'x' * 33]) {
         expect(() => keeperAttachCommand(bad), throwsArgumentError, reason: bad);

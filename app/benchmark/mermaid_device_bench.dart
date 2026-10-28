@@ -52,10 +52,14 @@ class _Bench {
   final WidgetsBinding binding;
   final _timings = <ui.FrameTiming>[];
 
-  void _metric(String name, num value) => print('MERMAIDBENCH_METRIC $name=${value is int ? value : value.toStringAsFixed(3)}');
+  void _metric(String name, num value) =>
+      print('MERMAIDBENCH_METRIC $name=${value is int ? value : value.toStringAsFixed(3)}');
 
   Future<void> run() async {
-    final watchdog = Timer(const Duration(minutes: 10), () => print('MERMAIDBENCH_ERROR watchdog: the run did not finish'));
+    final watchdog = Timer(
+      const Duration(minutes: 10),
+      () => print('MERMAIDBENCH_ERROR watchdog: the run did not finish'),
+    );
     try {
       await _run();
       print('MERMAIDBENCH_DONE');
@@ -69,7 +73,13 @@ class _Bench {
 
   Future<void> _run() async {
     binding.addTimingsCallback((t) => _timings.addAll(t));
-    print('MERMAIDBENCH_ENV mode=${kProfileMode ? 'profile' : kDebugMode ? 'DEBUG' : 'release'}');
+    print(
+      'MERMAIDBENCH_ENV mode=${kProfileMode
+          ? 'profile'
+          : kDebugMode
+          ? 'DEBUG'
+          : 'release'}',
+    );
     if (kDebugMode) print('MERMAIDBENCH_WARN a debug build: the numbers mean nothing, build with --profile');
 
     // The list: prose, then each fixture, three times.

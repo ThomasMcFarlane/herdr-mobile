@@ -172,11 +172,27 @@ void main() {
     ),
     'browser-name': (tester, b, size, scale) {
       final session = FileBrowserSession()..options.denied.add('$_dir/secret');
-      return shoot(tester, 'browser-name', browser(_projectFs(), _dir, session: session), size, b, scale: scale, then: () => settle(tester));
+      return shoot(
+        tester,
+        'browser-name',
+        browser(_projectFs(), _dir, session: session),
+        size,
+        b,
+        scale: scale,
+        then: () => settle(tester),
+      );
     },
     'browser-modified': (tester, b, size, scale) {
       final session = FileBrowserSession()..options.setSort(FileSort.modified);
-      return shoot(tester, 'browser-modified', browser(_projectFs(), _dir, session: session), size, b, scale: scale, then: () => settle(tester));
+      return shoot(
+        tester,
+        'browser-modified',
+        browser(_projectFs(), _dir, session: session),
+        size,
+        b,
+        scale: scale,
+        then: () => settle(tester),
+      );
     },
     'browser-search': (tester, b, size, scale) => shoot(
       tester,
@@ -222,12 +238,23 @@ void main() {
         },
       );
     },
-    'browser-empty': (tester, b, size, scale) =>
-        shoot(tester, 'browser-empty', browser(FakeFs()..addDir('/home/dev/empty'), '/home/dev/empty'), size, b, scale: scale, then: () => settle(tester)),
+    'browser-empty': (tester, b, size, scale) => shoot(
+      tester,
+      'browser-empty',
+      browser(FakeFs()..addDir('/home/dev/empty'), '/home/dev/empty'),
+      size,
+      b,
+      scale: scale,
+      then: () => settle(tester),
+    ),
     'browser-one': (tester, b, size, scale) => shoot(
       tester,
       'browser-one',
-      browser(FakeFs()..addFile('/home/dev/one/Thiết kế giao diện.md', 'x', modified: _now.subtract(const Duration(minutes: 3))), '/home/dev/one'),
+      browser(
+        FakeFs()
+          ..addFile('/home/dev/one/Thiết kế giao diện.md', 'x', modified: _now.subtract(const Duration(minutes: 3))),
+        '/home/dev/one',
+      ),
       size,
       b,
       scale: scale,
@@ -236,7 +263,11 @@ void main() {
     'browser-unreachable': (tester, b, size, scale) => shoot(
       tester,
       'browser-unreachable',
-      browser(_projectFs()..fail = RemoteFileException(RemoteFileErrorKind.network, 'Connection lost: the host stopped answering'), _dir),
+      browser(
+        _projectFs()
+          ..fail = RemoteFileException(RemoteFileErrorKind.network, 'Connection lost: the host stopped answering'),
+        _dir,
+      ),
       size,
       b,
       scale: scale,
@@ -280,7 +311,12 @@ void main() {
       final fs = _projectFs();
       const path = '$_dir/main.dart';
       fs.addFile(path, sampleDart, modified: _now.subtract(const Duration(minutes: 7)));
-      final stat = RemoteStat(path: path, kind: RemoteEntryKind.file, size: fs.nodes[path]!.bytes.length, modified: fs.nodes[path]!.modified);
+      final stat = RemoteStat(
+        path: path,
+        kind: RemoteEntryKind.file,
+        size: fs.nodes[path]!.bytes.length,
+        modified: fs.nodes[path]!.modified,
+      );
       return shoot(
         tester,
         'viewer-pill',

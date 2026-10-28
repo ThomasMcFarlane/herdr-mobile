@@ -47,10 +47,7 @@ class AppSwitch extends StatelessWidget {
           curve: Motion.easeOut,
           width: height - 2 * _inset - 3,
           height: height - 2 * _inset - 3,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: value ? ds.onAccent : ds.textTertiary,
-          ),
+          decoration: BoxDecoration(shape: BoxShape.circle, color: value ? ds.onAccent : ds.textTertiary),
         ),
       ),
     );
@@ -111,10 +108,7 @@ class SwitchRow extends StatelessWidget {
                     if (subtitle != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 2),
-                        child: Text(
-                          subtitle,
-                          style: Type.secondary.copyWith(color: ds.textSecondary),
-                        ),
+                        child: Text(subtitle, style: Type.secondary.copyWith(color: ds.textSecondary)),
                       ),
                   ],
                 ),

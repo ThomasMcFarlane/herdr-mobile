@@ -8,12 +8,7 @@ import 'tokens.dart';
 /// A section title over a [FormPanel] of fields. Titles are `barTitle` in the
 /// text colour so they read as headers, not as one more field label.
 class FormSection extends StatelessWidget {
-  const FormSection({
-    super.key,
-    required this.label,
-    required this.children,
-    this.endsWithField = true,
-  });
+  const FormSection({super.key, required this.label, required this.children, this.endsWithField = true});
 
   final String label;
   final List<Widget> children;
@@ -24,12 +19,12 @@ class FormSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SectionLabel(label: label),
-          FormPanel(endsWithField: endsWithField, children: children),
-        ],
-      );
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      SectionLabel(label: label),
+      FormPanel(endsWithField: endsWithField, children: children),
+    ],
+  );
 }
 
 /// Fields grouped on a surface with a hairline: the grouping reads as one unit.
@@ -55,10 +50,7 @@ class FormPanel extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              for (var i = 0; i < children.length; i++) ...[
-                if (i > 0) const SizedBox(height: Gap.sm),
-                children[i],
-              ],
+              for (var i = 0; i < children.length; i++) ...[if (i > 0) const SizedBox(height: Gap.sm), children[i]],
             ],
           ),
         ),

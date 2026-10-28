@@ -17,32 +17,21 @@ import '../../../data/words/where_line.dart';
 /// own: [AgentStatus]'s order is persisted (collapsed-section bits use the
 /// index) and sorts the fleet's flat list, so it stays as it is. Terminal
 /// agents and agent sessions share the sections.
-const boardOrder = [
-  AgentStatus.blocked,
-  AgentStatus.done,
-  AgentStatus.working,
-  AgentStatus.idle,
-  AgentStatus.unknown,
-];
+const boardOrder = [AgentStatus.blocked, AgentStatus.done, AgentStatus.working, AgentStatus.idle, AgentStatus.unknown];
 
 /// Statuses that get a filter chip, in board order. Unknown agents still show
 /// in their own section but are not worth a chip.
-const filterableStatuses = [
-  AgentStatus.blocked,
-  AgentStatus.done,
-  AgentStatus.working,
-  AgentStatus.idle,
-];
+const filterableStatuses = [AgentStatus.blocked, AgentStatus.done, AgentStatus.working, AgentStatus.idle];
 
 /// The state a row is in, as a word for screen readers: the visible label
 /// says it with the glyph and the time's colour. Empty for "unknown".
 String stateWord(AgentStatus status) => switch (status) {
-      AgentStatus.blocked => 'needs you',
-      AgentStatus.working => 'working',
-      AgentStatus.done => 'done',
-      AgentStatus.idle => 'idle',
-      AgentStatus.unknown => '',
-    };
+  AgentStatus.blocked => 'needs you',
+  AgentStatus.working => 'working',
+  AgentStatus.done => 'done',
+  AgentStatus.idle => 'idle',
+  AgentStatus.unknown => '',
+};
 
 /// "12m", "<1m"; with a bound (the change was found after a gap and its start
 /// is not known) "≤ 25m": at most that long. The time only: the row's glyph
@@ -72,10 +61,10 @@ const _minute = Duration(minutes: 1);
 AgentStatus boardStatus(AgentSessionView s) => AttentionSet.sessionBlocked(s)
     ? AgentStatus.blocked
     : AttentionSet.sessionToReview(s)
-        ? AgentStatus.done
-        : s.phase == AgentPhase.working
-            ? AgentStatus.working
-            : AgentStatus.idle;
+    ? AgentStatus.done
+    : s.phase == AgentPhase.working
+    ? AgentStatus.working
+    : AgentStatus.idle;
 
 /// Everything one agent row shows. A record, so two equal rows compare equal
 /// and the screen can tell that nothing it draws has changed.
@@ -114,19 +103,11 @@ typedef TroubledMachine = ({
 /// What the agents tab needs from the fleet, and nothing more.
 @immutable
 class AgentsOverview {
-  const AgentsOverview({
-    required this.machineCount,
-    required this.agents,
-    required this.troubled,
-  });
+  const AgentsOverview({required this.machineCount, required this.agents, required this.troubled});
 
-  factory AgentsOverview.of(FleetRepository fleet) =>
-      AgentsOverview.from(fleet.connections, fleet.agents);
+  factory AgentsOverview.of(FleetRepository fleet) => AgentsOverview.from(fleet.connections, fleet.agents);
 
-  factory AgentsOverview.from(
-    List<MachineConnection> connections,
-    List<FleetAgent> agents,
-  ) {
+  factory AgentsOverview.from(List<MachineConnection> connections, List<FleetAgent> agents) {
     final several = connections.length > 1;
     return AgentsOverview(
       machineCount: connections.length,
@@ -135,13 +116,7 @@ class AgentsOverview {
         for (final c in connections)
           // A machine the person switched off is not a problem to fix.
           if (c.state != LinkState.online && c.state != LinkState.disabled)
-            (
-              machine: c,
-              label: c.profile.label,
-              state: c.state,
-              error: c.error,
-              approvalUrl: c.approvalUrl,
-            ),
+            (machine: c, label: c.profile.label, state: c.state, error: c.error, approvalUrl: c.approvalUrl),
       ],
     );
   }
@@ -217,14 +192,14 @@ Map<AgentStatus, List<AgentRowData>> groupByStatus(Iterable<AgentRowData> agents
 }
 
 Comparator<AgentRowData> _within(AgentStatus status, DateTime now) => switch (status) {
-      AgentStatus.blocked || AgentStatus.done => _longestWaiting,
-      AgentStatus.working => _quietest,
-      AgentStatus.idle => (a, b) {
-          final byTime = compareIdleTimes(a.since?.at, b.since?.at, now);
-          return byTime != 0 ? byTime : _byPlace(a, b);
-        },
-      AgentStatus.unknown => _byPlace,
-    };
+  AgentStatus.blocked || AgentStatus.done => _longestWaiting,
+  AgentStatus.working => _quietest,
+  AgentStatus.idle => (a, b) {
+    final byTime = compareIdleTimes(a.since?.at, b.since?.at, now);
+    return byTime != 0 ? byTime : _byPlace(a, b);
+  },
+  AgentStatus.unknown => _byPlace,
+};
 
 int _byPlace(AgentRowData a, AgentRowData b) {
   final byMachine = a.machine.profile.label.compareTo(b.machine.profile.label);
@@ -261,8 +236,8 @@ int compareIdleTimes(DateTime? a, DateTime? b, DateTime now) {
   int bucket(DateTime? t) => t == null
       ? 1
       : now.difference(t) < idleRecent
-          ? 0
-          : 2;
+      ? 0
+      : 2;
   final byBucket = bucket(a).compareTo(bucket(b));
   if (byBucket != 0) return byBucket;
   return a != null && b != null ? b.compareTo(a) : 0;
@@ -422,9 +397,9 @@ List<BoardSection> boardSections(
   }
 
   List<BoardItem> itemsOf(AgentStatus status) => [
-        for (final r in panes[status] ?? const <AgentRowData>[]) PaneItem(r),
-        for (final s in bySession[status] ?? const <AgentSessionView>[]) SessionItem(s),
-      ];
+    for (final r in panes[status] ?? const <AgentRowData>[]) PaneItem(r),
+    for (final s in bySession[status] ?? const <AgentSessionView>[]) SessionItem(s),
+  ];
 
   // [attention]'s order; anything it does not list keeps its own order, last.
   List<BoardItem> inOrder(AgentStatus status, List<AttentionItem> order) {
@@ -443,25 +418,24 @@ List<BoardSection> boardSections(
     return [for (final (_, item) in indexed) item];
   }
 
-  BoardSection everyRow(AgentStatus status, List<BoardItem> items) =>
-      BoardSection(status, items, count: items.length);
+  BoardSection everyRow(AgentStatus status, List<BoardItem> items) => BoardSection(status, items, count: items.length);
 
   BoardSection section(AgentStatus status) => switch (status) {
-        AgentStatus.blocked => BoardSection(
-            status,
-            inOrder(status, [...attention.needsYou, ...attention.offlineNeedsYou]),
-            count: attention.needsYou.length,
-            offline: attention.offlineNeedsYou.length,
-          ),
-        AgentStatus.done => BoardSection(
-            status,
-            inOrder(status, [...attention.toReview, ...attention.offlineToReview]),
-            count: attention.toReview.length,
-            offline: attention.offlineToReview.length,
-          ),
-        AgentStatus.idle => everyRow(status, _idleInOrder(itemsOf(status), at)),
-        _ => everyRow(status, itemsOf(status)),
-      };
+    AgentStatus.blocked => BoardSection(
+      status,
+      inOrder(status, [...attention.needsYou, ...attention.offlineNeedsYou]),
+      count: attention.needsYou.length,
+      offline: attention.offlineNeedsYou.length,
+    ),
+    AgentStatus.done => BoardSection(
+      status,
+      inOrder(status, [...attention.toReview, ...attention.offlineToReview]),
+      count: attention.toReview.length,
+      offline: attention.offlineToReview.length,
+    ),
+    AgentStatus.idle => everyRow(status, _idleInOrder(itemsOf(status), at)),
+    _ => everyRow(status, itemsOf(status)),
+  };
 
   return [
     for (final status in boardOrder)
@@ -473,9 +447,9 @@ List<BoardSection> boardSections(
 /// that order for those it does not tell apart.
 List<BoardItem> _idleInOrder(List<BoardItem> items, DateTime now) {
   DateTime? timeOf(BoardItem b) => switch (b) {
-        PaneItem(:final row) => row.since?.at,
-        SessionItem(:final session) => session.lastActivity,
-      };
+    PaneItem(:final row) => row.since?.at,
+    SessionItem(:final session) => session.lastActivity,
+  };
   final indexed = items.indexed.toList()
     ..sort((a, b) {
       final byTime = compareIdleTimes(timeOf(a.$2), timeOf(b.$2), now);
@@ -499,9 +473,9 @@ List<AgentEntry> agentEntries(
 }) {
   final only = sections.any((s) => s.status == filter) ? filter : null;
   String titleOf(BoardItem item) => switch (item) {
-        PaneItem(:final row) => row.title,
-        SessionItem(:final session) => session.title,
-      };
+    PaneItem(:final row) => row.title,
+    SessionItem(:final session) => session.title,
+  };
   return [
     for (final section in sections)
       if (only == null || only == section.status) ...[
@@ -514,9 +488,7 @@ List<AgentEntry> agentEntries(
         ..._lines(
           section,
           sectionOpen: !collapsed.contains(section.status),
-          foldable: only == null &&
-              section.status == AgentStatus.idle &&
-              section.items.length > idleShown + 1,
+          foldable: only == null && section.status == AgentStatus.idle && section.items.length > idleShown + 1,
           idleOpen: idleOpen,
           titleOf: titleOf,
         ),
@@ -542,12 +514,9 @@ List<AgentEntry> _lines(
     };
   }
 
-  AgentMore more() => AgentMore(
-        section.status,
-        items.length - idleShown,
-        [for (final item in items.skip(idleShown).take(2)) titleOf(item)],
-        open: idleOpen,
-      );
+  AgentMore more() => AgentMore(section.status, items.length - idleShown, [
+    for (final item in items.skip(idleShown).take(2)) titleOf(item),
+  ], open: idleOpen);
 
   return [
     for (var i = 0; i < items.length; i++) ...[
@@ -561,9 +530,7 @@ List<AgentEntry> _lines(
 }
 
 /// Entry key to its index, for `findChildIndexCallback`.
-Map<Key, int> entryIndexes(List<AgentEntry> entries) => {
-      for (final (i, e) in entries.indexed) e.key: i,
-    };
+Map<Key, int> entryIndexes(List<AgentEntry> entries) => {for (final (i, e) in entries.indexed) e.key: i};
 
 /// The state that most needs the person, to colour a summary of several
 /// machines: something to fix, then something to approve, then waiting.

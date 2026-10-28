@@ -133,8 +133,11 @@ class FakeLogSource implements SessionLogSource {
     final step = batchLines ?? lines.length;
     return [
       for (var i = at; i < lines.length; i += step)
-        LogBatch(lines.sublist(i, i + step > lines.length ? lines.length : i + step),
-            _ends[(i + step > lines.length ? lines.length : i + step) - 1], head: i == at ? head : null),
+        LogBatch(
+          lines.sublist(i, i + step > lines.length ? lines.length : i + step),
+          _ends[(i + step > lines.length ? lines.length : i + step) - 1],
+          head: i == at ? head : null,
+        ),
       LogBatch(const [], _end, caughtUp: true),
     ];
   }
@@ -288,7 +291,9 @@ class ScreenTransport extends FakeTransport {
     if (method != 'pane.read') return super.request(method, params);
     calls.add((method, params));
     final list = screens;
-    final text = liveScreen != null ? liveScreen!() : (list == null ? screen : list[sends < list.length ? sends : list.length - 1]);
+    final text = liveScreen != null
+        ? liveScreen!()
+        : (list == null ? screen : list[sends < list.length ? sends : list.length - 1]);
     return Future.value({
       'type': 'pane_read',
       'read': {'text': text, 'truncated': false},

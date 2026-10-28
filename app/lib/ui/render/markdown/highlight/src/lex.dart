@@ -16,11 +16,7 @@ final class LexState implements HighlightState {
 
   @override
   bool operator ==(Object other) =>
-      other is LexState &&
-      other.mode == mode &&
-      other.a == a &&
-      other.b == b &&
-      other.tag == tag;
+      other is LexState && other.mode == mode && other.a == a && other.b == b && other.tag == tag;
 
   @override
   int get hashCode => Object.hash(mode, a, b, tag);
@@ -32,9 +28,7 @@ final class LexState implements HighlightState {
 /// [prev] itself when the new values equal it (no allocation for the common
 /// "nothing changed" line).
 LexState nextState(LexState prev, int mode, int a, int b, String? tag) =>
-    prev.mode == mode && prev.a == a && prev.b == b && prev.tag == tag
-        ? prev
-        : LexState(mode, a, b, tag);
+    prev.mode == mode && prev.a == a && prev.b == b && prev.tag == tag ? prev : LexState(mode, a, b, tag);
 
 /// Appends `[s, e)` as [kind], merging into the previous token when they touch
 /// and share a kind. Plain and empty spans are dropped (gaps are plain).
@@ -86,8 +80,7 @@ bool isLower(int c) => c >= 0x61 && c <= 0x7A;
 
 bool isLetter(int c) => isUpper(c) || isLower(c);
 
-bool isHex(int c) =>
-    isDigit(c) || (c >= 0x41 && c <= 0x46) || (c >= 0x61 && c <= 0x66);
+bool isHex(int c) => isDigit(c) || (c >= 0x41 && c <= 0x46) || (c >= 0x61 && c <= 0x66);
 
 /// Letters, `_`, `$` and everything non-ASCII (Unicode identifiers).
 bool isIdentStart(int c) => isLetter(c) || c == 0x5F || c == 0x24 || c >= 0x80;

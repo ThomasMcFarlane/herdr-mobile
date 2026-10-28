@@ -17,8 +17,7 @@ String _defaultRow(int i) => switch (i % 11) {
 /// A deterministic stand-in for a terminal: an ever-growing list of rows
 /// that is read through a sliding window of the last `depth` rows.
 class _Sim {
-  _Sim(int initial, {this.trailingNewline = false, String Function(int)? rowOf})
-    : _rowOf = rowOf ?? _defaultRow {
+  _Sim(int initial, {this.trailingNewline = false, String Function(int)? rowOf}) : _rowOf = rowOf ?? _defaultRow {
     append(initial);
   }
 
@@ -45,14 +44,10 @@ class _Sim {
     return trailingNewline ? '$joined\n' : joined;
   }
 
-  void read(ScrollbackHistory history, int depth) =>
-      history.update(text(depth), truncated: out.length > depth);
+  void read(ScrollbackHistory history, int depth) => history.update(text(depth), truncated: out.length > depth);
 }
 
-List<String> _known(ScrollbackHistory h) => [
-  ...h.rows,
-  ...ScrollbackHistory.splitRows(h.window),
-];
+List<String> _known(ScrollbackHistory h) => [...h.rows, ...ScrollbackHistory.splitRows(h.window)];
 
 /// Everything retained is exactly the newest rows of the real output.
 void _expectTail(ScrollbackHistory h, _Sim sim, {String? reason}) {
@@ -80,11 +75,7 @@ void _expectInvariants(ScrollbackHistory h, {String? reason}) {
       fail('${reason ?? ''} adjacent gap rows at $i');
     }
   }
-  expect(
-    h.contiguousRows,
-    rows.length - 1 - rows.lastIndexOf(_gap) + h.windowRows,
-    reason: reason,
-  );
+  expect(h.contiguousRows, rows.length - 1 - rows.lastIndexOf(_gap) + h.windowRows, reason: reason);
 }
 
 int _count(List<String> rows, String row) => rows.where((r) => r == row).length;
@@ -114,10 +105,7 @@ void main() {
       var deepest = 0;
       for (var seed = 0; seed < 40; seed++) {
         final random = Random(seed);
-        final sim = _Sim(
-          100 + random.nextInt(200),
-          trailingNewline: seed.isOdd,
-        );
+        final sim = _Sim(100 + random.nextInt(200), trailingNewline: seed.isOdd);
         final h = ScrollbackHistory();
         var depth = depths[random.nextInt(depths.length)];
         sim.read(h, depth);
@@ -131,22 +119,14 @@ void main() {
           // Keep at least 12 rows shared with what is known so that at most
           // five rewritten ones leave enough to align on.
           final shared = min(depth, _known(h).length) - 12;
-          sim.append(
-            random.nextInt(10) < 8
-                ? random.nextInt(min(8, shared + 1))
-                : random.nextInt(shared + 1),
-          );
+          sim.append(random.nextInt(10) < 8 ? random.nextInt(min(8, shared + 1)) : random.nextInt(shared + 1));
           sim.rewriteTail(random.nextInt(6));
           sim.read(h, depth);
 
           _expectTail(h, sim, reason: reason);
           _expectInvariants(h, reason: reason);
           expect(h.rows, isNot(contains(_gap)), reason: reason);
-          expect(
-            _known(h).length,
-            greaterThanOrEqualTo(min(depth, sim.out.length)),
-            reason: reason,
-          );
+          expect(_known(h).length, greaterThanOrEqualTo(min(depth, sim.out.length)), reason: reason);
           expect(h.dropped, 0, reason: reason);
           expect(h.revision, greaterThanOrEqualTo(revision), reason: reason);
           revision = h.revision;
@@ -156,29 +136,26 @@ void main() {
       expect(deepest, greaterThan(1000));
     });
 
-    test(
-      'a deep read that covers everything leaves the history to the window',
-      () {
-        final sim = _Sim(700);
-        final h = ScrollbackHistory();
-        sim.read(h, 300);
-        expect(h.rows, isEmpty);
-        expect(h.windowRows, 300);
-        expect(h.truncated, isTrue);
+    test('a deep read that covers everything leaves the history to the window', () {
+      final sim = _Sim(700);
+      final h = ScrollbackHistory();
+      sim.read(h, 300);
+      expect(h.rows, isEmpty);
+      expect(h.windowRows, 300);
+      expect(h.truncated, isTrue);
 
-        sim.read(h, 1000);
-        expect(h.windowRows, 700);
-        expect(h.rows, isEmpty);
-        expect(h.truncated, isFalse);
-        _expectTail(h, sim);
+      sim.read(h, 1000);
+      expect(h.windowRows, 700);
+      expect(h.rows, isEmpty);
+      expect(h.truncated, isFalse);
+      _expectTail(h, sim);
 
-        // Back to 300 rows: the 400 older rows now sit above the window.
-        sim.append(20);
-        sim.read(h, 300);
-        expect(h.rows, sim.out.sublist(0, 420));
-        _expectTail(h, sim);
-      },
-    );
+      // Back to 300 rows: the 400 older rows now sit above the window.
+      sim.append(20);
+      sim.read(h, 300);
+      expect(h.rows, sim.out.sublist(0, 420));
+      _expectTail(h, sim);
+    });
 
     test('a deep read replaces the newest history with fresher rows', () {
       final sim = _Sim(300);
@@ -301,11 +278,7 @@ void main() {
 
       sim.append(10);
       sim.read(h, 300);
-      expect(h.rows, [
-        ...sim.out.sublist(700, 1000),
-        _gap,
-        ...sim.out.sublist(1200, sim.out.length - 300),
-      ]);
+      expect(h.rows, [...sim.out.sublist(700, 1000), _gap, ...sim.out.sublist(1200, sim.out.length - 300)]);
       expect(h.contiguousRows, sim.out.length - 1200);
       _expectInvariants(h);
     });
@@ -313,10 +286,7 @@ void main() {
 
   group('full-screen redraws', () {
     test('never accumulate history', () {
-      final screens = [
-        for (var k = 0; k < 40; k++)
-          List.generate(24, (j) => 'screen $k line $j\r').join('\n'),
-      ];
+      final screens = [for (var k = 0; k < 40; k++) List.generate(24, (j) => 'screen $k line $j\r').join('\n')];
       final h = ScrollbackHistory();
       for (var i = 0; i < 400; i++) {
         h.update(screens[i % screens.length], truncated: false);
@@ -329,10 +299,7 @@ void main() {
     test('in-place edits of a screen stay one screen', () {
       final h = ScrollbackHistory();
       for (var i = 0; i < 100; i++) {
-        final rows = List.generate(
-          24,
-          (j) => j == 23 ? 'status $i\r' : 'line $j\r',
-        );
+        final rows = List.generate(24, (j) => j == 23 ? 'status $i\r' : 'line $j\r');
         h.update(rows.join('\n'), truncated: false);
         expect(h.rows, isEmpty);
       }
@@ -348,11 +315,7 @@ void main() {
         sim.append(5);
         sim.read(h, 300);
         expect(h.rows.length, lessThanOrEqualTo(50));
-        expect(
-          h.dropped,
-          sim.out.length - h.windowRows - h.rows.length,
-          reason: 'step $i',
-        );
+        expect(h.dropped, sim.out.length - h.windowRows - h.rows.length, reason: 'step $i');
         _expectTail(h, sim, reason: 'step $i');
         _expectInvariants(h, reason: 'step $i');
       }
@@ -374,31 +337,24 @@ void main() {
         if (oldest >= 0) {
           expect(bytes + sim.out[oldest].length, greaterThan(maxBytes));
         }
-        expect(
-          h.dropped,
-          sim.out.length - h.windowRows - h.rows.length,
-          reason: 'step $i',
-        );
+        expect(h.dropped, sim.out.length - h.windowRows - h.rows.length, reason: 'step $i');
         _expectTail(h, sim, reason: 'step $i');
       }
       expect(h.rows, isNotEmpty);
     });
 
-    test(
-      'a gap row is never left at the top and is not counted as dropped',
-      () {
-        final sim = _Sim(1000);
-        final h = ScrollbackHistory(maxRows: 1);
-        sim.read(h, 300);
-        sim.append(400);
-        sim.read(h, 300);
-        // History would be [... 300 rows, gap]; capped to one row that is the
-        // gap, which describes nothing above it.
-        expect(h.rows, isEmpty);
-        expect(h.dropped, 300);
-        expect(h.contiguousRows, h.windowRows);
-      },
-    );
+    test('a gap row is never left at the top and is not counted as dropped', () {
+      final sim = _Sim(1000);
+      final h = ScrollbackHistory(maxRows: 1);
+      sim.read(h, 300);
+      sim.append(400);
+      sim.read(h, 300);
+      // History would be [... 300 rows, gap]; capped to one row that is the
+      // gap, which describes nothing above it.
+      expect(h.rows, isEmpty);
+      expect(h.dropped, 300);
+      expect(h.contiguousRows, h.windowRows);
+    });
 
     test('contiguousRows follows the gap out of the history', () {
       final sim = _Sim(1000);
@@ -425,26 +381,23 @@ void main() {
   });
 
   group('ambiguous rows', () {
-    test(
-      'a pane of identical blank rows is a no-op until something differs',
-      () {
-        final blank = List.filled(300, '\r').join('\n');
-        final h = ScrollbackHistory();
-        h.update(blank, truncated: true);
-        final revision = h.revision;
-        h.update(blank, truncated: true);
-        expect(h.revision, revision);
-        expect(h.rows, isEmpty);
+    test('a pane of identical blank rows is a no-op until something differs', () {
+      final blank = List.filled(300, '\r').join('\n');
+      final h = ScrollbackHistory();
+      h.update(blank, truncated: true);
+      final revision = h.revision;
+      h.update(blank, truncated: true);
+      expect(h.revision, revision);
+      expect(h.rows, isEmpty);
 
-        // Output scrolled by 11 rows but only the marker is distinguishable:
-        // the least-scrolling reading wins, so no duplicates and no gap.
-        final marked = [...List.filled(299, '\r'), 'marker\r'].join('\n');
-        h.update(marked, truncated: true);
-        expect(h.rows, isNot(contains(_gap)));
-        expect(h.rows, isEmpty);
-        expect(h.windowRows, 300);
-      },
-    );
+      // Output scrolled by 11 rows but only the marker is distinguishable:
+      // the least-scrolling reading wins, so no duplicates and no gap.
+      final marked = [...List.filled(299, '\r'), 'marker\r'].join('\n');
+      h.update(marked, truncated: true);
+      expect(h.rows, isNot(contains(_gap)));
+      expect(h.rows, isEmpty);
+      expect(h.windowRows, 300);
+    });
 
     test('blank rows alone never close a short overlap', () {
       final h = ScrollbackHistory();

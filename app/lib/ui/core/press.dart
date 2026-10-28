@@ -84,10 +84,7 @@ class _PressBuilderState extends State<PressBuilder> {
     }
     if (widget.minTapSize > 0) {
       child = ConstrainedBox(
-        constraints: BoxConstraints(
-          minWidth: widget.minTapSize,
-          minHeight: widget.minTapSize,
-        ),
+        constraints: BoxConstraints(minWidth: widget.minTapSize, minHeight: widget.minTapSize),
         child: Align(widthFactor: 1, heightFactor: 1, child: child),
       );
     }

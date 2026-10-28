@@ -17,8 +17,7 @@ class _CountingSecrets extends MemorySecretStore {
   }
 }
 
-MachineProfile _profile(String id) =>
-    MachineProfile(id: id, label: id, host: '$id.example', username: 'u');
+MachineProfile _profile(String id) => MachineProfile(id: id, label: id, host: '$id.example', username: 'u');
 
 Future<(MachineRepository, _CountingSecrets)> _repo(List<String> ids) async {
   final profiles = MemoryProfileStore()..profiles = [for (final id in ids) _profile(id)];
@@ -66,8 +65,7 @@ void main() {
 
   test('removing a machine drops its warmed read and still saves the list', () async {
     final profiles = MemoryProfileStore()..profiles = [_profile('a'), _profile('b')];
-    final secrets = _CountingSecrets()
-      ..secrets['a'] = const MachineSecrets(password: 'pw-a');
+    final secrets = _CountingSecrets()..secrets['a'] = const MachineSecrets(password: 'pw-a');
     final repo = MachineRepository(profiles: profiles, secrets: secrets);
     await repo.load();
     repo.warmSecrets();

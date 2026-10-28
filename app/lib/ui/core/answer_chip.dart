@@ -121,8 +121,7 @@ class AnswerChip extends StatelessWidget {
   /// change the row's width.
   static const _narrowMinWidth = 104.0;
 
-  bool get _held =>
-      hold && onHeld != null && state != AnswerChipState.sending && state != AnswerChipState.sent;
+  bool get _held => hold && onHeld != null && state != AnswerChipState.sending && state != AnswerChipState.sent;
 
   bool get _takesTaps => enabled && state != AnswerChipState.changed;
 
@@ -135,9 +134,10 @@ class AnswerChip extends StatelessWidget {
         AnswerChipState.sent => 'Sent: $label',
         AnswerChipState.failed => 'Couldn’t send $label${error == null ? '' : ': $error'}. Retry',
         AnswerChipState.changed => 'The question changed. Nothing was sent',
-        AnswerChipState.rest when hold => reason == null
-            ? '$label, needs holding or a second activation'
-            : '$label, needs holding or a second activation: $reason',
+        AnswerChipState.rest when hold =>
+          reason == null
+              ? '$label, needs holding or a second activation'
+              : '$label, needs holding or a second activation: $reason',
         _ => null,
       };
 
@@ -188,7 +188,8 @@ class AnswerChip extends StatelessWidget {
           };
     // Chips that are not the answer in flight step back while the answers are
     // deaf; the one saying the question changed is read, so it stays clear.
-    final live = enabled ||
+    final live =
+        enabled ||
         state == AnswerChipState.sending ||
         state == AnswerChipState.sent ||
         state == AnswerChipState.changed;
@@ -196,7 +197,8 @@ class AnswerChip extends StatelessWidget {
     final lead = switch (state) {
       AnswerChipState.sending => const BusySpinner(size: IconSize.inline),
       AnswerChipState.sent => Icon(LucideIcons.check, size: IconSize.row, color: ds.done),
-      AnswerChipState.primed || AnswerChipState.failed => Icon(LucideIcons.triangleAlert, size: IconSize.row, color: fg),
+      AnswerChipState.primed ||
+      AnswerChipState.failed => Icon(LucideIcons.triangleAlert, size: IconSize.row, color: fg),
       AnswerChipState.changed => Icon(LucideIcons.refreshCw, size: IconSize.row, color: fg),
       AnswerChipState.rest => null,
     };
@@ -205,7 +207,11 @@ class AnswerChip extends StatelessWidget {
     final marker = state != AnswerChipState.rest
         ? null
         : switch (risk) {
-            AnswerRisk.gate => Icon(LucideIcons.triangleAlert, size: IconSize.inline, color: danger ? ds.dangerText : ds.textSecondary),
+            AnswerRisk.gate => Icon(
+              LucideIcons.triangleAlert,
+              size: IconSize.inline,
+              color: danger ? ds.dangerText : ds.textSecondary,
+            ),
             AnswerRisk.elevated => Icon(LucideIcons.shieldHalf, size: IconSize.inline, color: ds.textSecondary),
             AnswerRisk.none => null,
           };
@@ -237,10 +243,7 @@ class AnswerChip extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         words,
-                        Text(
-                          detail,
-                          style: Type.secondary.copyWith(color: danger ? ds.dangerText : ds.textSecondary),
-                        ),
+                        Text(detail, style: Type.secondary.copyWith(color: danger ? ds.dangerText : ds.textSecondary)),
                       ],
                     ),
             ),

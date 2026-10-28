@@ -15,7 +15,9 @@ import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/pane_previews.dart';
 import '../../../data/words/agent_names.dart';
 import '../../../data/words/plural.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../support/tap_guard.dart';
 import '../composer/composer_frame.dart';
 import 'agent_navigation.dart';
@@ -123,7 +125,10 @@ class _ReplySheetState extends State<ReplySheet> {
   /// The agent after the current one among those still waiting. Nobody else
   /// waiting ends the walk: the build shows "All clear".
   void _advance(List<String> waiting) {
-    final others = [for (final k in waiting) if (k != _key) k];
+    final others = [
+      for (final k in waiting)
+        if (k != _key) k,
+    ];
     String? next;
     if (others.isNotEmpty) {
       final from = _order.indexOf(_key ?? '');
@@ -155,7 +160,10 @@ class _ReplySheetState extends State<ReplySheet> {
         _close();
         return const SizedBox(height: _frameHeight);
       }
-      return SheetScaffold(kind: SheetKind.form, child: AgentReply(key: ValueKey(agent.key), agent: agent));
+      return SheetScaffold(
+        kind: SheetKind.form,
+        child: AgentReply(key: ValueKey(agent.key), agent: agent),
+      );
     }
 
     // A session opened from the walk is on top: leave the walk as it is. It
@@ -194,11 +202,11 @@ class _ReplySheetState extends State<ReplySheet> {
     final Widget child = switch (item) {
       SessionAttention(:final session) => _SessionAsk(key: ValueKey(key), session: session, onOpen: _opened),
       _ when agent != null => AgentReply(
-          key: ValueKey(agent.key),
-          agent: agent,
-          onSent: _sent,
-          onAnswered: () => _advance(waiting),
-        ),
+        key: ValueKey(agent.key),
+        agent: agent,
+        onSent: _sent,
+        onAnswered: () => _advance(waiting),
+      ),
       // A pane the set lists and the board has not built yet: a frame.
       _ => const SizedBox(height: _frameHeight),
     };
@@ -337,12 +345,7 @@ class _TriageBar extends StatelessWidget {
     final ds = context.ds;
     return Row(
       children: [
-        CircleButton(
-          icon: LucideIcons.chevronLeft,
-          tooltip: 'Previous agent',
-          onPressed: onPrev,
-          filled: false,
-        ),
+        CircleButton(icon: LucideIcons.chevronLeft, tooltip: 'Previous agent', onPressed: onPrev, filled: false),
         Expanded(
           child: Semantics(
             liveRegion: true,
@@ -353,12 +356,7 @@ class _TriageBar extends StatelessWidget {
             ),
           ),
         ),
-        CircleButton(
-          icon: LucideIcons.chevronRight,
-          tooltip: 'Next agent',
-          onPressed: onNext,
-          filled: false,
-        ),
+        CircleButton(icon: LucideIcons.chevronRight, tooltip: 'Next agent', onPressed: onNext, filled: false),
       ],
     );
   }
@@ -618,7 +616,8 @@ class _AgentReplyState extends State<AgentReply> with TapGuardState<AgentReply>,
           builder: (context, _) {
             // The answer's chip carries its outcome while the chips are on
             // screen; once they are gone (the agent moved on) it shows here.
-            final own = _reply.subject == null ||
+            final own =
+                _reply.subject == null ||
                 !(a.status == AgentStatus.blocked && live && _handle.preview.value?.prompt != null);
             final text = !own
                 ? null
@@ -642,9 +641,7 @@ class _AgentReplyState extends State<AgentReply> with TapGuardState<AgentReply>,
                           text,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: Type.secondary.copyWith(
-                            color: failed ? ds.dangerText : ds.textSecondary,
-                          ),
+                          style: Type.secondary.copyWith(color: failed ? ds.dangerText : ds.textSecondary),
                         ),
                       ),
                     ),
@@ -720,7 +717,6 @@ class _SheetPreview extends StatelessWidget {
     );
   }
 }
-
 
 /// A sheet's height while it has nothing to show yet, or `All clear`.
 const _frameHeight = 120.0;

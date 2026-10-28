@@ -11,7 +11,9 @@ class _Throws extends StatelessWidget {
 }
 
 void main() {
-  testWidgets('a row that fails to build is one readable row, not a screenful, and the rows around it stay', (tester) async {
+  testWidgets('a row that fails to build is one readable row, not a screenful, and the rows around it stay', (
+    tester,
+  ) async {
     final before = ErrorWidget.builder;
     // The binding insists on the builder being the original at the end of the test body.
     ErrorWidget.builder = compactErrorView;
@@ -23,11 +25,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
-        home: Scaffold(
-          body: ListView(
-            children: const [Text('before'), _Throws(), Text('after')],
-          ),
-        ),
+        home: Scaffold(body: ListView(children: const [Text('before'), _Throws(), Text('after')])),
       ),
     );
     expect(tester.takeException(), isA<StateError>());

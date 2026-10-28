@@ -17,7 +17,11 @@ import '../support/shot.dart';
 
 void main() {
   if (Platform.environment['RELEASE_HISTORY_SHOTS'] == null) {
-    test('release history shots are off (set RELEASE_HISTORY_SHOTS=1)', () {}, skip: 'set RELEASE_HISTORY_SHOTS=1 to render PNGs');
+    test(
+      'release history shots are off (set RELEASE_HISTORY_SHOTS=1)',
+      () {},
+      skip: 'set RELEASE_HISTORY_SHOTS=1 to render PNGs',
+    );
     return;
   }
   final out = Platform.environment['RELEASE_HISTORY_SHOTS_DIR'] ?? '/tmp/release_history_shots';

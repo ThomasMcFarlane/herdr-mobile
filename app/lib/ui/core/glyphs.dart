@@ -11,50 +11,50 @@ import 'tokens.dart';
 /// words ("Needs you", counts) and reaches 4.5:1.
 extension AgentStatusColor on AgentStatus {
   Color color(Ds ds) => switch (this) {
-        AgentStatus.blocked => ds.blocked,
-        AgentStatus.working => ds.working,
-        AgentStatus.done => ds.done,
-        AgentStatus.idle || AgentStatus.unknown => ds.textTertiary,
-      };
+    AgentStatus.blocked => ds.blocked,
+    AgentStatus.working => ds.working,
+    AgentStatus.done => ds.done,
+    AgentStatus.idle || AgentStatus.unknown => ds.textTertiary,
+  };
 
   Color textColor(Ds ds) => switch (this) {
-        AgentStatus.blocked => ds.blockedText,
-        _ => ds.textSecondary,
-      };
+    AgentStatus.blocked => ds.blockedText,
+    _ => ds.textSecondary,
+  };
 
   String get label => switch (this) {
-        AgentStatus.blocked => 'Needs you',
-        AgentStatus.working => 'Working',
-        AgentStatus.done => 'Done',
-        AgentStatus.idle => 'Idle',
-        AgentStatus.unknown => 'Unknown',
-      };
+    AgentStatus.blocked => 'Needs you',
+    AgentStatus.working => 'Working',
+    AgentStatus.done => 'Done',
+    AgentStatus.idle => 'Idle',
+    AgentStatus.unknown => 'Unknown',
+  };
 }
 
 /// Colour per connection state. [color] is for the dot; [textColor] is for the
 /// status line (only states that need the person are tinted).
 extension LinkStateColor on LinkState {
   Color color(Ds ds) => switch (this) {
-        LinkState.online => ds.done,
-        LinkState.connecting || LinkState.reconnecting => ds.working,
-        LinkState.attention || LinkState.approval => ds.blocked,
-        LinkState.disabled || LinkState.offline => ds.textTertiary,
-      };
+    LinkState.online => ds.done,
+    LinkState.connecting || LinkState.reconnecting => ds.working,
+    LinkState.attention || LinkState.approval => ds.blocked,
+    LinkState.disabled || LinkState.offline => ds.textTertiary,
+  };
 
   Color textColor(Ds ds) => switch (this) {
-        LinkState.attention || LinkState.approval => ds.blockedText,
-        _ => ds.textSecondary,
-      };
+    LinkState.attention || LinkState.approval => ds.blockedText,
+    _ => ds.textSecondary,
+  };
 
   String get label => switch (this) {
-        LinkState.online => 'Online',
-        LinkState.connecting => 'Connecting…',
-        LinkState.reconnecting => 'Reconnecting…',
-        LinkState.attention => 'Needs attention',
-        LinkState.disabled => 'Disabled',
-        LinkState.offline => 'Offline',
-        LinkState.approval => 'Waiting for approval',
-      };
+    LinkState.online => 'Online',
+    LinkState.connecting => 'Connecting…',
+    LinkState.reconnecting => 'Reconnecting…',
+    LinkState.attention => 'Needs attention',
+    LinkState.disabled => 'Disabled',
+    LinkState.offline => 'Offline',
+    LinkState.approval => 'Waiting for approval',
+  };
 }
 
 /// An agent's status as a small shape: the shape says what it is even without
@@ -70,12 +70,7 @@ extension LinkStateColor on LinkState {
 /// done glyph sends a single faint ring outward. [Motion.settle], then the
 /// ticker stops; a glyph first built with its status never animates.
 class StatusGlyph extends StatefulWidget {
-  const StatusGlyph({
-    super.key,
-    required AgentStatus this.status,
-    this.size = 18,
-    this.dim = false,
-  }) : _ended = null;
+  const StatusGlyph({super.key, required AgentStatus this.status, this.size = 18, this.dim = false}) : _ended = null;
 
   /// A call, run or plan step that failed: a disc in the danger colour with a
   /// cross, the same grammar as done (disc and check) and needs-you (disc and
@@ -97,10 +92,10 @@ class StatusGlyph extends StatefulWidget {
 
   /// What is drawn, for the shape and the words.
   _Shape get _shape => switch (_ended) {
-        _Ended.failed => _Shape.failed,
-        _Ended.cancelled => _Shape.cancelled,
-        null => _Shape.of(status!),
-      };
+    _Ended.failed => _Shape.failed,
+    _Ended.cancelled => _Shape.cancelled,
+    null => _Shape.of(status!),
+  };
 
   /// Whether this is [StatusGlyph.failed].
   bool get isFailed => _ended == _Ended.failed;
@@ -130,12 +125,12 @@ enum _Shape {
   final AgentStatus? status;
 
   static _Shape of(AgentStatus s) => switch (s) {
-        AgentStatus.idle => idle,
-        AgentStatus.unknown => unknown,
-        AgentStatus.working => working,
-        AgentStatus.done => done,
-        AgentStatus.blocked => blocked,
-      };
+    AgentStatus.idle => idle,
+    AgentStatus.unknown => unknown,
+    AgentStatus.working => working,
+    AgentStatus.done => done,
+    AgentStatus.blocked => blocked,
+  };
 
   Color color(Ds ds) => status?.color(ds) ?? (this == failed ? ds.danger : ds.textTertiary);
 
@@ -196,14 +191,8 @@ class _StatusGlyphState extends State<StatusGlyph> with SingleTickerProviderStat
 }
 
 class _GlyphPainter extends CustomPainter {
-  _GlyphPainter(
-    this.shape,
-    this.color,
-    this.markColor, {
-    this.from,
-    this.fromColor,
-    this.progress,
-  }) : super(repaint: progress);
+  _GlyphPainter(this.shape, this.color, this.markColor, {this.from, this.fromColor, this.progress})
+    : super(repaint: progress);
 
   final _Shape shape;
   final Color color;
@@ -240,15 +229,7 @@ class _GlyphPainter extends CustomPainter {
 
   /// One shape. [draw] is how much of it has been drawn in (1 = all of it),
   /// [alpha] its opacity.
-  static void _draw(
-    Canvas canvas,
-    Size size,
-    _Shape shape,
-    Color color,
-    Color markColor,
-    double draw,
-    double alpha,
-  ) {
+  static void _draw(Canvas canvas, Size size, _Shape shape, Color color, Color markColor, double draw, double alpha) {
     Color a(Color c) => Ds.fade(c, alpha);
     double part(double from, double to) => ((draw - from) / (to - from)).clamp(0.0, 1.0);
     final c = size.center(Offset.zero);
@@ -317,11 +298,7 @@ class _GlyphPainter extends CustomPainter {
         if (bar > 0) canvas.drawLine(top, Offset.lerp(top, bottom, bar)!, mark);
         final dot = part(0.7, 1);
         if (dot > 0) {
-          canvas.drawCircle(
-            Offset(c.dx, c.dy + r * 0.46),
-            stroke * 0.62 * dot,
-            Paint()..color = a(markColor),
-          );
+          canvas.drawCircle(Offset(c.dx, c.dy + r * 0.46), stroke * 0.62 * dot, Paint()..color = a(markColor));
         }
       case _Shape.failed:
         // The disc settles to size, then the two strokes of the cross.
@@ -338,7 +315,11 @@ class _GlyphPainter extends CustomPainter {
         canvas.drawArc(Rect.fromCircle(center: c, radius: r), -math.pi / 2, 2 * math.pi * part(0, 0.7), false, ring);
         final k = r * math.sqrt1_2;
         final from = Offset(c.dx - k, c.dy - k);
-        canvas.drawLine(from, Offset.lerp(from, Offset(c.dx + k, c.dy + k), part(0.5, 1))!, ring..strokeCap = StrokeCap.round);
+        canvas.drawLine(
+          from,
+          Offset.lerp(from, Offset(c.dx + k, c.dy + k), part(0.5, 1))!,
+          ring..strokeCap = StrokeCap.round,
+        );
     }
   }
 
@@ -361,10 +342,10 @@ class LinkDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(color: state.color(context.ds), shape: BoxShape.circle),
-      );
+    width: size,
+    height: size,
+    decoration: BoxDecoration(color: state.color(context.ds), shape: BoxShape.circle),
+  );
 }
 
 /// Notion-style icon tile: a glyph on a softly tinted rounded square.
@@ -384,10 +365,7 @@ class IconTile extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        color: ds.wash(tint),
-        borderRadius: BorderRadius.circular(Radii.xs),
-      ),
+      decoration: BoxDecoration(color: ds.wash(tint), borderRadius: BorderRadius.circular(Radii.xs)),
       alignment: Alignment.center,
       child: Icon(icon, size: size * 0.56, color: tint),
     );

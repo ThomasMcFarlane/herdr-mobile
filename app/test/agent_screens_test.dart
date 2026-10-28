@@ -59,12 +59,32 @@ void main() {
         'nope',
         '[]',
         '{}',
-        jsonEncode({'v': 2, 'pane': ['m', 'p'], 'view': 'terminal'}),
+        jsonEncode({
+          'v': 2,
+          'pane': ['m', 'p'],
+          'view': 'terminal',
+        }),
         jsonEncode({'v': 1, 'view': 'terminal'}),
-        jsonEncode({'v': 1, 'pane': ['m'], 'view': 'terminal'}),
-        jsonEncode({'v': 1, 'pane': ['', 'p'], 'view': 'terminal'}),
-        jsonEncode({'v': 1, 'pane': [1, 2], 'view': 'terminal'}),
-        jsonEncode({'v': 1, 'pane': ['m', 'p'], 'view': 'sideways'}),
+        jsonEncode({
+          'v': 1,
+          'pane': ['m'],
+          'view': 'terminal',
+        }),
+        jsonEncode({
+          'v': 1,
+          'pane': ['', 'p'],
+          'view': 'terminal',
+        }),
+        jsonEncode({
+          'v': 1,
+          'pane': [1, 2],
+          'view': 'terminal',
+        }),
+        jsonEncode({
+          'v': 1,
+          'pane': ['m', 'p'],
+          'view': 'sideways',
+        }),
         jsonEncode({'v': 1, 'session': '', 'view': 'chat'}),
       ]) {
         expect(FrontAgent.decode(source), isNull, reason: source);
@@ -255,8 +275,11 @@ void main() {
 
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.containsKey(legacyKey), isFalse, reason: 'the tabs are gone for good');
-      expect(await store.read(), const FrontAgent(PaneAgent('m', 'w1:p2'), AgentView.terminal),
-          reason: 'carried over once and kept');
+      expect(
+        await store.read(),
+        const FrontAgent(PaneAgent('m', 'w1:p2'), AgentView.terminal),
+        reason: 'carried over once and kept',
+      );
     });
 
     test('tabs left while the board was in front bring nothing back, and are gone', () async {

@@ -113,7 +113,10 @@ abstract final class Springs {
   static final snap = SpringDescription.withDampingRatio(mass: 1, stiffness: 1500, ratio: 0.85);
 
   /// A swiped row that did not go far enough, coming back.
-  static final recoil = SpringDescription.withDurationAndBounce(duration: const Duration(milliseconds: 380), bounce: 0.1);
+  static final recoil = SpringDescription.withDurationAndBounce(
+    duration: const Duration(milliseconds: 380),
+    bounce: 0.1,
+  );
 
   /// A swiped row leaving.
   static final out = SpringDescription.withDurationAndBounce(duration: const Duration(milliseconds: 260));

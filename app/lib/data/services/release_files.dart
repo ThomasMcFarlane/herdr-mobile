@@ -62,8 +62,8 @@ class HttpReleaseFiles implements ReleaseFiles {
     Future<Directory> Function()? directory,
     HttpClient Function()? client,
     this.stall = const Duration(seconds: 30),
-  })  : _directory = directory ?? _defaultDirectory,
-        _client = client ?? HttpClient.new;
+  }) : _directory = directory ?? _defaultDirectory,
+       _client = client ?? HttpClient.new;
 
   final Future<Directory> Function() _directory;
   final HttpClient Function() _client;
@@ -131,10 +131,12 @@ class HttpReleaseFiles implements ReleaseFiles {
   UpdateDownload download(ReleaseInfo release, void Function(int received) onProgress) {
     final client = _client()..connectionTimeout = const Duration(seconds: 15);
     var cancelled = false;
-    final done = _run(release, client, onProgress, () => cancelled).catchError((Object e) {
-      if (cancelled) throw const UpdateCancelled();
-      throw updateFailure(e, doing: 'download the update');
-    }).whenComplete(() => client.close(force: true));
+    final done = _run(release, client, onProgress, () => cancelled)
+        .catchError((Object e) {
+          if (cancelled) throw const UpdateCancelled();
+          throw updateFailure(e, doing: 'download the update');
+        })
+        .whenComplete(() => client.close(force: true));
     return UpdateDownload(done, () {
       cancelled = true;
       client.close(force: true);
@@ -176,7 +178,8 @@ class HttpReleaseFiles implements ReleaseFiles {
         await response.drain<void>();
         throw httpFailure(response.statusCode);
       }
-      if (resumed && !(response.headers.value(HttpHeaders.contentRangeHeader) ?? 'bytes $have-').startsWith('bytes $have-')) {
+      if (resumed &&
+          !(response.headers.value(HttpHeaders.contentRangeHeader) ?? 'bytes $have-').startsWith('bytes $have-')) {
         await response.drain<void>();
         part.deleteSync();
         throw const StaleRelease('The partial download did not fit the release. Try again.');
@@ -241,9 +244,7 @@ class HttpReleaseFiles implements ReleaseFiles {
       final m = RegExp(r'^([0-9a-fA-F]{64})\s+\*?(.+?)\s*$').firstMatch(line);
       if (m != null && m[2] == release.fileName) return m[1]!.toLowerCase();
     }
-    throw UpdateException(
-      'Version ${release.version} has no checksum for its APK, so herdr will not install it.',
-    );
+    throw UpdateException('Version ${release.version} has no checksum for its APK, so herdr will not install it.');
   }
 }
 

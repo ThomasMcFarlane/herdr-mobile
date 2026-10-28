@@ -80,7 +80,12 @@ void main() {
         ..physicalSize = const Size(412 * 2.625, 892 * 2.625)
         ..devicePixelRatio = 2.625;
       addTearDown(tester.view.reset);
-      await tester.pumpWidget(MaterialApp(theme: AppTheme.light(), home: ReleaseHistoryScreen(load: load)));
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: ReleaseHistoryScreen(load: load),
+        ),
+      );
       await tester.pump();
       await tester.pump();
     }

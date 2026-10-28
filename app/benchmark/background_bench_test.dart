@@ -65,8 +65,7 @@ import 'package:herdr_mobile/data/repositories/machine_connection.dart';
 import 'package:herdr_mobile/data/repositories/machine_repository.dart';
 import 'package:herdr_mobile/data/repositories/notification_settings.dart';
 import 'package:herdr_mobile/data/repositories/pane_previews.dart';
-import 'package:herdr_mobile/data/services/bridge_command.dart'
-    show muxCompressMin, muxDeltaMin, muxReadyLine;
+import 'package:herdr_mobile/data/services/bridge_command.dart' show muxCompressMin, muxDeltaMin, muxReadyLine;
 import 'package:herdr_mobile/data/services/herdr_api.dart';
 import 'package:herdr_mobile/data/services/herdr_transport.dart' show HerdrTransportException;
 import 'package:herdr_mobile/data/services/mux_client.dart';
@@ -164,13 +163,7 @@ class Meter {
     }
     if (start != null) active += math.min(end!, toMs) - start;
     final activeS = active / 1000;
-    return (
-      bytes: bytes,
-      packets: packets,
-      activeS: activeS,
-      wakeups: wakeups,
-      costS: activeS + wakeups * wakeCostS,
-    );
+    return (bytes: bytes, packets: packets, activeS: activeS, wakeups: wakeups, costS: activeS + wakeups * wakeCostS);
   }
 }
 
@@ -199,8 +192,8 @@ class _Held {
 
 class _Host {
   _Host(this.id, this.meter, this.now, Map<String, String> agents, {Set<String> shells = const {}})
-      : statuses = {...agents},
-        shells = {...shells};
+    : statuses = {...agents},
+      shells = {...shells};
 
   final String id;
   final Meter meter;
@@ -219,11 +212,11 @@ class _Host {
   final _scroll = <String, int>{};
 
   Map<String, dynamic> snapshot() => snapshotJson(
-        panes: [
-          for (final e in statuses.entries) (id: e.key, ws: 'w1', agent: 'claude', status: e.value),
-          for (final s in shells) (id: s, ws: 'w1', agent: null, status: 'idle'),
-        ],
-      );
+    panes: [
+      for (final e in statuses.entries) (id: e.key, ws: 'w1', agent: 'claude', status: e.value),
+      for (final s in shells) (id: s, ws: 'w1', agent: null, status: 'idle'),
+    ],
+  );
 
   Map<String, dynamic> _paneJson(String pane) =>
       (snapshot()['panes'] as List).cast<Map<String, dynamic>>().firstWhere((p) => p['pane_id'] == pane);
@@ -256,9 +249,10 @@ class _Host {
   void setStatus(String pane, String status) {
     if (statuses[pane] == status) return;
     statuses[pane] = status;
-    _emit('pane.agent_status_changed', 'pane_agent_status_changed',
-        {'pane_id': pane, 'agent_status': status},
-        paneId: pane);
+    _emit('pane.agent_status_changed', 'pane_agent_status_changed', {
+      'pane_id': pane,
+      'agent_status': status,
+    }, paneId: pane);
     _emit('pane.updated', 'pane_updated', {'pane': _paneJson(pane)}, paneId: pane);
   }
 
@@ -286,7 +280,10 @@ class _Host {
     switch (method) {
       case 'ping':
         meter.count('mux_heartbeats');
-        d = {'id': id, 'result': {'type': 'pong', 'version': '9.9.9'}};
+        d = {
+          'id': id,
+          'result': {'type': 'pong', 'version': '9.9.9'},
+        };
       case 'session.snapshot':
         meter.count('snapshots');
         final s = snapshot();
@@ -306,13 +303,19 @@ class _Host {
         final pane = params['pane_id'] as String;
         final text = _screen(pane, params['lines'] as int? ?? 24);
         final read = <String, dynamic>{'text': text, 'truncated': false};
-        d = {'id': id, 'result': {'type': 'pane_read', 'read': read}};
+        d = {
+          'id': id,
+          'result': {'type': 'pane_read', 'read': read},
+        };
         if (text.length >= muxDeltaMin) {
           _heldAnswer(q, d, d['result'] as Map<String, dynamic>, 'read', text.split('\n'), snapshot: false);
         }
       default:
         meter.count('other_requests');
-        d = {'id': id, 'result': {'type': 'ok'}};
+        d = {
+          'id': id,
+          'result': {'type': 'ok'},
+        };
     }
     final json = jsonEncode(d);
     final raw = utf8.encode(json);
@@ -355,7 +358,10 @@ class _Host {
     Map<String, dynamic>? body;
     if (old != null && old.seq == have) {
       final o = _ops(old.rows, rows);
-      final literal = o.fold<int>(0, (a, e) => a + (e[0] is String ? e.fold<int>(0, (b, l) => b + (l as String).length) : 0));
+      final literal = o.fold<int>(
+        0,
+        (a, e) => a + (e[0] is String ? e.fold<int>(0, (b, l) => b + (l as String).length) : 0),
+      );
       if (literal * 2 < n) body = {'base': have, 'o': o};
     }
     if (snapshot) {
@@ -507,19 +513,28 @@ class _EventSession implements SSHSession {
       for (final t in types) {
         final pane = t['pane_id'];
         if (pane != null && !link.host.hasPane(pane as String)) {
-          _write(jsonEncode({
-            'id': q['id'],
-            'error': {'code': 'pane_not_found', 'message': 'no pane $pane'},
-          }));
+          _write(
+            jsonEncode({
+              'id': q['id'],
+              'error': {'code': 'pane_not_found', 'message': 'no pane $pane'},
+            }),
+          );
           return;
         }
       }
       final sub = _sub = _Sub(types, _write);
-      unawaited(_later(rtt).then((_) {
-        if (_closed) return;
-        _write(jsonEncode({'id': q['id'], 'result': {'type': 'subscription_started'}}));
-        link.host.subs.add(sub);
-      }));
+      unawaited(
+        _later(rtt).then((_) {
+          if (_closed) return;
+          _write(
+            jsonEncode({
+              'id': q['id'],
+              'result': {'type': 'subscription_started'},
+            }),
+          );
+          link.host.subs.add(sub);
+        }),
+      );
     }
   }
 
@@ -687,23 +702,20 @@ class _Rig {
       {'p1': 'working', 'p2': 'working', 'p3': 'working', 'p4': 'working', 'p5': 'idle'},
       shells: {'p6'},
     );
-    hosts['b'] = _Host(
-      'b',
-      meter,
-      () => async.elapsed,
-      {'q1': 'working', 'q2': 'working', 'q3': 'working', 'q4': 'idle'},
-    );
+    hosts['b'] = _Host('b', meter, () => async.elapsed, {
+      'q1': 'working',
+      'q2': 'working',
+      'q3': 'working',
+      'q4': 'idle',
+    });
     zone.run(() {
       final repository = MachineRepository(profiles: MemoryProfileStore(), secrets: MemorySecretStore());
       fleet = FleetRepository(
         machines: repository,
         network: network,
         clock: wall,
-        connect: (profile, secrets) => MachineConnection(
-          profile: profile,
-          api: HerdrApi(_transport(profile)),
-          clock: wall,
-        ),
+        connect: (profile, secrets) =>
+            MachineConnection(profile: profile, api: HerdrApi(_transport(profile)), clock: wall),
       );
       for (final (id, label) in [('a', 'Alpha'), ('b', 'Bravo')]) {
         repository.save(
@@ -869,12 +881,14 @@ class _Rig {
 
   /// Every machine shows what herdr says.
   bool get fresh => hosts.values.every((h) {
-        final c = fleet.connection(h.id);
-        if (c == null || !c.isLive) return false;
-        final shown = {for (final p in c.snapshot.panes) if (p.agent != null) p.id: p.status.name};
-        return shown.length == h.statuses.length &&
-            h.statuses.entries.every((e) => shown[e.key] == e.value);
-      });
+    final c = fleet.connection(h.id);
+    if (c == null || !c.isLive) return false;
+    final shown = {
+      for (final p in c.snapshot.panes)
+        if (p.agent != null) p.id: p.status.name,
+    };
+    return shown.length == h.statuses.length && h.statuses.entries.every((e) => shown[e.key] == e.value);
+  });
 
   /// Time until [fresh], stepping 100 ms; null if it never was within 2 min.
   Future<Duration?> untilFresh() async {
@@ -900,7 +914,6 @@ class _Rig {
   }
 }
 
-
 // ----------------------------------------------------------------------------
 // The scenario
 
@@ -915,8 +928,7 @@ class _Episode {
 final _out = <String>[];
 final _failures = <String>[];
 
-void _metric(String name, num value) =>
-    _out.add('METRIC $name=${value is int ? value : value.toStringAsFixed(3)}');
+void _metric(String name, num value) => _out.add('METRIC $name=${value is int ? value : value.toStringAsFixed(3)}');
 
 void _kb(String name, num bytes) => _metric(name, bytes / 1024);
 
@@ -952,11 +964,7 @@ List<_Episode> _episodes(_Rig r, Duration watchFor, List<(String, int, int)> out
 /// The app leaves for [watchFor] with notifications on, and what that costs is
 /// written as `<prefix>_*` metrics. With [turbulent] the world misbehaves: a
 /// handover, a pane that appears and one that closes, a machine that is down.
-Future<void> _watch({
-  required String prefix,
-  required Duration watchFor,
-  required bool turbulent,
-}) async {
+Future<void> _watch({required String prefix, required Duration watchFor, required bool turbulent}) async {
   {
     final async = FakeAsync(initialTime: DateTime.utc(2026, 1, 1, 12));
     final r = _Rig.start(async, notifications: true);
@@ -1040,9 +1048,11 @@ Future<void> _watch({
       await r.elapse(const Duration(minutes: 5));
       if (trace) {
         // ignore: avoid_print
-        print('TRACE $prefix +${m + 5}m ${r.fleet.connections.map((c) => c.state.name).join(',')} '
-            'subs=${r.hosts.values.map((h) => h.subs.map((s) => s.types.length).toList()).join(' ')} '
-            '${meter.counts}');
+        print(
+          'TRACE $prefix +${m + 5}m ${r.fleet.connections.map((c) => c.state.name).join(',')} '
+          'subs=${r.hosts.values.map((h) => h.subs.map((s) => s.types.length).toList()).join(' ')} '
+          '${meter.counts}',
+        );
       }
     }
     r.counting = false;
@@ -1077,8 +1087,10 @@ Future<void> _watch({
     }
     if (trace) {
       // ignore: avoid_print
-      print('TRACE $prefix episodes ${[for (final e in episodes) '${e.host}/${e.pane}@${e.startS}']} '
-          'latencies $latencies');
+      print(
+        'TRACE $prefix episodes ${[for (final e in episodes) '${e.host}/${e.pane}@${e.startS}']} '
+        'latencies $latencies',
+      );
     }
     latencies.sort();
     _metric('${prefix}_attention_episodes', episodes.length);
@@ -1092,8 +1104,11 @@ Future<void> _watch({
     if (trace && !turbulent) {
       final from = away.inMilliseconds + 10 * 60 * 1000;
       // ignore: avoid_print
-      print('TRACE $prefix timeline 10..20 min away: '
-          '${[for (final (ms, w) in meter.timeline) if (ms >= from && ms < from + 600000) '${((ms - from) / 1000).toStringAsFixed(1)}s:$w']}');
+      print(
+        'TRACE $prefix timeline 10..20 min away: '
+        '${[for (final (ms, w) in meter.timeline)
+          if (ms >= from && ms < from + 600000) '${((ms - from) / 1000).toStringAsFixed(1)}s:$w']}',
+      );
     }
 
     final sites = r.timerSites.entries.toList()..sort((a, b) => b.value.compareTo(a.value));

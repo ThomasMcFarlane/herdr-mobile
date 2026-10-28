@@ -62,7 +62,8 @@ void main() {
     String? appName,
     Future<void> Function(WidgetTester tester, FakeWebView web)? then,
   }) async {
-    final transport = FakeTransport()..webInfo = const WebBridgeInfo(port: 8790, token: '0123456789abcdef0123456789abcdef', entryPort: 51999);
+    final transport = FakeTransport()
+      ..webInfo = const WebBridgeInfo(port: 8790, token: '0123456789abcdef0123456789abcdef', entryPort: 51999);
     final web = FakeWebView.install(pagePort: 8790);
     web.titles[_page] = _title;
     final image = await picture(tester, brightness);
@@ -90,7 +91,10 @@ void main() {
     final scale = textScale == 1 ? '' : '-x$textScale';
     await shoot(
       tester,
-      WebPreviewScreen(machine: pageMachine(transport, label: 'tuannd12'), page: ServerPage(Uri.parse(_page), name: appName)),
+      WebPreviewScreen(
+        machine: pageMachine(transport, label: 'tuannd12'),
+        page: ServerPage(Uri.parse(_page), name: appName),
+      ),
       '$_out/$state-$mode-${size.width.toInt()}x${size.height.toInt()}$scale.png',
       brightness: brightness,
       size: size,

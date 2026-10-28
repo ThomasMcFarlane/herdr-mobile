@@ -23,38 +23,38 @@ import 'tokens.dart';
 /// already removed); the size dependency rebuilds it on rotation. The exit
 /// runs the enter curve flipped (never ease-in). Under reduced motion the
 /// sheet appears and goes without sliding (drag to dismiss still works).
-Future<T?> showAppSheet<T>(
-  BuildContext context, {
-  required WidgetBuilder builder,
-  bool dismissible = true,
-}) => showModalBottomSheet<T>(
-  context: context,
-  isScrollControlled: true,
-  isDismissible: dismissible,
-  sheetAnimationStyle: Motion.reduced(context)
-      ? AnimationStyle.noAnimation
-      : AnimationStyle(
-          curve: Motion.easeOut,
-          reverseCurve: Motion.easeOutExit,
-          duration: Motion.sheetIn,
-          reverseDuration: Motion.sheetOut,
+Future<T?> showAppSheet<T>(BuildContext context, {required WidgetBuilder builder, bool dismissible = true}) =>
+    showModalBottomSheet<T>(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: dismissible,
+      sheetAnimationStyle: Motion.reduced(context)
+          ? AnimationStyle.noAnimation
+          : AnimationStyle(
+              curve: Motion.easeOut,
+              reverseCurve: Motion.easeOutExit,
+              duration: Motion.sheetIn,
+              reverseDuration: Motion.sheetOut,
+            ),
+      builder: (ctx) => ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(ctx).height - MediaQuery.paddingOf(Navigator.of(ctx).context).top,
         ),
-  builder: (ctx) => ConstrainedBox(
-    constraints: BoxConstraints(
-      maxHeight: MediaQuery.sizeOf(ctx).height - MediaQuery.paddingOf(Navigator.of(ctx).context).top,
-    ),
-    child: SafeArea(
-      top: false,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Padding(padding: EdgeInsets.only(top: Gap.sm), child: SheetGrabber()),
-          Flexible(child: builder(ctx)),
-        ],
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.only(top: Gap.sm),
+                child: SheetGrabber(),
+              ),
+              Flexible(child: builder(ctx)),
+            ],
+          ),
+        ),
       ),
-    ),
-  ),
-);
+    );
 
 /// The handle at the top of every sheet (app sheets and the attach sheet).
 class SheetGrabber extends StatelessWidget {
@@ -151,10 +151,7 @@ class SheetScaffold extends StatelessWidget {
         ? null
         : rows
         // Outer inset 4 + 16: the title sits on the 20 gutter, with the rows.
-        ? Padding(
-            padding: EdgeInsets.fromLTRB(side + Gap.lg, Gap.sm, side + Gap.lg, Gap.sm),
-            child: SheetTitle(title),
-          )
+        ? Padding(padding: EdgeInsets.fromLTRB(side + Gap.lg, Gap.sm, side + Gap.lg, Gap.sm), child: SheetTitle(title))
         : Padding(
             padding: EdgeInsets.fromLTRB(side, 0, side, Gap.sm),
             child: Semantics(
@@ -169,14 +166,16 @@ class SheetScaffold extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                for (var i = 0; i < actions.length; i++) ...[
-                  if (i > 0) const SizedBox(height: Gap.sm),
-                  actions[i],
-                ],
+                for (var i = 0; i < actions.length; i++) ...[if (i > 0) const SizedBox(height: Gap.sm), actions[i]],
               ],
             ),
           );
-    final body = bleed ? child : Padding(padding: EdgeInsets.symmetric(horizontal: side), child: child);
+    final body = bleed
+        ? child
+        : Padding(
+            padding: EdgeInsets.symmetric(horizontal: side),
+            child: child,
+          );
     if (kind == SheetKind.list) {
       return ConstrainedBox(
         constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * listCap),
@@ -245,49 +244,49 @@ class SheetActionRow extends StatelessWidget {
       button: inert ? true : null,
       minHeight: _rowHeight,
       padding: EdgeInsets.symmetric(horizontal: Gap.lg - PressRow.inset, vertical: inert ? Gap.sm : 0),
-        child: Row(
-          children: [
-            Icon(
-              action.icon,
-              size: IconSize.lead,
-              color: inert
-                  ? ds.textTertiary
-                  : action.destructive
-                  ? ds.dangerText
-                  : ds.textSecondary,
-            ),
-            const SizedBox(width: Gap.md),
-            Expanded(
-              child: Column(
-                // Shrink-wrapped, so the row centres the label with its icon
-                // (a full-height column pinned the label to the top).
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    action.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Type.row.copyWith(
-                      color: inert
-                          ? ds.textMuted
-                          : action.destructive
-                          ? ds.dangerText
-                          : ds.text,
-                    ),
+      child: Row(
+        children: [
+          Icon(
+            action.icon,
+            size: IconSize.lead,
+            color: inert
+                ? ds.textTertiary
+                : action.destructive
+                ? ds.dangerText
+                : ds.textSecondary,
+          ),
+          const SizedBox(width: Gap.md),
+          Expanded(
+            child: Column(
+              // Shrink-wrapped, so the row centres the label with its icon
+              // (a full-height column pinned the label to the top).
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  action.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Type.row.copyWith(
+                    color: inert
+                        ? ds.textMuted
+                        : action.destructive
+                        ? ds.dangerText
+                        : ds.text,
                   ),
-                  if (reason != null)
-                    Text(
-                      reason,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Type.caption.copyWith(color: ds.textSecondary),
-                    ),
-                ],
-              ),
+                ),
+                if (reason != null)
+                  Text(
+                    reason,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Type.caption.copyWith(color: ds.textSecondary),
+                  ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -450,4 +449,3 @@ class _HoldConfirmButtonState extends State<_HoldConfirmButton> {
     );
   }
 }
-

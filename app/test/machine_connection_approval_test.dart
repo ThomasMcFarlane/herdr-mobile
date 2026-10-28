@@ -13,15 +13,16 @@ const _profile = MachineProfile(
   auth: SshAuth.none,
 );
 
-const _banner = '# Tailscale SSH requires an additional check.\n'
+const _banner =
+    '# Tailscale SSH requires an additional check.\n'
     '# To authenticate, visit: https://login.tailscale.com/a/l3503a0535f1bf';
 
 MachineConnection _connection() => MachineConnection(
-      profile: _profile,
-      api: HerdrApi(FakeTransport()),
-      backoff: (_) => const Duration(milliseconds: 10),
-      pollInterval: const Duration(hours: 1),
-    );
+  profile: _profile,
+  api: HerdrApi(FakeTransport()),
+  backoff: (_) => const Duration(milliseconds: 10),
+  pollInterval: const Duration(hours: 1),
+);
 
 void main() {
   late MachineConnection c;

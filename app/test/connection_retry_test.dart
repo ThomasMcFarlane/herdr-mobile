@@ -32,9 +32,7 @@ class _Machine extends FakeTransport {
   int unreadable = 0;
 
   /// Gaps between consecutive snapshot requests, in whole seconds.
-  List<int> get gaps => [
-        for (var i = 1; i < asked.length; i++) asked[i].difference(asked[i - 1]).inSeconds,
-      ];
+  List<int> get gaps => [for (var i = 1; i < asked.length; i++) asked[i].difference(asked[i - 1]).inSeconds];
 
   @override
   Future<Map<String, dynamic>> request(String method, [Map<String, dynamic> params = const {}]) {
@@ -66,12 +64,12 @@ class _Machine extends FakeTransport {
 DateTime Function() _fakeNow(FakeAsync async) => async.getClock(DateTime(2026)).now;
 
 MachineConnection _connection(FakeTransport t, FakeAsync async) => MachineConnection(
-      profile: _profile,
-      api: HerdrApi(t),
-      clock: _fakeNow(async),
-      // The real retry delays and stream timing.
-      pollInterval: const Duration(hours: 1),
-    );
+  profile: _profile,
+  api: HerdrApi(t),
+  clock: _fakeNow(async),
+  // The real retry delays and stream timing.
+  pollInterval: const Duration(hours: 1),
+);
 
 void main() {
   test('a stream that dies at once backs off 1, 2, 4, 8 seconds, not 1 second for ever', () {
@@ -87,12 +85,7 @@ void main() {
 
   test('a stream that delivered an event counts as having worked: the delays start over', () {
     fakeAsync((async) {
-      final t = _Machine([
-        _diesAtOnce,
-        _diesAtOnce,
-        (up: Duration.zero, event: true),
-        _diesAtOnce,
-      ], _fakeNow(async));
+      final t = _Machine([_diesAtOnce, _diesAtOnce, (up: Duration.zero, event: true), _diesAtOnce], _fakeNow(async));
       final c = _connection(t, async)..start();
       async.elapse(const Duration(seconds: 20));
       c.dispose();
@@ -103,11 +96,7 @@ void main() {
 
   test('a stream that stayed up for a while counts as having worked', () {
     fakeAsync((async) {
-      final t = _Machine([
-        _diesAtOnce,
-        (up: const Duration(seconds: 31), event: false),
-        _diesAtOnce,
-      ], _fakeNow(async));
+      final t = _Machine([_diesAtOnce, (up: const Duration(seconds: 31), event: false), _diesAtOnce], _fakeNow(async));
       final c = _connection(t, async)..start();
       async.elapse(const Duration(seconds: 60));
       c.dispose();
@@ -119,9 +108,7 @@ void main() {
 
   test('a reply the app cannot read is a failed attempt that is retried', () {
     fakeAsync((async) {
-      final t = _Machine([
-        (up: const Duration(hours: 1), event: false),
-      ], _fakeNow(async))..unreadable = 2;
+      final t = _Machine([(up: const Duration(hours: 1), event: false)], _fakeNow(async))..unreadable = 2;
       final c = _connection(t, async)..start();
       async.elapse(const Duration(milliseconds: 10));
 

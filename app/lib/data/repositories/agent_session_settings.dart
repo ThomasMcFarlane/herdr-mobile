@@ -12,10 +12,10 @@ class AgentSessionMemory {
   factory AgentSessionMemory.fromJson(Object? json) {
     if (json is! Map) return const AgentSessionMemory();
     Map<String, String> strings(Object? m) => {
-          if (m is Map)
-            for (final e in m.entries)
-              if (e.key is String && e.value is String) e.key as String: e.value as String,
-        };
+      if (m is Map)
+        for (final e in m.entries)
+          if (e.key is String && e.value is String) e.key as String: e.value as String,
+    };
     return AgentSessionMemory(
       machineId: json['machine'] is String ? json['machine'] as String : null,
       agents: strings(json['agents']),

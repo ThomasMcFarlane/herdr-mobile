@@ -41,7 +41,9 @@ Future<_Rig> _open(WidgetTester tester) async {
           builder: (context) => Scaffold(
             body: TextButton(
               onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => AgentSessionScreen(session: session, agent: _agent)),
+                MaterialPageRoute<void>(
+                  builder: (_) => AgentSessionScreen(session: session, agent: _agent),
+                ),
               ),
               child: const Text('open'),
             ),

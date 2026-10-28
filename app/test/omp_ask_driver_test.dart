@@ -23,12 +23,10 @@ void main() {
       expect(s.kind, AskScreenKind.question);
       expect(s.hasTabs, isFalse);
       expect(s.title, 'Which database should the project use?');
-      expect([for (final r in s.rows) r.label], [
-        'SQLite (Recommended)',
-        'Postgres',
-        'DuckDB',
-        'Other (type your own)',
-      ]);
+      expect(
+        [for (final r in s.rows) r.label],
+        ['SQLite (Recommended)', 'Postgres', 'DuckDB', 'Other (type your own)'],
+      );
       expect(s.cursorRow, 0);
       expect(s.rows.every((r) => !r.checked && !r.multi), isTrue);
       expect(s.rows[1].description, 'Full server, best for concurrent writes and large data sets');
@@ -121,13 +119,16 @@ void main() {
 
     test('plan review', () {
       final p = parseOmpPlanReview(fixtureScreen('plan-review'))!;
-      expect([for (final o in p.options) o.label], [
-        'Approve and execute',
-        'Approve and compact context',
-        'Approve and keep context (~6.8k / 200k)',
-        'Refine plan',
-        'Save and quit',
-      ]);
+      expect(
+        [for (final o in p.options) o.label],
+        [
+          'Approve and execute',
+          'Approve and compact context',
+          'Approve and keep context (~6.8k / 200k)',
+          'Refine plan',
+          'Save and quit',
+        ],
+      );
       expect(p.cursorIndex, 0);
       expect(p.approve, ['enter']);
       expect(p.keysForLabel('Refine'), ['down', 'down', 'down', 'enter']);
@@ -138,20 +139,22 @@ void main() {
 
     test('plan review with the model slider: its rows are not options', () {
       final p = parseOmpPlanReview(fixtureScreen('plan-review-slider'))!;
-      expect([for (final o in p.options) o.label], [
-        'Approve and execute',
-        'Approve and compact context',
-        'Approve and keep context (~23k / 1m)',
-        'Refine plan',
-        'Save and quit',
-      ]);
+      expect(
+        [for (final o in p.options) o.label],
+        [
+          'Approve and execute',
+          'Approve and compact context',
+          'Approve and keep context (~23k / 1m)',
+          'Refine plan',
+          'Save and quit',
+        ],
+      );
       expect(p.cursorIndex, 0);
       expect(p.keysForLabel('Refine'), ['down', 'down', 'down', 'enter']);
     });
 
     test('keep context over 95% is skipped by the cursor: the keys do not count it', () {
-      String full(String usage) =>
-          fixtureScreen('plan-review').replaceAll('(~6.8k / 200k)', usage);
+      String full(String usage) => fixtureScreen('plan-review').replaceAll('(~6.8k / 200k)', usage);
       // 199k of 200k: disabled for sure, so Refine is two downs, not three
       // (three would land on "Save and quit", which quits omp).
       final over = parseOmpPlanReview(full('(~199k / 200k)'))!;

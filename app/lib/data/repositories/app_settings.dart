@@ -184,10 +184,10 @@ class AppSettings extends ChangeNotifier {
   /// Whether a board of [agentCount] agents draws cards (a live preview each)
   /// rather than compact rows.
   bool cardsFor(int agentCount) => switch (_density) {
-        BoardDensity.cards => true,
-        BoardDensity.compact => false,
-        BoardDensity.auto => agentCount < autoCompactFrom,
-      };
+    BoardDensity.cards => true,
+    BoardDensity.compact => false,
+    BoardDensity.auto => agentCount < autoCompactFrom,
+  };
 
   /// Reads the saved settings. Anything missing or unreadable is the default.
   Future<void> load() async {

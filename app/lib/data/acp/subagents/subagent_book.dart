@@ -65,8 +65,9 @@ class SubagentBook {
 
   SubagentBook withRuns(List<SubagentRun> next) => SubagentBook(runs: next, owners: owners, held: held);
 
-  SubagentBook withOwner(String toolCallId, String parentId) =>
-      owners[toolCallId] == parentId ? this : SubagentBook(runs: runs, owners: {...owners, toolCallId: parentId}, held: held);
+  SubagentBook withOwner(String toolCallId, String parentId) => owners[toolCallId] == parentId
+      ? this
+      : SubagentBook(runs: runs, owners: {...owners, toolCallId: parentId}, held: held);
 
   bool hasHeldFor(String parentId) => held.any((h) => h.parentId == parentId);
 
@@ -104,7 +105,13 @@ SubagentRun runFromFacts(
 }) {
   final base =
       old ??
-      SubagentRun(id: f.id, route: f.route, parentToolCallId: parentToolCallId, parentRunId: parentRunId, startedAt: startedAt);
+      SubagentRun(
+        id: f.id,
+        route: f.route,
+        parentToolCallId: parentToolCallId,
+        parentRunId: parentRunId,
+        startedAt: startedAt,
+      );
   final over = !f.status.isActive;
   final DateTime? finishedAt = over ? (old == null || old.status.isActive ? now : old.finishedAt) : null;
   final count = f.toolCount;
@@ -129,7 +136,8 @@ SubagentRun runFromFacts(
     recentOutput: f.recentOutput,
     note: f.note,
     result: f.result,
-    failure: f.failure ?? (f.status == SubagentStatus.failed || f.status == SubagentStatus.cancelled ? base.failure : null),
+    failure:
+        f.failure ?? (f.status == SubagentStatus.failed || f.status == SubagentStatus.cancelled ? base.failure : null),
     retry: f.retry ?? (f.clearRetry || over ? null : base.retry),
     background: f.background,
   );

@@ -14,22 +14,26 @@ void main() {
     tester.view.physicalSize = const Size(360, 780) * 3;
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
-    final session = FakeAgentSession(
-      title: 'Fix ingest logic for the planning skill',
-      state: stateWith(turnActive: true),
-    )
-      ..observed = true
-      ..paneId = 'w1:p1'
-      ..live = ['npm test'];
+    final session =
+        FakeAgentSession(title: 'Fix ingest logic for the planning skill', state: stateWith(turnActive: true))
+          ..observed = true
+          ..paneId = 'w1:p1'
+          ..live = ['npm test'];
     await tester.pumpWidget(
-      MaterialApp(theme: AppTheme.light(), home: AgentSessionScreen(key: ObjectKey(session), session: session)),
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: AgentSessionScreen(key: ObjectKey(session), session: session),
+      ),
     );
     await tester.pump(const Duration(milliseconds: 300));
 
     final inBar = find.descendant(of: find.byType(SessionBar), matching: find.textContaining('Working'));
     expect(inBar, findsNothing, reason: 'the status row below says how long; the bar names the session');
 
-    final title = find.descendant(of: find.byType(SessionBar), matching: find.text('Fix ingest logic for the planning skill'));
+    final title = find.descendant(
+      of: find.byType(SessionBar),
+      matching: find.text('Fix ingest logic for the planning skill'),
+    );
     expect(title, findsOneWidget);
     final room = tester.getSize(find.byType(SessionBar)).width;
     expect(tester.getSize(title).width, greaterThan(room * 0.4), reason: 'the title gets the room, not a label');

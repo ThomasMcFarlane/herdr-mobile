@@ -21,6 +21,11 @@ echo "==> flutter pub get"
 flutter pub get >/dev/null
 
 if [ "${1:-}" != "--tests" ]; then
+  # Width is pinned in app/analysis_options.yaml (formatter.page_width). A file
+  # it would change is listed; `dart format .` in app/ fixes them.
+  echo "==> dart format"
+  dart format -o none --set-exit-if-changed . ../tool
+
   echo "==> flutter analyze"
   flutter analyze
 

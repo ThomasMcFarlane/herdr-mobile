@@ -51,7 +51,12 @@ void main() {
     dir.deleteSync(recursive: true);
   });
 
-  Future<void> pump(WidgetTester tester, {LogImageBlock block = _block, bool withSession = true, double textScale = 1}) async {
+  Future<void> pump(
+    WidgetTester tester, {
+    LogImageBlock block = _block,
+    bool withSession = true,
+    double textScale = 1,
+  }) async {
     _base = (await tester.runAsync(() => createTestImage(width: 4, height: 4)))!;
     addTearDown(_base.dispose);
     // The store's index load is real IO: done in the real zone, before the
@@ -98,7 +103,11 @@ void main() {
     await tester.tap(find.text('Tap to load'));
     await tester.pump();
     await tester.pump(Dwell.spinnerDelay); // a wait shorter than this shows nothing
-    expect(find.byType(CircularProgressIndicator), findsOneWidget, reason: 'the wait the person started shows the one spinner');
+    expect(
+      find.byType(CircularProgressIndicator),
+      findsOneWidget,
+      reason: 'the wait the person started shows the one spinner',
+    );
     expect(find.text('Tap to load'), findsNothing);
     // A second tap lands on the picture frame, not on a line to load again.
     await tester.tap(find.byType(CircularProgressIndicator), warnIfMissed: false);
@@ -139,7 +148,10 @@ void main() {
   });
 
   testWidgets('a failure the host says is final, and a view that cannot fetch, offer no retry', (tester) async {
-    session.logPictureError = const LogPictureException('The log changed since that picture was listed.', retryable: false);
+    session.logPictureError = const LogPictureException(
+      'The log changed since that picture was listed.',
+      retryable: false,
+    );
     await pump(tester);
     await tester.tap(find.text('Tap to load'));
     await settle(tester, () => find.textContaining('log changed').evaluate().isNotEmpty);
@@ -149,7 +161,13 @@ void main() {
     session.logPictureError = logPictureNotHere;
     await tester.pumpWidget(const SizedBox());
     cache.clear();
-    await pump(tester, block: const LogImageBlock(mimeType: 'image/png', ref: KeeperPictureRef(start: 2, hash: 'aaaaaaaaaaaaaaaa')));
+    await pump(
+      tester,
+      block: const LogImageBlock(
+        mimeType: 'image/png',
+        ref: KeeperPictureRef(start: 2, hash: 'aaaaaaaaaaaaaaaa'),
+      ),
+    );
     await tester.tap(find.text('Tap to load'));
     await settle(tester, () => find.text('Not available here').evaluate().isNotEmpty);
     expect(find.textContaining('Tap to retry'), findsNothing);
@@ -176,8 +194,16 @@ void main() {
     await tester.runAsync(() => store.put(_ref.key, Uint8List.fromList([1, 2, 3])));
     session.logPictureGate = Completer<void>(); // held back: look at the frames in between
     await pump(tester);
-    expect(find.text('Tap to load'), findsNothing, reason: 'the first frame is already the picture frame: the row does not change height after it');
-    expect(find.byType(CircularProgressIndicator), findsNothing, reason: 'nobody tapped: a quiet frame, not the wait of a tap');
+    expect(
+      find.text('Tap to load'),
+      findsNothing,
+      reason: 'the first frame is already the picture frame: the row does not change height after it',
+    );
+    expect(
+      find.byType(CircularProgressIndicator),
+      findsNothing,
+      reason: 'nobody tapped: a quiet frame, not the wait of a tap',
+    );
     session.logPictureGate!.complete();
     await settle(tester, () => find.byType(RawImage).evaluate().isNotEmpty);
     expect(find.text('Tap to load'), findsNothing);
@@ -194,16 +220,25 @@ void main() {
   });
 
   testWidgets('an odd type and a very long reason wrap at large text instead of overflowing', (tester) async {
-    session.logPictureError = const LogPictureException('The machine said something very long indeed about this picture. '
-        'It went on and on about the log, the line, the offset and every other thing it knew.');
+    session.logPictureError = const LogPictureException(
+      'The machine said something very long indeed about this picture. '
+      'It went on and on about the log, the line, the offset and every other thing it knew.',
+    );
     await pump(
       tester,
-      block: const LogImageBlock(mimeType: 'image/svg+xml; charset=utf-8', ref: KeeperPictureRef(start: 1, hash: 'fedcba9876543210', bytes: 14 * 1024 * 1024)),
+      block: const LogImageBlock(
+        mimeType: 'image/svg+xml; charset=utf-8',
+        ref: KeeperPictureRef(start: 1, hash: 'fedcba9876543210', bytes: 14 * 1024 * 1024),
+      ),
       textScale: 2,
     );
     expect(find.text('Tap to load'), findsOneWidget);
     await tester.tap(find.text('Tap to load'));
     await settle(tester, () => find.textContaining('Tap to retry.').evaluate().isNotEmpty);
-    expect(tester.takeException(), isNull, reason: 'the failure chip with a long reason and a long type fits at 2x text');
+    expect(
+      tester.takeException(),
+      isNull,
+      reason: 'the failure chip with a long reason and a long type fits at 2x text',
+    );
   });
 }

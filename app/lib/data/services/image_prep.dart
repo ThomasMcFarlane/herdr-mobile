@@ -102,7 +102,12 @@ Future<PreparedImage> prepareImage(Uint8List input, {int maxEdge = maxImageEdge,
     if (rgba == null) throw const ImagePrepException('Could not read that picture.');
     final w = image.width;
     final h = image.height;
-    final job = _Job(TransferableTypedData.fromList([rgba.buffer.asUint8List(rgba.offsetInBytes, rgba.lengthInBytes)]), w, h, maxBytes);
+    final job = _Job(
+      TransferableTypedData.fromList([rgba.buffer.asUint8List(rgba.offsetInBytes, rgba.lengthInBytes)]),
+      w,
+      h,
+      maxBytes,
+    );
     final done = await Isolate.run(() => _encode(job));
     return PreparedImage(bytes: done.bytes.materialize().asUint8List(), width: done.width, height: done.height);
   } finally {

@@ -13,9 +13,28 @@ const _frame = Duration(milliseconds: 16);
 String _prose(int chars, {int seed = 1}) {
   final random = Random(seed);
   const words = [
-    'the', 'parser', 'lowercases', 'before', 'it', 'normalises', 'lib/ui/render/markdown/md_parser.dart:1',
-    'Hà', 'Nội', 'Việt', 'Nam', 'tiếng', 'https://example.com/docs/streaming?x=1&y=22', '`inline`', '**bold**',
-    '👨\u200D👩\u200D👧\u200D👦', '🇻🇳', 'e\u0323\u0302', '–', 'a', 'of', 'anthropomorphization',
+    'the',
+    'parser',
+    'lowercases',
+    'before',
+    'it',
+    'normalises',
+    'lib/ui/render/markdown/md_parser.dart:1',
+    'Hà',
+    'Nội',
+    'Việt',
+    'Nam',
+    'tiếng',
+    'https://example.com/docs/streaming?x=1&y=22',
+    '`inline`',
+    '**bold**',
+    '👨\u200D👩\u200D👧\u200D👦',
+    '🇻🇳',
+    'e\u0323\u0302',
+    '–',
+    'a',
+    'of',
+    'anthropomorphization',
   ];
   final b = StringBuffer();
   while (b.length < chars) {
@@ -97,7 +116,12 @@ void main() {
       });
 
       test('$agent cadence with frames that arrive late: still bounded', () {
-        final run = _simulate(RevealPacer(), text, traceCadence[agent]!, jitterMs: [16, 17, 16, 33, 16, 16, 50, 16, 16]);
+        final run = _simulate(
+          RevealPacer(),
+          text,
+          traceCadence[agent]!,
+          jitterMs: [16, 17, 16, 33, 16, 16, 50, 16, 16],
+        );
         expect(run.shown, text);
         expect(run.maxLagMs, lessThanOrEqualTo(250), reason: '$agent: worst lag ${run.maxLagMs} ms');
       });
@@ -230,7 +254,9 @@ void main() {
     test('every revealed prefix of a text arriving one code unit at a time ends on a boundary', () {
       for (var seed = 0; seed < 12; seed++) {
         final random = Random(seed);
-        final text = [for (var i = 0; i < 120; i++) ...[clusters[random.nextInt(clusters.length)], ' ']].join();
+        final text = [
+          for (var i = 0; i < 120; i++) ...[clusters[random.nextInt(clusters.length)], ' '],
+        ].join();
         final p = RevealPacer(minRate: 1, k: 0.05);
         var shown = '';
         var fed = 0;

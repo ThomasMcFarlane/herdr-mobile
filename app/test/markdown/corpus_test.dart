@@ -42,21 +42,22 @@ void main() {
       }
     });
 
-    test('healing never throws and never grows a text by more than closers',
-        () {
+    test('healing never throws and never grows a text by more than closers', () {
       // Every prefix of every corpus text: the contract of a display-only step.
       for (final t in allCorpusTexts().where((t) => t.text.length < 1500)) {
         for (var p = 1; p <= t.text.length; p++) {
           final prefix = t.text.substring(0, p);
           final healed = healTail(prefix);
-          expect(healed.length, lessThanOrEqualTo(prefix.length + 12),
-              reason: '${t.name} @$p');
+          expect(healed.length, lessThanOrEqualTo(prefix.length + 12), reason: '${t.name} @$p');
           // Parsing the healed text must not throw either, and one pass is
           // complete: healing again adds nothing (it may only drop more of an
           // ambiguous partial closing fence).
           parseMd(healed);
-          expect(healTail(healed).length, lessThanOrEqualTo(healed.length),
-              reason: '${t.name} @$p: ${prefix.replaceAll('\n', '⏎')}');
+          expect(
+            healTail(healed).length,
+            lessThanOrEqualTo(healed.length),
+            reason: '${t.name} @$p: ${prefix.replaceAll('\n', '⏎')}',
+          );
         }
       }
     });

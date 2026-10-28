@@ -48,10 +48,12 @@ class _MuxChannel implements MuxChannel {
     final m = jsonDecode(line) as Map<String, dynamic>;
     sent.add(m);
     if (silent) return;
-    _lines.add(jsonEncode({
-      'id': m['id'],
-      'result': {'type': 'pong', 'version': '1'},
-    }));
+    _lines.add(
+      jsonEncode({
+        'id': m['id'],
+        'result': {'type': 'pong', 'version': '1'},
+      }),
+    );
   }
 
   @override
@@ -90,8 +92,7 @@ class _Client implements SSHClient {
     SSHPtyConfig? pty,
     SSHX11Config? x11,
     Map<String, String>? environment,
-  }) =>
-      Future.error(SSHChannelOpenError(1, 'no more sessions'));
+  }) => Future.error(SSHChannelOpenError(1, 'no more sessions'));
 
   @override
   Future<void> close() async {
@@ -144,33 +145,33 @@ class _Rig {
   _Client get client => clients.last;
 }
 
-void _rig(String name, void Function(_Rig r) body) =>
-    test(name, () => fakeAsync((async) {
-          final r = _Rig(async);
-          body(r);
-          unawaited(r.t.close());
-          async.flushMicrotasks();
-        }));
+void _rig(String name, void Function(_Rig r) body) => test(
+  name,
+  () => fakeAsync((async) {
+    final r = _Rig(async);
+    body(r);
+    unawaited(r.t.close());
+    async.flushMicrotasks();
+  }),
+);
 
 /// Runs inside the worker isolate; remembers what the app told it.
 class _BgProbe implements HerdrTransport {
   final backgrounds = <bool>[];
 
   @override
-  Future<Map<String, dynamic>> request(
-    String method, [
-    Map<String, dynamic> params = const {},
-  ]) async {
+  Future<Map<String, dynamic>> request(String method, [Map<String, dynamic> params = const {}]) async {
     if (method == 'die') Isolate.exit();
-    return {'background': [...backgrounds]};
+    return {
+      'background': [...backgrounds],
+    };
   }
 
   @override
   void setBackground(bool background) => backgrounds.add(background);
 
   @override
-  Stream<Map<String, dynamic>> events(List<Map<String, dynamic>> subscriptions) =>
-      const Stream.empty();
+  Stream<Map<String, dynamic>> events(List<Map<String, dynamic>> subscriptions) => const Stream.empty();
 
   @override
   void reset() {}
@@ -214,15 +215,13 @@ class _BgProbe implements HerdrTransport {
   Future<void> close() async {}
 }
 
-HerdrTransport _buildProbe(Object? config, void Function(String) a, void Function(String) b) =>
-    _BgProbe();
+HerdrTransport _buildProbe(Object? config, void Function(String) a, void Function(String) b) => _BgProbe();
 
 void main() {
   group('timings', () {
     test('the foreground keeps the numbers the app always had', () {
       const f = LivenessTiming.foreground;
-      expect([f.muxInterval, f.muxTimeout, f.linkInterval, f.linkTimeout],
-          [_sec(8), _sec(5), _sec(25), _sec(10)]);
+      expect([f.muxInterval, f.muxTimeout, f.linkInterval, f.linkTimeout], [_sec(8), _sec(5), _sec(25), _sec(10)]);
     });
 
     test('the background tests are longer than the safety-net poll, so its answers make them needless', () {
@@ -270,7 +269,9 @@ void main() {
       expect(r.mux.beats, before + 2, reason: 'then every 8 s');
     });
 
-    _rig('a mux that stops answering in the background is judged by the 15 s timeout, and the connection is reset', (r) {
+    _rig('a mux that stops answering in the background is judged by the 15 s timeout, and the connection is reset', (
+      r,
+    ) {
       r.connectLink();
       r.startMux();
       r.t.setBackground(true);
@@ -439,12 +440,8 @@ void main() {
       fakeAsync((async) {
         final live = LinkLiveness(clock: () => async.elapsed);
         var pings = 0;
-        final watch = LinkWatch(
-          liveness: live,
-          ping: () async => pings++,
-          onDead: () {},
-          isClosed: () => false,
-        )..start();
+        final watch = LinkWatch(liveness: live, ping: () async => pings++, onDead: () {}, isClosed: () => false)
+          ..start();
 
         for (var i = 0; i < 10; i++) {
           watch.configure(_sec(150), _sec(15));
@@ -463,12 +460,8 @@ void main() {
       fakeAsync((async) {
         final live = LinkLiveness(clock: () => async.elapsed);
         var pings = 0;
-        final watch = LinkWatch(
-          liveness: live,
-          ping: () async => pings++,
-          onDead: () {},
-          isClosed: () => false,
-        )..start();
+        final watch = LinkWatch(liveness: live, ping: () async => pings++, onDead: () {}, isClosed: () => false)
+          ..start();
 
         watch.stop();
         watch.configure(_sec(1), _sec(1), checkNow: true);
@@ -500,12 +493,7 @@ void main() {
         final live = LinkLiveness(clock: () => async.elapsed);
         var dead = 0;
         final answer = Completer<void>();
-        LinkWatch(
-          liveness: live,
-          ping: () => answer.future,
-          onDead: () => dead++,
-          isClosed: () => false,
-        ).start();
+        LinkWatch(liveness: live, ping: () => answer.future, onDead: () => dead++, isClosed: () => false).start();
         async.elapse(_sec(25)); // pinged, never answered
 
         for (var i = 0; i < 12; i++) {
@@ -525,8 +513,7 @@ void main() {
     setUp(() => t = IsolateTransport(builder: _buildProbe, config: () => null, onPin: (_) {}));
     tearDown(() => t.close());
 
-    Future<List<Object?>> seen() async =>
-        (await t.request('probe'))['background'] as List<Object?>;
+    Future<List<Object?>> seen() async => (await t.request('probe'))['background'] as List<Object?>;
 
     test('a flag set before the worker exists is applied when it starts', () async {
       t.setBackground(true);

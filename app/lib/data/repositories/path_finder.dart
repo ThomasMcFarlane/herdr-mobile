@@ -90,11 +90,7 @@ class Checkouts {
 /// A not-found that says what it looked for and where. Still a plain
 /// not-found to everything that only reads [kind].
 class PathNotFound extends RemoteFileException {
-  PathNotFound(
-    String message, {
-    super.path,
-    this.canSearch = false,
-  }) : super(RemoteFileErrorKind.notFound, message);
+  PathNotFound(String message, {super.path, this.canSearch = false}) : super(RemoteFileErrorKind.notFound, message);
 
   /// A search by name could still be tried (it was not, and the path is below
   /// the session folder).
@@ -149,9 +145,46 @@ class PathFinder {
   static const skipFolders = {'node_modules', 'build', '.dart_tool', 'target', 'dist', '.venv'};
 
   static const _commonStems = {
-    'readme', 'index', 'main', 'license', 'licence', 'changelog', 'makefile', 'dockerfile', 'package', 'pubspec',
-    'cargo', 'setup', 'config', 'settings', 'utils', 'helpers', 'types', 'constants', 'test', 'tests', 'app',
-    'lib', 'mod', 'init', '__init__', 'notes', 'todo', 'plan', 'design', 'docs', 'schema', 'models', 'agents', 'claude', 'gemini', 'contributing', 'tsconfig', 'gradle', 'manifest', 'strings',
+    'readme',
+    'index',
+    'main',
+    'license',
+    'licence',
+    'changelog',
+    'makefile',
+    'dockerfile',
+    'package',
+    'pubspec',
+    'cargo',
+    'setup',
+    'config',
+    'settings',
+    'utils',
+    'helpers',
+    'types',
+    'constants',
+    'test',
+    'tests',
+    'app',
+    'lib',
+    'mod',
+    'init',
+    '__init__',
+    'notes',
+    'todo',
+    'plan',
+    'design',
+    'docs',
+    'schema',
+    'models',
+    'agents',
+    'claude',
+    'gemini',
+    'contributing',
+    'tsconfig',
+    'gradle',
+    'manifest',
+    'strings',
   };
 
   /// Whether [name] says enough to search for it on its own: not a name every
@@ -189,7 +222,8 @@ class PathFinder {
     final top = found.top;
     final sub = top != null && cwd != top && cwd.startsWith('$top/') ? cwd.substring(top.length + 1) : '';
     final rels = <String>{
-      if (sub.isNotEmpty) for (final r in relatives) RemotePath.normalize('$sub/$r'),
+      if (sub.isNotEmpty)
+        for (final r in relatives) RemotePath.normalize('$sub/$r'),
       for (final r in relatives) RemotePath.normalize(r),
     }.where((r) => r != '.' && r != '..' && !r.startsWith('../') && !RemotePath.isAbsolute(r)).toList();
     if (rels.isEmpty) return const PathFindReport();
@@ -233,11 +267,13 @@ class PathFinder {
           if (e.name == name) {
             final kind = e.resolvedKind;
             if (kind == RemoteEntryKind.file || kind == RemoteEntryKind.dir) {
-              hits.add(PathCandidate(
-                stat: RemoteStat(path: e.path, kind: kind!, size: e.size, modified: e.modified, mode: e.mode),
-                root: cwd,
-                source: CandidateSource.search,
-              ));
+              hits.add(
+                PathCandidate(
+                  stat: RemoteStat(path: e.path, kind: kind!, size: e.size, modified: e.modified, mode: e.mode),
+                  root: cwd,
+                  source: CandidateSource.search,
+                ),
+              );
             }
           }
           if (e.kind == RemoteEntryKind.dir && !e.isHidden && !skipFolders.contains(e.name)) down.add(e.path);
@@ -393,13 +429,16 @@ class _Budget {
       finish(null);
     });
     unawaited(_cancel.whenCancelled.then((_) => finish(null)));
-    op().then(finish, onError: (Object e) {
-      if (e is RemoteFileException &&
-          (e.kind == RemoteFileErrorKind.network || e.kind == RemoteFileErrorKind.failed)) {
-        _failed = true;
-      }
-      finish(null);
-    });
+    op().then(
+      finish,
+      onError: (Object e) {
+        if (e is RemoteFileException &&
+            (e.kind == RemoteFileErrorKind.network || e.kind == RemoteFileErrorKind.failed)) {
+          _failed = true;
+        }
+        finish(null);
+      },
+    );
     try {
       return await done.future;
     } finally {

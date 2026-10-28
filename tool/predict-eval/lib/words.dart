@@ -10,7 +10,8 @@ const _codeish = r'\/@_=:{}[]<>#$%&*+|~^`';
 bool isCodeChar(String char) => _codeish.contains(char);
 
 /// The word being typed at the end of [draft] ('' after a space).
-String trailingWord(String draft) => _trailingWord.firstMatch(draft)?.group(0) ?? '';
+String trailingWord(String draft) =>
+    _trailingWord.firstMatch(draft)?.group(0) ?? '';
 
 /// Prose words of [text] with their spans, leaving out any word that touches
 /// code characters.
@@ -28,5 +29,5 @@ List<({int start, int end})> proseWords(String text) {
 
 /// Every word of [text], code or not: what a typist has to type.
 List<({int start, int end})> allWords(String text) => [
-      for (final m in wordPattern.allMatches(text)) (start: m.start, end: m.end),
-    ];
+  for (final m in wordPattern.allMatches(text)) (start: m.start, end: m.end),
+];

@@ -83,7 +83,15 @@ void main() {
 
     test('attributes and text survive', () {
       final out = light.recolor(
-        AnsiRun('héllo', fg: TerminalColors.ansi[2], bold: true, dim: true, italic: true, underline: true, strike: true),
+        AnsiRun(
+          'héllo',
+          fg: TerminalColors.ansi[2],
+          bold: true,
+          dim: true,
+          italic: true,
+          underline: true,
+          strike: true,
+        ),
       );
       expect(out.text, 'héllo');
       expect([out.bold, out.dim, out.italic, out.underline, out.strike], everyElement(isTrue));

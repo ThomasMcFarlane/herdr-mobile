@@ -153,7 +153,12 @@ void main() {
       final site = await _open();
       expect((await site.get('/index.html', headers: {})).status, 200);
       final cookie = await site.signIn();
-      final post = await rawRequest(site.info.port, method: 'POST', target: '/index.html', headers: {'Cookie': cookie, 'Content-Length': '0'});
+      final post = await rawRequest(
+        site.info.port,
+        method: 'POST',
+        target: '/index.html',
+        headers: {'Cookie': cookie, 'Content-Length': '0'},
+      );
       expect(post.status, 405);
     });
   });
@@ -495,10 +500,18 @@ void main() {
       final cookie = await site.signIn();
 
       // Cookie lines are one list: the cookie on the second line opens it, none at all is a 403.
-      final ok = await rawRequest(site.info.port, target: '/style.css', headers: {'Cookie': 'theme=dark\r\nCookie: $cookie'});
+      final ok = await rawRequest(
+        site.info.port,
+        target: '/style.css',
+        headers: {'Cookie': 'theme=dark\r\nCookie: $cookie'},
+      );
       expect(ok.status, 200);
       expect(ok.text, 'body{}');
-      final none = await rawRequest(site.info.port, target: '/style.css', headers: {'Cookie': 'theme=dark\r\nCookie: a=b'});
+      final none = await rawRequest(
+        site.info.port,
+        target: '/style.css',
+        headers: {'Cookie': 'theme=dark\r\nCookie: a=b'},
+      );
       expect(none.status, 403);
 
       // Two ranges say nothing clear: the whole file is sent.

@@ -7,7 +7,9 @@ import 'package:provider/provider.dart';
 import '../../../data/models/remote_file.dart';
 import '../../../data/repositories/machine_connection.dart';
 import '../../../data/words/plural.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'file_browser_view_model.dart';
 import 'file_format.dart';
 import 'file_listing.dart';
@@ -219,13 +221,7 @@ class _FileBrowserScreenState extends State<FileBrowserScreen> implements _Brows
         _push(
           fileViewerRoute<String>(
             widget.machine,
-            RemoteStat(
-              path: e.path,
-              kind: RemoteEntryKind.file,
-              size: e.size,
-              modified: e.modified,
-              mode: e.mode,
-            ),
+            RemoteStat(path: e.path, kind: RemoteEntryKind.file, size: e.size, modified: e.modified, mode: e.mode),
             // A picture pages through the folder's other pictures.
             siblings: _vm.entries,
           ),
@@ -340,11 +336,7 @@ class _BrowserViewState extends State<_BrowserView> {
           ),
           if (showTools)
             SliverToBoxAdapter(
-              child: _Tools(
-                controller: _search,
-                compact: _pick,
-                search: vm.baseCount >= _searchFrom || vm.searching,
-              ),
+              child: _Tools(controller: _search, compact: _pick, search: vm.baseCount >= _searchFrom || vm.searching),
             ),
           if (vm.loading)
             const SliverFillRemaining(child: DelayedSkeleton(rows: true))
@@ -389,7 +381,12 @@ class _BrowserViewState extends State<_BrowserView> {
     return Scaffold(
       backgroundColor: ds.bg,
       body: _pick
-          ? Column(children: [Expanded(child: list), _PickBar(path: vm.path, enabled: failed == null && !vm.loading)])
+          ? Column(
+              children: [
+                Expanded(child: list),
+                _PickBar(path: vm.path, enabled: failed == null && !vm.loading),
+              ],
+            )
           : list,
     );
   }
@@ -417,12 +414,7 @@ class _BrowserViewState extends State<_BrowserView> {
       alsoRetry: failed.kind == RemoteFileErrorKind.permission,
       action: up == null
           ? null
-          : AppButton(
-              label: up,
-              kind: AppButtonKind.secondary,
-              compact: true,
-              onPressed: () => widget.onGoTo(parent!),
-            ),
+          : AppButton(label: up, kind: AppButtonKind.secondary, compact: true, onPressed: () => widget.onGoTo(parent!)),
     );
   }
 
@@ -441,7 +433,9 @@ class _BrowserViewState extends State<_BrowserView> {
     final base = vm.baseCount;
     final counted = vm.filtered
         ? '${groupDigits(shown)} of ${groupDigits(base)} ${noun(base)}'
-        : (hidden > 0 ? '${groupDigits(shown)} ${noun(shown)} · $hidden hidden' : '${groupDigits(shown)} ${noun(shown)}');
+        : (hidden > 0
+              ? '${groupDigits(shown)} ${noun(shown)} · $hidden hidden'
+              : '${groupDigits(shown)} ${noun(shown)}');
     return _pickFile ? '$counted · choose a file' : counted;
   }
 }
@@ -541,11 +535,7 @@ Future<void> _showSortSheet(BuildContext context, FileBrowserOptions options) =>
               ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: Gap.lg),
-              child: SwitchRow(
-                title: 'Folders first',
-                value: options.foldersFirst,
-                onChanged: options.setFoldersFirst,
-              ),
+              child: SwitchRow(title: 'Folders first', value: options.foldersFirst, onChanged: options.setFoldersFirst),
             ),
           ],
         ),
@@ -572,23 +562,23 @@ class _SortRow extends StatelessWidget {
       selected: selected,
       minHeight: _rowHeight,
       padding: const EdgeInsets.symmetric(horizontal: Gap.lg - PressRow.inset, vertical: Gap.xs + Gap.hair),
-        child: Row(
-          children: [
-            Icon(_sortIcons[sort], size: IconSize.lead, color: ds.textSecondary),
-            const SizedBox(width: Gap.md),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(sort.label, style: Type.row.copyWith(color: ds.text)),
-                  Text(sort.hint, style: Type.caption.copyWith(color: ds.textSecondary)),
-                ],
-              ),
+      child: Row(
+        children: [
+          Icon(_sortIcons[sort], size: IconSize.lead, color: ds.textSecondary),
+          const SizedBox(width: Gap.md),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(sort.label, style: Type.row.copyWith(color: ds.text)),
+                Text(sort.hint, style: Type.caption.copyWith(color: ds.textSecondary)),
+              ],
             ),
-            if (selected) Icon(LucideIcons.check, size: IconSize.bar, color: ds.accentText),
-          ],
-        ),
+          ),
+          if (selected) Icon(LucideIcons.check, size: IconSize.bar, color: ds.accentText),
+        ],
+      ),
     );
   }
 }
@@ -762,7 +752,9 @@ class _PickBar extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: ds.bg,
-        border: Border(top: BorderSide(color: ds.hairline, width: 1 / MediaQuery.devicePixelRatioOf(context))),
+        border: Border(
+          top: BorderSide(color: ds.hairline, width: 1 / MediaQuery.devicePixelRatioOf(context)),
+        ),
       ),
       child: Padding(
         padding: EdgeInsets.fromLTRB(Gap.gutter, Gap.md, Gap.gutter, Gap.md + MediaQuery.paddingOf(context).bottom),

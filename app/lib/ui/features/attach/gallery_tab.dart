@@ -9,7 +9,9 @@ import '../../../data/words/elapsed.dart';
 import '../../../data/words/plural.dart';
 import '../../../data/services/phone_gallery.dart';
 import '../../../data/services/thumb_cache.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../agent_session/session_select.dart' show notifyRegionBuilt;
 import '../files/file_format.dart';
 import 'attach_kit.dart';
@@ -241,13 +243,25 @@ Future<void> _chooseAlbum(BuildContext context, GalleryModel model) async {
                   ),
                   child: Row(
                     children: [
-                      Icon(a.isRecent ? HerdrIcons.pictures : LucideIcons.folder, size: IconSize.lead, color: ds.textSecondary),
-                      const SizedBox(width: Gap.md),
-                      Expanded(
-                        child: Text(a.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: Type.row.copyWith(color: ds.text)),
+                      Icon(
+                        a.isRecent ? HerdrIcons.pictures : LucideIcons.folder,
+                        size: IconSize.lead,
+                        color: ds.textSecondary,
                       ),
                       const SizedBox(width: Gap.md),
-                      Text(groupDigits(a.count), style: Type.secondary.copyWith(color: ds.textMuted, fontFeatures: Type.tabular)),
+                      Expanded(
+                        child: Text(
+                          a.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Type.row.copyWith(color: ds.text),
+                        ),
+                      ),
+                      const SizedBox(width: Gap.md),
+                      Text(
+                        groupDigits(a.count),
+                        style: Type.secondary.copyWith(color: ds.textMuted, fontFeatures: Type.tabular),
+                      ),
                       if (a.id == model.album?.id) ...[
                         const SizedBox(width: Gap.md),
                         Icon(LucideIcons.check, size: IconSize.bar, color: ds.accentText),
@@ -498,13 +512,8 @@ class _GridState extends State<_Grid> {
     tray: widget.tray,
     cache: widget.cache,
     now: widget.now,
-    onOpen: () => openGalleryPreview(
-      context,
-      model: widget.model,
-      tray: widget.tray,
-      cache: widget.cache,
-      index: index,
-    ),
+    onOpen: () =>
+        openGalleryPreview(context, model: widget.model, tray: widget.tray, cache: widget.cache, index: index),
   );
 }
 
@@ -636,7 +645,8 @@ class _PhotoTileState extends State<PhotoTile> {
     final ds = context.ds;
     final n = _number;
     final picked = n != null;
-    final label = 'Photo ${widget.index + 1}, taken ${formatWhen(widget.asset.createdAt, widget.now(), sentence: true)}';
+    final label =
+        'Photo ${widget.index + 1}, taken ${formatWhen(widget.asset.createdAt, widget.now(), sentence: true)}';
     Widget picture = GalleryThumb(asset: widget.asset, cache: widget.cache);
     if (picked) picture = ClipRRect(borderRadius: BorderRadius.circular(Radii.xs), child: picture);
     return Semantics(

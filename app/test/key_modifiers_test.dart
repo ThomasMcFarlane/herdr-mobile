@@ -3,9 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/ui/features/pane/key_modifiers.dart';
 
 TextEditingValue _v(String text) => TextEditingValue(
-      text: text,
-      selection: TextSelection.collapsed(offset: text.length),
-    );
+  text: text,
+  selection: TextSelection.collapsed(offset: text.length),
+);
 
 void main() {
   group('StickyModifiers', () {

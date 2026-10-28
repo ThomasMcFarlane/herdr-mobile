@@ -13,7 +13,9 @@ import '../../../data/repositories/fleet_repository.dart';
 import '../../../data/repositories/machine_connection.dart';
 import '../../../data/words/agent_names.dart';
 import '../../../data/words/place_name.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../agents/agent_navigation.dart';
 import '../history/past_sessions_navigation.dart';
 import '../files/files_navigation.dart';
@@ -26,9 +28,11 @@ import 'session_start_support.dart' show showStartedToast;
 /// Opens the new-agent-session form, on [machine] when given. With [prefill]
 /// the form starts from a running session (a duplicate) instead.
 Future<void> openNewAgentSession(BuildContext context, {MachineConnection? machine, SessionPrefill? prefill}) =>
-    Navigator.of(context).push(MaterialPageRoute<void>(
-      builder: (_) => NewAgentSessionScreen(machineId: machine?.profile.id, prefill: prefill),
-    ));
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => NewAgentSessionScreen(machineId: machine?.profile.id, prefill: prefill),
+      ),
+    );
 
 /// Starts an agent session (the phone is an ACP client; the agent runs on the
 /// machine behind a keeper). Start goes back to where the form was opened and
@@ -45,15 +49,15 @@ class NewAgentSessionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ChangeNotifierProvider(
-        create: (ctx) => NewAgentSessionViewModel(
-          fleet: ctx.read<FleetRepository>(),
-          sessions: ctx.read<AgentSessions>(),
-          settings: ctx.read<AgentSessionSettings>(),
-          machineId: machineId,
-          prefill: prefill,
-        ),
-        child: const _Form(),
-      );
+    create: (ctx) => NewAgentSessionViewModel(
+      fleet: ctx.read<FleetRepository>(),
+      sessions: ctx.read<AgentSessions>(),
+      settings: ctx.read<AgentSessionSettings>(),
+      machineId: machineId,
+      prefill: prefill,
+    ),
+    child: const _Form(),
+  );
 }
 
 class _Form extends StatefulWidget {
@@ -163,11 +167,7 @@ class _FormState extends State<_Form> {
 
   Future<void> _browse(MachineConnection machine) async {
     final start = _folder.text.trim();
-    final picked = await pickRemoteDirectory(
-      context,
-      machine,
-      startDir: start.startsWith('/') ? start : null,
-    );
+    final picked = await pickRemoteDirectory(context, machine, startDir: start.startsWith('/') ? start : null);
     if (picked != null && mounted) {
       _folder.text = picked;
       _lookUpNow();
@@ -189,7 +189,8 @@ class _FormState extends State<_Form> {
       if (mounted) nav.pop();
       showStartedToast(
         toaster,
-        message: '${session.agentLabel} started in ${placeName(session.machine.places, session.cwd)} · ${session.machine.profile.label}',
+        message:
+            '${session.agentLabel} started in ${placeName(session.machine.places, session.cwd)} · ${session.machine.profile.label}',
         onOpen: () => unawaited(openAgent(nav.context, SessionAgent(session.key))),
       );
     }
@@ -212,7 +213,8 @@ class _FormState extends State<_Form> {
                 child: EmptyState(
                   icon: HerdrIcons.machinesOff,
                   title: 'No machine is online',
-                  message: 'An agent session starts on a connected machine. Check the Machines '
+                  message:
+                      'An agent session starts on a connected machine. Check the Machines '
                       'tab, then come back.',
                   action: AppButton(
                     label: 'Back',
@@ -380,12 +382,7 @@ class _AgentChips extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Wrap(
-          spacing: Gap.sm,
-          children: [
-            for (final r in agentRoutes) _chip(r),
-          ],
-        ),
+        Wrap(spacing: Gap.sm, children: [for (final r in agentRoutes) _chip(r)]),
         if (vm.checking)
           Padding(
             padding: const EdgeInsets.only(top: Gap.hair),
@@ -416,11 +413,11 @@ class _AgentChips extends StatelessWidget {
   }
 
   Widget _chip(AgentRoute r) => AppChip(
-        label: agentName(r.id),
-        selected: vm.agent == r.id,
-        enabled: vm.isAvailable(r.id) != false,
-        onTap: () => vm.selectAgent(r.id),
-      );
+    label: agentName(r.id),
+    selected: vm.agent == r.id,
+    enabled: vm.isAvailable(r.id) != false,
+    onTap: () => vm.selectAgent(r.id),
+  );
 }
 
 /// The error (if any) and the Start buttons, pinned under the form.

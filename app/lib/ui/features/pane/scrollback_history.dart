@@ -265,15 +265,9 @@ class ScrollbackHistory {
   int _matchesAt(List<String> next, int from, int viewLength, int s, int best) {
     final knownStart = from + (s > 0 ? s : 0);
     final nextStart = s < 0 ? -s : 0;
-    final overlap = math.min(
-      viewLength - (s > 0 ? s : 0),
-      next.length - nextStart,
-    );
+    final overlap = math.min(viewLength - (s > 0 ? s : 0), next.length - nextStart);
     if (overlap <= 0 || _known(knownStart) != next[nextStart]) return 0;
-    final needed = math.max(
-      math.max(best + 1, (overlap + 1) >> 1),
-      math.min(overlap, 4),
-    );
+    final needed = math.max(math.max(best + 1, (overlap + 1) >> 1), math.min(overlap, 4));
     var missBudget = overlap - needed;
     if (missBudget < 0) return 0;
     var matches = 0;
@@ -304,9 +298,7 @@ class ScrollbackHistory {
       final c = row.codeUnitAt(i);
       if (c == 0x20 || c == 0x09 || c == 0x0d || c == 0x0a) {
         i++;
-      } else if (c == 0x1b &&
-          i + 1 < row.length &&
-          row.codeUnitAt(i + 1) == 0x5b) {
+      } else if (c == 0x1b && i + 1 < row.length && row.codeUnitAt(i + 1) == 0x5b) {
         i += 2;
         while (i < row.length && !_isCsiFinal(row.codeUnitAt(i))) {
           i++;
@@ -363,8 +355,7 @@ class ScrollbackHistory {
     final length = _history.length;
     var count = 0;
     var freed = 0;
-    while (count < length &&
-        (length - count > maxRows || _historyBytes - freed > maxBytes)) {
+    while (count < length && (length - count > maxRows || _historyBytes - freed > maxBytes)) {
       freed += _history[count].length;
       count++;
     }

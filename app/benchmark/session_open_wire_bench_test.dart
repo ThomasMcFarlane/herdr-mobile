@@ -64,11 +64,7 @@ final _agent = _env['OPEN_AGENT'] ?? 'mixed';
 const execRtts = 2;
 
 /// (name, round trip ms, megabits a second towards the phone)
-const _links = [
-  ('fast', 40.0, 30.0),
-  ('mid', 120.0, 10.0),
-  ('slow', 300.0, 2.0),
-];
+const _links = [('fast', 40.0, 30.0), ('mid', 120.0, 10.0), ('slow', 300.0, 2.0)];
 
 final _out = <String>[];
 
@@ -245,7 +241,10 @@ Future<_Open> _open(
   final session = AcpAgentSession(machine: machine, host: metered, info: info, cache: cache);
   final live = Completer<void>();
   void listener() {
-    if (!live.isCompleted && session.link == AgentLink.live && !session.state.replaying && session.state.items.isNotEmpty) {
+    if (!live.isCompleted &&
+        session.link == AgentLink.live &&
+        !session.state.replaying &&
+        session.state.items.isNotEmpty) {
       live.complete();
     }
   }

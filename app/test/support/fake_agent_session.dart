@@ -581,11 +581,8 @@ class FakeAgentSessions extends ChangeNotifier implements AgentSessions {
   Future<Set<String>> available(MachineConnection machine) async => const {};
 
   @override
-  Future<AgentSessionView> start({
-    required MachineConnection machine,
-    required String agent,
-    required String cwd,
-  }) => throw UnimplementedError('the screen never starts sessions');
+  Future<AgentSessionView> start({required MachineConnection machine, required String agent, required String cwd}) =>
+      throw UnimplementedError('the screen never starts sessions');
 
   @override
   Future<PastSessions> history({required MachineConnection machine, required String agent, String? cwd}) async =>

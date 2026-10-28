@@ -6,7 +6,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/acp/prompt_queue.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/words/plural.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'session_select.dart';
 import '../../render/visible_text.dart';
 
@@ -48,7 +50,10 @@ class _QueuedMessagesState extends State<QueuedMessages> {
 
   Widget _list(BuildContext context, List<QueuedMessage> queued) {
     final ds = context.ds;
-    final held = [for (final m in queued) if (m.held) m];
+    final held = [
+      for (final m in queued)
+        if (m.held) m,
+    ];
     final shown = _all || queued.length <= queuedRowsShown ? queued : queued.take(queuedRowsShown).toList();
     final reason = held.isEmpty ? null : visibleText(held.first.heldReason ?? 'Held. Resume to send.');
     return Padding(
@@ -131,10 +136,7 @@ class _QueuedRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final ds = context.ds;
     final attachments = message.attachments.length;
-    final note = [
-      if (attachments > 0) '+ ${countOf(attachments, 'attachment')}',
-      ?reason,
-    ].join(' · ');
+    final note = [if (attachments > 0) '+ ${countOf(attachments, 'attachment')}', ?reason].join(' · ');
     return Panel(
       padding: const EdgeInsets.symmetric(vertical: Gap.xs),
       child: Row(
@@ -194,8 +196,10 @@ class _QueuedRow extends StatelessWidget {
 
 /// Opens queued message [id] to edit its text or remove it. A message that
 /// went out meanwhile says so and can no longer be changed.
-Future<void> editQueuedMessage(BuildContext context, AgentSessionView session, String id) =>
-    showAppSheet<void>(context, builder: (_) => _EditQueued(session: session, id: id));
+Future<void> editQueuedMessage(BuildContext context, AgentSessionView session, String id) => showAppSheet<void>(
+  context,
+  builder: (_) => _EditQueued(session: session, id: id),
+);
 
 class _EditQueued extends StatefulWidget {
   const _EditQueued({required this.session, required this.id});
@@ -222,8 +226,7 @@ class _EditQueuedState extends State<_EditQueued> {
   void initState() {
     super.initState();
     _initial = _message?.text ?? '';
-    _text = TextEditingController(text: _initial)
-      ..selection = TextSelection.collapsed(offset: _initial.length);
+    _text = TextEditingController(text: _initial)..selection = TextSelection.collapsed(offset: _initial.length);
   }
 
   @override
@@ -276,18 +279,10 @@ class _EditQueuedState extends State<_EditQueued> {
               const SizedBox(height: Gap.sm),
               Row(
                 children: [
-                  AppButton(
-                    label: 'Remove',
-                    kind: AppButtonKind.ghost,
-                    onPressed: gone ? null : _remove,
-                  ),
+                  AppButton(label: 'Remove', kind: AppButtonKind.ghost, onPressed: gone ? null : _remove),
                   const SizedBox(width: Gap.sm),
                   Expanded(
-                    child: AppButton(
-                      label: 'Save',
-                      expand: true,
-                      onPressed: gone || !changed ? null : _save,
-                    ),
+                    child: AppButton(label: 'Save', expand: true, onPressed: gone || !changed ? null : _save),
                   ),
                 ],
               ),

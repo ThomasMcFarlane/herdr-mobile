@@ -58,12 +58,7 @@ class FleetAgent {
   /// [isGenericPaneTitle]. A name the person gave the pane is never generic.
   bool isGenericTitle(String title) =>
       pane.label == null &&
-      isGenericPaneTitle(
-        title,
-        agent: pane.agent,
-        folder: paneFolder(pane.cwd),
-        workspace: workspace?.label,
-      );
+      isGenericPaneTitle(title, agent: pane.agent, folder: paneFolder(pane.cwd), workspace: workspace?.label);
 
   /// The pane's own title says nothing about the work (and the person did not
   /// name it).

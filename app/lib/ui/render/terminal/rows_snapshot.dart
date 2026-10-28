@@ -23,8 +23,7 @@ final class RowsSnapshot extends ListBase<String> {
   final int length;
 
   @override
-  set length(int value) =>
-      throw UnsupportedError('Cannot change the length of a RowsSnapshot');
+  set length(int value) => throw UnsupportedError('Cannot change the length of a RowsSnapshot');
 
   @override
   String operator [](int index) {
@@ -33,6 +32,5 @@ final class RowsSnapshot extends ListBase<String> {
   }
 
   @override
-  void operator []=(int index, String value) =>
-      throw UnsupportedError('Cannot modify a RowsSnapshot');
+  void operator []=(int index, String value) => throw UnsupportedError('Cannot modify a RowsSnapshot');
 }

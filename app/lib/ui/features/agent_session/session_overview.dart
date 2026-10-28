@@ -13,7 +13,9 @@ import '../../../data/decision/session_chips.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/words/elapsed.dart';
 import '../../../data/words/plural.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../support/step_clock.dart';
 import 'log_atoms.dart';
 import 'permission_subject.dart';
@@ -115,36 +117,36 @@ class _SessionOverviewState extends State<SessionOverview> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-              _StatusRow(snap: snap),
-              if (model.goal != null) ...[
-                _Section('Goal'),
-                Text(
-                  visibleText(model.goal!),
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: Type.compact.copyWith(color: ds.text),
-                ),
-              ],
-              if (progress != null) ...[
-                _Section('Plan', detail: '${progress.done} of ${progress.total} done'),
-                _Bar(fraction: progress.done / progress.total, color: ds.done),
-                if (progress.current != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: Gap.sm),
-                    child: Text(
-                      visibleText(progress.current!),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Type.secondary.copyWith(color: ds.textSecondary),
-                    ),
+                _StatusRow(snap: snap),
+                if (model.goal != null) ...[
+                  _Section('Goal'),
+                  Text(
+                    visibleText(model.goal!),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: Type.compact.copyWith(color: ds.text),
                   ),
-              ],
-              if (model.files.isNotEmpty) ..._changed(context, model),
-              if (model.commands.isNotEmpty) ..._commands(context, model),
-              if (runs.isNotEmpty || observed.isNotEmpty) ..._subagents(context, state, runs, observed),
-              if (chips.isNotEmpty) ..._settings(context, chips),
-              if (usage != null || state.turnUsage != null) ..._usage(context, usage, state.turnUsage),
-              if (state.pending.isNotEmpty) ..._pending(context, state.pending),
+                ],
+                if (progress != null) ...[
+                  _Section('Plan', detail: '${progress.done} of ${progress.total} done'),
+                  _Bar(fraction: progress.done / progress.total, color: ds.done),
+                  if (progress.current != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: Gap.sm),
+                      child: Text(
+                        visibleText(progress.current!),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Type.secondary.copyWith(color: ds.textSecondary),
+                      ),
+                    ),
+                ],
+                if (model.files.isNotEmpty) ..._changed(context, model),
+                if (model.commands.isNotEmpty) ..._commands(context, model),
+                if (runs.isNotEmpty || observed.isNotEmpty) ..._subagents(context, state, runs, observed),
+                if (chips.isNotEmpty) ..._settings(context, chips),
+                if (usage != null || state.turnUsage != null) ..._usage(context, usage, state.turnUsage),
+                if (state.pending.isNotEmpty) ..._pending(context, state.pending),
               ],
             ),
           ),
@@ -197,18 +199,11 @@ class _SessionOverviewState extends State<SessionOverview> {
     return [
       _Section(
         'Commands',
-        detail: [
-          '${model.commandCount}',
-          if (model.failedCommands > 0) '${model.failedCommands} failed',
-        ].join(' · '),
+        detail: ['${model.commandCount}', if (model.failedCommands > 0) '${model.failedCommands} failed'].join(' · '),
         detailColor: model.failedCommands > 0 ? ds.dangerText : null,
       ),
       for (final (i, c) in model.commands.indexed)
-        _CommandRow(
-          command: c,
-          open: _open.contains('cmd:$i'),
-          onTap: () => _toggle('cmd:$i'),
-        ),
+        _CommandRow(command: c, open: _open.contains('cmd:$i'), onTap: () => _toggle('cmd:$i')),
     ];
   }
 
@@ -221,13 +216,14 @@ class _SessionOverviewState extends State<SessionOverview> {
     final ds = context.ds;
     final String text;
     if (runs.isNotEmpty) {
-      text = groupTitle(runs, blockedRunIds(state), live: runsAreLive(state, linkLive: widget.session.link == AgentLink.live));
+      text = groupTitle(
+        runs,
+        blockedRunIds(state),
+        live: runsAreLive(state, linkLive: widget.session.link == AgentLink.live),
+      );
     } else {
       final running = observed.where((e) => e.state == SubagentState.running).length;
-      text = [
-        countOf(observed.length, 'subagent'),
-        if (running > 0) '$running running',
-      ].join(' · ');
+      text = [countOf(observed.length, 'subagent'), if (running > 0) '$running running'].join(' · ');
     }
     return [
       _Section('Subagents'),
@@ -235,14 +231,16 @@ class _SessionOverviewState extends State<SessionOverview> {
         onTap: () => _leave((c) => unawaited(showSubagents(c, widget.session))),
         minHeight: kMinTap,
         padding: const EdgeInsets.symmetric(horizontal: Gap.xs),
-          child: Row(
-            children: [
-              Icon(HerdrIcons.agents, size: IconSize.row, color: ds.textSecondary),
-              const SizedBox(width: Gap.sm),
-              Expanded(child: Text(text, style: Type.secondaryStrong.copyWith(color: ds.text))),
-              Icon(LucideIcons.chevronRight, size: IconSize.inline, color: ds.textTertiary),
-            ],
-          ),
+        child: Row(
+          children: [
+            Icon(HerdrIcons.agents, size: IconSize.row, color: ds.textSecondary),
+            const SizedBox(width: Gap.sm),
+            Expanded(
+              child: Text(text, style: Type.secondaryStrong.copyWith(color: ds.text)),
+            ),
+            Icon(LucideIcons.chevronRight, size: IconSize.inline, color: ds.textTertiary),
+          ],
+        ),
       ),
     ];
   }
@@ -284,7 +282,9 @@ class _SessionOverviewState extends State<SessionOverview> {
                   padding: const EdgeInsets.only(left: _nameWidth, top: Gap.hair),
                   child: Text(
                     c.reason!,
-                    style: Type.caption.copyWith(color: c.risk == ModeRisk.dangerous ? ds.dangerText : ds.textSecondary),
+                    style: Type.caption.copyWith(
+                      color: c.risk == ModeRisk.dangerous ? ds.dangerText : ds.textSecondary,
+                    ),
                   ),
                 ),
             ],
@@ -314,15 +314,15 @@ class _SessionOverviewState extends State<SessionOverview> {
           ),
         ),
       ],
-      if (cost != null)
-        _Fact('Cost', formatCost(cost, usage!.costCurrency)),
+      if (cost != null) _Fact('Cost', formatCost(cost, usage!.costCurrency)),
       if (turn != null) _Fact('Last turn', _turnWords(turn)),
     ];
   }
 
   static String _turnWords(TurnUsage t) => [
     '${formatTokens(t.totalTokens)} tokens',
-    if (t.inputTokens > 0 || t.outputTokens > 0) '${formatTokens(t.inputTokens)} in · ${formatTokens(t.outputTokens)} out',
+    if (t.inputTokens > 0 || t.outputTokens > 0)
+      '${formatTokens(t.inputTokens)} in · ${formatTokens(t.outputTokens)} out',
   ].join(' · ');
 
   List<Widget> _pending(BuildContext context, List<PendingRequest> pending) {
@@ -334,36 +334,36 @@ class _SessionOverviewState extends State<SessionOverview> {
           onTap: () => Navigator.of(context).pop(),
           minHeight: kMinTap,
           padding: const EdgeInsets.symmetric(horizontal: Gap.xs, vertical: Gap.xs),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: Gap.hair),
-                  child: StatusGlyph(status: AgentStatus.blocked, size: IconSize.row),
-                ),
-                const SizedBox(width: Gap.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: Gap.hair),
+                child: StatusGlyph(status: AgentStatus.blocked, size: IconSize.row),
+              ),
+              const SizedBox(width: Gap.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _pendingText(p),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Type.secondaryStrong.copyWith(color: ds.text),
+                    ),
+                    if (p.origin != null)
                       Text(
-                        _pendingText(p),
-                        maxLines: 2,
+                        'From subagent: ${visibleText(p.origin!.label)}',
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Type.secondaryStrong.copyWith(color: ds.text),
+                        style: Type.caption.copyWith(color: ds.textSecondary),
                       ),
-                      if (p.origin != null)
-                        Text(
-                          'From subagent: ${visibleText(p.origin!.label)}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Type.caption.copyWith(color: ds.textSecondary),
-                        ),
-                    ],
-                  ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
+          ),
         ),
       if (pending.length > 3)
         Padding(
@@ -468,7 +468,10 @@ class _Fact extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: _nameWidth, child: Text(name, style: Type.secondary.copyWith(color: ds.textMuted))),
+          SizedBox(
+            width: _nameWidth,
+            child: Text(name, style: Type.secondary.copyWith(color: ds.textMuted)),
+          ),
           Expanded(
             child: Text(
               value,
@@ -539,36 +542,31 @@ class _CommandRow extends StatelessWidget {
         semanticLabel: [text, if (command.failed) 'failed', ?code].join(', '),
         minHeight: kMinTap,
         padding: const EdgeInsets.symmetric(horizontal: Gap.xs, vertical: Gap.xs),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(top: Gap.hair),
-                child: command.failed
-                    ? const StatusGlyph.failed(size: IconSize.row)
-                    : Icon(LucideIcons.terminal, size: IconSize.row, color: ds.textSecondary),
-              ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: Gap.hair),
+              child: command.failed
+                  ? const StatusGlyph.failed(size: IconSize.row)
+                  : Icon(LucideIcons.terminal, size: IconSize.row, color: ds.textSecondary),
+            ),
+            const SizedBox(width: Gap.sm),
+            Expanded(
+              child: Text(text, maxLines: open ? 8 : 1, overflow: TextOverflow.ellipsis, style: mono),
+            ),
+            if (code != null) ...[
               const SizedBox(width: Gap.sm),
-              Expanded(
-                child: Text(
-                  text,
-                  maxLines: open ? 8 : 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: mono,
+              Text(
+                code,
+                style: (command.failed ? Type.captionStrong : Type.caption).copyWith(
+                  color: command.failed ? ds.dangerText : ds.textMuted,
+                  fontFeatures: Type.tabular,
                 ),
               ),
-              if (code != null) ...[
-                const SizedBox(width: Gap.sm),
-                Text(
-                  code,
-                  style: (command.failed ? Type.captionStrong : Type.caption).copyWith(
-                    color: command.failed ? ds.dangerText : ds.textMuted,
-                    fontFeatures: Type.tabular,
-                  ),
-                ),
-              ],
             ],
-          ),
+          ],
+        ),
       ),
     );
   }

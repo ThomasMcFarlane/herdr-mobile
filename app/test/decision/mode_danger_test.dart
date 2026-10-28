@@ -61,7 +61,11 @@ void main() {
         for (final o in setup.configOptions) {
           if (o is SelectConfigOption && o.category == 'mode') {
             for (final c in o.choices) {
-              expect({_id(c.value, c.name)}, known.where((k) => k.$1 == c.value).map((k) => k.$3).toSet(), reason: '$name ${c.value}');
+              expect(
+                {_id(c.value, c.name)},
+                known.where((k) => k.$1 == c.value).map((k) => k.$3).toSet(),
+                reason: '$name ${c.value}',
+              );
             }
           }
         }
@@ -84,7 +88,14 @@ void main() {
       ]) {
         expect(_id(s), ModeRisk.dangerous, reason: s);
       }
-      for (final s in ['agent-full-access', 'agent_full_access', 'AGENT FULL ACCESS', 'Full access', 'FULL-ACCESS', 'danger-full-access']) {
+      for (final s in [
+        'agent-full-access',
+        'agent_full_access',
+        'AGENT FULL ACCESS',
+        'Full access',
+        'FULL-ACCESS',
+        'danger-full-access',
+      ]) {
         expect(_id(s), ModeRisk.dangerous, reason: s);
       }
       for (final s in ['acceptEdits', 'accept_edits', 'ACCEPT EDITS', 'Accept Edits']) {
@@ -126,13 +137,36 @@ void main() {
     });
 
     test('words that mean "asks for less" are elevated', () {
-      for (final s in ['auto-accept', 'autoApprove', 'auto_edit', 'accept-all', 'unrestricted', 'never-ask', 'no-prompts', 'autonomous', 'Auto mode', 'dont-ask-again']) {
+      for (final s in [
+        'auto-accept',
+        'autoApprove',
+        'auto_edit',
+        'accept-all',
+        'unrestricted',
+        'never-ask',
+        'no-prompts',
+        'autonomous',
+        'Auto mode',
+        'dont-ask-again',
+      ]) {
         expect(_id(s), ModeRisk.elevated, reason: s);
       }
     });
 
     test('plain unknown names are none', () {
-      for (final s in ['custom', 'author', 'Chế độ an toàn', '安全模式', 'review', 'architect', 'ask', 'code', '', '   ', '\u202E']) {
+      for (final s in [
+        'custom',
+        'author',
+        'Chế độ an toàn',
+        '安全模式',
+        'review',
+        'architect',
+        'ask',
+        'code',
+        '',
+        '   ',
+        '\u202E',
+      ]) {
         expect(_id(s), ModeRisk.none, reason: '"$s"');
       }
       expect(assessMode().risk, ModeRisk.none);
@@ -189,9 +223,12 @@ void main() {
     });
 
     test('a current id the list does not hold keeps the id as its name', () {
-      final s = _session(modeId: 'bypassPermissions', modes: [
-        {'id': 'default', 'name': 'Default'},
-      ]);
+      final s = _session(
+        modeId: 'bypassPermissions',
+        modes: [
+          {'id': 'default', 'name': 'Default'},
+        ],
+      );
       expect(currentModeOf(s)!.name, 'bypassPermissions');
       expect(assessSessionMode(s).risk, ModeRisk.dangerous);
     });
@@ -230,10 +267,18 @@ void main() {
       for (final name in ['claude/permission', 'codex/tools', 'omp/plan']) {
         final setup = replayTrace(name).setup;
         final before = assessSessionMode(setup).risk;
-        final id = name.startsWith('codex') ? 'agent-full-access' : name.startsWith('claude') ? 'bypassPermissions' : 'default';
+        final id = name.startsWith('codex')
+            ? 'agent-full-access'
+            : name.startsWith('claude')
+            ? 'bypassPermissions'
+            : 'default';
         final moved = setup.apply(SessionUpdate.parse({'sessionUpdate': 'current_mode_update', 'currentModeId': id}));
         expect(currentModeOf(moved)!.id, id, reason: name);
-        expect(assessSessionMode(moved).risk, name.startsWith('omp') ? ModeRisk.none : ModeRisk.dangerous, reason: name);
+        expect(
+          assessSessionMode(moved).risk,
+          name.startsWith('omp') ? ModeRisk.none : ModeRisk.dangerous,
+          reason: name,
+        );
         expect(before, isNot(ModeRisk.dangerous), reason: '$name starts safe');
       }
     });

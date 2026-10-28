@@ -50,7 +50,8 @@ void main() {
     test('draws each kind v1 supports, with the phone profile in front', () {
       const sources = {
         MermaidKind.flowchart: 'flowchart TD\n A[Start] --> B{Ok?}\n B -->|yes| C[Ship]\n B -->|no| A',
-        MermaidKind.sequence: 'sequenceDiagram\n participant A as App\n participant B as Server\n A->>B: hello\n B-->>A: hi',
+        MermaidKind.sequence:
+            'sequenceDiagram\n participant A as App\n participant B as Server\n A->>B: hello\n B-->>A: hi',
         MermaidKind.state: 'stateDiagram-v2\n [*] --> idle\n idle --> running: start\n running --> [*]',
         MermaidKind.er: 'erDiagram\n USER ||--o{ ORDER : places\n USER {\n int id PK\n string name\n }',
         MermaidKind.classDiagram: 'classDiagram\n class Animal {\n +String name\n +eat()\n }\n Animal <|-- Dog',
@@ -93,7 +94,10 @@ void main() {
       expect((broken as MermaidFailed).reason, contains('line 2'));
 
       expect((layoutMermaid(_job('   ')) as MermaidFailed).reason, 'Nothing to draw');
-      expect((layoutMermaid(_job('flowchart TD\n${' A-->B\n' * 4000}')) as MermaidFailed).reason, startsWith('Too large'));
+      expect(
+        (layoutMermaid(_job('flowchart TD\n${' A-->B\n' * 4000}')) as MermaidFailed).reason,
+        startsWith('Too large'),
+      );
     });
 
     test('a left-to-right chain is drawn top-down when that is narrower; a short one keeps its direction', () {
@@ -117,7 +121,11 @@ void main() {
 
     test('a literal backslash-n in a label is drawn as two lines', () {
       final one = _drawn('flowchart TD\n A["one two"]');
-      final two = _drawn(r'flowchart TD' '\n' r' A["one\ntwo"]');
+      final two = _drawn(
+        r'flowchart TD'
+        '\n'
+        r' A["one\ntwo"]',
+      );
       expect(two.scene.size.height, greaterThan(one.scene.size.height));
     });
 

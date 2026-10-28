@@ -16,12 +16,14 @@ class NonePredictor implements Predictor {
 /// in a row above an empty composer. A chip fills the composer; the row is only
 /// useful before the first character.
 class StaticPhrases implements Predictor {
-  StaticPhrases([this.phrases = const [
-    'continue',
-    'yes, go ahead',
-    'run the tests',
-    'explain what you changed',
-  ]]);
+  StaticPhrases([
+    this.phrases = const [
+      'continue',
+      'yes, go ahead',
+      'run the tests',
+      'explain what you changed',
+    ],
+  ]);
 
   final List<String> phrases;
 

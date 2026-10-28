@@ -14,39 +14,37 @@ import 'support/fake_transport.dart';
 import 'support/memory_snapshot_cache.dart';
 import 'support/test_transport.dart';
 
-const _profile =
-    MachineProfile(id: 'm', label: 'box', host: 'h', username: 'u');
+const _profile = MachineProfile(id: 'm', label: 'box', host: 'h', username: 'u');
 
 /// Real-time tests: short delays so `eventually` stays quick.
 MachineConnection _connection(FakeTransport t) => MachineConnection(
-      profile: _profile,
-      api: HerdrApi(t),
-      backoff: (_) => const Duration(milliseconds: 10),
-      pollInterval: const Duration(hours: 1),
-      structuralDelay: const Duration(milliseconds: 20),
-      churnInterval: const Duration(milliseconds: 100),
-    );
+  profile: _profile,
+  api: HerdrApi(t),
+  backoff: (_) => const Duration(milliseconds: 10),
+  pollInterval: const Duration(hours: 1),
+  structuralDelay: const Duration(milliseconds: 20),
+  churnInterval: const Duration(milliseconds: 100),
+);
 
 /// `fakeAsync` tests: production throttle defaults, and a backoff so long
 /// that any reconnect that happens must have skipped it.
-MachineConnection _slow(FakeTransport t, {SnapshotCache? cache}) =>
-    MachineConnection(
-      profile: _profile,
-      api: HerdrApi(t),
-      cache: cache,
-      backoff: (_) => const Duration(seconds: 30),
-      pollInterval: const Duration(hours: 1),
-    );
+MachineConnection _slow(FakeTransport t, {SnapshotCache? cache}) => MachineConnection(
+  profile: _profile,
+  api: HerdrApi(t),
+  cache: cache,
+  backoff: (_) => const Duration(seconds: 30),
+  pollInterval: const Duration(hours: 1),
+);
 
 const _structural = Duration(milliseconds: 150);
 
 Map<String, dynamic> _paneUpdated(String id) => {
-      'event': 'pane_updated',
-      'data': {
-        'type': 'pane_updated',
-        'pane': {'pane_id': id},
-      },
-    };
+  'event': 'pane_updated',
+  'data': {
+    'type': 'pane_updated',
+    'pane': {'pane_id': id},
+  },
+};
 
 /// Starts [c] and lets the first connect finish.
 void _online(FakeAsync async, MachineConnection c) {
@@ -55,8 +53,7 @@ void _online(FakeAsync async, MachineConnection c) {
   expect(c.isLive, isTrue);
 }
 
-({String id, String ws, String? agent, String status}) _pane(
-        String id, String status) =>
+({String id, String ws, String? agent, String status}) _pane(String id, String status) =>
     (id: id, ws: 'w1', agent: 'claude', status: status);
 
 void main() {
@@ -79,10 +76,7 @@ void main() {
     t.snapshot = snapshotJson(panes: [_pane('w1:p1', 'blocked')]);
     t.emit();
 
-    await eventually(
-      () => c.snapshot.agentPanes.single.status == AgentStatus.blocked,
-      reason: 'refresh after event',
-    );
+    await eventually(() => c.snapshot.agentPanes.single.status == AgentStatus.blocked, reason: 'refresh after event');
   });
 
   // Regression: busy agents emit events continuously. A debounce that resets
@@ -107,12 +101,8 @@ void main() {
   // Busy agents emit it for every spinner frame; refetching the full session
   // each time was the dominant steady-state cost.
   group('pane_updated is classified against the known pane', () {
-    Map<String, dynamic> event(
-      FakeTransport t,
-      void Function(Map<String, dynamic>) edit,
-    ) {
-      final pane = Map<String, dynamic>.of(
-          (t.snapshot['panes'] as List).first as Map<String, dynamic>);
+    Map<String, dynamic> event(FakeTransport t, void Function(Map<String, dynamic>) edit) {
+      final pane = Map<String, dynamic>.of((t.snapshot['panes'] as List).first as Map<String, dynamic>);
       edit(pane);
       return {
         'event': 'pane_updated',
@@ -135,8 +125,7 @@ void main() {
         async.elapse(const Duration(seconds: 10));
 
         expect(t.snapshotCalls, before);
-        expect(activity, hasLength(50),
-            reason: 'an open pane view still needs every activity signal');
+        expect(activity, hasLength(50), reason: 'an open pane view still needs every activity signal');
         c.dispose();
       });
     });
@@ -206,8 +195,7 @@ void main() {
     expect(t.snapshotCalls - before, lessThanOrEqualTo(3));
   });
 
-  test('reconnects after the event channel drops, keeping the stale snapshot',
-      () async {
+  test('reconnects after the event channel drops, keeping the stale snapshot', () async {
     final t = FakeTransport(snapshotJson(panes: [_pane('w1:p1', 'working')]));
     final c = _connection(t)..start();
     addTearDown(c.dispose);
@@ -225,8 +213,7 @@ void main() {
   });
 
   test('a fatal error needs attention and stops retrying until retry()', () async {
-    final t = FakeTransport()
-      ..failure = const HerdrTransportException('bad key', fatal: true);
+    final t = FakeTransport()..failure = const HerdrTransportException('bad key', fatal: true);
     final c = _connection(t)..start();
     addTearDown(c.dispose);
 
@@ -243,10 +230,7 @@ void main() {
 
   test('disabled machine never connects', () async {
     final t = FakeTransport();
-    final c = MachineConnection(
-      profile: _profile.copyWith(enabled: false),
-      api: HerdrApi(t),
-    )..start();
+    final c = MachineConnection(profile: _profile.copyWith(enabled: false), api: HerdrApi(t))..start();
     addTearDown(c.dispose);
 
     await Future<void>.delayed(const Duration(milliseconds: 50));
@@ -288,8 +272,7 @@ void main() {
 
     test('state and error changes notify; repeating them does not', () {
       fakeAsync((async) {
-        final t = FakeTransport()
-          ..failure = const HerdrTransportException('down');
+        final t = FakeTransport()..failure = const HerdrTransportException('down');
         final c = _slow(t);
         var notified = 0;
         c.addListener(() => notified++);
@@ -310,8 +293,7 @@ void main() {
   });
 
   group('event throttling', () {
-    test('a pane_updated flood refreshes at most once per 1500 ms, never starves',
-        () {
+    test('a pane_updated flood refreshes at most once per 1500 ms, never starves', () {
       fakeAsync((async) {
         final t = FakeTransport();
         final c = _slow(t);
@@ -323,8 +305,7 @@ void main() {
           async.elapse(const Duration(milliseconds: 10));
         }
 
-        expect(t.snapshotCalls - before, inInclusiveRange(3, 4),
-            reason: '6 s of continuous churn');
+        expect(t.snapshotCalls - before, inInclusiveRange(3, 4), reason: '6 s of continuous churn');
         c.dispose();
       });
     });
@@ -341,10 +322,7 @@ void main() {
         }
         expect(c.snapshot.workspaces, hasLength(1));
 
-        t.snapshot = snapshotJson(workspaces: [
-          (id: 'w1', label: 'main'),
-          (id: 'w2', label: 'new'),
-        ]);
+        t.snapshot = snapshotJson(workspaces: [(id: 'w1', label: 'main'), (id: 'w2', label: 'new')]);
         t.emit({'event': 'workspace_created'});
         for (var i = 0; i < 15; i++) {
           t.emit(_paneUpdated('w1:p1')); // the flood keeps going
@@ -402,8 +380,7 @@ void main() {
       });
     });
 
-    test('events during an in-flight refresh yield exactly one trailing refresh',
-        () {
+    test('events during an in-flight refresh yield exactly one trailing refresh', () {
       fakeAsync((async) {
         final t = TestTransport();
         final c = _slow(t);
@@ -504,8 +481,7 @@ void main() {
 
     test('goOffline during a backoff cancels the pending retry', () {
       fakeAsync((async) {
-        final t = FakeTransport()
-          ..failure = const HerdrTransportException('down');
+        final t = FakeTransport()..failure = const HerdrTransportException('down');
         final c = _slow(t)..start();
         async.flushMicrotasks();
         expect(c.state, LinkState.reconnecting);
@@ -523,8 +499,7 @@ void main() {
 
     test('reconnect after offline is immediate, not after the backoff', () {
       fakeAsync((async) {
-        final t = FakeTransport()
-          ..failure = const HerdrTransportException('down');
+        final t = FakeTransport()..failure = const HerdrTransportException('down');
         final c = _slow(t)..start();
         async.flushMicrotasks();
         c.goOffline();
@@ -560,8 +535,7 @@ void main() {
 
     test('goOffline and reconnect leave attention alone', () {
       fakeAsync((async) {
-        final t = FakeTransport()
-          ..failure = const HerdrTransportException('bad key', fatal: true);
+        final t = FakeTransport()..failure = const HerdrTransportException('bad key', fatal: true);
         final c = _slow(t)..start();
         async.flushMicrotasks();
         expect(c.state, LinkState.attention);
@@ -582,10 +556,7 @@ void main() {
     test('goOffline leaves a disabled machine disabled', () {
       fakeAsync((async) {
         final t = FakeTransport();
-        final c = MachineConnection(
-          profile: _profile.copyWith(enabled: false),
-          api: HerdrApi(t),
-        )..goOffline();
+        final c = MachineConnection(profile: _profile.copyWith(enabled: false), api: HerdrApi(t))..goOffline();
         expect(c.state, LinkState.disabled);
         c.reconnect();
         async.flushMicrotasks();
@@ -725,16 +696,12 @@ void main() {
   });
 
   group('snapshot cache', () {
-    final cached = Snapshot.fromJson(snapshotJson(
-      panes: [_pane('w1:p9', 'blocked')],
-      version: 'cached',
-    ));
+    final cached = Snapshot.fromJson(snapshotJson(panes: [_pane('w1:p9', 'blocked')], version: 'cached'));
 
     test('seeds the snapshot before the first fetch completes', () {
       fakeAsync((async) {
         final cache = MemorySnapshotCache({'m': cached});
-        final t = TestTransport(snapshotJson(panes: [_pane('w1:p1', 'working')]))
-          ..gate = Completer<void>();
+        final t = TestTransport(snapshotJson(panes: [_pane('w1:p1', 'working')]))..gate = Completer<void>();
         final c = _slow(t, cache: cache);
         var notified = 0;
         c.addListener(() => notified++);
@@ -758,8 +725,7 @@ void main() {
 
     test('a slow cache read never overrides a fresh snapshot', () {
       fakeAsync((async) {
-        final cache = MemorySnapshotCache({'m': cached})
-          ..readGate = Completer<void>();
+        final cache = MemorySnapshotCache({'m': cached})..readGate = Completer<void>();
         final t = FakeTransport(snapshotJson(panes: [_pane('w1:p1', 'working')]));
         final c = _slow(t, cache: cache);
         _online(async, c);
@@ -784,8 +750,7 @@ void main() {
 
     test('goOffline on a cold start still shows the cached snapshot', () {
       fakeAsync((async) {
-        final c = _slow(FakeTransport(), cache: MemorySnapshotCache({'m': cached}))
-          ..goOffline();
+        final c = _slow(FakeTransport(), cache: MemorySnapshotCache({'m': cached}))..goOffline();
         async.flushMicrotasks();
         expect(c.state, LinkState.offline);
         expect(c.snapshot, cached);

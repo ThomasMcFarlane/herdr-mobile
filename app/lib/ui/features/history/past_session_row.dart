@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/acp/past_session.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../render/visible_text.dart';
 import '../../../data/words/elapsed.dart';
 import '../files/file_format.dart' show groupDigits;
@@ -24,10 +26,10 @@ String messageCountLabel(int? count) => switch (count) {
 
 /// `2 h ago · 14 messages`: when it last changed and how long it is, whichever
 /// the agent reports.
-String pastSessionDetail(PastSession s, DateTime now) =>
-    [if (s.updatedAt case final at?) formatAgo(at, now), messageCountLabel(s.messageCount)]
-        .where((p) => p.isNotEmpty)
-        .join(' · ');
+String pastSessionDetail(PastSession s, DateTime now) => [
+  if (s.updatedAt case final at?) formatAgo(at, now),
+  messageCountLabel(s.messageCount),
+].where((p) => p.isNotEmpty).join(' · ');
 
 /// One session an agent remembers: its title, the folder it ran in, when it
 /// last changed. The whole row is the tap target.

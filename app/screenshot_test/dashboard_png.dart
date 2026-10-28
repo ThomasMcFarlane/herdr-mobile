@@ -10,13 +10,7 @@ const _w = 1200.0;
 const _h = 2048.0;
 
 class _Palette {
-  const _Palette({
-    required this.bg,
-    required this.card,
-    required this.text,
-    required this.muted,
-    required this.grid,
-  });
+  const _Palette({required this.bg, required this.card, required this.text, required this.muted, required this.grid});
 
   final ui.Color bg;
   final ui.Color card;
@@ -55,15 +49,12 @@ void _text(
   double width = 800,
   ui.TextAlign align = ui.TextAlign.left,
 }) {
-  final b = ui.ParagraphBuilder(ui.ParagraphStyle(
-    fontFamily: 'Inter',
-    fontSize: size,
-    fontWeight: weight,
-    textAlign: align,
-    maxLines: 1,
-  ))
-    ..pushStyle(ui.TextStyle(color: color, fontFamily: 'Inter', fontSize: size, fontWeight: weight))
-    ..addText(s);
+  final b =
+      ui.ParagraphBuilder(
+          ui.ParagraphStyle(fontFamily: 'Inter', fontSize: size, fontWeight: weight, textAlign: align, maxLines: 1),
+        )
+        ..pushStyle(ui.TextStyle(color: color, fontFamily: 'Inter', fontSize: size, fontWeight: weight))
+        ..addText(s);
   final p = b.build()..layout(ui.ParagraphConstraints(width: width));
   canvas.drawParagraph(p, ui.Offset(x, y));
 }
@@ -96,11 +87,7 @@ Future<Uint8List> dashboardPng(WidgetTester tester, {required bool dark}) async 
     _text(canvas, 'payments-api  ·  last 7 days', 64, 168, 34, p.muted);
 
     // Three headline numbers.
-    const tiles = [
-      ('p50', '84 ms', '-12%'),
-      ('p95', '212 ms', '-38%'),
-      ('p99', '480 ms', '-41%'),
-    ];
+    const tiles = [('p50', '84 ms', '-12%'), ('p95', '212 ms', '-38%'), ('p99', '480 ms', '-41%')];
     const tileW = 340.0;
     const gap = 30.0;
     for (final (i, t) in tiles.indexed) {
@@ -115,7 +102,17 @@ Future<Uint8List> dashboardPng(WidgetTester tester, {required bool dark}) async 
     const chart = ui.Rect.fromLTWH(64, 530, _w - 128, 640);
     _card(canvas, chart, p);
     _text(canvas, 'p95 by hour', 100, 566, 36, p.text, weight: FontWeight.w600);
-    _text(canvas, 'fix deployed', 790, 570, 28, _accent, weight: FontWeight.w600, width: 260, align: ui.TextAlign.right);
+    _text(
+      canvas,
+      'fix deployed',
+      790,
+      570,
+      28,
+      _accent,
+      weight: FontWeight.w600,
+      width: 260,
+      align: ui.TextAlign.right,
+    );
     const plot = ui.Rect.fromLTRB(100, 650, _w - 100, 1050);
     final grid = ui.Paint()
       ..color = p.grid
@@ -164,7 +161,14 @@ Future<Uint8List> dashboardPng(WidgetTester tester, {required bool dark}) async 
         ..strokeJoin = ui.StrokeJoin.round,
     );
     canvas.drawCircle(pts.last, 14, ui.Paint()..color = p.card);
-    canvas.drawCircle(pts.last, 14, ui.Paint()..color = _accent..style = ui.PaintingStyle.stroke..strokeWidth = 7);
+    canvas.drawCircle(
+      pts.last,
+      14,
+      ui.Paint()
+        ..color = _accent
+        ..style = ui.PaintingStyle.stroke
+        ..strokeWidth = 7,
+    );
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     for (final (i, d) in days.indexed) {
       final x = plot.left + plot.width * i / 6;
@@ -194,12 +198,7 @@ Future<Uint8List> dashboardPng(WidgetTester tester, {required bool dark}) async 
     // Slowest endpoints.
     _card(canvas, const ui.Rect.fromLTWH(64, 1580, _w - 128, 420), p);
     _text(canvas, 'Slowest endpoints', 100, 1614, 36, p.text, weight: FontWeight.w600);
-    const endpoints = [
-      ('POST /checkout', 212),
-      ('POST /refund', 188),
-      ('GET /orders', 131),
-      ('GET /cart', 96),
-    ];
+    const endpoints = [('POST /checkout', 212), ('POST /refund', 188), ('GET /orders', 131), ('GET /cart', 96)];
     for (final (i, e) in endpoints.indexed) {
       final y = 1698.0 + i * 70;
       _text(canvas, e.$1, 100, y, 30, p.text, width: 300);
@@ -208,10 +207,7 @@ Future<Uint8List> dashboardPng(WidgetTester tester, {required bool dark}) async 
         ui.Paint()..color = p.grid,
       );
       canvas.drawRRect(
-        ui.RRect.fromRectAndRadius(
-          ui.Rect.fromLTWH(420, y + 10, 480 * e.$2 / 240, 18),
-          const ui.Radius.circular(9),
-        ),
+        ui.RRect.fromRectAndRadius(ui.Rect.fromLTWH(420, y + 10, 480 * e.$2 / 240, 18), const ui.Radius.circular(9)),
         ui.Paint()..color = _accent.withValues(alpha: i == 0 ? 1 : 0.55),
       );
       _text(canvas, '${e.$2} ms', 920, y, 30, p.muted, width: 180, align: ui.TextAlign.right);

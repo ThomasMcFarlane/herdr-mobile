@@ -10,7 +10,9 @@ import '../../../data/repositories/agent_screens.dart';
 import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/pane_previews.dart';
 import '../../../data/words/elapsed.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../support/step_clock.dart';
 import '../../support/tap_guard.dart';
 import 'agent_navigation.dart';
@@ -25,10 +27,10 @@ import 'swipe_review.dart';
 /// agent gets the most (the stream is the signal), a finished one shows how it
 /// ended, an idle one shows nothing: a prompt box and a status bar are noise.
 int previewRowCount(AgentStatus status) => switch (status) {
-      AgentStatus.working || AgentStatus.blocked => 5,
-      AgentStatus.done => 3,
-      AgentStatus.idle || AgentStatus.unknown => 0,
-    };
+  AgentStatus.working || AgentStatus.blocked => 5,
+  AgentStatus.done => 3,
+  AgentStatus.idle || AgentStatus.unknown => 0,
+};
 
 /// Room at a panel's end for the reply circle that floats over it: its 44 hit
 /// box less the panel's own inset.
@@ -245,40 +247,38 @@ class _AgentCardState extends State<AgentCard>
               border: Border.all(color: edge),
             ),
             child: CustomPaint(
-              painter: _arrival == null
-                  ? null
-                  : _ArrivalWash(_arrival!, color: ds.accentWash, radius: _radius - 1),
+              painter: _arrival == null ? null : _ArrivalWash(_arrival!, color: ds.accentWash, radius: _radius - 1),
               child: Padding(
-            padding: const EdgeInsets.fromLTRB(_pad, Gap.md, _pad, _pad),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _Header(agent: a, showTime: !_stackTime(context)),
-                Padding(
-                  padding: const EdgeInsets.only(left: _glyphColumn) +
-                      (slim && canReply ? const EdgeInsets.only(right: replyGutter) : EdgeInsets.zero),
-                  child: _Subtitle(text: a.subtitle),
+                padding: const EdgeInsets.fromLTRB(_pad, Gap.md, _pad, _pad),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _Header(agent: a, showTime: !_stackTime(context)),
+                    Padding(
+                      padding:
+                          const EdgeInsets.only(left: _glyphColumn) +
+                          (slim && canReply ? const EdgeInsets.only(right: replyGutter) : EdgeInsets.zero),
+                      child: _Subtitle(text: a.subtitle),
+                    ),
+                    if (_stackTime(context))
+                      Padding(
+                        padding: const EdgeInsets.only(left: _glyphColumn),
+                        child: StateTime(agent: a),
+                      ),
+                    if (!slim) const SizedBox(height: Gap.md),
+                    if (prompt != null) ...[
+                      QuestionWash(
+                        question: prompt.question,
+                        subject: prompt.subject,
+                        // Room for the reply circle that floats over the wash's end.
+                        trailing: const SizedBox(width: _replyRoom),
+                        onReadAll: _more,
+                      ),
+                      SizedBox(height: Gap.md + chipsHeight),
+                    ] else if (shown > 0)
+                      _PreviewPanel(rows: shown, lines: preview?.lines, reserveReply: canReply),
+                  ],
                 ),
-                if (_stackTime(context))
-                  Padding(padding: const EdgeInsets.only(left: _glyphColumn), child: StateTime(agent: a)),
-                if (!slim) const SizedBox(height: Gap.md),
-                if (prompt != null) ...[
-                  QuestionWash(
-                    question: prompt.question,
-                    subject: prompt.subject,
-                    // Room for the reply circle that floats over the wash's end.
-                    trailing: const SizedBox(width: _replyRoom),
-                    onReadAll: _more,
-                  ),
-                  SizedBox(height: Gap.md + chipsHeight),
-                ] else if (shown > 0)
-                  _PreviewPanel(
-                    rows: shown,
-                    lines: preview?.lines,
-                    reserveReply: canReply,
-                  ),
-              ],
-            ),
               ),
             ),
           ),
@@ -344,14 +344,14 @@ class _AgentCardState extends State<AgentCard>
   }
 
   String _semanticLabel(PromptInfo? prompt) => [
-        _agent.status.label,
-        _agent.title,
-        if (_agent.subtitle.isNotEmpty) _agent.subtitle,
-        if (_agent.stale) 'offline',
-        if (prompt != null)
-          'Asks: ${prompt.question.replaceAll('\n', ' ')}'
-              '${prompt.subject.isEmpty ? '' : '. ${prompt.subject.replaceAll('\n', ', ')}'}',
-      ].join(', ');
+    _agent.status.label,
+    _agent.title,
+    if (_agent.subtitle.isNotEmpty) _agent.subtitle,
+    if (_agent.stale) 'offline',
+    if (prompt != null)
+      'Asks: ${prompt.question.replaceAll('\n', ' ')}'
+          '${prompt.subject.isEmpty ? '' : '. ${prompt.subject.replaceAll('\n', ', ')}'}',
+  ].join(', ');
 
   /// The card's inner edge: its corner radius, so content sits concentric.
   static const _pad = Radii.md;
@@ -389,7 +389,9 @@ class _Header extends StatelessWidget {
         SizedBox(
           width: IconSize.lead,
           height: math.max(titleLine, IconSize.lead),
-          child: Center(child: StatusGlyph(status: agent.status, size: IconSize.lead)),
+          child: Center(
+            child: StatusGlyph(status: agent.status, size: IconSize.lead),
+          ),
         ),
         const SizedBox(width: Gap.md),
         Expanded(
@@ -400,10 +402,7 @@ class _Header extends StatelessWidget {
             style: _titleStyle.copyWith(color: ds.text),
           ),
         ),
-        if (showTime) ...[
-          const SizedBox(width: Gap.sm),
-          StateTime(agent: agent),
-        ],
+        if (showTime) ...[const SizedBox(width: Gap.sm), StateTime(agent: agent)],
       ],
     );
   }
@@ -435,13 +434,13 @@ class StateTime extends StatelessWidget {
       fontFeatures: Type.tabular,
     );
     Widget label(String text, String words) => Padding(
-          padding: const EdgeInsets.only(top: Gap.hair),
-          child: Semantics(
-            label: words,
-            excludeSemantics: true,
-            child: Text(text, maxLines: 1, softWrap: false, style: style),
-          ),
-        );
+      padding: const EdgeInsets.only(top: Gap.hair),
+      child: Semantics(
+        label: words,
+        excludeSemantics: true,
+        child: Text(text, maxLines: 1, softWrap: false, style: style),
+      ),
+    );
     if (agent.stale) return label('offline', 'offline');
     if (agent.quietMinutes > 0) {
       // design-lint: allow(raw-duration) a count of minutes the machine measured, not a timer
@@ -519,10 +518,7 @@ class _PreviewPanel extends StatelessWidget {
                 child: FractionallySizedBox(
                   widthFactor: f,
                   child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: ds.skeleton,
-                      borderRadius: BorderRadius.circular(Radii.pill),
-                    ),
+                    decoration: BoxDecoration(color: ds.skeleton, borderRadius: BorderRadius.circular(Radii.pill)),
                     child: const SizedBox(height: Gap.sm),
                   ),
                 ),
@@ -547,9 +543,7 @@ class _PreviewPanel extends StatelessWidget {
               softWrap: false,
               overflow: TextOverflow.ellipsis,
               textScaler: scaler,
-              style: _style.copyWith(
-                color: i == tail.length - 1 && last != null ? ds.text : ds.textSecondary,
-              ),
+              style: _style.copyWith(color: i == tail.length - 1 && last != null ? ds.text : ds.textSecondary),
             ),
         ],
       );
@@ -567,27 +561,32 @@ class _PreviewPanel extends StatelessWidget {
               children: [
                 Positioned.fill(
                   child: Padding(
-                    padding: EdgeInsets.fromLTRB(Gap.sm + Gap.hair, Gap.sm, reserveReply ? replyGutter : Gap.sm + Gap.hair, Gap.sm),
+                    padding: EdgeInsets.fromLTRB(
+                      Gap.sm + Gap.hair,
+                      Gap.sm,
+                      reserveReply ? replyGutter : Gap.sm + Gap.hair,
+                      Gap.sm,
+                    ),
                     child: content,
                   ),
                 ),
-            if (tail != null && tail.length >= rows)
-              Positioned(
-                left: 0,
-                right: 0,
-                top: 0,
-                height: Gap.lg,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [ds.fill, ds.fill.withAlpha(0)],
+                if (tail != null && tail.length >= rows)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    top: 0,
+                    height: Gap.lg,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [ds.fill, ds.fill.withAlpha(0)],
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-          ],
+              ],
             ),
           ),
         ),
@@ -643,12 +642,7 @@ class AgentCompactRow extends StatelessWidget {
             dim: agent.stale,
             // Merged from the glyph and the texts, plus what dimming only implies.
             semanticLabel: agent.stale
-                ? [
-                    agent.status.label,
-                    agent.title,
-                    if (agent.subtitle.isNotEmpty) agent.subtitle,
-                    'offline',
-                  ].join(', ')
+                ? [agent.status.label, agent.title, if (agent.subtitle.isNotEmpty) agent.subtitle, 'offline'].join(', ')
                 : null,
             onTap: sel.active
                 ? pick
@@ -663,7 +657,13 @@ class AgentCompactRow extends StatelessWidget {
       ),
     );
     if (!divider) return row;
-    return Column(mainAxisSize: MainAxisSize.min, children: [row, Hairline(indent: ListRow.textIndent())]);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        row,
+        Hairline(indent: ListRow.textIndent()),
+      ],
+    );
   }
 }
 

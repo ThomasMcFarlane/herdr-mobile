@@ -44,8 +44,7 @@ String promptDigest(PromptInfo prompt) {
 /// Whether a notification may carry [reply] as a button: one tap must be the
 /// whole answer. Anything the card makes the person confirm (a risky command,
 /// a standing grant) is not.
-bool answerableFromNotification(QuickReply reply) =>
-    !reply.needsConfirm && !grantsStandingPermission(reply.label);
+bool answerableFromNotification(QuickReply reply) => !reply.needsConfirm && !grantsStandingPermission(reply.label);
 
 /// How a notification's answer ended.
 enum AnswerOutcome {

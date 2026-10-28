@@ -111,7 +111,13 @@ void main() {
 
     test('the echo of the prompt keeps the time the client stamped', () {
       var s = const AgentSessionState('s').withUserMessage([const TextBlock('hello')], at: _at(0));
-      s = s.apply(_u({'sessionUpdate': 'user_message_chunk', 'content': {'type': 'text', 'text': 'hello'}}), at: _at(1));
+      s = s.apply(
+        _u({
+          'sessionUpdate': 'user_message_chunk',
+          'content': {'type': 'text', 'text': 'hello'},
+        }),
+        at: _at(1),
+      );
       final user = s.items.single as TranscriptMessage;
       expect(user.local, isFalse);
       expect(user.at, _at(0));
@@ -139,7 +145,13 @@ void main() {
   group('replay', () {
     test('what arrives while the state replays is history: no times', () {
       var s = AgentSessionState('s', replaying: true);
-      s = s.apply(_u({'sessionUpdate': 'user_message_chunk', 'content': {'type': 'text', 'text': 'fix it'}}), at: _at(1));
+      s = s.apply(
+        _u({
+          'sessionUpdate': 'user_message_chunk',
+          'content': {'type': 'text', 'text': 'fix it'},
+        }),
+        at: _at(1),
+      );
       s = s.apply(_u(_agentText('ok')), at: _at(2));
       s = s.apply(_u(_tool('t1', 'completed')), at: _at(3));
       s = s.apply(_u(_tool('t2', 'in_progress')), at: _at(4));
@@ -189,8 +201,7 @@ void main() {
       var s = _omp();
       final options = ompSessionNew()['configOptions']! as List;
       final changed = [
-        for (final o in options)
-          (o as Map<String, Object?>)['id'] == 'mode' ? {...o, 'currentValue': 'plan'} : o,
+        for (final o in options) (o as Map<String, Object?>)['id'] == 'mode' ? {...o, 'currentValue': 'plan'} : o,
       ];
       s = s.apply(_u({'sessionUpdate': 'config_option_update', 'configOptions': changed}), at: _at(1));
       expect(_notes(s), 1);
@@ -264,8 +275,7 @@ void main() {
       final s = _omp();
       final options = ompSessionNew()['configOptions']! as List;
       final changed = parseConfigOptions([
-        for (final o in options)
-          (o as Map<String, Object?>)['id'] == 'mode' ? {...o, 'currentValue': 'plan'} : o,
+        for (final o in options) (o as Map<String, Object?>)['id'] == 'mode' ? {...o, 'currentValue': 'plan'} : o,
       ]);
       expect(_notes(s.withConfigOptions(changed)), 0);
     });
@@ -323,8 +333,7 @@ void main() {
         'session/set_config_option': (r) {
           final options = ompSessionNew()['configOptions']! as List;
           final changed = [
-            for (final o in options)
-              (o as Map<String, Object?>)['id'] == 'mode' ? {...o, 'currentValue': 'plan'} : o,
+            for (final o in options) (o as Map<String, Object?>)['id'] == 'mode' ? {...o, 'currentValue': 'plan'} : o,
           ];
           agent.update('s', {'sessionUpdate': 'config_option_update', 'configOptions': changed});
           return {'configOptions': changed};
@@ -361,7 +370,10 @@ void main() {
     test('session/load replays without times and ends the replay with its answer', () async {
       await start({
         'session/load': (r) {
-          agent.update('s', {'sessionUpdate': 'user_message_chunk', 'content': {'type': 'text', 'text': 'old prompt'}});
+          agent.update('s', {
+            'sessionUpdate': 'user_message_chunk',
+            'content': {'type': 'text', 'text': 'old prompt'},
+          });
           agent.update('s', _agentText('old answer'));
           agent.update('s', _tool('t1', 'completed'));
           agent.update('s', {'sessionUpdate': 'current_mode_update', 'currentModeId': 'default'});

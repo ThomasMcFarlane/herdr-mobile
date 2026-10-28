@@ -11,18 +11,18 @@ void main() {
 
     test('maps an error response to HerdrApiException', () {
       expect(
-        () => unwrapResponse(
-            '{"id":"1","error":{"code":"pane_not_found","message":"no such pane"}}'),
-        throwsA(isA<HerdrApiException>()
-            .having((e) => e.code, 'code', 'pane_not_found')
-            .having((e) => e.message, 'message', 'no such pane')),
+        () => unwrapResponse('{"id":"1","error":{"code":"pane_not_found","message":"no such pane"}}'),
+        throwsA(
+          isA<HerdrApiException>()
+              .having((e) => e.code, 'code', 'pane_not_found')
+              .having((e) => e.message, 'message', 'no such pane'),
+        ),
       );
     });
 
     test('garbage and shape errors are transport errors, not crashes', () {
       for (final bad in ['not json', '[]', '{"id":"1"}', '']) {
-        expect(() => unwrapResponse(bad), throwsA(isA<HerdrTransportException>()),
-            reason: bad);
+        expect(() => unwrapResponse(bad), throwsA(isA<HerdrTransportException>()), reason: bad);
       }
     });
   });
@@ -67,13 +67,7 @@ void main() {
           'revision': 394,
           'scroll': {'viewport_rows': 28},
         },
-        {
-          'pane_id': 'wB:p3',
-          'workspace_id': 'wB',
-          'tab_id': 'wB:t1',
-          'cwd': '/work',
-          'agent_status': 'unknown',
-        },
+        {'pane_id': 'wB:p3', 'workspace_id': 'wB', 'tab_id': 'wB:t1', 'cwd': '/work', 'agent_status': 'unknown'},
       ],
     });
 
@@ -108,26 +102,26 @@ void main() {
 
   group('value equality', () {
     Map<String, dynamic> pane({int revision = 1, String title = 't'}) => {
-          'pane_id': 'w1:p1',
-          'workspace_id': 'w1',
-          'tab_id': 'w1:t1',
-          'terminal_title': title,
-          'agent': 'omp',
-          'agent_status': 'working',
-          'revision': revision,
-          'scroll': {'viewport_rows': 20 + revision},
-        };
+      'pane_id': 'w1:p1',
+      'workspace_id': 'w1',
+      'tab_id': 'w1:t1',
+      'terminal_title': title,
+      'agent': 'omp',
+      'agent_status': 'working',
+      'revision': revision,
+      'scroll': {'viewport_rows': 20 + revision},
+    };
 
     Snapshot snapshot(List<Map<String, dynamic>> panes) => Snapshot.fromJson({
-          'version': '1',
-          'workspaces': [
-            {'workspace_id': 'w1', 'label': 'a', 'agent_status': 'working'},
-          ],
-          'tabs': [
-            {'tab_id': 'w1:t1', 'workspace_id': 'w1', 'agent_status': 'working'},
-          ],
-          'panes': panes,
-        });
+      'version': '1',
+      'workspaces': [
+        {'workspace_id': 'w1', 'label': 'a', 'agent_status': 'working'},
+      ],
+      'tabs': [
+        {'tab_id': 'w1:t1', 'workspace_id': 'w1', 'agent_status': 'working'},
+      ],
+      'panes': panes,
+    });
 
     test('a refetched identical snapshot is equal even if revision churned', () {
       final a = snapshot([pane(revision: 1)]);
@@ -157,9 +151,7 @@ void main() {
   });
 
   test('urgency order puts blocked first, then working, done, idle', () {
-    final sorted = [...AgentStatus.values]
-      ..sort((a, b) => a.attentionRank.compareTo(b.attentionRank));
-    expect(sorted.take(4),
-        [AgentStatus.blocked, AgentStatus.working, AgentStatus.done, AgentStatus.idle]);
+    final sorted = [...AgentStatus.values]..sort((a, b) => a.attentionRank.compareTo(b.attentionRank));
+    expect(sorted.take(4), [AgentStatus.blocked, AgentStatus.working, AgentStatus.done, AgentStatus.idle]);
   });
 }

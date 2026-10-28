@@ -78,7 +78,11 @@ void main() {
       final once = _feed(mapper, lines);
       final twice = _feed(mapper, lines, once);
       expect(twice.items.length, once.items.length, reason: name);
-      expect([for (final c in _tools(twice)) (c.toolCallId, c.status)], [for (final c in _tools(once)) (c.toolCallId, c.status)], reason: name);
+      expect(
+        [for (final c in _tools(twice)) (c.toolCallId, c.status)],
+        [for (final c in _tools(once)) (c.toolCallId, c.status)],
+        reason: name,
+      );
       expect(mapper.openToolCalls, isEmpty, reason: '$name leaves nothing running');
     }
   });
@@ -158,7 +162,11 @@ void main() {
       final call = _tools(s).single;
       expect(call.status, ToolStatus.inProgress);
       expect(call.title, 'curl -sI https://example.com | head -1');
-      expect((call.rawInput as Map)['command'], 'curl -sI https://example.com | head -1', reason: 'the approval card compares with it');
+      expect(
+        (call.rawInput as Map)['command'],
+        'curl -sI https://example.com | head -1',
+        reason: 'the approval card compares with it',
+      );
       expect(m.openToolCalls, {call.toolCallId});
       expect(m.turnEnded, isFalse);
     });
@@ -175,7 +183,11 @@ void main() {
       for (final name in ['interrupt', 'command-decline']) {
         final (s, m) = _run(name);
 
-        expect(_tools(s).single.status, name == 'interrupt' ? ToolStatus.completed : ToolStatus.cancelled, reason: name);
+        expect(
+          _tools(s).single.status,
+          name == 'interrupt' ? ToolStatus.completed : ToolStatus.cancelled,
+          reason: name,
+        );
         expect(_texts(s, MessageRole.agent), contains('Interrupted'), reason: name);
         expect(m.turnEnded, isTrue, reason: name);
       }
@@ -200,7 +212,11 @@ void main() {
       expect(m.backgroundTasks.single.stop, StopRoute.none, reason: 'no model tool stops a unified-exec process');
 
       final s = _feed(CodexLogMapper(), lines);
-      expect(_tools(s).first.title, 'sleep 40 && echo finished', reason: 'its late item went to the call that started it, not to a later poll');
+      expect(
+        _tools(s).first.title,
+        'sleep 40 && echo finished',
+        reason: 'its late item went to the call that started it, not to a later poll',
+      );
       expect(_text(_tools(s).first), contains('finished'));
     });
 
@@ -212,7 +228,16 @@ void main() {
       expect(running.backgroundTasks.single.id, 'cell1');
       expect(running.backgroundTasks.single.status, BackgroundStatus.running);
       expect(running.backgroundTasks.single.stop, StopRoute.message);
-      expect(_tools(_feed(CodexLogMapper(), lines.sublist(0, lines.indexWhere((l) => l.contains('Script running with cell ID 1')) + 1))).single.status, ToolStatus.inProgress, reason: 'the call stays open while its cell runs');
+      expect(
+        _tools(
+          _feed(
+            CodexLogMapper(),
+            lines.sublist(0, lines.indexWhere((l) => l.contains('Script running with cell ID 1')) + 1),
+          ),
+        ).single.status,
+        ToolStatus.inProgress,
+        reason: 'the call stays open while its cell runs',
+      );
       expect(running.openToolCalls, isEmpty, reason: 'a cell is a task, not what an approval asks about');
 
       final (s, m) = _run('yield-cell');
@@ -245,7 +270,13 @@ void main() {
       'timestamp': '2026-10-09T12:45:26.465Z',
       'ordinal': ordinal,
       'type': 'response_item',
-      'payload': {'type': 'custom_tool_call', 'status': 'completed', 'call_id': 'c$ordinal', 'name': 'exec', 'input': js},
+      'payload': {
+        'type': 'custom_tool_call',
+        'status': 'completed',
+        'call_id': 'c$ordinal',
+        'name': 'exec',
+        'input': js,
+      },
     });
 
     test('a command is named by its real text whether the model quoted the keys of its object or not', () {
@@ -281,12 +312,17 @@ void main() {
     });
 
     test('is shown as a row that says what it is, never dropped', () {
-      final s = _feed(CodexLogMapper(), [item({'type': 'BrandNewThing', 'id': 'x1', 'detail': 'd'}, 5)]);
+      final s = _feed(CodexLogMapper(), [
+        item({'type': 'BrandNewThing', 'id': 'x1', 'detail': 'd'}, 5),
+      ]);
       expect(_tools(s).single.title, 'BrandNewThing');
     });
 
     test('an item the table marks as ignored stays out', () {
-      final s = _feed(CodexLogMapper(), [item({'type': 'Reasoning', 'id': 'r', 'summary_text': []}, 5), item({'type': 'Sleep', 'id': 's'}, 6)]);
+      final s = _feed(CodexLogMapper(), [
+        item({'type': 'Reasoning', 'id': 'r', 'summary_text': []}, 5),
+        item({'type': 'Sleep', 'id': 's'}, 6),
+      ]);
       expect(s.items, isEmpty);
     });
   });
@@ -296,9 +332,31 @@ void main() {
       String l(int o, String type, Map<String, Object?> p) =>
           jsonEncode({'timestamp': 't', 'ordinal': o, 'type': type, 'payload': p});
       final s = _feed(CodexLogMapper(), [
-        l(1, 'response_item', {'type': 'custom_tool_call', 'call_id': 'c1', 'name': 'exec', 'input': 'const r = await tools.exec_command({cmd:"ls /nope"});\ntext("done");'}),
-        l(2, 'event_msg', {'type': 'item_completed', 'item': {'type': 'CommandExecution', 'id': 'e1', 'command': ['/bin/zsh', '-lc', 'ls /nope'], 'status': 'failed', 'exit_code': 1, 'aggregated_output': 'ls: /nope: No such file'}}),
-        l(3, 'response_item', {'type': 'custom_tool_call_output', 'call_id': 'c1', 'output': [{'type': 'input_text', 'text': 'Script completed\nWall time 0.1 seconds\nOutput:\n'}, {'type': 'input_text', 'text': 'done'}]}),
+        l(1, 'response_item', {
+          'type': 'custom_tool_call',
+          'call_id': 'c1',
+          'name': 'exec',
+          'input': 'const r = await tools.exec_command({cmd:"ls /nope"});\ntext("done");',
+        }),
+        l(2, 'event_msg', {
+          'type': 'item_completed',
+          'item': {
+            'type': 'CommandExecution',
+            'id': 'e1',
+            'command': ['/bin/zsh', '-lc', 'ls /nope'],
+            'status': 'failed',
+            'exit_code': 1,
+            'aggregated_output': 'ls: /nope: No such file',
+          },
+        }),
+        l(3, 'response_item', {
+          'type': 'custom_tool_call_output',
+          'call_id': 'c1',
+          'output': [
+            {'type': 'input_text', 'text': 'Script completed\nWall time 0.1 seconds\nOutput:\n'},
+            {'type': 'input_text', 'text': 'done'},
+          ],
+        }),
       ]);
       expect(_tools(s).single.status, ToolStatus.failed);
     });
@@ -320,7 +378,9 @@ void main() {
               'type': 'FileChange',
               'id': 'f1',
               'status': 'completed',
-              'changes': {'/w/a.sql': {'type': 'update', 'unified_diff': '@@ -1,2 +1,2 @@\n keep\n--- a comment\n+++i\n'}},
+              'changes': {
+                '/w/a.sql': {'type': 'update', 'unified_diff': '@@ -1,2 +1,2 @@\n keep\n--- a comment\n+++i\n'},
+              },
             },
           },
         }),
@@ -334,11 +394,13 @@ void main() {
     test('a compacted line is skipped from its first characters, without decoding it', () {
       // Decoded, this line would be a user message (the later duplicate keys win): it maps to nothing
       // only because the first 160 characters said `compacted`.
-      final trap = '{"ordinal":1,"type":"compacted","payload":{"type":"x"},"type":"event_msg","payload":{"type":"item_completed","item":{"type":"UserMessage","id":"u","content":[{"type":"text","text":"hi"}]}}}';
+      final trap =
+          '{"ordinal":1,"type":"compacted","payload":{"type":"x"},"type":"event_msg","payload":{"type":"item_completed","item":{"type":"UserMessage","id":"u","content":[{"type":"text","text":"hi"}]}}}';
       expect(jsonDecode(trap)['type'], 'event_msg');
       expect(CodexLogMapper().map(trap), isEmpty);
 
-      final big = '{"timestamp":"2026-10-09T12:43:35.249Z","ordinal":23,"type":"compacted","payload":{"message":"","replacement_history":[{"type":"message","text":"${'x' * 1200000}"}]}}';
+      final big =
+          '{"timestamp":"2026-10-09T12:43:35.249Z","ordinal":23,"type":"compacted","payload":{"message":"","replacement_history":[{"type":"message","text":"${'x' * 1200000}"}]}}';
       expect(CodexLogMapper().map(big), isEmpty);
     });
 
@@ -370,10 +432,43 @@ void main() {
         line({'id': 't', 'cwd': '/w'}, 'session_meta', 0),
         line({'type': 'user_message', 'message': 'list files'}, 'event_msg', 1),
         line({'type': 'agent_message', 'message': 'on it', 'phase': 'commentary'}, 'event_msg', 2),
-        line({'type': 'function_call', 'name': 'exec_command', 'arguments': jsonEncode({'cmd': 'ls -la', 'workdir': '/w'}), 'call_id': 'c1'}, 'response_item', 3),
-        line({'type': 'exec_command_end', 'call_id': 'c1', 'command': ['ls'], 'aggregated_output': 'a\nb\n', 'exit_code': 0, 'status': 'completed'}, 'event_msg', 4),
-        line({'type': 'custom_tool_call', 'name': 'apply_patch', 'input': '*** Begin Patch\n*** End Patch', 'call_id': 'c2'}, 'response_item', 5),
-        line({'type': 'patch_apply_end', 'call_id': 'c2', 'success': false, 'stdout': '', 'changes': {}}, 'event_msg', 6),
+        line(
+          {
+            'type': 'function_call',
+            'name': 'exec_command',
+            'arguments': jsonEncode({'cmd': 'ls -la', 'workdir': '/w'}),
+            'call_id': 'c1',
+          },
+          'response_item',
+          3,
+        ),
+        line(
+          {
+            'type': 'exec_command_end',
+            'call_id': 'c1',
+            'command': ['ls'],
+            'aggregated_output': 'a\nb\n',
+            'exit_code': 0,
+            'status': 'completed',
+          },
+          'event_msg',
+          4,
+        ),
+        line(
+          {
+            'type': 'custom_tool_call',
+            'name': 'apply_patch',
+            'input': '*** Begin Patch\n*** End Patch',
+            'call_id': 'c2',
+          },
+          'response_item',
+          5,
+        ),
+        line(
+          {'type': 'patch_apply_end', 'call_id': 'c2', 'success': false, 'stdout': '', 'changes': {}},
+          'event_msg',
+          6,
+        ),
       ];
       final m = CodexLogMapper();
       final s = _feed(m, lines);
@@ -390,17 +485,37 @@ void main() {
     test('update_plan becomes the plan', () {
       final m = CodexLogMapper();
       final s = _feed(m, [
-        line({'type': 'function_call', 'name': 'update_plan', 'arguments': jsonEncode({'plan': [{'step': 'one', 'status': 'completed'}, {'step': 'two', 'status': 'in_progress'}]}), 'call_id': 'p'}, 'response_item', 1),
+        line(
+          {
+            'type': 'function_call',
+            'name': 'update_plan',
+            'arguments': jsonEncode({
+              'plan': [
+                {'step': 'one', 'status': 'completed'},
+                {'step': 'two', 'status': 'in_progress'},
+              ],
+            }),
+            'call_id': 'p',
+          },
+          'response_item',
+          1,
+        ),
       ]);
 
-      expect([for (final e in s.plan) (e.content, e.status)], [('one', PlanStatus.completed), ('two', PlanStatus.inProgress)]);
+      expect(
+        [for (final e in s.plan) (e.content, e.status)],
+        [('one', PlanStatus.completed), ('two', PlanStatus.inProgress)],
+      );
     });
   });
 
   group('a message with a picture', () {
     test('the captured paste shows once per turn, with Codex\'s own placeholder', () {
       final s = _feed(CodexLogMapper(), _lines('image-paste'));
-      final texts = [for (final m in s.items.whereType<TranscriptMessage>()) if (m.role == MessageRole.user) m.text];
+      final texts = [
+        for (final m in s.items.whereType<TranscriptMessage>())
+          if (m.role == MessageRole.user) m.text,
+      ];
       expect(texts, isNotEmpty);
       expect(texts, everyElement('[Image #1]  what colour is this picture?'));
       expect(texts.where((t) => t.contains('[image]')), isEmpty);
@@ -423,39 +538,51 @@ void main() {
           {'type': 'image', 'image_url': 'data:image/png;base64,<trimmed>'},
         ]),
       ]);
-      final texts = [for (final m in s.items.whereType<TranscriptMessage>()) if (m.role == MessageRole.user) m.text];
+      final texts = [
+        for (final m in s.items.whereType<TranscriptMessage>())
+          if (m.role == MessageRole.user) m.text,
+      ];
       expect(texts, ['what is this?\n[image]', '[image]']);
     });
 
-    test('an image part whose URL is the host\'s note with a reference is a block; a local_image path stays a line', () {
-      String item(String id, List<Object> content) => jsonEncode({
-        'type': 'event_msg',
-        'payload': {
-          'type': 'item_completed',
-          'item': {'type': 'UserMessage', 'id': id, 'content': content},
-        },
-      });
-      final s = _feed(CodexLogMapper(), [
-        item('a', [
-          {'type': 'text', 'text': 'look'},
-          {'type': 'image', 'image_url': 'data:image/png;base64,[40000 bytes of data not sent; ref=512.0123456789abcdef]'},
-        ]),
-        item('b', [
-          {'type': 'image', 'image_url': '[40 bytes of data not sent; ref=9.fedcba9876543210]'},
-        ]),
-        item('c', [
-          {'type': 'local_image', 'path': '/h/x.jpg'},
-        ]),
-      ]);
-      final users = [for (final m in s.items.whereType<TranscriptMessage>()) if (m.role == MessageRole.user) m];
-      final a = users[0].blocks.whereType<LogImageBlock>().single;
-      expect(a.mimeType, 'image/png');
-      expect((a.ref as KeeperPictureRef).start, 512);
-      expect(users[0].text, 'look');
-      expect(users[1].blocks.single, isA<LogImageBlock>(), reason: 'a picture alone is not an empty message');
-      expect((users[1].blocks.single as LogImageBlock).mimeType, '');
-      expect(users[2].text, '[image]');
-    });
+    test(
+      'an image part whose URL is the host\'s note with a reference is a block; a local_image path stays a line',
+      () {
+        String item(String id, List<Object> content) => jsonEncode({
+          'type': 'event_msg',
+          'payload': {
+            'type': 'item_completed',
+            'item': {'type': 'UserMessage', 'id': id, 'content': content},
+          },
+        });
+        final s = _feed(CodexLogMapper(), [
+          item('a', [
+            {'type': 'text', 'text': 'look'},
+            {
+              'type': 'image',
+              'image_url': 'data:image/png;base64,[40000 bytes of data not sent; ref=512.0123456789abcdef]',
+            },
+          ]),
+          item('b', [
+            {'type': 'image', 'image_url': '[40 bytes of data not sent; ref=9.fedcba9876543210]'},
+          ]),
+          item('c', [
+            {'type': 'local_image', 'path': '/h/x.jpg'},
+          ]),
+        ]);
+        final users = [
+          for (final m in s.items.whereType<TranscriptMessage>())
+            if (m.role == MessageRole.user) m,
+        ];
+        final a = users[0].blocks.whereType<LogImageBlock>().single;
+        expect(a.mimeType, 'image/png');
+        expect((a.ref as KeeperPictureRef).start, 512);
+        expect(users[0].text, 'look');
+        expect(users[1].blocks.single, isA<LogImageBlock>(), reason: 'a picture alone is not an empty message');
+        expect((users[1].blocks.single as LogImageBlock).mimeType, '');
+        expect(users[2].text, '[image]');
+      },
+    );
 
     test('the captured paste lists only a local_image path: the picture stays an [image] line', () {
       final (s, _) = _run('image-paste');

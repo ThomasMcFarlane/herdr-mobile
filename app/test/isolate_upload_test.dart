@@ -12,8 +12,7 @@ import 'support/fake_sftp_server.dart';
 
 /// Runs the REAL upload code ([SftpFiles]) inside the worker isolate against
 /// an in-memory SFTP server with a 100 MB/s wire and a 5 ms round trip.
-HerdrTransport _build(Object? config, void Function(String) onPin, void Function(String) onNotice) =>
-    _SftpOnly();
+HerdrTransport _build(Object? config, void Function(String) onPin, void Function(String) onNotice) => _SftpOnly();
 
 class _SftpOnly implements HerdrTransport {
   _SftpOnly() {
@@ -93,8 +92,11 @@ void main() {
 
     final msgs = uploadMessages();
     final counters = msgs.where((m) => m.$2[0] == 'uprog').toList();
-    expect(counters.length, lessThanOrEqualTo(seconds * 10 + 3),
-        reason: '${counters.length} progress messages in ${seconds}s');
+    expect(
+      counters.length,
+      lessThanOrEqualTo(seconds * 10 + 3),
+      reason: '${counters.length} progress messages in ${seconds}s',
+    );
     expect(transport.uploadProgressMessages, counters.length);
     expect(msgs.where((m) => m.$2[0] == 'udone'), hasLength(1));
 
@@ -102,8 +104,11 @@ void main() {
     for (final (_, m) in msgs) {
       expect(m.length, lessThanOrEqualTo(4), reason: '$m');
       for (final part in m) {
-        expect(part is int || part is String || part is bool || part == null, isTrue,
-            reason: 'payload ${part.runtimeType} in $m');
+        expect(
+          part is int || part is String || part is bool || part == null,
+          isTrue,
+          reason: 'payload ${part.runtimeType} in $m',
+        );
         expect(part is TypedData, isFalse);
         expect(part is TransferableTypedData, isFalse);
       }
@@ -130,8 +135,11 @@ void main() {
 
     // The upload would run ~0.6 s more; the worker must not report any of it.
     await Future<void>.delayed(const Duration(milliseconds: 800));
-    expect(uploadMessages().where((m) => m.$2[0] == 'uprog' && m.$1 > cancelAt + 150), isEmpty,
-        reason: 'the worker kept sending counters after the cancel');
+    expect(
+      uploadMessages().where((m) => m.$2[0] == 'uprog' && m.$1 > cancelAt + 150),
+      isEmpty,
+      reason: 'the worker kept sending counters after the cancel',
+    );
     expect(uploadMessages().where((m) => m.$2[0] == 'udone'), isEmpty);
   });
 
@@ -151,10 +159,8 @@ void main() {
   });
 
   test('a cancel before the worker is up never starts the upload', () async {
-    final job = transport.uploadFile(
-      localPath: sparse('d.bin', 1024).path,
-      remotePath: '/home/dev/inbox/d.bin',
-    )..cancel();
+    final job = transport.uploadFile(localPath: sparse('d.bin', 1024).path, remotePath: '/home/dev/inbox/d.bin')
+      ..cancel();
     await expectLater(job.done, throwsA(isA<UploadCancelled>()));
     await Future<void>.delayed(const Duration(milliseconds: 300));
     expect(uploadMessages(), isEmpty);

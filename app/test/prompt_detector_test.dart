@@ -8,9 +8,7 @@ typedef _R = (String, List<String>, bool);
 
 String _fmt(_R r) => '${r.$1} | ${r.$2.join(',')} | ${r.$3 ? 'confirm' : 'plain'}';
 
-List<String> _replies(PromptInfo p) => [
-      for (final r in p.replies) _fmt((r.label, r.keys, r.needsConfirm)),
-    ];
+List<String> _replies(PromptInfo p) => [for (final r in p.replies) _fmt((r.label, r.keys, r.needsConfirm))];
 
 PromptInfo? _detect(String screen) => detectPrompt(screen.split('\n'));
 
@@ -311,21 +309,13 @@ Which cleanup?
     ],
     question: 'This will DROP TABLE users and delete every row.\nContinue? [y/N]',
   ),
-  _Case(
-    'inline prompt followed by a hint row',
-    'Remove 3 files? [y/N]\n  (esc to cancel)',
-    [
-      ('Yes', ['y', 'enter'], true),
-      ('No', ['n', 'enter'], false),
-    ],
-  ),
+  _Case('inline prompt followed by a hint row', 'Remove 3 files? [y/N]\n  (esc to cancel)', [
+    ('Yes', ['y', 'enter'], true),
+    ('No', ['n', 'enter'], false),
+  ]),
   // ---- press enter
-  _Case('Press Enter to continue', 'Installed.\nPress Enter to continue', [
-    ('Enter', _enter, false),
-  ]),
-  _Case('press any key', 'Update complete\nPress any key to continue...', [
-    ('Enter', _enter, false),
-  ]),
+  _Case('Press Enter to continue', 'Installed.\nPress Enter to continue', [('Enter', _enter, false)]),
+  _Case('press any key', 'Update complete\nPress any key to continue...', [('Enter', _enter, false)]),
   // ---- un-numbered menus
   _Case(
     'pointer menu, cursor on first',
@@ -442,8 +432,7 @@ Overwritten 3 files.
 ''',
   '(yes/no) in prose': 'Should I document the (yes/no) syntax in the README for new users',
   'Claude working footer only': '✻ Thinking… (esc to interrupt)',
-  'codex confirm dialog without a menu':
-      'Press enter to confirm or esc to cancel',
+  'codex confirm dialog without a menu': 'Press enter to confirm or esc to cancel',
   'menu followed by an unrelated line': '''
 Do you want to proceed?
 ❯ 1. Yes
@@ -523,16 +512,16 @@ Which?
     test('rows the window dropped from a long command make it "long", not whole', () {
       final command = ['rm -rf /', for (var i = 2; i <= 12; i++) 'step $i'];
       String screen(List<String> rows) => [
-            ' Bash command',
-            ...rows.map((r) => '   $r'),
-            ' Do you want to proceed?',
-            ' ❯ 1. Yes',
-            '   2. Yes, then B',
-            '   3. Yes, then C',
-            '   4. Yes, then D',
-            '   5. Yes, then E',
-            '   6. No',
-          ].join('\n');
+        ' Bash command',
+        ...rows.map((r) => '   $r'),
+        ' Do you want to proceed?',
+        ' ❯ 1. Yes',
+        '   2. Yes, then B',
+        '   3. Yes, then C',
+        '   4. Yes, then D',
+        '   5. Yes, then E',
+        '   6. No',
+      ].join('\n');
       // 12 rows fit exactly when the command has 4: nothing was dropped.
       final whole = _detect(screen(['echo one', 'echo two', 'echo three', 'echo four']))!;
       expect(whole.subject.split('\n'), ['echo one', 'echo two', 'echo three', 'echo four']);
@@ -560,11 +549,7 @@ Do you want to proceed?
 ❯ 1. Yes
   2. No
 ''';
-      final boxed = plain
-          .trimRight()
-          .split('\n')
-          .map((l) => '│ ${l.padRight(30)} │')
-          .join('\n');
+      final boxed = plain.trimRight().split('\n').map((l) => '│ ${l.padRight(30)} │').join('\n');
       expect(_detect(boxed), _detect(plain));
     });
 
@@ -618,14 +603,16 @@ Do you want to proceed?
     });
 
     test('a long command whose header scrolled out still gets a subject, capped at 6 rows and marked', () {
-      final p = _detect([
-        ' Bash command',
-        for (var i = 1; i <= 9; i++) '   part $i',
-        ' Do you want to proceed?',
-        ' ❯ 1. Yes',
-        '   2. No',
-        '   3. Not now',
-      ].join('\n'))!;
+      final p = _detect(
+        [
+          ' Bash command',
+          for (var i = 1; i <= 9; i++) '   part $i',
+          ' Do you want to proceed?',
+          ' ❯ 1. Yes',
+          '   2. No',
+          '   3. Not now',
+        ].join('\n'),
+      )!;
       // Twelve rows fit: "Bash command" and "part 1" are gone; the block now
       // starts at the top of what is visible. Eight rows, six shown, the last
       // of them marked.
@@ -635,13 +622,15 @@ Do you want to proceed?
     });
 
     test('exactly six rows are shown whole and are not "long"', () {
-      final p = _detect([
-        ' Bash command',
-        for (var i = 1; i <= 6; i++) '   part $i',
-        ' Do you want to proceed?',
-        ' ❯ 1. Yes',
-        '   2. No',
-      ].join('\n'))!;
+      final p = _detect(
+        [
+          ' Bash command',
+          for (var i = 1; i <= 6; i++) '   part $i',
+          ' Do you want to proceed?',
+          ' ❯ 1. Yes',
+          '   2. No',
+        ].join('\n'),
+      )!;
       expect(p.subject, [for (var i = 1; i <= 6; i++) 'part $i'].join('\n'));
       expect(p.replies.any((r) => r.needsConfirm), isFalse);
     });
@@ -672,14 +661,16 @@ Do you want to proceed?
       expect(row.subject.split('\n').first, isNot(contains('push')));
       expect(row.replies.map((r) => r.risk), ['force-pushes', null]);
       // In a row past the sixth.
-      final rows = _detect([
-        ' Bash command',
-        for (var i = 1; i <= 7; i++) '   part $i',
-        '   rm -rf /srv/data',
-        ' Do you want to proceed?',
-        ' ❯ 1. Yes',
-        '   2. No',
-      ].join('\n'))!;
+      final rows = _detect(
+        [
+          ' Bash command',
+          for (var i = 1; i <= 7; i++) '   part $i',
+          '   rm -rf /srv/data',
+          ' Do you want to proceed?',
+          ' ❯ 1. Yes',
+          '   2. No',
+        ].join('\n'),
+      )!;
       expect(rows.subject, isNot(contains('rm')));
       expect(rows.replies.map((r) => r.risk), ['deletes files', null]);
     });
@@ -773,7 +764,9 @@ Do you want to proceed?
       expect(_detect('Done editing, now:\nAllow this tool call?\n❯ Allow once\n  Deny')!.subject, '');
       expect(_detect('ls node_modules\nAllow this tool call?\n❯ Allow once\n  Deny')!.subject, '');
       // A diff above an edit dialog is deeper than the question: output.
-      final p = _detect('Here is the diff for lib/a.dart.\n   10 - rm -rf build\n Do you want to make this edit?\n ❯ 1. Yes\n   2. No')!;
+      final p = _detect(
+        'Here is the diff for lib/a.dart.\n   10 - rm -rf build\n Do you want to make this edit?\n ❯ 1. Yes\n   2. No',
+      )!;
       expect(p.subject, '');
       expect(p.replies.first.needsConfirm, isTrue, reason: 'judged, even though not shown');
     });
@@ -849,8 +842,12 @@ Do you want to proceed?
     });
 
     test('a standing grant on a risky command names the standing grant first', () {
-      final p = _detect(bash('git push origin main').replaceFirst(
-          '2. No, and tell Claude what to do differently (esc)', "2. Yes, and don't ask again for git push"))!;
+      final p = _detect(
+        bash('git push origin main').replaceFirst(
+          '2. No, and tell Claude what to do differently (esc)',
+          "2. Yes, and don't ask again for git push",
+        ),
+      )!;
       expect(p.replies[0].risk, 'pushes to a remote');
       expect(p.replies[1].risk, standingPermission);
     });
@@ -892,10 +889,7 @@ Do you want to proceed?
         'deletes or overwrites',
       );
       // Two rows up is not read.
-      expect(
-        risk('I will delete the old build output.\nnpm test\nDo you want to proceed?\n❯ 1. Yes\n  2. No'),
-        isNull,
-      );
+      expect(risk('I will delete the old build output.\nnpm test\nDo you want to proceed?\n❯ 1. Yes\n  2. No'), isNull);
     });
 
     test('a subject row is a command: its description does not flag, its command does', () {
@@ -938,8 +932,20 @@ Do you want to proceed?
 
   group('model', () {
     test('a subject takes part in equality', () {
-      const a = PromptInfo(question: 'q', replies: [QuickReply(label: 'a', keys: ['1'])], subject: 'x');
-      const b = PromptInfo(question: 'q', replies: [QuickReply(label: 'a', keys: ['1'])], subject: 'y');
+      const a = PromptInfo(
+        question: 'q',
+        replies: [
+          QuickReply(label: 'a', keys: ['1']),
+        ],
+        subject: 'x',
+      );
+      const b = PromptInfo(
+        question: 'q',
+        replies: [
+          QuickReply(label: 'a', keys: ['1']),
+        ],
+        subject: 'y',
+      );
       expect(a, isNot(b));
       expect(a.hashCode, isNot(b.hashCode));
     });
@@ -956,7 +962,8 @@ Do you want to proceed?
     // The layout of a real 2.1.293 screen (test/fixtures/prompts/claude/): the
     // command sits between two dashed rules, at the same indent as the
     // question, under a description.
-    String dialog({String header = ' Bash command', String command = ' touch /tmp/x.txt', String note = ''}) => '''
+    String dialog({String header = ' Bash command', String command = ' touch /tmp/x.txt', String note = ''}) =>
+        '''
 $header
  Tip: auto mode handles these prompts for you
  Create empty file x.txt
@@ -1027,7 +1034,7 @@ ${'╌' * 53}
     test('a preview never shows the stand-in of a rule', () {
       expect(isDashedRule(cleanPreviewRow('╌' * 30)!), isTrue);
       expect(cleanPreviewRow('╌╌╌'), isNull, reason: 'a short run is not a rule');
-      expect(isDashedRule(cleanPreviewRow('──────────')??''), isFalse);
+      expect(isDashedRule(cleanPreviewRow('──────────') ?? ''), isFalse);
     });
   });
 
@@ -1066,7 +1073,10 @@ ${'╌' * 53}
   tab to add notes | enter to submit answer | esc to interrupt
 ''')!;
       expect(p.question, '1 of 2 · Which room is the desk in?', reason: 'the card is one question of a form');
-      expect(p.replies.map((r) => r.keys), [['1'], ['2']]);
+      expect(p.replies.map((r) => r.keys), [
+        ['1'],
+        ['2'],
+      ]);
     });
   });
 

@@ -14,16 +14,15 @@ void main() {
   setUpAll(loadAppFonts);
 
   Future<UiHarness> fleet(int idle) => UiHarness.create([
-        (
-          profile: MachineProfile(id: 'a', label: 'workstation', host: 'a.example', username: 'dev'),
-          snapshot: snapshotWith(
-            [for (var i = 1; i <= idle; i++) _pane(i)],
-            title: (id) => 'Task ${id.split('p').last}',
-          ),
-        ),
-      ]);
+    (
+      profile: MachineProfile(id: 'a', label: 'workstation', host: 'a.example', username: 'dev'),
+      snapshot: snapshotWith([for (var i = 1; i <= idle; i++) _pane(i)], title: (id) => 'Task ${id.split('p').last}'),
+    ),
+  ]);
 
-  testWidgets('27 idle agents show five, then one line that names the next two; a tap opens it, a tap closes it', (tester) async {
+  testWidgets('27 idle agents show five, then one line that names the next two; a tap opens it, a tap closes it', (
+    tester,
+  ) async {
     final h = await fleet(27);
     await pumpUi(tester, h, height: 3000);
 

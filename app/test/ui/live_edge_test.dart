@@ -21,15 +21,15 @@ class _Harness {
   int get active => timers.where((t) => t.isActive).length;
 
   Future<T> _tracked<T>(Future<T> Function() body) => runZoned(
-        body,
-        zoneSpecification: ZoneSpecification(
-          createTimer: (self, parent, zone, duration, f) {
-            final timer = parent.createTimer(zone, duration, f);
-            timers.add(timer);
-            return timer;
-          },
-        ),
-      );
+    body,
+    zoneSpecification: ZoneSpecification(
+      createTimer: (self, parent, zone, duration, f) {
+        final timer = parent.createTimer(zone, duration, f);
+        timers.add(timer);
+        return timer;
+      },
+    ),
+  );
 
   Future<void> show({
     bool stale = false,
@@ -38,31 +38,30 @@ class _Harness {
     bool tickers = true,
     bool dark = true,
     bool reduceMotion = false,
-  }) =>
-      _tracked(
-        () => tester.pumpWidget(
-          MaterialApp(
-            theme: dark ? AppTheme.dark() : AppTheme.light(),
-            home: MediaQuery(
-              data: MediaQueryData(disableAnimations: reduceMotion),
-              child: TickerMode(
-                enabled: tickers,
-                child: SizedBox(
-                  width: 300,
-                  height: 200,
-                  child: LiveEdge(
-                    stale: stale,
-                    failed: failed,
-                    streaming: streaming,
-                    lastRead: () => lastRead,
-                    now: () => now,
-                  ),
-                ),
+  }) => _tracked(
+    () => tester.pumpWidget(
+      MaterialApp(
+        theme: dark ? AppTheme.dark() : AppTheme.light(),
+        home: MediaQuery(
+          data: MediaQueryData(disableAnimations: reduceMotion),
+          child: TickerMode(
+            enabled: tickers,
+            child: SizedBox(
+              width: 300,
+              height: 200,
+              child: LiveEdge(
+                stale: stale,
+                failed: failed,
+                streaming: streaming,
+                lastRead: () => lastRead,
+                now: () => now,
               ),
             ),
           ),
         ),
-      );
+      ),
+    ),
+  );
 
   /// Moves the clock and the test's clock by [by] together.
   Future<void> pass(Duration by) {
@@ -83,8 +82,11 @@ void main() {
     expect(staleLabel(const Duration(seconds: 60)), 'stale · 1m');
     expect(staleLabel(const Duration(minutes: 59, seconds: 59)), 'stale · 59m');
     expect(staleLabel(const Duration(hours: 3)), 'stale · 3h');
-    expect(staleLabel(const Duration(seconds: -4)), 'stale · 0s',
-        reason: 'a clock that stepped back never shows a negative age');
+    expect(
+      staleLabel(const Duration(seconds: -4)),
+      'stale · 0s',
+      reason: 'a clock that stepped back never shows a negative age',
+    );
   });
 
   group('live', () {
@@ -98,15 +100,17 @@ void main() {
       expect(tester.hasRunningAnimations, isFalse);
     });
 
-    testWidgets('is tinted while output streams and a hairline while quiet',
-        (tester) async {
+    testWidgets('is tinted while output streams and a hairline while quiet', (tester) async {
       final h = _Harness(tester);
       final ds = AppTheme.dark().extension<Ds>()!;
 
       await h.show(streaming: true);
       await tester.pump();
-      expect(_rule(tester), Color.lerp(ds.hairline, ds.accent, 0.6),
-          reason: 'agent-driven, so the tint lands in the same frame');
+      expect(
+        _rule(tester),
+        Color.lerp(ds.hairline, ds.accent, 0.6),
+        reason: 'agent-driven, so the tint lands in the same frame',
+      );
 
       await h.show();
       await tester.pumpAndSettle();
@@ -133,8 +137,7 @@ void main() {
       expect(find.text('stale · 12s'), findsOneWidget);
     });
 
-    testWidgets('redraws once a second while stale, with one timer at a time',
-        (tester) async {
+    testWidgets('redraws once a second while stale, with one timer at a time', (tester) async {
       final h = _Harness(tester);
       h.now = _epoch.add(const Duration(seconds: 12));
       await h.show(stale: true, failed: true);
@@ -228,8 +231,7 @@ void main() {
       expect(_rule(tester), ds.danger);
     });
 
-    testWidgets('the label reads in a calm voice, not once a second',
-        (tester) async {
+    testWidgets('the label reads in a calm voice, not once a second', (tester) async {
       final semantics = tester.ensureSemantics();
       final h = _Harness(tester);
       await h.show(stale: true, failed: true);

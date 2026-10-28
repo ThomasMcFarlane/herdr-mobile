@@ -20,8 +20,7 @@ import '../support/shot.dart' show loadAppFonts;
 import 'board_support.dart';
 import 'ui_harness.dart';
 
-MachineProfile _profile(String id) =>
-    MachineProfile(id: id, label: 'box-$id', host: '$id.example', username: 'dev');
+MachineProfile _profile(String id) => MachineProfile(id: id, label: 'box-$id', host: '$id.example', username: 'dev');
 
 Pane _pane(int i, String status) => (id: 'w1:p$i', ws: 'w1', agent: 'claude', status: status);
 
@@ -38,15 +37,13 @@ Finder _row(String title) => find.widgetWithText(AgentCompactRow, title);
 
 Finder _chip(String label) => find.widgetWithText(AppChip, label);
 
-int _sectionCount(WidgetTester tester, String label) => tester
-    .widget<SectionLabel>(find.byWidgetPredicate((w) => w is SectionLabel && w.label == label))
-    .count!;
+int _sectionCount(WidgetTester tester, String label) =>
+    tester.widget<SectionLabel>(find.byWidgetPredicate((w) => w is SectionLabel && w.label == label)).count!;
 
 double _top(WidgetTester tester, Finder f) => tester.getTopLeft(f).dy;
 
 /// What the Agents tab's badge says, as a screen reader hears it.
-String _badge(WidgetTester tester) =>
-    tester.getSemantics(find.byKey(FloatingTabBar.tabKey('Agents'))).label;
+String _badge(WidgetTester tester) => tester.getSemantics(find.byKey(FloatingTabBar.tabKey('Agents'))).label;
 
 /// Needs you plus to review, as the app's one set counts them.
 int _wanted(WidgetTester tester) {
@@ -99,8 +96,7 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('with nothing blocked there is no pill and no badge: finished work is not a question',
-        (tester) async {
+    testWidgets('with nothing blocked there is no pill and no badge: finished work is not a question', (tester) async {
       final semantics = tester.ensureSemantics();
       final h = await BoardHarness.create([
         _machine('a', [_pane(1, 'done'), _pane(2, 'done'), _pane(3, 'working')]),
@@ -128,8 +124,7 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('an offline machine\'s agents leave every count, and the board says they are offline',
-        (tester) async {
+    testWidgets('an offline machine\'s agents leave every count, and the board says they are offline', (tester) async {
       final h = await BoardHarness.create([
         _machine('a', [_pane(1, 'blocked'), _pane(2, 'done')]),
         _machine('b', [_pane(3, 'blocked')]),
@@ -147,37 +142,40 @@ void main() {
       expect(_wanted(tester), 0, reason: 'nothing out of reach can be answered or marked reviewed');
       expect(find.text('2 offline'), findsOneWidget, reason: 'Needs you lists them, last known');
       expect(find.text('1 offline'), findsOneWidget, reason: 'and so does Done');
-      expect(find.byKey(const ValueKey('mark-all-reviewed')), findsNothing,
-          reason: 'a button that would do nothing is not offered');
+      expect(
+        find.byKey(const ValueKey('mark-all-reviewed')),
+        findsNothing,
+        reason: 'a button that would do nothing is not offered',
+      );
       h.network.goOnline();
       await teardownBoard(tester, h);
     });
 
     testWidgets('sections run Needs you, Done, Working, Idle; so do the chips', (tester) async {
       final h = await BoardHarness.create([
-        _machine('a', [
-          _pane(1, 'idle'),
-          _pane(2, 'working'),
-          _pane(3, 'done'),
-          _pane(4, 'blocked'),
-        ]),
+        _machine('a', [_pane(1, 'idle'), _pane(2, 'working'), _pane(3, 'done'), _pane(4, 'blocked')]),
       ]);
       await pumpBoard(tester, h, height: _tall);
 
       Finder section(String label) => find.widgetWithText(SectionLabel, label);
-      final ys = [for (final s in ['Needs you', 'Done', 'Working', 'Idle']) _top(tester, section(s))];
+      final ys = [
+        for (final s in ['Needs you', 'Done', 'Working', 'Idle']) _top(tester, section(s)),
+      ];
       expect(ys, orderedEquals([...ys]..sort()), reason: 'top to bottom');
       expect(ys.toSet(), hasLength(4));
 
-      final xs = [for (final s in ['Needs you', 'Done', 'Working', 'Idle']) tester.getTopLeft(_chip(s)).dx];
+      final xs = [
+        for (final s in ['Needs you', 'Done', 'Working', 'Idle']) tester.getTopLeft(_chip(s)).dx,
+      ];
       expect(xs, orderedEquals([...xs]..sort()), reason: 'left to right');
       await teardownBoard(tester, h);
     });
   });
 
   group('reviewing', () {
-    testWidgets('opening a finished agent clears Done everywhere on the phone, and herdr is told nothing',
-        (tester) async {
+    testWidgets('opening a finished agent clears Done everywhere on the phone, and herdr is told nothing', (
+      tester,
+    ) async {
       final semantics = tester.ensureSemantics();
       final h = await BoardHarness.create([
         _machine('a', [_pane(1, 'blocked'), _pane(2, 'done'), _pane(3, 'done')]),
@@ -200,11 +198,12 @@ void main() {
       expect(h.fleet.agents.firstWhere((a) => a.pane.id == 'w1:p2').pane.status.name, 'idle');
 
       final calls = h.transports['a']!.calls.map((c) => c.$1);
-      expect(calls.where((m) => m.contains('focus')), isEmpty,
-          reason: 'focusing would clear herdr\'s own state and move the desktop view');
-      final herdrStatuses = [
-        for (final p in h.transports['a']!.snapshot['panes'] as List) (p as Map)['agent_status'],
-      ];
+      expect(
+        calls.where((m) => m.contains('focus')),
+        isEmpty,
+        reason: 'focusing would clear herdr\'s own state and move the desktop view',
+      );
+      final herdrStatuses = [for (final p in h.transports['a']!.snapshot['panes'] as List) (p as Map)['agent_status']];
       expect(herdrStatuses, ['blocked', 'done', 'done'], reason: 'herdr still says done');
       semantics.dispose();
       await teardownBoard(tester, h);
@@ -249,10 +248,9 @@ void main() {
 
   group('honest wait time', () {
     testWidgets('a change found after a 30-minute gap reads ≤ 30m, never <1m', (tester) async {
-      final h = await BoardHarness.create(
-        [_machine('a', [_pane(1, 'working')])],
-        observedAgo: const Duration(minutes: 30),
-      );
+      final h = await BoardHarness.create([
+        _machine('a', [_pane(1, 'working')]),
+      ], observedAgo: const Duration(minutes: 30));
       await pumpBoard(tester, h, height: _tall);
 
       // The app was away for half an hour (its clock then read 30 minutes
@@ -268,11 +266,12 @@ void main() {
     });
 
     testWidgets('a change seen live is exact', (tester) async {
-      final h = await BoardHarness.create([_machine('a', [_pane(1, 'working')])]);
+      final h = await BoardHarness.create([
+        _machine('a', [_pane(1, 'working')]),
+      ]);
       await pumpBoard(tester, h, height: _tall);
 
-      await h.changeStatuses(tester, 'a', [_pane(1, 'blocked')],
-          ago: const Duration(minutes: 12), title: _title);
+      await h.changeStatuses(tester, 'a', [_pane(1, 'blocked')], ago: const Duration(minutes: 12), title: _title);
 
       expect(find.text('12m'), findsOneWidget);
       expect(_said('needs you, 12 minutes'), findsOneWidget);
@@ -282,8 +281,7 @@ void main() {
   });
 
   group('order inside a section', () {
-    testWidgets('Needs you: the one that has waited longest is on top, not the one with the lowest id',
-        (tester) async {
+    testWidgets('Needs you: the one that has waited longest is on top, not the one with the lowest id', (tester) async {
       final h = await BoardHarness.create([
         _machine('a', [_pane(1, 'working'), _pane(2, 'working'), _pane(3, 'working')]),
       ]);
@@ -314,7 +312,9 @@ void main() {
       expect(_said('needs you, 20 minutes'), findsOneWidget);
       expect(_said('needs you, 5 minutes'), findsOneWidget);
       expect(_said('needs you, 1 minute'), findsOneWidget);
-      final y = [for (final i in [1, 2, 3]) _top(tester, _card('task $i'))];
+      final y = [
+        for (final i in [1, 2, 3]) _top(tester, _card('task $i')),
+      ];
       expect(y[1], lessThan(y[0]), reason: '20 minutes above 5');
       expect(y[0], lessThan(y[2]), reason: '5 minutes above 1');
       await teardownBoard(tester, h);
@@ -326,10 +326,20 @@ void main() {
       ]);
       await pumpBoard(tester, h, height: _tall);
 
-      await h.changeStatuses(tester, 'a', [_pane(1, 'done'), _pane(2, 'working')],
-          ago: const Duration(minutes: 2), title: _title);
-      await h.changeStatuses(tester, 'a', [_pane(1, 'done'), _pane(2, 'done')],
-          ago: const Duration(minutes: 40), title: _title);
+      await h.changeStatuses(
+        tester,
+        'a',
+        [_pane(1, 'done'), _pane(2, 'working')],
+        ago: const Duration(minutes: 2),
+        title: _title,
+      );
+      await h.changeStatuses(
+        tester,
+        'a',
+        [_pane(1, 'done'), _pane(2, 'done')],
+        ago: const Duration(minutes: 40),
+        title: _title,
+      );
 
       expect(_top(tester, _card('task 2')), lessThan(_top(tester, _card('task 1'))));
       await teardownBoard(tester, h);
@@ -337,22 +347,25 @@ void main() {
   });
 
   group('quiet', () {
-    testWidgets('a working agent quiet for minutes says so; the order moves with a refresh, not an event',
-        (tester) async {
+    testWidgets('a working agent quiet for minutes says so; the order moves with a refresh, not an event', (
+      tester,
+    ) async {
       // The stream went live 14 minutes ago (the connection's clock starts that
       // far behind) and has heard nothing since.
-      final h = await BoardHarness.create(
-        [_machine('a', [_pane(1, 'working'), _pane(2, 'working')])],
-        observedAgo: const Duration(minutes: 14),
-      );
+      final h = await BoardHarness.create([
+        _machine('a', [_pane(1, 'working'), _pane(2, 'working')]),
+      ], observedAgo: const Duration(minutes: 14));
       await pumpBoard(tester, h, height: _tall);
       expect(_said(RegExp('quiet')), findsNothing, reason: 'on connecting, nothing has been listened to yet');
 
       final panes = [_pane(1, 'working'), _pane(2, 'working')];
       await h.changeStatuses(tester, 'a', panes, title: _title);
       expect(_said('working, quiet for 14 minutes'), findsNWidgets(2), reason: 'the next refresh, 14 minutes on');
-      expect(_top(tester, _card('task 1')), lessThan(_top(tester, _card('task 2'))),
-          reason: 'equally quiet: machine, then pane');
+      expect(
+        _top(tester, _card('task 1')),
+        lessThan(_top(tester, _card('task 2'))),
+        reason: 'equally quiet: machine, then pane',
+      );
 
       // task 1 speaks up: a burst of events, no refresh.
       var notified = 0;
@@ -369,24 +382,28 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pump(const Duration(milliseconds: 100));
       expect(notified, 0, reason: 'no notification per event');
-      expect(_top(tester, _card('task 1')), lessThan(_top(tester, _card('task 2'))),
-          reason: 'the order waits for the next refresh');
+      expect(
+        _top(tester, _card('task 1')),
+        lessThan(_top(tester, _card('task 2'))),
+        reason: 'the order waits for the next refresh',
+      );
 
       await h.changeStatuses(tester, 'a', panes, title: _title);
-      expect(_top(tester, _card('task 2')), lessThan(_top(tester, _card('task 1'))),
-          reason: 'now the quietest one is first');
+      expect(
+        _top(tester, _card('task 2')),
+        lessThan(_top(tester, _card('task 1'))),
+        reason: 'now the quietest one is first',
+      );
       expect(_said('working, quiet for 14 minutes'), findsOneWidget, reason: 'only task 2 is still quiet');
       await teardownBoard(tester, h);
     });
 
     testWidgets('an agent that is not working never says quiet', (tester) async {
-      final h = await BoardHarness.create(
-        [_machine('a', [_pane(1, 'blocked'), _pane(2, 'done'), _pane(3, 'idle')])],
-        observedAgo: const Duration(minutes: 14),
-      );
+      final h = await BoardHarness.create([
+        _machine('a', [_pane(1, 'blocked'), _pane(2, 'done'), _pane(3, 'idle')]),
+      ], observedAgo: const Duration(minutes: 14));
       await pumpBoard(tester, h, height: _tall);
-      await h.changeStatuses(
-          tester, 'a', [_pane(1, 'blocked'), _pane(2, 'done'), _pane(3, 'idle')], title: _title);
+      await h.changeStatuses(tester, 'a', [_pane(1, 'blocked'), _pane(2, 'done'), _pane(3, 'idle')], title: _title);
 
       expect(find.textContaining('quiet'), findsNothing);
       await teardownBoard(tester, h);
@@ -407,20 +424,17 @@ void main() {
       expect(find.byType(AgentCompactRow), findsNothing);
       expect(find.byTooltip('Compact list'), findsOneWidget);
 
-      await h.changeStatuses(tester, 'a', [for (var i = 1; i <= 5; i++) _pane(i, 'working')],
-          title: _title);
+      await h.changeStatuses(tester, 'a', [for (var i = 1; i <= 5; i++) _pane(i, 'working')], title: _title);
       expect(find.byType(AgentCard), findsNothing);
       expect(find.byType(AgentCompactRow), findsNWidgets(5));
       expect(find.byTooltip('Cards with preview'), findsOneWidget);
 
-      await h.changeStatuses(tester, 'a', [for (var i = 1; i <= 4; i++) _pane(i, 'working')],
-          title: _title);
+      await h.changeStatuses(tester, 'a', [for (var i = 1; i <= 4; i++) _pane(i, 'working')], title: _title);
       expect(find.byType(AgentCard), findsNWidgets(4), reason: 'back under five');
       await teardownBoard(tester, h);
     });
 
-    testWidgets('the button makes an explicit choice that the count no longer overrides',
-        (tester) async {
+    testWidgets('the button makes an explicit choice that the count no longer overrides', (tester) async {
       final h = await auto([for (var i = 1; i <= 6; i++) _pane(i, 'working')]);
       await pumpBoard(tester, h, height: _tall);
       expect(find.byType(AgentCompactRow), findsNWidgets(6));
@@ -431,15 +445,13 @@ void main() {
       expect(find.byType(AgentCard), findsNWidgets(6));
       expect(h.appSettings.density, BoardDensity.cards);
 
-      await h.changeStatuses(tester, 'a', [for (var i = 1; i <= 2; i++) _pane(i, 'working')],
-          title: _title);
+      await h.changeStatuses(tester, 'a', [for (var i = 1; i <= 2; i++) _pane(i, 'working')], title: _title);
       expect(find.byType(AgentCard), findsNWidgets(2));
       await tester.tap(find.byTooltip('Compact list'));
       await settle(tester);
       expect(h.appSettings.density, BoardDensity.compact);
 
-      await h.changeStatuses(tester, 'a', [for (var i = 1; i <= 2; i++) _pane(i, 'working')],
-          title: _title);
+      await h.changeStatuses(tester, 'a', [for (var i = 1; i <= 2; i++) _pane(i, 'working')], title: _title);
       expect(find.byType(AgentCompactRow), findsNWidgets(2), reason: 'two agents, but compact was chosen');
       await teardownBoard(tester, h);
     });
@@ -455,8 +467,7 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('Settings > Look > Agent list sets Auto, Cards or Compact, so Auto can come back',
-        (tester) async {
+    testWidgets('Settings > Look > Agent list sets Auto, Cards or Compact, so Auto can come back', (tester) async {
       final h = await BoardHarness.create([
         _machine('a', [for (var i = 1; i <= 6; i++) _pane(i, 'working')]),
       ]);
@@ -464,10 +475,8 @@ void main() {
       expect(h.appSettings.density, BoardDensity.cards, reason: 'the harness pins cards');
       expect(find.byType(AgentCard), findsNWidgets(6));
 
-      Finder option(String label) => find.descendant(
-            of: find.byType(Segmented<BoardDensity>),
-            matching: find.text(label),
-          );
+      Finder option(String label) =>
+          find.descendant(of: find.byType(Segmented<BoardDensity>), matching: find.text(label));
       Future<void> choose(String label) async {
         await tester.tap(find.byKey(FloatingTabBar.tabKey('Settings')));
         await settle(tester);
@@ -513,7 +522,7 @@ void main() {
 /// A time label by what a screen reader hears: the visible text is the time
 /// only, the words carry the state.
 Finder _said(Pattern label) => find.byWidgetPredicate((w) {
-      if (w is! Semantics) return false;
-      final l = w.properties.label;
-      return l != null && (label is String ? l == label : label.allMatches(l).isNotEmpty);
-    });
+  if (w is! Semantics) return false;
+  final l = w.properties.label;
+  return l != null && (label is String ? l == label : label.allMatches(l).isNotEmpty);
+});

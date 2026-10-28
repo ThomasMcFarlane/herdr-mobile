@@ -83,7 +83,10 @@ class OmpSessionLocator {
       } else {
         throw listed.error!;
       }
-      final names = {for (final f in folders) if (f.isDirectory) f.name};
+      final names = {
+        for (final f in folders)
+          if (f.isDirectory) f.name,
+      };
       final tries = [
         if (base.isNotEmpty)
           for (final n in names)

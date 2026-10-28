@@ -68,7 +68,11 @@ void main() {
       final rig = await _rig(fs);
 
       for (final bad in ['../../../../etc/passwd', 'a/b', 'a b', 'x' * 65, '']) {
-        expect(await logs.pathOf(rig.machine, _parentLog, SubagentInfo(name: 'x', logId: bad)), isNull, reason: bad);
+        expect(
+          await logs.pathOf(rig.machine, _parentLog, SubagentInfo(name: 'x', logId: bad)),
+          isNull,
+          reason: bad,
+        );
       }
       expect(fs.calls, isEmpty);
     });
@@ -84,15 +88,17 @@ void main() {
     test('running while its file was written lately, finished otherwise', () async {
       final fs = FakeFs()
         ..addFile('$_dir/agent-$_agent.jsonl', '{}\n', modified: DateTime.now().toUtc())
-        ..addFile('$_dir/agent-a7348e8a87aaf897f.jsonl', '{}\n', modified: DateTime.now().toUtc().subtract(const Duration(minutes: 5)));
+        ..addFile(
+          '$_dir/agent-a7348e8a87aaf897f.jsonl',
+          '{}\n',
+          modified: DateTime.now().toUtc().subtract(const Duration(minutes: 5)),
+        );
       final rig = await _rig(fs);
 
-      final states = await logs.refine(
-        rig.machine,
-        _parentLog,
-        const [SubagentInfo(name: 'fresh', logId: _agent), SubagentInfo(name: 'old', logId: 'a7348e8a87aaf897f')],
-        running: const Duration(seconds: 32),
-      );
+      final states = await logs.refine(rig.machine, _parentLog, const [
+        SubagentInfo(name: 'fresh', logId: _agent),
+        SubagentInfo(name: 'old', logId: 'a7348e8a87aaf897f'),
+      ], running: const Duration(seconds: 32));
 
       expect(states, {'fresh': SubagentState.running, 'old': SubagentState.finished});
     });
@@ -116,7 +122,8 @@ void main() {
       await eventually(() => parent.link == AgentLink.live, reason: 'parent followed');
       expect(parent.logPath, _parentLog);
 
-      final childSource = FakeLogSource()..write(File('test/fixtures/claude_logs/subagents/agent-$_agent.jsonl').readAsLinesSync());
+      final childSource = FakeLogSource()
+        ..write(File('test/fixtures/claude_logs/subagents/agent-$_agent.jsonl').readAsLinesSync());
       final child = ObservedAgentSession(
         machine: rig.machine,
         paneId: 'w1:p1',
@@ -148,7 +155,9 @@ void main() {
       const info = SubagentInfo(name: 'list_files', logId: child);
 
       expect(await logs.pathOf(rig.machine, '/ignored.jsonl', info), childFile);
-      final states = await logs.refine(rig.machine, '/ignored.jsonl', const [info], running: const Duration(seconds: 32));
+      final states = await logs.refine(rig.machine, '/ignored.jsonl', const [
+        info,
+      ], running: const Duration(seconds: 32));
       expect(states, {'list_files': SubagentState.running});
     });
 

@@ -205,14 +205,14 @@ class RowList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SliverList.builder(
-        itemCount: rows.length,
-        itemBuilder: (context, i) => _RowEntry(rows: rows, index: i),
-        findChildIndexCallback: (key) {
-          if (key is! ValueKey<String>) return null;
-          final i = rows.indexWhere((r) => r.id == key.value);
-          return i < 0 ? null : i;
-        },
-      );
+    itemCount: rows.length,
+    itemBuilder: (context, i) => _RowEntry(rows: rows, index: i),
+    findChildIndexCallback: (key) {
+      if (key is! ValueKey<String>) return null;
+      final i = rows.indexWhere((r) => r.id == key.value);
+      return i < 0 ? null : i;
+    },
+  );
 }
 
 /// A list of [RowSpec]s as a box: for rows inside a sheet, a fold or a group
@@ -224,10 +224,10 @@ class RowColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [for (var i = 0; i < rows.length; i++) _RowEntry(rows: rows, index: i)],
-      );
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    mainAxisSize: MainAxisSize.min,
+    children: [for (var i = 0; i < rows.length; i++) _RowEntry(rows: rows, index: i)],
+  );
 }
 
 class _RowEntry extends StatelessWidget {
@@ -247,7 +247,10 @@ class _RowEntry extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
-      children: [body, Hairline(indent: indent)],
+      children: [
+        body,
+        Hairline(indent: indent),
+      ],
     );
   }
 
@@ -355,7 +358,10 @@ class _ActionRowView extends StatelessWidget {
               if (icon != null) ...[
                 SizedBox(
                   width: RowMetrics.leadingExtent,
-                  child: _Faded(enabled: spec.enabled, child: Icon(icon, size: IconSize.bar, color: color)),
+                  child: _Faded(
+                    enabled: spec.enabled,
+                    child: Icon(icon, size: IconSize.bar, color: color),
+                  ),
                 ),
                 const SizedBox(width: Gap.md),
               ],
@@ -425,6 +431,5 @@ class _Faded extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) =>
-      enabled ? child : Opacity(opacity: RowMetrics.disabledText, child: child);
+  Widget build(BuildContext context) => enabled ? child : Opacity(opacity: RowMetrics.disabledText, child: child);
 }

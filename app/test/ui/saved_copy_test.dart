@@ -21,7 +21,10 @@ Future<void> _pump(WidgetTester tester, FakeAgentSession session) async {
   tester.view.devicePixelRatio = 2;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
-    MaterialApp(theme: AppTheme.light(), home: AgentSessionScreen(key: ObjectKey(session), session: session)),
+    MaterialApp(
+      theme: AppTheme.light(),
+      home: AgentSessionScreen(key: ObjectKey(session), session: session),
+    ),
   );
   await tester.pump(const Duration(milliseconds: 100));
 }
@@ -40,7 +43,9 @@ void main() {
       unseenDone: unseenDone,
     )..cachedAsOfValue = DateTime.now().subtract(const Duration(minutes: 3));
 
-    testWidgets('the transcript is on screen at once, under a quiet Updating… strip, not a blank Connecting…', (tester) async {
+    testWidgets('the transcript is on screen at once, under a quiet Updating… strip, not a blank Connecting…', (
+      tester,
+    ) async {
       final session = copy();
       await _pump(tester, session);
       expect(find.textContaining('Fix the build', findRichText: true), findsOneWidget);
@@ -70,7 +75,9 @@ void main() {
       expect(_strip('Updating…'), findsNothing);
     });
 
-    testWidgets('a request that waited when the copy was saved is not offered, and comes back with the attach', (tester) async {
+    testWidgets('a request that waited when the copy was saved is not offered, and comes back with the attach', (
+      tester,
+    ) async {
       final request = PendingPermission(7, permissionRequest(rawInput: {'command': 'rm -rf build'}));
       final session = copy(pending: [request]);
       await _pump(tester, session);
@@ -119,7 +126,9 @@ void main() {
       expect(waiting, findsNothing, reason: 'the request itself is shown now');
     });
 
-    testWidgets('a finished session opened from its saved copy stays to review until the live replay shows it', (tester) async {
+    testWidgets('a finished session opened from its saved copy stays to review until the live replay shows it', (
+      tester,
+    ) async {
       final session = copy(unseenDone: true);
       await _pump(tester, session);
       session.setLink(AgentLink.failed, error: 'Could not reach the session on devbox.');
@@ -142,7 +151,10 @@ void main() {
   group('savedCopyNotice', () {
     final now = DateTime(2026, 3, 1, 15, 30);
     test('today, yesterday, earlier', () {
-      expect(savedCopyNotice(DateTime(2026, 3, 1, 14, 2), now), 'Showing the copy saved today at 14:02. Nothing here can be answered.');
+      expect(
+        savedCopyNotice(DateTime(2026, 3, 1, 14, 2), now),
+        'Showing the copy saved today at 14:02. Nothing here can be answered.',
+      );
       expect(savedCopyNotice(DateTime(2026, 3, 1, 9, 5), now), contains('saved today at 09:05.'));
       expect(savedCopyNotice(DateTime(2026, 2, 28, 23, 59), now), contains('saved yesterday at 23:59.'));
       expect(savedCopyNotice(DateTime(2026, 2, 3, 8, 0), now), contains('saved on 3 Feb at 08:00.'));
@@ -178,7 +190,9 @@ void main() {
       );
     }
 
-    testWidgets('a finger going down takes one hold; lifting without opening lets it go after a moment', (tester) async {
+    testWidgets('a finger going down takes one hold; lifting without opening lets it go after a moment', (
+      tester,
+    ) async {
       await pump(tester);
       final gesture = await tester.startGesture(tester.getCenter(find.byType(SizedBox).last));
       expect(sessions.preconnected, ['m/k1']);
@@ -250,7 +264,10 @@ void main() {
     testWidgets('a second finger does not take a second hold', (tester) async {
       await pump(tester);
       final a = await tester.startGesture(tester.getCenter(find.byType(SizedBox).last), pointer: 1);
-      final b = await tester.startGesture(tester.getCenter(find.byType(SizedBox).last) + const Offset(5, 5), pointer: 2);
+      final b = await tester.startGesture(
+        tester.getCenter(find.byType(SizedBox).last) + const Offset(5, 5),
+        pointer: 2,
+      );
       expect(sessions.preconnected, hasLength(1));
       await b.up();
       await a.up();

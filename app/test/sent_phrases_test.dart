@@ -132,24 +132,22 @@ void main() {
 
   group('quickChips', () {
     test('your own list stays first once you changed it', () {
-      expect(
-        quickChips(phrases: ['mine', 'other'], untouched: false, learned: ['learned']),
-        ['mine', 'other', 'learned'],
-      );
+      expect(quickChips(phrases: ['mine', 'other'], untouched: false, learned: ['learned']), [
+        'mine',
+        'other',
+        'learned',
+      ]);
     });
 
     test('while the shipped list is untouched, what you really send goes first', () {
-      expect(
-        quickChips(phrases: QuickPhrases.defaults, untouched: true, learned: ['create pr']),
-        ['create pr', ...QuickPhrases.defaults],
-      );
+      expect(quickChips(phrases: QuickPhrases.defaults, untouched: true, learned: ['create pr']), [
+        'create pr',
+        ...QuickPhrases.defaults,
+      ]);
     });
 
     test('a phrase that is also learned shows once, where the order puts it first', () {
-      expect(
-        quickChips(phrases: ['Continue', 'b'], untouched: true, learned: ['continue']),
-        ['continue', 'b'],
-      );
+      expect(quickChips(phrases: ['Continue', 'b'], untouched: true, learned: ['continue']), ['continue', 'b']);
     });
   });
 

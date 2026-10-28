@@ -156,11 +156,16 @@ void main() {
                 {
                   'type': 'diff',
                   'path': 'lib/feature/parse.dart',
-                  'oldText': '${[for (var i = 0; i < 30; i++) 'final line$i = $i;'].join('\n')}\nString parse(String s) => lower(s);\n',
+                  'oldText':
+                      '${[for (var i = 0; i < 30; i++) 'final line$i = $i;'].join('\n')}\nString parse(String s) => lower(s);\n',
                   'newText':
                       '${[for (var i = 0; i < 30; i++) 'final line$i = $i;'].join('\n')}\nString parse(String s) => fold(normalize(s));\nString fold(String s) => s;\n',
                 },
-                {'type': 'diff', 'path': 'test/parse_test.dart', 'newText': 'void main() {\n  test(\'Hà Nội\', () {});\n}\n'},
+                {
+                  'type': 'diff',
+                  'path': 'test/parse_test.dart',
+                  'newText': 'void main() {\n  test(\'Hà Nội\', () {});\n}\n',
+                },
               ],
             ),
           ),
@@ -179,8 +184,16 @@ void main() {
               title: 'Approve Plan',
               rawInput: {'plan': _plan},
               options: const [
-                PermissionOption(optionId: 'a', name: 'Yes, and bypass permissions', kind: PermissionOptionKind.allowAlways),
-                PermissionOption(optionId: 'b', name: 'Yes, manually approve edits', kind: PermissionOptionKind.allowOnce),
+                PermissionOption(
+                  optionId: 'a',
+                  name: 'Yes, and bypass permissions',
+                  kind: PermissionOptionKind.allowAlways,
+                ),
+                PermissionOption(
+                  optionId: 'b',
+                  name: 'Yes, manually approve edits',
+                  kind: PermissionOptionKind.allowOnce,
+                ),
                 PermissionOption(optionId: 'c', name: 'No, keep planning', kind: PermissionOptionKind.rejectOnce),
               ],
             ),
@@ -199,8 +212,16 @@ void main() {
     'danger-chip': () => FakeAgentSession(
       title: 'Sửa lỗi định dạng ngày tháng ở màn hình thanh toán',
       state: stateWith(
-        items: [..._history(), TranscriptNote(key: 'n1', text: 'Mode changed to Bypass Permissions', modeId: 'bypassPermissions')],
-        options: [_mode('bypassPermissions', 'Bypass Permissions'), _model, _effort, const BooleanConfigOption(id: 'fast', name: 'Fast', value: true)],
+        items: [
+          ..._history(),
+          TranscriptNote(key: 'n1', text: 'Mode changed to Bypass Permissions', modeId: 'bypassPermissions'),
+        ],
+        options: [
+          _mode('bypassPermissions', 'Bypass Permissions'),
+          _model,
+          _effort,
+          const BooleanConfigOption(id: 'fast', name: 'Fast', value: true),
+        ],
       ),
     ),
     'chips-overflow': () => FakeAgentSession(
@@ -245,14 +266,7 @@ void main() {
       }
     }
     testWidgets('compact ${brightness.name}', (tester) async {
-      await shoot(
-        tester,
-        'compact',
-        cases['danger-chip']!(),
-        const Size(892, 412),
-        brightness,
-        keyboard: 180,
-      );
+      await shoot(tester, 'compact', cases['danger-chip']!(), const Size(892, 412), brightness, keyboard: 180);
     });
     testWidgets('landscape ${brightness.name}', (tester) async {
       await shoot(tester, 'landscape', cases['danger-chip']!(), const Size(892, 412), brightness);

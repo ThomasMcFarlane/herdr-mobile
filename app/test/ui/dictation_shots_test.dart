@@ -64,7 +64,9 @@ void main() {
     addTearDown(tester.view.reset);
 
     final session = FakeAgentSession(
-      state: stateWith(items: [userMsg('u1', 'Fix the Hà Nội locale bug'), agentMsg('a1', 'Done. Want me to run the tests?')]),
+      state: stateWith(
+        items: [userMsg('u1', 'Fix the Hà Nội locale bug'), agentMsg('a1', 'Done. Want me to run the tests?')],
+      ),
     );
     final engine = FakeEngine();
     final dictation = Dictation(engine, MemoryDictationStore());
@@ -127,11 +129,7 @@ void main() {
     expect(tester.takeException(), isNull, reason: '$name ${brightness.name} $size');
   }
 
-  const sizes = [
-    (Size(412, 892), 1.0, 0.0),
-    (Size(320, 640), 1.6, 0.0),
-    (Size(892, 412), 1.0, 220.0),
-  ];
+  const sizes = [(Size(412, 892), 1.0, 0.0), (Size(320, 640), 1.6, 0.0), (Size(892, 412), 1.0, 220.0)];
   for (final (size, scale, keyboard) in sizes) {
     for (final brightness in Brightness.values) {
       testWidgets('idle ${brightness.name} ${size.width}', (tester) async {

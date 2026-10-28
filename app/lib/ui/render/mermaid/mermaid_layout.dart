@@ -249,7 +249,8 @@ core.RenderScene ensureReadable(
       case core.SceneText() when n.style.fontFamily != family:
         mark();
         return n.copyWith(style: n.style.copyWith(fontFamily: family));
-      case core.SceneShape(:final fill?) when fill.gradient == null && (fill.color.value == _white || fill.color.value == _erLabelBox):
+      case core.SceneShape(:final fill?)
+          when fill.gradient == null && (fill.color.value == _white || fill.color.value == _erLabelBox):
         mark();
         return n.copyWith(fill: core.Fill(surface));
       default:

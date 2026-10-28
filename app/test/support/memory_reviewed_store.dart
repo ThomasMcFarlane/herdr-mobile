@@ -10,9 +10,8 @@ class MemoryReviewedStore implements ReviewedStore {
   bool failing = false;
 
   @override
-  Future<ReviewedMap?> read() async => saved == null
-      ? null
-      : {for (final MapEntry(:key, :value) in saved!.entries) key: Map.of(value)};
+  Future<ReviewedMap?> read() async =>
+      saved == null ? null : {for (final MapEntry(:key, :value) in saved!.entries) key: Map.of(value)};
 
   @override
   Future<void> write(ReviewedMap reviewed) async {

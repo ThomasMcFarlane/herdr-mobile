@@ -64,8 +64,7 @@ void main() {
     });
 
     test('never replaces a different pin that is already saved', () async {
-      final store = MemoryProfileStore()
-        ..profiles = [_unpinned.copyWith(hostKeyFingerprint: 'SHA256:one')];
+      final store = MemoryProfileStore()..profiles = [_unpinned.copyWith(hostKeyFingerprint: 'SHA256:one')];
       final machines = MachineRepository(profiles: store, secrets: MemorySecretStore());
       await machines.load();
 

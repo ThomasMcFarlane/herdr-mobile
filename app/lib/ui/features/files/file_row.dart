@@ -4,7 +4,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/models/remote_file.dart';
 import '../../../data/services/remote_files.dart';
 import '../../../data/words/elapsed.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'file_format.dart';
 import 'file_thumb.dart';
 import 'file_widgets.dart';
@@ -75,41 +77,44 @@ class FileRow extends StatelessWidget {
           onTap: onTap,
           minHeight: _rowHeight,
           padding: const EdgeInsets.symmetric(horizontal: Gap.gutter - PressRow.inset, vertical: Gap.md),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: RowMetrics.leadingExtent,
-                    child: e.isDirectory
-                        ? IconTile(icon: iconForEntry(e), color: ds.textSecondary)
-                        : FileThumb(files: files, entry: e, icon: iconForEntry(e), loader: thumbs),
-                  ),
-                  const SizedBox(width: Gap.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        MiddleEllipsisText(e.name, style: Type.row.copyWith(color: ds.text)),
-                        if (sub.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: Gap.hair),
-                            child: Text(
-                              sub,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              // The one muted line: size and time.
-                              style: Type.secondary.copyWith(color: ds.textSecondary),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  if (trailing != null) ...[const SizedBox(width: Gap.xs), trailing!] else if (e.isDirectory) ...[
-                    const SizedBox(width: Gap.md),
-                    Icon(LucideIcons.chevronRight, size: IconSize.row, color: ds.textTertiary),
-                  ],
-                ],
+          child: Row(
+            children: [
+              SizedBox(
+                width: RowMetrics.leadingExtent,
+                child: e.isDirectory
+                    ? IconTile(icon: iconForEntry(e), color: ds.textSecondary)
+                    : FileThumb(files: files, entry: e, icon: iconForEntry(e), loader: thumbs),
               ),
+              const SizedBox(width: Gap.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    MiddleEllipsisText(e.name, style: Type.row.copyWith(color: ds.text)),
+                    if (sub.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: Gap.hair),
+                        child: Text(
+                          sub,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          // The one muted line: size and time.
+                          style: Type.secondary.copyWith(color: ds.textSecondary),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (trailing != null) ...[
+                const SizedBox(width: Gap.xs),
+                trailing!,
+              ] else if (e.isDirectory) ...[
+                const SizedBox(width: Gap.md),
+                Icon(LucideIcons.chevronRight, size: IconSize.row, color: ds.textTertiary),
+              ],
+            ],
+          ),
         ),
         Hairline(indent: indent),
       ],

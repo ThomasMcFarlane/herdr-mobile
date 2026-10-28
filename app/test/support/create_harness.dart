@@ -43,9 +43,9 @@ class CreateHarness {
     for (final t in stubs.values) {
       // Enough for a pane screen to open on a new pane.
       t.on['pane.read'] = (_) => {
-            'type': 'pane_read',
-            'read': {'text': '', 'truncated': false},
-          };
+        'type': 'pane_read',
+        'read': {'text': '', 'truncated': false},
+      };
     }
     final fleet = FleetRepository(
       machines: machines,
@@ -63,17 +63,22 @@ class CreateHarness {
     }
     await fleet.settled();
     final hosts = <String, FakeAgentHost>{};
-    final agents = AgentSessionRepository(fleet: fleet, hostFor: (c) => hosts.putIfAbsent(c.profile.id, FakeAgentHost.new));
+    final agents = AgentSessionRepository(
+      fleet: fleet,
+      hostFor: (c) => hosts.putIfAbsent(c.profile.id, FakeAgentHost.new),
+    );
     final agentStore = MemorySessionStore();
     final agentSettings = AgentSessionSettings(agentStore);
     await agentSettings.load();
     final h = CreateHarness._(machines, fleet, stubs, hosts, agents, agentStore, agentSettings);
     if (waitOnline) {
       // Enabled machines are online once their first snapshot has landed.
-      await eventually(() => [
-            for (final s in spec)
-              if (s.profile.enabled) h.connection(s.profile.id).isLive,
-          ].every((live) => live));
+      await eventually(
+        () => [
+          for (final s in spec)
+            if (s.profile.enabled) h.connection(s.profile.id).isLive,
+        ].every((live) => live),
+      );
     }
     return h;
   }

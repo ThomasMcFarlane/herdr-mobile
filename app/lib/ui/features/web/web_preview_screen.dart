@@ -11,7 +11,9 @@ import '../../../data/models/web_bridge.dart';
 import '../../../data/repositories/fleet_repository.dart';
 import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/web_preview.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../render/visible_text.dart';
 import '../../support/open_link.dart';
 import '../pane/link_sheet.dart';
@@ -50,9 +52,7 @@ final class ServerPage extends WebPage {
 /// when it is known, else [path] (relative to [cwd]) looked up first.
 final class FilePage extends WebPage {
   const FilePage(this.path, {this.cwd}) : stat = null;
-  FilePage.stat(RemoteStat this.stat)
-      : path = stat.path,
-        cwd = null;
+  FilePage.stat(RemoteStat this.stat) : path = stat.path, cwd = null;
 
   final String path;
   final String? cwd;
@@ -70,7 +70,9 @@ final class FilePage extends WebPage {
 Future<void> openWebPreview(BuildContext context, MachineConnection machine, WebPage page) {
   FocusManager.instance.primaryFocus?.unfocus();
   return Navigator.of(context).push(
-    MaterialPageRoute<void>(builder: (_) => WebPreviewScreen(machine: machine, page: page)),
+    MaterialPageRoute<void>(
+      builder: (_) => WebPreviewScreen(machine: machine, page: page),
+    ),
   );
 }
 
@@ -185,9 +187,9 @@ class _WebPreviewScreenState extends State<WebPreviewScreen> {
       // After the first frame: the hold tells the fleet's listeners, which
       // must not rebuild while this route is being built.
       _release = context.read<FleetRepository>().holdAlive(
-            widget.machine.profile.id,
-            page: '${widget.page.label} on ${widget.machine.profile.label}',
-          );
+        widget.machine.profile.id,
+        page: '${widget.page.label} on ${widget.machine.profile.label}',
+      );
       unawaited(_openPage());
     });
   }
@@ -405,10 +407,7 @@ class _WebPreviewScreenState extends State<WebPreviewScreen> {
         _toaster.show('$where is a $service port. Open its link from the terminal if you mean to.');
         return;
       }
-      _toaster.show(
-        '$where isn’t open on this phone.',
-        action: ToastAction('Open', () => unawaited(_forward(url))),
-      );
+      _toaster.show('$where isn’t open on this phone.', action: ToastAction('Open', () => unawaited(_forward(url))));
       return;
     }
     if (isMachineLocalUrl(url.toString())) {
@@ -569,7 +568,8 @@ class _WebPreviewScreenState extends State<WebPreviewScreen> {
       WebResourceErrorType.timeout => '$machine took too long to answer. Retry asks again.',
       WebResourceErrorType.io => 'The connection to $machine broke while the page loaded. Retry asks again.',
       WebResourceErrorType.redirectLoop => 'The page sends itself round in a loop. Retry asks again.',
-      WebResourceErrorType.webContentProcessTerminated => 'The page stopped: its view ran out of memory or crashed. Retry opens it again.',
+      WebResourceErrorType.webContentProcessTerminated =>
+        'The page stopped: its view ran out of memory or crashed. Retry opens it again.',
       _ when error.description.contains('EMPTY_RESPONSE') || error.description.contains('CONNECTION_CLOSED') =>
         'The server on $machine closed the connection without an answer. Is it still running? Retry asks again.',
       _ when error.description.contains('CONNECTION_RESET') =>
@@ -665,10 +665,12 @@ class _WebPreviewScreenState extends State<WebPreviewScreen> {
     final ds = context.ds;
     final page = _shownPage;
     final foreign = _foreign;
-    final place = page?.place ?? switch (widget.page) {
-      ServerPage(:final link) => MachinePage.server(link).place,
-      FilePage() => widget.page.label,
-    };
+    final place =
+        page?.place ??
+        switch (widget.page) {
+          ServerPage(:final link) => MachinePage.server(link).place,
+          FilePage() => widget.page.label,
+        };
     // An app the agent started says what it is (`python label_server.py`) where
     // the address `localhost:8790` said nothing; the address stays in `⋯`.
     final appName = !foreign && widget.page is ServerPage ? (widget.page as ServerPage).name : null;
@@ -699,10 +701,10 @@ class _WebPreviewScreenState extends State<WebPreviewScreen> {
               subtitle: foreign
                   ? address
                   : address == title
-                      ? widget.machine.profile.label
-                      : appName != null
-                          ? '${widget.machine.profile.label} · $address'
-                          : '$address · ${widget.machine.profile.label}',
+                  ? widget.machine.profile.label
+                  : appName != null
+                  ? '${widget.machine.profile.label} · $address'
+                  : '$address · ${widget.machine.profile.label}',
               actions: [
                 CircleButton(
                   icon: LucideIcons.rotateCw,
@@ -746,8 +748,8 @@ class _WebPreviewScreenState extends State<WebPreviewScreen> {
                                   ],
                                 )
                               : _phase == _Phase.opening
-                                  ? const Center(child: BusySpinner())
-                                  : null,
+                              ? const Center(child: BusySpinner())
+                              : null,
                         ),
                       ),
                   ],

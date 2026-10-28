@@ -11,28 +11,25 @@ import 'support/update_fakes.dart';
 const _base = 'https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.7';
 
 ReleaseInfo _release([String version = '0.1.7']) => ReleaseInfo(
-      version: version,
-      apkUrl: '$_base/herdr-mobile-$version.apk',
-      size: 1000,
-      pageUrl: 'https://github.com/tuan3w/herdr-mobile/releases/tag/v$version',
-      notes: '### Better\n\n- a thing',
-      sha256: 'a' * 64,
-    );
+  version: version,
+  apkUrl: '$_base/herdr-mobile-$version.apk',
+  size: 1000,
+  pageUrl: 'https://github.com/tuan3w/herdr-mobile/releases/tag/v$version',
+  notes: '### Better\n\n- a thing',
+  sha256: 'a' * 64,
+);
 
-Map<String, Object?> _github({
-  String tag = 'v0.1.7',
-  List<Map<String, Object?>>? assets,
-}) =>
-    {
-      'tag_name': tag,
-      'html_url': 'https://github.com/tuan3w/herdr-mobile/releases/tag/$tag',
-      'body': '  notes  ',
-      'assets': assets ??
-          [
-            {'name': 'herdr-mobile-0.1.7.apk', 'size': 1000, 'browser_download_url': '$_base/herdr-mobile-0.1.7.apk'},
-            {'name': 'SHA256SUMS', 'size': 90, 'browser_download_url': '$_base/SHA256SUMS'},
-          ],
-    };
+Map<String, Object?> _github({String tag = 'v0.1.7', List<Map<String, Object?>>? assets}) => {
+  'tag_name': tag,
+  'html_url': 'https://github.com/tuan3w/herdr-mobile/releases/tag/$tag',
+  'body': '  notes  ',
+  'assets':
+      assets ??
+      [
+        {'name': 'herdr-mobile-0.1.7.apk', 'size': 1000, 'browser_download_url': '$_base/herdr-mobile-0.1.7.apk'},
+        {'name': 'SHA256SUMS', 'size': 90, 'browser_download_url': '$_base/SHA256SUMS'},
+      ],
+};
 
 class _BrokenStore implements UpdateStore {
   @override
@@ -55,22 +52,34 @@ void main() {
 
     test('prefers the digest GitHub states with the asset', () {
       final hex = 'ab' * 32;
-      final r = ReleaseInfo.fromGitHub(_github(assets: [
-        {
-          'name': 'herdr-mobile-0.1.7.apk',
-          'size': 5,
-          'digest': 'sha256:${hex.toUpperCase()}',
-          'browser_download_url': '$_base/herdr-mobile-0.1.7.apk',
-        },
-      ]))!;
+      final r = ReleaseInfo.fromGitHub(
+        _github(
+          assets: [
+            {
+              'name': 'herdr-mobile-0.1.7.apk',
+              'size': 5,
+              'digest': 'sha256:${hex.toUpperCase()}',
+              'browser_download_url': '$_base/herdr-mobile-0.1.7.apk',
+            },
+          ],
+        ),
+      )!;
       expect(r.sha256, hex);
     });
 
     test('never fetches from a host the release names outside the repository', () {
-      final r = ReleaseInfo.fromGitHub(_github(assets: [
-        {'name': 'herdr-mobile-0.1.7.apk', 'size': 5, 'browser_download_url': 'https://evil.example/herdr-mobile-0.1.7.apk'},
-        {'name': 'SHA256SUMS', 'size': 5, 'browser_download_url': '$_base/SHA256SUMS'},
-      ]));
+      final r = ReleaseInfo.fromGitHub(
+        _github(
+          assets: [
+            {
+              'name': 'herdr-mobile-0.1.7.apk',
+              'size': 5,
+              'browser_download_url': 'https://evil.example/herdr-mobile-0.1.7.apk',
+            },
+            {'name': 'SHA256SUMS', 'size': 5, 'browser_download_url': '$_base/SHA256SUMS'},
+          ],
+        ),
+      );
       expect(r, isNull);
     });
 
@@ -81,24 +90,45 @@ void main() {
 
     test('an APK that cannot be checked is refused with a reason', () {
       expect(
-        () => ReleaseInfo.fromGitHub(_github(assets: [
-          {'name': 'herdr-mobile-0.1.7.apk', 'size': 5, 'browser_download_url': '$_base/herdr-mobile-0.1.7.apk'},
-        ])),
+        () => ReleaseInfo.fromGitHub(
+          _github(
+            assets: [
+              {'name': 'herdr-mobile-0.1.7.apk', 'size': 5, 'browser_download_url': '$_base/herdr-mobile-0.1.7.apk'},
+            ],
+          ),
+        ),
         throwsA(isA<UpdateException>()),
       );
     });
 
     test('files outside this repository\'s release downloads are never taken', () {
-      String asset(String url) => ReleaseInfo.fromGitHub(_github(assets: [
-            {'name': 'herdr-mobile-0.1.7.apk', 'size': 5, 'digest': 'sha256:${'a' * 64}', 'browser_download_url': url},
-          ])) == null
-              ? 'refused'
-              : 'taken';
+      String asset(String url) =>
+          ReleaseInfo.fromGitHub(
+                _github(
+                  assets: [
+                    {
+                      'name': 'herdr-mobile-0.1.7.apk',
+                      'size': 5,
+                      'digest': 'sha256:${'a' * 64}',
+                      'browser_download_url': url,
+                    },
+                  ],
+                ),
+              ) ==
+              null
+          ? 'refused'
+          : 'taken';
       expect(asset('$_base/herdr-mobile-0.1.7.apk'), 'taken');
       expect(asset('$_base/../../../../other/repo/releases/download/v1/herdr-mobile-0.1.7.apk'), 'refused');
       expect(asset('$_base/herdr-mobile-0.1.7.apk?x=1'), 'refused');
-      expect(asset('https://github.com:8443/tuan3w/herdr-mobile/releases/download/v0.1.7/herdr-mobile-0.1.7.apk'), 'refused');
-      expect(asset('https://user@github.com/tuan3w/herdr-mobile/releases/download/v0.1.7/herdr-mobile-0.1.7.apk'), 'refused');
+      expect(
+        asset('https://github.com:8443/tuan3w/herdr-mobile/releases/download/v0.1.7/herdr-mobile-0.1.7.apk'),
+        'refused',
+      );
+      expect(
+        asset('https://user@github.com/tuan3w/herdr-mobile/releases/download/v0.1.7/herdr-mobile-0.1.7.apk'),
+        'refused',
+      );
       expect(asset('https://github.com/other/repo/releases/download/v0.1.7/herdr-mobile-0.1.7.apk'), 'refused');
       expect(asset('http://github.com/tuan3w/herdr-mobile/releases/download/v0.1.7/herdr-mobile-0.1.7.apk'), 'refused');
     });

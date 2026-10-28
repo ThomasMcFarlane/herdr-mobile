@@ -34,11 +34,8 @@ const _maxNameBytes = 200;
 /// the session [sessionKey] is to be uploaded, creating the folders (0700) as
 /// needed. The name is made safe and unique: see [inboxSafeName]. Throws
 /// [RemoteFileException] (unsupported, permission, network).
-Future<String> reserveInboxPath(
-  MachineConnection machine, {
-  required String sessionKey,
-  required String fileName,
-}) => HostInbox.of(machine.files).reserve(sessionKey: sessionKey, fileName: fileName);
+Future<String> reserveInboxPath(MachineConnection machine, {required String sessionKey, required String fileName}) =>
+    HostInbox.of(machine.files).reserve(sessionKey: sessionKey, fileName: fileName);
 
 /// A file name that is safe to create on the host: the last path segment of
 /// [raw] with every character that is not a letter (any script, Vietnamese
@@ -97,13 +94,14 @@ class HostInbox {
   final _taken = <String>{};
 
   /// `<12 hex>` folder name of [sessionKey].
-  static String sessionFolder(String sessionKey) =>
-      sha1.convert(utf8.encode(sessionKey)).toString().substring(0, 12);
+  static String sessionFolder(String sessionKey) => sha1.convert(utf8.encode(sessionKey)).toString().substring(0, 12);
 
   Future<String> reserve({required String sessionKey, required String fileName}) async {
     final home = await _files.home();
     final dir = RemotePath.join(
-        RemotePath.join(RemotePath.join(home, '.herdr-mobile'), 'inbox'), sessionFolder(sessionKey));
+      RemotePath.join(RemotePath.join(home, '.herdr-mobile'), 'inbox'),
+      sessionFolder(sessionKey),
+    );
     final safe = inboxSafeName(fileName);
     final stamp = _stamp(_now());
     // One makeDirs for the session folder, started with the first name check
@@ -116,7 +114,7 @@ class HostInbox {
     // Observed from the start: if the name check fails first, a failed
     // makeDirs must not surface later as an unhandled error.
     made?.then((_) {}, onError: (Object _) {});
-    for (var n = 1;; n++) {
+    for (var n = 1; ; n++) {
       final path = RemotePath.join(dir, _numbered(stamp, safe, n));
       if (!_taken.add(path)) continue;
       if (_taken.length > 2000) _taken.removeWhere((p) => p != path);

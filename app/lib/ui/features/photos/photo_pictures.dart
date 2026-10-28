@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../files/file_format.dart';
 import 'photo_math.dart';
 import 'photo_viewer_view_model.dart';
@@ -98,8 +99,12 @@ class _Picture extends StatelessWidget {
             children: [
               // A pixel in from the edge: the picture's anti-aliased edge
               // must not show a dashed line of squares around it.
-              // design-lint: allow(raw-size) one pixel exactly: the inset hides the edge, any gap token would show a frame.
-              if (transparent) const Padding(padding: EdgeInsets.all(1), child: CustomPaint(painter: _Checkerboard())),
+              if (transparent)
+                const Padding(
+                  // design-lint: allow(raw-size) one pixel exactly: the inset hides the edge, any gap token would show a frame.
+                  padding: EdgeInsets.all(1),
+                  child: CustomPaint(painter: _Checkerboard()),
+                ),
               RawImage(
                 image: image,
                 fit: BoxFit.fill,
@@ -135,7 +140,14 @@ class _Checkerboard extends CustomPainter {
     // that shows at any zoom and grows with it (seen on a 2,487 px diagram).
     for (var y = 0; y < rows; y++) {
       for (var x = y.isEven ? 0 : 1; x < columns; x += 2) {
-        path.addRect(Rect.fromLTRB(x * _cell, y * _cell, math.min((x + 1) * _cell, size.width), math.min((y + 1) * _cell, size.height)));
+        path.addRect(
+          Rect.fromLTRB(
+            x * _cell,
+            y * _cell,
+            math.min((x + 1) * _cell, size.width),
+            math.min((y + 1) * _cell, size.height),
+          ),
+        );
       }
     }
     canvas.drawPath(path, light);

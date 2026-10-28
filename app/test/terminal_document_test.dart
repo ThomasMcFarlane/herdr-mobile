@@ -11,33 +11,20 @@ const _esc = '\x1b';
 
 String _sgr(String params) => '$_esc[${params}m';
 
-String _show(String s) => s
-    .replaceAll(_esc, r'\e')
-    .replaceAll('\r', r'\r')
-    .replaceAll('\n', r'\n')
-    .replaceAll('\t', r'\t');
+String _show(String s) =>
+    s.replaceAll(_esc, r'\e').replaceAll('\r', r'\r').replaceAll('\n', r'\n').replaceAll('\t', r'\t');
 
 /// Everything observable about parsed lines, as comparable values.
 List<Object> _dump(List<List<AnsiRun>> lines, int columns) => [
-      columns,
-      for (final line in lines)
-        [
-          for (final r in line)
-            [
-              r.text,
-              r.fg?.toARGB32(),
-              r.bg?.toARGB32(),
-              r.bold,
-              r.dim,
-              r.italic,
-              r.underline,
-              r.strike,
-            ],
-        ],
-    ];
+  columns,
+  for (final line in lines)
+    [
+      for (final r in line)
+        [r.text, r.fg?.toARGB32(), r.bg?.toARGB32(), r.bold, r.dim, r.italic, r.underline, r.strike],
+    ],
+];
 
-List<Object> _dumpDoc(TerminalDocument doc) =>
-    _dump([for (final l in doc.lines) l.runs], doc.columns);
+List<Object> _dumpDoc(TerminalDocument doc) => _dump([for (final l in doc.lines) l.runs], doc.columns);
 
 List<Object> _dumpParsed(AnsiDocument doc) => _dump(doc.lines, doc.columns);
 
@@ -47,30 +34,98 @@ List<Object> _dumpParsed(AnsiDocument doc) => _dump(doc.lines, doc.columns);
 List<Object> _expected(List<String> history, String text) {
   final above = parseAnsi(history.isEmpty ? '' : '${history.join('\n')}\n');
   final window = parseAnsi(text);
-  return _dump(
-    [...above.lines, ...window.lines],
-    max(above.columns, window.columns),
-  );
+  return _dump([...above.lines, ...window.lines], max(above.columns, window.columns));
 }
 
 const _words = [
-  'ls', 'hello', 'x', '   ', '  ', '│', '日本語', '😀', 'é', 'a\u0301', '░▒▓',
-  '[', ']', ';', ':', '\\', '\x7f', '\x00', '\x08', '\t',
+  'ls',
+  'hello',
+  'x',
+  '   ',
+  '  ',
+  '│',
+  '日本語',
+  '😀',
+  'é',
+  'a\u0301',
+  '░▒▓',
+  '[',
+  ']',
+  ';',
+  ':',
+  '\\',
+  '\x7f',
+  '\x00',
+  '\x08',
+  '\t',
 ];
 
 const _escapes = [
-  '0', '', '1', '2', '3', '4', '4:0', '4:3', '7', '9', '22', '23', '24', '27',
-  '29', '31', '32', '39', '41', '49', '90', '97', '100', '107',
-  '38;5;196', '38;5;300', '48;5;16', '38;2;1;2;3', '48;2;10;20;30',
-  '38;2;1;2', '38:2::10:20:30', '38:2:10:20:30', '38:5:100', '48:2::300:0:0',
-  '1;31;44', '0;1;38;2;94;234;212', '38', '48;5', '999999999999', ';;', '?25',
+  '0',
+  '',
+  '1',
+  '2',
+  '3',
+  '4',
+  '4:0',
+  '4:3',
+  '7',
+  '9',
+  '22',
+  '23',
+  '24',
+  '27',
+  '29',
+  '31',
+  '32',
+  '39',
+  '41',
+  '49',
+  '90',
+  '97',
+  '100',
+  '107',
+  '38;5;196',
+  '38;5;300',
+  '48;5;16',
+  '38;2;1;2;3',
+  '48;2;10;20;30',
+  '38;2;1;2',
+  '38:2::10:20:30',
+  '38:2:10:20:30',
+  '38:5:100',
+  '48:2::300:0:0',
+  '1;31;44',
+  '0;1;38;2;94;234;212',
+  '38',
+  '48;5',
+  '999999999999',
+  ';;',
+  '?25',
 ];
 
 const _other = [
-  '\x1b[2J', '\x1b[H', '\x1b[?25h', '\x1b[1;1H', '\x1b[K', '\x1b(B', '\x1b=',
-  '\x1b]0;title\x07', '\x1b]8;;http://x\x1b\\', '\x1b]0;unterminated',
-  '\x1bPdcs\x1b\\', '\x1b_apc\x07', '\x1b[3', '\x1b[', '\x1b', '\x1b[38;5;',
-  '\x1b[31', '\x1b\x1b[31m', '\x1b[\x1b[1m', '\r', '\r\r',
+  '\x1b[2J',
+  '\x1b[H',
+  '\x1b[?25h',
+  '\x1b[1;1H',
+  '\x1b[K',
+  '\x1b(B',
+  '\x1b=',
+  '\x1b]0;title\x07',
+  '\x1b]8;;http://x\x1b\\',
+  '\x1b]0;unterminated',
+  '\x1bPdcs\x1b\\',
+  '\x1b_apc\x07',
+  '\x1b[3',
+  '\x1b[',
+  '\x1b',
+  '\x1b[38;5;',
+  '\x1b[31',
+  '\x1b\x1b[31m',
+  '\x1b[\x1b[1m',
+  '\r',
+  '\r\r',
 ];
 
 /// A random line (without line feed) of text, SGR, other escapes and lone CRs.
@@ -111,11 +166,7 @@ void main() {
         for (var step = 0; step < 14; step++) {
           final text = _joinLines(rng, lines);
           doc.update(const [], text);
-          expect(
-            _dumpDoc(doc),
-            _dumpParsed(parseAnsi(text)),
-            reason: 'round $round step $step: ${_show(text)}',
-          );
+          expect(_dumpDoc(doc), _dumpParsed(parseAnsi(text)), reason: 'round $round step $step: ${_show(text)}');
           switch (rng.nextInt(7)) {
             case 0:
               lines = [...lines, _genLine(rng)];
@@ -150,11 +201,7 @@ void main() {
         for (var step = 0; step < 14; step++) {
           final text = _joinLines(rng, window);
           doc.update(history, text);
-          expect(
-            _dumpDoc(doc),
-            _expected(history, text),
-            reason: 'round $round step $step',
-          );
+          expect(_dumpDoc(doc), _expected(history, text), reason: 'round $round step $step');
           switch (rng.nextInt(5)) {
             case 0: // The window slides: its top rows join the history.
               final k = min(window.length, 1 + rng.nextInt(3));
@@ -205,8 +252,7 @@ void main() {
     });
 
     test('a line whose start state changed is parsed again, not served stale', () {
-      final doc = TerminalDocument()
-        ..update(const [], '${_sgr('31')}x\nplain\n${_sgr('0')}z\nq');
+      final doc = TerminalDocument()..update(const [], '${_sgr('31')}x\nplain\n${_sgr('0')}z\nq');
       final before = [...doc.lines];
       expect(before[1].runs.single.fg, TerminalColors.ansi[1]);
 
@@ -270,9 +316,7 @@ void main() {
       final doc = TerminalDocument()..update(const [], 'e\nf\ng\nh\ni\nj');
       final shift = doc.update(['a', 'b', 'c', 'd'], 'e\nf\ng\nh\ni\nj');
       expect(shift.prepended, 4);
-      expect(doc.lines.map((l) => l.runs.single.text), [
-        'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
-      ]);
+      expect(doc.lines.map((l) => l.runs.single.text), ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']);
     });
 
     test('a slide that moves rows into the history keeps every id', () {
@@ -308,22 +352,19 @@ void main() {
 
   group('style does not cross into the window', () {
     test('a colour left open by the last scrolled-off row stops at the window', () {
-      final doc = TerminalDocument()
-        ..update(['${_sgr('31')}red and never reset'], 'live row\n${_sgr('0')}end');
+      final doc = TerminalDocument()..update(['${_sgr('31')}red and never reset'], 'live row\n${_sgr('0')}end');
       expect(doc.lines[0].runs.single.fg, TerminalColors.ansi[1]);
       expect(doc.lines[1].runs.single.fg, isNull, reason: 'the window starts afresh');
     });
 
     test('style still carries from row to row inside the history and the window', () {
-      final doc = TerminalDocument()
-        ..update(['${_sgr('31')}one', 'two'], '${_sgr('32')}three\nfour');
+      final doc = TerminalDocument()..update(['${_sgr('31')}one', 'two'], '${_sgr('32')}three\nfour');
       expect(doc.lines[1].runs.single.fg, TerminalColors.ansi[1]);
       expect(doc.lines[3].runs.single.fg, TerminalColors.ansi[2]);
     });
 
     test('dropping the oldest rows leaves a clean first row', () {
-      final doc = TerminalDocument()
-        ..update(['${_sgr('31')}red', 'carried'], 'live');
+      final doc = TerminalDocument()..update(['${_sgr('31')}red', 'carried'], 'live');
       expect(doc.lines[1].runs.single.fg, TerminalColors.ansi[1]);
       doc.update(['carried'], 'live');
       expect(doc.lines[0].runs.single.fg, isNull);
@@ -358,10 +399,7 @@ void main() {
       final rows = line.rows(4);
       expect(rows.map((r) => r.single.text), ['abcd', 'efgh', 'ij']);
       expect(line.rows(4), same(rows));
-      expect(
-        [for (final r in line.rows(3)) r.single.text],
-        [for (final r in wrapLine(line.runs, 3)) r.single.text],
-      );
+      expect([for (final r in line.rows(3)) r.single.text], [for (final r in wrapLine(line.runs, 3)) r.single.text]);
       expect(line.rows(4), isNot(same(rows)), reason: 'rebuilt for the new width');
     });
   });

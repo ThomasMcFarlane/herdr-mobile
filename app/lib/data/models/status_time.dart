@@ -42,8 +42,7 @@ class StatusTime {
   /// Equal when it is the same moment, however the [DateTime] was made (a
   /// restored one is local, a test's may be UTC).
   @override
-  bool operator ==(Object other) =>
-      other is StatusTime && other.at.isAtSameMomentAs(at) && other.exact == exact;
+  bool operator ==(Object other) => other is StatusTime && other.at.isAtSameMomentAs(at) && other.exact == exact;
 
   @override
   int get hashCode => Object.hash(at.millisecondsSinceEpoch, exact);
@@ -67,15 +66,12 @@ class ObservedStatuses {
   final Map<String, ObservedStatus> panes;
 
   Map<String, Object> toJson() => {
-        'seen': seenAt.millisecondsSinceEpoch,
-        'panes': {
-          for (final MapEntry(:key, :value) in panes.entries)
-            key: {
-              's': value.status.name,
-              if (value.since case final since?) 't': since.toJson(),
-            },
-        },
-      };
+    'seen': seenAt.millisecondsSinceEpoch,
+    'panes': {
+      for (final MapEntry(:key, :value) in panes.entries)
+        key: {'s': value.status.name, if (value.since case final since?) 't': since.toJson()},
+    },
+  };
 
   /// Null for anything that is not what [toJson] writes.
   static ObservedStatuses? fromJson(Object? raw) {
@@ -97,7 +93,7 @@ class ObservedStatuses {
 /// local ISO text.
 /// Null for anything else.
 DateTime? momentFromJson(Object? raw) => switch (raw) {
-      final int ms => DateTime.fromMillisecondsSinceEpoch(ms),
-      final String text => DateTime.tryParse(text),
-      _ => null,
-    };
+  final int ms => DateTime.fromMillisecondsSinceEpoch(ms),
+  final String text => DateTime.tryParse(text),
+  _ => null,
+};

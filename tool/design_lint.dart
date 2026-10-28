@@ -16,7 +16,13 @@
 import 'dart:io';
 
 final class Rule {
-  const Rule(this.id, this.patterns, this.message, {this.include = const ['lib/ui/'], this.exempt = const []});
+  const Rule(
+    this.id,
+    this.patterns,
+    this.message, {
+    this.include = const ['lib/ui/'],
+    this.exempt = const [],
+  });
 
   final String id;
   final List<RegExp> patterns;
@@ -35,9 +41,17 @@ final class Rule {
 final _rules = <Rule>[
   Rule(
     'raw-color',
-    [RegExp(r'\bColor\(\s*0x'), RegExp(r'\bColor\.from(?:ARGB|RGBO)\('), RegExp(r'\bColors\.(?!transparent\b)')],
+    [
+      RegExp(r'\bColor\(\s*0x'),
+      RegExp(r'\bColor\.from(?:ARGB|RGBO)\('),
+      RegExp(r'\bColors\.(?!transparent\b)'),
+    ],
     'use a Ds role (context.ds.*) or add one to tokens.dart',
-    exempt: ['lib/ui/core/tokens.dart', 'lib/ui/core/theme.dart', 'lib/ui/render/terminal/'],
+    exempt: [
+      'lib/ui/core/tokens.dart',
+      'lib/ui/core/theme.dart',
+      'lib/ui/render/terminal/',
+    ],
   ),
   Rule(
     'raw-type',
@@ -58,11 +72,9 @@ final _rules = <Rule>[
     'use a Ds role or getter (wash, washPressed, accentWash, pressTint, faint...)',
     exempt: ['lib/ui/core/tokens.dart'],
   ),
-  Rule(
-    'raw-radius',
-    [RegExp(r'\b(?:BorderRadius|Radius)\.circular\(\s*[\d.]')],
-    'use Radii.xs/sm/md/lg/pill',
-  ),
+  Rule('raw-radius', [
+    RegExp(r'\b(?:BorderRadius|Radius)\.circular\(\s*[\d.]'),
+  ], 'use Radii.xs/sm/md/lg/pill'),
   Rule(
     'raw-duration',
     [RegExp(r'\bDuration\(\s*(?:milliseconds|seconds|microseconds|minutes):')],
@@ -87,7 +99,9 @@ final _rules = <Rule>[
       RegExp(r'\b(?:size|iconSize):\s*[\d.]'),
       // A layout size; a stroke's width (BorderSide, Border.all), a line
       // height (copyWith, raw-type's) and a zero floor are not sizes.
-      RegExp(r'(?<!(?:BorderSide|Border\.all|copyWith)\([^)]*)\b(?:height|width|minWidth|minHeight|maxWidth|maxHeight):\s*(?!0\b)[\d.]'),
+      RegExp(
+        r'(?<!(?:BorderSide|Border\.all|copyWith)\([^)]*)\b(?:height|width|minWidth|minHeight|maxWidth|maxHeight):\s*(?!0\b)[\d.]',
+      ),
       RegExp(r'\bEdgeInsets\.\w+\([^)]*(?<![\w.])\d'),
     ],
     'use IconSize.*, Gap.* or a component size',
@@ -129,17 +143,34 @@ final _rules = <Rule>[
     'use BusySpinner (it waits before it shows, and stops under reduced motion)',
     exempt: ['lib/ui/core/spinner.dart'],
   ),
-  Rule('loop', [RegExp(r'\.repeat\(')], 'nothing loops at rest (BusySpinner is the one exception)',
-      exempt: ['lib/ui/core/spinner.dart']),
+  Rule(
+    'loop',
+    [RegExp(r'\.repeat\(')],
+    'nothing loops at rest (BusySpinner is the one exception)',
+    exempt: ['lib/ui/core/spinner.dart'],
+  ),
   Rule(
     'kit-import',
-    [RegExp(r'''^import\s+['"](?:package:herdr_mobile/ui/core/(?!kit\.dart)|(?:\.\./)+core/(?!kit\.dart))''')],
+    [
+      RegExp(
+        r'''^import\s+['"](?:package:herdr_mobile/ui/core/(?!kit\.dart)|(?:\.\./)+core/(?!kit\.dart))''',
+      ),
+    ],
     'import the kit through ui/core/kit.dart',
-    include: ['lib/ui/features/', 'lib/ui/shell/', 'lib/ui/render/', 'lib/ui/support/'],
+    include: [
+      'lib/ui/features/',
+      'lib/ui/shell/',
+      'lib/ui/render/',
+      'lib/ui/support/',
+    ],
   ),
   Rule(
     'layer',
-    [RegExp(r'''^import\s+['"].*(?:ui/features/|ui/render/|ui/support/|\.\./features/|\.\./render/|\.\./support/)''')],
+    [
+      RegExp(
+        r'''^import\s+['"].*(?:ui/features/|ui/render/|ui/support/|\.\./features/|\.\./render/|\.\./support/)''',
+      ),
+    ],
     'the kit imports nothing above it',
     include: ['lib/ui/core/'],
   ),
@@ -151,13 +182,19 @@ final _rules = <Rule>[
   ),
   Rule(
     'layer',
-    [RegExp(r'''^import\s+['"](?:package:flutter|package:herdr_mobile/ui/|(?:\.\./)+ui/)''')],
+    [
+      RegExp(
+        r'''^import\s+['"](?:package:flutter|package:herdr_mobile/ui/|(?:\.\./)+ui/)''',
+      ),
+    ],
     'words are pure Dart: no Flutter, no UI',
     include: ['lib/data/words/'],
   ),
 ];
 
-final _allow = RegExp(r'//\s*design-lint:\s*allow\(([\w-]+(?:\s*,\s*[\w-]+)*)\)\s*(.*)$');
+final _allow = RegExp(
+  r'//\s*design-lint:\s*allow\(([\w-]+(?:\s*,\s*[\w-]+)*)\)\s*(.*)$',
+);
 
 final class Finding {
   Finding(this.path, this.line, this.rule, this.message);
@@ -189,10 +226,20 @@ Set<String> _allowed(List<String> lines, int i, void Function(String) bad) {
 List<Finding> lint(Directory app) {
   final findings = <Finding>[];
   final lib = Directory('${app.path}/lib');
-  final files = lib.listSync(recursive: true).whereType<File>().where((f) => f.path.endsWith('.dart')).toList()
-    ..sort((a, b) => a.path.compareTo(b.path));
+  final files =
+      lib
+          .listSync(recursive: true)
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.dart'))
+          .toList()
+        ..sort((a, b) => a.path.compareTo(b.path));
   for (final file in files) {
-    findings.addAll(lintSource(file.path.substring(app.path.length + 1), file.readAsStringSync()));
+    findings.addAll(
+      lintSource(
+        file.path.substring(app.path.length + 1),
+        file.readAsStringSync(),
+      ),
+    );
   }
   return findings;
 }
@@ -211,7 +258,9 @@ List<Finding> lintSource(String path, String source) {
   for (final raw in lines) {
     starts.add(code.length);
     final lead = raw.length - raw.trimLeft().length;
-    final cut = raw.trimLeft().startsWith('//') ? lead : raw.indexOf(RegExp(r'\s//'));
+    final cut = raw.trimLeft().startsWith('//')
+        ? lead
+        : raw.indexOf(RegExp(r'\s//'));
     code
       ..write(cut < 0 ? raw : raw.substring(0, cut).padRight(raw.length))
       ..write('\n');
@@ -232,7 +281,11 @@ List<Finding> lintSource(String path, String source) {
 
   final allowed = <int, Set<String>>{};
   for (var i = 0; i < lines.length; i++) {
-    allowed[i] = _allowed(lines, i, (m) => findings.add(Finding(path, i + 1, 'allow', m)));
+    allowed[i] = _allowed(
+      lines,
+      i,
+      (m) => findings.add(Finding(path, i + 1, 'allow', m)),
+    );
   }
   final seen = <String>{};
   for (final rule in rules) {
@@ -246,7 +299,8 @@ List<Finding> lintSource(String path, String source) {
           ok = allowed[i]!.contains(rule.id);
         }
         // The finding names the line the raw value is on.
-        if (!ok && seen.add('$last:${rule.id}')) findings.add(Finding(path, last + 1, rule.id, rule.message));
+        if (!ok && seen.add('$last:${rule.id}'))
+          findings.add(Finding(path, last + 1, rule.id, rule.message));
       }
     }
   }
@@ -256,7 +310,9 @@ List<Finding> lintSource(String path, String source) {
 
 void main(List<String> args) {
   final here = Directory.current.path;
-  final app = Directory(File('$here/pubspec.yaml').existsSync() ? here : '$here/app');
+  final app = Directory(
+    File('$here/pubspec.yaml').existsSync() ? here : '$here/app',
+  );
   if (!File('${app.path}/pubspec.yaml').existsSync()) {
     stderr.writeln('design_lint: run from the repo root or from app/');
     exit(2);
@@ -268,15 +324,21 @@ void main(List<String> args) {
     for (final f in findings) {
       byRule[f.rule] = (byRule[f.rule] ?? 0) + 1;
       final parts = f.path.split('/');
-      final folder = parts.length > 4 ? parts.take(4).join('/') : parts.take(parts.length - 1).join('/');
+      final folder = parts.length > 4
+          ? parts.take(4).join('/')
+          : parts.take(parts.length - 1).join('/');
       byFolder[folder] = (byFolder[folder] ?? 0) + 1;
     }
     stdout.writeln('${findings.length} findings');
-    for (final e in byRule.entries.toList()..sort((a, b) => b.value.compareTo(a.value))) {
+    for (final e
+        in byRule.entries.toList()
+          ..sort((a, b) => b.value.compareTo(a.value))) {
       stdout.writeln('  ${e.key.padRight(14)} ${e.value}');
     }
     stdout.writeln('by folder:');
-    for (final e in byFolder.entries.toList()..sort((a, b) => b.value.compareTo(a.value))) {
+    for (final e
+        in byFolder.entries.toList()
+          ..sort((a, b) => b.value.compareTo(a.value))) {
       stdout.writeln('  ${e.value.toString().padLeft(5)}  ${e.key}');
     }
     return;

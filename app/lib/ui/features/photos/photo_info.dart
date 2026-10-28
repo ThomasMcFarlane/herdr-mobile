@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/words/elapsed.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../files/file_format.dart';
 import '../files/file_widgets.dart';
 import 'photo_viewer_view_model.dart';
@@ -44,10 +46,12 @@ List<PhotoInfoRow> photoInfoRows(PhotoEntry entry) {
   if (item.origin != null) rows.add(PhotoInfoRow('From', item.origin!));
   if (image != null) {
     final mp = megapixels(image.width, image.height);
-    rows.add(PhotoInfoRow(
-      'Dimensions',
-      '${groupDigits(image.width)} × ${groupDigits(image.height)}${mp.isEmpty ? '' : ' · $mp'}',
-    ));
+    rows.add(
+      PhotoInfoRow(
+        'Dimensions',
+        '${groupDigits(image.width)} × ${groupDigits(image.height)}${mp.isEmpty ? '' : ' · $mp'}',
+      ),
+    );
   }
   if (size != null) rows.add(PhotoInfoRow('Size', formatBytes(size)));
   final format = entry.format ?? (item.mime != null && item.mime!.isNotEmpty ? item.mime! : null);
@@ -89,9 +93,7 @@ class _InfoBody extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (final (i, row) in rows.indexed) _Row(row: row, divider: i < rows.length - 1),
-        ],
+        children: [for (final (i, row) in rows.indexed) _Row(row: row, divider: i < rows.length - 1)],
       ),
     );
   }

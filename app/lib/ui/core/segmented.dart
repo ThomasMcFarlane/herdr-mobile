@@ -41,12 +41,7 @@ class SegmentOption<T> {
 /// snap on its own). No press scale, no ripple. Text stops growing at 1.2x: the
 /// pill is a fixed 44 dp and every option is a full-height touch target.
 class Segmented<T> extends StatefulWidget {
-  const Segmented({
-    super.key,
-    required this.options,
-    required this.value,
-    required this.onChanged,
-  });
+  const Segmented({super.key, required this.options, required this.value, required this.onChanged});
 
   final List<SegmentOption<T>> options;
   final T value;
@@ -59,6 +54,7 @@ class Segmented<T> extends StatefulWidget {
 class _SegmentedState<T> extends State<Segmented<T>> {
   /// The capsule's air inside the pill.
   static const _inset = 2.0;
+
   /// Air at each side of a label: [_pad] when the row scrolls, at least [_padMin] when the cells are equal.
   static const _pad = 14.0;
   static const _padMin = 8.0;
@@ -119,7 +115,8 @@ class _SegmentedState<T> extends State<Segmented<T>> {
             final inner = bounded ? box.maxWidth : double.infinity;
             // Equal cells with the icons; else equal cells with the words alone (an icon
             // is decoration, a word is the option); else a scrolling row, icons kept.
-            bool equal(bool icons) => options.every((o) => _contentWidth(context, o, icons: icons) + 2 * _padMin <= inner / n);
+            bool equal(bool icons) =>
+                options.every((o) => _contentWidth(context, o, icons: icons) + 2 * _padMin <= inner / n);
             final icons = equal(true) || !equal(false);
             final fits = bounded && equal(icons);
             final natural = [for (final o in options) _contentWidth(context, o, icons: true) + 2 * _pad];
@@ -188,10 +185,7 @@ class _SegmentedState<T> extends State<Segmented<T>> {
             );
             return Container(
               height: kMinTap,
-              decoration: BoxDecoration(
-                color: ds.fill,
-                borderRadius: BorderRadius.circular(kMinTap / 2),
-              ),
+              decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(kMinTap / 2)),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(kMinTap / 2),
                 child: ClipRect(
@@ -227,7 +221,14 @@ class _SegmentedState<T> extends State<Segmented<T>> {
     });
   }
 
-  Widget _cell(BuildContext context, SegmentOption<T> o, int i, double place, {required bool selected, required bool icons}) {
+  Widget _cell(
+    BuildContext context,
+    SegmentOption<T> o,
+    int i,
+    double place, {
+    required bool selected,
+    required bool icons,
+  }) {
     final ds = context.ds;
     // 1 under the capsule, 0 a cell away: the colour follows the capsule.
     final warm = (1 - (place - i).abs()).clamp(0.0, 1.0);

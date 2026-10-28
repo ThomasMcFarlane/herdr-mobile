@@ -104,21 +104,24 @@ void main() {
       expect(await a, same(await b));
     });
 
-    test('a tile that scrolled away before its turn is never loaded; one already loading finishes into the cache', () async {
-      final loader = Loader();
-      final cache = ThumbCache(load: loader.call, parallel: 1);
-      final first = cache.request(asset(0));
-      final queued = cache.request(asset(1));
-      await flush();
-      cache.cancel('1'); // gone before its turn
-      cache.cancel('0'); // already running
-      loader.finish(0);
-      await first;
-      expect(await queued, isNull, reason: 'the cancelled request completes empty');
-      await flush();
-      expect(loader.started, ['0'], reason: 'the cancelled one never reached the plugin');
-      expect(cache.peek('0'), isNotNull, reason: 'a load that was running still lands in the cache for the way back');
-    });
+    test(
+      'a tile that scrolled away before its turn is never loaded; one already loading finishes into the cache',
+      () async {
+        final loader = Loader();
+        final cache = ThumbCache(load: loader.call, parallel: 1);
+        final first = cache.request(asset(0));
+        final queued = cache.request(asset(1));
+        await flush();
+        cache.cancel('1'); // gone before its turn
+        cache.cancel('0'); // already running
+        loader.finish(0);
+        await first;
+        expect(await queued, isNull, reason: 'the cancelled request completes empty');
+        await flush();
+        expect(loader.started, ['0'], reason: 'the cancelled one never reached the plugin');
+        expect(cache.peek('0'), isNotNull, reason: 'a load that was running still lands in the cache for the way back');
+      },
+    );
 
     test('a request two tiles want is not dropped by one of them leaving', () async {
       final loader = Loader();
@@ -178,10 +181,12 @@ void main() {
 
     test('a picture with no thumbnail is remembered and not asked for again', () async {
       var calls = 0;
-      final cache = ThumbCache(load: (a) async {
-        calls++;
-        return null;
-      });
+      final cache = ThumbCache(
+        load: (a) async {
+          calls++;
+          return null;
+        },
+      );
       expect(await cache.request(asset(1)), isNull);
       expect(await cache.request(asset(1)), isNull);
       expect(calls, 1);

@@ -9,8 +9,7 @@ import 'support/fake_network.dart';
 import 'support/fake_transport.dart';
 import 'support/memory_stores.dart';
 
-MachineProfile _machine(String id) =>
-    MachineProfile(id: id, label: id, host: '$id.local', username: 'u');
+MachineProfile _machine(String id) => MachineProfile(id: id, label: id, host: '$id.local', username: 'u');
 
 void main() {
   late MachineRepository machines;

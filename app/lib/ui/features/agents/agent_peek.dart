@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'agent_card.dart' show StateTime;
 import 'agent_session_rows.dart' show SessionStateTime, sessionMeta;
 import 'agents_grouping.dart';
@@ -24,12 +25,12 @@ class AgentPeekCard extends StatelessWidget {
     final (status, title, where, time, dim) = switch (item) {
       PaneItem(:final row) => (row.status, row.title, row.subtitle, StateTime(agent: row) as Widget, row.stale),
       SessionItem(:final session) => (
-          boardStatus(session),
-          session.title,
-          sessionMeta(session),
-          SessionStateTime(session: session) as Widget,
-          false,
-        ),
+        boardStatus(session),
+        session.title,
+        sessionMeta(session),
+        SessionStateTime(session: session) as Widget,
+        false,
+      ),
     };
     final align = fromLeft ? TextAlign.end : TextAlign.start;
     final children = [
@@ -81,10 +82,10 @@ class AgentPeekEnd extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Text(
-        peekEndWords(next: next, listed: listed),
-        maxLines: 1,
-        style: Type.label.copyWith(color: context.ds.textMuted),
-      );
+    peekEndWords(next: next, listed: listed),
+    maxLines: 1,
+    style: Type.label.copyWith(color: context.ds.textMuted),
+  );
 }
 
 /// What the end card says; the `Next agent` / `Previous agent` actions
@@ -92,8 +93,8 @@ class AgentPeekEnd extends StatelessWidget {
 String peekEndWords({required bool next, required bool listed}) => !listed
     ? 'Not on the board'
     : next
-        ? 'No next agent'
-        : 'No previous agent';
+    ? 'No next agent'
+    : 'No previous agent';
 
 /// The card a peek sits on: the floating lanes' look (surface, hairline, the
 /// one float shadow), so it reads as something over the screen, not part of

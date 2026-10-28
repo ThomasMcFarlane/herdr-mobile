@@ -8,10 +8,10 @@ import 'package:herdr_mobile/ui/render/terminal/ansi.dart';
 import 'package:herdr_mobile/ui/render/terminal/terminal_cells.dart';
 import 'package:herdr_mobile/ui/render/terminal/terminal_jump.dart';
 import 'package:herdr_mobile/ui/render/terminal/terminal_view.dart';
+
 import 'support/terminal_rows.dart';
 
-String _lines(int from, int to) =>
-    [for (var i = from; i < to; i++) 'line $i'].join('\r\n');
+String _lines(int from, int to) => [for (var i = from; i < to; i++) 'line $i'].join('\r\n');
 
 Future<void> _pump(
   WidgetTester tester,
@@ -19,37 +19,30 @@ Future<void> _pump(
   bool reduceMotion = false,
   double textScale = 1,
   bool blocked = false,
-}) =>
-    tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.dark(),
-        home: Builder(
-          builder: (context) => MediaQuery(
-            data: MediaQuery.of(context).copyWith(
-              disableAnimations: reduceMotion,
-              textScaler: TextScaler.linear(textScale),
-            ),
-            child: Scaffold(
-              body: Align(
-                alignment: Alignment.topLeft,
-                child: SizedBox(
-                  width: 360,
-                  height: 400,
-                  child: TerminalView(text: text, blocked: blocked),
-                ),
-              ),
+}) => tester.pumpWidget(
+  MaterialApp(
+    theme: AppTheme.dark(),
+    home: Builder(
+      builder: (context) => MediaQuery(
+        data: MediaQuery.of(context)
+            .copyWith(disableAnimations: reduceMotion, textScaler: TextScaler.linear(textScale)),
+        child: Scaffold(
+          body: Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: 360,
+              height: 400,
+              child: TerminalView(text: text, blocked: blocked),
             ),
           ),
         ),
       ),
-    );
+    ),
+  ),
+);
 
-FloatingPill _jumpPill(WidgetTester tester) => tester.widget(
-      find.descendant(
-        of: find.byType(TerminalView),
-        matching: find.byType(FloatingPill),
-      ),
-    );
+FloatingPill _jumpPill(WidgetTester tester) =>
+    tester.widget(find.descendant(of: find.byType(TerminalView), matching: find.byType(FloatingPill)));
 
 /// The pill's fade while it is drawn; null once it is gone.
 FadeTransition? _jumpFade(WidgetTester tester) {
@@ -88,8 +81,7 @@ void main() {
     expect(tester.getBottomLeft(terminalRow('line 109')).dy, closeTo(bottom, 0.01));
   });
 
-  testWidgets('does not move what you are reading when output arrives',
-      (tester) async {
+  testWidgets('does not move what you are reading when output arrives', (tester) async {
     await _pump(tester, _lines(0, 200));
     await tester.drag(find.byType(CustomScrollView), const Offset(0, 600));
     await tester.pumpAndSettle();
@@ -112,8 +104,10 @@ void main() {
 
   group('unchanged lines are not rebuilt into another item', () {
     // The widget and render object showing [line], and what they show.
-    ({Element element, RenderParagraph paragraph, String shown, InlineSpan span})
-        probe(WidgetTester tester, String line) {
+    ({Element element, RenderParagraph paragraph, String shown, InlineSpan span}) probe(
+      WidgetTester tester,
+      String line,
+    ) {
       final finder = terminalRow(line);
       final element = finder.evaluate().single;
       final paragraph = tester.renderObject<RenderParagraph>(finder);
@@ -182,8 +176,7 @@ void main() {
       expect(terminalRow('line 49'), findsOneWidget);
     });
 
-    testWidgets('text sharing nothing with the old is a fresh document',
-        (tester) async {
+    testWidgets('text sharing nothing with the old is a fresh document', (tester) async {
       await _pump(tester, _lines(0, 100));
       await _pump(tester, _lines(500, 600));
 
@@ -233,14 +226,9 @@ void main() {
   });
 
   testWidgets('renders SGR colours and attributes', (tester) async {
-    await _pump(
-      tester,
-      '\x1b[31mred\x1b[0m plain \x1b[1;4mbold\x1b[0m\r\n',
-    );
+    await _pump(tester, '\x1b[31mred\x1b[0m plain \x1b[1;4mbold\x1b[0m\r\n');
 
-    final runs = rowSpan(tester.widget(terminalRowContaining('red')))
-        .children!
-        .cast<TextSpan>();
+    final runs = rowSpan(tester.widget(terminalRowContaining('red'))).children!.cast<TextSpan>();
     expect(runs.map((r) => r.text), ['red', ' plain ', 'bold']);
     expect(runs[0].style!.color, TerminalColors.ansi[1]);
     expect(runs[1].style, isNull);
@@ -251,17 +239,13 @@ void main() {
   testWidgets('dim text stays readable', (tester) async {
     await _pump(tester, '\x1b[2mdim\x1b[0m');
 
-    final color =
-        rowSpan(tester.widget(terminalRow('dim'))).children!.single.style!.color!;
+    final color = rowSpan(tester.widget(terminalRow('dim'))).children!.single.style!.color!;
     expect(color, isNot(TerminalColors.foreground));
     expect(_contrast(color, TerminalColors.background), greaterThanOrEqualTo(4.5));
   });
 
   testWidgets('long lines scroll horizontally instead of wrapping', (tester) async {
-    Finder scrollables() => find.descendant(
-          of: find.byType(TerminalView),
-          matching: find.byType(Scrollable),
-        );
+    Finder scrollables() => find.descendant(of: find.byType(TerminalView), matching: find.byType(Scrollable));
 
     await _pump(tester, 'x' * 200);
     final wide = tester.state<ScrollableState>(scrollables().first);
@@ -277,28 +261,23 @@ void main() {
       'device pixels', (tester) async {
     Future<double> pitch(double scale) async {
       await _pump(tester, 'line 0\r\nline 1', textScale: scale);
-      return tester.getTopLeft(terminalRow('line 1')).dy -
-          tester.getTopLeft(terminalRow('line 0')).dy;
+      return tester.getTopLeft(terminalRow('line 1')).dy - tester.getTopLeft(terminalRow('line 0')).dy;
     }
 
     // The row height is the font size times 1.3, rounded to device pixels.
     final dpr = tester.view.devicePixelRatio;
-    double snapped(double fontSize) =>
-        (fontSize * 1.3 * dpr).roundToDouble() / dpr;
+    double snapped(double fontSize) => (fontSize * 1.3 * dpr).roundToDouble() / dpr;
 
     expect(await pitch(1), closeTo(snapped(11.5), 0.001));
     expect(await pitch(1.5), closeTo(snapped(11.5 * 1.5), 0.001));
-    expect(await pitch(3), closeTo(snapped(11.5 * 1.6), 0.001),
-        reason: 'capped so a terminal stays usable');
+    expect(await pitch(3), closeTo(snapped(11.5 * 1.6), 0.001), reason: 'capped so a terminal stays usable');
   });
 
   group('cell grid', () {
     // The prepared row showing [line].
-    TerminalLine lineOf(WidgetTester tester, String line) =>
-        tester.widget<TerminalLineView>(terminalRow(line)).line;
+    TerminalLine lineOf(WidgetTester tester, String line) => tester.widget<TerminalLineView>(terminalRow(line)).line;
 
-    testWidgets('box drawing is painted, and shows as spaces in the text layer',
-        (tester) async {
+    testWidgets('box drawing is painted, and shows as spaces in the text layer', (tester) async {
       await _pump(tester, '┌──┐ ok\r\n│  │');
 
       expect(terminalRow('     ok'), findsOneWidget);
@@ -311,8 +290,7 @@ void main() {
     testWidgets('backgrounds are not part of the text style', (tester) async {
       await _pump(tester, '\x1b[44mblue\x1b[0m');
 
-      final run =
-          rowSpan(tester.widget(terminalRow('blue'))).children!.single as TextSpan;
+      final run = rowSpan(tester.widget(terminalRow('blue'))).children!.single as TextSpan;
       expect(run.style, isNull);
     });
 
@@ -327,16 +305,13 @@ void main() {
 
       expect(lineOf(tester, 'line 45'), same(before));
       expect(lineOf(tester, '   '), same(picture));
-      expect(lineOf(tester, '   ').picture, same(recorded),
-          reason: 'not recorded again');
+      expect(lineOf(tester, '   ').picture, same(recorded), reason: 'not recorded again');
     });
 
     test('the cache keeps the rows used most recently and disposes the rest', () {
       final metrics = CellMetrics.measure(11.5, 3);
       final cache = TerminalLineCache(metrics);
-      final runs = [
-        for (var i = 0; i < 700; i++) parseAnsi('\x1b[44m$i\x1b[0m').lines.single,
-      ];
+      final runs = [for (var i = 0; i < 700; i++) parseAnsi('\x1b[44m$i\x1b[0m').lines.single];
       final first = cache.lineFor(runs[0]);
       expect(first.picture, isNotNull);
       expect(cache.lineFor(runs[0]), same(first));
@@ -358,8 +333,7 @@ void main() {
       expect(first.hasPicture, isFalse);
     });
 
-    testWidgets('rows are as tall as the snapped line height, at any density',
-        (tester) async {
+    testWidgets('rows are as tall as the snapped line height, at any density', (tester) async {
       for (final dpr in [1.0, 2.625, 3.0]) {
         tester.view
           ..devicePixelRatio = dpr
@@ -375,10 +349,7 @@ void main() {
 
   group('the jump pill', () {
     ScrollPosition position(WidgetTester tester) => tester
-        .state<ScrollableState>(find.descendant(
-          of: find.byType(CustomScrollView),
-          matching: find.byType(Scrollable),
-        ))
+        .state<ScrollableState>(find.descendant(of: find.byType(CustomScrollView), matching: find.byType(Scrollable)))
         .position;
 
     Future<void> scrollUp(WidgetTester tester, [double by = 600]) async {
@@ -474,10 +445,9 @@ void main() {
       await _pump(tester, _lines(0, 203), blocked: true);
       expect(says('Needs you'), findsOneWidget);
       expect(says('3 new lines'), findsNothing);
-      final glyph = tester.widget<StatusGlyph>(find.descendant(
-        of: find.byType(TerminalView),
-        matching: find.byType(StatusGlyph),
-      ));
+      final glyph = tester.widget<StatusGlyph>(
+        find.descendant(of: find.byType(TerminalView), matching: find.byType(StatusGlyph)),
+      );
       expect(glyph.status, AgentStatus.blocked);
 
       await _pump(tester, _lines(0, 204), blocked: false);
@@ -504,8 +474,7 @@ void main() {
       expect(terminalRow('line 201'), findsOneWidget);
     });
 
-    testWidgets('a question arriving while the reader is at the end is not a pill',
-        (tester) async {
+    testWidgets('a question arriving while the reader is at the end is not a pill', (tester) async {
       await _pump(tester, _lines(0, 200));
       await _pump(tester, _lines(0, 200), blocked: true);
       expect(shown(tester), isFalse);
@@ -557,8 +526,7 @@ void main() {
       expect(terminalRow('line 1999'), findsOneWidget);
     });
 
-    testWidgets('reduced motion lands at once, however short the way',
-        (tester) async {
+    testWidgets('reduced motion lands at once, however short the way', (tester) async {
       await _pump(tester, _lines(0, 200), reduceMotion: true);
       await scrollUp(tester);
       expect(position(tester).pixels, greaterThan(500));
@@ -567,21 +535,20 @@ void main() {
       await tester.pump();
 
       expect(position(tester).pixels, 0);
-      expect(find.descendant(of: find.byType(FloatingPill), matching: find.byType(ScaleTransition)), findsNothing,
-          reason: 'no movement, only the fade');
+      expect(
+        find.descendant(of: find.byType(FloatingPill), matching: find.byType(ScaleTransition)),
+        findsNothing,
+        reason: 'no movement, only the fade',
+      );
     });
 
     testWidgets('a tap is a tick, and nothing else is', (tester) async {
       final haptics = <String>[];
-      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-        SystemChannels.platform,
-        (call) async {
-          if (call.method == 'HapticFeedback.vibrate') haptics.add(call.arguments as String);
-          return null;
-        },
-      );
-      addTearDown(() => tester.binding.defaultBinaryMessenger
-          .setMockMethodCallHandler(SystemChannels.platform, null));
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        if (call.method == 'HapticFeedback.vibrate') haptics.add(call.arguments as String);
+        return null;
+      });
+      addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
       await _pump(tester, _lines(0, 200));
       await scrollUp(tester);
       await _pump(tester, _lines(0, 203));
@@ -600,10 +567,8 @@ void main() {
       await tester.drag(find.byType(CustomScrollView), const Offset(0, 600));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 60));
-      ScaleTransition scale() => tester.widget(find.descendant(
-            of: find.byType(FloatingPill),
-            matching: find.byType(ScaleTransition),
-          ).first);
+      ScaleTransition scale() =>
+          tester.widget(find.descendant(of: find.byType(FloatingPill), matching: find.byType(ScaleTransition)).first);
       expect(scale().scale.value, inInclusiveRange(0.9, 1));
       expect(scale().scale.value, lessThan(1));
       await tester.pumpAndSettle();
@@ -617,8 +582,7 @@ void main() {
       await tester.tap(find.byTooltip('Jump to latest'));
       await tester.pump(const Duration(milliseconds: 40));
 
-      expect(says('3 new lines'), findsOneWidget,
-          reason: 'it does not turn into a chevron on its way out');
+      expect(says('3 new lines'), findsOneWidget, reason: 'it does not turn into a chevron on its way out');
       await tester.pumpAndSettle();
       expect(shown(tester), isFalse);
     });
@@ -631,8 +595,7 @@ void main() {
     expect(newLinesLabel(100), '99+ new');
   });
 
-  testWidgets('a height that changes every frame (the keyboard) rebuilds no rows',
-      (tester) async {
+  testWidgets('a height that changes every frame (the keyboard) rebuilds no rows', (tester) async {
     final height = ValueNotifier(500.0);
     addTearDown(height.dispose);
     // One instance: only the viewport changes, as when the Scaffold above
@@ -646,8 +609,7 @@ void main() {
             alignment: Alignment.topLeft,
             child: ValueListenableBuilder<double>(
               valueListenable: height,
-              builder: (context, h, _) =>
-                  SizedBox(width: 360, height: h, child: view),
+              builder: (context, h, _) => SizedBox(width: 360, height: h, child: view),
             ),
           ),
         ),

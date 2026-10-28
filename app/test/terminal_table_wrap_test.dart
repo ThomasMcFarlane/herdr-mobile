@@ -12,23 +12,20 @@ import 'package:herdr_mobile/ui/core/kit.dart';
 const _wide = '│ crate   │ version │ description of what this crate is for and how │';
 
 Widget _app(Widget view) => MaterialApp(
-      theme: AppTheme.dark(),
-      home: Scaffold(
-        body: Align(
-          alignment: Alignment.topLeft,
-          child: SizedBox(width: 360, height: 400, child: view),
-        ),
-      ),
-    );
+  theme: AppTheme.dark(),
+  home: Scaffold(
+    body: Align(
+      alignment: Alignment.topLeft,
+      child: SizedBox(width: 360, height: 400, child: view),
+    ),
+  ),
+);
 
 ScrollableState _horizontal(WidgetTester tester) => tester.state<ScrollableState>(
-      find
-          .descendant(of: find.byType(TerminalView), matching: find.byType(Scrollable))
-          .first,
-    );
+  find.descendant(of: find.byType(TerminalView), matching: find.byType(Scrollable)).first,
+);
 
-int _rows(WidgetTester tester) =>
-    find.byType(TerminalLineView).evaluate().length;
+int _rows(WidgetTester tester) => find.byType(TerminalLineView).evaluate().length;
 
 void main() {
   group('isTableRow', () {
@@ -49,12 +46,7 @@ void main() {
     });
 
     test('markdown and ASCII tables', () {
-      for (final row in [
-        '| a | b |',
-        '|---|---|',
-        '  | name | value | note |  ',
-        '+-----+-----+',
-      ]) {
+      for (final row in ['| a | b |', '|---|---|', '  | name | value | note |  ', '+-----+-----+']) {
         expect(isTableRow(row), isTrue, reason: row);
       }
     });
@@ -101,10 +93,14 @@ void main() {
 
   group('the view', () {
     testWidgets('prose wraps, the table row stays whole, and the view scrolls sideways', (tester) async {
-      await tester.pumpWidget(_app(const TerminalView(
-        text: 'a long sentence that has to be wrapped over several rows of the phone\r\n$_wide',
-        wrap: true,
-      )));
+      await tester.pumpWidget(
+        _app(
+          const TerminalView(
+            text: 'a long sentence that has to be wrapped over several rows of the phone\r\n$_wide',
+            wrap: true,
+          ),
+        ),
+      );
       await tester.pump();
       await tester.pump();
 
@@ -118,21 +114,26 @@ void main() {
       expect(_horizontal(tester).position.pixels, greaterThan(0));
     });
 
-    testWidgets('without a table wider than the view, wrapping does not scroll sideways',
-        (tester) async {
-      await tester.pumpWidget(_app(const TerminalView(
-        text: 'a long sentence that has to be wrapped over several rows of the phone\r\n│ a │ b │',
-        wrap: true,
-      )));
+    testWidgets('without a table wider than the view, wrapping does not scroll sideways', (tester) async {
+      await tester.pumpWidget(
+        _app(
+          const TerminalView(
+            text: 'a long sentence that has to be wrapped over several rows of the phone\r\n│ a │ b │',
+            wrap: true,
+          ),
+        ),
+      );
       await tester.pump();
       await tester.pump();
       expect(_horizontal(tester).position.maxScrollExtent, 0);
     });
 
     testWidgets('not wrapping is unchanged: the whole output scrolls sideways', (tester) async {
-      await tester.pumpWidget(_app(const TerminalView(
-        text: 'a long sentence that has to be wrapped over several rows of the phone\r\n$_wide',
-      )));
+      await tester.pumpWidget(
+        _app(
+          const TerminalView(text: 'a long sentence that has to be wrapped over several rows of the phone\r\n$_wide'),
+        ),
+      );
       await tester.pump();
       expect(_horizontal(tester).position.maxScrollExtent, greaterThan(0));
     });

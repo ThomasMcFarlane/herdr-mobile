@@ -3,8 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/ui/features/photos/photo_math.dart';
 
 /// A 4000 x 3000 photo in a 412 x 892 viewport on a 2.625 dpr screen.
-PhotoGeometry geometry({Size image = const Size(4000, 3000), Size viewport = const Size(412, 892), double dpr = 2.625}) =>
-    PhotoGeometry.forImage(viewport: viewport, image: image, devicePixelRatio: dpr);
+PhotoGeometry geometry({
+  Size image = const Size(4000, 3000),
+  Size viewport = const Size(412, 892),
+  double dpr = 2.625,
+}) => PhotoGeometry.forImage(viewport: viewport, image: image, devicePixelRatio: dpr);
 
 void main() {
   group('rubber band', () {
@@ -190,7 +193,11 @@ void main() {
 
   group('paging', () {
     test('a pull past 30% of the width, or a flick, turns the page; a neighbour must exist', () {
-      expect(pageDecision(150, 0, 400, hasPrevious: true, hasNext: true), -1, reason: 'dragged right: the previous photo');
+      expect(
+        pageDecision(150, 0, 400, hasPrevious: true, hasNext: true),
+        -1,
+        reason: 'dragged right: the previous photo',
+      );
       expect(pageDecision(-150, 0, 400, hasPrevious: true, hasNext: true), 1);
       expect(pageDecision(60, 0, 400, hasPrevious: true, hasNext: true), 0);
       expect(pageDecision(40, 1200, 400, hasPrevious: true, hasNext: true), -1);
@@ -216,13 +223,8 @@ void main() {
     test('a sharper bitmap is wanted only when the picture is stretched past the one decoded', () {
       final g = geometry();
       // Fit shows 412 dp * 2.625 = 1081 px; a 1623 px bitmap covers up to 1.5x.
-      bool wants(double scale, {int decoded = 1623}) => wantsSharper(
-        geometry: g,
-        scale: scale,
-        devicePixelRatio: 2.625,
-        decodedWidth: decoded,
-        nativeWidth: 4000,
-      );
+      bool wants(double scale, {int decoded = 1623}) =>
+          wantsSharper(geometry: g, scale: scale, devicePixelRatio: 2.625, decodedWidth: decoded, nativeWidth: 4000);
       expect(wants(1), isFalse);
       expect(wants(1.4), isFalse);
       expect(wants(1.6), isTrue);

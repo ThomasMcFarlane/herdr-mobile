@@ -281,12 +281,19 @@ ToolSummary _search(ToolCall call) {
     final t = _titled(call);
     return ToolSummary(kind: call.kind, text: t.text, hits: _hits(call));
   }
-  return ToolSummary(kind: call.kind, text: clip(firstLine(stripTerminalEscapes(pattern)) ?? pattern, _maxText), hits: _hits(call));
+  return ToolSummary(
+    kind: call.kind,
+    text: clip(firstLine(stripTerminalEscapes(pattern)) ?? pattern, _maxText),
+    hits: _hits(call),
+  );
 }
 
 const _countKeys = ['totalMatches', 'total_matches', 'matchCount', 'numMatches', 'numFiles', 'count', 'total'];
 const _listKeys = ['matches', 'results', 'files', 'items'];
-final _foundCount = RegExp(r'\b(?:found|matched)\s+(\d+)\s+(?:matches|match|files?|results?|lines?|occurrences?)\b', caseSensitive: false);
+final _foundCount = RegExp(
+  r'\b(?:found|matched)\s+(\d+)\s+(?:matches|match|files?|results?|lines?|occurrences?)\b',
+  caseSensitive: false,
+);
 final _noMatches = RegExp(r'^\s*no (?:matches|files|results)(?: found)?\b', caseSensitive: false);
 
 /// The number of matches a search reports in its output: a count field, a

@@ -133,8 +133,15 @@ class ClaudeLocator implements SessionLogLocator {
     if (_scanned.contains(id)) return const NotYet(notYetWhy);
     final List<RemoteEntry> dirs;
     try {
-      dirs = [for (final e in await files.list(projects)) if (e.isDirectory) e]
-        ..sort((a, b) => (b.modified ?? DateTime.fromMillisecondsSinceEpoch(0)).compareTo(a.modified ?? DateTime.fromMillisecondsSinceEpoch(0)));
+      dirs =
+          [
+            for (final e in await files.list(projects))
+              if (e.isDirectory) e,
+          ]..sort(
+            (a, b) => (b.modified ?? DateTime.fromMillisecondsSinceEpoch(0)).compareTo(
+              a.modified ?? DateTime.fromMillisecondsSinceEpoch(0),
+            ),
+          );
     } on RemoteFileException catch (e) {
       if (_absent(e)) return const NotYet(notYetWhy);
       rethrow;

@@ -416,7 +416,9 @@ void main() {
       final rig = await _pump(tester, fs: fs, size: const Size(320, 640));
 
       expect(tester.takeException(), isNull);
-      final cut = find.byWidgetPredicate((w) => w is Text && (w.data ?? '').contains('…') && (w.data ?? '').endsWith('.md'));
+      final cut = find.byWidgetPredicate(
+        (w) => w is Text && (w.data ?? '').contains('…') && (w.data ?? '').endsWith('.md'),
+      );
       expect(cut, findsOneWidget);
       final shown = tester.widget<Text>(cut).data!;
       expect(shown.length, lessThan(_longName.length));

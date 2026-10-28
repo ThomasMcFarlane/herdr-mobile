@@ -58,33 +58,46 @@ void main() {
       expect((await token.list()).single.loginInKeychain, isFalse);
     });
 
-    test('on a Mac, Claude\'s keeper is a launchd job of the desktop session, works, and unloads when it ends', () async {
-      final uid = (await Process.run('id', ['-u'])).stdout.toString().trim();
-      if (!Platform.isMacOS || (await Process.run('launchctl', ['print', 'gui/$uid'])).exitCode != 0) {
-        markTestSkipped('needs a macOS desktop session');
-        return;
-      }
-      final h = await newHost({'HERDR_MOBILE_NO_LAUNCHD': ''});
-      final info = await h.start(agent: 'claude');
-      expect(info.loginInKeychain, isFalse, reason: 'the job can open the Keychain, so there is nothing to warn about');
-      final label = (await h.rawList()).single['launchd'] as String;
-      expect(label, startsWith('dev.herdrmobile.keeper.'));
-      Future<bool> loaded() async => (await Process.run('launchctl', ['print', 'gui/$uid/$label'])).exitCode == 0;
-      expect(await loaded(), isTrue);
-      expect([for (final f in Directory(h.keepers).listSync()) if (f.path.contains('/start-')) f.path], isEmpty,
-          reason: 'the plist (it can hold a token) and the report file are gone');
+    test(
+      'on a Mac, Claude\'s keeper is a launchd job of the desktop session, works, and unloads when it ends',
+      () async {
+        final uid = (await Process.run('id', ['-u'])).stdout.toString().trim();
+        if (!Platform.isMacOS || (await Process.run('launchctl', ['print', 'gui/$uid'])).exitCode != 0) {
+          markTestSkipped('needs a macOS desktop session');
+          return;
+        }
+        final h = await newHost({'HERDR_MOBILE_NO_LAUNCHD': ''});
+        final info = await h.start(agent: 'claude');
+        expect(
+          info.loginInKeychain,
+          isFalse,
+          reason: 'the job can open the Keychain, so there is nothing to warn about',
+        );
+        final label = (await h.rawList()).single['launchd'] as String;
+        expect(label, startsWith('dev.herdrmobile.keeper.'));
+        Future<bool> loaded() async => (await Process.run('launchctl', ['print', 'gui/$uid/$label'])).exitCode == 0;
+        expect(await loaded(), isTrue);
+        expect(
+          [
+            for (final f in Directory(h.keepers).listSync())
+              if (f.path.contains('/start-')) f.path,
+          ],
+          isEmpty,
+          reason: 'the plist (it can hold a token) and the report file are gone',
+        );
 
-      // It is a working keeper, with the starter's environment (the fake agent logs to FAKE_ACP_LOG).
-      final a = await h.attach(info.id);
-      await a.initialize(title: 'Phone');
-      await a.newSession(h);
-      await a.response(a.prompt('plain'));
-      expect(h.agentLog(), isNotEmpty);
+        // It is a working keeper, with the starter's environment (the fake agent logs to FAKE_ACP_LOG).
+        final a = await h.attach(info.id);
+        await a.initialize(title: 'Phone');
+        await a.newSession(h);
+        await a.response(a.prompt('plain'));
+        expect(h.agentLog(), isNotEmpty);
 
-      await h.run(keeperKillCommand(info.id));
-      await eventually(() async => !await loaded(), what: 'the job to unload');
-      expect(await processAlive(info.pid!), isFalse);
-    });
+        await h.run(keeperKillCommand(info.id));
+        await eventually(() async => !await loaded(), what: 'the job to unload');
+        expect(await processAlive(info.pid!), isFalse);
+      },
+    );
 
     test('directory, socket, record and log are private', () async {
       final h = await newHost();
@@ -96,13 +109,17 @@ void main() {
       }
     });
 
-    test('the agent gets no stray file descriptors', skip: Directory('/proc/self/fd').existsSync() ? false : 'needs /proc', () async {
-      final h = await newHost();
-      await h.start();
-      final agentPid = (await h.rawList()).single['agent_pid']! as int;
-      final fds = Directory('/proc/$agentPid/fd').listSync().map((e) => e.uri.pathSegments.last).toSet();
-      expect(fds, {'0', '1', '2'});
-    });
+    test(
+      'the agent gets no stray file descriptors',
+      skip: Directory('/proc/self/fd').existsSync() ? false : 'needs /proc',
+      () async {
+        final h = await newHost();
+        await h.start();
+        final agentPid = (await h.rawList()).single['agent_pid']! as int;
+        final fds = Directory('/proc/$agentPid/fd').listSync().map((e) => e.uri.pathSegments.last).toSet();
+        expect(fds, {'0', '1', '2'});
+      },
+    );
 
     test('a slow start is listed while it initialises and is not swept as an orphan', () async {
       final h = await newHost({'FAKE_ACP_INIT_DELAY': '8', 'HERDR_KEEPER_ORPHAN_SECONDS': '1'});
@@ -143,7 +160,10 @@ void main() {
       final k = await h.run(keeperKillCommand(rec['id']! as String));
       expect(k.code, 0, reason: k.err);
       expect(asJson(jsonDecode(k.out)), {'ok': true});
-      await eventually(() async => !await processAlive(keeperPid) && !await processAlive(agentPid), what: 'keeper and agent to stop');
+      await eventually(
+        () async => !await processAlive(keeperPid) && !await processAlive(agentPid),
+        what: 'keeper and agent to stop',
+      );
       final r = await s.finished;
       expect(r.code, 70);
       expect(await h.list(), isEmpty);
@@ -230,8 +250,9 @@ void main() {
       expect(inits, hasLength(1));
       expect(inits.single['id'], 'keeper-init');
       final caps = asJson(asJson(inits.single['params'])['clientCapabilities']);
-      expect(asJson(caps['session']), {'configOptions': {'boolean': <String, Object?>{}}},
-          reason: 'Claude Code and Codex send fast as a select unless the client opts in');
+      expect(asJson(caps['session']), {
+        'configOptions': {'boolean': <String, Object?>{}},
+      }, reason: 'Claude Code and Codex send fast as a select unless the client opts in');
       expect(asJson(caps['elicitation']), {'form': <String, Object?>{}});
     });
 
@@ -294,35 +315,38 @@ void main() {
       // it: every refused attempt used to come back as one more identical
       // bubble.
       for (final noisy in [true, false]) {
-        test(noisy ? 'the agent streamed output of its own before refusing' : 'the agent refused without a word', () async {
-          final busy = File('${Directory.systemTemp.createTempSync('keeper_busy_').path}/busy');
-          addTearDown(() => busy.parent.deleteSync(recursive: true));
-          final h = await newHost({'FAKE_ACP_BUSY_FILE': busy.path});
-          final info = await h.start();
-          final a = await h.attach(info.id);
-          await a.initialize();
-          await a.newSession(h);
+        test(
+          noisy ? 'the agent streamed output of its own before refusing' : 'the agent refused without a word',
+          () async {
+            final busy = File('${Directory.systemTemp.createTempSync('keeper_busy_').path}/busy');
+            addTearDown(() => busy.parent.deleteSync(recursive: true));
+            final h = await newHost({'FAKE_ACP_BUSY_FILE': busy.path});
+            final info = await h.start();
+            final a = await h.attach(info.id);
+            await a.initialize();
+            await a.newSession(h);
 
-          busy.writeAsStringSync(noisy ? 'busy' : 'quiet');
-          for (var i = 0; i < 3; i++) {
-            final refused = await a.response(a.prompt('reply:fix it'));
-            expect(asJson(refused['error'])['code'], -32003);
-          }
-          busy.deleteSync();
-          final ok = await a.response(a.prompt('reply:fix it'));
-          expect(asJson(ok['result'])['stopReason'], 'end_turn');
-          await a.close();
+            busy.writeAsStringSync(noisy ? 'busy' : 'quiet');
+            for (var i = 0; i < 3; i++) {
+              final refused = await a.response(a.prompt('reply:fix it'));
+              expect(asJson(refused['error'])['code'], -32003);
+            }
+            busy.deleteSync();
+            final ok = await a.response(a.prompt('reply:fix it'));
+            expect(asJson(ok['result'])['stopReason'], 'end_turn');
+            await a.close();
 
-          final b = await h.attach(info.id);
-          await b.initialize();
-          await b.load(h);
-          final users = updatesOf(b.seen).where((u) => u['sessionUpdate'] == 'user_message_chunk');
-          expect(users.map(updateText), ['reply:fix it'], reason: 'the one the agent took');
-          expect(updatesOf(b.seen).where((u) => u['sessionUpdate'] == 'agent_message_chunk').map(updateText), [
-            if (noisy) ...List.filled(3, 'subagent progress'),
-            're: fix it',
-          ]);
-        });
+            final b = await h.attach(info.id);
+            await b.initialize();
+            await b.load(h);
+            final users = updatesOf(b.seen).where((u) => u['sessionUpdate'] == 'user_message_chunk');
+            expect(users.map(updateText), ['reply:fix it'], reason: 'the one the agent took');
+            expect(updatesOf(b.seen).where((u) => u['sessionUpdate'] == 'agent_message_chunk').map(updateText), [
+              if (noisy) ...List.filled(3, 'subagent progress'),
+              're: fix it',
+            ]);
+          },
+        );
       }
     });
   });

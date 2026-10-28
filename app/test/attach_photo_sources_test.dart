@@ -61,19 +61,22 @@ Future<(Attachment, int)> _attach(_Source source, {required bool images}) async 
 }
 
 void main() {
-  test('an agent that takes no images: a camera or system-picker photo goes up as a file, as a gallery photo does', () async {
-    final (gallery, galleryUploads) = await _attach(_Source.gallery, images: false);
-    expect(gallery.block, isA<ResourceLinkBlock>());
-    expect(galleryUploads, 1);
-    for (final source in [_Source.camera, _Source.systemPicker]) {
-      final (chip, uploads) = await _attach(source, images: false);
-      expect(chip.ready, isTrue, reason: '$source');
-      expect(chip.block, isA<ResourceLinkBlock>(), reason: '$source: never an image block the agent refuses');
-      expect(uploads, 1, reason: '$source: the original goes to the host');
-      expect(chip.kind, gallery.kind, reason: '$source');
-      expect(chip.note, gallery.note, reason: '$source: the chip says it goes as a file');
-    }
-  });
+  test(
+    'an agent that takes no images: a camera or system-picker photo goes up as a file, as a gallery photo does',
+    () async {
+      final (gallery, galleryUploads) = await _attach(_Source.gallery, images: false);
+      expect(gallery.block, isA<ResourceLinkBlock>());
+      expect(galleryUploads, 1);
+      for (final source in [_Source.camera, _Source.systemPicker]) {
+        final (chip, uploads) = await _attach(source, images: false);
+        expect(chip.ready, isTrue, reason: '$source');
+        expect(chip.block, isA<ResourceLinkBlock>(), reason: '$source: never an image block the agent refuses');
+        expect(uploads, 1, reason: '$source: the original goes to the host');
+        expect(chip.kind, gallery.kind, reason: '$source');
+        expect(chip.note, gallery.note, reason: '$source: the chip says it goes as a file');
+      }
+    },
+  );
 
   test('an agent that takes images: every source gives an image block and uploads nothing', () async {
     for (final source in _Source.values) {

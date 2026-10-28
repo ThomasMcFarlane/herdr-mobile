@@ -144,7 +144,7 @@ class _MinuteBuilderState extends State<MinuteBuilder> with StepClockLease<Minut
 
   @override
   Widget build(BuildContext context) => ValueListenableBuilder<int>(
-        valueListenable: clock.steps,
-        builder: (context, _, _) => widget.builder(context, DateTime.now()),
-      );
+    valueListenable: clock.steps,
+    builder: (context, _, _) => widget.builder(context, DateTime.now()),
+  );
 }

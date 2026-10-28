@@ -26,14 +26,12 @@ import '../support/memory_stores.dart';
 import '../support/worktree_fixtures.dart';
 import 'ui_harness.dart';
 
-
 HerdrTransport _noTransport(
   MachineProfile profile,
   MachineSecrets secrets,
   void Function(String) onPin,
   void Function(String) onNotice,
-) =>
-    throw StateError('this test never opens a connection');
+) => throw StateError('this test never opens a connection');
 
 const _fatal = HerdrTransportException('Permission denied (publickey).', fatal: true);
 const _longLabel = 'build-server-eu-west-2-production-primary-gpu-cluster-0042';
@@ -47,13 +45,11 @@ MachineProfile _m(
   bool enabled = true,
   int port = 22,
   SshAuth auth = SshAuth.password,
-}) =>
-    MachineProfile(id: id, label: label, host: host, username: user, enabled: enabled, port: port, auth: auth);
+}) => MachineProfile(id: id, label: label, host: host, username: user, enabled: enabled, port: port, auth: auth);
 
 List<Pane> _agents(int n, {String ws = 'w1', String status = 'working', int blocked = 0}) => [
-      for (var i = 0; i < n; i++)
-        (id: '$ws:p$i', ws: ws, agent: 'claude', status: i < blocked ? 'blocked' : status),
-    ];
+  for (var i = 0; i < n; i++) (id: '$ws:p$i', ws: ws, agent: 'claude', status: i < blocked ? 'blocked' : status),
+];
 
 /// Lets async connection work and animations finish.
 Future<void> _flush(WidgetTester tester) async {
@@ -163,7 +159,11 @@ void main() {
         expect(find.textContaining('Reconnecting'), findsOneWidget);
         expect(find.text('Waiting for approval'), findsOneWidget);
         expect(find.text('Open sign-in page'), findsOneWidget);
-        expect(find.textContaining('not connecting'), findsOneWidget, reason: 'a disabled machine says why it is quiet');
+        expect(
+          find.textContaining('not connecting'),
+          findsOneWidget,
+          reason: 'a disabled machine says why it is quiet',
+        );
         expect(find.text('Retry'), findsNWidgets(2), reason: 'attention and reconnecting offer a retry');
         await _tearDown(tester, h);
       });
@@ -172,7 +172,12 @@ void main() {
     testWidgets('worst-case names stay in their lane and counts are never cut', (tester) async {
       final h = await UiHarness.create([
         (
-          profile: _m('a', _longLabel, host: 'ip-10-0-143-201.eu-west-2.compute.internal', user: 'bartholomew.fitzgerald'),
+          profile: _m(
+            'a',
+            _longLabel,
+            host: 'ip-10-0-143-201.eu-west-2.compute.internal',
+            user: 'bartholomew.fitzgerald',
+          ),
           snapshot: snapshotWith(_agents(120, blocked: 120)),
         ),
         (profile: _m('b', 'x', host: 'a', user: 'u'), snapshot: snapshotWith(_agents(1))),
@@ -195,7 +200,10 @@ void main() {
 
     testWidgets('a long address is cut in its middle, so the host\'s end stays readable', (tester) async {
       final h = await UiHarness.create([
-        (profile: _m('d', 'staging', host: 'ip-10-0-143-201.eu-west-2.compute.internal'), snapshot: snapshotWith(_agents(2))),
+        (
+          profile: _m('d', 'staging', host: 'ip-10-0-143-201.eu-west-2.compute.internal'),
+          snapshot: snapshotWith(_agents(2)),
+        ),
       ]);
       // The test font draws every glyph a full em wide, so the row needs a
       // wide screen for the address to show at all.
@@ -352,14 +360,20 @@ void main() {
 
   group('one machine', () {
     Map<String, dynamic> manyPanes(int n) => snapshotWith(
-          _agents(n),
-          workspaces: const [(id: 'w1', label: 'payments-api-gateway-v2-migration-branch-feature-flags-rollout')],
-        );
+      _agents(n),
+      workspaces: const [(id: 'w1', label: 'payments-api-gateway-v2-migration-branch-feature-flags-rollout')],
+    );
 
     for (final (width, scale) in [(360.0, 1.0), (320.0, 2.0)]) {
       testWidgets('a workspace with 40 panes and a 60-char name at ${width.toInt()}dp ${scale}x', (tester) async {
         final h = await UiHarness.create([(profile: _m('a', _longLabel), snapshot: manyPanes(40))]);
-        await _pump(tester, MachineScreen(machine: h.fleet.connection('a')!), fleet: h, width: width, scale: scale);
+        await _pump(
+          tester,
+          MachineScreen(machine: h.fleet.connection('a')!),
+          fleet: h,
+          width: width,
+          scale: scale,
+        );
 
         expect(find.textContaining('payments-api-gateway'), findsOneWidget);
         expect(find.text('40'), findsOneWidget, reason: 'pane count is shown in full');
@@ -439,7 +453,12 @@ void main() {
       final machine = h.fleet.connection('a')!;
       machine.setKeeperPanes({'w1:p0': 'a/k1'});
       final sessions = FakeAgentSessions([FakeAgentSession(key: 'a/k1', title: 'Fix the login test')]);
-      await _pump(tester, MachineScreen(machine: machine), fleet: h, sessions: sessions);
+      await _pump(
+        tester,
+        MachineScreen(machine: machine),
+        fleet: h,
+        sessions: sessions,
+      );
 
       await _tapVisible(tester, find.text('title w1:p0'));
       expect(find.byType(AgentSessionScreen), findsOneWidget);
@@ -453,9 +472,7 @@ void main() {
           profile: _m('a', 'box'),
           snapshot: () {
             final j = snapshotWith(
-              [
-                for (var i = 1; i <= 6; i++) (id: 'w$i:p1', ws: 'w$i', agent: 'claude', status: 'idle'),
-              ],
+              [for (var i = 1; i <= 6; i++) (id: 'w$i:p1', ws: 'w$i', agent: 'claude', status: 'idle')],
               workspaces: [for (var i = 1; i <= 6; i++) (id: 'w$i', label: 'space $i')],
             );
             ((j['workspaces'] as List)[2] as Map<String, dynamic>)['agent_status'] = 'blocked';
@@ -501,13 +518,31 @@ void main() {
         return j;
       }
 
-      testWidgets('lists the checkouts under one repo header, with branches, and a phone session under its checkout', (tester) async {
+      testWidgets('lists the checkouts under one repo header, with branches, and a phone session under its checkout', (
+        tester,
+      ) async {
         final h = await UiHarness.create([(profile: _m('a', 'box'), snapshot: repoSnapshot())]);
         h.transports['a']!.answers['worktree.list'] = {
           'type': 'worktree_list',
           'worktrees': [
-            {'path': primary, 'label': 'x', 'branch': 'main', 'is_linked_worktree': false, 'is_detached': false, 'is_bare': false, 'is_prunable': false},
-            {'path': linked, 'label': 'x', 'branch': 'feat/login', 'is_linked_worktree': true, 'is_detached': false, 'is_bare': false, 'is_prunable': false},
+            {
+              'path': primary,
+              'label': 'x',
+              'branch': 'main',
+              'is_linked_worktree': false,
+              'is_detached': false,
+              'is_bare': false,
+              'is_prunable': false,
+            },
+            {
+              'path': linked,
+              'label': 'x',
+              'branch': 'feat/login',
+              'is_linked_worktree': true,
+              'is_detached': false,
+              'is_bare': false,
+              'is_prunable': false,
+            },
           ],
         };
         final machine = h.fleet.connection('a')!;
@@ -517,10 +552,18 @@ void main() {
         expect(find.text('herdr-mobile'), findsOneWidget, reason: 'one header for the repo');
         expect(find.text('Main checkout'), findsNothing, reason: 'the title carries the branch in one rich text');
         expect(find.textContaining('Main checkout', findRichText: true), findsOneWidget);
-        expect(find.textContaining('worktree-a', findRichText: true), findsOneWidget, reason: 'the checkout is a header, not a section of its own');
+        expect(
+          find.textContaining('worktree-a', findRichText: true),
+          findsOneWidget,
+          reason: 'the checkout is a header, not a section of its own',
+        );
         expect(find.text('Phone sessions'), findsNothing, reason: 'its only session moved under its checkout');
         expect(find.text('title w3:p0'), findsOneWidget);
-        expect(find.textContaining('feat/login', findRichText: true), findsOneWidget, reason: 'the branch is read once on arrival');
+        expect(
+          find.textContaining('feat/login', findRichText: true),
+          findsOneWidget,
+          reason: 'the branch is read once on arrival',
+        );
         expect(find.text('3'), findsOneWidget, reason: 'the repo counts the rows under it');
         await _tearDown(tester, h);
       });
@@ -543,14 +586,14 @@ void main() {
     testWidgets('tab names appear on panes only when a workspace has several tabs', (tester) async {
       final j = snapshotWith(_agents(2));
       (j['tabs'] as List).add({
-          'tab_id': 'w1:t2',
-          'workspace_id': 'w1',
-          'number': 2,
-          'label': 'logs',
-          'focused': false,
-          'pane_count': 1,
-          'agent_status': 'idle',
-        });
+        'tab_id': 'w1:t2',
+        'workspace_id': 'w1',
+        'number': 2,
+        'label': 'logs',
+        'focused': false,
+        'pane_count': 1,
+        'agent_status': 'idle',
+      });
       ((j['panes'] as List).last as Map<String, dynamic>)['tab_id'] = 'w1:t2';
       final h = await UiHarness.create([(profile: _m('a', 'box'), snapshot: j)]);
       await _pump(tester, MachineScreen(machine: h.fleet.connection('a')!), fleet: h);
@@ -566,14 +609,14 @@ void main() {
     testWidgets('a workspace lists its newest tab first', (tester) async {
       final j = snapshotWith(_agents(2));
       (j['tabs'] as List).add({
-          'tab_id': 'w1:t2',
-          'workspace_id': 'w1',
-          'number': 2,
-          'label': 'newer',
-          'focused': false,
-          'pane_count': 1,
-          'agent_status': 'idle',
-        });
+        'tab_id': 'w1:t2',
+        'workspace_id': 'w1',
+        'number': 2,
+        'label': 'newer',
+        'focused': false,
+        'pane_count': 1,
+        'agent_status': 'idle',
+      });
       ((j['panes'] as List).last as Map<String, dynamic>)['tab_id'] = 'w1:t2';
       final h = await UiHarness.create([(profile: _m('a', 'box'), snapshot: j)]);
       await _pump(tester, MachineScreen(machine: h.fleet.connection('a')!), fleet: h);
@@ -587,7 +630,9 @@ void main() {
     });
 
     testWidgets('a machine with no workspaces says so', (tester) async {
-      final h = await UiHarness.create([(profile: _m('a', 'box'), snapshot: snapshotWith(const [], workspaces: const []))]);
+      final h = await UiHarness.create([
+        (profile: _m('a', 'box'), snapshot: snapshotWith(const [], workspaces: const [])),
+      ]);
       await _pump(tester, MachineScreen(machine: h.fleet.connection('a')!), fleet: h);
 
       expect(find.text('No workspaces'), findsOneWidget);
@@ -903,20 +948,27 @@ void main() {
       await tester.tap(field(3));
       await _flush(tester);
       expect(tester.getRect(add).bottom, lessThanOrEqualTo(700 - 300), reason: 'above the keyboard');
-      expect(tester.getRect(field(3)).bottom, lessThanOrEqualTo(tester.getRect(add).top),
-          reason: 'the focused field is not hidden behind the bar');
+      expect(
+        tester.getRect(field(3)).bottom,
+        lessThanOrEqualTo(tester.getRect(add).top),
+        reason: 'the focused field is not hidden behind the bar',
+      );
       await _tearDown(tester);
     });
 
     testWidgets('validation messages do not move the fields below them', (tester) async {
       final repo = await repoWith();
       await _pump(tester, const MachineFormScreen(), repo: repo, height: 900);
-      final before = [for (final i in [1, 2, 3, 4]) tester.getTopLeft(field(i))];
+      final before = [
+        for (final i in [1, 2, 3, 4]) tester.getTopLeft(field(i)),
+      ];
 
       await tapButton(tester, 'Add machine');
       expect(find.text('Required'), findsNWidgets(2));
 
-      expect([for (final i in [1, 2, 3, 4]) tester.getTopLeft(field(i))], before);
+      expect([
+        for (final i in [1, 2, 3, 4]) tester.getTopLeft(field(i)),
+      ], before);
       await _tearDown(tester);
     });
 
@@ -958,7 +1010,13 @@ void main() {
         final repo = await repoWith([
           _m('w', _longLabel, host: _longHost, user: 'bartholomew.fitzgerald', auth: SshAuth.key),
         ]);
-        await _pump(tester, MachineFormScreen(existing: repo.machines.single), repo: repo, width: width, scale: scale);
+        await _pump(
+          tester,
+          MachineFormScreen(existing: repo.machines.single),
+          repo: repo,
+          width: width,
+          scale: scale,
+        );
         for (var i = 0; i < 6; i++) {
           await tester.drag(find.byType(CustomScrollView), const Offset(0, -500));
           await tester.pump(const Duration(milliseconds: 50));

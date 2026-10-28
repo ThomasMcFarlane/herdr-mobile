@@ -2,11 +2,11 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
-import 'package:flutter/rendering.dart'
-    show PaintingContext, RenderParagraph, Selectable, SelectionRegistrar;
+import 'package:flutter/rendering.dart' show PaintingContext, RenderParagraph, Selectable, SelectionRegistrar;
 import 'package:flutter/widgets.dart';
 
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'ansi.dart';
 import 'cell_width.dart';
 import 'box_drawing.dart';
@@ -31,13 +31,9 @@ const _cachedLines = 512;
 /// ([rowPx]) so that rows tile without sub-pixel seams. Column edges are
 /// snapped to device pixels too (see [TerminalLine]).
 final class CellMetrics {
-  CellMetrics({
-    required this.fontSize,
-    required this.advance,
-    required this.dpr,
-    TerminalPalette? palette,
-  }) : palette = palette ?? TerminalPalette.dark,
-       rowPx = (fontSize * terminalLineHeightFactor * dpr).round();
+  CellMetrics({required this.fontSize, required this.advance, required this.dpr, TerminalPalette? palette})
+    : palette = palette ?? TerminalPalette.dark,
+      rowPx = (fontSize * terminalLineHeightFactor * dpr).round();
 
   /// Measures the monospace advance at [fontSize]. Does text layout, so keep
   /// the result around instead of measuring per frame.
@@ -46,11 +42,7 @@ final class CellMetrics {
     final painter = TextPainter(
       text: TextSpan(
         text: sample,
-        style: TextStyle(
-          fontFamily: monoFamily,
-          fontSize: fontSize,
-          height: terminalLineHeightFactor,
-        ),
+        style: TextStyle(fontFamily: monoFamily, fontSize: fontSize, height: terminalLineHeightFactor),
       ),
       textDirection: TextDirection.ltr,
       textScaler: TextScaler.noScaling,
@@ -137,30 +129,19 @@ final class CellMetrics {
 /// background, otherwise the foreground (default when unset). [run] is already
 /// in [palette]'s colours.
 Color runForeground(AnsiRun run, TerminalPalette palette) => run.dim
-    ? Color.lerp(
-        run.bg ?? palette.background,
-        run.fg ?? palette.foreground,
-        _dimBlend,
-      )!
+    ? Color.lerp(run.bg ?? palette.background, run.fg ?? palette.foreground, _dimBlend)!
     : (run.fg ?? palette.foreground);
 
 /// Text style of [run]. Backgrounds are not part of it (they are painted by
 /// [TerminalLineView] across the whole row height); null for plain text.
 TextStyle? runTextStyle(AnsiRun run, TerminalPalette palette) {
   final decoration = switch ((run.underline, run.strike)) {
-    (true, true) => TextDecoration.combine(const [
-        TextDecoration.underline,
-        TextDecoration.lineThrough,
-      ]),
+    (true, true) => TextDecoration.combine(const [TextDecoration.underline, TextDecoration.lineThrough]),
     (true, false) => TextDecoration.underline,
     (false, true) => TextDecoration.lineThrough,
     _ => null,
   };
-  if (run.fg == null &&
-      !run.bold &&
-      !run.dim &&
-      !run.italic &&
-      decoration == null) {
+  if (run.fg == null && !run.bold && !run.dim && !run.italic && decoration == null) {
     return null;
   }
   return TextStyle(
@@ -199,9 +180,7 @@ String blankSprites(String text) {
 /// Owns a native [ui.Picture]; [dispose] releases it.
 final class TerminalLine {
   TerminalLine(List<AnsiRun> runs, this.metrics, {this.links = const []})
-    : runs = metrics.palette.isDark
-          ? runs
-          : [for (final run in runs) metrics.palette.recolor(run)];
+    : runs = metrics.palette.isDark ? runs : [for (final run in runs) metrics.palette.recolor(run)];
 
   /// The row's runs in the colours of [CellMetrics.palette].
   final List<AnsiRun> runs;
@@ -212,10 +191,7 @@ final class TerminalLine {
 
   late final TextSpan span = TextSpan(
     children: links.isEmpty
-        ? [
-            for (final run in runs)
-              TextSpan(text: blankSprites(run.text), style: runTextStyle(run, metrics.palette)),
-          ]
+        ? [for (final run in runs) TextSpan(text: blankSprites(run.text), style: runTextStyle(run, metrics.palette))]
         : _linkSpans(),
   );
 
@@ -278,9 +254,7 @@ final class TerminalLine {
   Color _linkForeground(AnsiRun run) {
     final palette = metrics.palette;
     if (run.fg != null) return runForeground(run, palette);
-    return run.dim
-        ? Color.lerp(run.bg ?? palette.background, palette.link, _dimBlend)!
-        : palette.link;
+    return run.dim ? Color.lerp(run.bg ?? palette.background, palette.link, _dimBlend)! : palette.link;
   }
 
   /// Underlines under the linked cells, in the colour of the text above.
@@ -323,16 +297,9 @@ final class TerminalLine {
   /// while [key], [env] and [onLinkTap] are unchanged, so an update that moved
   /// a row without changing it makes Flutter skip rebuilding it. With
   /// [onLinkTap], a tap on a link of the row is reported.
-  Widget view(
-    Key key,
-    TerminalRowEnv env,
-    ValueChanged<TerminalLink>? onLinkTap,
-  ) {
+  Widget view(Key key, TerminalRowEnv env, ValueChanged<TerminalLink>? onLinkTap) {
     final cached = _view;
-    if (cached != null &&
-        _viewKey == key &&
-        identical(_viewEnv, env) &&
-        identical(_viewTap, onLinkTap)) {
+    if (cached != null && _viewKey == key && identical(_viewEnv, env) && identical(_viewTap, onLinkTap)) {
       return cached;
     }
     _viewKey = key;
@@ -464,10 +431,7 @@ final class _Fills {
     final lowest = items.length > 8 ? items.length - 8 : 0;
     for (var i = items.length - 1; i >= lowest; i--) {
       final (other, otherColor) = items[i];
-      if (otherColor == color &&
-          other.top == rect.top &&
-          other.bottom == rect.bottom &&
-          other.right == rect.left) {
+      if (otherColor == color && other.top == rect.top && other.bottom == rect.bottom && other.right == rect.left) {
         items[i] = (Rect.fromLTRB(other.left, other.top, rect.right, rect.bottom), color);
         return;
       }
@@ -538,11 +502,10 @@ final class TerminalRowSelection extends StaticSelectionContainerDelegate {
     super.remove(selectable);
   }
 
-  Rect _rectOf(Selectable selectable) => _rects[selectable] ??=
-      MatrixUtils.transformRect(
-        selectable.getTransformTo(null),
-        selectable.boundingBoxes.reduce((a, b) => a.expandToInclude(b)),
-      );
+  Rect _rectOf(Selectable selectable) => _rects[selectable] ??= MatrixUtils.transformRect(
+    selectable.getTransformTo(null),
+    selectable.boundingBoxes.reduce((a, b) => a.expandToInclude(b)),
+  );
 
   static int _topToBottom(Rect a, Rect b) {
     final byTop = a.top.compareTo(b.top);
@@ -570,11 +533,7 @@ final class TerminalRowEnv {
   });
 
   /// The environment [metrics]-sized rows have at [context].
-  factory TerminalRowEnv.of(
-    BuildContext context,
-    CellMetrics metrics, {
-    SelectionRegistrar? registrar,
-  }) {
+  factory TerminalRowEnv.of(BuildContext context, CellMetrics metrics, {SelectionRegistrar? registrar}) {
     // What `Text.rich` would have made of the style, minus the machinery
     // around it (a MouseRegion and a selection container per row).
     var style = DefaultTextStyle.of(context).style.merge(metrics.textStyle);
@@ -585,8 +544,7 @@ final class TerminalRowEnv {
       metrics: metrics,
       style: style,
       registrar: registrar ?? SelectionContainer.maybeOf(context),
-      selectionColor: DefaultSelectionStyle.of(context).selectionColor ??
-          DefaultSelectionStyle.defaultColor,
+      selectionColor: DefaultSelectionStyle.of(context).selectionColor ?? DefaultSelectionStyle.defaultColor,
       locale: Localizations.maybeLocaleOf(context),
       textDirection: Directionality.of(context),
     );
@@ -657,26 +615,20 @@ class TerminalLineView extends LeafRenderObjectWidget {
 /// The tap recogniser only takes part when the finger lands on a link, and it
 /// is an ordinary one, so a drag, a long press or a fling that starts there
 /// still belongs to the list, the selection or the scroll view.
-Widget _linkable(
-  TerminalLineView row,
-  ValueChanged<TerminalLink> onTap,
-) {
+Widget _linkable(TerminalLineView row, ValueChanged<TerminalLink> onTap) {
   final line = row.line;
   final metrics = line.metrics;
   return RawGestureDetector(
     gestures: {
-      _LinkTapRecognizer:
-          GestureRecognizerFactoryWithHandlers<_LinkTapRecognizer>(
-        _LinkTapRecognizer.new,
-        (recognizer) {
-          recognizer.allows = (position) =>
-              line.linkAt(metrics.columnAt(position.dx)) != null;
-          recognizer.onTapUp = (details) {
-            final link = line.linkAt(metrics.columnAt(details.localPosition.dx));
-            if (link != null) onTap(link);
-          };
-        },
-      ),
+      _LinkTapRecognizer: GestureRecognizerFactoryWithHandlers<_LinkTapRecognizer>(_LinkTapRecognizer.new, (
+        recognizer,
+      ) {
+        recognizer.allows = (position) => line.linkAt(metrics.columnAt(position.dx)) != null;
+        recognizer.onTapUp = (details) {
+          final link = line.linkAt(metrics.columnAt(details.localPosition.dx));
+          if (link != null) onTap(link);
+        };
+      }),
     },
     child: row,
   );
@@ -692,12 +644,7 @@ class _RowParagraph extends RenderParagraph {
     required super.registrar,
     required super.selectionColor,
     required super.devicePixelRatio,
-  }) : super(
-         textScaler: TextScaler.noScaling,
-         softWrap: false,
-         maxLines: 1,
-         overflow: TextOverflow.clip,
-       );
+  }) : super(textScaler: TextScaler.noScaling, softWrap: false, maxLines: 1, overflow: TextOverflow.clip);
 
   TerminalLine _line;
 
@@ -726,6 +673,5 @@ class _LinkTapRecognizer extends TapGestureRecognizer {
   bool Function(Offset localPosition) allows = (_) => false;
 
   @override
-  bool isPointerAllowed(PointerDownEvent event) =>
-      allows(event.localPosition) && super.isPointerAllowed(event);
+  bool isPointerAllowed(PointerDownEvent event) => allows(event.localPosition) && super.isPointerAllowed(event);
 }

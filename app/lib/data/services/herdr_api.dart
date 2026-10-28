@@ -23,8 +23,7 @@ enum SplitDirection {
 /// This herdr is too old for the request (an unknown method, or a parameter it
 /// does not know). A [HerdrApiException], so existing handlers still catch it.
 class HerdrUnsupportedException extends HerdrApiException {
-  const HerdrUnsupportedException(this.method)
-      : super('unsupported', 'herdr does not support $method');
+  const HerdrUnsupportedException(this.method) : super('unsupported', 'herdr does not support $method');
 
   final String method;
 }
@@ -53,8 +52,7 @@ class HerdrApi {
   /// File access over the same connection (SFTP), for the file viewer.
   late final RemoteFiles files = RemoteFiles(_transport, machineId: machineId);
 
-  Future<String> ping() async =>
-      (await _transport.request('ping'))['version'] as String? ?? '';
+  Future<String> ping() async => (await _transport.request('ping'))['version'] as String? ?? '';
 
   Future<Snapshot> snapshot() async {
     final r = await _transport.request('session.snapshot');
@@ -86,21 +84,18 @@ class HerdrApi {
       _transport.request('pane.send_keys', {'pane_id': paneId, 'keys': keys});
 
   /// Types [text] then presses enter.
-  Future<void> sendLine(String paneId, String text) =>
-      _transport.request('pane.send_input', {
-        'pane_id': paneId,
-        'text': text,
-        'keys': ['enter'],
-      });
+  Future<void> sendLine(String paneId, String text) => _transport.request('pane.send_input', {
+    'pane_id': paneId,
+    'text': text,
+    'keys': ['enter'],
+  });
 
   /// Types [text] (as a bracketed paste when the pane asks for one), then
   /// presses [keys]; either may be empty.
-  Future<void> sendInput(String paneId, String text, {List<String> keys = const []}) =>
-      _transport.request('pane.send_input', {
-        'pane_id': paneId,
-        if (text.isNotEmpty) 'text': text,
-        if (keys.isNotEmpty) 'keys': keys,
-      });
+  Future<void> sendInput(String paneId, String text, {List<String> keys = const []}) => _transport.request(
+    'pane.send_input',
+    {'pane_id': paneId, if (text.isNotEmpty) 'text': text, if (keys.isNotEmpty) 'keys': keys},
+  );
 
   /// Creates a workspace (with one tab and one pane) running a login shell in
   /// [cwd]. Never focuses it unless asked: [focus] moves the desktop user's
@@ -136,10 +131,7 @@ class HerdrApi {
   /// is not in a git repo, or on a herdr that predates worktrees
   /// ([HerdrUnsupportedException]).
   Future<List<WorktreeInfo>> listWorktrees({String? cwd, String? workspaceId}) async {
-    final r = await _call('worktree.list', {
-      'cwd': ?cwd,
-      'workspace_id': ?workspaceId,
-    });
+    final r = await _call('worktree.list', {'cwd': ?cwd, 'workspace_id': ?workspaceId});
     return WorktreeInfo.parseList(r['worktrees']);
   }
 
@@ -168,8 +160,7 @@ class HerdrApi {
   /// Removes the linked worktree open as [workspaceId]: its folder goes, its
   /// branch stays. herdr refuses a checkout with uncommitted changes. There is
   /// no `force` here on purpose: the phone never throws work away.
-  Future<void> removeWorktree(String workspaceId) =>
-      _call('worktree.remove', {'workspace_id': workspaceId});
+  Future<void> removeWorktree(String workspaceId) => _call('worktree.remove', {'workspace_id': workspaceId});
 
   /// Adds a tab (with one pane) to [workspaceId].
   Future<({String tabId, String rootPaneId})> createTab({
@@ -207,8 +198,7 @@ class HerdrApi {
     return _id(r, 'pane', 'pane_id');
   }
 
-  Future<void> closeWorkspace(String workspaceId) =>
-      _call('workspace.close', {'workspace_id': workspaceId});
+  Future<void> closeWorkspace(String workspaceId) => _call('workspace.close', {'workspace_id': workspaceId});
 
   Future<void> closeTab(String tabId) => _call('tab.close', {'tab_id': tabId});
 
@@ -217,8 +207,7 @@ class HerdrApi {
   Future<void> renameWorkspace(String workspaceId, String label) =>
       _call('workspace.rename', {'workspace_id': workspaceId, 'label': label});
 
-  Future<void> renameTab(String tabId, String label) =>
-      _call('tab.rename', {'tab_id': tabId, 'label': label});
+  Future<void> renameTab(String tabId, String label) => _call('tab.rename', {'tab_id': tabId, 'label': label});
 
   /// An empty [label] clears the pane's name (herdr takes null for that).
   Future<void> renamePane(String paneId, String label) =>
@@ -235,8 +224,7 @@ class HerdrApi {
     }
     return [
       for (final m in (r['manifests'] as List?) ?? const [])
-        if (m is Map && m['agent'] is String && (m['agent'] as String).isNotEmpty)
-          m['agent'] as String,
+        if (m is Map && m['agent'] is String && (m['agent'] as String).isNotEmpty) m['agent'] as String,
     ];
   }
 
@@ -248,8 +236,7 @@ class HerdrApi {
     final rows = info is Map ? info['foreground_processes'] : null;
     return [
       if (rows is List)
-        for (final row in rows)
-          ?PaneProcess.tryParse(row),
+        for (final row in rows) ?PaneProcess.tryParse(row),
     ];
   }
 
@@ -277,8 +264,7 @@ class HerdrApi {
       return await _transport.request(method, params);
     } on HerdrApiException catch (e) {
       if (e.code == 'invalid_request' &&
-          (e.message.contains('unknown variant `$method`') ||
-              e.message.contains('unknown field'))) {
+          (e.message.contains('unknown variant `$method`') || e.message.contains('unknown field'))) {
         throw HerdrUnsupportedException(method);
       }
       rethrow;
@@ -312,13 +298,12 @@ class HerdrApi {
   /// `pane_not_found` for the WHOLE subscription if one named pane does not
   /// exist (measured on 0.9.3), so the list must be built from a snapshot that
   /// is fresh; a pane closed after the subscription started is harmless.
-  Stream<Map<String, dynamic>> changes({Iterable<String>? statusPanes}) =>
-      _transport.events([
-        ..._structuralEvents,
-        if (statusPanes == null) const {'type': 'pane.updated'},
-        if (statusPanes != null)
-          for (final id in statusPanes) {'type': 'pane.agent_status_changed', 'pane_id': id},
-      ]);
+  Stream<Map<String, dynamic>> changes({Iterable<String>? statusPanes}) => _transport.events([
+    ..._structuralEvents,
+    if (statusPanes == null) const {'type': 'pane.updated'},
+    if (statusPanes != null)
+      for (final id in statusPanes) {'type': 'pane.agent_status_changed', 'pane_id': id},
+  ]);
 
   static const _structuralEvents = <Map<String, dynamic>>[
     {'type': 'workspace.created'},

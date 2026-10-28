@@ -7,7 +7,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/services/exif.dart';
 import '../../../data/services/image_decode.dart';
 import '../../../data/services/photo_export.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../files/file_format.dart';
 import 'photo_info.dart';
 import 'photo_item.dart';
@@ -27,13 +29,15 @@ Future<void> openPhotoViewer(
   Future<List<PhotoItem>> Function()? moreItems,
   Widget Function()? viewAsText,
   PhotoOverlayBuilder? overlay,
-}) => Navigator.of(context).push(photoViewerRoute(
-  items: items,
-  initialIndex: initialIndex,
-  moreItems: moreItems,
-  viewAsText: viewAsText,
-  overlay: overlay,
-));
+}) => Navigator.of(context).push(
+  photoViewerRoute(
+    items: items,
+    initialIndex: initialIndex,
+    moreItems: moreItems,
+    viewAsText: viewAsText,
+    overlay: overlay,
+  ),
+);
 
 /// The route [openPhotoViewer] pushes, for callers that push their own
 /// (replacing a screen, say).
@@ -135,11 +139,7 @@ class PhotoViewerState extends State<PhotoViewer> with SingleTickerProviderState
     export: widget.export,
   );
   final _dismiss = ValueNotifier<double>(0);
-  late final AnimationController _chrome = AnimationController(
-    vsync: this,
-    duration: Motion.standard,
-    value: 1,
-  );
+  late final AnimationController _chrome = AnimationController(vsync: this, duration: Motion.standard, value: 1);
   late final CurvedAnimation _chromeCurve = Motion.curved(_chrome);
   final _chromeKey = GlobalKey();
   late final ThemeData _theme = AppTheme.dark();
@@ -324,9 +324,16 @@ class _Chrome extends StatelessWidget {
         // The bars go as soon as a drag starts (the picture needs the room):
         // gone by a third of the way to dismissal.
         final opacity = visible.value * (1 - (dismiss.value * 3).clamp(0.0, 1.0));
-        if (opacity <= 0) return ExcludeSemantics(child: IgnorePointer(child: Opacity(opacity: 0, child: child)));
+        if (opacity <= 0) {
+          return ExcludeSemantics(
+            child: IgnorePointer(child: Opacity(opacity: 0, child: child)),
+          );
+        }
         if (opacity >= 1) return child!;
-        return IgnorePointer(ignoring: opacity < 0.5, child: Opacity(opacity: opacity, child: child));
+        return IgnorePointer(
+          ignoring: opacity < 0.5,
+          child: Opacity(opacity: opacity, child: child),
+        );
       },
     );
   }
@@ -400,10 +407,12 @@ class _Caption extends StatelessWidget {
                 final room = box.maxWidth - _measure(gap + detail, detailStyle, scaler);
                 final name = fitMiddle(item.name, room < 60 ? box.maxWidth : room, nameStyle, scaler);
                 return Text.rich(
-                  TextSpan(children: [
-                    TextSpan(text: name, style: nameStyle),
-                    if (detail.isNotEmpty) TextSpan(text: '$gap$detail', style: detailStyle),
-                  ]),
+                  TextSpan(
+                    children: [
+                      TextSpan(text: name, style: nameStyle),
+                      if (detail.isNotEmpty) TextSpan(text: '$gap$detail', style: detailStyle),
+                    ],
+                  ),
                   maxLines: 1,
                   softWrap: false,
                   overflow: TextOverflow.ellipsis,
@@ -417,13 +426,12 @@ class _Caption extends StatelessWidget {
   }
 }
 
-double _measure(String text, TextStyle style, TextScaler scaler) =>
-    (TextPainter(
-      text: TextSpan(text: text, style: style),
-      textDirection: TextDirection.ltr,
-      textScaler: scaler,
-      maxLines: 1,
-    )..layout()).width;
+double _measure(String text, TextStyle style, TextScaler scaler) => (TextPainter(
+  text: TextSpan(text: text, style: style),
+  textDirection: TextDirection.ltr,
+  textScaler: scaler,
+  maxLines: 1,
+)..layout()).width;
 
 /// [name] cut in the middle with `…` just enough to fit [maxWidth], keeping
 /// the extension and as much of both ends as there is room for.
@@ -483,7 +491,11 @@ class _FailureView extends StatelessWidget {
                 const SizedBox(height: Gap.md),
                 Semantics(
                   header: true,
-                  child: Text(title, textAlign: TextAlign.center, style: Type.title.copyWith(color: ds.text)),
+                  child: Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: Type.title.copyWith(color: ds.text),
+                  ),
                 ),
                 const SizedBox(height: Gap.sm),
                 Text(

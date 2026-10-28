@@ -67,8 +67,14 @@ void main() {
     List<String> sorted(List<String> names) => [...names]..sort(RemotePath.naturalCompare);
 
     test('numbers sort by value and case is ignored', () {
-      expect(sorted(['file10', 'file2', 'File1', 'file01', 'Zed', 'alpha']),
-          ['alpha', 'File1', 'file01', 'file2', 'file10', 'Zed']);
+      expect(sorted(['file10', 'file2', 'File1', 'file01', 'Zed', 'alpha']), [
+        'alpha',
+        'File1',
+        'file01',
+        'file2',
+        'file10',
+        'Zed',
+      ]);
     });
 
     test('long digit runs do not overflow', () {

@@ -10,12 +10,7 @@ import '../support/shot.dart' show loadAppFonts;
 import 'ui_harness.dart';
 
 MachineProfile _machine(String id, String label, {String host = 'h.example'}) =>
-    MachineProfile(
-      id: id,
-      label: label,
-      host: host,
-      username: 'bartholomew.fitzgerald',
-    );
+    MachineProfile(id: id, label: label, host: host, username: 'bartholomew.fitzgerald');
 
 /// Realistic worst cases, spread across rows rather than stacked in one:
 /// long unbreakable names, one-letter names, CJK, RTL, emoji, empty strings.
@@ -43,36 +38,38 @@ const _workspaces = <({String id, String label})>[
 ];
 
 List<Pane> _panes(int count) => [
-      for (var i = 0; i < count; i++)
-        (
-          id: 'w${i % 3 + 1}:p${i + 1}',
-          ws: 'w${i % 3 + 1}',
-          agent: i % 5 == 4 ? 'a-rather-long-agent-name-from-a-plugin' : 'claude',
-          status: const ['blocked', 'working', 'done', 'idle', 'unknown'][i % 5],
-        ),
-    ];
+  for (var i = 0; i < count; i++)
+    (
+      id: 'w${i % 3 + 1}:p${i + 1}',
+      ws: 'w${i % 3 + 1}',
+      agent: i % 5 == 4 ? 'a-rather-long-agent-name-from-a-plugin' : 'claude',
+      status: const ['blocked', 'working', 'done', 'idle', 'unknown'][i % 5],
+    ),
+];
 
 Future<UiHarness> _worstCase({int agents = 14}) => UiHarness.create([
-      (
-        profile: _machine('a',
-            'build-server-eu-west-2-production-primary-gpu-cluster-0042',
-            host: 'ip-10-0-143-201.eu-west-2.compute.internal'),
-        snapshot: snapshotWith(
-          _panes(agents),
-          workspaces: _workspaces,
-          title: (id) => _titles[id.hashCode.abs() % _titles.length],
-          cwd: (id) => _cwds[id.hashCode.abs() % _cwds.length],
-        ),
-      ),
-      (
-        profile: _machine('b', 'x'), // one-letter machine name
-        snapshot: snapshotWith(_panes(2)),
-      ),
-      (
-        profile: _machine('c', '🚀 日本語のマシン'),
-        snapshot: snapshotWith(const []), // online but empty
-      ),
-    ]);
+  (
+    profile: _machine(
+      'a',
+      'build-server-eu-west-2-production-primary-gpu-cluster-0042',
+      host: 'ip-10-0-143-201.eu-west-2.compute.internal',
+    ),
+    snapshot: snapshotWith(
+      _panes(agents),
+      workspaces: _workspaces,
+      title: (id) => _titles[id.hashCode.abs() % _titles.length],
+      cwd: (id) => _cwds[id.hashCode.abs() % _cwds.length],
+    ),
+  ),
+  (
+    profile: _machine('b', 'x'), // one-letter machine name
+    snapshot: snapshotWith(_panes(2)),
+  ),
+  (
+    profile: _machine('c', '🚀 日本語のマシン'),
+    snapshot: snapshotWith(const []), // online but empty
+  ),
+]);
 
 void main() {
   setUpAll(loadAppFonts);
@@ -93,8 +90,7 @@ void main() {
         await teardownUi(tester, h);
       });
 
-      testWidgets('machines list and machine detail survive worst-case data',
-          (tester) async {
+      testWidgets('machines list and machine detail survive worst-case data', (tester) async {
         final h = await _worstCase();
         await pumpUi(tester, h, width: width, textScale: scale);
 
@@ -126,8 +122,7 @@ void main() {
   });
 
   group('states', () {
-    testWidgets('no machines: an inviting empty state, not a blank screen',
-        (tester) async {
+    testWidgets('no machines: an inviting empty state, not a blank screen', (tester) async {
       final h = await UiHarness.create(const []);
       await pumpUi(tester, h);
 
@@ -136,35 +131,30 @@ void main() {
     });
 
     testWidgets('a machine with no agents says so', (tester) async {
-      final h = await UiHarness.create([
-        (profile: _machine('a', 'solo'), snapshot: snapshotWith(const [])),
-      ]);
+      final h = await UiHarness.create([(profile: _machine('a', 'solo'), snapshot: snapshotWith(const []))]);
       await pumpUi(tester, h);
 
       expect(find.text('No agents running'), findsOneWidget);
       await teardownUi(tester, h);
     });
 
-    testWidgets('losing the network says so instead of showing stale data as live',
-        (tester) async {
+    testWidgets('losing the network says so instead of showing stale data as live', (tester) async {
       final h = await UiHarness.create([
-        (
-          profile: _machine('a', 'solo'),
-          snapshot: snapshotWith(_panes(3), title: (_) => 'Fix the tests'),
-        ),
+        (profile: _machine('a', 'solo'), snapshot: snapshotWith(_panes(3), title: (_) => 'Fix the tests')),
       ]);
       await pumpUi(tester, h);
       expect(find.textContaining('Offline'), findsNothing);
-      expect(
-          tester.widgetList<AgentCard>(find.byType(AgentCard)).any((c) => c.agent.stale), isFalse);
+      expect(tester.widgetList<AgentCard>(find.byType(AgentCard)).any((c) => c.agent.stale), isFalse);
 
       h.network.goOffline();
       await settle(tester);
 
       expect(find.textContaining('Offline'), findsWidgets);
       expect(
-          tester.widgetList<AgentCard>(find.byType(AgentCard)).every((c) => c.agent.stale), isTrue,
-          reason: 'rows keep their data but are marked stale');
+        tester.widgetList<AgentCard>(find.byType(AgentCard)).every((c) => c.agent.stale),
+        isTrue,
+        reason: 'rows keep their data but are marked stale',
+      );
       await teardownUi(tester, h);
     });
   });

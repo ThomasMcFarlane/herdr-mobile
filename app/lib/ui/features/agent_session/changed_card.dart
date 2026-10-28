@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../data/acp/turns/turns.dart';
 import '../../../data/words/plural.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'log_atoms.dart';
 import 'tool_rows.dart' show DiffPanel;
 import 'transcript_rows.dart';
@@ -105,7 +107,10 @@ class ChangedFileRow extends StatelessWidget {
     final stats = file.added + file.removed > 0;
     final mark = file.isDelete ? 'deleted' : (file.isNew ? 'new' : null);
     return DecoratedBox(
-      decoration: BoxDecoration(color: ds.fill, borderRadius: _corners(first: false, last: last)),
+      decoration: BoxDecoration(
+        color: ds.fill,
+        borderRadius: _corners(first: false, last: last),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -146,10 +151,7 @@ class ChangedFileRow extends StatelessWidget {
                       style: Type.captionStrong.copyWith(color: file.isDelete ? removedText(ds) : ds.addedText),
                     ),
                   ],
-                  if (stats) ...[
-                    const SizedBox(width: Gap.sm),
-                    DiffStats(added: file.added, removed: file.removed),
-                  ],
+                  if (stats) ...[const SizedBox(width: Gap.sm), DiffStats(added: file.added, removed: file.removed)],
                 ],
               ),
             ),
@@ -183,7 +185,13 @@ class ChangedFileRow extends StatelessWidget {
 /// The last line of a card that lists only some of its files: `12 more`, and
 /// `Show less` once all are listed.
 class ChangedMoreRow extends StatelessWidget {
-  const ChangedMoreRow({super.key, required this.rowKey, required this.count, required this.all, required this.onToggle});
+  const ChangedMoreRow({
+    super.key,
+    required this.rowKey,
+    required this.count,
+    required this.all,
+    required this.onToggle,
+  });
 
   final String rowKey;
   final int count;

@@ -78,13 +78,13 @@ class SelectMark extends StatelessWidget {
         child: !selected
             ? null
             : number != null
-                ? Text(
-                    '$number',
-                    maxLines: 1,
-                    textScaler: TextScaler.noScaling,
-                    style: Type.badge.copyWith(color: ds.onAccent),
-                  )
-                : Icon(LucideIcons.check, size: IconSize.inline, color: ds.onAccent),
+            ? Text(
+                '$number',
+                maxLines: 1,
+                textScaler: TextScaler.noScaling,
+                style: Type.badge.copyWith(color: ds.onAccent),
+              )
+            : Icon(LucideIcons.check, size: IconSize.inline, color: ds.onAccent),
       ),
     );
   }

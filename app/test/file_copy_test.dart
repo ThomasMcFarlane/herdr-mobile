@@ -131,7 +131,10 @@ void main() {
       final waiting = ReadCancel()..cancel();
 
       final first = staging.fetch(files, await fs.stat('/v/a.mp4'));
-      await expectLater(staging.fetch(files, await fs.stat('/v/b.mp4'), cancel: waiting), throwsA(isA<ReadCancelled>()));
+      await expectLater(
+        staging.fetch(files, await fs.stat('/v/b.mp4'), cancel: waiting),
+        throwsA(isA<ReadCancelled>()),
+      );
       await first;
 
       expect(fs.calls.where((c) => c.contains('/v/b.mp4')).where((c) => c.startsWith('read')), isEmpty);

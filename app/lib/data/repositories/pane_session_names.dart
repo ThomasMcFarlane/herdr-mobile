@@ -115,7 +115,8 @@ class PaneSessionNames extends ChangeNotifier {
         continue;
       }
       final entry = _entries[key];
-      final fresh = entry != null &&
+      final fresh =
+          entry != null &&
           entry.path == path &&
           entry.status == a.pane.status &&
           (!entry.failed || _clock().difference(entry.at) < retryAfter);

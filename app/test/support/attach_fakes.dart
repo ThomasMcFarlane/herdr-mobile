@@ -179,7 +179,11 @@ class FakeUploader implements AttachUploader {
   FakeUpload get last => started.last;
 
   @override
-  AttachUpload start({required String localPath, required String fileName, void Function(int sent, int total)? onProgress}) {
+  AttachUpload start({
+    required String localPath,
+    required String fileName,
+    void Function(int sent, int total)? onProgress,
+  }) {
     final u = FakeUpload(localPath, fileName, onProgress);
     started.add(u);
     return u;
@@ -200,11 +204,16 @@ class MemoryRecentStore implements RecentPhoneFilesStore {
 
 /// An [AttachKit] over fakes.
 class FakeKit {
-  FakeKit({FakeGallery? gallery, FakePhoneFilePicker? picker, FakeUploader? uploader, MemoryRecentStore? store, ThumbCache? thumbs})
-    : gallery = gallery ?? FakeGallery(),
-      picker = picker ?? FakePhoneFilePicker(),
-      uploader = uploader ?? FakeUploader(),
-      store = store ?? MemoryRecentStore() {
+  FakeKit({
+    FakeGallery? gallery,
+    FakePhoneFilePicker? picker,
+    FakeUploader? uploader,
+    MemoryRecentStore? store,
+    ThumbCache? thumbs,
+  }) : gallery = gallery ?? FakeGallery(),
+       picker = picker ?? FakePhoneFilePicker(),
+       uploader = uploader ?? FakeUploader(),
+       store = store ?? MemoryRecentStore() {
     kit = AttachKit(
       gallery: this.gallery,
       files: this.picker,

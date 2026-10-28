@@ -32,9 +32,8 @@ typedef Pane = ({String id, String ws, String? agent, String status});
 /// shadows an earlier one, so a test that adds sessions after a harness's
 /// providers adds this again after them.
 SingleChildWidget attentionSetProvider() => ChangeNotifierProvider<AttentionSet>(
-      create: (context) =>
-          AttentionSet(fleet: context.read<FleetRepository>(), sessions: context.read<AgentSessions?>()),
-    );
+  create: (context) => AttentionSet(fleet: context.read<FleetRepository>(), sessions: context.read<AgentSessions?>()),
+);
 
 /// A fake machine that also answers `pane.read`: [paneTexts] for the pane
 /// asked about, else [paneText] (the same for every pane).
@@ -50,10 +49,7 @@ class UiTransport extends FakeTransport {
   final Map<String, Map<String, dynamic>> answers = {};
 
   @override
-  Future<Map<String, dynamic>> request(
-    String method, [
-    Map<String, dynamic> params = const {},
-  ]) {
+  Future<Map<String, dynamic>> request(String method, [Map<String, dynamic> params = const {}]) {
     if (answers[method] case final answer?) {
       calls.add((method, params));
       return Future.value(answer);
@@ -71,7 +67,7 @@ class UiTransport extends FakeTransport {
 /// A fleet of fake machines wired like the app wires real ones.
 class UiHarness {
   UiHarness._(this.machines, this.fleet, this.network, this.transports, this.agentScreens)
-      : previews = PanePreviews(changes: fleet, connection: fleet.connection);
+    : previews = PanePreviews(changes: fleet, connection: fleet.connection);
 
   /// Terminal font/wrap settings the pane screen reads, kept in memory.
   final terminalSettings = TerminalSettings(MemoryTerminalSettingsStore());
@@ -90,16 +86,11 @@ class UiHarness {
   final FakeNetwork network;
   final Map<String, UiTransport> transports;
 
-  static Future<UiHarness> create(
-    List<({MachineProfile profile, Map<String, dynamic> snapshot})> spec,
-  ) async {
-    final machines = MachineRepository(
-        profiles: MemoryProfileStore(), secrets: MemorySecretStore());
+  static Future<UiHarness> create(List<({MachineProfile profile, Map<String, dynamic> snapshot})> spec) async {
+    final machines = MachineRepository(profiles: MemoryProfileStore(), secrets: MemorySecretStore());
     await machines.load();
     final network = FakeNetwork();
-    final transports = {
-      for (final s in spec) s.profile.id: UiTransport(s.snapshot),
-    };
+    final transports = {for (final s in spec) s.profile.id: UiTransport(s.snapshot)};
     final agentScreens = AgentScreens();
     final fleet = FleetRepository(
       screens: agentScreens,
@@ -163,8 +154,7 @@ Future<void> pumpUi(
       child: MaterialApp(
         theme: brightness == Brightness.dark ? AppTheme.dark() : AppTheme.light(),
         builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(context)
-              .copyWith(textScaler: TextScaler.linear(textScale)),
+          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
           child: child!,
         ),
         home: const HomeShell(),
@@ -181,7 +171,6 @@ Future<void> settle(WidgetTester tester) async {
   }
 }
 
-
 /// Tears the tree down so no timers outlive the test.
 Future<void> teardownUi(WidgetTester tester, UiHarness h) async {
   await tester.pumpWidget(const SizedBox());
@@ -195,10 +184,7 @@ Map<String, dynamic> snapshotWith(
   String Function(String paneId)? title,
   String Function(String paneId)? cwd,
 }) {
-  final json = snapshotJson(
-    panes: panes,
-    workspaces: workspaces ?? const [(id: 'w1', label: 'main')],
-  );
+  final json = snapshotJson(panes: panes, workspaces: workspaces ?? const [(id: 'w1', label: 'main')]);
   for (final p in json['panes'] as List) {
     final m = p as Map<String, dynamic>;
     final id = m['pane_id'] as String;

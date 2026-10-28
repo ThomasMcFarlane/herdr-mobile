@@ -12,7 +12,7 @@ const tracesDir = 'test/fixtures/traces';
 typedef CorpusText = ({String name, String text});
 
 List<CorpusText> allCorpusTexts() => [
-      for (final c in loadCorpus(corpusDir)) (name: c.toString(), text: c.input),
-      ...loadMessages('$corpusDir/messages'),
-      for (final m in loadTraceMessages(tracesDir)) (name: m.name, text: m.chunks.join()),
-    ];
+  for (final c in loadCorpus(corpusDir)) (name: c.toString(), text: c.input),
+  ...loadMessages('$corpusDir/messages'),
+  for (final m in loadTraceMessages(tracesDir)) (name: m.name, text: m.chunks.join()),
+];

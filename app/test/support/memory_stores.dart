@@ -15,8 +15,7 @@ class MemorySecretStore implements SecretStore {
   final Map<String, MachineSecrets> secrets = {};
 
   @override
-  Future<MachineSecrets> read(String id) async =>
-      secrets[id] ?? const MachineSecrets();
+  Future<MachineSecrets> read(String id) async => secrets[id] ?? const MachineSecrets();
 
   @override
   Future<void> write(String id, MachineSecrets s) async => secrets[id] = s;

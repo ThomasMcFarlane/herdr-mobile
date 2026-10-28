@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../../data/repositories/quick_phrases.dart';
 import '../../../data/repositories/sent_phrases.dart';
 import '../../../data/words/plural.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// Settings > Agents > Quick phrases: its own page, because the list grows
@@ -18,19 +19,19 @@ class QuickPhrasesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        backgroundColor: context.ds.bg,
-        body: CustomScrollView(
-          slivers: [
-            const SliverLargeTitle.back(title: 'Quick phrases'),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + Gap.lg),
-                child: const QuickPhrasesSection(),
-              ),
-            ),
-          ],
+    backgroundColor: context.ds.bg,
+    body: CustomScrollView(
+      slivers: [
+        const SliverLargeTitle.back(title: 'Quick phrases'),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + Gap.lg),
+            child: const QuickPhrasesSection(),
+          ),
         ),
-      );
+      ],
+    ),
+  );
 }
 
 /// The lines offered as chips above the composers. A row opens the editor
@@ -60,10 +61,7 @@ class QuickPhrasesSection extends StatelessWidget {
         if (phrases.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: Gap.sm),
-            child: Text(
-              'No phrases yet, so no chips.',
-              style: Type.secondary.copyWith(color: ds.textMuted),
-            ),
+            child: Text('No phrases yet, so no chips.', style: Type.secondary.copyWith(color: ds.textMuted)),
           ),
         for (final phrase in phrases)
           _PhraseRow(
@@ -83,7 +81,8 @@ class QuickPhrasesSection extends StatelessWidget {
           const SizedBox(height: Gap.md),
           SwitchRow(
             title: 'Add what I send most',
-            subtitle: 'A message to an agent that you sent at least twice becomes a chip. '
+            subtitle:
+                'A message to an agent that you sent at least twice becomes a chip. '
                 'Learned and kept on this phone only.',
             value: sent.enabled,
             onChanged: (on) => unawaited(sent.setEnabled(on)),
@@ -120,20 +119,20 @@ class _PhraseRow extends StatelessWidget {
           },
           minHeight: _rowHeight,
           padding: const EdgeInsets.symmetric(vertical: Gap.sm),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    phrase,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Type.row.copyWith(color: ds.text),
-                  ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  phrase,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Type.row.copyWith(color: ds.text),
                 ),
-                const SizedBox(width: Gap.md),
-                Icon(LucideIcons.pencil, size: IconSize.row, color: ds.textTertiary),
-              ],
-            ),
+              ),
+              const SizedBox(width: Gap.md),
+              Icon(LucideIcons.pencil, size: IconSize.row, color: ds.textTertiary),
+            ],
+          ),
         ),
         const Hairline(),
       ],

@@ -18,13 +18,15 @@ void main() {
     body = '';
     location = null;
     server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-    unawaited(server.forEach((req) async {
-      userAgent = req.headers.value(HttpHeaders.userAgentHeader);
-      req.response.statusCode = status;
-      if (location != null) req.response.headers.set(HttpHeaders.locationHeader, location!);
-      req.response.write(body);
-      await req.response.close();
-    }));
+    unawaited(
+      server.forEach((req) async {
+        userAgent = req.headers.value(HttpHeaders.userAgentHeader);
+        req.response.statusCode = status;
+        if (location != null) req.response.headers.set(HttpHeaders.locationHeader, location!);
+        req.response.write(body);
+        await req.response.close();
+      }),
+    );
   });
 
   tearDown(() => server.close(force: true));
@@ -36,7 +38,11 @@ void main() {
     return jsonEncode({
       'tag_name': tag,
       'assets': [
-        {'name': 'herdr-mobile-${tag.substring(1)}.apk', 'size': size, 'browser_download_url': '$base/herdr-mobile-${tag.substring(1)}.apk'},
+        {
+          'name': 'herdr-mobile-${tag.substring(1)}.apk',
+          'size': size,
+          'browser_download_url': '$base/herdr-mobile-${tag.substring(1)}.apk',
+        },
         {'name': 'SHA256SUMS', 'size': 10, 'browser_download_url': '$base/SHA256SUMS'},
       ],
     });

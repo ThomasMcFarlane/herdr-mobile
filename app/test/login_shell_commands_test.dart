@@ -22,13 +22,7 @@ String? _installed(String shell) {
   return null;
 }
 
-Future<RunResult> _runUnder(
-  String shell,
-  String command,
-  Directory home,
-  String path, {
-  String input = '',
-}) async {
+Future<RunResult> _runUnder(String shell, String command, Directory home, String path, {String input = ''}) async {
   final p = await Process.start(
     shell,
     ['-c', command],
@@ -111,7 +105,9 @@ void main() {
       buildMuxCommand(session: 'default'),
       buildEventsCommand(session: 'default'),
     ];
-    final shape = RegExp(r'''^sh -c 'eval "\$\(echo ([A-Za-z0-9+/=]+) \| \{ base64 -d 2>/dev/null \|\| base64 -D; \}\)"'$''');
+    final shape = RegExp(
+      r'''^sh -c 'eval "\$\(echo ([A-Za-z0-9+/=]+) \| \{ base64 -d 2>/dev/null \|\| base64 -D; \}\)"'$''',
+    );
     for (final c in commands) {
       final m = shape.firstMatch(c);
       expect(m, isNotNull, reason: c);

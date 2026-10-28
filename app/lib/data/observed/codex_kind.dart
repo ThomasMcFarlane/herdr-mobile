@@ -59,7 +59,9 @@ class CodexSubagentLogs implements SubagentLogs {
       try {
         final stat = await machine.files.stat(path);
         final at = stat.modified;
-        out[info.name] = at != null && now.difference(at.toUtc()) <= running ? SubagentState.running : SubagentState.finished;
+        out[info.name] = at != null && now.difference(at.toUtc()) <= running
+            ? SubagentState.running
+            : SubagentState.finished;
       } on RemoteFileException {
         continue;
       }

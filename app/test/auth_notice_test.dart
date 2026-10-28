@@ -5,22 +5,20 @@ void main() {
   _refusalTests();
   group('approvalUrlFrom', () {
     test('finds the link in a real Tailscale SSH check banner', () {
-      const banner = '# Tailscale SSH requires an additional check.\n'
+      const banner =
+          '# Tailscale SSH requires an additional check.\n'
           '# To authenticate, visit: https://login.tailscale.com/a/l3503a0535f1bf\n';
 
       expect(approvalUrlFrom(banner), 'https://login.tailscale.com/a/l3503a0535f1bf');
     });
 
     test('drops sentence punctuation that follows the link', () {
-      expect(approvalUrlFrom('visit https://login.tailscale.com/a/abc.'),
-          'https://login.tailscale.com/a/abc');
-      expect(approvalUrlFrom('(see https://login.tailscale.com/a/abc)'),
-          'https://login.tailscale.com/a/abc');
+      expect(approvalUrlFrom('visit https://login.tailscale.com/a/abc.'), 'https://login.tailscale.com/a/abc');
+      expect(approvalUrlFrom('(see https://login.tailscale.com/a/abc)'), 'https://login.tailscale.com/a/abc');
     });
 
     test('keeps a query string', () {
-      expect(approvalUrlFrom('https://login.example.com/a/b?x=1&y=2'),
-          'https://login.example.com/a/b?x=1&y=2');
+      expect(approvalUrlFrom('https://login.example.com/a/b?x=1&y=2'), 'https://login.example.com/a/b?x=1&y=2');
     });
 
     // The banner text is chosen by the machine. A hostile or compromised host
@@ -48,8 +46,7 @@ void main() {
     });
 
     test('returns the first link when several are present', () {
-      expect(approvalUrlFrom('https://a.example/1 then https://b.example/2'),
-          'https://a.example/1');
+      expect(approvalUrlFrom('https://a.example/1 then https://b.example/2'), 'https://a.example/1');
     });
   });
 }
@@ -67,8 +64,10 @@ void _refusalTests() {
 
     test('is not the approval prompt, which carries a link', () {
       expect(
-        refusalReasonFrom('# Tailscale SSH requires an additional check.\n'
-            '# To authenticate, visit: https://login.tailscale.com/a/abc'),
+        refusalReasonFrom(
+          '# Tailscale SSH requires an additional check.\n'
+          '# To authenticate, visit: https://login.tailscale.com/a/abc',
+        ),
         isNull,
       );
     });

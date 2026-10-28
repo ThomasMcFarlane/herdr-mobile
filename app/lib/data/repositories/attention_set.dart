@@ -177,7 +177,8 @@ class AttentionSet extends ChangeNotifier {
     for (final list in [needs, needsOff, review, reviewOff]) {
       list.sort(_longestWaiting);
     }
-    var changed = !_sameKeys(needs, _needsYou) ||
+    var changed =
+        !_sameKeys(needs, _needsYou) ||
         !_sameKeys(needsOff, _offlineNeedsYou) ||
         !_sameKeys(review, _toReview) ||
         !_sameKeys(reviewOff, _offlineToReview);

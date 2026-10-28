@@ -85,10 +85,7 @@ void main() {
       expect(vm.truncatedAtLimit, isTrue);
       expect(vm.hasMore, isFalse);
       expect(vm.document!.bytes, 5000);
-      final ends = [
-        for (final c in fs.calls)
-          int.parse(c.split('@')[1].split('+')[0]) + int.parse(c.split('+').last),
-      ];
+      final ends = [for (final c in fs.calls) int.parse(c.split('@')[1].split('+')[0]) + int.parse(c.split('+').last)];
       expect(ends.every((e) => e <= 5000), isTrue, reason: '$ends');
       final reads = fs.calls.length;
       await vm.loadMore();
@@ -225,7 +222,9 @@ void main() {
     });
 
     test('formatting needs the whole file: it reads the rest, or refuses past the limit', () async {
-      final big = jsonEncode({'items': List.generate(400, (i) => {'id': i, 'name': 'item $i'})});
+      final big = jsonEncode({
+        'items': List.generate(400, (i) => {'id': i, 'name': 'item $i'}),
+      });
       final fs = FakeFs()..addFile('/h/big.json', big);
       final vm = await _open(fs, '/h/big.json', firstChunk: 600);
       expect(vm.pretty, isFalse);
@@ -255,7 +254,11 @@ void main() {
       final vm = await _open(fs, '/h/screenshot', firstChunk: 1000);
       expect(vm.phase, ViewerPhase.ready);
       expect(vm.kind, FileKind.image);
-      expect(fs.calls.where((c) => c.startsWith('read')).length, 1, reason: 'only the sniffing read: no bitmap is made here');
+      expect(
+        fs.calls.where((c) => c.startsWith('read')).length,
+        1,
+        reason: 'only the sniffing read: no bitmap is made here',
+      );
     });
 
     test('a file shown as text on request stays text whatever its bytes say', () async {
@@ -411,8 +414,10 @@ void main() {
       final vm = vmFor(fs, '/p');
       await vm.load();
 
-      expect([for (final e in vm.entries) e.name],
-          ['Alpha', 'shortcut', 'zeta', 'đồ án', 'apple.txt', 'doc', 'File2.txt', 'file10.txt']);
+      expect(
+        [for (final e in vm.entries) e.name],
+        ['Alpha', 'shortcut', 'zeta', 'đồ án', 'apple.txt', 'doc', 'File2.txt', 'file10.txt'],
+      );
     });
 
     test('dotfiles are hidden until asked for, and the count says how many', () async {

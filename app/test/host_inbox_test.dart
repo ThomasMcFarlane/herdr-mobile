@@ -69,8 +69,20 @@ void main() {
 
     test('whatever goes in, the result is a safe, non-hidden, non-empty file name', () {
       final inputs = [
-        '../../etc/passwd', 'a\u0000b', '.', '....', '~/x', r'..\..\win', 'x\t\ty', '\u{1F600}\u{1F600}.png',
-        'with space and ünïcödé.txt', '.ssh', 'CON', 'a:b*c?.txt', '"quoted".md', 'x' * 500,
+        '../../etc/passwd',
+        'a\u0000b',
+        '.',
+        '....',
+        '~/x',
+        r'..\..\win',
+        'x\t\ty',
+        '\u{1F600}\u{1F600}.png',
+        'with space and ünïcödé.txt',
+        '.ssh',
+        'CON',
+        'a:b*c?.txt',
+        '"quoted".md',
+        'x' * 500,
       ];
       for (final input in inputs) {
         final out = inboxSafeName(input);
@@ -240,8 +252,7 @@ void main() {
       }
       expect(fs.nodes, isNot(contains('$_base/bbbbbbbbbbbb/old-other-session')));
       // Only the inbox was ever listed.
-      expect(fs.calls.where((c) => c.startsWith('list')).map((c) => c.substring(5)),
-          everyElement(startsWith(_base)));
+      expect(fs.calls.where((c) => c.startsWith('list')).map((c) => c.substring(5)), everyElement(startsWith(_base)));
     });
 
     test('never deletes more than the cap', () async {
@@ -289,8 +300,10 @@ void main() {
       InboxJanitor(log, startDelay: Duration.zero).watch(machine);
       expect(fs.nodes, contains('$_base/aaaaaaaaaaaa/old'), reason: 'not before the machine is online');
       machine.start();
-      await eventually(() => !fs.nodes.containsKey('$_base/aaaaaaaaaaaa/old') && log.runs.isNotEmpty,
-          reason: 'the sweep after going online');
+      await eventually(
+        () => !fs.nodes.containsKey('$_base/aaaaaaaaaaaa/old') && log.runs.isNotEmpty,
+        reason: 'the sweep after going online',
+      );
     });
 
     test('sweeps a machine at most once per 24 hours and skips machines without files', () async {

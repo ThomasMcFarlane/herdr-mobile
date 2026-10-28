@@ -7,8 +7,7 @@ enum RemoteEntryKind {
   link,
   other;
 
-  static RemoteEntryKind parse(String? name) =>
-      values.firstWhere((k) => k.name == name, orElse: () => other);
+  static RemoteEntryKind parse(String? name) => values.firstWhere((k) => k.name == name, orElse: () => other);
 }
 
 /// One row of a directory listing.
@@ -50,30 +49,26 @@ class RemoteEntry {
   bool get isHidden => name.startsWith('.');
 
   Map<String, Object?> toJson() => {
-        'name': name,
-        'path': path,
-        'kind': kind.name,
-        'resolved': resolvedKind?.name,
-        'size': size,
-        'modified': modified?.millisecondsSinceEpoch,
-        'mode': mode,
-        'target': linkTarget,
-      };
+    'name': name,
+    'path': path,
+    'kind': kind.name,
+    'resolved': resolvedKind?.name,
+    'size': size,
+    'modified': modified?.millisecondsSinceEpoch,
+    'mode': mode,
+    'target': linkTarget,
+  };
 
   factory RemoteEntry.fromJson(Map<Object?, Object?> j) => RemoteEntry(
-        name: j['name']! as String,
-        path: j['path']! as String,
-        kind: RemoteEntryKind.parse(j['kind'] as String?),
-        resolvedKind: j['resolved'] == null
-            ? null
-            : RemoteEntryKind.parse(j['resolved'] as String?),
-        size: j['size'] as int?,
-        modified: j['modified'] == null
-            ? null
-            : DateTime.fromMillisecondsSinceEpoch(j['modified']! as int, isUtc: true),
-        mode: j['mode'] as int?,
-        linkTarget: j['target'] as String?,
-      );
+    name: j['name']! as String,
+    path: j['path']! as String,
+    kind: RemoteEntryKind.parse(j['kind'] as String?),
+    resolvedKind: j['resolved'] == null ? null : RemoteEntryKind.parse(j['resolved'] as String?),
+    size: j['size'] as int?,
+    modified: j['modified'] == null ? null : DateTime.fromMillisecondsSinceEpoch(j['modified']! as int, isUtc: true),
+    mode: j['mode'] as int?,
+    linkTarget: j['target'] as String?,
+  );
 
   @override
   bool operator ==(Object other) =>
@@ -93,13 +88,7 @@ class RemoteEntry {
 
 /// What `stat` found at a path, links followed.
 class RemoteStat {
-  const RemoteStat({
-    required this.path,
-    required this.kind,
-    this.size,
-    this.modified,
-    this.mode,
-  });
+  const RemoteStat({required this.path, required this.kind, this.size, this.modified, this.mode});
 
   /// The path that was asked about.
   final String path;
@@ -116,22 +105,20 @@ class RemoteStat {
   String get name => RemotePath.basename(path);
 
   Map<String, Object?> toJson() => {
-        'path': path,
-        'kind': kind.name,
-        'size': size,
-        'modified': modified?.millisecondsSinceEpoch,
-        'mode': mode,
-      };
+    'path': path,
+    'kind': kind.name,
+    'size': size,
+    'modified': modified?.millisecondsSinceEpoch,
+    'mode': mode,
+  };
 
   factory RemoteStat.fromJson(Map<Object?, Object?> j) => RemoteStat(
-        path: j['path']! as String,
-        kind: RemoteEntryKind.parse(j['kind'] as String?),
-        size: j['size'] as int?,
-        modified: j['modified'] == null
-            ? null
-            : DateTime.fromMillisecondsSinceEpoch(j['modified']! as int, isUtc: true),
-        mode: j['mode'] as int?,
-      );
+    path: j['path']! as String,
+    kind: RemoteEntryKind.parse(j['kind'] as String?),
+    size: j['size'] as int?,
+    modified: j['modified'] == null ? null : DateTime.fromMillisecondsSinceEpoch(j['modified']! as int, isUtc: true),
+    mode: j['mode'] as int?,
+  );
 
   @override
   bool operator ==(Object other) =>
@@ -169,8 +156,7 @@ enum RemoteFileErrorKind {
   /// The connection failed or dropped; retrying may help.
   network;
 
-  static RemoteFileErrorKind parse(String? name) =>
-      values.firstWhere((k) => k.name == name, orElse: () => network);
+  static RemoteFileErrorKind parse(String? name) => values.firstWhere((k) => k.name == name, orElse: () => network);
 }
 
 /// A file operation failed. Like `HerdrTransportException`, it says whether
@@ -180,8 +166,7 @@ enum RemoteFileErrorKind {
 /// retryable by default.
 class RemoteFileException implements Exception {
   RemoteFileException(this.kind, this.message, {bool? fatal, this.path})
-      : fatal = fatal ??
-            (kind != RemoteFileErrorKind.network && kind != RemoteFileErrorKind.failed);
+    : fatal = fatal ?? (kind != RemoteFileErrorKind.network && kind != RemoteFileErrorKind.failed);
 
   final RemoteFileErrorKind kind;
   final String message;
@@ -205,8 +190,7 @@ const uploadMaxBytes = 200 * 1024 * 1024;
 /// An upload stopped by [UploadJob.cancel]: not a failure, nobody is waiting.
 /// Kind `failed` and fatal (retrying is the caller's choice, not automatic).
 class UploadCancelled extends RemoteFileException {
-  UploadCancelled({super.path})
-      : super(RemoteFileErrorKind.failed, 'Upload cancelled', fatal: true);
+  UploadCancelled({super.path}) : super(RemoteFileErrorKind.failed, 'Upload cancelled', fatal: true);
 }
 
 /// One upload to the host, running in the transport's worker. Bytes never
@@ -368,4 +352,3 @@ abstract final class RemotePath {
     return s.substring(k);
   }
 }
-

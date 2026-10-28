@@ -180,12 +180,7 @@ void main() {
     test('flags a label that says it destroys something', () {
       final reason = proseRisk('Delete all branches');
       expect(reason, isNotNull);
-      for (final text in [
-        'Overwrite config.json?',
-        'Remove 3 files?',
-        'Yes, discard my changes',
-        'Force',
-      ]) {
+      for (final text in ['Overwrite config.json?', 'Remove 3 files?', 'Yes, discard my changes', 'Force']) {
         expect(proseRisk(text), reason, reason: text);
       }
     });

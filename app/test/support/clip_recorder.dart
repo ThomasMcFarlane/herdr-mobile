@@ -69,7 +69,12 @@ class ClipRecorder {
   }
 
   /// Holds a finger on the centre of [target] for [hold], captioned [label].
-  Future<void> longPress(WidgetTester t, Finder target, String label, {Duration hold = const Duration(milliseconds: 700)}) async {
+  Future<void> longPress(
+    WidgetTester t,
+    Finder target,
+    String label, {
+    Duration hold = const Duration(milliseconds: 700),
+  }) async {
     final at = t.getCenter(target);
     _steps.add({'t': _now, ..._norm(t, at), 'kind': 'tap', 'label': label});
     final g = await t.startGesture(at);
@@ -112,18 +117,17 @@ class ClipRecorder {
   /// card at the top ([top]) when the change itself appears low on screen (a
   /// toast, a sheet), so the caption never covers what it describes.
   void chapter(int index, int total, String label, {bool top = false}) => _steps.add({
-        't': _now,
-        'kind': 'chapter',
-        'label': label,
-        'index': index,
-        'total': total,
-        if (top) 'place': 'top',
-      });
+    't': _now,
+    'kind': 'chapter',
+    'label': label,
+    'index': index,
+    'total': total,
+    if (top) 'place': 'top',
+  });
 
   /// Writes touches.json next to the frames.
-  void finish() => File('${out.path}/touches.json').writeAsStringSync(
-        const JsonEncoder.withIndent('  ').convert({'fps': 30, 'frames': _frames, 'steps': _steps}),
-      );
+  void finish() => File('${out.path}/touches.json')
+      .writeAsStringSync(const JsonEncoder.withIndent('  ').convert({'fps': 30, 'frames': _frames, 'steps': _steps}));
 
   Map<String, double> _norm(WidgetTester t, Offset o) {
     final size = t.view.physicalSize / t.view.devicePixelRatio;
@@ -137,7 +141,8 @@ class ClipRecorder {
       final ui.Image image = await boundary.toImage(pixelRatio: width / boundary.size.width);
       final data = await image.toByteData(format: ui.ImageByteFormat.png);
       _frames++;
-      await File('${out.path}/frames/${_frames.toString().padLeft(5, '0')}.png').writeAsBytes(data!.buffer.asUint8List());
+      await File('${out.path}/frames/${_frames.toString().padLeft(5, '0')}.png')
+          .writeAsBytes(data!.buffer.asUint8List());
     });
   }
 }

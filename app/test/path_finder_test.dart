@@ -12,15 +12,21 @@ const _main = '/work/proj';
 
 void _repo(FakeFs fs, List<String> names) => fs.addRepo(_main, names);
 
-PathFinder _finder(FakeFs fs, {DateTime Function()? now, int maxWorktrees = 12, Duration? budget, int maxFolders = 400, Duration? search}) =>
-    PathFinder(
-      RemoteFiles(FakeTransport()..fs = fs),
-      now: now,
-      maxWorktrees: maxWorktrees,
-      worktreeBudget: budget ?? const Duration(seconds: 3),
-      searchBudget: search ?? const Duration(seconds: 2),
-      maxFolders: maxFolders,
-    );
+PathFinder _finder(
+  FakeFs fs, {
+  DateTime Function()? now,
+  int maxWorktrees = 12,
+  Duration? budget,
+  int maxFolders = 400,
+  Duration? search,
+}) => PathFinder(
+  RemoteFiles(FakeTransport()..fs = fs),
+  now: now,
+  maxWorktrees: maxWorktrees,
+  worktreeBudget: budget ?? const Duration(seconds: 3),
+  searchBudget: search ?? const Duration(seconds: 2),
+  maxFolders: maxFolders,
+);
 
 Future<PathFindReport> _inWorktrees(PathFinder f, String rel, {String cwd = _main, SearchCancel? cancel}) =>
     f.inWorktrees([rel], cwd, cancel ?? SearchCancel());
@@ -74,7 +80,11 @@ void main() {
 
       final r = await _inWorktrees(_finder(fs), 'lib/m.dart', cwd: '$_main/app');
 
-      expect(r.candidates.single.path, '/work/a/app/lib/m.dart', reason: 'the first place that exists in each worktree');
+      expect(
+        r.candidates.single.path,
+        '/work/a/app/lib/m.dart',
+        reason: 'the first place that exists in each worktree',
+      );
     });
 
     test('a path that climbs out of the checkout is never asked about', () async {
@@ -104,7 +114,14 @@ void main() {
       final r = await _inWorktrees(_finder(fs), 'f.md');
 
       expect(r.candidates.map((c) => c.rootName), ['good']);
-      expect(fs.calls.where((c) => c.startsWith('stat ') && (c.contains('elsewhere') || c.contains('/work/notgit') || c.contains('/work/nul'))), isEmpty);
+      expect(
+        fs.calls.where(
+          (c) =>
+              c.startsWith('stat ') &&
+              (c.contains('elsewhere') || c.contains('/work/notgit') || c.contains('/work/nul')),
+        ),
+        isEmpty,
+      );
     });
 
     test('a denied .git/worktrees, or no repository at all, is just nothing', () async {
@@ -306,7 +323,16 @@ void main() {
   test('isDistinctive: a long, uncommon name is; README.md, main.dart and short names are not', () {
     expect(PathFinder.isDistinctive('SESSION_PROFILE.md'), isTrue);
     expect(PathFinder.isDistinctive('files_navigation.dart'), isTrue);
-    for (final common in ['README.md', 'main.dart', 'index.ts', 'pubspec.yaml', 'a.md', 'Makefile', 'notes.txt', '.env']) {
+    for (final common in [
+      'README.md',
+      'main.dart',
+      'index.ts',
+      'pubspec.yaml',
+      'a.md',
+      'Makefile',
+      'notes.txt',
+      '.env',
+    ]) {
       expect(PathFinder.isDistinctive(common), isFalse, reason: common);
     }
   });

@@ -76,9 +76,7 @@ const muxProjections = <String, Map<String, Object>>{
   'pane.read': {
     'id': true,
     'error': true,
-    'result': {
-      'read': paneReadWireFields,
-    },
+    'result': {'read': paneReadWireFields},
   },
 };
 
@@ -109,7 +107,8 @@ def prune(v,s):
 const _pruneSlot = '@@PRUNE@@';
 
 /// Remote half of one event subscription (see [buildEventsCommand]).
-const _pythonEvents = '''
+const _pythonEvents =
+    '''
 import socket,sys,os,json,zlib,threading
 K=json.loads(r"""$_keepSlot""")
 @@PRUNE@@
@@ -151,7 +150,8 @@ os._exit(code)
 /// stdin line, each served on its own thread against a fresh connection to
 /// herdr's one-request-per-connection socket. Responses are written as they
 /// complete (possibly out of order); the client matches them by `id`.
-const _pythonMux = '''
+const _pythonMux =
+    '''
 import socket,sys,os,json,threading,zlib,itertools,difflib
 P=sys.argv[1]
 K=json.loads(r"""$_keepSlot""")
@@ -343,15 +343,12 @@ String _shellCommand(String script) {
 /// when either is missing so callers can fall back to [buildBridgeCommand].
 ///
 /// Shipped base64-encoded like [buildBridgeCommand], with stdin untouched.
-String buildMuxCommand({required String session, String? socketPath}) =>
-    _pythonCommand(
-      what: 'the multiplexed channel',
-      script: _pythonMux
-          .replaceFirst(_pruneSlot, _pythonPrune)
-          .replaceFirst(_keepSlot, jsonEncode(muxProjections)),
-      session: session,
-      socketPath: socketPath,
-    );
+String buildMuxCommand({required String session, String? socketPath}) => _pythonCommand(
+  what: 'the multiplexed channel',
+  script: _pythonMux.replaceFirst(_pruneSlot, _pythonPrune).replaceFirst(_keepSlot, jsonEncode(muxProjections)),
+  session: session,
+  socketPath: socketPath,
+);
 
 /// Builds the remote command for one event subscription: reads the
 /// `events.subscribe` request line from stdin, forwards it to herdr's socket
@@ -363,15 +360,12 @@ String buildMuxCommand({required String session, String? socketPath}) =>
 /// closes or herdr hangs up. Needs `python3` and the socket like
 /// [buildMuxCommand], and exits 78 when either is missing, so the caller can
 /// use [buildBridgeCommand] instead.
-String buildEventsCommand({required String session, String? socketPath}) =>
-    _pythonCommand(
-      what: 'the event channel',
-      script: _pythonEvents
-          .replaceFirst(_pruneSlot, _pythonPrune)
-          .replaceFirst(_keepSlot, jsonEncode(eventProjection)),
-      session: session,
-      socketPath: socketPath,
-    );
+String buildEventsCommand({required String session, String? socketPath}) => _pythonCommand(
+  what: 'the event channel',
+  script: _pythonEvents.replaceFirst(_pruneSlot, _pythonPrune).replaceFirst(_keepSlot, jsonEncode(eventProjection)),
+  session: session,
+  socketPath: socketPath,
+);
 
 String _pythonCommand({
   required String what,
@@ -437,7 +431,8 @@ echo "herdr-mobile: need herdr >= 0.9, socat or python3 on this host" >&2
 exit 78
 ''';
 
-  final script = '''
+  final script =
+      '''
 for H in "\$HOME/.local/bin/herdr" "\$(command -v herdr 2>/dev/null)"; do
   if [ -n "\$H" ] && [ -x "\$H" ] && [ "\$("\$H" --session $session remote-api-bridge --check </dev/null 2>/dev/null)" = herdr-api-bridge-v1 ]; then
     exec "\$H" --session $session remote-api-bridge

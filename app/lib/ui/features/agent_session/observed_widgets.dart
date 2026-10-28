@@ -1,10 +1,11 @@
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/words/elapsed.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../support/step_clock.dart';
 import 'session_select.dart';
 import '../../render/visible_text.dart';
@@ -31,28 +32,28 @@ class LiveOutput extends StatelessWidget {
         padding: const EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.sm),
         child: Panel(
           padding: const EdgeInsets.symmetric(horizontal: Gap.md, vertical: Gap.sm),
-            child: Semantics(
-              label: 'Live output from the terminal',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+          child: Semantics(
+            label: 'Live output from the terminal',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ExcludeSemantics(
+                  child: Text('Live from terminal', style: Type.caption.copyWith(color: ds.textMuted)),
+                ),
+                const SizedBox(height: Gap.xs),
+                for (final row in rows)
                   ExcludeSemantics(
-                    child: Text('Live from terminal', style: Type.caption.copyWith(color: ds.textMuted)),
-                  ),
-                  const SizedBox(height: Gap.xs),
-                  for (final row in rows)
-                    ExcludeSemantics(
-                      child: Text(
-                        visibleText(row),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        softWrap: false,
-                        style: Mono.small.copyWith(color: ds.textSecondary),
-                      ),
+                    child: Text(
+                      visibleText(row),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: false,
+                      style: Mono.small.copyWith(color: ds.textSecondary),
                     ),
-                ],
-              ),
+                  ),
+              ],
             ),
+          ),
         ),
       );
     },

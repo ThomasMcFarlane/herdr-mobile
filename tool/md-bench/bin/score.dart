@@ -20,15 +20,13 @@ void main(List<String> args) {
   final filter = args.contains('-v') && args.indexOf('-v') + 1 < args.length
       ? args[args.indexOf('-v') + 1]
       : '';
-  final only = args.contains('--engine') ? args[args.indexOf('--engine') + 1] : null;
+  final only = args.contains('--engine')
+      ? args[args.indexOf('--engine') + 1]
+      : null;
   final cases = loadCorpus('../../app/test/markdown/corpus')
       .where((c) => !c.isHeal)
       .toList();
-  final engines = <String, Dumper>{
-    'B': dumpB,
-    'C': dumpC,
-    'D': dumpD,
-  };
+  final engines = <String, Dumper>{'B': dumpB, 'C': dumpC, 'D': dumpD};
   final byFile = <String, Map<String, int>>{};
   final total = <String, int>{for (final k in engines.keys) k: 0};
   final failed = <String, List<String>>{for (final k in engines.keys) k: []};
@@ -50,7 +48,9 @@ void main(List<String> args) {
       } else {
         failed[e.key]!.add('${c.file}:${c.name}');
         if (verbose && c.name.contains(filter)) {
-          stdout.writeln('--- ${e.key} FAIL ${c.file}:${c.name}\ninput : ${c.input.replaceAll('\n', '⏎')}\nexpect:\n${c.expect}\ngot:\n$got\n');
+          stdout.writeln(
+            '--- ${e.key} FAIL ${c.file}:${c.name}\ninput : ${c.input.replaceAll('\n', '⏎')}\nexpect:\n${c.expect}\ngot:\n$got\n',
+          );
         }
       }
     }
@@ -59,13 +59,17 @@ void main(List<String> args) {
   for (final f in byFile.entries) {
     final r = f.value;
     stdout.writeln(
-        '${f.key.padRight(14)} ${engines.keys.map((k) => '$k ${r[k] ?? 0}/${r['$k.n'] ?? 0}').join('   ')}');
+      '${f.key.padRight(14)} ${engines.keys.map((k) => '$k ${r[k] ?? 0}/${r['$k.n'] ?? 0}').join('   ')}',
+    );
   }
   stdout.writeln(
-      'TOTAL          ${engines.keys.map((k) => '$k ${total[k]}/${cases.length}').join('   ')}');
+    'TOTAL          ${engines.keys.map((k) => '$k ${total[k]}/${cases.length}').join('   ')}',
+  );
   if (!verbose) {
     for (final k in engines.keys) {
-      stdout.writeln('\n$k fails (${failed[k]!.length}): ${failed[k]!.join(' ')}');
+      stdout.writeln(
+        '\n$k fails (${failed[k]!.length}): ${failed[k]!.join(' ')}',
+      );
     }
   }
 }

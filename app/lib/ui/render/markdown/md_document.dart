@@ -83,16 +83,11 @@ final class MdImage extends MdInline {
 final class MdInlines {
   MdInlines(List<MdInline> items) : this._(List<MdInline>.unmodifiable(items));
 
-  MdInlines._(this.items)
-      : text = _join(items),
-        _starts = _startsOf(items);
+  MdInlines._(this.items) : text = _join(items), _starts = _startsOf(items);
 
   static const MdInlines empty = MdInlines._empty();
 
-  const MdInlines._empty()
-      : items = const <MdInline>[],
-        text = '',
-        _starts = const <int>[0];
+  const MdInlines._empty() : items = const <MdInline>[], text = '', _starts = const <int>[0];
 
   final List<MdInline> items;
 
@@ -244,12 +239,7 @@ final class MdListItem {
 /// A bullet or ordered list. Depth is structure: a nested list is a block of
 /// an item.
 final class MdList extends MdBlock {
-  const MdList({
-    required this.ordered,
-    required this.start,
-    required this.tight,
-    required this.items,
-  });
+  const MdList({required this.ordered, required this.start, required this.tight, required this.items});
 
   final bool ordered;
 
@@ -271,11 +261,7 @@ enum MdAlign { none, left, center, right }
 /// A pipe table. Every row has exactly `aligns.length` cells (short rows are
 /// padded with empty cells, long ones cut), as GFM specifies.
 final class MdTable extends MdBlock {
-  const MdTable({
-    required this.aligns,
-    required this.header,
-    required this.rows,
-  });
+  const MdTable({required this.aligns, required this.header, required this.rows});
 
   final List<MdAlign> aligns;
   final List<MdInlines> header;

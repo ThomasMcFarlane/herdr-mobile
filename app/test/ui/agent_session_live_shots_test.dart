@@ -125,7 +125,13 @@ void main() {
           then: () async {
             await tester.drag(find.byType(TranscriptView), const Offset(0, 420));
             await tester.pump(const Duration(milliseconds: 100));
-            session.apply(const MessageChunk(MessageRole.agent, 'a1', TextBlock('\n\nThere are three of them.\n\n- `a.dart`\n- `b.dart`\n\nI start with the first')));
+            session.apply(
+              const MessageChunk(
+                MessageRole.agent,
+                'a1',
+                TextBlock('\n\nThere are three of them.\n\n- `a.dart`\n- `b.dart`\n\nI start with the first'),
+              ),
+            );
             for (var i = 0; i < 40; i++) {
               await tester.pump(const Duration(milliseconds: 40));
             }

@@ -18,22 +18,23 @@ late BuildContext _ctx;
 Toaster get _toaster => Toaster.of(_ctx);
 
 Widget _app({Widget? home, bool reduceMotion = false}) => MaterialApp(
-      theme: AppTheme.light(),
-      navigatorObservers: [ToastRouteObserver()],
-      builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(context).copyWith(disableAnimations: reduceMotion),
-        child: child!,
+  theme: AppTheme.light(),
+  navigatorObservers: [ToastRouteObserver()],
+  builder: (context, child) => MediaQuery(
+    data: MediaQuery.of(context).copyWith(disableAnimations: reduceMotion),
+    child: child!,
+  ),
+  home:
+      home ??
+      Scaffold(
+        body: Builder(
+          builder: (context) {
+            _ctx = context;
+            return const SizedBox.expand();
+          },
+        ),
       ),
-      home: home ??
-          Scaffold(
-            body: Builder(
-              builder: (context) {
-                _ctx = context;
-                return const SizedBox.expand();
-              },
-            ),
-          ),
-    );
+);
 
 Future<void> _pump(WidgetTester tester, {bool reduceMotion = false}) async {
   await tester.pumpWidget(_app(reduceMotion: reduceMotion));
@@ -58,30 +59,30 @@ Future<void> _ms(WidgetTester tester, int ms) async {
 const _exit = 300;
 
 Widget _tabBarPage() => Scaffold(
-      body: Builder(
-        builder: (context) {
-          _ctx = context;
-          return Stack(
-            children: [
-              const SizedBox.expand(),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: FloatingTabBar(
-                  index: 0,
-                  onChanged: (_) {},
-                  tabs: const [
-                    TabSpec(icon: HerdrIcons.agents, label: 'Agents'),
-                    TabSpec(icon: HerdrIcons.settings, label: 'Settings'),
-                  ],
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
+  body: Builder(
+    builder: (context) {
+      _ctx = context;
+      return Stack(
+        children: [
+          const SizedBox.expand(),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: FloatingTabBar(
+              index: 0,
+              onChanged: (_) {},
+              tabs: const [
+                TabSpec(icon: HerdrIcons.agents, label: 'Agents'),
+                TabSpec(icon: HerdrIcons.settings, label: 'Settings'),
+              ],
+            ),
+          ),
+        ],
+      );
+    },
+  ),
+);
 
 void main() {
   setUpAll(loadAppFonts);
@@ -166,15 +167,21 @@ void main() {
       await _end(tester);
     });
 
-    testWidgets('a captured Toaster still works after its screen is gone, and is quiet once the app is', (tester) async {
+    testWidgets('a captured Toaster still works after its screen is gone, and is quiet once the app is', (
+      tester,
+    ) async {
       await _pump(tester);
       Toaster? captured;
-      unawaited(Navigator.of(_ctx).push(MaterialPageRoute<void>(
-        builder: (context) {
-          captured = Toaster.of(context);
-          return const Scaffold(body: SizedBox.expand());
-        },
-      )));
+      unawaited(
+        Navigator.of(_ctx).push(
+          MaterialPageRoute<void>(
+            builder: (context) {
+              captured = Toaster.of(context);
+              return const Scaffold(body: SizedBox.expand());
+            },
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
       Navigator.of(tester.element(find.byType(Scaffold))).pop();
       await tester.pumpAndSettle();
@@ -296,16 +303,17 @@ void main() {
       await _end(tester);
     });
 
-    testWidgets('repeated actions with one groupKey share a toast whose Undo runs them all, latest first',
-        (tester) async {
+    testWidgets('repeated actions with one groupKey share a toast whose Undo runs them all, latest first', (
+      tester,
+    ) async {
       await _pump(tester);
       final undone = <int>[];
       void review(int i) => _toaster.show(
-            'Marked reviewed',
-            action: ToastAction('Undo', () => undone.add(i)),
-            groupKey: 'review',
-            groupMessage: (n) => 'Marked $n reviewed',
-          );
+        'Marked reviewed',
+        action: ToastAction('Undo', () => undone.add(i)),
+        groupKey: 'review',
+        groupMessage: (n) => 'Marked $n reviewed',
+      );
 
       review(1);
       await _ms(tester, 400);
@@ -344,11 +352,11 @@ void main() {
     testWidgets('each joining call restarts the clock', (tester) async {
       await _pump(tester);
       void close() => _toaster.show(
-            'Closed tab',
-            action: ToastAction('Undo', () {}),
-            groupKey: 'close',
-            groupMessage: (n) => 'Closed $n tabs',
-          );
+        'Closed tab',
+        action: ToastAction('Undo', () {}),
+        groupKey: 'close',
+        groupMessage: (n) => 'Closed $n tabs',
+      );
       close();
       await _ms(tester, 4500);
       close();
@@ -364,11 +372,11 @@ void main() {
       await _pump(tester);
       final undone = <int>[];
       void review(int i) => _toaster.show(
-            'Marked reviewed',
-            action: ToastAction('Undo', () => undone.add(i)),
-            groupKey: 'review',
-            groupMessage: (n) => 'Marked $n reviewed',
-          );
+        'Marked reviewed',
+        action: ToastAction('Undo', () => undone.add(i)),
+        groupKey: 'review',
+        groupMessage: (n) => 'Marked $n reviewed',
+      );
       review(1);
       await _ms(tester, 5300); // 250 in, 5 s on its clock
       await _ms(tester, _exit);
@@ -387,11 +395,11 @@ void main() {
       await _pump(tester);
       final undone = <int>[];
       void review(int i) => _toaster.show(
-            'Marked reviewed',
-            action: ToastAction('Undo', () => undone.add(i)),
-            groupKey: 'review',
-            groupMessage: (n) => 'Marked $n reviewed',
-          );
+        'Marked reviewed',
+        action: ToastAction('Undo', () => undone.add(i)),
+        groupKey: 'review',
+        groupMessage: (n) => 'Marked $n reviewed',
+      );
       review(1);
       await _ms(tester, 5300);
       await _ms(tester, 60); // started to leave
@@ -517,7 +525,10 @@ void main() {
       final toast = tester.getRect(_toast);
       expect(toast.bottom, lessThanOrEqualTo(bar.top));
       expect(toast.bottom, bar.top - 8, reason: 'the bar margin again, above the pill');
-      expect(toast.bottom, tester.view.physicalSize.height / tester.view.devicePixelRatio - FloatingBar.clearance(_ctx));
+      expect(
+        toast.bottom,
+        tester.view.physicalSize.height / tester.view.devicePixelRatio - FloatingBar.clearance(_ctx),
+      );
       await _end(tester);
     });
 
@@ -542,12 +553,16 @@ void main() {
       await tester.pumpWidget(_app(home: _tabBarPage()));
       await tester.pump();
       final home = _ctx;
-      unawaited(Navigator.of(home).push(MaterialPageRoute<void>(
-        builder: (context) {
-          _ctx = context;
-          return const Scaffold(body: SizedBox.expand());
-        },
-      )));
+      unawaited(
+        Navigator.of(home).push(
+          MaterialPageRoute<void>(
+            builder: (context) {
+              _ctx = context;
+              return const Scaffold(body: SizedBox.expand());
+            },
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
 
       _toaster.show('Copied');
@@ -565,7 +580,9 @@ void main() {
       await tester.pumpAndSettle(const Duration(milliseconds: 50));
       final above = tester.getRect(_toast).bottom;
 
-      unawaited(Navigator.of(home).push(MaterialPageRoute<void>(builder: (_) => const Scaffold(body: SizedBox.expand()))));
+      unawaited(
+        Navigator.of(home).push(MaterialPageRoute<void>(builder: (_) => const Scaffold(body: SizedBox.expand()))),
+      );
       await tester.pumpAndSettle(const Duration(milliseconds: 50));
       expect(tester.getRect(_toast).bottom, greaterThan(above), reason: 'no bar left to clear');
 
@@ -577,25 +594,31 @@ void main() {
 
     testWidgets('above a bar of its own height, riding on the keyboard when the body shrinks for it', (tester) async {
       tester.view
-        ..physicalSize = const Size(800, 1200) // 400 x 600 dp
+        ..physicalSize =
+            const Size(800, 1200) // 400 x 600 dp
         ..devicePixelRatio = 2
         ..viewInsets = const FakeViewPadding(bottom: 600); // 300 dp
       addTearDown(tester.view.reset);
-      await tester.pumpWidget(_app(
-        home: Scaffold(
-          body: Builder(
-            builder: (context) {
-              _ctx = context;
-              return Column(
-                children: const [
-                  Expanded(child: SizedBox.expand()),
-                  ToastShelf(aboveKeyboard: true, child: SizedBox(height: 120, width: double.infinity, key: Key('bar'))),
-                ],
-              );
-            },
+      await tester.pumpWidget(
+        _app(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                _ctx = context;
+                return Column(
+                  children: const [
+                    Expanded(child: SizedBox.expand()),
+                    ToastShelf(
+                      aboveKeyboard: true,
+                      child: SizedBox(height: 120, width: double.infinity, key: Key('bar')),
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
         ),
-      ));
+      );
       await tester.pump();
       await tester.pump();
       _toaster.show('Copied');
@@ -610,26 +633,28 @@ void main() {
     testWidgets('a bar that grows moves the toast up with it', (tester) async {
       final height = ValueNotifier<double>(60);
       addTearDown(height.dispose);
-      await tester.pumpWidget(_app(
-        home: Scaffold(
-          body: Builder(
-            builder: (context) {
-              _ctx = context;
-              return Column(
-                children: [
-                  const Expanded(child: SizedBox.expand()),
-                  ToastShelf(
-                    child: ValueListenableBuilder<double>(
-                      valueListenable: height,
-                      builder: (_, h, _) => SizedBox(height: h, width: double.infinity, key: const Key('bar')),
+      await tester.pumpWidget(
+        _app(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                _ctx = context;
+                return Column(
+                  children: [
+                    const Expanded(child: SizedBox.expand()),
+                    ToastShelf(
+                      child: ValueListenableBuilder<double>(
+                        valueListenable: height,
+                        builder: (_, h, _) => SizedBox(height: h, width: double.infinity, key: const Key('bar')),
+                      ),
                     ),
-                  ),
-                ],
-              );
-            },
+                  ],
+                );
+              },
+            ),
           ),
         ),
-      ));
+      );
       await tester.pump();
       await tester.pump();
       _toaster.show('Copied', duration: const Duration(seconds: 30));
@@ -648,7 +673,8 @@ void main() {
   group('keyboard', () {
     testWidgets('the toast follows a rising keyboard frame by frame', (tester) async {
       tester.view
-        ..physicalSize = const Size(800, 1200) // 400 x 600 dp
+        ..physicalSize =
+            const Size(800, 1200) // 400 x 600 dp
         ..devicePixelRatio = 2
         ..padding = FakeViewPadding.zero
         ..viewInsets = FakeViewPadding.zero;
@@ -715,8 +741,7 @@ void main() {
       await _end(tester);
     });
 
-    testWidgets('long text wraps to two lines and is cut after that; the card stays on a 320 dp phone',
-        (tester) async {
+    testWidgets('long text wraps to two lines and is cut after that; the card stays on a 320 dp phone', (tester) async {
       tester.view.physicalSize = const Size(640, 1200);
       tester.view.devicePixelRatio = 2;
       addTearDown(tester.view.reset);

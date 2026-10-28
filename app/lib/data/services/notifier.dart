@@ -79,13 +79,13 @@ class NotificationAnswer {
 
   /// What the platform hands back when the button is pressed.
   String get actionId => [
-        _tag,
-        Uri.encodeComponent(machineId),
-        Uri.encodeComponent(paneId),
-        digest,
-        index,
-        Uri.encodeComponent(nonce),
-      ].join('|');
+    _tag,
+    Uri.encodeComponent(machineId),
+    Uri.encodeComponent(paneId),
+    digest,
+    index,
+    Uri.encodeComponent(nonce),
+  ].join('|');
 
   /// Reads an [actionId] back; null for anything else.
   static NotificationAnswer? tryParse(String? actionId) {

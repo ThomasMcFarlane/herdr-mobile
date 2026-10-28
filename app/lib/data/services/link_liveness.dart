@@ -122,12 +122,7 @@ class LinkLiveness {
 /// of [LinkLiveness] is due. A link that stays silent after a ping is dead:
 /// [onDead] runs once and the watch stops.
 class LinkWatch {
-  LinkWatch({
-    required this.liveness,
-    required this.ping,
-    required this.onDead,
-    required this.isClosed,
-  });
+  LinkWatch({required this.liveness, required this.ping, required this.onDead, required this.isClosed});
 
   final LinkLiveness liveness;
 
@@ -198,11 +193,14 @@ class LinkWatch {
       return;
     }
     liveness.pingSent();
-    ping().then((_) => liveness.pingAnswered(), onError: (Object _) {
-      if (_stopped) return;
-      stop();
-      onDead();
-    });
+    ping().then(
+      (_) => liveness.pingAnswered(),
+      onError: (Object _) {
+        if (_stopped) return;
+        stop();
+        onDead();
+      },
+    );
     _arm(liveness.timeout);
   }
 }

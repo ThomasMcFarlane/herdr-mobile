@@ -72,9 +72,9 @@ class TranscriptMessage extends TranscriptItem {
     required List<ContentBlock> head,
     required LiveText this.live,
     required this.at,
-  })  : _blocks = head,
-        local = false,
-        endedAt = null;
+  }) : _blocks = head,
+       local = false,
+       endedAt = null;
 
   @override
   final String key;
@@ -123,18 +123,27 @@ class TranscriptMessage extends TranscriptItem {
   /// [now] is when it stopped growing.
   TranscriptMessage settledAt(DateTime? now) => live == null
       ? this
-      : TranscriptMessage(key: key, role: role, messageId: messageId, blocks: blocks, local: local, at: at, endedAt: now);
+      : TranscriptMessage(
+          key: key,
+          role: role,
+          messageId: messageId,
+          blocks: blocks,
+          local: local,
+          at: at,
+          endedAt: now,
+        );
 
   /// A copy with other content; never live.
-  TranscriptMessage _with({String? key, List<ContentBlock>? blocks, String? messageId, bool? local}) => TranscriptMessage(
-    key: key ?? this.key,
-    role: role,
-    messageId: messageId ?? this.messageId,
-    blocks: blocks ?? this.blocks,
-    local: local ?? this.local,
-    at: at,
-    endedAt: endedAt,
-  );
+  TranscriptMessage _with({String? key, List<ContentBlock>? blocks, String? messageId, bool? local}) =>
+      TranscriptMessage(
+        key: key ?? this.key,
+        role: role,
+        messageId: messageId ?? this.messageId,
+        blocks: blocks ?? this.blocks,
+        local: local ?? this.local,
+        at: at,
+        endedAt: endedAt,
+      );
 }
 
 /// One tool call. [at] is when the call was first seen (the start of its
@@ -206,8 +215,7 @@ class TranscriptNote extends TranscriptItem {
 /// oldest turns (`AcpSessionSetup.droppedTurns`).
 const hostDroppedKey = 'host-dropped';
 
-String hostDroppedText(int turns) =>
-    'Earlier messages are no longer kept on the machine (${countOf(turns, 'turn')}).';
+String hostDroppedText(int turns) => 'Earlier messages are no longer kept on the machine (${countOf(turns, 'turn')}).';
 
 /// The key and words of the divider between what only this phone still has
 /// (above) and what the host replayed (below), written when the two could not
@@ -596,7 +604,10 @@ class AgentSessionState {
     PlanUpdate() => _copy(plan: update.entries),
     CommandsUpdate() => _copy(commands: update.commands),
     ModeUpdate() => _mode(update.modeId, now),
-    ConfigUpdate() => _copy(configOptions: update.options, modes: _modesFor(update.options))._announceMode(currentModeId, now),
+    ConfigUpdate() => _copy(
+      configOptions: update.options,
+      modes: _modesFor(update.options),
+    )._announceMode(currentModeId, now),
     SessionInfoUpdate() => _copy(
       title: update.hasTitle ? update.title : _keep,
       updatedAt: update.hasUpdatedAt ? update.updatedAt : _keep,
@@ -681,7 +692,13 @@ class AgentSessionState {
     final at = _findMessage(u.role, u.messageId);
     if (at < 0) {
       return _append(
-        TranscriptMessage(key: 'm$nextKey', role: u.role, messageId: u.messageId, blocks: u.content ?? const [], at: now),
+        TranscriptMessage(
+          key: 'm$nextKey',
+          role: u.role,
+          messageId: u.messageId,
+          blocks: u.content ?? const [],
+          at: now,
+        ),
         now: now,
       )._copy(nextKey: nextKey + 1);
     }
@@ -730,7 +747,10 @@ class AgentSessionState {
     final at = _toolIndex(id);
     if (at < 0) {
       final call = next(null);
-      return _append(TranscriptTool(call, at: now, finishedAt: call.status.isFinished ? now : null), now: now);
+      return _append(
+        TranscriptTool(call, at: now, finishedAt: call.status.isFinished ? now : null),
+        now: now,
+      );
     }
     final old = items[at] as TranscriptTool;
     final call = next(old.call);
@@ -781,7 +801,10 @@ class AgentSessionState {
       modes: m == null ? ModeState(currentModeId: id) : m.withCurrent(id),
       configOptions: [
         for (final o in configOptions)
-          if (o is SelectConfigOption && o.category == 'mode' && o.choices.any((c) => c.value == id)) o.withValue(id) else o,
+          if (o is SelectConfigOption && o.category == 'mode' && o.choices.any((c) => c.value == id))
+            o.withValue(id)
+          else
+            o,
       ],
     )._announceMode(before, now);
   }
@@ -796,10 +819,12 @@ class AgentSessionState {
     final mine = expectedMode == after;
     final state = mine ? _copy(expectedMode: null) : this;
     if (mine || before == null || replaying) return state;
-    return state._append(
-      TranscriptNote(key: 'n$nextKey', text: 'Mode changed to ${_modeName(after)}', modeId: after, at: now),
-      now: now,
-    )._copy(nextKey: nextKey + 1);
+    return state
+        ._append(
+          TranscriptNote(key: 'n$nextKey', text: 'Mode changed to ${_modeName(after)}', modeId: after, at: now),
+          now: now,
+        )
+        ._copy(nextKey: nextKey + 1);
   }
 
   /// What the person reads for mode [id].
@@ -829,12 +854,11 @@ class AgentSessionState {
 
   AgentSessionState _state(StateUpdate u, DateTime? now) => switch (u.state) {
     AgentRunState.running => _copy(runState: u.state, turnActive: true),
-    AgentRunState.idle => _settled(now)._copy(
-      runState: u.state,
-      turnActive: false,
-      cancelRequested: false,
-      lastStopReason: u.stopReason,
-    )._withStopNote(u.stopReason, now)._cancelUnfinished(u.stopReason == StopReason.cancelled, now),
+    AgentRunState.idle =>
+      _settled(now)
+          ._copy(runState: u.state, turnActive: false, cancelRequested: false, lastStopReason: u.stopReason)
+          ._withStopNote(u.stopReason, now)
+          ._cancelUnfinished(u.stopReason == StopReason.cancelled, now),
     AgentRunState.requiresAction => _copy(runState: u.state, turnActive: true),
     AgentRunState.unknown => this,
   };
@@ -872,7 +896,8 @@ class AgentSessionState {
   /// while none changed, so it can be compared and memoized by identity.
   List<BackgroundTask> get backgroundTasks => backgroundBook.tasks;
 
-  AgentSessionState _background(BackgroundBook next) => identical(next, backgroundBook) ? this : _copy(backgroundBook: next);
+  AgentSessionState _background(BackgroundBook next) =>
+      identical(next, backgroundBook) ? this : _copy(backgroundBook: next);
 
   /// After the tool call [toolId] changed: the background jobs its result
   /// names (omp has no task update, see `ompJobFacts`).
@@ -921,7 +946,8 @@ class AgentSessionState {
   /// The `_meta` of one tool call update alone.
   static Json? _updateMeta(SessionUpdate u) => switch (u) {
     ToolCallStart(:final call) => call.meta,
-    ToolCallPatchUpdate(:final patch) => patch.fields['_meta'] is Map ? (patch.fields['_meta'] as Map).cast<String, Object?>() : null,
+    ToolCallPatchUpdate(:final patch) =>
+      patch.fields['_meta'] is Map ? (patch.fields['_meta'] as Map).cast<String, Object?>() : null,
     _ => null,
   };
 
@@ -1064,7 +1090,9 @@ class AgentSessionState {
     if (run == null) return this;
     var s = this;
     if (run.transcript case final t?) {
-      s = s._copy(subagentBook: s.subagentBook.withRun(run.copyWith(transcript: t._settled(now)._cancelUnfinished(true, now))));
+      s = s._copy(
+        subagentBook: s.subagentBook.withRun(run.copyWith(transcript: t._settled(now)._cancelUnfinished(true, now))),
+      );
     }
     for (final nested in [
       for (final r in s.subagentBook.runs)
@@ -1114,7 +1142,6 @@ class AgentSessionState {
     final live = liveIndex;
     return _copy(items: next, liveIndex: live == at ? -1 : (live > at ? live - 1 : live));
   }
-
 
   // -- what this client did ---------------------------------------------------
 
@@ -1210,9 +1237,7 @@ class AgentSessionState {
     }
     final prefix = 'e${epoch + 1}.';
     final older = [for (final i in theirs.take(cut)) _earlier(i, prefix)];
-    final divider = proven || older.isEmpty
-        ? null
-        : const TranscriptNote(key: phoneEarlierKey, text: phoneEarlierText);
+    final divider = proven || older.isEmpty ? null : const TranscriptNote(key: phoneEarlierKey, text: phoneEarlierText);
     final shift = older.length + (divider == null ? 0 : 1);
     if (shift == 0 && _sameItems(replayed, mine, start)) {
       return (state: this, older: 0);
@@ -1304,9 +1329,7 @@ class AgentSessionState {
   ];
 
   /// [_signature] of each of [items] that has one, in order.
-  static List<String> signaturesOf(Iterable<TranscriptItem> items) => [
-    for (final i in items) ?_signature(i),
-  ];
+  static List<String> signaturesOf(Iterable<TranscriptItem> items) => [for (final i in items) ?_signature(i)];
 
   static String? _signature(TranscriptItem item) => switch (item) {
     TranscriptTool(:final call) => 'tool:${call.toolCallId}',
@@ -1397,15 +1420,17 @@ class AgentSessionState {
   /// turn also marks what was still running as cancelled; a refusal or a
   /// limit leaves a [TranscriptStop]. [usage] and [meta] are the response's,
   /// kept as the last turn's.
-  AgentSessionState withTurnEnded(StopReason reason, {TurnUsage? usage, Json? meta, DateTime? at}) =>
-      _settled(at)._copy(
+  AgentSessionState withTurnEnded(StopReason reason, {TurnUsage? usage, Json? meta, DateTime? at}) => _settled(at)
+      ._copy(
         turnActive: false,
         cancelRequested: false,
         runState: null,
         lastStopReason: reason,
         turnUsage: usage,
         turnMeta: meta,
-      )._withStopNote(reason, at)._cancelUnfinished(reason == StopReason.cancelled, at);
+      )
+      ._withStopNote(reason, at)
+      ._cancelUnfinished(reason == StopReason.cancelled, at);
 
   /// A [TranscriptStop] for [reason] when it asks for one, and the last item
   /// is not one already (the v2 `state_update` and the response both report
@@ -1416,7 +1441,10 @@ class AgentSessionState {
       _ => false,
     };
     if (!noted || (items.isNotEmpty && items.last is TranscriptStop)) return this;
-    return _append(TranscriptStop(key: 'n$nextKey', reason: reason, at: now), now: now)._copy(nextKey: nextKey + 1);
+    return _append(
+      TranscriptStop(key: 'n$nextKey', reason: reason, at: now),
+      now: now,
+    )._copy(nextKey: nextKey + 1);
   }
 
   /// `session/cancel` was sent (at [at], the caller's clock): ACP asks the
@@ -1430,7 +1458,13 @@ class AgentSessionState {
     for (final i in items) {
       if (i is TranscriptTool && !i.call.status.isFinished) {
         changed = true;
-        next.add(TranscriptTool(i.call.copyWith(status: ToolStatus.cancelled), at: i.at, finishedAt: now));
+        next.add(
+          TranscriptTool(
+            i.call.copyWith(status: ToolStatus.cancelled),
+            at: i.at,
+            finishedAt: now,
+          ),
+        );
       } else {
         next.add(i);
       }
@@ -1475,6 +1509,11 @@ class AgentSessionState {
 
   /// The connection ended: nothing can be answered or is running from this
   /// client's point of view.
-  AgentSessionState withDisconnected() =>
-      _settled()._copy(disconnected: true, pending: const [], turnActive: false, cancelRequested: false, runState: null);
+  AgentSessionState withDisconnected() => _settled()._copy(
+    disconnected: true,
+    pending: const [],
+    turnActive: false,
+    cancelRequested: false,
+    runState: null,
+  );
 }

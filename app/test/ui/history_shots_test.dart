@@ -67,7 +67,9 @@ void main() {
     for (var i = 0; i < n; i++)
       past(
         's$i',
-        title: i % 7 == 3 ? null : 'Session $i: ${const ['fix the parser', 'review billing', 'migrate to Postgres', 'tidy the CLI'][i % 4]}',
+        title: i % 7 == 3
+            ? null
+            : 'Session $i: ${const ['fix the parser', 'review billing', 'migrate to Postgres', 'tidy the CLI'][i % 4]}',
         cwd: '/home/dev/${const ['payments-api', 'herdr-mobile', 'billing', 'thư-mục-mới'][i % 4]}',
         messages: i % 11 == 5 ? 0 : 6 + i * 3,
         ago: Duration(minutes: 3 + i * 47),
@@ -163,13 +165,8 @@ void main() {
     'past-cannot-reopen',
     script: (s) => s.answers['omp'] = remembered(past3.sessions, canLoad: false),
   );
-  cases['past-loading'] = (t, b, k) => pastCase(
-    t,
-    b,
-    k,
-    'past-loading',
-    script: (s) => s.historyGate = Completer<void>().future,
-  );
+  cases['past-loading'] = (t, b, k) =>
+      pastCase(t, b, k, 'past-loading', script: (s) => s.historyGate = Completer<void>().future);
   cases['past-error'] = (t, b, k) => pastCase(
     t,
     b,
@@ -236,7 +233,8 @@ void main() {
 
   cases['continue'] = (t, b, k) => continueCase(t, b, k, 'continue');
   cases['continue-working'] = (t, b, k) => continueCase(t, b, k, 'continue-working', tap: true);
-  cases['continue-narrow-large'] = (t, b, k) => continueCase(t, b, k, 'continue-narrow-large', size: narrow, scale: 1.6);
+  cases['continue-narrow-large'] = (t, b, k) =>
+      continueCase(t, b, k, 'continue-narrow-large', size: narrow, scale: 1.6);
   cases['continue-long-reason'] = (t, b, k) => continueCase(
     t,
     b,

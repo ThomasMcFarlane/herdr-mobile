@@ -68,7 +68,8 @@ class QuestionWash extends StatelessWidget {
     final direction = Directionality.of(context);
 
     Widget text(BoxConstraints? box) {
-      final cut = box != null &&
+      final cut =
+          box != null &&
           (_cut(question, questionStyle, box.maxWidth, scaler, direction) ||
               (subject.isNotEmpty && _cut(subject, subjectStyle, box.maxWidth, scaler, direction)));
       Widget q = Text(
@@ -108,7 +109,10 @@ class QuestionWash extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (leading != null) ...[
-              Padding(padding: const EdgeInsets.only(top: Gap.hair), child: leading),
+              Padding(
+                padding: const EdgeInsets.only(top: Gap.hair),
+                child: leading,
+              ),
               const SizedBox(width: Gap.sm),
             ],
             Expanded(child: measure ? LayoutBuilder(builder: (context, box) => text(box)) : text(null)),
@@ -121,10 +125,7 @@ class QuestionWash extends StatelessWidget {
     return Container(
       constraints: const BoxConstraints(minHeight: kMinTap),
       padding: const EdgeInsets.all(Gap.md),
-      decoration: BoxDecoration(
-        color: ds.blockedWash,
-        borderRadius: BorderRadius.circular(Radii.sm),
-      ),
+      decoration: BoxDecoration(color: ds.blockedWash, borderRadius: BorderRadius.circular(Radii.sm)),
       child: footer == null
           ? body
           : Column(
@@ -150,4 +151,3 @@ class QuestionWash extends StatelessWidget {
     return cut;
   }
 }
-

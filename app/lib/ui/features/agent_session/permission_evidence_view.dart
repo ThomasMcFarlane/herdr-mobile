@@ -5,7 +5,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/decision/permission_evidence.dart';
 import '../../../data/words/plural.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../render/markdown/markdown.dart';
 import 'code_panel.dart' show clipLine;
 import 'diff_lines.dart';
@@ -153,10 +155,7 @@ class ReadAllCue extends StatelessWidget {
                   child: Text(text!, style: Type.captionStrong.copyWith(color: ds.blockedText)),
                 ),
         ),
-        if (onOpen case final open?) ...[
-          const SizedBox(width: Gap.md),
-          TextAction(label: 'Read all', onTap: open),
-        ],
+        if (onOpen case final open?) ...[const SizedBox(width: Gap.md), TextAction(label: 'Read all', onTap: open)],
       ],
     );
   }
@@ -417,13 +416,16 @@ Widget diffRowView(BuildContext context, DiffRow row) {
               ),
               const SizedBox(width: Gap.sm),
               Expanded(
-                child: Text(
-                  visibleText(diff.path),
-                  style: Mono.base.copyWith(color: ds.text),
-                ),
+                child: Text(visibleText(diff.path), style: Mono.base.copyWith(color: ds.text)),
               ),
               const SizedBox(width: Gap.sm),
-              Text(counts, style: Mono.base.copyWith(color: ds.textSecondary, fontFeatures: [...Mono.noLigatures, ...Type.tabular])),
+              Text(
+                counts,
+                style: Mono.base.copyWith(
+                  color: ds.textSecondary,
+                  fontFeatures: [...Mono.noLigatures, ...Type.tabular],
+                ),
+              ),
             ],
           ),
         ),

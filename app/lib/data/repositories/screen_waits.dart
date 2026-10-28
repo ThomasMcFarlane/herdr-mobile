@@ -66,7 +66,8 @@ class ScreenWaits {
         watch?.timer?.cancel();
         final next = _watches[p.id] = _Watch(key, FleetAgent.kindOf(p)!);
         _probe(p.id, next);
-      } else if (watch.failed || (_waiting.contains(p.id) && _clock().difference(watch.readAt ?? _clock()) >= recheckEvery)) {
+      } else if (watch.failed ||
+          (_waiting.contains(p.id) && _clock().difference(watch.readAt ?? _clock()) >= recheckEvery)) {
         _probe(p.id, watch);
       }
     }

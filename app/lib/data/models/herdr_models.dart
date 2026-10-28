@@ -33,12 +33,12 @@ enum AgentStatus {
   unknown;
 
   static AgentStatus parse(Object? raw) => switch (raw) {
-        'blocked' => blocked,
-        'working' => working,
-        'done' => done,
-        'idle' => idle,
-        _ => unknown,
-      };
+    'blocked' => blocked,
+    'working' => working,
+    'done' => done,
+    'idle' => idle,
+    _ => unknown,
+  };
 
   /// Sort rank: what needs the user most comes first.
   int get attentionRank => index;
@@ -48,12 +48,12 @@ enum AgentStatus {
   /// then what still runs. Not [attentionRank], whose order is persisted and
   /// puts working above done. Higher wins.
   int get rollupRank => switch (this) {
-        blocked => 4,
-        done => 3,
-        working => 2,
-        idle => 1,
-        unknown => 0,
-      };
+    blocked => 4,
+    done => 3,
+    working => 2,
+    idle => 1,
+    unknown => 0,
+  };
 }
 
 /// Git provenance of a workspace herdr opened as part of a worktree group
@@ -81,10 +81,7 @@ class WorkspaceWorktree {
     final repoKey = text('repo_key');
     final repoName = text('repo_name');
     final repoRoot = text('repo_root');
-    if (checkoutPath == null ||
-        repoKey == null ||
-        repoName == null ||
-        repoRoot == null) {
+    if (checkoutPath == null || repoKey == null || repoName == null || repoRoot == null) {
       return null;
     }
     return WorkspaceWorktree(
@@ -103,12 +100,12 @@ class WorkspaceWorktree {
   final bool isLinked;
 
   Map<String, dynamic> toJson() => {
-        'checkout_path': checkoutPath,
-        'is_linked_worktree': isLinked,
-        'repo_key': repoKey,
-        'repo_name': repoName,
-        'repo_root': repoRoot,
-      };
+    'checkout_path': checkoutPath,
+    'is_linked_worktree': isLinked,
+    'repo_key': repoKey,
+    'repo_name': repoName,
+    'repo_root': repoRoot,
+  };
 
   @override
   bool operator ==(Object other) =>
@@ -120,8 +117,7 @@ class WorkspaceWorktree {
       other.isLinked == isLinked;
 
   @override
-  int get hashCode =>
-      Object.hash(repoKey, repoName, repoRoot, checkoutPath, isLinked);
+  int get hashCode => Object.hash(repoKey, repoName, repoRoot, checkoutPath, isLinked);
 }
 
 class Workspace {
@@ -137,15 +133,15 @@ class Workspace {
   });
 
   factory Workspace.fromJson(Map<String, dynamic> j) => Workspace(
-        id: j['workspace_id'] as String,
-        number: (j['number'] as num?)?.toInt() ?? 0,
-        label: (j['label'] as String?) ?? '',
-        focused: j['focused'] == true,
-        paneCount: (j['pane_count'] as num?)?.toInt() ?? 0,
-        tabCount: (j['tab_count'] as num?)?.toInt() ?? 0,
-        status: AgentStatus.parse(j['agent_status']),
-        worktree: WorkspaceWorktree.tryParse(j['worktree']),
-      );
+    id: j['workspace_id'] as String,
+    number: (j['number'] as num?)?.toInt() ?? 0,
+    label: (j['label'] as String?) ?? '',
+    focused: j['focused'] == true,
+    paneCount: (j['pane_count'] as num?)?.toInt() ?? 0,
+    tabCount: (j['tab_count'] as num?)?.toInt() ?? 0,
+    status: AgentStatus.parse(j['agent_status']),
+    worktree: WorkspaceWorktree.tryParse(j['worktree']),
+  );
 
   final String id;
   final int number;
@@ -157,26 +153,26 @@ class Workspace {
   final WorkspaceWorktree? worktree;
 
   Map<String, dynamic> toJson() => {
-        'workspace_id': id,
-        'number': number,
-        'label': label,
-        'focused': focused,
-        'pane_count': paneCount,
-        'tab_count': tabCount,
-        'agent_status': status.name,
-        if (worktree != null) 'worktree': worktree!.toJson(),
-      };
+    'workspace_id': id,
+    'number': number,
+    'label': label,
+    'focused': focused,
+    'pane_count': paneCount,
+    'tab_count': tabCount,
+    'agent_status': status.name,
+    if (worktree != null) 'worktree': worktree!.toJson(),
+  };
 
   Workspace withStatus(AgentStatus status) => Workspace(
-        id: id,
-        number: number,
-        label: label,
-        focused: focused,
-        paneCount: paneCount,
-        tabCount: tabCount,
-        status: status,
-        worktree: worktree,
-      );
+    id: id,
+    number: number,
+    label: label,
+    focused: focused,
+    paneCount: paneCount,
+    tabCount: tabCount,
+    status: status,
+    worktree: worktree,
+  );
 
   @override
   bool operator ==(Object other) =>
@@ -191,8 +187,7 @@ class Workspace {
       other.worktree == worktree;
 
   @override
-  int get hashCode => Object.hash(
-      id, number, label, focused, paneCount, tabCount, status, worktree);
+  int get hashCode => Object.hash(id, number, label, focused, paneCount, tabCount, status, worktree);
 }
 
 class Tab {
@@ -207,14 +202,14 @@ class Tab {
   });
 
   factory Tab.fromJson(Map<String, dynamic> j) => Tab(
-        id: j['tab_id'] as String,
-        workspaceId: j['workspace_id'] as String,
-        number: (j['number'] as num?)?.toInt() ?? 0,
-        label: (j['label'] as String?) ?? '',
-        focused: j['focused'] == true,
-        paneCount: (j['pane_count'] as num?)?.toInt() ?? 0,
-        status: AgentStatus.parse(j['agent_status']),
-      );
+    id: j['tab_id'] as String,
+    workspaceId: j['workspace_id'] as String,
+    number: (j['number'] as num?)?.toInt() ?? 0,
+    label: (j['label'] as String?) ?? '',
+    focused: j['focused'] == true,
+    paneCount: (j['pane_count'] as num?)?.toInt() ?? 0,
+    status: AgentStatus.parse(j['agent_status']),
+  );
 
   final String id;
   final String workspaceId;
@@ -225,24 +220,24 @@ class Tab {
   final AgentStatus status;
 
   Map<String, dynamic> toJson() => {
-        'tab_id': id,
-        'workspace_id': workspaceId,
-        'number': number,
-        'label': label,
-        'focused': focused,
-        'pane_count': paneCount,
-        'agent_status': status.name,
-      };
+    'tab_id': id,
+    'workspace_id': workspaceId,
+    'number': number,
+    'label': label,
+    'focused': focused,
+    'pane_count': paneCount,
+    'agent_status': status.name,
+  };
 
   Tab withStatus(AgentStatus status) => Tab(
-        id: id,
-        workspaceId: workspaceId,
-        number: number,
-        label: label,
-        focused: focused,
-        paneCount: paneCount,
-        status: status,
-      );
+    id: id,
+    workspaceId: workspaceId,
+    number: number,
+    label: label,
+    focused: focused,
+    paneCount: paneCount,
+    status: status,
+  );
 
   @override
   bool operator ==(Object other) =>
@@ -256,8 +251,7 @@ class Tab {
       other.status == status;
 
   @override
-  int get hashCode =>
-      Object.hash(id, workspaceId, number, label, focused, paneCount, status);
+  int get hashCode => Object.hash(id, workspaceId, number, label, focused, paneCount, status);
 }
 
 /// The session an agent in a pane reports about itself (herdr's
@@ -288,12 +282,7 @@ class AgentSessionRef {
   final String value;
   final String? source;
 
-  Map<String, dynamic> toJson() => {
-        'agent': agent,
-        'kind': kind,
-        'value': value,
-        if (source != null) 'source': source,
-      };
+  Map<String, dynamic> toJson() => {'agent': agent, 'kind': kind, 'value': value, if (source != null) 'source': source};
 
   @override
   bool operator ==(Object other) =>
@@ -368,18 +357,18 @@ class Pane {
   bool get isAgent => agent != null;
 
   Map<String, dynamic> toJson() => {
-        'pane_id': id,
-        'workspace_id': workspaceId,
-        'tab_id': tabId,
-        'focused': focused,
-        'cwd': cwd,
-        'terminal_title': title,
-        'agent': agent,
-        'agent_status': status.name,
-        'label': label,
-        if (completionSeq != null) 'completion_seq': completionSeq,
-        if (session != null) 'agent_session': session!.toJson(),
-      };
+    'pane_id': id,
+    'workspace_id': workspaceId,
+    'tab_id': tabId,
+    'focused': focused,
+    'cwd': cwd,
+    'terminal_title': title,
+    'agent': agent,
+    'agent_status': status.name,
+    'label': label,
+    if (completionSeq != null) 'completion_seq': completionSeq,
+    if (session != null) 'agent_session': session!.toJson(),
+  };
 
   @override
   bool operator ==(Object other) =>
@@ -401,32 +390,32 @@ class Pane {
       Object.hash(id, workspaceId, tabId, focused, cwd, title, agent, status, label, completionSeq, session);
 
   Pane withStatus(AgentStatus status) => Pane(
-        id: id,
-        workspaceId: workspaceId,
-        tabId: tabId,
-        focused: focused,
-        cwd: cwd,
-        title: title,
-        agent: agent,
-        status: status,
-        label: label,
-        completionSeq: completionSeq,
-        session: session,
-      );
+    id: id,
+    workspaceId: workspaceId,
+    tabId: tabId,
+    focused: focused,
+    cwd: cwd,
+    title: title,
+    agent: agent,
+    status: status,
+    label: label,
+    completionSeq: completionSeq,
+    session: session,
+  );
 
   Pane withCompletionSeq(int? seq) => Pane(
-        id: id,
-        workspaceId: workspaceId,
-        tabId: tabId,
-        focused: focused,
-        cwd: cwd,
-        title: title,
-        agent: agent,
-        status: status,
-        label: label,
-        completionSeq: seq,
-        session: session,
-      );
+    id: id,
+    workspaceId: workspaceId,
+    tabId: tabId,
+    focused: focused,
+    cwd: cwd,
+    title: title,
+    agent: agent,
+    status: status,
+    label: label,
+    completionSeq: seq,
+    session: session,
+  );
 }
 
 /// What `Pane.fromJson` reads of a pane, in a snapshot and in a `pane_updated`
@@ -487,12 +476,7 @@ const snapshotWireFields = <String, Object>{
 
 /// One-shot view of a herdr server (`session.snapshot`).
 class Snapshot {
-  const Snapshot({
-    required this.version,
-    required this.workspaces,
-    required this.tabs,
-    required this.panes,
-  });
+  const Snapshot({required this.version, required this.workspaces, required this.tabs, required this.panes});
 
   factory Snapshot.fromJson(Map<String, dynamic> j) {
     // One row this app cannot read (a field of another type, one a newer herdr
@@ -510,6 +494,7 @@ class Snapshot {
       }
       return out.toList(growable: false);
     }
+
     // `completion_seq` is on the snapshot's `agents` entries (herdr's
     // `AgentInfo`), not on its panes; older servers send none.
     final completions = <String, int>{};
@@ -524,15 +509,15 @@ class Snapshot {
       workspaces: list('workspaces', Workspace.fromJson),
       tabs: list('tabs', Tab.fromJson),
       panes: list('panes', Pane.fromJson)
-          .map((p) => p.completionSeq == null && completions.containsKey(p.id)
-              ? p.withCompletionSeq(completions[p.id])
-              : p)
+          .map(
+            (p) =>
+                p.completionSeq == null && completions.containsKey(p.id) ? p.withCompletionSeq(completions[p.id]) : p,
+          )
           .toList(growable: false),
     );
   }
 
-  static const empty =
-      Snapshot(version: '', workspaces: [], tabs: [], panes: []);
+  static const empty = Snapshot(version: '', workspaces: [], tabs: [], panes: []);
 
   final String version;
   final List<Workspace> workspaces;
@@ -540,11 +525,11 @@ class Snapshot {
   final List<Pane> panes;
 
   Map<String, dynamic> toJson() => {
-        'version': version,
-        'workspaces': [for (final w in workspaces) w.toJson()],
-        'tabs': [for (final t in tabs) t.toJson()],
-        'panes': [for (final p in panes) p.toJson()],
-      };
+    'version': version,
+    'workspaces': [for (final w in workspaces) w.toJson()],
+    'tabs': [for (final t in tabs) t.toJson()],
+    'panes': [for (final p in panes) p.toJson()],
+  };
 
   @override
   bool operator ==(Object other) =>
@@ -555,21 +540,13 @@ class Snapshot {
       _sameItems(other.panes, panes);
 
   @override
-  int get hashCode => Object.hash(
-        version,
-        Object.hashAll(workspaces),
-        Object.hashAll(tabs),
-        Object.hashAll(panes),
-      );
+  int get hashCode => Object.hash(version, Object.hashAll(workspaces), Object.hashAll(tabs), Object.hashAll(panes));
 
-  List<Pane> get agentPanes =>
-      panes.where((p) => p.isAgent).toList(growable: false);
+  List<Pane> get agentPanes => panes.where((p) => p.isAgent).toList(growable: false);
 
-  List<Tab> tabsOf(String workspaceId) =>
-      tabs.where((t) => t.workspaceId == workspaceId).toList(growable: false);
+  List<Tab> tabsOf(String workspaceId) => tabs.where((t) => t.workspaceId == workspaceId).toList(growable: false);
 
-  List<Pane> panesOf(String tabId) =>
-      panes.where((p) => p.tabId == tabId).toList(growable: false);
+  List<Pane> panesOf(String tabId) => panes.where((p) => p.tabId == tabId).toList(growable: false);
 
   Workspace? workspace(String id) {
     for (final w in workspaces) {
@@ -596,10 +573,8 @@ const paneReadWireFields = <String, Object>{'text': true, 'truncated': true};
 class PaneRead {
   const PaneRead({required this.text, required this.truncated});
 
-  factory PaneRead.fromJson(Map<String, dynamic> j) => PaneRead(
-        text: (j['text'] as String?) ?? '',
-        truncated: j['truncated'] == true,
-      );
+  factory PaneRead.fromJson(Map<String, dynamic> j) =>
+      PaneRead(text: (j['text'] as String?) ?? '', truncated: j['truncated'] == true);
 
   final String text;
   final bool truncated;

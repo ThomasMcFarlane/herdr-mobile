@@ -105,7 +105,9 @@ int _shortestScript(Int32List a, Int32List b, int limit) {
   final v = Int32List(2 * top + 3);
   for (var d = 0; d <= top; d++) {
     for (var k = -d; k <= d; k += 2) {
-      var px = (k == -d || (k != d && v[offset + k - 1] < v[offset + k + 1])) ? v[offset + k + 1] : v[offset + k - 1] + 1;
+      var px = (k == -d || (k != d && v[offset + k - 1] < v[offset + k + 1]))
+          ? v[offset + k + 1]
+          : v[offset + k - 1] + 1;
       var py = px - k;
       while (px < n && py < m && a[px] == b[py]) {
         px++;

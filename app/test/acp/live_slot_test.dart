@@ -281,7 +281,9 @@ void main() {
       expect(live().apply(const StateUpdate(AgentRunState.idle, StopReason.endTurn)).liveKey, isNull);
       expect(live().withDisconnected().liveKey, isNull);
 
-      final upserted = live().apply(const MessageUpsert(MessageRole.agent, 'a1', hasContent: true, content: [TextBlock('new')]));
+      final upserted = live().apply(
+        const MessageUpsert(MessageRole.agent, 'a1', hasContent: true, content: [TextBlock('new')]),
+      );
       expect(upserted.liveKey, isNull);
       expect((upserted.items.single as TranscriptMessage).text, 'new');
       final kept = live().apply(const MessageUpsert(MessageRole.agent, 'a1', hasContent: false));
@@ -336,7 +338,12 @@ void main() {
     });
 
     test('a message that was built from history goes live on its first chunk', () {
-      final history = TranscriptMessage(key: 'h', role: MessageRole.agent, messageId: 'a1', blocks: const [TextBlock('past ')]);
+      final history = TranscriptMessage(
+        key: 'h',
+        role: MessageRole.agent,
+        messageId: 'a1',
+        blocks: const [TextBlock('past ')],
+      );
       var s = AgentSessionState('s', items: [history]);
       expect(s.liveKey, isNull);
       s = s.apply(_chunk('and now'));
@@ -347,7 +354,9 @@ void main() {
 
     test('the echo of the prompt is dropped, and the agent reply after it streams live', () {
       var s = const AgentSessionState('s').withUserMessage([const TextBlock('fix it')]).withTurnStarted();
-      s = s.apply(_chunk('fix ', id: 'u1', role: MessageRole.user)).apply(_chunk('it', id: 'u1', role: MessageRole.user));
+      s = s
+          .apply(_chunk('fix ', id: 'u1', role: MessageRole.user))
+          .apply(_chunk('it', id: 'u1', role: MessageRole.user));
       expect(s.items, hasLength(1));
       expect((s.items.single as TranscriptMessage).local, isFalse);
       s = s.apply(_chunk('ok')).apply(_chunk(' done'));
@@ -388,7 +397,7 @@ void main() {
 
     final traces = root.existsSync()
         ? (root.listSync(recursive: true).whereType<File>().where((f) => f.path.endsWith('.jsonl')).toList()
-          ..sort((a, b) => a.path.compareTo(b.path)))
+            ..sort((a, b) => a.path.compareTo(b.path)))
         : <File>[];
 
     test('there are traces to check', () => expect(traces, isNotEmpty));
@@ -455,7 +464,10 @@ void main() {
             case 3:
               both((s, ref) => s.apply(MessageChunk(role, id, TextBlock(text, meta: const {'m': 1}))));
             case 4:
-              both((s, ref) => s.apply(MessageUpsert(role, id ?? 'a1', hasContent: hasContent, content: [TextBlock(text)])));
+              both(
+                (s, ref) =>
+                    s.apply(MessageUpsert(role, id ?? 'a1', hasContent: hasContent, content: [TextBlock(text)])),
+              );
             case 5:
               both((s, ref) => s.withTurnEnded(StopReason.endTurn));
             case 6:
@@ -476,12 +488,21 @@ void main() {
     // 20 KB in 120-character chunks into a transcript of N items: the copy per
     // chunk of the old reducer grows with N, the live slot does not. The numbers
     // are printed, not asserted (timing); what is asserted is structure.
-    AgentSessionState history(int n) => AgentSessionState('s', items: [
-          for (var i = 0; i < n; i++)
-            i.isEven
-                ? TranscriptMessage(key: 'h$i', role: MessageRole.user, blocks: [TextBlock('prompt $i')])
-                : TranscriptMessage(key: 'h$i', role: MessageRole.agent, messageId: 'h$i', blocks: [TextBlock('answer $i')]),
-        ], nextKey: n);
+    AgentSessionState history(int n) => AgentSessionState(
+      's',
+      items: [
+        for (var i = 0; i < n; i++)
+          i.isEven
+              ? TranscriptMessage(key: 'h$i', role: MessageRole.user, blocks: [TextBlock('prompt $i')])
+              : TranscriptMessage(
+                  key: 'h$i',
+                  role: MessageRole.agent,
+                  messageId: 'h$i',
+                  blocks: [TextBlock('answer $i')],
+                ),
+      ],
+      nextKey: n,
+    );
 
     final text = List.generate(167, (i) => 'word${i % 10} ' * 20).join().substring(0, 20000);
     final chunks = [for (var i = 0; i < text.length; i += 120) text.substring(i, min(i + 120, text.length))];

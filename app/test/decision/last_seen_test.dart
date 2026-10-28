@@ -13,8 +13,11 @@ TranscriptMessage _msg(String key, MessageRole role) =>
 
 TranscriptTool _tool(String id) => TranscriptTool(ToolCall(toolCallId: id, title: id));
 
-AgentSessionState _state(List<TranscriptItem> items, {List<PendingRequest> pending = const [], bool replaying = false}) =>
-    AgentSessionState('s', items: items, pending: pending, replaying: replaying);
+AgentSessionState _state(
+  List<TranscriptItem> items, {
+  List<PendingRequest> pending = const [],
+  bool replaying = false,
+}) => AgentSessionState('s', items: items, pending: pending, replaying: replaying);
 
 PendingRequest _ask(Object id) => PendingPermission(id, PermissionRequest.parse(const {}));
 
@@ -58,7 +61,10 @@ void main() {
     });
 
     test('steps and a waiting request together: "2 steps since 14:02 · 1 needs you"', () async {
-      final s = _state([_msg('m0', MessageRole.user), _tool('a'), _tool('b'), _msg('m1', MessageRole.agent)], pending: [_ask(7)]);
+      final s = _state(
+        [_msg('m0', MessageRole.user), _tool('a'), _tool('b'), _msg('m1', MessageRole.agent)],
+        pending: [_ask(7)],
+      );
       final seen = LastSeen()..markSeen('k', _t0, 2);
       final r = (await seen.sinceLeft('k', s))!;
       expect((r.steps, r.tools, r.messages, r.needsYou, r.firstUnseenKey), (2, 1, 1, 1, 'tool:b'));
@@ -66,11 +72,19 @@ void main() {
 
     test('the user\'s own messages and the agent\'s thoughts are news but not steps', () async {
       final seen = LastSeen()..markSeen('k', _t0, 1);
-      final quiet = _state([_msg('m0', MessageRole.user), _msg('m1', MessageRole.thought), _msg('m2', MessageRole.user)]);
+      final quiet = _state([
+        _msg('m0', MessageRole.user),
+        _msg('m1', MessageRole.thought),
+        _msg('m2', MessageRole.user),
+      ]);
       expect(await seen.sinceLeft('k', quiet), isNull);
       final busy = _state([_msg('m0', MessageRole.user), _msg('m1', MessageRole.thought), _tool('t')]);
       final r = (await seen.sinceLeft('k', busy))!;
-      expect((r.steps, r.firstUnseenKey), (1, 'm1'), reason: 'the divider sits above the first new item, a thought included');
+      expect(
+        (r.steps, r.firstUnseenKey),
+        (1, 'm1'),
+        reason: 'the divider sits above the first new item, a thought included',
+      );
     });
 
     test('stop rows and notes are steps', () async {
@@ -115,10 +129,18 @@ void main() {
 
     test('a live message at the marker is seen; its later growth is not counted', () async {
       final live = [
-        {'sessionUpdate': 'agent_message_chunk', 'content': {'type': 'text', 'text': 'Hello'}},
+        {
+          'sessionUpdate': 'agent_message_chunk',
+          'content': {'type': 'text', 'text': 'Hello'},
+        },
       ].fold(const AgentSessionState('s'), (s, u) => s.apply(SessionUpdate.parse(u)));
       final seen = LastSeen()..markSeen('k', _t0, live.items.length);
-      final grown = live.apply(SessionUpdate.parse({'sessionUpdate': 'agent_message_chunk', 'content': {'type': 'text', 'text': ' world'}}));
+      final grown = live.apply(
+        SessionUpdate.parse({
+          'sessionUpdate': 'agent_message_chunk',
+          'content': {'type': 'text', 'text': ' world'},
+        }),
+      );
       expect(await seen.sinceLeft('k', grown), isNull);
     });
   });

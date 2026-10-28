@@ -9,11 +9,7 @@ void main() {
 
   setUp(() {
     now = Duration.zero;
-    live = LinkLiveness(
-      interval: const Duration(seconds: 25),
-      timeout: const Duration(seconds: 10),
-      clock: () => now,
-    );
+    live = LinkLiveness(interval: const Duration(seconds: 25), timeout: const Duration(seconds: 10), clock: () => now);
   });
 
   test('a link that has been quiet for the interval is due for a ping', () {
@@ -55,8 +51,11 @@ void main() {
     for (var i = 0; i < 30; i++) {
       advance(5);
       live.inbound();
-      expect(live.untilVerdict(), isNot(Duration.zero),
-          reason: 'bytes keep arriving, so the link is alive at ${i * 5}s');
+      expect(
+        live.untilVerdict(),
+        isNot(Duration.zero),
+        reason: 'bytes keep arriving, so the link is alive at ${i * 5}s',
+      );
     }
 
     // The replay stops dead and the reply never comes.

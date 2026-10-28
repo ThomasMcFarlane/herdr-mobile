@@ -9,15 +9,12 @@ const _red = Color(0xFFE06C75);
 const _blue = Color(0xFF204060);
 
 /// The text of each row.
-List<String> _texts(List<List<AnsiRun>> rows) =>
-    [for (final row in rows) row.map((r) => r.text).join()];
+List<String> _texts(List<List<AnsiRun>> rows) => [for (final row in rows) row.map((r) => r.text).join()];
 
 /// Cells in each row.
-List<int> _widths(List<List<AnsiRun>> rows) =>
-    [for (final row in rows) row.fold(0, (n, r) => n + columnsOf(r.text))];
+List<int> _widths(List<List<AnsiRun>> rows) => [for (final row in rows) row.fold(0, (n, r) => n + columnsOf(r.text))];
 
-List<List<AnsiRun>> _wrap(String ansi, int columns) =>
-    wrapLine(parseAnsi(ansi).lines.single, columns);
+List<List<AnsiRun>> _wrap(String ansi, int columns) => wrapLine(parseAnsi(ansi).lines.single, columns);
 
 void main() {
   group('plain text', () {
@@ -125,8 +122,10 @@ void main() {
       expect(_texts(rows), ['abcd', 'ef']);
       for (final row in rows) {
         final r = row.single;
-        expect((r.fg, r.bg, r.bold, r.dim, r.italic, r.underline, r.strike),
-            (_red, _blue, true, true, true, true, true));
+        expect(
+          (r.fg, r.bg, r.bold, r.dim, r.italic, r.underline, r.strike),
+          (_red, _blue, true, true, true, true, true),
+        );
       }
     });
   });
@@ -211,9 +210,7 @@ void main() {
           text.write(alphabet[next(alphabet.length)]);
         }
         final columns = 1 + next(12);
-        final runs = [
-          if (text.isNotEmpty) AnsiRun(text.toString(), fg: _red),
-        ];
+        final runs = [if (text.isNotEmpty) AnsiRun(text.toString(), fg: _red)];
         final rows = wrapLine(runs, columns);
 
         expect(_texts(rows).join(), text.toString(), reason: '$text @ $columns');
@@ -222,12 +219,10 @@ void main() {
           final width = _widths(rows)[r];
           final chars = _texts(rows)[r].runes.where((c) => cellWidth(c) > 0);
           // Only a lone wide character may be wider than the row.
-          expect(width <= columns || chars.length == 1, isTrue,
-              reason: 'row $r of "$text" @ $columns is $width wide');
+          expect(width <= columns || chars.length == 1, isTrue, reason: 'row $r of "$text" @ $columns is $width wide');
           if (r < rows.length - 1 && columns >= 2) {
             // Full, or one short because a wide character did not fit.
-            expect(width, anyOf(columns, columns - 1),
-                reason: 'row $r of "$text" @ $columns');
+            expect(width, anyOf(columns, columns - 1), reason: 'row $r of "$text" @ $columns');
           }
           for (final run in rows[r]) {
             expect(run.fg, _red);

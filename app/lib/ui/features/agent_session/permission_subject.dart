@@ -204,9 +204,7 @@ List<String> _inputPaths(Object? input) {
 /// than [_riskCharLimit] (see there).
 String? _boundedRisk(String s, String? Function(String) judge) {
   if (s.length <= _riskCharLimit) return judge(s);
-  return judge(s.substring(0, _riskCharLimit)) ??
-      judge(s.substring(s.length - _riskCharLimit)) ??
-      longCommand;
+  return judge(s.substring(0, _riskCharLimit)) ?? judge(s.substring(s.length - _riskCharLimit)) ?? longCommand;
 }
 
 /// The input as lines of `key: value`, the shortest first, so a long file body

@@ -37,6 +37,7 @@ import 'package:herdr_mobile/ui/features/pane/pane_screen.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:herdr_mobile/ui/features/composer/command_model.dart';
+
 import '../support/attach_fakes.dart';
 import '../support/fake_agent_session.dart';
 import '../support/fake_network.dart';
@@ -49,7 +50,11 @@ class _Picker implements AttachPicker {
   var n = 0;
 
   PickedPhoto next() {
-    final names = ['IMG_20260518_184233_a-very-long-photograph-name-that-keeps-going.jpg', 'Ảnh chụp màn hình.png', 'x.jpg'];
+    final names = [
+      'IMG_20260518_184233_a-very-long-photograph-name-that-keeps-going.jpg',
+      'Ảnh chụp màn hình.png',
+      'x.jpg',
+    ];
     final name = names[n++ % names.length];
     return PickedPhoto(path: '/cache/$name', name: name, size: 900);
   }
@@ -78,7 +83,8 @@ void main() {
   // The worst case is 1.3; the attach sheet is driven at 1.0 (it is taller than
   // the phone at 1.3 and needs a finger to scroll), then the text grows.
   final scale = ValueNotifier<double>(1.3);
-  const draft = 'Please look at the three screenshots, compare them with the design,\nand list every spacing that differs.\n'
+  const draft =
+      'Please look at the three screenshots, compare them with the design,\nand list every spacing that differs.\n'
       'Then fix the worst one first.\nAnd run the tests.';
 
   Future<void> snap(WidgetTester tester, GlobalKey key, String name) async {
@@ -243,7 +249,10 @@ void main() {
       framed(
         key,
         Scaffold(
-          body: Align(alignment: Alignment.bottomCenter, child: CommandPalette(input: input, model: model, onPick: (_) {})),
+          body: Align(
+            alignment: Alignment.bottomCenter,
+            child: CommandPalette(input: input, model: model, onPick: (_) {}),
+          ),
         ),
       ),
     );

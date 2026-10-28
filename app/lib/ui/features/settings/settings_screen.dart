@@ -14,7 +14,9 @@ import '../../../data/repositories/terminal_settings.dart';
 import '../../../data/services/disk_cache.dart';
 import '../../../data/services/notifier.dart';
 import '../../../data/words/plural.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../support/open_link.dart';
 import '../files/file_format.dart';
 import '../kit/kit_screen.dart';
@@ -105,42 +107,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // the one above it to scroll itself into view.
           SliverToBoxAdapter(
             child: RowColumn(
-            rows: [
-              if (update != null)
+              rows: [
+                if (update != null)
+                  CustomRow(
+                    id: 'update',
+                    child: UpdateGroup(update: update, onOpen: () => _openUpdate(update)),
+                  ),
                 CustomRow(
-                  id: 'update',
-                  child: UpdateGroup(update: update, onOpen: () => _openUpdate(update)),
+                  id: 'look',
+                  child: _LookGroup(open: _open == _Open.look, onToggle: () => _toggle(_Open.look)),
                 ),
-              CustomRow(
-                id: 'look',
-                child: _LookGroup(open: _open == _Open.look, onToggle: () => _toggle(_Open.look)),
-              ),
-              CustomRow(
-                id: 'agents',
-                child: _AgentsGroup(open: _open == _Open.agents, onToggle: () => _toggle(_Open.agents)),
-              ),
-              CustomRow(
-                id: 'notifications',
-                child: _NotificationsGroup(
-                  open: _open == _Open.notifications,
-                  onToggle: () => _toggle(_Open.notifications),
+                CustomRow(
+                  id: 'agents',
+                  child: _AgentsGroup(open: _open == _Open.agents, onToggle: () => _toggle(_Open.agents)),
                 ),
-              ),
-              CustomRow(
-                id: 'storage',
-                child: _StorageGroup(open: _open == _Open.storage, onToggle: () => _toggle(_Open.storage)),
-              ),
-              CustomRow(
-                id: 'about',
-                child: _AboutGroup(
-                  update: update,
-                  open: _open == _Open.about,
-                  onToggle: () => _toggle(_Open.about),
+                CustomRow(
+                  id: 'notifications',
+                  child: _NotificationsGroup(
+                    open: _open == _Open.notifications,
+                    onToggle: () => _toggle(_Open.notifications),
+                  ),
                 ),
-              ),
-              GapRow(id: 'clearance', height: FloatingBar.listEnd(context)),
-            ],
-          ),
+                CustomRow(
+                  id: 'storage',
+                  child: _StorageGroup(open: _open == _Open.storage, onToggle: () => _toggle(_Open.storage)),
+                ),
+                CustomRow(
+                  id: 'about',
+                  child: _AboutGroup(update: update, open: _open == _Open.about, onToggle: () => _toggle(_Open.about)),
+                ),
+                GapRow(id: 'clearance', height: FloatingBar.listEnd(context)),
+              ],
+            ),
           ),
         ],
       ),
@@ -157,16 +155,16 @@ class _LookGroup extends StatelessWidget {
   final VoidCallback onToggle;
 
   static String _theme(ThemeChoice choice) => switch (choice) {
-        ThemeChoice.light => 'Light',
-        ThemeChoice.dark => 'Dark',
-        ThemeChoice.system => 'System',
-      };
+    ThemeChoice.light => 'Light',
+    ThemeChoice.dark => 'Dark',
+    ThemeChoice.system => 'System',
+  };
 
   static String _density(BoardDensity density) => switch (density) {
-        BoardDensity.auto => 'Auto',
-        BoardDensity.cards => 'Cards',
-        BoardDensity.compact => 'Compact',
-      };
+    BoardDensity.auto => 'Auto',
+    BoardDensity.cards => 'Cards',
+    BoardDensity.compact => 'Compact',
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -188,37 +186,37 @@ class _LookGroup extends StatelessWidget {
         CustomRow(
           id: 'theme',
           child: SettingsField(
-          title: 'Theme',
-          child: Segmented<ThemeChoice>(
-            options: const [
-              SegmentOption(ThemeChoice.light, 'Light', icon: LucideIcons.sun),
-              SegmentOption(ThemeChoice.dark, 'Dark', icon: LucideIcons.moon),
-              SegmentOption(ThemeChoice.system, 'System', icon: LucideIcons.smartphone),
-            ],
-            value: theme,
-            onChanged: (next) => unawaited(settings.setTheme(next)),
+            title: 'Theme',
+            child: Segmented<ThemeChoice>(
+              options: const [
+                SegmentOption(ThemeChoice.light, 'Light', icon: LucideIcons.sun),
+                SegmentOption(ThemeChoice.dark, 'Dark', icon: LucideIcons.moon),
+                SegmentOption(ThemeChoice.system, 'System', icon: LucideIcons.smartphone),
+              ],
+              value: theme,
+              onChanged: (next) => unawaited(settings.setTheme(next)),
+            ),
           ),
-        ),
         ),
         CustomRow(
           id: 'density',
           child: SettingsField(
-          title: 'Agent list',
-          // Only where the setting hides a rule: Cards and Compact say it all.
-          hint: density == BoardDensity.auto
-              ? 'Cards up to ${AppSettings.autoCompactFrom - 1} agents, the compact list from '
-                  '${AppSettings.autoCompactFrom}; a blocked agent always keeps its answers.'
-              : null,
-          child: Segmented<BoardDensity>(
-            options: const [
-              SegmentOption(BoardDensity.auto, 'Auto', icon: LucideIcons.sparkles),
-              SegmentOption(BoardDensity.cards, 'Cards', icon: LucideIcons.layoutGrid),
-              SegmentOption(BoardDensity.compact, 'Compact', icon: LucideIcons.list),
-            ],
-            value: density,
-            onChanged: (next) => unawaited(settings.setDensity(next)),
+            title: 'Agent list',
+            // Only where the setting hides a rule: Cards and Compact say it all.
+            hint: density == BoardDensity.auto
+                ? 'Cards up to ${AppSettings.autoCompactFrom - 1} agents, the compact list from '
+                      '${AppSettings.autoCompactFrom}; a blocked agent always keeps its answers.'
+                : null,
+            child: Segmented<BoardDensity>(
+              options: const [
+                SegmentOption(BoardDensity.auto, 'Auto', icon: LucideIcons.sparkles),
+                SegmentOption(BoardDensity.cards, 'Cards', icon: LucideIcons.layoutGrid),
+                SegmentOption(BoardDensity.compact, 'Compact', icon: LucideIcons.list),
+              ],
+              value: density,
+              onChanged: (next) => unawaited(settings.setDensity(next)),
+            ),
           ),
-        ),
         ),
         const CustomRow(
           id: 'font-size',
@@ -277,19 +275,19 @@ class _AgentsGroup extends StatelessWidget {
         CustomRow(
           id: 'open-as',
           child: SettingsField(
-          title: 'Open agents as',
-          hint: openAs == OpenAgentsAs.chat
-              ? 'omp, Claude Code and Codex open as a chat when the app can find their session log; the terminal is one tap away. Any other agent, or one it cannot find, opens as a terminal.'
-              : 'A running agent opens as its terminal.',
-          child: Segmented<OpenAgentsAs>(
-            options: const [
-              SegmentOption(OpenAgentsAs.chat, 'Chat', icon: LucideIcons.messageSquare),
-              SegmentOption(OpenAgentsAs.terminal, 'Terminal', icon: LucideIcons.terminal),
-            ],
-            value: openAs,
-            onChanged: (next) => unawaited(settings.setOpenAgentsAs(next)),
+            title: 'Open agents as',
+            hint: openAs == OpenAgentsAs.chat
+                ? 'omp, Claude Code and Codex open as a chat when the app can find their session log; the terminal is one tap away. Any other agent, or one it cannot find, opens as a terminal.'
+                : 'A running agent opens as its terminal.',
+            child: Segmented<OpenAgentsAs>(
+              options: const [
+                SegmentOption(OpenAgentsAs.chat, 'Chat', icon: LucideIcons.messageSquare),
+                SegmentOption(OpenAgentsAs.terminal, 'Terminal', icon: LucideIcons.terminal),
+              ],
+              value: openAs,
+              onChanged: (next) => unawaited(settings.setOpenAgentsAs(next)),
+            ),
           ),
-        ),
         ),
         if (phrases != null)
           ActionRow(
@@ -297,9 +295,9 @@ class _AgentsGroup extends StatelessWidget {
             title: 'Quick phrases',
             value: '$phrases',
             chevron: true,
-            onTap: () => unawaited(Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const QuickPhrasesPage()),
-            )),
+            onTap: () => unawaited(
+              Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const QuickPhrasesPage())),
+            ),
           ),
       ],
     );
@@ -377,10 +375,10 @@ class _NotificationsGroupState extends State<_NotificationsGroup> {
       summary: _blocked
           ? 'Blocked by Android'
           : !enabled
-              ? 'Off'
-              : alsoDone
-                  ? 'When an agent needs me or finishes'
-                  : 'When an agent needs me',
+          ? 'Off'
+          : alsoDone
+          ? 'When an agent needs me or finishes'
+          : 'When an agent needs me',
       open: widget.open,
       onToggle: widget.onToggle,
       rows: [
@@ -388,15 +386,16 @@ class _NotificationsGroupState extends State<_NotificationsGroup> {
           CustomRow(
             id: 'blocked',
             child: Padding(
-            padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.sm, Gap.gutter, Gap.xs),
-            child: StatusPanel(
-              color: ds.blocked,
-              icon: HerdrIcons.notificationsOff,
-              liveRegion: true,
-              message: 'Android is blocking notifications for herdr. '
-                  'Allow them in the system settings for this app.',
+              padding: const EdgeInsets.fromLTRB(Gap.gutter, Gap.sm, Gap.gutter, Gap.xs),
+              child: StatusPanel(
+                color: ds.blocked,
+                icon: HerdrIcons.notificationsOff,
+                liveRegion: true,
+                message:
+                    'Android is blocking notifications for herdr. '
+                    'Allow them in the system settings for this app.',
+              ),
             ),
-          ),
           ),
         ToggleRow(
           id: 'notify',
@@ -413,7 +412,8 @@ class _NotificationsGroupState extends State<_NotificationsGroup> {
         ),
         const NoteRow(
           id: 'watching',
-          text: 'While agents work, or a page from a machine is open, herdr keeps a quiet '
+          text:
+              'While agents work, or a page from a machine is open, herdr keeps a quiet '
               '\u201cWatching\u201d notice so Android keeps the connection alive. '
               'Notifications clear when you open the app.',
         ),
@@ -483,34 +483,34 @@ class _StorageGroupState extends State<_StorageGroup> {
 
   @override
   Widget build(BuildContext context) => FutureBuilder<int>(
-        future: _size,
-        builder: (context, snapshot) {
-          final bytes = snapshot.data;
-          return SettingsGroup(
-            icon: HerdrIcons.storage,
-            title: 'Storage',
-            summary: bytes == null
-                ? 'Cache'
-                : bytes == 0
-                    ? 'Cache \u00b7 empty'
-                    : 'Cache \u00b7 ${formatBytes(bytes)}',
-            open: widget.open,
-            onToggle: widget.onToggle,
-            rows: [
-              EntityRow(
-                id: 'clear-cache',
-                title: 'Clear cache',
-                titleMaxLines: 1,
-                subtitle: 'Copies of what you looked at on your machines, kept so it is not downloaded twice. At most 192 MB, the oldest go first.',
-                subtitleMaxLines: 4,
-                trailing: Icon(LucideIcons.trash2, size: IconSize.row, color: context.ds.textTertiary),
-                // A plain tap is the right guard: all of it can be downloaded again.
-                onTap: () => unawaited(_clear()),
-              ),
-            ],
-          );
-        },
+    future: _size,
+    builder: (context, snapshot) {
+      final bytes = snapshot.data;
+      return SettingsGroup(
+        icon: HerdrIcons.storage,
+        title: 'Storage',
+        summary: bytes == null
+            ? 'Cache'
+            : bytes == 0
+            ? 'Cache \u00b7 empty'
+            : 'Cache \u00b7 ${formatBytes(bytes)}',
+        open: widget.open,
+        onToggle: widget.onToggle,
+        rows: [
+          EntityRow(
+            id: 'clear-cache',
+            title: 'Clear cache',
+            titleMaxLines: 1,
+            subtitle: 'Copies of what you looked at on your machines, kept so it is not downloaded twice. At most 192 MB, the oldest go first.',
+            subtitleMaxLines: 4,
+            trailing: Icon(LucideIcons.trash2, size: IconSize.row, color: context.ds.textTertiary),
+            // A plain tap is the right guard: all of it can be downloaded again.
+            onTap: () => unawaited(_clear()),
+          ),
+        ],
       );
+    },
+  );
 }
 
 class _AboutGroup extends StatelessWidget {
@@ -523,7 +523,8 @@ class _AboutGroup extends StatelessWidget {
   static const _repoLabel = 'github.com/tuan3w/herdr-mobile · GPL-3.0';
 
   /// The notice GPL-3.0 section 5(d) asks an interactive program to show.
-  static const _legalese = 'Copyright © 2026 Tuan Nguyen. herdr mobile is free '
+  static const _legalese =
+      'Copyright © 2026 Tuan Nguyen. herdr mobile is free '
       'software under the GNU General Public License v3.0, and comes with no '
       'warranty. Its source is at github.com/tuan3w/herdr-mobile.';
 
@@ -535,11 +536,11 @@ class _AboutGroup extends StatelessWidget {
   }
 
   void _openLicenses(BuildContext context) => showLicensePage(
-        context: context,
-        applicationName: 'herdr mobile',
-        applicationVersion: appVersion,
-        applicationLegalese: _legalese,
-      );
+    context: context,
+    applicationName: 'herdr mobile',
+    applicationVersion: appVersion,
+    applicationLegalese: _legalese,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -553,11 +554,15 @@ class _AboutGroup extends StatelessWidget {
       onToggle: onToggle,
       divider: false,
       // Hidden: holding the version opens the kit catalog, in every build.
-      onLongPress: () => unawaited(Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => const KitScreen()),
-      )),
+      onLongPress: () =>
+          unawaited(Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const KitScreen()))),
       rows: [
-        if (update != null) CustomRow(id: 'updates', dividerIndent: Gap.gutter, child: _UpdateRows(update: update)),
+        if (update != null)
+          CustomRow(
+            id: 'updates',
+            dividerIndent: Gap.gutter,
+            child: _UpdateRows(update: update),
+          ),
         EntityRow(
           id: 'connection',
           title: 'Connection',
@@ -565,10 +570,10 @@ class _AboutGroup extends StatelessWidget {
           subtitleMaxLines: 8,
           subtitle: update == null
               ? 'Talks to herdr over SSH and sends nothing anywhere else. '
-                  'Dictation uses your phone’s own speech service.'
+                    'Dictation uses your phone’s own speech service.'
               : 'Talks to herdr over SSH. The only other place it contacts is GitHub, '
-                  'to look for a new version and, when you tap Download, to fetch it. '
-                  'Dictation uses your phone’s own speech service.',
+                    'to look for a new version and, when you tap Download, to fetch it. '
+                    'Dictation uses your phone’s own speech service.',
         ),
         EntityRow(
           id: 'whatsnew',
@@ -609,44 +614,45 @@ class _UpdateRows extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-        listenable: update,
-        builder: (context, _) {
-          final ds = context.ds;
-          final release = update.release;
-          final checking = update.stage == UpdateStage.checking;
-          final problem = update.checkProblem;
-          final subtitle = checking
-              ? 'Asking github.com\u2026'
-              : problem ??
-                  (release != null
-                      ? 'Version ${release.version} is available, at the top of this page.'
-                      : update.upToDate
-                          ? 'You have the latest version.'
-                          : 'Asks github.com for the newest release.');
-          return RowColumn(
-            rows: [
-              EntityRow(
-                id: 'check',
-                title: 'Check for updates',
-                titleMaxLines: 1,
-                subtitle: subtitle,
-                subtitleMaxLines: 4,
-                subtitleColor: problem != null ? ds.dangerText : null,
-                trailing: checking
-                    ? const BusySpinner(size: IconSize.bar)
-                    : Icon(LucideIcons.refreshCw, size: IconSize.row, color: ds.textTertiary),
-                onTap: update.stage == UpdateStage.idle ? () => unawaited(update.check()) : null,
-              ),
-              ToggleRow(
-                id: 'auto-check',
-                title: 'Check automatically',
-                subtitle: 'Asks github.com about twice a day while you use the app, with this '
-                    'app’s name and version. A download comes from GitHub’s file servers.',
-                value: update.autoCheck,
-                onChanged: (on) => unawaited(update.setAutoCheck(on)),
-              ),
-            ],
-          );
-        },
+    listenable: update,
+    builder: (context, _) {
+      final ds = context.ds;
+      final release = update.release;
+      final checking = update.stage == UpdateStage.checking;
+      final problem = update.checkProblem;
+      final subtitle = checking
+          ? 'Asking github.com\u2026'
+          : problem ??
+                (release != null
+                    ? 'Version ${release.version} is available, at the top of this page.'
+                    : update.upToDate
+                    ? 'You have the latest version.'
+                    : 'Asks github.com for the newest release.');
+      return RowColumn(
+        rows: [
+          EntityRow(
+            id: 'check',
+            title: 'Check for updates',
+            titleMaxLines: 1,
+            subtitle: subtitle,
+            subtitleMaxLines: 4,
+            subtitleColor: problem != null ? ds.dangerText : null,
+            trailing: checking
+                ? const BusySpinner(size: IconSize.bar)
+                : Icon(LucideIcons.refreshCw, size: IconSize.row, color: ds.textTertiary),
+            onTap: update.stage == UpdateStage.idle ? () => unawaited(update.check()) : null,
+          ),
+          ToggleRow(
+            id: 'auto-check',
+            title: 'Check automatically',
+            subtitle:
+                'Asks github.com about twice a day while you use the app, with this '
+                'app’s name and version. A download comes from GitHub’s file servers.',
+            value: update.autoCheck,
+            onChanged: (on) => unawaited(update.setAutoCheck(on)),
+          ),
+        ],
       );
+    },
+  );
 }

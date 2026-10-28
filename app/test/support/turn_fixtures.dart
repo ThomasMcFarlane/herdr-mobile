@@ -6,8 +6,13 @@ final t0 = DateTime(2026, 10, 5, 12);
 
 DateTime at(int seconds) => t0.add(Duration(seconds: seconds));
 
-TranscriptMessage userAt(String key, String text, int seconds) =>
-    TranscriptMessage(key: key, role: MessageRole.user, blocks: [TextBlock(text)], at: at(seconds), endedAt: at(seconds));
+TranscriptMessage userAt(String key, String text, int seconds) => TranscriptMessage(
+  key: key,
+  role: MessageRole.user,
+  blocks: [TextBlock(text)],
+  at: at(seconds),
+  endedAt: at(seconds),
+);
 
 TranscriptMessage agentAt(String key, String text, int seconds, [int? end]) => TranscriptMessage(
   key: key,
@@ -125,7 +130,8 @@ List<TranscriptItem> richTurn({String prefix = ''}) => [
     24,
     end: 40,
     exitCode: 1,
-    output: '00:02 +11 -1: locale handles Hà Nội\nExpected: Hà Nội\n  Actual: ha noi\n00:03 +11 -1: Some tests failed.\n',
+    output:
+        '00:02 +11 -1: locale handles Hà Nội\nExpected: Hà Nội\n  Actual: ha noi\n00:03 +11 -1: Some tests failed.\n',
   ),
   agentAt(
     '${prefix}a',

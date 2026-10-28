@@ -20,7 +20,14 @@ Json _meta(String toolName, {String? parent, Json? response, bool? subagent}) =>
   'claudeCode': {'toolName': toolName, 'parentToolUseId': ?parent, 'toolResponse': ?response, 'subagent': ?subagent},
 };
 
-Json _launch(String id, {String? parent, String status = 'pending', Json? input, String title = 'Task', Json? response}) => {
+Json _launch(
+  String id, {
+  String? parent,
+  String status = 'pending',
+  Json? input,
+  String title = 'Task',
+  Json? response,
+}) => {
   'sessionUpdate': 'tool_call',
   'toolCallId': id,
   'title': title,
@@ -30,7 +37,15 @@ Json _launch(String id, {String? parent, String status = 'pending', Json? input,
   '_meta': _meta('Agent', parent: parent, response: response),
 };
 
-Json _toolUpdate(String id, {String? parent, String? status, String? tool, Json? response, Json? input, String? title}) => {
+Json _toolUpdate(
+  String id, {
+  String? parent,
+  String? status,
+  String? tool,
+  Json? response,
+  Json? input,
+  String? title,
+}) => {
   'sessionUpdate': 'tool_call_update',
   'toolCallId': id,
   'status': ?status,
@@ -171,7 +186,9 @@ void main() {
     });
 
     test('an Agent call that waits for approval is waiting until it is answered', () {
-      var s = _fold([_launch('a', input: {'description': 'd', 'prompt': 'p'}, status: 'in_progress')]);
+      var s = _fold([
+        _launch('a', input: {'description': 'd', 'prompt': 'p'}, status: 'in_progress'),
+      ]);
       expect(s.subagents.single.status, SubagentStatus.running);
       final request = PermissionRequest.parse({
         'sessionId': 's',
@@ -192,26 +209,37 @@ void main() {
     test('a subagent that talks: text and calls go to its run, the answer to the main transcript', () {
       final s = _fold([
         _text('Starting. '),
-        _launch('toolu_task', input: {'description': 'Explore code', 'prompt': 'Find the parser', 'subagent_type': 'Explore'}),
+        _launch(
+          'toolu_task',
+          input: {'description': 'Explore code', 'prompt': 'Find the parser', 'subagent_type': 'Explore'},
+        ),
         _childText('toolu_task', 'Looking for', id: 'msg_sub_1'),
         _childText('toolu_task', ' the parser.', id: 'msg_sub_1'),
         _childTool('toolu_sub_read', 'toolu_task'),
-        _toolUpdate('toolu_task', status: 'in_progress', response: {'elapsedTimeSeconds': 3, 'subagentType': 'Explore'}),
+        _toolUpdate(
+          'toolu_task',
+          status: 'in_progress',
+          response: {'elapsedTimeSeconds': 3, 'subagentType': 'Explore'},
+        ),
         // Later updates of the child's call carry no tag.
         _toolUpdate('toolu_sub_read', status: 'completed', tool: 'Read'),
         _childText('toolu_task', 'Foun', id: 'msg_sub_2'),
         _childText('toolu_task', 'd it.', id: 'msg_sub_2'),
-        _toolUpdate('toolu_task', status: 'completed', response: {
-          'agentId': 'a1',
-          'prompt': 'Find the parser',
-          'status': 'completed',
-          'totalDurationMs': 10,
-          'totalTokens': 5,
-          'totalToolUseCount': 1,
-          'content': [
-            {'type': 'text', 'text': 'The parser is in x.ts.'},
-          ],
-        }),
+        _toolUpdate(
+          'toolu_task',
+          status: 'completed',
+          response: {
+            'agentId': 'a1',
+            'prompt': 'Find the parser',
+            'status': 'completed',
+            'totalDurationMs': 10,
+            'totalTokens': 5,
+            'totalToolUseCount': 1,
+            'content': [
+              {'type': 'text', 'text': 'The parser is in x.ts.'},
+            ],
+          },
+        ),
         _text('It is in x.ts.', id: 'main2'),
       ]);
       final mainText = [for (final m in s.items.whereType<TranscriptMessage>()) m.text];
@@ -221,8 +249,15 @@ void main() {
       expect(run.agentType, 'Explore');
       expect(run.title, 'Explore code');
       expect(run.status, SubagentStatus.finished);
-      expect([for (final m in run.items.whereType<TranscriptMessage>()) m.text], ['Looking for the parser.', 'Found it.']);
-      expect(run.items.whereType<TranscriptTool>().single.call.status, ToolStatus.completed, reason: 'untagged update routed by call id');
+      expect(
+        [for (final m in run.items.whereType<TranscriptMessage>()) m.text],
+        ['Looking for the parser.', 'Found it.'],
+      );
+      expect(
+        run.items.whereType<TranscriptTool>().single.call.status,
+        ToolStatus.completed,
+        reason: 'untagged update routed by call id',
+      );
       expect(run.toolCount, 1);
       expect(run.result, 'The parser is in x.ts.');
       expect(run.totalElapsed, const Duration(milliseconds: 10));
@@ -266,7 +301,10 @@ void main() {
       expect(s.subagents, isEmpty);
       expect(s.subagentBook.held, hasLength(3));
       s = _fold([
-        _launch('late', input: {'description': 'Check the logs', 'prompt': 'Check logs', 'subagent_type': 'general-purpose'}),
+        _launch(
+          'late',
+          input: {'description': 'Check the logs', 'prompt': 'Check logs', 'subagent_type': 'general-purpose'},
+        ),
       ], s);
       expect(s.subagentBook.held, isEmpty);
       final run = s.subagents.single;
@@ -296,7 +334,11 @@ void main() {
     test('a subagent that starts a subagent: runs are flat, nested ones say whose they are', () {
       final s = _fold([
         _launch('outer', input: {'description': 'Plan the work', 'prompt': 'Plan it', 'subagent_type': 'Plan'}),
-        _launch('inner', parent: 'outer', input: {'description': 'Read the spec', 'prompt': 'Read spec.md', 'subagent_type': 'Explore'}),
+        _launch(
+          'inner',
+          parent: 'outer',
+          input: {'description': 'Read the spec', 'prompt': 'Read spec.md', 'subagent_type': 'Explore'},
+        ),
         _childTool('grand', 'inner', title: 'Read /spec.md'),
         _toolUpdate('inner', parent: 'outer', status: 'completed'),
         _childText('outer', 'Plan: do X.', id: 'm'),
@@ -310,7 +352,9 @@ void main() {
       expect(inner.agentType, 'Explore');
       expect(inner.status, SubagentStatus.finished);
       expect(inner.items.whereType<TranscriptTool>().map((t) => t.call.toolCallId), ['grand']);
-      expect(outer.items.whereType<TranscriptTool>().map((t) => t.call.toolCallId), ['inner'], reason: 'the inner Agent row is in the outer transcript');
+      expect(outer.items.whereType<TranscriptTool>().map((t) => t.call.toolCallId), [
+        'inner',
+      ], reason: 'the inner Agent row is in the outer transcript');
       expect(outer.items.whereType<TranscriptMessage>().single.text, 'Plan: do X.');
       expect(s.items.whereType<TranscriptTool>().map((t) => t.call.toolCallId), ['outer']);
       expect(s.subagentSummary.total, 2);
@@ -335,10 +379,7 @@ void main() {
       // Tagged request for a call this client never saw.
       final tagged = PermissionRequest.parse({
         'sessionId': 's',
-        'toolCall': {
-          'toolCallId': 'never_seen',
-          '_meta': _meta('Edit', parent: 'outer'),
-        },
+        'toolCall': {'toolCallId': 'never_seen', '_meta': _meta('Edit', parent: 'outer')},
         'options': [
           {'optionId': 'allow', 'name': 'Allow', 'kind': 'allow_once'},
         ],
@@ -403,7 +444,9 @@ void main() {
       expect(run.status, SubagentStatus.running);
       expect(s.toolCall('bg')!.status, ToolStatus.completed);
       expect(run.items.whereType<TranscriptMessage>().single.text, 'Reviewing now.');
-      s = s.apply(_u(_toolUpdate('bg', response: {'status': 'completed', 'totalDurationMs': 1000, 'totalToolUseCount': 0})));
+      s = s.apply(
+        _u(_toolUpdate('bg', response: {'status': 'completed', 'totalDurationMs': 1000, 'totalToolUseCount': 0})),
+      );
       run = s.subagents.single;
       expect(run.status, SubagentStatus.finished);
       expect(run.background, isFalse);
@@ -430,15 +473,19 @@ void main() {
 
     test('cancelling the turn cancels running subagents, their calls and the subagents they started', () {
       final at = DateTime.utc(2026, 1, 1, 12);
-      var s = _fold([
-        _launch('outer', input: {'description': 'Outer', 'prompt': 'p'}),
-        _launch('inner', parent: 'outer', input: {'description': 'Inner', 'prompt': 'p'}),
-        _childTool('grand', 'inner'),
-        _childTool('child', 'outer', tool: 'Bash'),
-        _launch('done', input: {'description': 'Done', 'prompt': 'p'}),
-        _toolUpdate('done', status: 'completed'),
-        _childText('outer', 'thinking...'),
-      ], null, at);
+      var s = _fold(
+        [
+          _launch('outer', input: {'description': 'Outer', 'prompt': 'p'}),
+          _launch('inner', parent: 'outer', input: {'description': 'Inner', 'prompt': 'p'}),
+          _childTool('grand', 'inner'),
+          _childTool('child', 'outer', tool: 'Bash'),
+          _launch('done', input: {'description': 'Done', 'prompt': 'p'}),
+          _toolUpdate('done', status: 'completed'),
+          _childText('outer', 'thinking...'),
+        ],
+        null,
+        at,
+      );
       expect(s.subagentSummary.running, 2);
       s = s.withCancelRequested(at: at.add(const Duration(seconds: 5)));
       expect(s.subagentRun('outer')!.status, SubagentStatus.cancelled);
@@ -448,7 +495,11 @@ void main() {
       expect(s.subagentRun('outer')!.liveMessage, isNull, reason: 'its text stopped');
       for (final id in ['outer', 'inner']) {
         final tools = s.subagentRun(id)!.items.whereType<TranscriptTool>();
-        expect(tools.every((t) => t.call.status == ToolStatus.cancelled || t.call.toolCallId == 'inner'), isTrue, reason: id);
+        expect(
+          tools.every((t) => t.call.status == ToolStatus.cancelled || t.call.toolCallId == 'inner'),
+          isTrue,
+          reason: id,
+        );
       }
       expect(s.subagentRun('inner')!.items.whereType<TranscriptTool>().single.call.status, ToolStatus.cancelled);
       expect(s.toolCall('outer')!.status, ToolStatus.cancelled);
@@ -470,7 +521,9 @@ void main() {
 
     test('a long run keeps the newest items and counts what it dropped', () {
       const n = 2250;
-      var s = _fold([_launch('t', input: {'description': 'd', 'prompt': 'p'})]);
+      var s = _fold([
+        _launch('t', input: {'description': 'd', 'prompt': 'p'}),
+      ]);
       for (var i = 0; i < n; i++) {
         s = s.apply(_u(_childTool('c$i', 't', title: 'Read $i')));
       }
@@ -518,8 +571,20 @@ void main() {
 
     test('a session without subagents has none, and an ordinary call starts none', () {
       final s = _fold([
-        {'sessionUpdate': 'tool_call', 'toolCallId': 'x', 'title': 'ls', 'kind': 'execute', 'rawInput': {'command': 'ls'}},
-        {'sessionUpdate': 'tool_call', 'toolCallId': 'todo', 'title': 'Marking step done', 'kind': 'think', 'rawInput': {'op': 'done', 'task': 'step'}},
+        {
+          'sessionUpdate': 'tool_call',
+          'toolCallId': 'x',
+          'title': 'ls',
+          'kind': 'execute',
+          'rawInput': {'command': 'ls'},
+        },
+        {
+          'sessionUpdate': 'tool_call',
+          'toolCallId': 'todo',
+          'title': 'Marking step done',
+          'kind': 'think',
+          'rawInput': {'op': 'done', 'task': 'step'},
+        },
         _toolUpdate('x', status: 'completed', tool: 'Bash'),
       ]);
       expect(s.subagents, isEmpty);
@@ -578,19 +643,37 @@ void main() {
       expect(s.subagents.every((r) => !r.hasTranscript && r.items.isEmpty), isTrue);
       expect(s.subagents.first.route, SubagentRoute.omp);
 
-      s = s.apply(_u({
-        'sessionUpdate': 'tool_call_update',
-        'toolCallId': 'call_task',
-        'status': 'in_progress',
-        'rawOutput': {
-          'content': [],
-          'details': {
-            'results': [],
-            'totalDurationMs': 0,
-            'progress': [progress(0, 'Alpha', 'running'), progress(1, 'Beta', 'pending', extra: {'retryState': {'attempt': 2, 'maxAttempts': 5, 'delayMs': 8000, 'errorMessage': '429 rate limited', 'startedAtMs': 1}})],
+      s = s.apply(
+        _u({
+          'sessionUpdate': 'tool_call_update',
+          'toolCallId': 'call_task',
+          'status': 'in_progress',
+          'rawOutput': {
+            'content': [],
+            'details': {
+              'results': [],
+              'totalDurationMs': 0,
+              'progress': [
+                progress(0, 'Alpha', 'running'),
+                progress(
+                  1,
+                  'Beta',
+                  'pending',
+                  extra: {
+                    'retryState': {
+                      'attempt': 2,
+                      'maxAttempts': 5,
+                      'delayMs': 8000,
+                      'errorMessage': '429 rate limited',
+                      'startedAtMs': 1,
+                    },
+                  },
+                ),
+              ],
+            },
           },
-        },
-      }));
+        }),
+      );
       final alpha = s.subagentRun('call_task#0')!, beta = s.subagentRun('call_task#1')!;
       expect(alpha.status, SubagentStatus.running);
       expect(alpha.name, 'Alpha');
@@ -615,22 +698,43 @@ void main() {
       expect(beta.retry!.message, '429 rate limited');
       expect(s.subagentSummary.running, 1);
 
-      s = s.apply(_u({
-        'sessionUpdate': 'tool_call_update',
-        'toolCallId': 'call_task',
-        'status': 'completed',
-        'rawOutput': {
-          'content': [],
-          'details': {
-            'totalDurationMs': 50000,
-            'progress': [progress(0, 'Alpha', 'completed'), progress(1, 'Beta', 'failed')],
-            'results': [
-              {'index': 0, 'id': 'Alpha', 'agent': 'explore', 'exitCode': 0, 'output': 'Alpha found.', 'stderr': '', 'durationMs': 41000, 'tokens': 2000},
-              {'index': 1, 'id': 'Beta', 'agent': 'scout', 'exitCode': 1, 'output': '', 'stderr': 'boom', 'error': 'Provider quota exhausted', 'durationMs': 9000, 'tokens': 10},
-            ],
+      s = s.apply(
+        _u({
+          'sessionUpdate': 'tool_call_update',
+          'toolCallId': 'call_task',
+          'status': 'completed',
+          'rawOutput': {
+            'content': [],
+            'details': {
+              'totalDurationMs': 50000,
+              'progress': [progress(0, 'Alpha', 'completed'), progress(1, 'Beta', 'failed')],
+              'results': [
+                {
+                  'index': 0,
+                  'id': 'Alpha',
+                  'agent': 'explore',
+                  'exitCode': 0,
+                  'output': 'Alpha found.',
+                  'stderr': '',
+                  'durationMs': 41000,
+                  'tokens': 2000,
+                },
+                {
+                  'index': 1,
+                  'id': 'Beta',
+                  'agent': 'scout',
+                  'exitCode': 1,
+                  'output': '',
+                  'stderr': 'boom',
+                  'error': 'Provider quota exhausted',
+                  'durationMs': 9000,
+                  'tokens': 10,
+                },
+              ],
+            },
           },
-        },
-      }));
+        }),
+      );
       final a2 = s.subagentRun('call_task#0')!, b2 = s.subagentRun('call_task#1')!;
       expect(a2.status, SubagentStatus.finished);
       expect(a2.result, 'Alpha found.');
@@ -658,7 +762,13 @@ void main() {
         },
       };
       var s = _fold([
-        {'sessionUpdate': 'tool_call', 'toolCallId': 'c', 'title': 'Spawning', 'kind': 'other', 'rawInput': {'tasks': []}},
+        {
+          'sessionUpdate': 'tool_call',
+          'toolCallId': 'c',
+          'title': 'Spawning',
+          'kind': 'other',
+          'rawInput': {'tasks': []},
+        },
         progressUpdate,
       ]);
       expect(s.subagentRun('c#0')!.status, SubagentStatus.cancelled);
@@ -671,7 +781,13 @@ void main() {
 
     test('the todo tool (a `task` string and an `op`) is not a subagent', () {
       final s = _fold([
-        {'sessionUpdate': 'tool_call', 'toolCallId': 't', 'title': 'task', 'kind': 'think', 'rawInput': {'op': 'done', 'task': 'step'}},
+        {
+          'sessionUpdate': 'tool_call',
+          'toolCallId': 't',
+          'title': 'task',
+          'kind': 'think',
+          'rawInput': {'op': 'done', 'task': 'step'},
+        },
       ]);
       expect(s.subagents, isEmpty);
     });

@@ -18,8 +18,7 @@ class _MediaStore {
     final date = (((args as Map)['option'] as Map)['child'] as Map)['createDate'] as Map;
     final kept = [
       for (final p in pictures)
-        if (date['ignore'] == true || (p.createdMs >= (date['min'] as int) && p.createdMs <= (date['max'] as int)))
-          p,
+        if (date['ignore'] == true || (p.createdMs >= (date['min'] as int) && p.createdMs <= (date['max'] as int))) p,
     ]..sort((a, b) => b.createdMs.compareTo(a.createdMs));
     return kept;
   }
@@ -41,7 +40,14 @@ class _MediaStore {
         return {
           'data': [
             for (final p in all.sublist((args['start'] as int).clamp(0, end), end))
-              {'id': p.id, 'type': 1, 'width': 1080, 'height': 2400, 'createDt': p.createdMs ~/ 1000, 'title': '${p.id}.png'},
+              {
+                'id': p.id,
+                'type': 1,
+                'width': 1080,
+                'height': 2400,
+                'createDt': p.createdMs ~/ 1000,
+                'title': '${p.id}.png',
+              },
           ],
         };
     }

@@ -7,7 +7,9 @@ import '../../../data/models/herdr_models.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/batch_actions.dart';
 import '../../../data/repositories/fleet_repository.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../../data/words/plural.dart';
 import 'agents_grouping.dart' show AgentsOverview;
 import 'board_selection.dart';
@@ -92,11 +94,7 @@ class _BatchSheetState extends State<BatchSheet> {
     // Rebuilds when a status, a title or a machine's state changes.
     context.select<FleetRepository, AgentsOverview>(AgentsOverview.of);
     final sessions = context.watch<AgentSessions?>();
-    final targets = resolveBatchTargets(
-      refs: widget.refs,
-      fleet: context.read<FleetRepository>(),
-      sessions: sessions,
-    );
+    final targets = resolveBatchTargets(refs: widget.refs, fleet: context.read<FleetRepository>(), sessions: sessions);
     final message = _action == BatchAction.message;
     final waitingTerminals = {
       for (final t in targets)
@@ -111,24 +109,19 @@ class _BatchSheetState extends State<BatchSheet> {
 
     final (title, about, runHeader, verb) = switch (_action) {
       BatchAction.stop => (
-          'Stop agents',
-          'Sends Esc to each terminal agent and stops the turn of each agent session.',
-          'Will be stopped',
-          'Stop',
-        ),
-      BatchAction.message => (
-          'Message agents',
-          null,
-          'Will get the message',
-          'Message',
-        ),
+        'Stop agents',
+        'Sends Esc to each terminal agent and stops the turn of each agent session.',
+        'Will be stopped',
+        'Stop',
+      ),
+      BatchAction.message => ('Message agents', null, 'Will get the message', 'Message'),
       BatchAction.close => (
-          'Close agents',
-          'This closes these terminal panes and ends these agent sessions. '
-              'Whatever runs in them stops, and it cannot be undone.',
-          'Will be closed',
-          'Close',
-        ),
+        'Close agents',
+        'This closes these terminal panes and ends these agent sessions. '
+            'Whatever runs in them stops, and it cannot be undone.',
+        'Will be closed',
+        'Close',
+      ),
     };
 
     final viewport = MediaQuery.sizeOf(context).height;
@@ -216,7 +209,8 @@ class _BatchSheetState extends State<BatchSheet> {
                           onChanged: (on) => setState(() => _anyway = on ? waitingTerminals : null),
                         ),
                       ),
-                    for (final s in waiting) _TargetRow(target: s.target, note: _sentence(s.reason), noteColor: ds.blockedText),
+                    for (final s in waiting)
+                      _TargetRow(target: s.target, note: _sentence(s.reason), noteColor: ds.blockedText),
                   ],
                   if (skipped.isNotEmpty) ...[
                     SectionLabel(label: 'Skipped', count: skipped.length),
@@ -260,7 +254,9 @@ class _TargetRow extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.only(top: Gap.hair),
-              child: ExcludeSemantics(child: StatusGlyph(status: status, size: IconSize.bar)),
+              child: ExcludeSemantics(
+                child: StatusGlyph(status: status, size: IconSize.bar),
+              ),
             ),
             const SizedBox(width: Gap.md),
             Expanded(
@@ -292,11 +288,7 @@ class _TargetRow extends StatelessWidget {
             const SizedBox(width: Gap.sm),
             Padding(
               padding: const EdgeInsets.only(top: Gap.hair),
-              child: Text(
-                status.label,
-                maxLines: 1,
-                style: Type.caption.copyWith(color: status.textColor(ds)),
-              ),
+              child: Text(status.label, maxLines: 1, style: Type.caption.copyWith(color: status.textColor(ds))),
             ),
           ],
         ),

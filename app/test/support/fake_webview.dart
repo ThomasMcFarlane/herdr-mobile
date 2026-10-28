@@ -288,18 +288,18 @@ class _FakeWidget extends PlatformWebViewWidget {
 /// A fleet with no machines, for a screen that holds the connections up
 /// ([FleetRepository.holdAlive]) without a real fleet behind it.
 FleetRepository emptyFleet() => FleetRepository(
-      machines: MachineRepository(profiles: MemoryProfileStore(), secrets: MemorySecretStore()),
-      network: FakeNetwork(),
-      connect: (profile, secrets) => MachineConnection(profile: profile, api: HerdrApi(FakeTransport())),
-    );
+  machines: MachineRepository(profiles: MemoryProfileStore(), secrets: MemorySecretStore()),
+  network: FakeNetwork(),
+  connect: (profile, secrets) => MachineConnection(profile: profile, api: HerdrApi(FakeTransport())),
+);
 
 /// [child] under [fleet], as the app has it.
 Widget withFleet(FleetRepository fleet, Widget child) => ChangeNotifierProvider.value(value: fleet, child: child);
 
 /// A machine for page tests.
 MachineConnection pageMachine(FakeTransport transport, {String label = 'build-box'}) => MachineConnection(
-      profile: MachineProfile(id: 'm', label: label, host: 'h', username: 'u'),
-      api: HerdrApi(transport),
-      backoff: (_) => const Duration(hours: 1),
-      pollInterval: const Duration(hours: 1),
-    );
+  profile: MachineProfile(id: 'm', label: label, host: 'h', username: 'u'),
+  api: HerdrApi(transport),
+  backoff: (_) => const Duration(hours: 1),
+  pollInterval: const Duration(hours: 1),
+);

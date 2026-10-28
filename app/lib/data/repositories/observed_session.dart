@@ -55,7 +55,13 @@ bool promptShowsInput(String subject, Object? input) {
   final cut = shown.endsWith('…');
   if (cut) shown = shown.substring(0, shown.length - 1);
   if (shown.isEmpty || shown.contains('…')) return false;
-  final texts = input is String ? [input] : [if (input is Map) for (final v in input.values) if (v is String) v];
+  final texts = input is String
+      ? [input]
+      : [
+          if (input is Map)
+            for (final v in input.values)
+              if (v is String) v,
+        ];
   for (final text in texts) {
     final whole = text.replaceAll(_whitespace, '');
     if (whole == shown || (cut && whole.startsWith(shown))) return true;
@@ -357,9 +363,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
   // -- the view ---------------------------------------------------------------
 
   @override
-  String get key => _isSub
-      ? 'sub/${machine.profile.id}/$paneId/$subagentName'
-      : 'pane/${machine.profile.id}/$paneId';
+  String get key => _isSub ? 'sub/${machine.profile.id}/$paneId/$subagentName' : 'pane/${machine.profile.id}/$paneId';
 
   @override
   String get agentLabel => _isSub ? 'Subagent of ${agentName(kind.id)}' : agentName(kind.id);
@@ -520,9 +524,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
       if (history == null || _disposed || token != _madeToken) return;
       _madeHistory = history;
       unawaited(
-        DiskCache.shared
-            .put(DiskCache.madeKey(machine.profile.id, path), history.toBytes())
-            .catchError((Object _) {}),
+        DiskCache.shared.put(DiskCache.madeKey(machine.profile.id, path), history.toBytes()).catchError((Object _) {}),
       );
     } on Object {
       // The link, or a host that cannot read the log: the rows stay what they
@@ -543,38 +545,40 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
     var caughtUp = false;
     final done = Completer<void>();
     var work = Future<void>.value();
-    final sub = _source.follow(path, from: seed?.upTo ?? 0, until: head, digest: true).listen(
-      (batch) {
-        work = work.then((_) async {
-          if (_disposed || token != _madeToken) return;
-          if (batch.reset) {
-            // The log is not the one the offset came from: all of it again.
-            mapper = _newMapper();
-            log = AgentSessionState(_log.sessionId);
-            base = null;
-          }
-          final lines = batch.lines;
-          await _inSlices(lines.length, (i) {
-            for (final u in mapper.map(lines[i])) {
-              log = log.apply(u);
-            }
-          });
-          end = batch.endOffset;
-          if (batch.caughtUp) caughtUp = true;
-        });
-      },
-      onError: (Object e, StackTrace s) {
-        work = work.then((_) {
-          if (!done.isCompleted) done.completeError(e, s);
-        });
-      },
-      onDone: () {
-        work = work.then((_) {
-          if (!done.isCompleted) done.complete();
-        });
-      },
-      cancelOnError: true,
-    );
+    final sub = _source
+        .follow(path, from: seed?.upTo ?? 0, until: head, digest: true)
+        .listen(
+          (batch) {
+            work = work.then((_) async {
+              if (_disposed || token != _madeToken) return;
+              if (batch.reset) {
+                // The log is not the one the offset came from: all of it again.
+                mapper = _newMapper();
+                log = AgentSessionState(_log.sessionId);
+                base = null;
+              }
+              final lines = batch.lines;
+              await _inSlices(lines.length, (i) {
+                for (final u in mapper.map(lines[i])) {
+                  log = log.apply(u);
+                }
+              });
+              end = batch.endOffset;
+              if (batch.caughtUp) caughtUp = true;
+            });
+          },
+          onError: (Object e, StackTrace s) {
+            work = work.then((_) {
+              if (!done.isCompleted) done.completeError(e, s);
+            });
+          },
+          onDone: () {
+            work = work.then((_) {
+              if (!done.isCompleted) done.complete();
+            });
+          },
+          cancelOnError: true,
+        );
     _madeSub = sub;
     try {
       await done.future;
@@ -647,7 +651,8 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
     if (pane == null || !machine.isLive) return AgentPhase.idle;
     if (_pending is PendingQuestion) return AgentPhase.blockedOnQuestion;
     return switch (pane.status) {
-      AgentStatus.blocked => _pending is PendingQuestion ? AgentPhase.blockedOnQuestion : AgentPhase.blockedOnPermission,
+      AgentStatus.blocked =>
+        _pending is PendingQuestion ? AgentPhase.blockedOnQuestion : AgentPhase.blockedOnPermission,
       AgentStatus.working => AgentPhase.working,
       _ => AgentPhase.idle,
     };
@@ -782,11 +787,13 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
     final load = _fetchPicture(ref);
     _pictureLoads[key] = load;
     // Whoever asked gets the answer or the failure; this only forgets the load.
-    unawaited(load.then<void>((_) {}, onError: (Object _) {}).whenComplete(() {
-      // A block body: `remove` returns the failed load itself, and a callback
-      // that returns a future makes `whenComplete` wait for it and fail with it.
-      _pictureLoads.remove(key);
-    }));
+    unawaited(
+      load.then<void>((_) {}, onError: (Object _) {}).whenComplete(() {
+        // A block body: `remove` returns the failed load itself, and a callback
+        // that returns a future makes `whenComplete` wait for it and fail with it.
+        _pictureLoads.remove(key);
+      }),
+    );
     return load;
   }
 
@@ -900,9 +907,15 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
   @override
   Future<BackgroundStopResult> stopAllBackground({BackgroundKind? only}) async {
     final work = backgroundWork;
-    final running = [for (final t in work.running) if (only == null || t.kind == only) t];
+    final running = [
+      for (final t in work.running)
+        if (only == null || t.kind == only) t,
+    ];
     if (running.isEmpty) return const BackgroundAlreadyDone();
-    return _askToStop([for (final t in work.stoppable) if (only == null || t.kind == only) t]);
+    return _askToStop([
+      for (final t in work.stoppable)
+        if (only == null || t.kind == only) t,
+    ]);
   }
 
   /// One message for all of [tasks]; only ids that are plain tokens are put
@@ -1150,7 +1163,9 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
       final name = subagentName!;
       final info = parent!._mapper.subagents.where((s) => s.name == name).firstOrNull ?? SubagentInfo(name: name);
       final path = await subs.pathOf(machine, parentPath, info);
-      if (path == null || !isReadableLogPath(path)) return const NotYet('This subagent has not written its transcript yet.');
+      if (path == null || !isReadableLogPath(path)) {
+        return const NotYet('This subagent has not written its transcript yet.');
+      }
       return Located(path);
     }
     final pane = _pane;
@@ -1204,23 +1219,25 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
     // A wider read that starts over (the link dropped before any of it came)
     // is mapped from scratch; one that resumes goes on where it was.
     if (_offset == null && _wideLog != null) _startWide();
-    final sub = _source.follow(path, from: _offset, tailBytes: _offset == null ? _tailBytes : null).listen(
-      (batch) {
-        got = true;
-        work = work.then((_) => _alive(epoch) ? _applyBatch(batch, epoch) : null);
-      },
-      onError: (Object e, StackTrace s) {
-        work = work.then((_) {
-          if (!done.isCompleted) done.completeError(e, s);
-        });
-      },
-      onDone: () {
-        work = work.then((_) {
-          if (!done.isCompleted) done.complete(got);
-        });
-      },
-      cancelOnError: true,
-    );
+    final sub = _source
+        .follow(path, from: _offset, tailBytes: _offset == null ? _tailBytes : null)
+        .listen(
+          (batch) {
+            got = true;
+            work = work.then((_) => _alive(epoch) ? _applyBatch(batch, epoch) : null);
+          },
+          onError: (Object e, StackTrace s) {
+            work = work.then((_) {
+              if (!done.isCompleted) done.completeError(e, s);
+            });
+          },
+          onDone: () {
+            work = work.then((_) {
+              if (!done.isCompleted) done.complete(got);
+            });
+          },
+          cancelOnError: true,
+        );
     _sub = sub;
     // The helper says `caught up` after its first read to the end, which is how
     // an empty log or a resume at its end becomes live. This is the fallback for
@@ -1476,8 +1493,42 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
   }
 
   static bool _recordsEqual(Object a, Object b) {
-    final x = a as (AgentLink, AgentPhase, bool, PendingRequest?, bool, String, String?, String, List<String>?, AgentSessionState, int, Map<String, SubagentState>, BackgroundWork, bool);
-    final y = b as (AgentLink, AgentPhase, bool, PendingRequest?, bool, String, String?, String, List<String>?, AgentSessionState, int, Map<String, SubagentState>, BackgroundWork, bool);
+    final x =
+        a
+            as (
+              AgentLink,
+              AgentPhase,
+              bool,
+              PendingRequest?,
+              bool,
+              String,
+              String?,
+              String,
+              List<String>?,
+              AgentSessionState,
+              int,
+              Map<String, SubagentState>,
+              BackgroundWork,
+              bool,
+            );
+    final y =
+        b
+            as (
+              AgentLink,
+              AgentPhase,
+              bool,
+              PendingRequest?,
+              bool,
+              String,
+              String?,
+              String,
+              List<String>?,
+              AgentSessionState,
+              int,
+              Map<String, SubagentState>,
+              BackgroundWork,
+              bool,
+            );
     return x.$1 == y.$1 &&
         x.$2 == y.$2 &&
         x.$3 == y.$3 &&
@@ -1604,12 +1655,18 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
     // A dialog about a patch names only where it goes.
     final destination = RegExp(r'^\s*Destination:\s*(.+?)\s*$', multiLine: true).firstMatch(prompt.subject)?.group(1);
     if (destination != null) {
-      final hits = [for (final call in open) if (_patchTouches(call.rawInput, destination)) call];
+      final hits = [
+        for (final call in open)
+          if (_patchTouches(call.rawInput, destination)) call,
+      ];
       return hits.length == 1 ? hits.single : null;
     }
     // Two calls that look like what the dialog shows (a cut command with the
     // same start) are not told apart: the card then shows the screen's own text.
-    final hits = [for (final call in open) if (promptShowsInput(prompt.subject, call.rawInput)) call];
+    final hits = [
+      for (final call in open)
+        if (promptShowsInput(prompt.subject, call.rawInput)) call,
+    ];
     return hits.length == 1 ? hits.single : null;
   }
 
@@ -1726,7 +1783,10 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
     final memo = _commandsMemo;
     if (memo != null && identical(log, _memoLog) && identical(_catalog, _memoCatalog)) return memo;
     // The log's commands are `/` ones: only a `/` entry of the catalog hides one.
-    final known = {for (final c in _catalog) if (c.trigger == '/') c.name};
+    final known = {
+      for (final c in _catalog)
+        if (c.trigger == '/') c.name,
+    };
     final merged = [
       ..._catalog,
       for (final c in log)
@@ -1899,7 +1959,8 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
     try {
       final shown = _pendingPrompt;
       final index = outcome is PermissionSelected ? int.tryParse(outcome.optionId) : null;
-      if (shown == null || (outcome is PermissionSelected && (index == null || index < 0 || index >= shown.replies.length))) {
+      if (shown == null ||
+          (outcome is PermissionSelected && (index == null || index < 0 || index >= shown.replies.length))) {
         return _refuse(p, _answerGone);
       }
       // The screen is the truth: keys (a refusal's `esc` too, which would
@@ -2200,9 +2261,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
     if (_flushTimer != null && (slow || !_flushSlow)) return;
     _flushTimer?.cancel();
     _flushSlow = slow;
-    final wait = slow
-        ? backgroundNotifyEvery
-        : (_toldSinceFirstBatch ? notifyEvery : Duration.zero);
+    final wait = slow ? backgroundNotifyEvery : (_toldSinceFirstBatch ? notifyEvery : Duration.zero);
     _flushTimer = Timer(wait, () {
       _flushTimer = null;
       if (_disposed || !_dirty) return;

@@ -21,18 +21,8 @@ import 'package:provider/provider.dart';
 import 'support/fake_agent_session.dart';
 import 'ui/ui_harness.dart';
 
-const _mini = MachineProfile(
-  id: 'm-mini',
-  label: 'Mac mini',
-  host: 'mini.example.com',
-  username: 'me',
-);
-const _vps = MachineProfile(
-  id: 'm-vps',
-  label: 'Hetzner VPS',
-  host: 'vps.example.com',
-  username: 'me',
-);
+const _mini = MachineProfile(id: 'm-mini', label: 'Mac mini', host: 'mini.example.com', username: 'me');
+const _vps = MachineProfile(id: 'm-vps', label: 'Hetzner VPS', host: 'vps.example.com', username: 'me');
 
 /// Sessions the host only reports once asked (the app was just started).
 class _LateSessions extends FakeAgentSessions {
@@ -50,21 +40,12 @@ class _LateSessions extends FakeAgentSessions {
 void main() {
   group('parseAgentLink', () {
     test('decodes machine and pane id', () {
-      expect(
-        parseAgentLink('herdr://agent/Mac%20mini/wD%3Ap1'),
-        const AgentLink('Mac mini', 'wD:p1'),
-      );
+      expect(parseAgentLink('herdr://agent/Mac%20mini/wD%3Ap1'), const AgentLink('Mac mini', 'wD:p1'));
     });
 
     test('reads what the host plugin sends (same literals as its test.sh)', () {
-      expect(
-        parseAgentLink('herdr://agent/Test%20Box/wD%3Ap1'),
-        const AgentLink('Test Box', 'wD:p1'),
-      );
-      expect(
-        parseAgentLink('herdr://agent/Mac%2Fmini%20%C3%A9/wD%3Ap1'),
-        const AgentLink('Mac/mini é', 'wD:p1'),
-      );
+      expect(parseAgentLink('herdr://agent/Test%20Box/wD%3Ap1'), const AgentLink('Test Box', 'wD:p1'));
+      expect(parseAgentLink('herdr://agent/Mac%2Fmini%20%C3%A9/wD%3Ap1'), const AgentLink('Mac/mini é', 'wD:p1'));
       expect(
         parseAgentLink('herdr://agent/%24%28touch%20%2Ftmp%2Fx%29/wD%3Ap1'),
         const AgentLink(r'$(touch /tmp/x)', 'wD:p1'),
@@ -76,10 +57,7 @@ void main() {
     });
 
     test('keeps non-ASCII names whole', () {
-      expect(
-        parseAgentLink('herdr://agent/M%C3%A1y%20Vi%E1%BB%87t/w1%3Ap1'),
-        const AgentLink('Máy Việt', 'w1:p1'),
-      );
+      expect(parseAgentLink('herdr://agent/M%C3%A1y%20Vi%E1%BB%87t/w1%3Ap1'), const AgentLink('Máy Việt', 'w1:p1'));
     });
 
     test('scheme and host ignore case; machine and pane keep theirs', () {
@@ -126,10 +104,7 @@ void main() {
 
   group('parseSessionLink', () {
     test('decodes machine and keeper id', () {
-      expect(
-        parseSessionLink('herdr://session/Mac%20mini/k%2F1'),
-        const SessionLink('Mac mini', 'k/1'),
-      );
+      expect(parseSessionLink('herdr://session/Mac%20mini/k%2F1'), const SessionLink('Mac mini', 'k/1'));
       expect(parseSessionLink('HERDR://Session/box/abc/'), const SessionLink('box', 'abc'));
     });
 
@@ -212,20 +187,19 @@ void main() {
       Duration patience = const Duration(seconds: 2),
       FakeAgentSessions? sessions,
     }) async {
-      h = await UiHarness.create(machines ??
-          [
-            (
-              profile: _mini,
-              snapshot: snapshotWith([
-                (id: 'w1:p1', ws: 'w1', agent: 'claude', status: 'blocked'),
-                (id: 'w1:p2', ws: 'w1', agent: 'codex', status: 'working'),
-              ]),
-            ),
-            (
-              profile: _vps,
-              snapshot: snapshotWith([(id: 'w1:p9', ws: 'w1', agent: 'omp', status: 'done')]),
-            ),
-          ]);
+      h = await UiHarness.create(
+        machines ??
+            [
+              (
+                profile: _mini,
+                snapshot: snapshotWith([
+                  (id: 'w1:p1', ws: 'w1', agent: 'claude', status: 'blocked'),
+                  (id: 'w1:p2', ws: 'w1', agent: 'codex', status: 'working'),
+                ]),
+              ),
+              (profile: _vps, snapshot: snapshotWith([(id: 'w1:p9', ws: 'w1', agent: 'omp', status: 'done')])),
+            ],
+      );
       opened = [];
       links = DeepLinks(
         machines: h.machines,
@@ -236,11 +210,13 @@ void main() {
       );
       // The app registers it in initState, before the MaterialApp builds.
       links.attach();
-      await tester.pumpWidget(MaterialApp(
-        theme: AppTheme.light(),
-        navigatorKey: links.navigatorKey,
-        home: const Scaffold(body: Center(child: Text('board'))),
-      ));
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          navigatorKey: links.navigatorKey,
+          home: const Scaffold(body: Center(child: Text('board'))),
+        ),
+      );
       await settle(tester);
     }
 
@@ -265,16 +241,15 @@ void main() {
       final message = const JSONMethodCodec().encodeMethodCall(
         MethodCall('pushRouteInformation', {'location': location}),
       );
-      await tester.binding.defaultBinaryMessenger
-          .handlePlatformMessage('flutter/navigation', message, (_) {});
+      await tester.binding.defaultBinaryMessenger.handlePlatformMessage('flutter/navigation', message, (_) {});
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
     }
 
     void showSecondScreen() {
-      links.navigatorKey.currentState!.push(MaterialPageRoute<void>(
-        builder: (_) => const Scaffold(body: Text('second screen')),
-      ));
+      links.navigatorKey.currentState!.push(
+        MaterialPageRoute<void>(builder: (_) => const Scaffold(body: Text('second screen'))),
+      );
     }
 
     testWidgets('a link while running opens that pane of that machine', (tester) async {
@@ -294,8 +269,7 @@ void main() {
       await tearDownApp(tester);
     });
 
-    testWidgets('a link that started the app opens its pane once the first screen is up',
-        (tester) async {
+    testWidgets('a link that started the app opens its pane once the first screen is up', (tester) async {
       tester.platformDispatcher.defaultRouteNameTestValue = 'herdr://agent/Mac%20mini/w1%3Ap1';
       addTearDown(tester.platformDispatcher.clearDefaultRouteNameTestValue);
       await pumpApp(tester);
@@ -327,8 +301,7 @@ void main() {
       await tearDownApp(tester);
     });
 
-    testWidgets('a failed link leaves the screen in front and its toast offers the way back',
-        (tester) async {
+    testWidgets('a failed link leaves the screen in front and its toast offers the way back', (tester) async {
       await pumpApp(tester);
       showSecondScreen();
       await tester.pumpAndSettle();
@@ -390,8 +363,7 @@ void main() {
       await tearDownApp(tester);
     });
 
-    testWidgets('a machine that is down still opens a pane its cached snapshot has',
-        (tester) async {
+    testWidgets('a machine that is down still opens a pane its cached snapshot has', (tester) async {
       await pumpApp(tester);
       await loseMachine(tester);
       await pushLink(tester, 'herdr://agent/Mac%20mini/w1%3Ap1');
@@ -399,8 +371,7 @@ void main() {
       await tearDownApp(tester);
     });
 
-    testWidgets('a machine that never answers is reported after the patience runs out',
-        (tester) async {
+    testWidgets('a machine that never answers is reported after the patience runs out', (tester) async {
       await pumpApp(tester);
       await loseMachine(tester);
 
@@ -415,8 +386,7 @@ void main() {
       await tearDownApp(tester);
     });
 
-    testWidgets('waits for a reconnecting machine and opens the pane once it is there',
-        (tester) async {
+    testWidgets('waits for a reconnecting machine and opens the pane once it is there', (tester) async {
       await pumpApp(tester, patience: const Duration(seconds: 30));
       final t = h.transports['m-mini']!;
       await loseMachine(tester);
@@ -459,8 +429,7 @@ void main() {
       await tearDownApp(tester);
     });
 
-    testWidgets('an unknown session is "no longer on" the machine, like an unknown pane',
-        (tester) async {
+    testWidgets('an unknown session is "no longer on" the machine, like an unknown pane', (tester) async {
       await pumpApp(tester, sessions: FakeAgentSessions([FakeAgentSession(key: 'm-mini/k1')]));
       await pushLink(tester, 'herdr://session/Mac%20mini/gone');
       expect(opened, isEmpty);
@@ -469,8 +438,7 @@ void main() {
       await tearDownApp(tester);
     });
 
-    testWidgets('a session the phone has not listed yet is looked for on the host first',
-        (tester) async {
+    testWidgets('a session the phone has not listed yet is looked for on the host first', (tester) async {
       final sessions = _LateSessions();
       await pumpApp(tester, sessions: sessions);
       await pushLink(tester, 'herdr://session/Mac%20mini/k9');
@@ -488,8 +456,7 @@ void main() {
       await tearDownApp(tester);
     });
 
-    testWidgets('without sessions to open, a session link is not one this app can open',
-        (tester) async {
+    testWidgets('without sessions to open, a session link is not one this app can open', (tester) async {
       await pumpApp(tester);
       await pushLink(tester, 'herdr://session/Mac%20mini/k1');
       expect(find.text("That link isn't one herdr can open."), findsOneWidget);
@@ -510,8 +477,7 @@ void main() {
       await tearDownApp(tester);
     });
 
-    testWidgets('following a link by hand (a notification tap) is the same as Android handing it over',
-        (tester) async {
+    testWidgets('following a link by hand (a notification tap) is the same as Android handing it over', (tester) async {
       await pumpApp(tester);
       await links.follow('herdr://agent/Mac%20mini/w1%3Ap1');
       await links.follow('/settings');
@@ -537,25 +503,27 @@ void main() {
         ..physicalSize = const Size(360, 740) * 2
         ..devicePixelRatio = 2;
       addTearDown(tester.view.reset);
-      await tester.pumpWidget(MultiProvider(
-        providers: [
-          ChangeNotifierProvider.value(value: h.machines),
-          ChangeNotifierProvider.value(value: h.fleet),
-          ChangeNotifierProvider(create: (_) => AttentionSet(fleet: h.fleet)),
-          ChangeNotifierProvider.value(value: h.terminalSettings),
-          ChangeNotifierProvider.value(value: h.appSettings),
-          ChangeNotifierProvider.value(value: h.agentScreens),
-          Provider<PanePreviews>.value(value: h.previews),
-          Provider<TransportFactory>.value(
-            value: (profile, secrets, onPin, onNotice) => UiTransport(snapshotWith(const [])),
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: h.machines),
+            ChangeNotifierProvider.value(value: h.fleet),
+            ChangeNotifierProvider(create: (_) => AttentionSet(fleet: h.fleet)),
+            ChangeNotifierProvider.value(value: h.terminalSettings),
+            ChangeNotifierProvider.value(value: h.appSettings),
+            ChangeNotifierProvider.value(value: h.agentScreens),
+            Provider<PanePreviews>.value(value: h.previews),
+            Provider<TransportFactory>.value(
+              value: (profile, secrets, onPin, onNotice) => UiTransport(snapshotWith(const [])),
+            ),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.light(),
+            navigatorKey: links.navigatorKey,
+            home: HomeShell(initialTab: tab.index, tabs: tabs),
           ),
-        ],
-        child: MaterialApp(
-          theme: AppTheme.light(),
-          navigatorKey: links.navigatorKey,
-          home: HomeShell(initialTab: tab.index, tabs: tabs),
         ),
-      ));
+      );
       await settle(tester);
     }
 

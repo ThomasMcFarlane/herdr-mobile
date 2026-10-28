@@ -170,8 +170,7 @@ class _FastCupertinoTransitions extends CupertinoPageTransitionsBuilder {
 
   // Durations have no context to ask, so they read the same platform flag
   // `MediaQuery.disableAnimations` is made from.
-  static bool get _reduced =>
-      WidgetsBinding.instance.platformDispatcher.accessibilityFeatures.disableAnimations;
+  static bool get _reduced => WidgetsBinding.instance.platformDispatcher.accessibilityFeatures.disableAnimations;
 
   @override
   Duration get transitionDuration => _reduced ? Motion.fade : Motion.page;
@@ -271,9 +270,9 @@ abstract final class AppTheme {
     );
 
     OutlineInputBorder border(Color c, [double w = 1]) => OutlineInputBorder(
-          borderRadius: BorderRadius.circular(Radii.sm),
-          borderSide: BorderSide(color: c, width: w),
-        );
+      borderRadius: BorderRadius.circular(Radii.sm),
+      borderSide: BorderSide(color: c, width: w),
+    );
 
     return ThemeData(
       useMaterial3: true,
@@ -295,10 +294,12 @@ abstract final class AppTheme {
       dividerTheme: DividerThemeData(color: ds.hairline, thickness: 1, space: 1),
       // Slide-with-parallax and edge-swipe back on every platform, instead of
       // Android's zoom/fade.
-      pageTransitionsTheme: const PageTransitionsTheme(builders: {
-        TargetPlatform.android: _FastCupertinoTransitions(),
-        TargetPlatform.iOS: _FastCupertinoTransitions(),
-      }),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: _FastCupertinoTransitions(),
+          TargetPlatform.iOS: _FastCupertinoTransitions(),
+        },
+      ),
       appBarTheme: AppBarTheme(
         backgroundColor: ds.bg,
         foregroundColor: ds.text,
@@ -326,10 +327,7 @@ abstract final class AppTheme {
         selectionHandleColor: ds.accent,
       ),
       tooltipTheme: TooltipThemeData(
-        decoration: BoxDecoration(
-          color: ds.inverseSurface,
-          borderRadius: BorderRadius.circular(Radii.xs),
-        ),
+        decoration: BoxDecoration(color: ds.inverseSurface, borderRadius: BorderRadius.circular(Radii.xs)),
         textStyle: Type.caption.copyWith(color: ds.onInverse),
       ),
       bottomSheetTheme: BottomSheetThemeData(
@@ -339,9 +337,7 @@ abstract final class AppTheme {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         showDragHandle: false,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.lg)),
-        ),
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.lg))),
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(color: ds.textSecondary),
     );

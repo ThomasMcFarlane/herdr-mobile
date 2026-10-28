@@ -84,7 +84,11 @@ void main() {
     expect(find.text('Edit queued message'), findsOneWidget);
     final sheetField = find.descendant(of: find.byType(BottomSheet), matching: find.byType(TextField));
     expect(find.widgetWithText(AppButton, 'Save').evaluate(), isNotEmpty);
-    expect(tester.widget<AppButton>(find.widgetWithText(AppButton, 'Save')).onPressed, isNull, reason: 'nothing changed yet');
+    expect(
+      tester.widget<AppButton>(find.widgetWithText(AppButton, 'Save')).onPressed,
+      isNull,
+      reason: 'nothing changed yet',
+    );
 
     await tester.enterText(sheetField, 'then run the tests twice');
     await tester.pump();
@@ -184,7 +188,9 @@ void main() {
     expect(tester.widget<TextField>(field).controller!.text, 'a draft', reason: 'Stop does not touch the draft');
   });
 
-  testWidgets('Stop is its own button: Send keeps its place and a double tap on Queue cannot reach Stop', (tester) async {
+  testWidgets('Stop is its own button: Send keeps its place and a double tap on Queue cannot reach Stop', (
+    tester,
+  ) async {
     final session = working();
     await pump(tester, session);
     final sendAt = tester.getCenter(find.byIcon(LucideIcons.listPlus));

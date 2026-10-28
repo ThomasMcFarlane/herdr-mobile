@@ -77,10 +77,7 @@ abstract interface class HerdrTransport {
   /// Sends [method] and returns the `result` object.
   /// Throws [HerdrApiException] on an API error, [HerdrTransportException]
   /// on connection problems.
-  Future<Map<String, dynamic>> request(
-    String method, [
-    Map<String, dynamic> params = const {},
-  ]);
+  Future<Map<String, dynamic>> request(String method, [Map<String, dynamic> params = const {}]);
 
   /// Subscribes to event [types] (e.g. `pane.updated`).
   /// Emits each event object; errors with [HerdrTransportException] if the
@@ -175,8 +172,7 @@ abstract interface class HerdrTransport {
 }
 
 /// Splits a byte stream into decoded JSON-line strings.
-Stream<String> jsonLines(Stream<List<int>> bytes) =>
-    utf8.decoder.bind(bytes).transform(const LineSplitter());
+Stream<String> jsonLines(Stream<List<int>> bytes) => utf8.decoder.bind(bytes).transform(const LineSplitter());
 
 /// Returns the `result` of an already-decoded response, or throws.
 Map<String, dynamic> unwrapDecoded(Object? decoded) {
@@ -185,10 +181,7 @@ Map<String, dynamic> unwrapDecoded(Object? decoded) {
   }
   final error = decoded['error'];
   if (error is Map) {
-    throw HerdrApiException(
-      (error['code'] as String?) ?? 'error',
-      (error['message'] as String?) ?? 'unknown error',
-    );
+    throw HerdrApiException((error['code'] as String?) ?? 'error', (error['message'] as String?) ?? 'unknown error');
   }
   final result = decoded['result'];
   if (result is! Map<String, dynamic>) {

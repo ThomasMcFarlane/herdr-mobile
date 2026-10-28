@@ -43,11 +43,7 @@ void main() {
       final load = await c.load(h, timeout: const Duration(seconds: 120));
       final updates = c.seen.where(isMethod('session/update')).toList();
       await c.close();
-      return (
-        load: load,
-        updates: updatesOf(updates),
-        bytes: updates.fold(0, (n, m) => n + jsonEncode(m).length),
-      );
+      return (load: load, updates: updatesOf(updates), bytes: updates.fold(0, (n, m) => n + jsonEncode(m).length));
     }
 
     test('a zipped attach replays the same messages in a fraction of the bytes, and leaves small ones alone', () async {
@@ -99,7 +95,10 @@ void main() {
       expect(r.bytes, greaterThan(1024 * 1024), reason: 'the newest turn is whole');
 
       // Every turn but the newest kept its rows and lost what made it heavy.
-      final trimmed = [for (final t in turns) if (t.tools.any(isTrimmed)) t];
+      final trimmed = [
+        for (final t in turns)
+          if (t.tools.any(isTrimmed)) t,
+      ];
       expect(trimmed, hasLength(11));
       expect(herdr['trimmedTurns'], 11);
       for (final t in turns.take(11)) {
@@ -237,37 +236,41 @@ void main() {
       }
     });
 
-    test('a turn in flight that alone passes the entry bound eats its own oldest entries, not the conversation before it', () async {
-      // omp streams every chunk of a long command as an update, so one long
-      // turn can hold more entries than the bound. Dropping the turns before it
-      // cannot make that fit; it only loses the questions and answers.
-      final h = await newHost({'HERDR_KEEPER_LOG_MESSAGES': '600'});
-      final info = await h.start();
-      await detached(h, info.id, 6, '2:1:1');
-      final b = await h.attach(info.id);
-      await b.initialize();
-      await b.load(h);
-      b.prompt('heavyhold:300:1:1:long');
-      await b.next((m) {
-        if (m['method'] != 'session/update') return false;
-        final u = asJson(asJson(m['params'])['update']);
-        return u['toolCallId'] == 'tlong-299' && u['status'] == 'completed';
-      });
-      await b.close();
+    test(
+      'a turn in flight that alone passes the entry bound eats its own oldest entries, not the conversation before it',
+      () async {
+        // omp streams every chunk of a long command as an update, so one long
+        // turn can hold more entries than the bound. Dropping the turns before it
+        // cannot make that fit; it only loses the questions and answers.
+        final h = await newHost({'HERDR_KEEPER_LOG_MESSAGES': '600'});
+        final info = await h.start();
+        await detached(h, info.id, 6, '2:1:1');
+        final b = await h.attach(info.id);
+        await b.initialize();
+        await b.load(h);
+        b.prompt('heavyhold:300:1:1:long');
+        await b.next((m) {
+          if (m['method'] != 'session/update') return false;
+          final u = asJson(asJson(m['params'])['update']);
+          return u['toolCallId'] == 'tlong-299' && u['status'] == 'completed';
+        });
+        await b.close();
 
-      final r = await replay(h, info.id);
-      final turns = turnsOf(r.updates);
-      expect(herdrMeta(r.load)['droppedTurns'], 0, reason: 'no turn before it was dropped');
-      expect(turns.map((t) => t.user), [
-        for (var i = 0; i < 6; i++) 'heavy:2:1:1:$i',
-        'heavyhold:300:1:1:long',
-      ]);
-      for (var i = 0; i < 6; i++) {
-        expect(turns[i].answer, 'answer $i', reason: 'turn $i keeps its answer');
-      }
-      expect(turns.last.tools.length, lessThan(300 * 3), reason: 'the open turn gave up its oldest entries (300 calls, 3 updates each)');
-      expect(turns.last.tools, isNotEmpty);
-    });
+        final r = await replay(h, info.id);
+        final turns = turnsOf(r.updates);
+        expect(herdrMeta(r.load)['droppedTurns'], 0, reason: 'no turn before it was dropped');
+        expect(turns.map((t) => t.user), [for (var i = 0; i < 6; i++) 'heavy:2:1:1:$i', 'heavyhold:300:1:1:long']);
+        for (var i = 0; i < 6; i++) {
+          expect(turns[i].answer, 'answer $i', reason: 'turn $i keeps its answer');
+        }
+        expect(
+          turns.last.tools.length,
+          lessThan(300 * 3),
+          reason: 'the open turn gave up its oldest entries (300 calls, 3 updates each)',
+        );
+        expect(turns.last.tools, isNotEmpty);
+      },
+    );
 
     test('taking a refused prompt back keeps the turns and counters consistent', () async {
       final dir = Directory.systemTemp.createTempSync('keeper_log_');
@@ -326,7 +329,11 @@ void main() {
         final c = asJson(out[key]);
         expect(c['carry'], ['available_commands_update', 'current_mode_update'], reason: key);
         expect(c['mode'], ['plan'], reason: key);
-        expect(['available_commands_update', 'current_mode_update'], contains(c['first']), reason: '$key: state replays before the turns');
+        expect(
+          ['available_commands_update', 'current_mode_update'],
+          contains(c['first']),
+          reason: '$key: state replays before the turns',
+        );
       }
       expect(asJson(out['carryWhole'])['dropped'], greaterThan(0));
       // Heavy turns: every question stays; the newest turn keeps all its output.

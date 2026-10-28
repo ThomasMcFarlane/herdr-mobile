@@ -33,11 +33,17 @@ FakeFs projectFs() {
   fs.addFile('$root/AGENTS.md', 'notes\n');
   fs.addFile('$root/.gitignore', 'build/\n.dart_tool/\n');
   fs.addFile('$root/pubspec.yaml', 'name: herdr_mobile\nversion: 1.4.0+4102\n');
-  fs.addFile('$root/package.json', '{"name":"herdr","version":"1.0.0","scripts":{"build":"tsc","test":"vitest"},"dependencies":{"a":"^1","b":"^2"}}');
+  fs.addFile(
+    '$root/package.json',
+    '{"name":"herdr","version":"1.0.0","scripts":{"build":"tsc","test":"vitest"},"dependencies":{"a":"^1","b":"^2"}}',
+  );
   fs.addFile('$root/app/lib/main.dart', sampleDart);
   fs.addFile('$root/docs/Thiết kế giao diện.md', '# Thiết kế\n');
   fs.addFile('$root/docs/日本語のメモ.txt', 'メモ\n');
-  fs.addFile('$root/screenshot 2026-05-20 at 09.30.png', Uint8List.fromList([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0]));
+  fs.addFile(
+    '$root/screenshot 2026-05-20 at 09.30.png',
+    Uint8List.fromList([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0]),
+  );
   fs.addFile('$root/release.apk', Uint8List(4 * 1024 * 1024));
   fs.addFile('$root/empty.txt', '');
   fs.addFile('$root/build.log', List.generate(300, (i) => 'line $i ok').join('\n'));
@@ -88,7 +94,9 @@ String get sampleDart {
     ..writeln('}')
     ..writeln();
   for (var i = 0; i < 60; i++) {
-    b.writeln('\tfinal value$i = compute(input[$i], options: const Options(retries: 3, backoff: Duration(milliseconds: 250)));');
+    b.writeln(
+      '\tfinal value$i = compute(input[$i], options: const Options(retries: 3, backoff: Duration(milliseconds: 250)));',
+    );
   }
   b.writeln('// Tiếng Việt: Đường dẫn tệp rất dài, 日本語のコメントもここにあります。');
   return b.toString();
@@ -105,15 +113,12 @@ Future<Uint8List> makePng(WidgetTester tester, int width, int height) async {
     canvas.drawRect(
       rect,
       ui.Paint()
-        ..shader = ui.Gradient.linear(rect.topLeft, rect.bottomRight, const [
-          ui.Color(0xFF5E6AD2),
-          ui.Color(0xFF4CB782),
-          ui.Color(0xFFF2C94C),
-        ], const [
-          0,
-          0.55,
-          1
-        ]),
+        ..shader = ui.Gradient.linear(
+          rect.topLeft,
+          rect.bottomRight,
+          const [ui.Color(0xFF5E6AD2), ui.Color(0xFF4CB782), ui.Color(0xFFF2C94C)],
+          const [0, 0.55, 1],
+        ),
     );
     canvas.drawCircle(
       ui.Offset(width * 0.3, height * 0.4),

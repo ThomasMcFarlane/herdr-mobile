@@ -48,12 +48,7 @@ Future<void> _pump(WidgetTester tester, Widget home, {_Routes? routes, Size size
     ..devicePixelRatio = 2.625;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
-    MaterialApp(
-      key: UniqueKey(),
-      theme: AppTheme.light(),
-      navigatorObservers: [?routes],
-      home: home,
-    ),
+    MaterialApp(key: UniqueKey(), theme: AppTheme.light(), navigatorObservers: [?routes], home: home),
   );
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 50));
@@ -74,10 +69,17 @@ Widget _host(Future<void> Function(BuildContext context) onTap) => Scaffold(
   ),
 );
 
-FileBrowserScreen _browser(FakeFs fs, String path, {FileBrowserSession? session, DateTime Function()? clock, ThumbLoader? thumbs}) =>
-    FileBrowserScreen(machine: machineWithFiles(fs), path: path, session: session, clock: clock, thumbs: thumbs);
+FileBrowserScreen _browser(
+  FakeFs fs,
+  String path, {
+  FileBrowserSession? session,
+  DateTime Function()? clock,
+  ThumbLoader? thumbs,
+}) => FileBrowserScreen(machine: machineWithFiles(fs), path: path, session: session, clock: clock, thumbs: thumbs);
 
-List<String> _names(WidgetTester tester) => [for (final r in tester.widgetList<FileRow>(find.byType(FileRow))) r.entry.name];
+List<String> _names(WidgetTester tester) => [
+  for (final r in tester.widgetList<FileRow>(find.byType(FileRow))) r.entry.name,
+];
 
 final _now = DateTime.utc(2026, 5, 20, 12);
 
@@ -114,7 +116,9 @@ void main() {
 
     int lists(FakeFs fs) => fs.calls.where((c) => c.startsWith('list ')).length;
 
-    testWidgets('a breadcrumb pops to the folder already on the stack: nothing is pushed, nothing is read again', (tester) async {
+    testWidgets('a breadcrumb pops to the folder already on the stack: nothing is pushed, nothing is read again', (
+      tester,
+    ) async {
       final fs = projectFs();
       final routes = _Routes();
       final session = FileBrowserSession();
@@ -211,7 +215,9 @@ void main() {
       expect(session.paths, ['/']);
     });
 
-    testWidgets('a picker keeps handing its answer down the stack after a breadcrumb popped part of it', (tester) async {
+    testWidgets('a picker keeps handing its answer down the stack after a breadcrumb popped part of it', (
+      tester,
+    ) async {
       final fs = projectFs();
       String? chosen;
       final machine = machineWithFiles(fs);
@@ -276,41 +282,44 @@ void main() {
   });
 
   group('opening is immediate', () {
-    testWidgets('Browse files puts the screen up at once, the skeleton comes after a moment, a second tap does nothing', (tester) async {
-      final fs = projectFs()..gate = Completer<void>();
-      final routes = _Routes();
-      final machine = machineWithFiles(fs);
-      // Two asks in the same moment (a double tap, a hotkey and a tap): one screen.
-      await _pump(
-        tester,
-        _host((c) async {
-          unawaited(openFileBrowser(c, machine, startDir: _root));
-          await openFileBrowser(c, machine, startDir: _root);
-        }),
-        routes: routes,
-      );
-      final before = routes.pushes;
+    testWidgets(
+      'Browse files puts the screen up at once, the skeleton comes after a moment, a second tap does nothing',
+      (tester) async {
+        final fs = projectFs()..gate = Completer<void>();
+        final routes = _Routes();
+        final machine = machineWithFiles(fs);
+        // Two asks in the same moment (a double tap, a hotkey and a tap): one screen.
+        await _pump(
+          tester,
+          _host((c) async {
+            unawaited(openFileBrowser(c, machine, startDir: _root));
+            await openFileBrowser(c, machine, startDir: _root);
+          }),
+          routes: routes,
+        );
+        final before = routes.pushes;
 
-      await tester.tap(find.text('go'));
-      await tester.pump();
-      await tester.pump();
+        await tester.tap(find.text('go'));
+        await tester.pump();
+        await tester.pump();
 
-      expect(find.byType(FileBrowserScreen), findsOneWidget, reason: 'on screen before the host answered a thing');
-      expect(routes.pushes, before + 1, reason: 'the second tap was ignored');
-      expect(find.text('AGENTS.md'), findsNothing, reason: 'the host has not answered yet');
-      expect(find.byType(Skeleton), findsNothing, reason: 'no placeholder inside the first 120 ms');
+        expect(find.byType(FileBrowserScreen), findsOneWidget, reason: 'on screen before the host answered a thing');
+        expect(routes.pushes, before + 1, reason: 'the second tap was ignored');
+        expect(find.text('AGENTS.md'), findsNothing, reason: 'the host has not answered yet');
+        expect(find.byType(Skeleton), findsNothing, reason: 'no placeholder inside the first 120 ms');
 
-      await tester.pump(const Duration(milliseconds: 60));
-      expect(find.byType(Skeleton), findsNothing);
-      await tester.pump(const Duration(milliseconds: 100));
-      expect(find.byType(Skeleton), findsOneWidget, reason: 'a slow link shows its placeholder');
+        await tester.pump(const Duration(milliseconds: 60));
+        expect(find.byType(Skeleton), findsNothing);
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(find.byType(Skeleton), findsOneWidget, reason: 'a slow link shows its placeholder');
 
-      fs.gate!.complete();
-      await _settle(tester);
-      expect(find.byType(Skeleton), findsNothing);
-      expect(find.text('AGENTS.md'), findsOneWidget);
-      expect(routes.pushes, before + 1);
-    });
+        fs.gate!.complete();
+        await _settle(tester);
+        expect(find.byType(Skeleton), findsNothing);
+        expect(find.text('AGENTS.md'), findsOneWidget);
+        expect(routes.pushes, before + 1);
+      },
+    );
 
     testWidgets('a link that answers at once never flashes a skeleton', (tester) async {
       final machine = machineWithFiles(projectFs());
@@ -327,21 +336,24 @@ void main() {
       expect(find.text('AGENTS.md'), findsOneWidget);
     });
 
-    testWidgets('with no start folder the browser opens at the login directory, and the title is Files until it is known', (tester) async {
-      final fs = projectFs()..gate = Completer<void>();
-      final machine = machineWithFiles(fs);
-      await _pump(tester, _host((c) => openFileBrowser(c, machine)));
+    testWidgets(
+      'with no start folder the browser opens at the login directory, and the title is Files until it is known',
+      (tester) async {
+        final fs = projectFs()..gate = Completer<void>();
+        final machine = machineWithFiles(fs);
+        await _pump(tester, _host((c) => openFileBrowser(c, machine)));
 
-      await tester.tap(find.text('go'));
-      await tester.pump();
-      await tester.pump();
-      expect(find.text('Files'), findsWidgets);
+        await tester.tap(find.text('go'));
+        await tester.pump();
+        await tester.pump();
+        expect(find.text('Files'), findsWidgets);
 
-      fs.gate!.complete();
-      await _settle(tester);
-      expect(find.text('herdr-mobile'), findsWidgets);
-      expect(find.text('dev'), findsWidgets);
-    });
+        fs.gate!.complete();
+        await _settle(tester);
+        expect(find.text('herdr-mobile'), findsWidgets);
+        expect(find.text('dev'), findsWidgets);
+      },
+    );
 
     testWidgets('a path tapped in the output is on screen at once; a double tap opens one screen', (tester) async {
       final fs = projectFs()..gate = Completer<void>();
@@ -534,7 +546,9 @@ void main() {
       expect(find.text('8 items'), findsOneWidget);
     });
 
-    testWidgets('when nothing changed it says so, that only this folder was checked, and offers everything', (tester) async {
+    testWidgets('when nothing changed it says so, that only this folder was checked, and offers everything', (
+      tester,
+    ) async {
       await _pump(tester, _browser(_recentFs(), '$_home/w', clock: () => _now.add(const Duration(days: 30))));
       await _settle(tester);
 
@@ -589,7 +603,9 @@ void main() {
       expect(find('zzz'), isEmpty);
     });
 
-    testWidgets('typing filters at once, without a read; accents do not matter; Clear brings everything back', (tester) async {
+    testWidgets('typing filters at once, without a read; accents do not matter; Clear brings everything back', (
+      tester,
+    ) async {
       final fs = searchFs();
       await _pump(tester, _browser(fs, '$_home/s'));
       await _settle(tester);
@@ -631,8 +647,10 @@ void main() {
     testWidgets('middleEllipsize keeps the extension and fits the width; a short name is left alone', (tester) async {
       final style = Type.row;
       const scaler = TextScaler.noScaling;
-      double width(String s) =>
-          (TextPainter(text: TextSpan(text: s, style: style), textDirection: TextDirection.ltr)..layout()).width;
+      double width(String s) => (TextPainter(
+        text: TextSpan(text: s, style: style),
+        textDirection: TextDirection.ltr,
+      )..layout()).width;
 
       const name = 'really_long_name....test.dart';
       final cut = middleEllipsize(name, 150, style, scaler);
@@ -690,23 +708,30 @@ void main() {
     });
 
     test('unreadable: no read bit at all, or a folder nobody can enter; a link says nothing', () {
-      RemoteEntry entry(int? mode, {RemoteEntryKind kind = RemoteEntryKind.file, RemoteEntryKind? resolved}) => RemoteEntry(
-        name: 'x',
-        path: '/x',
-        kind: kind,
-        resolvedKind: resolved ?? (kind == RemoteEntryKind.link ? RemoteEntryKind.dir : kind),
-        mode: mode,
-      );
+      RemoteEntry entry(int? mode, {RemoteEntryKind kind = RemoteEntryKind.file, RemoteEntryKind? resolved}) =>
+          RemoteEntry(
+            name: 'x',
+            path: '/x',
+            kind: kind,
+            resolvedKind: resolved ?? (kind == RemoteEntryKind.link ? RemoteEntryKind.dir : kind),
+            mode: mode,
+          );
       expect(isUnreadable(entry(0x8000)), isTrue);
       expect(isUnreadable(entry(0x81A4)), isFalse);
       expect(isUnreadable(entry(0x8080)), isTrue, reason: 'write only');
-      expect(isUnreadable(entry(0x4000 | 0x1A4, kind: RemoteEntryKind.dir)), isTrue, reason: 'a folder with no execute bit');
+      expect(
+        isUnreadable(entry(0x4000 | 0x1A4, kind: RemoteEntryKind.dir)),
+        isTrue,
+        reason: 'a folder with no execute bit',
+      );
       expect(isUnreadable(entry(0x41ED, kind: RemoteEntryKind.dir)), isFalse);
       expect(isUnreadable(entry(null)), isFalse);
       expect(isUnreadable(entry(0xA1FF, kind: RemoteEntryKind.link)), isFalse);
     });
 
-    testWidgets('a folder the host refused is dimmed, says so, and still opens to explain; Open parent leads out', (tester) async {
+    testWidgets('a folder the host refused is dimmed, says so, and still opens to explain; Open parent leads out', (
+      tester,
+    ) async {
       final fs = projectFs()
         ..addDir('$_home/w/secret')
         ..addFile('$_home/w/a.txt', 'x')
@@ -727,7 +752,11 @@ void main() {
       final row = find.widgetWithText(FileRow, 'secret');
       expect(tester.widget<FileRow>(row).denied, isTrue);
       expect(find.descendant(of: row, matching: find.text('No permission')), findsOneWidget);
-      expect(find.descendant(of: row, matching: find.byType(Opacity)), findsOneWidget, reason: 'dimmed, not hidden');
+      expect(
+        find.descendant(of: row, matching: find.byType(Opacity)),
+        findsOneWidget,
+        reason: 'dimmed, not hidden',
+      );
       expect(find.byType(FileRow), findsNWidgets(2));
     });
   });
@@ -785,7 +814,11 @@ void main() {
     test('only small raster images are eligible', () {
       expect(ThumbLoader.eligible(png('a.png')), isTrue);
       expect(ThumbLoader.eligible(png('a.JPG')), isTrue);
-      expect(ThumbLoader.eligible(png('a.png', size: thumbMaxBytes + 1)), isFalse, reason: 'a photo is not read for 32 px');
+      expect(
+        ThumbLoader.eligible(png('a.png', size: thumbMaxBytes + 1)),
+        isFalse,
+        reason: 'a photo is not read for 32 px',
+      );
       expect(ThumbLoader.eligible(png('a.svg')), isFalse);
       expect(ThumbLoader.eligible(png('a.txt')), isFalse);
       expect(ThumbLoader.eligible(png('a.png', size: 0)), isFalse);
@@ -811,7 +844,9 @@ void main() {
       fs.gate!.complete();
       final bytes = await Future.wait(results);
       expect(bytes[6], isNull, reason: 'cancelled while it waited');
-      expect([for (final i in [0, 1, 2, 3, 4, 5, 7]) bytes[i]!.length], everyElement(3));
+      expect([
+        for (final i in [0, 1, 2, 3, 4, 5, 7]) bytes[i]!.length,
+      ], everyElement(3));
       expect(fs.calls.where((c) => c == 'read $_home/p/6.png@0+3'), isEmpty);
       expect(loader.running, 0);
     });
@@ -875,7 +910,9 @@ void main() {
       await tester.pump();
     }
 
-    testWidgets('a re-stat that finds a newer time shows the pill after 15 s; nothing is read to find out', (tester) async {
+    testWidgets('a re-stat that finds a newer time shows the pill after 15 s; nothing is read to find out', (
+      tester,
+    ) async {
       final fs = logFs();
       await _pump(tester, viewer(fs));
       await _settle(tester);
@@ -931,7 +968,8 @@ void main() {
       final context = tester.element(find.byType(CodeView));
 
       unawaited(
-        Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const Scaffold(body: Text('covering page')))),
+        Navigator.of(context)
+            .push(MaterialPageRoute<void>(builder: (_) => const Scaffold(body: Text('covering page')))),
       );
       await _settle(tester);
       expect(find.text('covering page'), findsOneWidget);
@@ -1057,8 +1095,7 @@ void main() {
 
   testWidgets('the file icons for code, image, Markdown, archive and binary differ', (tester) async {
     final icons = {
-      for (final n in ['a.dart', 'a.png', 'a.md', 'a.zip', 'a.bin', 'a.json', 'a.mp3'])
-        n: fileIconForName(n),
+      for (final n in ['a.dart', 'a.png', 'a.md', 'a.zip', 'a.bin', 'a.json', 'a.mp3']) n: fileIconForName(n),
     };
     expect(icons['a.dart'], isNot(icons['a.png']));
     expect(icons['a.md'], isNot(icons['a.zip']));

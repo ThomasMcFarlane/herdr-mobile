@@ -7,7 +7,9 @@ import '../../../data/repositories/agent_session.dart';
 import '../../../data/acp/background/background_work.dart' show BackgroundWork;
 import '../../../data/words/elapsed.dart';
 import '../../support/step_clock.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'background_format.dart';
 import '../../render/visible_text.dart';
 
@@ -142,9 +144,19 @@ class _StatusLineState extends State<StatusLine> with StepClockLease<StatusLine>
     final ds = context.ds;
     final style = Type.secondary.copyWith(color: ds.textSecondary, fontFeatures: Type.tabular);
     final work = _waitingOn;
-    if (work != null) return Padding(padding: const EdgeInsets.only(top: Gap.md), child: _WaitingLine(work: work, style: style));
+    if (work != null) {
+      return Padding(
+        padding: const EdgeInsets.only(top: Gap.md),
+        child: _WaitingLine(work: work, style: style),
+      );
+    }
     // A no-break space keeps the height of the line while it is empty.
-    if (!_active) return Padding(padding: const EdgeInsets.only(top: Gap.md), child: Text('\u00A0', style: style));
+    if (!_active) {
+      return Padding(
+        padding: const EdgeInsets.only(top: Gap.md),
+        child: Text('\u00A0', style: style),
+      );
+    }
     return Padding(
       padding: const EdgeInsets.only(top: Gap.md),
       child: ValueListenableBuilder<int>(
@@ -170,12 +182,18 @@ class _StatusLineState extends State<StatusLine> with StepClockLease<StatusLine>
                 children: [
                   Row(
                     children: [
-                      Flexible(child: Text(words, maxLines: 1, overflow: TextOverflow.ellipsis, style: style)),
+                      Flexible(
+                        child: Text(words, maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
+                      ),
                       if (clockText != null) Text(' \u00b7 $clockText', maxLines: 1, style: style),
                     ],
                   ),
                   if (quietText != null)
-                    Text(quietText, maxLines: 1, style: Type.secondaryStrong.copyWith(color: ds.text, fontFeatures: Type.tabular)),
+                    Text(
+                      quietText,
+                      maxLines: 1,
+                      style: Type.secondaryStrong.copyWith(color: ds.text, fontFeatures: Type.tabular),
+                    ),
                 ],
               ),
             ),
@@ -207,7 +225,9 @@ class _WaitingLine extends StatelessWidget {
           child: ExcludeSemantics(
             child: Row(
               children: [
-                Flexible(child: Text(words, maxLines: 1, overflow: TextOverflow.ellipsis, style: style)),
+                Flexible(
+                  child: Text(words, maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
+                ),
                 if (clock != null) Text(' \u00b7 $clock', maxLines: 1, style: style),
               ],
             ),

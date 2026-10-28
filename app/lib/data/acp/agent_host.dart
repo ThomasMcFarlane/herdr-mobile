@@ -161,9 +161,7 @@ class KeeperInfo {
 
   /// What a host listed, row by row: a row that is no keeper (not an object,
   /// no id) is left out, so one odd row never hides the others.
-  static List<KeeperInfo> listFromJson(Iterable<Object?> rows) => [
-    for (final row in rows) ?_tryParse(row),
-  ];
+  static List<KeeperInfo> listFromJson(Iterable<Object?> rows) => [for (final row in rows) ?_tryParse(row)];
 
   static KeeperInfo? _tryParse(Object? row) {
     if (row is! Map) return null;

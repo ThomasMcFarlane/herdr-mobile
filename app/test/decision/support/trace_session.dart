@@ -55,9 +55,7 @@ TraceRun replayTrace(String name) {
     if (!received && method == 'session/prompt') {
       promptId = msg['id'];
       final prompt = (msg['params'] as Map)['prompt'] as List;
-      state = state
-          .withUserMessage([TextBlock(prompt.map((b) => (b as Map)['text'] ?? '').join())])
-          .withTurnStarted();
+      state = state.withUserMessage([TextBlock(prompt.map((b) => (b as Map)['text'] ?? '').join())]).withTurnStarted();
     } else if (received && method == 'session/update') {
       state = state.apply(SessionUpdate.parse((msg['params'] as Map)['update']));
     } else if (received && method == 'session/request_permission') {
@@ -70,7 +68,10 @@ TraceRun replayTrace(String name) {
       state = state.withPending(PendingQuestion(msg['id'] as Object, request));
     } else if (!received && msg['result'] != null && msg['id'] != null && state.pending.any((p) => p.id == msg['id'])) {
       state = state.withoutPending(msg['id'] as Object);
-    } else if (received && result is Map && !sawSetup && (result.containsKey('configOptions') || result.containsKey('modes'))) {
+    } else if (received &&
+        result is Map &&
+        !sawSetup &&
+        (result.containsKey('configOptions') || result.containsKey('modes'))) {
       sawSetup = true;
       state = state.withSetup(AcpSessionSetup.parse(result));
       setup = state;

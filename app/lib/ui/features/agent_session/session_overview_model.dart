@@ -68,8 +68,14 @@ SessionOverviewModel _build(List<TranscriptItem> items) {
     added += f.added;
     removed += f.removed;
   }
-  final failed = [for (final c in commands.reversed) if (c.failed) c];
-  final rest = [for (final c in commands.reversed) if (!c.failed) c];
+  final failed = [
+    for (final c in commands.reversed)
+      if (c.failed) c,
+  ];
+  final rest = [
+    for (final c in commands.reversed)
+      if (!c.failed) c,
+  ];
   return SessionOverviewModel(
     goal: goal,
     files: files,

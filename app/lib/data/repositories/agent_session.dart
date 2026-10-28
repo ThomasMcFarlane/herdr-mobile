@@ -472,11 +472,7 @@ abstract interface class AgentSessions implements Listenable {
   /// Starts a keeper on [machine] for [agent] in [cwd], attaches, creates the
   /// ACP session and returns it. Throws `AgentHostException` with words for the
   /// person.
-  Future<AgentSessionView> start({
-    required MachineConnection machine,
-    required String agent,
-    required String cwd,
-  });
+  Future<AgentSessionView> start({required MachineConnection machine, required String agent, required String cwd});
 
   /// What [agent] remembers on [machine] (see [AgentHost.history]), for [cwd]
   /// only when given.

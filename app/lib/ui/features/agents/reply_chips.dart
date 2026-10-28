@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/models/pane_preview.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'quick_reply_controller.dart';
 
 /// The one-tap answers to a blocked agent's prompt, full-width and 44 high,
@@ -74,10 +76,8 @@ class ReplyChips extends StatelessWidget {
   static double heightFor(int n) => n == 0 ? 0 : n * _chip + (n - 1) * _gap;
 
   @override
-  Widget build(BuildContext context) => ListenableBuilder(
-        listenable: controller,
-        builder: (context, _) => _chips(context, controller),
-      );
+  Widget build(BuildContext context) =>
+      ListenableBuilder(listenable: controller, builder: (context, _) => _chips(context, controller));
 
   Widget _chips(BuildContext context, QuickReplyController c) {
     final phase = c.phase;

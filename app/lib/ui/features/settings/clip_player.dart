@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../../data/models/release_info.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// Plays a release's walkthrough clip ([ReleaseClip]) over the update sheet,
@@ -16,15 +17,17 @@ import 'package:herdr_mobile/ui/core/kit.dart';
 /// video pauses or resumes, and the end offers Play again. A failure says what
 /// happened and offers Retry: never a dead end.
 Future<void> openClipPlayer(BuildContext context, ReleaseClip clip, {required String title}) =>
-    Navigator.of(context).push(PageRouteBuilder<void>(
-      transitionDuration: Motion.page,
-      reverseTransitionDuration: Motion.sheetOut,
-      pageBuilder: (context, _, _) => ClipPlayerScreen(clip: clip, title: title),
-      transitionsBuilder: (context, animation, _, child) => FadeTransition(
-        opacity: CurvedAnimation(parent: animation, curve: Motion.easeOut, reverseCurve: Motion.easeOut),
-        child: child,
+    Navigator.of(context).push(
+      PageRouteBuilder<void>(
+        transitionDuration: Motion.page,
+        reverseTransitionDuration: Motion.sheetOut,
+        pageBuilder: (context, _, _) => ClipPlayerScreen(clip: clip, title: title),
+        transitionsBuilder: (context, animation, _, child) => FadeTransition(
+          opacity: CurvedAnimation(parent: animation, curve: Motion.easeOut, reverseCurve: Motion.easeOut),
+          child: child,
+        ),
       ),
-    ));
+    );
 
 class ClipPlayerScreen extends StatefulWidget {
   const ClipPlayerScreen({super.key, required this.clip, required this.title});
@@ -101,8 +104,8 @@ class _ClipPlayerScreenState extends State<ClipPlayerScreen> {
                 child: _failure != null
                     ? _Failed(onRetry: () => unawaited(_load()))
                     : video == null || !video.value.isInitialized
-                        ? const Center(child: BusySpinner(size: IconSize.lead))
-                        : VideoStage(video: video, onTap: () => _toggle(video)),
+                    ? const Center(child: BusySpinner(size: IconSize.lead))
+                    : VideoStage(video: video, onTap: () => _toggle(video)),
               ),
             ),
           ],
@@ -121,15 +124,18 @@ class _Failed extends StatelessWidget {
   Widget build(BuildContext context) {
     final ds = context.ds;
     return Center(
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Text(
-          'Couldn\u2019t play the clip. Check the connection and try again.',
-          textAlign: TextAlign.center,
-          style: Type.secondary.copyWith(color: ds.dangerText),
-        ),
-        const SizedBox(height: Gap.md),
-        AppButton(label: 'Retry', kind: AppButtonKind.secondary, onPressed: onRetry),
-      ]),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Couldn\u2019t play the clip. Check the connection and try again.',
+            textAlign: TextAlign.center,
+            style: Type.secondary.copyWith(color: ds.dangerText),
+          ),
+          const SizedBox(height: Gap.md),
+          AppButton(label: 'Retry', kind: AppButtonKind.secondary, onPressed: onRetry),
+        ],
+      ),
     );
   }
 }

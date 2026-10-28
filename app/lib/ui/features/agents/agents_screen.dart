@@ -13,7 +13,9 @@ import '../../../data/repositories/agent_session.dart';
 import '../../../data/words/plural.dart';
 import '../../../data/repositories/attention_set.dart';
 import '../machines/approval_button.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../../support/tap_guard.dart';
 import '../create/new_agent_session_screen.dart';
 import '../history/past_sessions_navigation.dart';
@@ -143,9 +145,9 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
   }
 
   Set<AgentStatus> get _collapsed => {
-        for (final s in AgentStatus.values)
-          if (_collapsedBits.value & (1 << s.index) != 0) s,
-      };
+    for (final s in AgentStatus.values)
+      if (_collapsedBits.value & (1 << s.index) != 0) s,
+  };
 
   void _addMachine() => openMachineForm(context);
 
@@ -155,8 +157,7 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
 
   void _toggleFilter(AgentStatus s) => setState(() => _filter = _filter == s ? null : s);
 
-  void _toggleSection(AgentStatus s) =>
-      setState(() => _collapsedBits.value ^= 1 << s.index);
+  void _toggleSection(AgentStatus s) => setState(() => _collapsedBits.value ^= 1 << s.index);
 
   void _toggleIdle() => setState(() => _idleOpen = !_idleOpen);
 
@@ -176,9 +177,8 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
 
   /// An explicit choice, from what the board shows now (which `auto` may have
   /// decided): the other look, and it stays.
-  void _toggleDensity({required bool cards}) => unawaited(
-        context.read<AppSettings>().setDensity(cards ? BoardDensity.compact : BoardDensity.cards),
-      );
+  void _toggleDensity({required bool cards}) =>
+      unawaited(context.read<AppSettings>().setDensity(cards ? BoardDensity.compact : BoardDensity.cards));
 
   @override
   Widget build(BuildContext context) {
@@ -219,13 +219,10 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
               child: EmptyState(
                 mark: const BrandMark(),
                 title: 'Your agents, in your pocket',
-                message: 'Connect a machine running herdr to see every coding '
+                message:
+                    'Connect a machine running herdr to see every coding '
                     'agent, know the moment one needs you, and reply from anywhere.',
-                action: AppButton(
-                  label: 'Add your first machine',
-                  icon: LucideIcons.plus,
-                  onPressed: _addMachine,
-                ),
+                action: AppButton(label: 'Add your first machine', icon: LucideIcons.plus, onPressed: _addMachine),
               ),
             ),
           ),
@@ -245,7 +242,10 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
     final listed = _withFolding(entries, overview);
     final indexes = entryIndexes(listed);
 
-    final chips = [for (final s in sections) if (filterableStatuses.contains(s.status)) s];
+    final chips = [
+      for (final s in sections)
+        if (filterableStatuses.contains(s.status)) s,
+    ];
     final chipsHeight = chips.isEmpty ? 0.0 : AppChip.height;
     final troubled = overview.troubled;
     final blockedCount = attention.needsYou.length;
@@ -261,18 +261,12 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
         else if (e is SessionLine && e.open)
           sessionRef(e.session.key),
     ];
-    _liveRefs = {
-      for (final a in overview.agents) paneRef(a.key),
-      for (final s in sessionList) sessionRef(s.key),
-    };
+    _liveRefs = {for (final a in overview.agents) paneRef(a.key), for (final s in sessionList) sessionRef(s.key)};
     if (_selection.active) _queueRetain();
 
     final list = AppRefresh(
       onRefresh: () async {
-        await Future.wait([
-          context.read<FleetRepository>().retryAll(),
-          if (sessions != null) sessions.refresh(),
-        ]);
+        await Future.wait([context.read<FleetRepository>().retryAll(), if (sessions != null) sessions.refresh()]);
       },
       edgeOffset: SliverLargeTitle.extent(context, hasSubtitle: true, bottomHeight: chipsHeight),
       child: CustomScrollView(
@@ -292,16 +286,8 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
                 tooltip: cards ? 'Compact list' : 'Cards with preview',
                 onPressed: () => _toggleDensity(cards: cards),
               ),
-              CircleButton(
-                icon: LucideIcons.history,
-                tooltip: 'Past sessions',
-                onPressed: _pastSessions,
-              ),
-              CircleButton(
-                icon: LucideIcons.plus,
-                tooltip: 'New agent session',
-                onPressed: _newSession,
-              ),
+              CircleButton(icon: LucideIcons.history, tooltip: 'Past sessions', onPressed: _pastSessions),
+              CircleButton(icon: LucideIcons.plus, tooltip: 'New agent session', onPressed: _newSession),
             ],
             bottom: chips.isEmpty
                 ? null
@@ -332,10 +318,7 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
               // already leave air around the strip.
               padding: const EdgeInsets.symmetric(horizontal: Gap.gutter),
               sliver: SliverToBoxAdapter(
-                child: _ConnectionStrip(
-                  troubled: troubled,
-                  onShowMachines: widget.onShowMachines,
-                ),
+                child: _ConnectionStrip(troubled: troubled, onShowMachines: widget.onShowMachines),
               ),
             ),
           if (overview.agents.isEmpty && troubled.isEmpty && sessionList.isEmpty)
@@ -356,46 +339,44 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
               findChildIndexCallback: (key) => indexes[key],
               itemBuilder: (context, i) => switch (listed[i]) {
                 final AgentHeader h => SectionLabel(
-                    key: h.key,
-                    label: h.status.label,
-                    // Only offline ones listed: "Needs you · 2 offline", not
-                    // a 0 that reads as a count of nothing beside them.
-                    count: h.count == 0 && h.offline > 0 ? null : h.count,
-                    expanded: h.expanded,
-                    onTap: () => _toggleSection(h.status),
-                    trailing: _headerTrailing(h, review: review),
-                  ),
+                  key: h.key,
+                  label: h.status.label,
+                  // Only offline ones listed: "Needs you · 2 offline", not
+                  // a 0 that reads as a count of nothing beside them.
+                  count: h.count == 0 && h.offline > 0 ? null : h.count,
+                  expanded: h.expanded,
+                  onTap: () => _toggleSection(h.status),
+                  trailing: _headerTrailing(h, review: review),
+                ),
                 final AgentLine l => Collapse(
-                    key: l.key,
-                    open: l.open,
-                    // Measured when the agent stops waiting (see
-                    // [_withFolding]); the key follows the line.
-                    child: KeyedSubtree(
-                      key: _measure.putIfAbsent(l.agent.key, GlobalKey.new),
-                      // The board's job is to let you answer: an agent that is
-                      // blocked and reachable keeps its card and its answers
-                      // even in the compact list.
-                      child: cards || (l.agent.status == AgentStatus.blocked && !l.agent.stale)
-                          ? AgentCard(agent: l.agent)
-                          : AgentCompactRow(agent: l.agent, divider: !l.last),
-                    ),
+                  key: l.key,
+                  open: l.open,
+                  // Measured when the agent stops waiting (see
+                  // [_withFolding]); the key follows the line.
+                  child: KeyedSubtree(
+                    key: _measure.putIfAbsent(l.agent.key, GlobalKey.new),
+                    // The board's job is to let you answer: an agent that is
+                    // blocked and reachable keeps its card and its answers
+                    // even in the compact list.
+                    child: cards || (l.agent.status == AgentStatus.blocked && !l.agent.stale)
+                        ? AgentCard(agent: l.agent)
+                        : AgentCompactRow(agent: l.agent, divider: !l.last),
                   ),
+                ),
                 final SessionLine l => Collapse(
-                    key: l.key,
-                    open: l.open,
-                    child: AgentSessionRow(session: l.session, divider: !l.last),
-                  ),
+                  key: l.key,
+                  open: l.open,
+                  child: AgentSessionRow(session: l.session, divider: !l.last),
+                ),
                 final AgentMore m => AgentMoreRow(key: m.key, more: m, onTap: _toggleIdle),
-                final AgentFolding f => _FoldAway(
-                    key: f.key,
-                    height: f.height,
-                    onDone: () => _folded(f.agentKey),
-                  ),
+                final AgentFolding f => _FoldAway(key: f.key, height: f.height, onDone: () => _folded(f.agentKey)),
               },
             ),
             // Room under the last row for the lanes: the Dock, and the Pin
             // (the triage pill) while it shows.
-            SliverToBoxAdapter(child: SizedBox(height: FloatingBar.listEnd(context, pin: blockedCount > 0))),
+            SliverToBoxAdapter(
+              child: SizedBox(height: FloatingBar.listEnd(context, pin: blockedCount > 0)),
+            ),
           ],
         ],
       ),
@@ -424,9 +405,7 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
               left: 0,
               right: 0,
               bottom: 0,
-              child: BatchActionBar(
-                onAction: (action) => unawaited(performBatchAction(context, action, _selection)),
-              ),
+              child: BatchActionBar(onAction: (action) => unawaited(performBatchAction(context, action, _selection))),
             ),
             // The Pin lane: 8 above the Dock, in the Dock's slot (the same
             // side margins and width), toasts standing above it while it
@@ -438,10 +417,8 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
               bottom: 0,
               child: ListenableBuilder(
                 listenable: _selection,
-                builder: (context, child) => BottomStackTransition(
-                  visible: blockedCount > 0 && !_selection.active,
-                  builder: (_) => child!,
-                ),
+                builder: (context, child) =>
+                    BottomStackTransition(visible: blockedCount > 0 && !_selection.active, builder: (_) => child!),
                 child: FloatingBarSlot(
                   child: Padding(
                     padding: const EdgeInsets.only(bottom: FloatingBar.height + FloatingBar.margin),
@@ -477,8 +454,7 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
     final before = _answerLayout;
     _answerLayout = layout;
     if (before == null || before.isEmpty) return;
-    final unmoved = before.length <= layout.length &&
-        listEquals(before, layout.sublist(0, before.length));
+    final unmoved = before.length <= layout.length && listEquals(before, layout.sublist(0, before.length));
     if (unmoved) return;
     _gate.arm();
   }
@@ -534,14 +510,14 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
   /// the note says why, instead of a button that would do nothing) and
   /// "Select all".
   Widget? _headerTrailing(AgentHeader h, {required int review}) => switch (h.status) {
-        AgentStatus.blocked when h.offline > 0 => _OfflineNote(count: h.offline),
-        AgentStatus.done => _ReviewActions(
-            offline: h.offline,
-            onMarkAll: review > 0 ? _markAllReviewed : null,
-            onSelectAll: _selectAllDone,
-          ),
-        _ => null,
-      };
+    AgentStatus.blocked when h.offline > 0 => _OfflineNote(count: h.offline),
+    AgentStatus.done => _ReviewActions(
+      offline: h.offline,
+      onMarkAll: review > 0 ? _markAllReviewed : null,
+      onSelectAll: _selectAllDone,
+    ),
+    _ => null,
+  };
 
   /// Picks every finished agent (terminal and session), opening the section
   /// they sit in so that what is picked is on screen.
@@ -598,11 +574,11 @@ class _OfflineNote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Text(
-        '$count offline',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: Type.label.copyWith(color: context.ds.textMuted, fontFeatures: Type.tabular),
-      );
+    '$count offline',
+    maxLines: 1,
+    overflow: TextOverflow.ellipsis,
+    style: Type.label.copyWith(color: context.ds.textMuted, fontFeatures: Type.tabular),
+  );
 }
 
 /// The ghost buttons on the header of finished work: clear it all as reviewed
@@ -625,26 +601,15 @@ class _ReviewActions extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (offline > 0) ...[
-            Flexible(child: _OfflineNote(count: offline)),
-            const SizedBox(width: Gap.sm),
-          ],
+          if (offline > 0) ...[Flexible(child: _OfflineNote(count: offline)), const SizedBox(width: Gap.sm)],
           if (onMarkAll case final markAll?) ...[
             Flexible(
-              child: TextAction(
-                key: const ValueKey('mark-all-reviewed'),
-                label: 'Mark all reviewed',
-                onTap: markAll,
-              ),
+              child: TextAction(key: const ValueKey('mark-all-reviewed'), label: 'Mark all reviewed', onTap: markAll),
             ),
             const SizedBox(width: Gap.md),
           ],
           Flexible(
-            child: TextAction(
-              key: const ValueKey('select-all-done'),
-              label: 'Select all',
-              onTap: onSelectAll,
-            ),
+            child: TextAction(key: const ValueKey('select-all-done'), label: 'Select all', onTap: onSelectAll),
           ),
         ],
       ),
@@ -661,12 +626,12 @@ class _BackLeavesSelection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => PopScope(
-        canPop: !context.select<BoardSelection?, bool>((s) => s?.active ?? false),
-        onPopInvokedWithResult: (didPop, _) {
-          if (!didPop) selection.cancel();
-        },
-        child: child,
-      );
+    canPop: !context.select<BoardSelection?, bool>((s) => s?.active ?? false),
+    onPopInvokedWithResult: (didPop, _) {
+      if (!didPop) selection.cancel();
+    },
+    child: child,
+  );
 }
 
 String _summary(AgentsOverview o, int agentSessions) {
@@ -709,12 +674,7 @@ class _ConnectionStrip extends StatelessWidget {
       detail: t.state.label,
       action: switch (t.approvalUrl) {
         final url? => ApprovalButton(url: url),
-        null => AppButton(
-            label: 'Retry',
-            compact: true,
-            kind: AppButtonKind.secondary,
-            onPressed: t.machine.retry,
-          ),
+        null => AppButton(label: 'Retry', compact: true, kind: AppButtonKind.secondary, onPressed: t.machine.retry),
       },
     );
   }
@@ -729,10 +689,10 @@ class _FoldAway extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => TweenAnimationBuilder<double>(
-        tween: Tween(begin: height, end: 0),
-        duration: Motion.expand,
-        curve: Motion.easeOut,
-        onEnd: onDone,
-        builder: (context, h, _) => SizedBox(height: h, width: double.infinity),
-      );
+    tween: Tween(begin: height, end: 0),
+    duration: Motion.expand,
+    curve: Motion.easeOut,
+    onEnd: onDone,
+    builder: (context, h, _) => SizedBox(height: h, width: double.infinity),
+  );
 }

@@ -32,8 +32,10 @@ void main() {
           final got = dumpDocument(s.document());
           final want = dumpDocument(parseMd(t.text.substring(0, p)));
           if (got != want) {
-            fail('prefix $p of ${t.name}: ${_show(t.text.substring(0, p))}\n'
-                'stream:\n$got\nparse:\n$want');
+            fail(
+              'prefix $p of ${t.name}: ${_show(t.text.substring(0, p))}\n'
+              'stream:\n$got\nparse:\n$want',
+            );
           }
         }
       });
@@ -46,8 +48,11 @@ void main() {
         for (final c in m.chunks) {
           s.append(c);
           b.write(c);
-          expect(dumpDocument(s.document()), dumpDocument(parseMd(b.toString())),
-              reason: '${m.name} after ${b.length} chars');
+          expect(
+            dumpDocument(s.document()),
+            dumpDocument(parseMd(b.toString())),
+            reason: '${m.name} after ${b.length} chars',
+          );
         }
       }
     });
@@ -76,13 +81,63 @@ void main() {
     // Random documents from the line shapes that make a chunker go wrong:
     // lists with continuations, fences in items, quotes, tables, html, setext.
     const pool = [
-      '- a', '  - b', '    - c', '* item', '+ item', '1. one', '2) two', '   more text',
-      '  indented 2', '    indented 4', '\tTabbed', '', '', '', '> quote', '> > nested',
-      '>', '```', '```dart', '~~~', '````', '  ```', '    ```', 'text', 'more text **b**',
-      '# Heading', '## H2 ##', '---', '===', '***', '- - -', '| a | b |', '|---|---|',
-      '| 1 | 2 |', '|', '<div>', '</div>', '<!-- c -->', '<!--', '-->', '<pre>', '</pre>',
-      '[x]', '- [ ] task', '  - [x] done', 'Setext', '> [!NOTE]',
-      '> text', 'a  ', 'hard\\', '<br>', '![i](u)', '`code`', '`', '``', '**', '~~',
+      '- a',
+      '  - b',
+      '    - c',
+      '* item',
+      '+ item',
+      '1. one',
+      '2) two',
+      '   more text',
+      '  indented 2',
+      '    indented 4',
+      '\tTabbed',
+      '',
+      '',
+      '',
+      '> quote',
+      '> > nested',
+      '>',
+      '```',
+      '```dart',
+      '~~~',
+      '````',
+      '  ```',
+      '    ```',
+      'text',
+      'more text **b**',
+      '# Heading',
+      '## H2 ##',
+      '---',
+      '===',
+      '***',
+      '- - -',
+      '| a | b |',
+      '|---|---|',
+      '| 1 | 2 |',
+      '|',
+      '<div>',
+      '</div>',
+      '<!-- c -->',
+      '<!--',
+      '-->',
+      '<pre>',
+      '</pre>',
+      '[x]',
+      '- [ ] task',
+      '  - [x] done',
+      'Setext',
+      '> [!NOTE]',
+      '> text',
+      'a  ',
+      'hard\\',
+      '<br>',
+      '![i](u)',
+      '`code`',
+      '`',
+      '``',
+      '**',
+      '~~',
     ];
     // MD_FUZZ_DOCS / MD_FUZZ_SEED widen a one-off run; CI keeps the defaults.
     final rnd = Random(int.tryParse(Platform.environment['MD_FUZZ_SEED'] ?? '') ?? 20260705);
@@ -232,8 +287,7 @@ void main() {
     });
 
     test('code text keeps its newlines either way', () {
-      expect(dumpDocument(parseMd('```\na\nb\n```', softBreaksAsNewlines: false)),
-          'code "a\\nb"');
+      expect(dumpDocument(parseMd('```\na\nb\n```', softBreaksAsNewlines: false)), 'code "a\\nb"');
     });
   });
 

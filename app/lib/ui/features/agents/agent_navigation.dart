@@ -12,7 +12,9 @@ import '../../../data/repositories/app_settings.dart';
 import '../../../data/repositories/attention_set.dart';
 import '../../../data/repositories/fleet_repository.dart';
 import '../../../data/repositories/observed_sessions.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../agent_session/agent_session_screen.dart';
 import '../pane/pane_screen.dart';
 import 'agent_peek.dart';
@@ -46,8 +48,7 @@ Future<void> openAgent(
   AgentView? view,
   bool replace = false,
   Preconnect? preconnect,
-}) =>
-    _open(context, agent, view: view, replace: replace, entrance: _Entrance.page, preconnect: preconnect);
+}) => _open(context, agent, view: view, replace: replace, entrance: _Entrance.page, preconnect: preconnect);
 
 /// Opens [agent] from a notification or a link: in place of the agent screen
 /// in front, if one is (one agent per screen; Back still goes to the board),
@@ -88,14 +89,7 @@ bool stepToAgent(BuildContext context, AgentRef to, int delta) {
     return false;
   }
   final opens = _screenFor(context, to, _defaultView(context, to)) != null;
-  unawaited(
-    _open(
-      context,
-      to,
-      replace: true,
-      entrance: delta > 0 ? _Entrance.fromRight : _Entrance.fromLeft,
-    ),
-  );
+  unawaited(_open(context, to, replace: true, entrance: delta > 0 ? _Entrance.fromRight : _Entrance.fromLeft));
   return opens;
 }
 
@@ -130,17 +124,15 @@ List<BoardItem> _boardItems(BuildContext context) {
     context.read<AgentSessions?>()?.sessions ?? const [],
     attention,
   );
-  return [
-    for (final section in sections) ...section.items,
-  ];
+  return [for (final section in sections) ...section.items];
 }
 
 /// The agent a board row stands for.
 extension BoardItemAgent on BoardItem {
   AgentRef get agent => switch (this) {
-        PaneItem(:final row) => PaneAgent(row.machine.profile.id, row.paneId),
-        SessionItem(:final session) => SessionAgent(session.key),
-      };
+    PaneItem(:final row) => PaneAgent(row.machine.profile.id, row.paneId),
+    SessionItem(:final session) => SessionAgent(session.key),
+  };
 }
 
 /// Puts the agent screen the app was left on back in front at launch: at once
@@ -149,20 +141,13 @@ extension BoardItemAgent on BoardItem {
 /// is not known yet) is waited for, up to [patience], while the board is
 /// still in front and untouched; it then comes in with the usual page
 /// transition. If it never comes, it is forgotten.
-Future<void> resumeAgent(
-  NavigatorState navigator,
-  FrontAgent front, {
-  Duration patience = Dwell.resumePatience,
-}) async {
+Future<void> resumeAgent(NavigatorState navigator, FrontAgent front, {Duration patience = Dwell.resumePatience}) async {
   final context = navigator.context;
   if (_screenFor(context, front.agent, front.view, strict: true) case final screen?) {
     unawaited(navigator.push(_AgentRoute(front.agent, front.view, _Entrance.instant, screen)));
     return;
   }
-  final sources = Listenable.merge([
-    context.read<FleetRepository>(),
-    ?context.read<AgentSessions?>(),
-  ]);
+  final sources = Listenable.merge([context.read<FleetRepository>(), ?context.read<AgentSessions?>()]);
   final done = Completer<bool>();
   var touched = false;
   void pointer(PointerEvent e) {
@@ -242,7 +227,12 @@ Future<void> _open(
     preconnect?.cancel();
     return;
   }
-  final route = _AgentRoute(agent, shows, Motion.reduced(context) && entrance.slides ? _Entrance.fade : entrance, screen);
+  final route = _AgentRoute(
+    agent,
+    shows,
+    Motion.reduced(context) && entrance.slides ? _Entrance.fade : entrance,
+    screen,
+  );
   if (replace) {
     await navigator.pushReplacement(route);
   } else {
@@ -260,7 +250,13 @@ AgentView _defaultView(BuildContext context, AgentRef agent) {
 /// The screen for [agent] in [view]. A pane's chat needs its log; without one
 /// it is the terminal, unless [strict] (then null). Null for a session that is
 /// not listed.
-Widget? _screenFor(BuildContext context, AgentRef agent, AgentView view, {bool strict = false, Preconnect? preconnect}) {
+Widget? _screenFor(
+  BuildContext context,
+  AgentRef agent,
+  AgentView view, {
+  bool strict = false,
+  Preconnect? preconnect,
+}) {
   switch (agent) {
     case SessionAgent(:final sessionKey):
       final session = context.read<AgentSessions?>()?.byKey(sessionKey);
@@ -363,12 +359,7 @@ class _AgentRoute extends MaterialPageRoute<void> {
     // has played, then the real animation (Back, the edge swipe).
     final page = KeyedSubtree(
       key: _transitionKey,
-      child: super.buildTransitions(
-        context,
-        _UntilEntered(animation, () => _entered),
-        secondaryAnimation,
-        child,
-      ),
+      child: super.buildTransitions(context, _UntilEntered(animation, () => _entered), secondaryAnimation, child),
     );
     return _EntranceTransition(
       animation: animation,
@@ -441,6 +432,9 @@ class _EntranceTransitionState extends State<_EntranceTransition> {
     final faded = FadeTransition(opacity: _curve, child: widget.child);
     final from = widget.from;
     if (from == null) return faded;
-    return SlideTransition(position: Tween(begin: from, end: Offset.zero).animate(_curve), child: faded);
+    return SlideTransition(
+      position: Tween(begin: from, end: Offset.zero).animate(_curve),
+      child: faded,
+    );
   }
 }

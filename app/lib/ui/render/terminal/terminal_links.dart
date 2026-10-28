@@ -88,9 +88,7 @@ const int _maxScanUnits = 2000;
 /// Only the first [_maxScanUnits] UTF-16 units of [text] are examined.
 List<TerminalLink> detectLinks(String text) {
   if (text.isEmpty) return const [];
-  final line = text.length > _maxScanUnits
-      ? text.substring(0, _maxScanUnits)
-      : text;
+  final line = text.length > _maxScanUnits ? text.substring(0, _maxScanUnits) : text;
   return _Scanner(line).scan();
 }
 
@@ -362,8 +360,7 @@ bool _isPathBoundary(int c) {
 
 /// Characters a URL never contains: whitespace, box glyphs and the delimiters
 /// that wrap URLs in prose, markdown autolinks and quoted strings.
-bool _isUrlTerminator(int c) =>
-    _isSeparator(c) || c == _less || c == _greater || c == _quote;
+bool _isUrlTerminator(int c) => _isSeparator(c) || c == _less || c == _greater || c == _quote;
 
 /// One pass over one line; owns the cell-column cursor and the results.
 final class _Scanner {
@@ -399,11 +396,7 @@ final class _Scanner {
         } else {
           // `</div>`: a slash right after `<` closes a tag, it does not start
           // an absolute path. `<~/a>` and `<src/a>` are still paths.
-          next =
-              _boundaryBefore(i) &&
-                  !(c == _slash && _s.codeUnitAt(i - 1) == _less)
-              ? _tryPath(i)
-              : i + 1;
+          next = _boundaryBefore(i) && !(c == _slash && _s.codeUnitAt(i - 1) == _less) ? _tryPath(i) : i + 1;
         }
       }
       i = next;
@@ -432,15 +425,7 @@ final class _Scanner {
     return column;
   }
 
-  void _emit(
-    TerminalLinkKind kind,
-    int start,
-    int targetEnd,
-    int textEnd, {
-    int? targetStart,
-    int? line,
-    int? column,
-  }) {
+  void _emit(TerminalLinkKind kind, int start, int targetEnd, int textEnd, {int? targetStart, int? line, int? column}) {
     _links.add(
       TerminalLink(
         kind: kind,
@@ -491,17 +476,13 @@ final class _Scanner {
     var p = i + 4;
     if (p + 3 > _n || !_matchesHttp(i)) return -1;
     if (_s.codeUnitAt(p) | 0x20 == 0x73) p++;
-    if (p + 3 > _n ||
-        _s.codeUnitAt(p) != _colon ||
-        _s.codeUnitAt(p + 1) != _slash ||
-        _s.codeUnitAt(p + 2) != _slash) {
+    if (p + 3 > _n || _s.codeUnitAt(p) != _colon || _s.codeUnitAt(p + 1) != _slash || _s.codeUnitAt(p + 2) != _slash) {
       return -1;
     }
     final hostStart = p + 3;
     if (hostStart >= _n) return -1;
     final first = _s.codeUnitAt(hostStart);
-    if (!(_isAsciiAlnum(first) || first == _openBracket || first >= 0x80) ||
-        _isUrlTerminator(first)) {
+    if (!(_isAsciiAlnum(first) || first == _openBracket || first >= 0x80) || _isUrlTerminator(first)) {
       return -1;
     }
 
@@ -615,11 +596,7 @@ final class _Scanner {
     while (end > i && _s.codeUnitAt(end - 1) == _dot) {
       end--;
     }
-    if (end == i ||
-        !_isPath(i, end) ||
-        _isScpRemotePath(i) ||
-        _isForeignPath(i) ||
-        _isIncludeOperand(i, end)) {
+    if (end == i || !_isPath(i, end) || _isScpRemotePath(i) || _isForeignPath(i) || _isIncludeOperand(i, end)) {
       return runEnd;
     }
 
@@ -681,22 +658,16 @@ final class _Scanner {
   bool _isForeignPath(int i) {
     if (i < 2 || _s.codeUnitAt(i - 1) != _colon) return false;
     final before = _s.codeUnitAt(i - 2);
-    if (_isAsciiLetter(before) &&
-        (i == 2 || !_isAsciiAlnum(_s.codeUnitAt(i - 3)))) {
+    if (_isAsciiLetter(before) && (i == 2 || !_isAsciiAlnum(_s.codeUnitAt(i - 3)))) {
       return true;
     }
-    return i >= 8 &&
-        _s.startsWith('package', i - 8) &&
-        (i == 8 || !_isAsciiAlnum(_s.codeUnitAt(i - 9)));
+    return i >= 8 && _s.startsWith('package', i - 8) && (i == 8 || !_isAsciiAlnum(_s.codeUnitAt(i - 9)));
   }
 
   /// Whether `_s[i, end)` is the header named by `#include <x.h>`: a system
   /// header, not a file in the folder.
   bool _isIncludeOperand(int i, int end) {
-    if (i == 0 ||
-        _s.codeUnitAt(i - 1) != _less ||
-        end >= _n ||
-        _s.codeUnitAt(end) != _greater) {
+    if (i == 0 || _s.codeUnitAt(i - 1) != _less || end >= _n || _s.codeUnitAt(end) != _greater) {
       return false;
     }
     var k = 0;
@@ -749,15 +720,10 @@ final class _Scanner {
     if (first == _slash) {
       body = i + 1;
       absolute = true;
-    } else if ((first == _tilde || first == _dot) &&
-        i + 1 < e &&
-        _s.codeUnitAt(i + 1) == _slash) {
+    } else if ((first == _tilde || first == _dot) && i + 1 < e && _s.codeUnitAt(i + 1) == _slash) {
       body = i + 2;
       prefixed = true;
-    } else if (first == _dot &&
-        i + 2 < e &&
-        _s.codeUnitAt(i + 1) == _dot &&
-        _s.codeUnitAt(i + 2) == _slash) {
+    } else if (first == _dot && i + 2 < e && _s.codeUnitAt(i + 1) == _dot && _s.codeUnitAt(i + 2) == _slash) {
       body = i + 3;
       prefixed = true;
     }
@@ -796,10 +762,7 @@ final class _Scanner {
         return !lonelyAbsolute || name.contains('.');
       }
       if (_knownDotfiles.contains(name)) return true;
-      if (hasDir &&
-          !lonelyAbsolute &&
-          (_knownDirNames.contains(name) ||
-              (name == 'config' && _inDotFolder(segment)))) {
+      if (hasDir && !lonelyAbsolute && (_knownDirNames.contains(name) || (name == 'config' && _inDotFolder(segment)))) {
         return true;
       }
     }
@@ -832,11 +795,8 @@ final class _Scanner {
   /// name. A one-letter extension (`main.c`, `util.h`) needs a plain stem of
   /// two letters or more, so initials and `a.b.c` stay words.
   bool _isBareFile(int i, int dot, int e) {
-    final stemKnown =
-        dot - i <= _maxKnownLength &&
-        _knownNames.contains(_s.substring(i, dot));
-    if (!stemKnown &&
-        !_knownExtensions.contains(_s.substring(dot + 1, e).toLowerCase())) {
+    final stemKnown = dot - i <= _maxKnownLength && _knownNames.contains(_s.substring(i, dot));
+    if (!stemKnown && !_knownExtensions.contains(_s.substring(dot + 1, e).toLowerCase())) {
       return false;
     }
     if (!stemKnown && e - dot == 2) {
@@ -852,15 +812,12 @@ final class _Scanner {
     final first = _s.codeUnitAt(i);
     if (_isAsciiLetter(first) || first >= 0x80) return true;
     // `2024-report.pdf`, `__init__.py`, `.eslintrc.json` but not `1.md`.
-    return (_isAsciiDigit(first) || first == _underscore || first == _dot) &&
-        _hasLetter(i, dot);
+    return (_isAsciiDigit(first) || first == _underscore || first == _dot) && _hasLetter(i, dot);
   }
 
   /// Whether the segment starting at [segment] follows `.ssh/` or `.git/`.
   bool _inDotFolder(int segment) =>
-      segment >= 5 &&
-      (_s.startsWith('.ssh/', segment - 5) ||
-          _s.startsWith('.git/', segment - 5));
+      segment >= 5 && (_s.startsWith('.ssh/', segment - 5) || _s.startsWith('.git/', segment - 5));
 
   /// Whether the first segment of the relative path `_s[i, e)` is a host name
   /// (`github.com`, `example.com`): such a path is a web address.
@@ -914,11 +871,7 @@ final class _Scanner {
       if (lineEnd < _n && _s.codeUnitAt(lineEnd) == _colon) {
         final columnEnd = _positionDigitsEnd(lineEnd + 1);
         if (columnEnd >= 0) {
-          return (
-            line: line,
-            column: int.parse(_s.substring(lineEnd + 1, columnEnd)),
-            end: _rangeEnd(columnEnd),
-          );
+          return (line: line, column: int.parse(_s.substring(lineEnd + 1, columnEnd)), end: _rangeEnd(columnEnd));
         }
       }
       // `file.dart:12:` ends with the separator, which is not part of the link.
@@ -939,16 +892,10 @@ final class _Scanner {
         columnStart++;
       }
       final columnEnd = _positionDigitsEnd(columnStart);
-      if (columnEnd < 0 ||
-          columnEnd >= _n ||
-          _s.codeUnitAt(columnEnd) != _closeParen) {
+      if (columnEnd < 0 || columnEnd >= _n || _s.codeUnitAt(columnEnd) != _closeParen) {
         return null;
       }
-      return (
-        line: line,
-        column: int.parse(_s.substring(columnStart, columnEnd)),
-        end: columnEnd + 1,
-      );
+      return (line: line, column: int.parse(_s.substring(columnStart, columnEnd)), end: columnEnd + 1);
     }
     return null;
   }
@@ -979,9 +926,7 @@ final class _Scanner {
       column = int.parse(_s.substring(end + 1, columnEnd));
       end = columnEnd;
     }
-    if (end + 1 < _n &&
-        _s.codeUnitAt(end) == _minus &&
-        _s.codeUnitAt(end + 1) == 0x4c) {
+    if (end + 1 < _n && _s.codeUnitAt(end) == _minus && _s.codeUnitAt(end + 1) == 0x4c) {
       final to = _positionDigitsEnd(end + 2);
       if (to >= 0) {
         end = to;
@@ -993,9 +938,7 @@ final class _Scanner {
   }
 
   /// End of `C<digits>` at [at], or -1.
-  int _fragmentColumnEnd(int at) => at + 1 < _n && _s.codeUnitAt(at) == 0x43
-      ? _positionDigitsEnd(at + 1)
-      : -1;
+  int _fragmentColumnEnd(int at) => at + 1 < _n && _s.codeUnitAt(at) == 0x43 ? _positionDigitsEnd(at + 1) : -1;
 
   /// The line a path is followed by in words: Python tracebacks name it after
   /// the path (`"/x/y.py", line 12`), prose in brackets (`a.dart (line 12)`,

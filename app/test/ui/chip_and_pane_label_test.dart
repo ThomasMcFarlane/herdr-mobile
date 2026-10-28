@@ -9,7 +9,12 @@ Future<void> _pump(WidgetTester tester, Widget child, {double width = 200}) asyn
     ..physicalSize = Size(width, 400) * 2
     ..devicePixelRatio = 2;
   addTearDown(tester.view.reset);
-  await tester.pumpWidget(MaterialApp(theme: AppTheme.light(), home: Scaffold(body: child)));
+  await tester.pumpWidget(
+    MaterialApp(
+      theme: AppTheme.light(),
+      home: Scaffold(body: child),
+    ),
+  );
 }
 
 void main() {
@@ -41,20 +46,23 @@ void main() {
     test('keep the last two segments and never grow past the cap', () {
       expect(shortPath('/work/app'), 'work/app');
       expect(shortPath('/home/dev/work/payments-api'), '…/work/payments-api');
-      expect(shortPath('/a-very-long-directory-name-that-keeps-going/and-going-and-going-and-going').length, lessThanOrEqualTo(26));
+      expect(
+        shortPath('/a-very-long-directory-name-that-keeps-going/and-going-and-going-and-going').length,
+        lessThanOrEqualTo(26),
+      );
       expect(shortPath('/'), '');
     });
   });
 
   group('a pane the person renamed', () {
     Map<String, dynamic> json({String? label, String title = 'π > Fix the build'}) => {
-          'pane_id': 'w1:p1',
-          'workspace_id': 'w1',
-          'tab_id': 'w1:t1',
-          'terminal_title_stripped': title,
-          'agent_status': 'idle',
-          'label': ?label,
-        };
+      'pane_id': 'w1:p1',
+      'workspace_id': 'w1',
+      'tab_id': 'w1:t1',
+      'terminal_title_stripped': title,
+      'agent_status': 'idle',
+      'label': ?label,
+    };
 
     test('shows its own name instead of the program title', () {
       final pane = Pane.fromJson(json(label: ' builder '));

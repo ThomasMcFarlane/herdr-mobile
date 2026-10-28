@@ -8,7 +8,9 @@ Widget _circle(int? number, {bool reduced = false}) => MaterialApp(
   home: MediaQuery(
     data: MediaQueryData(disableAnimations: reduced),
     child: Scaffold(
-      body: Center(child: SelectionCircle(number: number, onTap: () {}, label: 'Select photo 1')),
+      body: Center(
+        child: SelectionCircle(number: number, onTap: () {}, label: 'Select photo 1'),
+      ),
     ),
   ),
 );
@@ -16,7 +18,9 @@ Widget _circle(int? number, {bool reduced = false}) => MaterialApp(
 /// The smallest scale any Transform under the circle draws at right now.
 double _smallestScale(WidgetTester tester) {
   var smallest = 1.0;
-  for (final t in tester.widgetList<Transform>(find.descendant(of: find.byType(SelectionCircle), matching: find.byType(Transform)))) {
+  for (final t in tester.widgetList<Transform>(
+    find.descendant(of: find.byType(SelectionCircle), matching: find.byType(Transform)),
+  )) {
     final s = t.transform.entry(0, 0);
     if (s < smallest) smallest = s;
   }

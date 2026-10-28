@@ -17,14 +17,7 @@ import 'support/fake_transport.dart';
 import 'support/memory_snapshot_cache.dart';
 import 'support/memory_stores.dart';
 
-const _good = {
-  'id': 'good',
-  'label': 'good',
-  'host': 'good.example',
-  'port': 22,
-  'username': 'u',
-  'auth': 'password',
-};
+const _good = {'id': 'good', 'label': 'good', 'host': 'good.example', 'port': 22, 'username': 'u', 'auth': 'password'};
 
 /// Never answers: the board must not need a machine to boot.
 class _Silent extends FakeTransport {
@@ -162,12 +155,7 @@ void main() {
 
     testWidgets('the screen names the error and Retry runs the retry', (tester) async {
       var retried = 0;
-      await tester.pumpWidget(
-        BootFailedApp(
-          error: StateError('disk is full'),
-          retry: () async => retried++,
-        ),
-      );
+      await tester.pumpWidget(BootFailedApp(error: StateError('disk is full'), retry: () async => retried++));
 
       expect(find.textContaining('disk is full'), findsOneWidget);
 
@@ -180,16 +168,21 @@ void main() {
 
   group('a snapshot with a row this app cannot read', () {
     test('leaves that row out and keeps the rest', () {
-      final json = snapshotJson(panes: [
-        (id: 'w1:p1', ws: 'w1', agent: 'claude', status: 'blocked'),
-        (id: 'w1:p2', ws: 'w1', agent: 'claude', status: 'working'),
-      ]);
+      final json = snapshotJson(
+        panes: [
+          (id: 'w1:p1', ws: 'w1', agent: 'claude', status: 'blocked'),
+          (id: 'w1:p2', ws: 'w1', agent: 'claude', status: 'working'),
+        ],
+      );
       json['panes'] = <Object?>[
         ...(json['panes']! as List),
         {'pane_id': 7, 'workspace_id': 'w1'}, // an id of the wrong type
         'junk',
       ];
-      json['tabs'] = <Object?>[...(json['tabs']! as List), {'tab_id': 'only-half'}];
+      json['tabs'] = <Object?>[
+        ...(json['tabs']! as List),
+        {'tab_id': 'only-half'},
+      ];
 
       final snapshot = Snapshot.fromJson(json);
 

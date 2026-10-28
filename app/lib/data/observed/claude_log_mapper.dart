@@ -224,7 +224,10 @@ class ClaudeLogMapper implements SessionLogMapper {
       case 'local_command' || 'informational':
         // A command's output line, not a hook's report (`/compact` prints a JSON
         // snapshot of the session after its first line).
-        final text = cutText(firstLine(_strip((e['content'] is String ? e['content'] as String : '').replaceAll(_ansi, ''))), 300);
+        final text = cutText(
+          firstLine(_strip((e['content'] is String ? e['content'] as String : '').replaceAll(_ansi, ''))),
+          300,
+        );
         return text.isEmpty ? const [] : [messageUpsert(MessageRole.agent, key, text)];
       default:
         return const [];
@@ -272,13 +275,20 @@ class ClaudeLogMapper implements SessionLogMapper {
       }
     }
     final names = a['names'];
-    final listed = names is List ? [for (final n in names) if (n is String && _skillName.hasMatch(n)) n] : [...described.keys.where(_skillName.hasMatch)];
+    final listed = names is List
+        ? [
+            for (final n in names)
+              if (n is String && _skillName.hasMatch(n)) n,
+          ]
+        : [...described.keys.where(_skillName.hasMatch)];
     if (listed.isEmpty) return const [];
     if (a['isInitial'] != false) _skills.clear();
     for (final name in listed) {
       _skills[name] = AcpCommand(name: name, description: described[name] ?? '');
     }
-    return [CommandsUpdate([..._skills.values])];
+    return [
+      CommandsUpdate([..._skills.values]),
+    ];
   }
 
   // -- assistant ---------------------------------------------------------------
@@ -403,10 +413,7 @@ class ClaudeLogMapper implements SessionLogMapper {
     _turnEnded = false;
     _lastTyped = text.trim();
     final id = _messageKey(key, text);
-    return [
-      ..._userClears(),
-      userMessageUpsert(id, text, pictures),
-    ];
+    return [..._userClears(), userMessageUpsert(id, text, pictures)];
   }
 
   /// The pictures of a content list that can be fetched later: an `image` block
@@ -532,7 +539,8 @@ class ClaudeLogMapper implements SessionLogMapper {
       }
     }
     final isError = b['is_error'] == true;
-    final denied = isError && (line['toolDenialKind'] == 'user-rejected' || text.startsWith("The user doesn't want to proceed"));
+    final denied =
+        isError && (line['toolDenialKind'] == 'user-rejected' || text.startsWith("The user doesn't want to proceed"));
     final status = denied ? 'cancelled' : (isError ? 'failed' : 'completed');
 
     final content = <ToolContent>[];
@@ -547,7 +555,10 @@ class ClaudeLogMapper implements SessionLogMapper {
       'status': status,
       'content': [for (final c in content) c.toJson()],
       if (text.isNotEmpty) 'rawOutput': capText(text),
-      if (locations.isNotEmpty) 'locations': [for (final l in locations) {'path': l.path, 'line': ?l.line}],
+      if (locations.isNotEmpty)
+        'locations': [
+          for (final l in locations) {'path': l.path, 'line': ?l.line},
+        ],
     };
     if (_ask?.toolCallId == id) _ask = null;
     final out = <SessionUpdate>[ToolCallPatchUpdate(ToolCallPatch(id, fields))];
@@ -689,14 +700,20 @@ class ClaudeLogMapper implements SessionLogMapper {
       case 'Edit':
         final from = input['old_string'];
         final to = input['new_string'];
-        return from is String && to is String ? [ToolDiff(path: abs, oldText: capText(from), newText: capText(to))] : const [];
+        return from is String && to is String
+            ? [ToolDiff(path: abs, oldText: capText(from), newText: capText(to))]
+            : const [];
       case 'MultiEdit':
         final edits = input['edits'];
         if (edits is! List) return const [];
         return [
           for (final ed in edits)
             if (ed is Map && ed['old_string'] is String && ed['new_string'] is String)
-              ToolDiff(path: abs, oldText: capText(ed['old_string'] as String), newText: capText(ed['new_string'] as String)),
+              ToolDiff(
+                path: abs,
+                oldText: capText(ed['old_string'] as String),
+                newText: capText(ed['new_string'] as String),
+              ),
         ];
       default:
         return const [];
@@ -721,7 +738,9 @@ class ClaudeLogMapper implements SessionLogMapper {
             options.add(AskOption(label: cutText(o, 300)));
           } else if (o is Map<String, dynamic> && o['label'] is String) {
             final d = o['description'];
-            options.add(AskOption(label: cutText(o['label'] as String, 300), description: d is String ? capText(d) : ''));
+            options.add(
+              AskOption(label: cutText(o['label'] as String, 300), description: d is String ? capText(d) : ''),
+            );
           }
         }
       }
@@ -788,7 +807,9 @@ class ClaudeLogMapper implements SessionLogMapper {
       default:
         return const [];
     }
-    return [PlanUpdate([for (final t in _taskList.values) PlanEntry(content: cutText(t.subject, 300), status: t.status)])];
+    return [
+      PlanUpdate([for (final t in _taskList.values) PlanEntry(content: cutText(t.subject, 300), status: t.status)]),
+    ];
   }
 
   // -- background work ---------------------------------------------------------
@@ -825,7 +846,9 @@ class ClaudeLogMapper implements SessionLogMapper {
       if (task is String && _safeId.hasMatch(task)) {
         final workflow = open.name == 'Workflow';
         final Object? named = workflow ? (result?['workflowName'] ?? open.input?['name']) : open.input?['description'];
-        final title = named is String && named.trim().isNotEmpty ? cutText(firstLine(named.trim()), _titleChars) : open.name;
+        final title = named is String && named.trim().isNotEmpty
+            ? cutText(firstLine(named.trim()), _titleChars)
+            : open.name;
         _put(
           BackgroundTask(
             id: task,
@@ -863,14 +886,11 @@ class ClaudeLogMapper implements SessionLogMapper {
     _finish(id, ended, at);
     for (final e in _subagents.entries.toList()) {
       if (e.value.logId != id) continue;
-      _subagents[e.key] = _withStatus(
-        e.value,
-        switch (ended) {
-          BackgroundStatus.failed => 'failed',
-          BackgroundStatus.stopped => 'aborted',
-          _ => 'completed',
-        },
-      );
+      _subagents[e.key] = _withStatus(e.value, switch (ended) {
+        BackgroundStatus.failed => 'failed',
+        BackgroundStatus.stopped => 'aborted',
+        _ => 'completed',
+      });
     }
     return const [];
   }
@@ -922,9 +942,7 @@ class ClaudeLogMapper implements SessionLogMapper {
     final id = agentId is String && _agentId.hasMatch(agentId) ? agentId : null;
     final async = result?['status'] == 'async_launched';
     final count = result?['totalToolUseCount'];
-    final status = isError
-        ? 'failed'
-        : (async ? 'running' : (result?['status'] == 'failed' ? 'failed' : 'completed'));
+    final status = isError ? 'failed' : (async ? 'running' : (result?['status'] == 'failed' ? 'failed' : 'completed'));
     _subagents[callId] = SubagentInfo(
       name: have.name,
       agent: have.agent,

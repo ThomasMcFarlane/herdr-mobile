@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/batch_actions.dart';
 import '../../../data/repositories/fleet_repository.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'agents_grouping.dart' show AgentsOverview;
 import 'board_selection.dart';
 
@@ -32,48 +34,48 @@ class SelectionHeader extends StatelessWidget {
       visible: state.active,
       slide: false,
       builder: (context) => MediaQuery.withClampedTextScaling(
-      maxScaleFactor: kBarTextScale,
-      child: Container(
-        color: ds.bg,
-        padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              height: _bar,
-              child: Padding(
-                padding: const EdgeInsets.only(left: Gap.gutter, right: Gap.sm),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Semantics(
-                        header: true,
-                        child: RollText(
-                          text: '${state.count} selected',
-                          style: Type.barTitle.copyWith(color: ds.text, fontFeatures: Type.tabular),
+        maxScaleFactor: kBarTextScale,
+        child: Container(
+          color: ds.bg,
+          padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                height: _bar,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: Gap.gutter, right: Gap.sm),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Semantics(
+                          header: true,
+                          child: RollText(
+                            text: '${state.count} selected',
+                            style: Type.barTitle.copyWith(color: ds.text, fontFeatures: Type.tabular),
+                          ),
                         ),
                       ),
-                    ),
-                    AppButton(
-                      label: 'All',
-                      kind: AppButtonKind.ghost,
-                      compact: true,
-                      onPressed: state.busy ? null : onAll,
-                    ),
-                    AppButton(
-                      label: 'Cancel',
-                      kind: AppButtonKind.ghost,
-                      compact: true,
-                      onPressed: state.busy ? null : selection.cancel,
-                    ),
-                  ],
+                      AppButton(
+                        label: 'All',
+                        kind: AppButtonKind.ghost,
+                        compact: true,
+                        onPressed: state.busy ? null : onAll,
+                      ),
+                      AppButton(
+                        label: 'Cancel',
+                        kind: AppButtonKind.ghost,
+                        compact: true,
+                        onPressed: state.busy ? null : selection.cancel,
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const Hairline(),
-          ],
+              const Hairline(),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -104,22 +106,22 @@ class BatchActionBar extends StatelessWidget {
       visible: selection.active,
       slide: false,
       builder: (context) => ToastShelf(
-      lift: clearance,
-      child: SizedBox(
-        height: clearance,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            const FloatingBarScrim(),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: FloatingBarSlot(child: FloatingBarPill(child: _content(context, selection))),
-            ),
-          ],
+        lift: clearance,
+        child: SizedBox(
+          height: clearance,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              const FloatingBarScrim(),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: FloatingBarSlot(child: FloatingBarPill(child: _content(context, selection))),
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -136,8 +138,7 @@ class BatchActionBar extends StatelessWidget {
     );
     bool can(BatchAction a) {
       final plan = BatchPlan.of(a, targets);
-      return plan.run.isNotEmpty ||
-          (a == BatchAction.message && plan.waiting.any((s) => s.canSendAnyway));
+      return plan.run.isNotEmpty || (a == BatchAction.message && plan.waiting.any((s) => s.canSendAnyway));
     }
 
     final busy = selection.busy;

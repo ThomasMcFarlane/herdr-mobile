@@ -32,14 +32,9 @@ import 'support/fake_transport.dart';
 import 'support/keeper_process_host.dart';
 import 'support/memory_transcript_cache.dart';
 
-const _message =
-    'reply: please check the fifth subagent as well and tell me which of the eight is still running';
+const _message = 'reply: please check the fifth subagent as well and tell me which of the eight is still running';
 
-Future<void> _until(
-  bool Function() check,
-  String what, {
-  Duration timeout = const Duration(seconds: 40),
-}) async {
+Future<void> _until(bool Function() check, String what, {Duration timeout = const Duration(seconds: 40)}) async {
   final end = DateTime.now().add(timeout);
   while (!check()) {
     if (DateTime.now().isAfter(end)) fail('timed out waiting for $what');
@@ -49,10 +44,8 @@ Future<void> _until(
 
 /// The user bubbles that show [_message] (the agent's reply says it too, as a
 /// message of the agent's, which does not count).
-int _bubbles(AgentSessionState s) => s.items
-    .whereType<TranscriptMessage>()
-    .where((m) => m.role == MessageRole.user && m.text == _message)
-    .length;
+int _bubbles(AgentSessionState s) =>
+    s.items.whereType<TranscriptMessage>().where((m) => m.role == MessageRole.user && m.text == _message).length;
 
 List<String> _userRows(AgentSessionState s) => [
   for (final m in s.items.whereType<TranscriptMessage>())
@@ -81,12 +74,7 @@ void main() {
     host = await KeeperProcessHost.create();
     cache = MemoryTranscriptCache();
     machine = MachineConnection(
-      profile: const MachineProfile(
-        id: 'm1',
-        label: 'studio',
-        host: 'm1.local',
-        username: 'u',
-      ),
+      profile: const MachineProfile(id: 'm1', label: 'studio', host: 'm1.local', username: 'u'),
       api: HerdrApi(FakeTransport()),
       backoff: (_) => const Duration(hours: 1),
       pollInterval: const Duration(hours: 1),
@@ -126,69 +114,31 @@ void main() {
     for (var i = 0; i < 3; i++) {
       final before = host.attachCount;
       await host.dropLinks();
-      await _until(
-        () => host.attachCount > before && session.attached,
-        're-attach #${i + 1}',
-      );
-      expect(
-        session.queued.length,
-        1,
-        reason: 'the queue survives a re-attach',
-      );
-      expect(
-        _bubbles(session.state),
-        0,
-        reason:
-            'queued, not sent: nothing in the transcript (re-attach ${i + 1})',
-      );
+      await _until(() => host.attachCount > before && session.attached, 're-attach #${i + 1}');
+      expect(session.queued.length, 1, reason: 'the queue survives a re-attach');
+      expect(_bubbles(session.state), 0, reason: 'queued, not sent: nothing in the transcript (re-attach ${i + 1})');
     }
 
     // The turn ends; the queue sends the message; omp is busy and refuses it.
-    int attempts() =>
-        host.promptsSeenByAgent().where((p) => p == _message).length;
-    await _until(
-      () => attempts() == 1,
-      'the first refused attempt',
-      timeout: const Duration(seconds: 40),
-    );
-    await _until(
-      () => session.queued.length == 1 && session.queued.single.held,
-      'the refused message to wait, held',
-    );
-    expect(
-      _bubbles(session.state),
-      0,
-      reason: 'refused: not in the transcript',
-    );
+    int attempts() => host.promptsSeenByAgent().where((p) => p == _message).length;
+    await _until(() => attempts() == 1, 'the first refused attempt', timeout: const Duration(seconds: 40));
+    await _until(() => session.queued.length == 1 && session.queued.single.held, 'the refused message to wait, held');
+    expect(_bubbles(session.state), 0, reason: 'refused: not in the transcript');
 
     // The person taps Resume again and again; omp keeps refusing.
     for (var i = 2; i <= 4; i++) {
       session.resumeQueue();
       await _until(() => attempts() == i, 'refused attempt #$i');
-      await _until(
-        () => session.queued.length == 1 && session.queued.single.held,
-        'held again after attempt #$i',
-      );
-      expect(
-        _bubbles(session.state),
-        0,
-        reason: 'refused attempt #$i left a bubble',
-      );
+      await _until(() => session.queued.length == 1 && session.queued.single.held, 'held again after attempt #$i');
+      expect(_bubbles(session.state), 0, reason: 'refused attempt #$i left a bubble');
     }
 
     // A re-attach replays the keeper's log: the refused attempts are not in it.
     {
       final before = host.attachCount;
       await host.dropLinks();
-      await _until(
-        () => host.attachCount > before && session.attached,
-        're-attach after the refusals',
-      );
-      expect(
-        _bubbles(session.state),
-        0,
-        reason: 'the keeper logged a refused prompt',
-      );
+      await _until(() => host.attachCount > before && session.attached, 're-attach after the refusals');
+      expect(_bubbles(session.state), 0, reason: 'the keeper logged a refused prompt');
       expect(session.queued.length, 1);
     }
 
@@ -198,9 +148,7 @@ void main() {
     await _until(
       () =>
           _bubbles(session.state) == 1 &&
-          session.state.items.whereType<TranscriptMessage>().any(
-            (m) => m.text.startsWith('re: '),
-          ),
+          session.state.items.whereType<TranscriptMessage>().any((m) => m.text.startsWith('re: ')),
       'the message to be answered',
     );
     await _until(() => !session.state.turnActive, 'the turn to end');
@@ -212,15 +160,8 @@ void main() {
     for (var i = 0; i < 3; i++) {
       final before = host.attachCount;
       await host.dropLinks();
-      await _until(
-        () => host.attachCount > before && session.attached,
-        'final re-attach #${i + 1}',
-      );
-      expect(
-        _bubbles(session.state),
-        1,
-        reason: 'after re-attach ${i + 1}: ${_userRows(session.state)}',
-      );
+      await _until(() => host.attachCount > before && session.attached, 'final re-attach #${i + 1}');
+      expect(_bubbles(session.state), 1, reason: 'after re-attach ${i + 1}: ${_userRows(session.state)}');
     }
     expect(_userRows(session.state), ['sleep:6', _message]);
 
@@ -229,21 +170,13 @@ void main() {
     session.background();
     final saved = await cache.read(session.key);
     expect(saved, isNotNull);
-    expect(
-      _bubbles(replayCachedTranscript(saved!)),
-      1,
-      reason: 'the saved copy',
-    );
+    expect(_bubbles(replayCachedTranscript(saved!)), 1, reason: 'the saved copy');
     expect(_userRows(replayCachedTranscript(saved)), ['sleep:6', _message]);
 
     session.dispose();
     final restarted = newSession((await host.list()).single)..acquire();
     await _until(() => restarted.attached, 'the restarted session to attach');
-    expect(
-      _bubbles(restarted.state),
-      1,
-      reason: 'after the restart: ${_userRows(restarted.state)}',
-    );
+    expect(_bubbles(restarted.state), 1, reason: 'after the restart: ${_userRows(restarted.state)}');
     expect(_userRows(restarted.state), ['sleep:6', _message]);
   }, timeout: const Timeout(Duration(minutes: 3)));
 
@@ -261,17 +194,10 @@ void main() {
 
     final before = host.attachCount;
     await host.dropLinks();
-    await _until(
-      () => host.attachCount > before && session.attached,
-      're-attach',
-    );
+    await _until(() => host.attachCount > before && session.attached, 're-attach');
     expect(_userRows(session.state), twice, reason: 'after a re-attach');
 
     session.background();
-    expect(
-      _userRows(replayCachedTranscript((await cache.read(session.key))!)),
-      twice,
-      reason: 'the saved copy',
-    );
+    expect(_userRows(replayCachedTranscript((await cache.read(session.key))!)), twice, reason: 'the saved copy');
   }, timeout: const Timeout(Duration(minutes: 2)));
 }

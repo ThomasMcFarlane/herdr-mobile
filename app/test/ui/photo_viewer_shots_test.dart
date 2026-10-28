@@ -34,10 +34,20 @@ Uint8List scene(int w, int h, {int orientation = 1, String? make, String? model,
     final t = y / h;
     final c = t < 0.62
         ? img.ColorRgb8((120 + 110 * t).round(), (170 + 60 * t).round(), (235 - 40 * t).round())
-        : img.ColorRgb8((30 + 20 * (t - 0.62)).round(), (80 + 90 * (t - 0.62)).round(), (120 + 60 * (t - 0.62)).round());
+        : img.ColorRgb8(
+            (30 + 20 * (t - 0.62)).round(),
+            (80 + 90 * (t - 0.62)).round(),
+            (120 + 60 * (t - 0.62)).round(),
+          );
     img.drawLine(image, x1: 0, y1: y, x2: w, y2: y, color: c);
   }
-  img.fillCircle(image, x: (w * 0.72).round(), y: (h * 0.28).round(), radius: (h * 0.09).round(), color: img.ColorRgb8(255, 236, 170));
+  img.fillCircle(
+    image,
+    x: (w * 0.72).round(),
+    y: (h * 0.28).round(),
+    radius: (h * 0.09).round(),
+    color: img.ColorRgb8(255, 236, 170),
+  );
   final ridge = img.ColorRgb8(52, 64, 82);
   for (var layer = 0; layer < 2; layer++) {
     final base = h * (0.62 - 0.08 * layer);
@@ -68,14 +78,15 @@ Uint8List tinyIcon() {
   return img.encodePng(image);
 }
 
-PhotoItem _memory(String name, Uint8List bytes, {String? path, DateTime? modified, String? origin, int? size}) => PhotoItem(
-  id: path ?? name,
-  name: name,
-  path: path,
-  modified: modified,
-  origin: origin,
-  source: MemoryPhotoSource(() async => bytes, size: size ?? bytes.length),
-);
+PhotoItem _memory(String name, Uint8List bytes, {String? path, DateTime? modified, String? origin, int? size}) =>
+    PhotoItem(
+      id: path ?? name,
+      name: name,
+      path: path,
+      modified: modified,
+      origin: origin,
+      source: MemoryPhotoSource(() async => bytes, size: size ?? bytes.length),
+    );
 
 Future<void> shootAt(
   WidgetTester tester,
@@ -178,9 +189,17 @@ void main() {
   });
 
   final photos = [
-    _memory('IMG_20260520_093012.jpg', scene(1600, 1200, make: 'Google', model: 'Pixel 8 Pro', taken: '2026:05:20 09:30:12'),
-        path: '/home/dev/Pictures/trip/IMG_20260520_093012.jpg', modified: DateTime.utc(2026, 5, 20, 9, 30, 14)),
-    _memory('IMG_20260520_093044.jpg', scene(1200, 1600, orientation: 1), path: '/home/dev/Pictures/trip/IMG_20260520_093044.jpg'),
+    _memory(
+      'IMG_20260520_093012.jpg',
+      scene(1600, 1200, make: 'Google', model: 'Pixel 8 Pro', taken: '2026:05:20 09:30:12'),
+      path: '/home/dev/Pictures/trip/IMG_20260520_093012.jpg',
+      modified: DateTime.utc(2026, 5, 20, 9, 30, 14),
+    ),
+    _memory(
+      'IMG_20260520_093044.jpg',
+      scene(1200, 1600, orientation: 1),
+      path: '/home/dev/Pictures/trip/IMG_20260520_093044.jpg',
+    ),
     _memory('IMG_20260520_093101.jpg', scene(1600, 900), path: '/home/dev/Pictures/trip/IMG_20260520_093101.jpg'),
   ];
 
@@ -197,41 +216,81 @@ void main() {
       });
 
       testWidgets('zoomed 2.5x at a point, overlay shown and hidden: $tag', (tester) async {
-        await shootAt(tester, 'zoomed-$tag', items: photos, index: 0, size: size, brightness: brightness, then: (t, v) async {
-          await doubleTapAt(t, Offset(size.width * 0.72, size.height * 0.4));
-          await pumpUntil(t, () => v.model.currentEntry.sharp != null);
-          await t.pump(const Duration(milliseconds: 300));
-        });
-        await shootAt(tester, 'zoomed-bare-$tag', items: photos, index: 0, size: size, brightness: brightness, then: (t, v) async {
-          await doubleTapAt(t, Offset(size.width * 0.72, size.height * 0.4));
-          await pumpUntil(t, () => v.model.currentEntry.sharp != null);
-          await t.tapAt(Offset(size.width / 2, size.height / 2));
-          await t.pump(const Duration(milliseconds: 600));
-        });
+        await shootAt(
+          tester,
+          'zoomed-$tag',
+          items: photos,
+          index: 0,
+          size: size,
+          brightness: brightness,
+          then: (t, v) async {
+            await doubleTapAt(t, Offset(size.width * 0.72, size.height * 0.4));
+            await pumpUntil(t, () => v.model.currentEntry.sharp != null);
+            await t.pump(const Duration(milliseconds: 300));
+          },
+        );
+        await shootAt(
+          tester,
+          'zoomed-bare-$tag',
+          items: photos,
+          index: 0,
+          size: size,
+          brightness: brightness,
+          then: (t, v) async {
+            await doubleTapAt(t, Offset(size.width * 0.72, size.height * 0.4));
+            await pumpUntil(t, () => v.model.currentEntry.sharp != null);
+            await t.tapAt(Offset(size.width / 2, size.height / 2));
+            await t.pump(const Duration(milliseconds: 600));
+          },
+        );
       });
 
       testWidgets('info sheet: $tag', (tester) async {
-        await shootAt(tester, 'info-$tag', items: photos, index: 0, size: size, brightness: brightness, then: (t, v) async {
-          await t.tap(find.byTooltip('Photo info'));
-          await t.pumpAndSettle();
-        });
+        await shootAt(
+          tester,
+          'info-$tag',
+          items: photos,
+          index: 0,
+          size: size,
+          brightness: brightness,
+          then: (t, v) async {
+            await t.tap(find.byTooltip('Photo info'));
+            await t.pumpAndSettle();
+          },
+        );
       });
 
       testWidgets('save and share sheet: $tag', (tester) async {
-        await shootAt(tester, 'share-$tag', items: photos, index: 0, size: size, brightness: brightness, then: (t, v) async {
-          await t.tap(find.byTooltip('Save or share'));
-          await t.pumpAndSettle();
-        });
+        await shootAt(
+          tester,
+          'share-$tag',
+          items: photos,
+          index: 0,
+          size: size,
+          brightness: brightness,
+          then: (t, v) async {
+            await t.tap(find.byTooltip('Save or share'));
+            await t.pumpAndSettle();
+          },
+        );
       });
 
       testWidgets('saved toast: $tag', (tester) async {
-        await shootAt(tester, 'saved-$tag', items: photos, index: 0, size: size, brightness: brightness, then: (t, v) async {
-          await t.tap(find.byTooltip('Save or share'));
-          await t.pumpAndSettle();
-          await t.tap(find.text('Save to phone'));
-          await t.pump();
-          await t.pump(const Duration(milliseconds: 500));
-        });
+        await shootAt(
+          tester,
+          'saved-$tag',
+          items: photos,
+          index: 0,
+          size: size,
+          brightness: brightness,
+          then: (t, v) async {
+            await t.tap(find.byTooltip('Save or share'));
+            await t.pumpAndSettle();
+            await t.tap(find.text('Save to phone'));
+            await t.pump();
+            await t.pump(const Duration(milliseconds: 500));
+          },
+        );
       });
 
       testWidgets('loading with progress: $tag', (tester) async {
@@ -242,9 +301,17 @@ void main() {
           path: '/home/dev/Pictures/trip/IMG_20260520_093012.jpg',
           source: _Slow(gate, 11 * 1024 * 1024, 4.2 * 1024 * 1024),
         );
-        await shootAt(tester, 'loading-$tag', items: [item, photos[1]], size: size, brightness: brightness, waitReady: false, then: (t, v) async {
-          await t.pump(const Duration(milliseconds: 200));
-        });
+        await shootAt(
+          tester,
+          'loading-$tag',
+          items: [item, photos[1]],
+          size: size,
+          brightness: brightness,
+          waitReady: false,
+          then: (t, v) async {
+            await t.pump(const Duration(milliseconds: 200));
+          },
+        );
         gate.complete();
         await tester.pump(const Duration(milliseconds: 100));
       });
@@ -261,7 +328,14 @@ void main() {
           source: _Slow(gate, 11 * 1024 * 1024, 7.7 * 1024 * 1024),
           placeholder: () => thumb.clone(),
         );
-        await shootAt(tester, 'loading-thumb-$tag', items: [item, photos[1]], size: size, brightness: brightness, waitReady: false);
+        await shootAt(
+          tester,
+          'loading-thumb-$tag',
+          items: [item, photos[1]],
+          size: size,
+          brightness: brightness,
+          waitReady: false,
+        );
         gate.complete();
         await tester.pump(const Duration(milliseconds: 100));
       });
@@ -279,7 +353,11 @@ void main() {
       });
 
       testWidgets('damaged file: $tag', (tester) async {
-        final item = _memory('error-page.png', Uint8List.fromList(List.filled(300, 3)), path: '/home/dev/Pictures/error-page.png');
+        final item = _memory(
+          'error-page.png',
+          Uint8List.fromList(List.filled(300, 3)),
+          path: '/home/dev/Pictures/error-page.png',
+        );
         await shootAt(tester, 'not-a-picture-$tag', items: [item], size: size, brightness: brightness);
       });
 
@@ -298,9 +376,11 @@ void main() {
         final items = [
           _memory('overlay.png', alpha, path: '/home/dev/overlay.png'),
           _memory('icon-24.png', tinyIcon(), path: '/home/dev/icon-24.png'),
-          _memory('Ảnh chụp màn hình rất dài của buổi họp ngày hai mươi tháng năm hai nghìn hai mươi sáu lần thứ 3 (bản cuối cùng).jpg',
-              scene(1600, 1000, orientation: 6, make: 'Canon', model: 'Canon EOS R5', taken: '2026:05:20 09:30:12'),
-              path: '/home/dev/Ảnh/dài.jpg'),
+          _memory(
+            'Ảnh chụp màn hình rất dài của buổi họp ngày hai mươi tháng năm hai nghìn hai mươi sáu lần thứ 3 (bản cuối cùng).jpg',
+            scene(1600, 1000, orientation: 6, make: 'Canon', model: 'Canon EOS R5', taken: '2026:05:20 09:30:12'),
+            path: '/home/dev/Ảnh/dài.jpg',
+          ),
         ];
         await shootAt(tester, 'transparent-$tag', items: items, index: 0, size: size, brightness: brightness);
         await shootAt(tester, 'tiny-crisp-$tag', items: items, index: 1, size: size, brightness: brightness);
@@ -308,15 +388,23 @@ void main() {
       });
 
       testWidgets('dragging down: the backdrop fades over the chat: $tag', (tester) async {
-        await shootAt(tester, 'dismiss-drag-$tag', items: photos, index: 0, size: size, brightness: brightness, then: (t, v) async {
-          final g = await t.startGesture(Offset(size.width / 2, size.height / 2));
-          for (var i = 0; i < 10; i++) {
-            await g.moveBy(const Offset(10, 18));
-            await t.pump(const Duration(milliseconds: 16));
-          }
-          // Held: the capture happens with the finger down.
-          addTearDown(() => g.up());
-        });
+        await shootAt(
+          tester,
+          'dismiss-drag-$tag',
+          items: photos,
+          index: 0,
+          size: size,
+          brightness: brightness,
+          then: (t, v) async {
+            final g = await t.startGesture(Offset(size.width / 2, size.height / 2));
+            for (var i = 0; i < 10; i++) {
+              await g.moveBy(const Offset(10, 18));
+              await t.pump(const Duration(milliseconds: 16));
+            }
+            // Held: the capture happens with the finger down.
+            addTearDown(() => g.up());
+          },
+        );
       });
     }
   }

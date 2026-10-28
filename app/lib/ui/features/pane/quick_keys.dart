@@ -5,7 +5,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/repositories/machine_connection.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'key_modifiers.dart';
 
 const quickKeysHeight = 44.0;
@@ -123,39 +125,40 @@ class QuickKeys extends StatelessWidget {
         separatorBuilder: (_, _) => const SizedBox(width: Gap.sm),
         itemBuilder: (_, i) => switch (set[i]) {
           final _Send key => _cap(
-              key,
-              onTap: enabled ? () => unawaited(onKeys(key.keys)) : null,
-              onRepeat: enabled && key.repeat ? () => onKeys(key.keys) : null,
-            ),
+            key,
+            onTap: enabled ? () => unawaited(onKeys(key.keys)) : null,
+            onRepeat: enabled && key.repeat ? () => onKeys(key.keys) : null,
+          ),
           final _Insert key => _cap(key, onTap: enabled ? () => onInsert(key.text) : null),
           final _Modifier key => ListenableBuilder(
-              listenable: modifiers,
-              builder: (_, _) => _cap(
-                key,
-                active: key.ctrl ? modifiers.ctrl : modifiers.alt,
-                onTap: !enabled
-                    ? null
-                    : () {
-                        if (key.ctrl) {
-                          modifiers.toggleCtrl();
-                        } else {
-                          modifiers.toggleAlt();
-                        }
-                      },
-              ),
+            listenable: modifiers,
+            builder: (_, _) => _cap(
+              key,
+              active: key.ctrl ? modifiers.ctrl : modifiers.alt,
+              onTap: !enabled
+                  ? null
+                  : () {
+                      if (key.ctrl) {
+                        modifiers.toggleCtrl();
+                      } else {
+                        modifiers.toggleAlt();
+                      }
+                    },
             ),
+          ),
         },
       ),
     );
   }
 
   /// Icon keys are named; text keys are read from their text.
-  static Widget _cap(_Key key, {required VoidCallback? onTap, Future<void> Function()? onRepeat, bool? active}) => KeyCap(
-    label: key.icon == null ? key.label : null,
-    icon: key.icon,
-    semanticLabel: key.icon != null ? key.semantic : null,
-    onTap: onTap,
-    onRepeat: onRepeat,
-    active: active,
-  );
+  static Widget _cap(_Key key, {required VoidCallback? onTap, Future<void> Function()? onRepeat, bool? active}) =>
+      KeyCap(
+        label: key.icon == null ? key.label : null,
+        icon: key.icon,
+        semanticLabel: key.icon != null ? key.semantic : null,
+        onTap: onTap,
+        onRepeat: onRepeat,
+        active: active,
+      );
 }

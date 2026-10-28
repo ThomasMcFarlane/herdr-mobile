@@ -59,11 +59,7 @@ class ScriptedSessions extends FakeAgentSessions {
   }
 
   @override
-  Future<AgentSessionView> start({
-    required MachineConnection machine,
-    required String agent,
-    required String cwd,
-  }) {
+  Future<AgentSessionView> start({required MachineConnection machine, required String agent, required String cwd}) {
     final call = (machineId: machine.profile.id, agent: agent, cwd: cwd);
     startCalls.add(call);
     final run = onStart;
@@ -131,7 +127,9 @@ class HistoryEnv {
 MachineProfile machineProfile(String id, String label) =>
     MachineProfile(id: id, label: label, host: '$id.example', username: 'dev');
 
-Future<HistoryEnv> historyEnv({List<({String id, String label})> machines = const [(id: 'a', label: 'studio-mac')]}) async {
+Future<HistoryEnv> historyEnv({
+  List<({String id, String label})> machines = const [(id: 'a', label: 'studio-mac')],
+}) async {
   final h = await BoardHarness.create([
     for (final m in machines) (profile: machineProfile(m.id, m.label), snapshot: snapshotWith(const [])),
   ]);

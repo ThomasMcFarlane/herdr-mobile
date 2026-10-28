@@ -189,7 +189,9 @@ class ClaudeAskDriver {
     final k = a.selected.single;
     // Already answered with it (the tab strip says so and the row is marked):
     // on to the next tab.
-    if (_sent.contains(i) && s.tabAnswered(i) && s.options[k].marked) return _advance(s, i, onOtherRow: cursor == n + 1);
+    if (_sent.contains(i) && s.tabAnswered(i) && s.options[k].marked) {
+      return _advance(s, i, onOtherRow: cursor == n + 1);
+    }
     // Sent but the dialog did not take it: ask again.
     _sent.remove(i);
     _sent.add(i);
@@ -264,7 +266,13 @@ enum ClaudeAskKind { none, question, review }
 
 /// One option row as drawn.
 class ClaudeAskRow {
-  const ClaudeAskRow({required this.number, required this.label, required this.cursor, required this.checked, required this.marked});
+  const ClaudeAskRow({
+    required this.number,
+    required this.label,
+    required this.cursor,
+    required this.checked,
+    required this.marked,
+  });
 
   final int number;
 
@@ -347,10 +355,7 @@ bool looksLikeClaudeAsk(String screen) => parseClaudeAsk(screen).kind != ClaudeA
 /// pane, at least the dialog's height: 45 rows are safe). Only the dialog at
 /// the bottom counts.
 ClaudeAskScreen parseClaudeAsk(String screen) {
-  final lines = [
-    for (final raw in screen.split('\n'))
-      _cleanRow(raw),
-  ];
+  final lines = [for (final raw in screen.split('\n')) _cleanRow(raw)];
   while (lines.isNotEmpty && lines.last.trim().isEmpty) {
     lines.removeLast();
   }
@@ -438,7 +443,9 @@ ClaudeAskScreen _parseQuestion(List<String> lines, int footer) {
       }
       final cursor = m[1] != null;
       if (cursor) cursorNumber = int.parse(m[2]!);
-      options.add(ClaudeAskRow(number: int.parse(m[2]!), label: label, cursor: cursor, checked: checked, marked: marked));
+      options.add(
+        ClaudeAskRow(number: int.parse(m[2]!), label: label, cursor: cursor, checked: checked, marked: marked),
+      );
     } else if (_submitRow.hasMatch(row)) {
       hasSubmit = true;
       onSubmit = _submitRow.firstMatch(row)![1] != null;

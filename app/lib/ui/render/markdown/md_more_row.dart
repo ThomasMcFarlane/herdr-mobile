@@ -38,7 +38,10 @@ class MoreRow extends StatelessWidget {
             constraints: const BoxConstraints(minHeight: kMinTap),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Padding(padding: const EdgeInsets.only(left: Gap.md), child: text),
+              child: Padding(
+                padding: const EdgeInsets.only(left: Gap.md),
+                child: text,
+              ),
             ),
           )
         : PressRow(
@@ -60,7 +63,8 @@ class MoreRow extends StatelessWidget {
           onTap: onCopy,
           semanticLabel: copyLabel,
           minTapSize: kMinTap,
-          builder: (context, pressed) => Icon(LucideIcons.copy, size: IconSize.row, color: pressed ? ds.text : ds.textSecondary),
+          builder: (context, pressed) =>
+              Icon(LucideIcons.copy, size: IconSize.row, color: pressed ? ds.text : ds.textSecondary),
         ),
       ],
     );

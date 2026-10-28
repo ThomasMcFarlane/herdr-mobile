@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'agents_grouping.dart';
 
 /// The row that stands for the rows a section folds away ("22 more idle", the
@@ -25,11 +26,16 @@ class AgentMoreRow extends StatelessWidget {
         onTap();
       },
       minHeight: kMinTap,
-      semanticLabel: open ? 'Show less ${more.status.name} agents' : '$title agents, folded${detail == null || detail.isEmpty ? '' : '. $detail'}',
+      semanticLabel: open
+          ? 'Show less ${more.status.name} agents'
+          : '$title agents, folded${detail == null || detail.isEmpty ? '' : '. $detail'}',
       padding: const EdgeInsets.symmetric(horizontal: Gap.gutter - PressRow.inset, vertical: Gap.sm),
       child: Row(
         children: [
-          SizedBox(width: Gap.xxl, child: Caret(open: open)),
+          SizedBox(
+            width: Gap.xxl,
+            child: Caret(open: open),
+          ),
           const SizedBox(width: Gap.md),
           Expanded(
             child: Column(

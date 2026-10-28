@@ -10,9 +10,7 @@ const _esc = '\x1b';
 String _sgr(String params) => '$_esc[${params}m';
 
 /// Visible text of each line.
-List<String> _plain(String input) => [
-      for (final line in parseAnsi(input).lines) line.map((r) => r.text).join(),
-    ];
+List<String> _plain(String input) => [for (final line in parseAnsi(input).lines) line.map((r) => r.text).join()];
 
 /// The only run of a one-line, one-run document.
 AnsiRun _run(String input) {
@@ -118,8 +116,7 @@ void main() {
       expect(_run('${_sgr('4')}x').underline, isTrue);
       expect(_run('${_sgr('9')}x').strike, isTrue);
       final plain = _run('x');
-      expect([plain.bold, plain.dim, plain.italic, plain.underline, plain.strike],
-          everyElement(isFalse));
+      expect([plain.bold, plain.dim, plain.italic, plain.underline, plain.strike], everyElement(isFalse));
     });
 
     test('22-29 reset only their own attribute', () {
@@ -130,18 +127,15 @@ void main() {
 
       final italic = _run('$all${_sgr('23')}x');
       expect(italic.italic, isFalse);
-      expect([italic.bold, italic.dim, italic.underline, italic.strike],
-          everyElement(isTrue));
+      expect([italic.bold, italic.dim, italic.underline, italic.strike], everyElement(isTrue));
 
       final underline = _run('$all${_sgr('24')}x');
       expect(underline.underline, isFalse);
-      expect([underline.bold, underline.italic, underline.strike],
-          everyElement(isTrue));
+      expect([underline.bold, underline.italic, underline.strike], everyElement(isTrue));
 
       final strike = _run('$all${_sgr('29')}x');
       expect(strike.strike, isFalse);
-      expect([strike.bold, strike.italic, strike.underline],
-          everyElement(isTrue));
+      expect([strike.bold, strike.italic, strike.underline], everyElement(isTrue));
 
       for (final code in ['25', '26', '28']) {
         final other = _run('$all${_sgr(code)}x');
@@ -156,15 +150,12 @@ void main() {
         final run = _run('$everything${reset}x');
         expect(run.fg, isNull, reason: reset);
         expect(run.bg, isNull, reason: reset);
-        expect([run.bold, run.dim, run.italic, run.underline, run.strike],
-            everyElement(isFalse), reason: reset);
+        expect([run.bold, run.dim, run.italic, run.underline, run.strike], everyElement(isFalse), reason: reset);
       }
     });
 
     test('a reset mid-line splits the runs', () {
-      final runs = parseAnsi('${_sgr('1;31')}a${_sgr('0')}b${_sgr('1')}c${_sgr('')}d')
-          .lines
-          .single;
+      final runs = parseAnsi('${_sgr('1;31')}a${_sgr('0')}b${_sgr('1')}c${_sgr('')}d').lines.single;
       expect(runs.map((r) => r.text), ['a', 'b', 'c', 'd']);
       expect(runs.map((r) => r.bold), [true, false, true, false]);
       expect(runs.map((r) => r.fg), [TerminalColors.ansi[1], null, null, null]);
@@ -253,15 +244,34 @@ void main() {
 
     test('random escape soup never throws or invents text', () {
       const alphabet = [
-        _esc, _esc, '[', ']', ';', ':', '0', '1', '3', '8', '2', '5', '9', 'm',
-        'H', '?', '\\', '\x07', '\n', '\r', 'a', ' ', '日', '─',
+        _esc,
+        _esc,
+        '[',
+        ']',
+        ';',
+        ':',
+        '0',
+        '1',
+        '3',
+        '8',
+        '2',
+        '5',
+        '9',
+        'm',
+        'H',
+        '?',
+        '\\',
+        '\x07',
+        '\n',
+        '\r',
+        'a',
+        ' ',
+        '日',
+        '─',
       ];
       final random = Random(7);
       for (var n = 0; n < 3000; n++) {
-        final input = [
-          for (var i = random.nextInt(40); i > 0; i--)
-            alphabet[random.nextInt(alphabet.length)],
-        ].join();
+        final input = [for (var i = random.nextInt(40); i > 0; i--) alphabet[random.nextInt(alphabet.length)]].join();
         final doc = parseAnsi(input);
         final visible = doc.lines.expand((l) => l).map((r) => r.text).join();
         expect(visible.length, lessThanOrEqualTo(input.length), reason: input);
@@ -282,10 +292,7 @@ void main() {
     });
 
     test('hyperlinks keep their label', () {
-      expect(
-        _plain('$_esc]8;;http://example.com\x07link$_esc]8;;\x07 after'),
-        ['link after'],
-      );
+      expect(_plain('$_esc]8;;http://example.com\x07link$_esc]8;;\x07 after'), ['link after']);
     });
 
     test('DCS and APC are stripped', () {
@@ -402,8 +409,7 @@ void main() {
 
   group('real herdr output', () {
     test('a captured line', () {
-      final lines = parseAnsi('$_esc[0m$_esc[3m$_esc[38;2;118;118;118mtext$_esc[0m\r\n')
-          .lines;
+      final lines = parseAnsi('$_esc[0m$_esc[3m$_esc[38;2;118;118;118mtext$_esc[0m\r\n').lines;
       expect(lines, hasLength(1));
       final run = lines.single.single;
       expect(run.text, 'text');
@@ -413,7 +419,8 @@ void main() {
     });
 
     test('padded, multi-style lines', () {
-      const raw = '$_esc[0m$_esc[1m$_esc[38;2;94;234;212m● $_esc[0mready'
+      const raw =
+          '$_esc[0m$_esc[1m$_esc[38;2;94;234;212m● $_esc[0mready'
           '                    $_esc[0m\r\n'
           '$_esc[0m$_esc[2m└ $_esc[0m\r\n';
       final lines = parseAnsi(raw).lines;

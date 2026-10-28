@@ -87,7 +87,13 @@ class _Rig {
 
   /// Two fingers [from] apart (each side of [at]) moved to [to] apart, in
   /// [steps] frames. Not released.
-  Future<(_Finger, _Finger)> pinch(Offset at, {required double from, required double to, int steps = 12, int stepMs = 16}) async {
+  Future<(_Finger, _Finger)> pinch(
+    Offset at, {
+    required double from,
+    required double to,
+    int steps = 12,
+    int stepMs = 16,
+  }) async {
     final a = _Finger(tester, await tester.startGesture(at - Offset(from, 0), pointer: 11));
     final b = _Finger(tester, await tester.startGesture(at + Offset(from, 0), pointer: 12));
     for (var i = 1; i <= steps; i++) {
@@ -135,15 +141,19 @@ Future<_Rig> _open(
     reduceMotion: reduceMotion,
     brightness: brightness,
   );
-  unawaited(Navigator.of(host).push(photoViewerRoute(
-    items: items,
-    initialIndex: index,
-    moreItems: moreItems,
-    viewAsText: viewAsText,
-    export: fake,
-    decoder: decoder.call,
-    exifReader: (_) => null,
-  )));
+  unawaited(
+    Navigator.of(host).push(
+      photoViewerRoute(
+        items: items,
+        initialIndex: index,
+        moreItems: moreItems,
+        viewAsText: viewAsText,
+        export: fake,
+        decoder: decoder.call,
+        exifReader: (_) => null,
+      ),
+    ),
+  );
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 300));
   final rig = _Rig(tester, decoder, fake, log ?? []);
@@ -153,7 +163,14 @@ Future<_Rig> _open(
 }
 
 List<PhotoItem> _three(List<String> log, {int w = 4000, int h = 3000}) => [
-  fakePhoto('IMG_0001.jpg', log, width: w, height: h, path: '/home/dev/shots/IMG_0001.jpg', modified: DateTime.utc(2026, 5, 20, 9, 30)),
+  fakePhoto(
+    'IMG_0001.jpg',
+    log,
+    width: w,
+    height: h,
+    path: '/home/dev/shots/IMG_0001.jpg',
+    modified: DateTime.utc(2026, 5, 20, 9, 30),
+  ),
   fakePhoto('IMG_0002.jpg', log, width: w, height: h, path: '/home/dev/shots/IMG_0002.jpg'),
   fakePhoto('IMG_0003.jpg', log, width: w, height: h, path: '/home/dev/shots/IMG_0003.jpg'),
 ];
@@ -171,7 +188,11 @@ List<String> _captureHaptics(WidgetTester tester) {
 }
 
 bool _chromeShown(WidgetTester tester) {
-  final opacity = find.ancestor(of: find.byTooltip('Back', skipOffstage: false), matching: find.byType(Opacity), matchRoot: false);
+  final opacity = find.ancestor(
+    of: find.byTooltip('Back', skipOffstage: false),
+    matching: find.byType(Opacity),
+    matchRoot: false,
+  );
   if (opacity.evaluate().isEmpty) return true;
   return tester.widget<Opacity>(opacity.first).opacity > 0.5;
 }
@@ -219,9 +240,13 @@ void main() {
 
     testWidgets('a very long name is cut in the middle: the end and the extension stay', (tester) async {
       final (decoder, log) = await prepared(tester, [(1260, 945)]);
-      const name = 'Ảnh chụp màn hình rất dài của buổi họp ngày hai mươi tháng năm hai nghìn hai mươi sáu lần thứ 3 (bản cuối cùng).png';
+      const name =
+          'Ảnh chụp màn hình rất dài của buổi họp ngày hai mươi tháng năm hai nghìn hai mươi sáu lần thứ 3 (bản cuối cùng).png';
       await _open(tester, [fakePhoto(name, log, width: 4000, height: 3000)], decoder, size: const Size(320, 640));
-      final caption = tester.widget<RichText>(find.textContaining('4,000 × 3,000', findRichText: true)).text.toPlainText();
+      final caption = tester
+          .widget<RichText>(find.textContaining('4,000 × 3,000', findRichText: true))
+          .text
+          .toPlainText();
       expect(caption, contains('…'));
       expect(caption, contains('.png  ·  4,000 × 3,000'));
       expect(caption, startsWith('Ảnh'));
@@ -246,10 +271,24 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Photo info'), findsOneWidget);
-      for (final text in ['Name', 'IMG_0001.jpg', 'Path', '/home/dev/shots/IMG_0001.jpg', 'Dimensions', '4,000 × 3,000 · 12.0 MP', 'Size', 'Modified', '20 May']) {
+      for (final text in [
+        'Name',
+        'IMG_0001.jpg',
+        'Path',
+        '/home/dev/shots/IMG_0001.jpg',
+        'Dimensions',
+        '4,000 × 3,000 · 12.0 MP',
+        'Size',
+        'Modified',
+        '20 May',
+      ]) {
         expect(find.textContaining(text), findsWidgets, reason: text);
       }
-      expect(find.textContaining('Screen-size preview'), findsOneWidget, reason: 'it says the bitmap is a preview until zoomed');
+      expect(
+        find.textContaining('Screen-size preview'),
+        findsOneWidget,
+        reason: 'it says the bitmap is a preview until zoomed',
+      );
 
       await tester.tap(find.byTooltip('Copy path'));
       await tester.pump();
@@ -270,17 +309,39 @@ void main() {
     });
 
     testWidgets('EXIF date and camera appear when the file has them', (tester) async {
-      final jpg = jpegWithExif(80, 40, orientation: 6, make: 'Canon', model: 'Canon EOS R5', taken: '2026:05:20 09:30:00');
+      final jpg = jpegWithExif(
+        80,
+        40,
+        orientation: 6,
+        make: 'Canon',
+        model: 'Canon EOS R5',
+        taken: '2026:05:20 09:30:00',
+      );
       usePhoneSurface(tester);
       late BuildContext host;
-      await pumpApp(tester, Builder(builder: (c) {
-        host = c;
-        return const SizedBox();
-      }));
-      unawaited(Navigator.of(host).push(photoViewerRoute(
-        items: [PhotoItem(id: 'a', name: 'a.jpg', source: MemoryPhotoSource(() async => jpg, size: jpg.length))],
-        export: FakeExport(),
-      )));
+      await pumpApp(
+        tester,
+        Builder(
+          builder: (c) {
+            host = c;
+            return const SizedBox();
+          },
+        ),
+      );
+      unawaited(
+        Navigator.of(host).push(
+          photoViewerRoute(
+            items: [
+              PhotoItem(
+                id: 'a',
+                name: 'a.jpg',
+                source: MemoryPhotoSource(() async => jpg, size: jpg.length),
+              ),
+            ],
+            export: FakeExport(),
+          ),
+        ),
+      );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       await pumpUntil(tester, () => tester.state<PhotoViewerState>(find.byType(PhotoViewer)).model.currentEntry.ready);
@@ -292,7 +353,11 @@ void main() {
       expect(find.text('Canon EOS R5'), findsOneWidget);
       expect(find.text('Taken'), findsOneWidget);
       expect(find.text(formatWhen(DateTime(2026, 5, 20, 9, 30), DateTime.now())), findsOneWidget);
-      expect(find.text('40 × 80 · 0.0 MP'.replaceAll(' · 0.0 MP', '')), findsOneWidget, reason: 'upright size, orientation applied');
+      expect(
+        find.text('40 × 80 · 0.0 MP'.replaceAll(' · 0.0 MP', '')),
+        findsOneWidget,
+        reason: 'upright size, orientation applied',
+      );
       expect(find.textContaining('EXIF 6'), findsOneWidget);
     });
   });
@@ -301,8 +366,10 @@ void main() {
     testWidgets('a swipe turns the page: order, position, and the neighbours were read ahead', (tester) async {
       final (decoder, log) = await prepared(tester);
       final rig = await _open(tester, _three(log), decoder);
-      expect(log.where((l) => l.startsWith('start')), ['start IMG_0001.jpg', 'start IMG_0002.jpg'],
-          reason: 'the next one is read ahead; the previous does not exist');
+      expect(log.where((l) => l.startsWith('start')), [
+        'start IMG_0001.jpg',
+        'start IMG_0002.jpg',
+      ], reason: 'the next one is read ahead; the previous does not exist');
 
       final g = await rig.drag(rig.center, const Offset(-260, 0));
       await g.up();
@@ -311,7 +378,11 @@ void main() {
       expect(find.text('Photo 2 of 3'), findsOneWidget);
       expect(rig.pose.pageDx, 0, reason: 'settled');
       expect(rig.pose.scale, 1);
-      expect(log.where((l) => l.startsWith('start')), ['start IMG_0001.jpg', 'start IMG_0002.jpg', 'start IMG_0003.jpg']);
+      expect(log.where((l) => l.startsWith('start')), [
+        'start IMG_0001.jpg',
+        'start IMG_0002.jpg',
+        'start IMG_0003.jpg',
+      ]);
 
       final back = await rig.drag(rig.center, const Offset(300, 0));
       await back.up();
@@ -368,7 +439,11 @@ void main() {
     testWidgets('neighbours are built lazily: a page enters the tree when a finger pulls it into view', (tester) async {
       final (decoder, log) = await prepared(tester);
       final rig = await _open(tester, _three(log), decoder);
-      expect(find.byType(PhotoPage), findsOneWidget, reason: 'the next photo is read ahead but is off screen: not built');
+      expect(
+        find.byType(PhotoPage),
+        findsOneWidget,
+        reason: 'the next photo is read ahead but is off screen: not built',
+      );
 
       final g = await rig.drag(rig.center, const Offset(-100, 0), stepMs: 30);
       expect(find.byType(PhotoPage), findsNWidgets(2));
@@ -448,7 +523,11 @@ void main() {
       // The point of the picture that was under the middle of the fingers is
       // still under it (give or take the few pixels the first frames moved it).
       final focal = c - rig.center;
-      expect(rig.pose.offset.dx, closeTo(focal.dx * (1 - scale), 8), reason: 'anchored at the fingers, not at the centre of the picture');
+      expect(
+        rig.pose.offset.dx,
+        closeTo(focal.dx * (1 - scale), 8),
+        reason: 'anchored at the fingers, not at the centre of the picture',
+      );
       expect(rig.pose.offset.dx, lessThan(-15), reason: 'a centre-anchored zoom would leave 0');
       await a.up();
       await b.up();
@@ -541,26 +620,35 @@ void main() {
       expect(rig.pose.scale, 1, reason: 'the new photo opens at fit');
     });
 
-    testWidgets('the zoom is sharpened: a bigger decode arrives once the picture is stretched, and goes when zoomed out', (tester) async {
-      final (decoder, log) = await prepared(tester);
-      final rig = await _open(tester, _three(log), decoder);
-      expect(rig.model.currentEntry.sharp, isNull);
-      expect(decoder.calls.last.boxW, 1622, reason: 'first decode: 1.5x the screen');
+    testWidgets(
+      'the zoom is sharpened: a bigger decode arrives once the picture is stretched, and goes when zoomed out',
+      (tester) async {
+        final (decoder, log) = await prepared(tester);
+        final rig = await _open(tester, _three(log), decoder);
+        expect(rig.model.currentEntry.sharp, isNull);
+        expect(decoder.calls.last.boxW, 1622, reason: 'first decode: 1.5x the screen');
 
-      await rig.doubleTap(rig.center);
-      await rig.settle(300);
-      await pumpUntil(tester, () => rig.model.currentEntry.sharp != null);
-      expect(rig.model.currentEntry.sharp, isNotNull, reason: '2.5x of fit is 2703 px: more than the 1622 px decoded');
-      expect(decoder.calls.last.boxW, 4096);
+        await rig.doubleTap(rig.center);
+        await rig.settle(300);
+        await pumpUntil(tester, () => rig.model.currentEntry.sharp != null);
+        expect(
+          rig.model.currentEntry.sharp,
+          isNotNull,
+          reason: '2.5x of fit is 2703 px: more than the 1622 px decoded',
+        );
+        expect(decoder.calls.last.boxW, 4096);
 
-      await rig.doubleTap(rig.center);
-      await rig.settle(800);
-      expect(rig.model.currentEntry.sharp, isNotNull, reason: 'kept for a moment in case the person zooms again');
-      await tester.pump(const Duration(seconds: 3));
-      expect(rig.model.currentEntry.sharp, isNull, reason: 'given back after the hold');
-    });
+        await rig.doubleTap(rig.center);
+        await rig.settle(800);
+        expect(rig.model.currentEntry.sharp, isNotNull, reason: 'kept for a moment in case the person zooms again');
+        await tester.pump(const Duration(seconds: 3));
+        expect(rig.model.currentEntry.sharp, isNull, reason: 'given back after the hold');
+      },
+    );
 
-    testWidgets('haptic detents: a click as the picture reaches fit, and as it reaches its largest size', (tester) async {
+    testWidgets('haptic detents: a click as the picture reaches fit, and as it reaches its largest size', (
+      tester,
+    ) async {
       final (decoder, log) = await prepared(tester);
       final out = _captureHaptics(tester);
       final rig = await _open(tester, _three(log), decoder);
@@ -581,7 +669,11 @@ void main() {
       await c.up();
       await d.up();
       await rig.settle();
-      expect(out.where((h) => h.contains('selectionClick')).length, greaterThanOrEqualTo(1), reason: 'a detent at the largest size: $out');
+      expect(
+        out.where((h) => h.contains('selectionClick')).length,
+        greaterThanOrEqualTo(1),
+        reason: 'a detent at the largest size: $out',
+      );
     });
   });
 
@@ -592,11 +684,19 @@ void main() {
       expect(find.byType(PhotoViewer), findsOneWidget);
 
       final g = await rig.drag(rig.center, const Offset(0, 140), stepMs: 40);
-      expect(rig.stage.widget.dismissProgress.value, closeTo(140 / (892 / 3), 0.08), reason: 'the backdrop fades with the drag');
+      expect(
+        rig.stage.widget.dismissProgress.value,
+        closeTo(140 / (892 / 3), 0.08),
+        reason: 'the backdrop fades with the drag',
+      );
       expect(rig.pose.drag.dy, greaterThan(100));
       await g.up();
       await rig.settle();
-      expect(rig.stage.widget.dismissProgress.value, 0, reason: '140 px at a crawl is short of the threshold: it springs back');
+      expect(
+        rig.stage.widget.dismissProgress.value,
+        0,
+        reason: '140 px at a crawl is short of the threshold: it springs back',
+      );
       expect(find.byType(PhotoViewer), findsOneWidget);
 
       final far = await rig.drag(rig.center, const Offset(0, 300), stepMs: 40);
@@ -674,21 +774,34 @@ void main() {
       final gate = Completer<void>();
       usePhoneSurface(tester);
       late BuildContext host;
-      await pumpApp(tester, Builder(builder: (c) {
-        host = c;
-        return const SizedBox();
-      }));
-      unawaited(Navigator.of(host).push(photoViewerRoute(
-        items: [fakePhoto('IMG_9.jpg', log, width: 4000, height: 3000, gate: gate, size: 4400000)],
-        export: FakeExport(),
-        decoder: decoder.call,
-      )));
+      await pumpApp(
+        tester,
+        Builder(
+          builder: (c) {
+            host = c;
+            return const SizedBox();
+          },
+        ),
+      );
+      unawaited(
+        Navigator.of(host).push(
+          photoViewerRoute(
+            items: [fakePhoto('IMG_9.jpg', log, width: 4000, height: 3000, gate: gate, size: 4400000)],
+            export: FakeExport(),
+            decoder: decoder.call,
+          ),
+        ),
+      );
       await tester.pump(const Duration(milliseconds: 300));
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.byType(BusySpinner), findsOneWidget);
       expect(find.text('4.2 MB'), findsOneWidget, reason: 'the size to expect');
-      expect(find.text('IMG_9.jpg  ·  4.2 MB'), findsOneWidget, reason: 'the caption already says which file, and how big');
+      expect(
+        find.text('IMG_9.jpg  ·  4.2 MB'),
+        findsOneWidget,
+        reason: 'the caption already says which file, and how big',
+      );
 
       gate.complete();
       await pumpUntil(tester, () => find.byType(BusySpinner).evaluate().isEmpty);
@@ -727,7 +840,13 @@ void main() {
 
     testWidgets('a dropped connection offers Retry, which reads again', (tester) async {
       final (decoder, log) = await prepared(tester);
-      final item = fakePhoto('a.jpg', log, width: 4000, height: 3000, error: RemoteFileException(RemoteFileErrorKind.network, 'The connection was lost'));
+      final item = fakePhoto(
+        'a.jpg',
+        log,
+        width: 4000,
+        height: 3000,
+        error: RemoteFileException(RemoteFileErrorKind.network, 'The connection was lost'),
+      );
       final rig = await _open(tester, [item], decoder);
       expect(find.text('Connection lost'), findsOneWidget);
       (item.source as FakeSource).error = null;
@@ -822,22 +941,41 @@ void main() {
   });
 
   group('crisp and see-through', () {
-    testWidgets('a 32 px picture shown at fit is drawn with the nearest neighbour; a photo is smoothed', (tester) async {
+    testWidgets('a 32 px picture shown at fit is drawn with the nearest neighbour; a photo is smoothed', (
+      tester,
+    ) async {
       final tiny = jpegWithExif(32, 32);
       final big = jpegWithExif(1200, 800);
       usePhoneSurface(tester);
       late BuildContext host;
-      await pumpApp(tester, Builder(builder: (c) {
-        host = c;
-        return const SizedBox();
-      }));
-      unawaited(Navigator.of(host).push(photoViewerRoute(
-        items: [
-          PhotoItem(id: 'tiny', name: 'tiny.jpg', source: MemoryPhotoSource(() async => tiny, size: tiny.length)),
-          PhotoItem(id: 'big', name: 'big.jpg', source: MemoryPhotoSource(() async => big, size: big.length)),
-        ],
-        export: FakeExport(),
-      )));
+      await pumpApp(
+        tester,
+        Builder(
+          builder: (c) {
+            host = c;
+            return const SizedBox();
+          },
+        ),
+      );
+      unawaited(
+        Navigator.of(host).push(
+          photoViewerRoute(
+            items: [
+              PhotoItem(
+                id: 'tiny',
+                name: 'tiny.jpg',
+                source: MemoryPhotoSource(() async => tiny, size: tiny.length),
+              ),
+              PhotoItem(
+                id: 'big',
+                name: 'big.jpg',
+                source: MemoryPhotoSource(() async => big, size: big.length),
+              ),
+            ],
+            export: FakeExport(),
+          ),
+        ),
+      );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       final model = tester.state<PhotoViewerState>(find.byType(PhotoViewer)).model;
@@ -856,29 +994,59 @@ void main() {
       final jpg = jpegWithExif(64, 64);
       usePhoneSurface(tester);
       late BuildContext host;
-      await pumpApp(tester, Builder(builder: (c) {
-        host = c;
-        return const SizedBox();
-      }));
-      unawaited(Navigator.of(host).push(photoViewerRoute(
-        items: [
-          PhotoItem(id: 'png', name: 'a.png', source: MemoryPhotoSource(() async => png, size: png.length)),
-          PhotoItem(id: 'jpg', name: 'b.jpg', source: MemoryPhotoSource(() async => jpg, size: jpg.length)),
-        ],
-        export: FakeExport(),
-      )));
+      await pumpApp(
+        tester,
+        Builder(
+          builder: (c) {
+            host = c;
+            return const SizedBox();
+          },
+        ),
+      );
+      unawaited(
+        Navigator.of(host).push(
+          photoViewerRoute(
+            items: [
+              PhotoItem(
+                id: 'png',
+                name: 'a.png',
+                source: MemoryPhotoSource(() async => png, size: png.length),
+              ),
+              PhotoItem(
+                id: 'jpg',
+                name: 'b.jpg',
+                source: MemoryPhotoSource(() async => jpg, size: jpg.length),
+              ),
+            ],
+            export: FakeExport(),
+          ),
+        ),
+      );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       final model = tester.state<PhotoViewerState>(find.byType(PhotoViewer)).model;
       await pumpUntil(tester, () => model.entryAt(1)?.ready ?? false);
       await tester.pump(const Duration(milliseconds: 50));
 
-      Finder checker() => find.descendant(of: find.byType(PhotoPage), matching: find.byWidgetPredicate((w) => w is CustomPaint && w.painter.runtimeType.toString() == '_Checkerboard'));
+      Finder checker() => find.descendant(
+        of: find.byType(PhotoPage),
+        matching: find.byWidgetPredicate(
+          (w) => w is CustomPaint && w.painter.runtimeType.toString() == '_Checkerboard',
+        ),
+      );
       expect(checker(), findsOneWidget, reason: 'only the PNG is see-through');
       model.goTo(1);
       await tester.pump(const Duration(milliseconds: 100));
-      expect(find.descendant(of: find.byType(PhotoPage), matching: find.byWidgetPredicate((w) => w is CustomPaint && w.painter.runtimeType.toString() == '_Checkerboard')), findsNothing,
-          reason: 'the png is a neighbour now, off screen and not built');
+      expect(
+        find.descendant(
+          of: find.byType(PhotoPage),
+          matching: find.byWidgetPredicate(
+            (w) => w is CustomPaint && w.painter.runtimeType.toString() == '_Checkerboard',
+          ),
+        ),
+        findsNothing,
+        reason: 'the png is a neighbour now, off screen and not built',
+      );
     });
   });
 }

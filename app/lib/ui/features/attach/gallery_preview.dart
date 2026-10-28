@@ -8,7 +8,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../data/services/phone_gallery.dart';
 import '../../../data/services/remote_files.dart' show ReadCancel, ReadCancelled;
 import '../../../data/services/thumb_cache.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import '../files/file_format.dart';
 import '../photos/photo_item.dart';
 import '../photos/photo_viewer.dart';
@@ -32,7 +34,10 @@ class GalleryPhotoSource implements PhotoSource {
     final file = await _gallery.file(asset);
     if (file == null) throw const PhotoSourceException('This picture is no longer on the phone.');
     if (file.size > photoReadCap) {
-      throw PhotoSourceException('This photo is ${formatBytes(file.size)}. The viewer opens photos up to ${formatBytes(photoReadCap)}.', tooLarge: true);
+      throw PhotoSourceException(
+        'This photo is ${formatBytes(file.size)}. The viewer opens photos up to ${formatBytes(photoReadCap)}.',
+        tooLarge: true,
+      );
     }
     final bytes = await File(file.path).readAsBytes();
     if (cancel?.cancelled ?? false) throw const ReadCancelled();
@@ -84,11 +89,7 @@ Future<void> openGalleryPreview(
       right: 0,
       bottom: 56 + MediaQuery.paddingOf(context).bottom,
       child: Center(
-        child: _SelectPill(
-          tray: tray,
-          asset: () => byId[viewer.currentEntry.item.id],
-          cache: cache,
-        ),
+        child: _SelectPill(tray: tray, asset: () => byId[viewer.currentEntry.item.id], cache: cache),
       ),
     ),
   );

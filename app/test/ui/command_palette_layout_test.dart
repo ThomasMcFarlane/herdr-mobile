@@ -39,7 +39,12 @@ void main() {
     await session.sendBlocks(const [TextBlock('second queued')]);
 
     final e = await historyEnv();
-    await pumpUnder(tester, e, AgentSessionScreen(key: ObjectKey(session), session: session), size: const Size(360, 800));
+    await pumpUnder(
+      tester,
+      e,
+      AgentSessionScreen(key: ObjectKey(session), session: session),
+      size: const Size(360, 800),
+    );
     tester.view.viewInsets = const FakeViewPadding(bottom: 300 * 2);
     addTearDown(tester.view.resetViewInsets);
     await tester.pump(const Duration(milliseconds: 200));

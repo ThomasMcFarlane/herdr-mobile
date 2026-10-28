@@ -32,7 +32,8 @@ Widget _app(Widget child, {Brightness brightness = Brightness.light}) => Materia
   ),
 );
 
-Widget _doc(String markdown, {bool soft = true}) => MdDocumentView(document: parseMd(markdown, softBreaksAsNewlines: soft));
+Widget _doc(String markdown, {bool soft = true}) =>
+    MdDocumentView(document: parseMd(markdown, softBreaksAsNewlines: soft));
 
 void _phone(WidgetTester tester, {double width = 412, double height = 892}) {
   tester.view.physicalSize = Size(width, height) * phoneDpr;
@@ -147,7 +148,11 @@ void main() {
       bool has(String s) => find.textContaining(s, findRichText: true).evaluate().isNotEmpty;
       expect(has('Heading one'), isTrue);
       expect(has('Heading two'), isTrue);
-      expect(has('A paragraph with bold, italic, gone, code and a link.\nSecond line'), isTrue, reason: 'soft breaks are newlines in chat prose');
+      expect(
+        has('A paragraph with bold, italic, gone, code and a link.\nSecond line'),
+        isTrue,
+        reason: 'soft breaks are newlines in chat prose',
+      );
       expect(has('bullet one'), isTrue);
       expect(has('nested bullet'), isTrue);
       expect(has('3.'), isTrue);
@@ -215,7 +220,9 @@ void main() {
     testWidgets('a tapped link opens the link sheet with the full address', (tester) async {
       final session = FakeAgentSession();
       await tester.pumpWidget(
-        _app(AgentMdScope(session: session, child: _doc('See the [docs](https://example.com/a/very/long/path?x=1) now.'))),
+        _app(
+          AgentMdScope(session: session, child: _doc('See the [docs](https://example.com/a/very/long/path?x=1) now.')),
+        ),
       );
       await _tapSpan(tester, 'docs');
       await tester.pumpAndSettle();
@@ -277,7 +284,9 @@ void main() {
         _app(
           MdActions(
             onLink: (context, url) => taps.add(url),
-            child: _doc('Open http://localhost:8791/ or `http://localhost:8792/x?a=1` but `curl http://localhost:8793/` is a command.'),
+            child: _doc(
+              'Open http://localhost:8791/ or `http://localhost:8792/x?a=1` but `curl http://localhost:8793/` is a command.',
+            ),
           ),
         ),
       );
@@ -315,7 +324,9 @@ void main() {
         _app(
           MdActions(
             onPath: (context, path, line) {},
-            child: _doc('Run /model then /compact in src/ (v1.2.3), and/or edit lib/a.dart:9, see `/resume` and `lib/ui/`.'),
+            child: _doc(
+              'Run /model then /compact in src/ (v1.2.3), and/or edit lib/a.dart:9, see `/resume` and `lib/ui/`.',
+            ),
           ),
         ),
       );
@@ -423,7 +434,11 @@ void main() {
           StatefulBuilder(
             builder: (context, setState) {
               set = setState;
-              return MdBlockView(block: blocks.single, expanded: expanded, onToggleExpanded: () => setState(() => expanded = !expanded));
+              return MdBlockView(
+                block: blocks.single,
+                expanded: expanded,
+                onToggleExpanded: () => setState(() => expanded = !expanded),
+              );
             },
           ),
         ),
@@ -458,7 +473,10 @@ void main() {
         final block = parseMd('```dart\n$code\n```').blocks.single;
         await tester.pumpWidget(const SizedBox());
         await tester.pumpWidget(_app(MdBlockView(block: block, tail: tail)));
-        return _spans(tester, find.byType(RichText)).where((s) => s.$1.contains('final') || s.$1.contains('class') || s.$1.contains('x')).toList();
+        return _spans(
+          tester,
+          find.byType(RichText),
+        ).where((s) => s.$1.contains('final') || s.$1.contains('class') || s.$1.contains('x')).toList();
       }
 
       final done = await spansOf('final a = 1;\nclass', tail: false);
@@ -492,7 +510,9 @@ void main() {
       expect(tester.getSize(find.byType(MdTableView)).width, lessThanOrEqualTo(320));
       final scroll = find.descendant(of: find.byType(MdTableView), matching: find.byType(SingleChildScrollView));
       expect(scroll, findsOneWidget);
-      final position = tester.state<ScrollableState>(find.descendant(of: scroll, matching: find.byType(Scrollable))).position;
+      final position = tester
+          .state<ScrollableState>(find.descendant(of: scroll, matching: find.byType(Scrollable)))
+          .position;
       expect(position.maxScrollExtent, greaterThan(1000));
       await tester.dragFrom(tester.getTopLeft(scroll) + const Offset(150, 20), const Offset(-300, 0));
       await tester.pump();
@@ -513,7 +533,8 @@ void main() {
         _app(_doc('| Left | Right |\n| :-- | --: |\n| ${'a very long cell that has to wrap ' * 4} | 7 |')),
       );
       expect(tester.takeException(), isNull);
-      RichText cell(String text) => tester.widget<RichText>(find.byWidgetPredicate((w) => w is RichText && w.text.toPlainText() == text));
+      RichText cell(String text) =>
+          tester.widget<RichText>(find.byWidgetPredicate((w) => w is RichText && w.text.toPlainText() == text));
       expect((cell('Left').text as TextSpan).style!.fontWeight, FontWeight.w600);
       expect(cell('Right').textAlign, TextAlign.right);
       expect(cell('7').textAlign, TextAlign.right);
@@ -564,7 +585,10 @@ void main() {
               onSelectionChanged: (content) => selected = content?.plainText,
               child: ListView.builder(
                 itemCount: blocks.length,
-                itemBuilder: (context, i) => Padding(padding: const EdgeInsets.only(bottom: 8), child: MdBlockView(block: blocks[i])),
+                itemBuilder: (context, i) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: MdBlockView(block: blocks[i]),
+                ),
               ),
             ),
           ),
@@ -572,7 +596,10 @@ void main() {
       );
       final first = find.byWidgetPredicate((w) => w is RichText && w.text.toPlainText() == 'First paragraph here.');
       final last = find.byWidgetPredicate((w) => w is RichText && w.text.toPlainText() == 'Last paragraph there.');
-      final gesture = await tester.startGesture(tester.getTopLeft(first) + const Offset(2, 10), kind: PointerDeviceKind.mouse);
+      final gesture = await tester.startGesture(
+        tester.getTopLeft(first) + const Offset(2, 10),
+        kind: PointerDeviceKind.mouse,
+      );
       await tester.pump();
       await gesture.moveTo(tester.getBottomRight(last) - const Offset(2, 8));
       await tester.pump();
@@ -587,8 +614,17 @@ void main() {
 
     testWidgets('semantics: headings, code, table and list items', (tester) async {
       final handle = tester.ensureSemantics();
-      await tester.pumpWidget(_app(_doc('# Title\n\nbody text\n\n- one\n- two\n\n```dart\na\nb\nc\n```\n\n| x | y | z |\n|-|-|-|\n| 1 | 2 | 3 |\n| 4 | 5 | 6 |')));
-      expect(tester.getSemantics(find.text('Title', findRichText: true)), matchesSemantics(label: 'Title', isHeader: true, textDirection: TextDirection.ltr));
+      await tester.pumpWidget(
+        _app(
+          _doc(
+            '# Title\n\nbody text\n\n- one\n- two\n\n```dart\na\nb\nc\n```\n\n| x | y | z |\n|-|-|-|\n| 1 | 2 | 3 |\n| 4 | 5 | 6 |',
+          ),
+        ),
+      );
+      expect(
+        tester.getSemantics(find.text('Title', findRichText: true)),
+        matchesSemantics(label: 'Title', isHeader: true, textDirection: TextDirection.ltr),
+      );
       expect(find.bySemanticsLabel('body text'), findsOneWidget);
       expect(find.bySemanticsLabel('one'), findsOneWidget);
       expect(find.bySemanticsLabel('Code, dart, 3 lines'), findsOneWidget);
@@ -610,7 +646,9 @@ void main() {
       }
 
       walk(tester.getSemantics(find.byType(Scaffold)));
-      final link = nodes.where((n) => n.label.contains('the docs') && n.getSemanticsData().hasAction(SemanticsAction.tap));
+      final link = nodes.where(
+        (n) => n.label.contains('the docs') && n.getSemanticsData().hasAction(SemanticsAction.tap),
+      );
       expect(link, isNotEmpty);
       handle.dispose();
     });
@@ -665,7 +703,12 @@ void main() {
 
     testWidgets('a README keeps CommonMark soft breaks (a newline is a space)', (tester) async {
       await tester.pumpWidget(
-        _app(SizedBox(height: 400, child: MarkdownView(document: docOf('# herdr mobile\n\nline one\nline two\n\n- a\n- b')))),
+        _app(
+          SizedBox(
+            height: 400,
+            child: MarkdownView(document: docOf('# herdr mobile\n\nline one\nline two\n\n- a\n- b')),
+          ),
+        ),
       );
       expect(find.textContaining('line one line two', findRichText: true), findsOneWidget);
       expect(find.textContaining('line one\nline two', findRichText: true), findsNothing);
@@ -673,7 +716,9 @@ void main() {
     });
 
     testWidgets('a link in a README opens the link sheet', (tester) async {
-      await tester.pumpWidget(_app(SizedBox(height: 400, child: MarkdownView(document: docOf('see [the site](https://example.com/x)')))));
+      await tester.pumpWidget(
+        _app(SizedBox(height: 400, child: MarkdownView(document: docOf('see [the site](https://example.com/x)')))),
+      );
       await _tapSpan(tester, 'the site');
       await tester.pumpAndSettle();
       expect(find.text('https://example.com/x'), findsOneWidget);
@@ -696,24 +741,30 @@ void main() {
         ),
       );
       final width = tester.getSize(find.byType(Scaffold)).width - 32;
-      final paragraph = find.byWidgetPredicate((w) => w is RichText && w.text.toPlainText().startsWith('A long paragraph'));
+      final paragraph = find.byWidgetPredicate(
+        (w) => w is RichText && w.text.toPlainText().startsWith('A long paragraph'),
+      );
       expect(tester.getSize(paragraph).width, lessThanOrEqualTo(560));
       expect(tester.getSize(paragraph).width, greaterThan(500));
       expect(tester.getSize(find.byType(MdCodeBlock)).width, width);
     });
 
-    testWidgets('AgentTextRow draws a block and passes Show all through with its key; ThinkingRow reads Markdown', (tester) async {
+    testWidgets('AgentTextRow draws a block and passes Show all through with its key; ThinkingRow reads Markdown', (
+      tester,
+    ) async {
       final toggled = <String>[];
       final code = parseMd('```\n${List.generate(80, (i) => 'l$i').join('\n')}\n```').blocks.single;
       await tester.pumpWidget(
-        _app(
-          AgentTextRow(rowKey: 'm#3', block: code, gap: 10, expanded: false, onToggle: toggled.add),
-        ),
+        _app(AgentTextRow(rowKey: 'm#3', block: code, gap: 10, expanded: false, onToggle: toggled.add)),
       );
       await tester.tap(find.text('Show all'));
       expect(toggled, [allKey('m#3')]);
 
-      final message = TranscriptMessage(key: 't', role: MessageRole.thought, blocks: const [TextBlock('**Plan:** read `lib/a.dart`')]);
+      final message = TranscriptMessage(
+        key: 't',
+        role: MessageRole.thought,
+        blocks: const [TextBlock('**Plan:** read `lib/a.dart`')],
+      );
       await tester.pumpWidget(
         _app(ThinkingRow(rowKey: 't', thoughts: [message], gap: 0, open: true, onToggle: (_) {})),
       );
@@ -728,7 +779,10 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             theme: AppTheme.light(),
-            builder: (context, child) => MediaQuery(data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.6)), child: child!),
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.6)),
+              child: child!,
+            ),
             home: Scaffold(body: SingleChildScrollView(child: _doc(entry.value))),
           ),
         );

@@ -36,12 +36,12 @@ const _root2 = '/srv/src/api-gateway';
 String _wt(String repo, String name) => '/home/dev/.herdr/worktrees/$repo/$name';
 
 Map<String, dynamic> _worktree(String key, String name, String root, String path, bool linked) => {
-      'checkout_path': path,
-      'is_linked_worktree': linked,
-      'repo_key': '$root/.git',
-      'repo_name': key,
-      'repo_root': root,
-    };
+  'checkout_path': path,
+  'is_linked_worktree': linked,
+  'repo_key': '$root/.git',
+  'repo_name': key,
+  'repo_root': root,
+};
 
 final _longBranch = 'feature/PAY-1234-migrate-the-ledger-to-the-new-posting-engine'.substring(0, 60);
 
@@ -84,22 +84,41 @@ Map<String, dynamic> _snapshot() {
     ws(id, _worktree(_repo1, names[i], _root1, _wt(_repo1, names[i]), true), label: names[i]);
     final n = i == 2 ? 31 : 1;
     for (var k = 0; k < n; k++) {
-      pane('$id:p$k', id, _wt(_repo1, names[i]), agent: i % 3 == 0 ? 'omp' : 'claude', status: k % 4 == 0 ? 'working' : 'idle');
+      pane(
+        '$id:p$k',
+        id,
+        _wt(_repo1, names[i]),
+        agent: i % 3 == 0 ? 'omp' : 'claude',
+        status: k % 4 == 0 ? 'working' : 'idle',
+      );
     }
   }
   ws('w20', _worktree('api-gateway', 'main', _root2, _root2, false), label: 'api-gateway');
   pane('w20:p1', 'w20', _root2, agent: 'omp', status: 'working');
-  ws('w21', _worktree('api-gateway', 'fix-rate-limit', _root2, _wt('api-gateway', 'fix-rate-limit'), true), label: 'fix-rate-limit');
-  pane('w21:p1', 'w21', _wt('api-gateway', 'fix-rate-limit'), agent: 'claude', status: 'blocked', title: 'Allow: rm -rf build/ ?');
+  ws(
+    'w21',
+    _worktree('api-gateway', 'fix-rate-limit', _root2, _wt('api-gateway', 'fix-rate-limit'), true),
+    label: 'fix-rate-limit',
+  );
+  pane(
+    'w21:p1',
+    'w21',
+    _wt('api-gateway', 'fix-rate-limit'),
+    agent: 'claude',
+    status: 'blocked',
+    title: 'Allow: rm -rf build/ ?',
+  );
   ws('w22', null, label: 'Phone sessions');
-  pane('w22:p1', 'w22', '${_wt(_repo1, names[1])}/app', agent: 'omp', status: 'working', title: 'Fix the flaky retry test');
+  pane(
+    'w22:p1',
+    'w22',
+    '${_wt(_repo1, names[1])}/app',
+    agent: 'omp',
+    status: 'working',
+    title: 'Fix the flaky retry test',
+  );
   pane('w22:p2', 'w22', '/tmp/scratch', agent: 'omp', status: 'done', title: 'Summarise the incident notes');
-  return {
-    'version': '0.9.3',
-    'workspaces': workspaces,
-    'tabs': tabs,
-    'panes': panes,
-  };
+  return {'version': '0.9.3', 'workspaces': workspaces, 'tabs': tabs, 'panes': panes};
 }
 
 void main() {
@@ -138,8 +157,18 @@ void main() {
       'type': 'worktree_list',
       'worktrees': [
         {'path': _root1, 'branch': 'main', 'label': 'x', 'is_linked_worktree': false},
-        {'path': _wt(_repo1, 'worktree-quiet-stone-dc35'), 'branch': _longBranch, 'label': 'x', 'is_linked_worktree': true},
-        {'path': _wt(_repo1, 'worktree-lucky-cloud-848c'), 'branch': 'autoresearch/ci-speed', 'label': 'x', 'is_linked_worktree': true},
+        {
+          'path': _wt(_repo1, 'worktree-quiet-stone-dc35'),
+          'branch': _longBranch,
+          'label': 'x',
+          'is_linked_worktree': true,
+        },
+        {
+          'path': _wt(_repo1, 'worktree-lucky-cloud-848c'),
+          'branch': 'autoresearch/ci-speed',
+          'label': 'x',
+          'is_linked_worktree': true,
+        },
         {'path': _root2, 'branch': 'main', 'label': 'x', 'is_linked_worktree': false},
       ],
     };
@@ -173,41 +202,43 @@ void main() {
   }
 
   testWidgets('machine: worst case, light 412', (tester) => machineShot(tester, 'machine-light-412'));
-  testWidgets('machine: worst case, dark 320 at 2x', (tester) => machineShot(
-        tester,
-        'machine-dark-320-2x',
-        brightness: Brightness.dark,
-        size: const Size(320, 640),
-        scale: 2,
-      ));
-  testWidgets('machine: the 31-pane checkout past its cap', (tester) => machineShot(
-        tester,
-        'machine-show-all-light-412',
-        after: (t) async {
-          final f = find.text('Show all 31 panes');
-          await t.ensureVisible(f);
-          await settle(t);
-        },
-      ));
-  testWidgets('machine: a blocked agent in a collapsed repo', (tester) => machineShot(
-        tester,
-        'machine-collapsed-blocked-dark-412',
-        brightness: Brightness.dark,
-        after: (t) async {
-          await t.scrollUntilVisible(find.text('api-gateway'), 400, scrollable: find.byType(Scrollable).first);
-          await t.tap(find.text('api-gateway').first);
-          await settle(t);
-          final f = find.text('Phone sessions');
-          await t.ensureVisible(f);
-          await settle(t);
-        },
-      ));
-  testWidgets('machine: offline dims everything and turns the buttons off', (tester) => machineShot(
-        tester,
-        'machine-offline-dark-412',
-        brightness: Brightness.dark,
-        offline: true,
-      ));
+  testWidgets(
+    'machine: worst case, dark 320 at 2x',
+    (tester) =>
+        machineShot(tester, 'machine-dark-320-2x', brightness: Brightness.dark, size: const Size(320, 640), scale: 2),
+  );
+  testWidgets(
+    'machine: the 31-pane checkout past its cap',
+    (tester) => machineShot(
+      tester,
+      'machine-show-all-light-412',
+      after: (t) async {
+        final f = find.text('Show all 31 panes');
+        await t.ensureVisible(f);
+        await settle(t);
+      },
+    ),
+  );
+  testWidgets(
+    'machine: a blocked agent in a collapsed repo',
+    (tester) => machineShot(
+      tester,
+      'machine-collapsed-blocked-dark-412',
+      brightness: Brightness.dark,
+      after: (t) async {
+        await t.scrollUntilVisible(find.text('api-gateway'), 400, scrollable: find.byType(Scrollable).first);
+        await t.tap(find.text('api-gateway').first);
+        await settle(t);
+        final f = find.text('Phone sessions');
+        await t.ensureVisible(f);
+        await settle(t);
+      },
+    ),
+  );
+  testWidgets(
+    'machine: offline dims everything and turns the buttons off',
+    (tester) => machineShot(tester, 'machine-offline-dark-412', brightness: Brightness.dark, offline: true),
+  );
 
   // The release still: the invented demo fleet's studio-mac, where payments-api
   // has a main checkout and two worktrees (no private names).
@@ -241,20 +272,29 @@ void main() {
       (profile: profileOf('a', 'build-box'), snapshot: snapshotWith(const [])),
     ], waitOnline: false);
     h.stubs['a']!.on['worktree.list'] = (_) => {
-          'type': 'worktree_list',
-          'worktrees': [
-            {'path': _root1, 'label': 'x', 'is_linked_worktree': false, 'branch': 'main', 'open_workspace_id': 'w1'},
-            {'path': _wt(_repo1, 'worktree-quiet-stone-dc35'), 'label': 'x', 'is_linked_worktree': true, 'branch': _longBranch, 'open_workspace_id': 'w3'},
-            {'path': '/tmp/proto-mermaid', 'label': 'x', 'is_linked_worktree': true},
-            for (var i = 0; i < 9; i++)
-              {'path': _wt(_repo1, 'worktree-extra-$i'), 'label': 'x', 'is_linked_worktree': true, 'branch': 'extra/$i'},
-          ],
-        };
+      'type': 'worktree_list',
+      'worktrees': [
+        {'path': _root1, 'label': 'x', 'is_linked_worktree': false, 'branch': 'main', 'open_workspace_id': 'w1'},
+        {
+          'path': _wt(_repo1, 'worktree-quiet-stone-dc35'),
+          'label': 'x',
+          'is_linked_worktree': true,
+          'branch': _longBranch,
+          'open_workspace_id': 'w3',
+        },
+        {'path': '/tmp/proto-mermaid', 'label': 'x', 'is_linked_worktree': true},
+        for (var i = 0; i < 9; i++)
+          {'path': _wt(_repo1, 'worktree-extra-$i'), 'label': 'x', 'is_linked_worktree': true, 'branch': 'extra/$i'},
+      ],
+    };
     tester.platformDispatcher.textScaleFactorTestValue = scale;
     addTearDown(tester.platformDispatcher.clearAllTestValues);
     await shoot(
       tester,
-      const NewAgentSessionScreen(machineId: 'a', prefill: SessionPrefill(machineId: 'a', folder: _root1)),
+      const NewAgentSessionScreen(
+        machineId: 'a',
+        prefill: SessionPrefill(machineId: 'a', folder: _root1),
+      ),
       '$out/$name.png',
       brightness: brightness,
       size: size,
@@ -300,13 +340,14 @@ void main() {
   }
 
   testWidgets('form: Checkout row with a repo folder', (tester) => formShot(tester, 'form-row-light-412'));
-  testWidgets('form: the picker with 12 checkouts, dark 320 at 2x', (tester) => formShot(
-        tester,
-        'form-picker-dark-320-2x',
-        brightness: Brightness.dark,
-        size: const Size(320, 640),
-        scale: 2,
-      ));
+  testWidgets(
+    'form: the picker with 12 checkouts, dark 320 at 2x',
+    (tester) =>
+        formShot(tester, 'form-picker-dark-320-2x', brightness: Brightness.dark, size: const Size(320, 640), scale: 2),
+  );
   testWidgets('form: New worktree with the keyboard up', (tester) => formShot(tester, 'form-new-light-412'));
-  testWidgets('form: New worktree starts with a suggested branch (release still)', (tester) => formShot(tester, 'form-new-prefilled-light-412'));
+  testWidgets(
+    'form: New worktree starts with a suggested branch (release still)',
+    (tester) => formShot(tester, 'form-new-prefilled-light-412'),
+  );
 }

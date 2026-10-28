@@ -7,7 +7,9 @@ import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 
 import '../../../data/repositories/terminal_settings.dart'
     show defaultTerminalFontSize, maxTerminalFontSize, minTerminalFontSize;
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'terminal_cells.dart';
 import 'terminal_document.dart';
 import 'terminal_jump.dart';
@@ -31,9 +33,9 @@ enum ZoomDetent { none, step, stop }
 /// (8.25 on the way to 8) stays silent: the stop follows within a quarter pixel.
 class ZoomDetents {
   ZoomDetents(double start)
-      : _step = start.round(),
-        _minArmed = start > minTerminalFontSize,
-        _maxArmed = start < maxTerminalFontSize;
+    : _step = start.round(),
+      _minArmed = start > minTerminalFontSize,
+      _maxArmed = start < maxTerminalFontSize;
 
   int _step;
   bool _minArmed;
@@ -246,17 +248,13 @@ class _TerminalViewState extends State<TerminalView> {
   /// Returns whether the metrics (and so the row height) changed.
   bool _updateMetrics() {
     final scaled = MediaQuery.textScalerOf(context).scale(widget.fontSize);
-    final fontSize =
-        math.min(math.max(scaled, widget.fontSize), widget.fontSize * 1.6);
+    final fontSize = math.min(math.max(scaled, widget.fontSize), widget.fontSize * 1.6);
     final dpr = MediaQuery.devicePixelRatioOf(context);
     // The theme's palette: a theme switch lands here through
     // didChangeDependencies and prepares every row again in the new colours.
     final palette = context.terminal;
     final old = _metrics;
-    if (old != null &&
-        old.fontSize == fontSize &&
-        old.dpr == dpr &&
-        identical(old.palette, palette)) {
+    if (old != null && old.fontSize == fontSize && old.dpr == dpr && identical(old.palette, palette)) {
       return false;
     }
     final metrics = CellMetrics.measure(fontSize, dpr, palette: palette);
@@ -292,8 +290,7 @@ class _TerminalViewState extends State<TerminalView> {
         _edge.value = (away: edge.away, unseen: edge.unseen, needsYou: needsYou);
       }
     }
-    final contentChanged = widget.text != oldWidget.text ||
-        !identical(widget.history, oldWidget.history);
+    final contentChanged = widget.text != oldWidget.text || !identical(widget.history, oldWidget.history);
     final wrapChanged = widget.wrap != oldWidget.wrap;
     final sizeChanged = widget.fontSize != oldWidget.fontSize;
     if (!contentChanged && !wrapChanged && !sizeChanged) return;
@@ -329,18 +326,13 @@ class _TerminalViewState extends State<TerminalView> {
     if (place != null) {
       _restorePlace(place);
     } else {
-      final prependedRows =
-          _startOfLine(math.min(prepended, _doc.lines.length));
+      final prependedRows = _startOfLine(math.min(prepended, _doc.lines.length));
       // Rows added at the end, net of what the read window dropped.
       final appended = _rowCount - previousRows + droppedRows - prependedRows;
       final moved = _following ? 0 : appended;
       if (!_following && appended > 0) {
         final edge = _edge.value;
-        _edge.value = (
-          away: true,
-          unseen: edge.unseen + appended,
-          needsYou: edge.needsYou,
-        );
+        _edge.value = (away: true, unseen: edge.unseen + appended, needsYou: edge.needsYou);
       }
       final position = _scroll.position as _AnchoringPosition;
       position.anchorBy(moved * _metrics!.lineHeight);
@@ -412,11 +404,7 @@ class _TerminalViewState extends State<TerminalView> {
     final item = fromBottom.floor();
     final row = math.max(0, _rowCount - 1 - item);
     final line = _lineOfRow(row);
-    return (
-      id: _doc.base + line,
-      part: row - _startOfLine(line),
-      fraction: fromBottom - item,
-    );
+    return (id: _doc.base + line, part: row - _startOfLine(line), fraction: fromBottom - item);
   }
 
   /// Scrolls to [place] again after the rows or their height changed.
@@ -453,8 +441,7 @@ class _TerminalViewState extends State<TerminalView> {
     final position = _scroll.position;
     if (!position.hasContentDimensions) return;
     final now = (
-      nearTop: position.maxScrollExtent - position.pixels <
-          _nearTopViewports * position.viewportDimension,
+      nearTop: position.maxScrollExtent - position.pixels < _nearTopViewports * position.viewportDimension,
       following: position.pixels <= _followSlop,
     );
     if (now == _reported) return;
@@ -471,13 +458,10 @@ class _TerminalViewState extends State<TerminalView> {
     final position = _scroll.position;
     final distance = position.pixels;
     if (distance <= 0) return;
-    if (Motion.reduced(context) ||
-        distance >= _animatedJumpViewports * position.viewportDimension) {
+    if (Motion.reduced(context) || distance >= _animatedJumpViewports * position.viewportDimension) {
       _scroll.jumpTo(0);
     } else {
-      unawaited(
-        _scroll.animateTo(0, duration: Motion.expand, curve: Motion.easeOut),
-      );
+      unawaited(_scroll.animateTo(0, duration: Motion.expand, curve: Motion.easeOut));
     }
   }
 
@@ -517,9 +501,7 @@ class _TerminalViewState extends State<TerminalView> {
     }
     final scaled = _pinchStartSize * _pinchDistance() / _pinchStartDistance;
     final stepped = (scaled / _pinchStep).round() * _pinchStep;
-    final size = stepped
-        .clamp(minTerminalFontSize, maxTerminalFontSize)
-        .toDouble();
+    final size = stepped.clamp(minTerminalFontSize, maxTerminalFontSize).toDouble();
     if (size == _pinchSize) return;
     _pinchSize = size;
     switch (_detents.update(size)) {
@@ -545,8 +527,7 @@ class _TerminalViewState extends State<TerminalView> {
     }
   }
 
-  double _pinchDistance() =>
-      (_touches[_pinchA]! - _touches[_pinchB]!).distance;
+  double _pinchDistance() => (_touches[_pinchA]! - _touches[_pinchB]!).distance;
 
   /// What the last pass of the [LayoutBuilder] below built, and what it was
   /// built for. The keyboard changes the viewport's HEIGHT every frame of its
@@ -584,14 +565,11 @@ class _TerminalViewState extends State<TerminalView> {
                 builder: (context, box) {
                   final env = _rowEnv(context, metrics);
                   final cached = _body;
-                  if (cached != null &&
-                      _bodyWidth == box.maxWidth &&
-                      identical(_bodyEnv, env)) {
+                  if (cached != null && _bodyWidth == box.maxWidth && identical(_bodyEnv, env)) {
                     return cached;
                   }
                   final viewWidth = math.max(0.0, box.maxWidth - 2 * pad);
-                  final columns =
-                      math.max(1, (viewWidth / metrics.advance).floor());
+                  final columns = math.max(1, (viewWidth / metrics.advance).floor());
                   if (columns != _viewColumns) {
                     _viewColumns = columns;
                     if (wrap) _layoutRows();
@@ -604,8 +582,7 @@ class _TerminalViewState extends State<TerminalView> {
                   final width = wrap && !sideways
                       ? viewWidth
                       : math.max(
-                          (metrics.columnEdge(wrap ? _doc.tableColumns : _doc.columns) + 1) /
-                              metrics.dpr,
+                          (metrics.columnEdge(wrap ? _doc.tableColumns : _doc.columns) + 1) / metrics.dpr,
                           viewWidth,
                         );
                   final height = _rowCount * metrics.lineHeight + 2 * Gap.sm;
@@ -614,9 +591,7 @@ class _TerminalViewState extends State<TerminalView> {
                     valueListenable: _pinching,
                     builder: (context, pinching, _) => SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
-                      physics: (wrap && !sideways) || pinching
-                          ? const NeverScrollableScrollPhysics()
-                          : null,
+                      physics: (wrap && !sideways) || pinching ? const NeverScrollableScrollPhysics() : null,
                       padding: EdgeInsets.symmetric(horizontal: pad),
                       child: SizedBox(
                         width: width,
@@ -629,57 +604,48 @@ class _TerminalViewState extends State<TerminalView> {
                         child: SelectionContainer(
                           delegate: _selection,
                           child: CustomScrollView(
-                          reverse: true,
-                          // Rows are cheap to build as they come into view and
-                          // costly to keep (each streamed update walks every
-                          // live row), so keep few beyond the screen.
-                          scrollCacheExtent:
-                              ScrollCacheExtent.pixels(metrics.lineHeight * 4),
-                          controller: _scroll,
-                          physics: pinching
-                              ? const NeverScrollableScrollPhysics()
-                              : null,
-                          slivers: [
-                            SliverPadding(
-                              padding: const EdgeInsets.only(bottom: Gap.sm),
-                              sliver: SliverFixedExtentList(
-                                key: _list,
-                                itemExtent: metrics.lineHeight,
-                                delegate: _RowsDelegate(
+                            reverse: true,
+                            // Rows are cheap to build as they come into view and
+                            // costly to keep (each streamed update walks every
+                            // live row), so keep few beyond the screen.
+                            scrollCacheExtent: ScrollCacheExtent.pixels(metrics.lineHeight * 4),
+                            controller: _scroll,
+                            physics: pinching ? const NeverScrollableScrollPhysics() : null,
+                            slivers: [
+                              SliverPadding(
+                                padding: const EdgeInsets.only(bottom: Gap.sm),
+                                sliver: SliverFixedExtentList(
+                                  key: _list,
                                   itemExtent: metrics.lineHeight,
-                                  (context, i) {
-                                    final row = _rowCount - 1 - i;
-                                    final index = _lineOfRow(row);
-                                    final part = row - _startOfLine(index);
-                                    final line = _doc.lines[index];
-                                    final columns = _wrapColumns;
-                                    return cache
-                                        .lineFor(
-                                          line.rows(columns)[part],
-                                          links: onLinkTap == null
-                                              ? null
-                                              : () => line.linksOnRow(part, columns),
-                                        )
-                                        .view(
-                                          ValueKey((_doc.base + index, part)),
-                                          env,
-                                          onLinkTap,
-                                        );
-                                  },
-                                  childCount: _rowCount,
-                                  addAutomaticKeepAlives: false,
-                                  addSemanticIndexes: false,
-                                  findChildIndexCallback: _indexOfKey,
+                                  delegate: _RowsDelegate(
+                                    itemExtent: metrics.lineHeight,
+                                    (context, i) {
+                                      final row = _rowCount - 1 - i;
+                                      final index = _lineOfRow(row);
+                                      final part = row - _startOfLine(index);
+                                      final line = _doc.lines[index];
+                                      final columns = _wrapColumns;
+                                      return cache
+                                          .lineFor(
+                                            line.rows(columns)[part],
+                                            links: onLinkTap == null ? null : () => line.linksOnRow(part, columns),
+                                          )
+                                          .view(ValueKey((_doc.base + index, part)), env, onLinkTap);
+                                    },
+                                    childCount: _rowCount,
+                                    addAutomaticKeepAlives: false,
+                                    addSemanticIndexes: false,
+                                    findChildIndexCallback: _indexOfKey,
+                                  ),
                                 ),
                               ),
-                            ),
-                            SliverToBoxAdapter(
-                              child: top == TerminalTop.none
-                                  ? const SizedBox(height: Gap.sm)
-                                  : _TopRow(top: top, width: viewWidth),
-                            ),
-                          ],
-                        ),
+                              SliverToBoxAdapter(
+                                child: top == TerminalTop.none
+                                    ? const SizedBox(height: Gap.sm)
+                                    : _TopRow(top: top, width: viewWidth),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -725,14 +691,8 @@ class _TopRow extends StatelessWidget {
     final secondary = Type.secondary.copyWith(color: context.terminal.dim);
     final (String title, String? detail) = switch (top) {
       TerminalTop.loading => ('Loading earlier output…', null),
-      TerminalTop.serverLimit => (
-          'Earlier output is not available.',
-          'herdr serves the last 1000 rows of a pane.',
-        ),
-      TerminalTop.localLimit => (
-          'Earlier output is not kept.',
-          'The phone holds the most recent rows only.',
-        ),
+      TerminalTop.serverLimit => ('Earlier output is not available.', 'herdr serves the last 1000 rows of a pane.'),
+      TerminalTop.localLimit => ('Earlier output is not kept.', 'The phone holds the most recent rows only.'),
       TerminalTop.none => ('', null),
     };
     // Align, so the box may be narrower than the (possibly wider) content.
@@ -813,11 +773,7 @@ class _AnchoringPosition extends ScrollPositionWithSingleContext {
 
 class _AnchoringController extends ScrollController {
   @override
-  ScrollPosition createScrollPosition(
-    ScrollPhysics physics,
-    ScrollContext context,
-    ScrollPosition? oldPosition,
-  ) =>
+  ScrollPosition createScrollPosition(ScrollPhysics physics, ScrollContext context, ScrollPosition? oldPosition) =>
       _AnchoringPosition(
         physics: physics,
         context: context,

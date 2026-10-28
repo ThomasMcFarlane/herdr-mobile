@@ -10,67 +10,62 @@ import 'fake_fs.dart';
 
 /// Builds a `session.snapshot` payload.
 Map<String, dynamic> snapshotJson({
-  List<({String id, String label})> workspaces = const [
-    (id: 'w1', label: 'main'),
-  ],
+  List<({String id, String label})> workspaces = const [(id: 'w1', label: 'main')],
   List<({String id, String ws, String? agent, String status})> panes = const [],
   String version = '9.9.9',
 
   /// `completion_seq` per pane id, sent the way herdr does: on the snapshot's
   /// `agents` entries.
   Map<String, int> completionSeq = const {},
-}) =>
-    {
-      'version': version,
-      'workspaces': [
-        for (final (i, w) in workspaces.indexed)
-          {
-            'workspace_id': w.id,
-            'number': i + 1,
-            'label': w.label,
-            'focused': i == 0,
-            'pane_count': panes.where((p) => p.ws == w.id).length,
-            'tab_count': 1,
-            'agent_status': 'idle',
-          },
-      ],
-      'tabs': [
-        for (final w in workspaces)
-          {
-            'tab_id': '${w.id}:t1',
-            'workspace_id': w.id,
-            'number': 1,
-            'label': '1',
-            'focused': false,
-            'pane_count': panes.where((p) => p.ws == w.id).length,
-            'agent_status': 'idle',
-          },
-      ],
-      'panes': [
-        for (final p in panes)
-          {
-            'pane_id': p.id,
-            'workspace_id': p.ws,
-            'tab_id': '${p.ws}:t1',
-            'focused': false,
-            'cwd': '/work/${p.ws}',
-            'terminal_title_stripped': 'title ${p.id}',
-            'agent_status': p.status,
-            'revision': 1,
-            if (p.agent != null) 'agent': p.agent,
-          },
-      ],
-      if (completionSeq.isNotEmpty)
-        'agents': [
-          for (final MapEntry(:key, :value) in completionSeq.entries)
-            {'pane_id': key, 'completion_seq': value},
-        ],
-    };
+}) => {
+  'version': version,
+  'workspaces': [
+    for (final (i, w) in workspaces.indexed)
+      {
+        'workspace_id': w.id,
+        'number': i + 1,
+        'label': w.label,
+        'focused': i == 0,
+        'pane_count': panes.where((p) => p.ws == w.id).length,
+        'tab_count': 1,
+        'agent_status': 'idle',
+      },
+  ],
+  'tabs': [
+    for (final w in workspaces)
+      {
+        'tab_id': '${w.id}:t1',
+        'workspace_id': w.id,
+        'number': 1,
+        'label': '1',
+        'focused': false,
+        'pane_count': panes.where((p) => p.ws == w.id).length,
+        'agent_status': 'idle',
+      },
+  ],
+  'panes': [
+    for (final p in panes)
+      {
+        'pane_id': p.id,
+        'workspace_id': p.ws,
+        'tab_id': '${p.ws}:t1',
+        'focused': false,
+        'cwd': '/work/${p.ws}',
+        'terminal_title_stripped': 'title ${p.id}',
+        'agent_status': p.status,
+        'revision': 1,
+        if (p.agent != null) 'agent': p.agent,
+      },
+  ],
+  if (completionSeq.isNotEmpty)
+    'agents': [
+      for (final MapEntry(:key, :value) in completionSeq.entries) {'pane_id': key, 'completion_seq': value},
+    ],
+};
 
 /// Scriptable in-memory transport.
 class FakeTransport implements HerdrTransport {
-  FakeTransport([Map<String, dynamic>? snapshot])
-      : snapshot = snapshot ?? snapshotJson();
+  FakeTransport([Map<String, dynamic>? snapshot]) : snapshot = snapshot ?? snapshotJson();
 
   Map<String, dynamic> snapshot;
 
@@ -88,10 +83,7 @@ class FakeTransport implements HerdrTransport {
   final List<List<Map<String, dynamic>>> subscribed = [];
 
   @override
-  Future<Map<String, dynamic>> request(
-    String method, [
-    Map<String, dynamic> params = const {},
-  ]) async {
+  Future<Map<String, dynamic>> request(String method, [Map<String, dynamic> params = const {}]) async {
     calls.add((method, params));
     if (failure != null) throw failure!;
     return switch (method) {
@@ -118,8 +110,7 @@ class FakeTransport implements HerdrTransport {
     return c.stream;
   }
 
-  void emit([Map<String, dynamic> event = const {'event': 'pane_updated'}]) =>
-      _streams.last.add(event);
+  void emit([Map<String, dynamic> event = const {'event': 'pane_updated'}]) => _streams.last.add(event);
 
   /// Simulates the event channel dropping.
   void dropEvents(Object error) {
@@ -165,8 +156,7 @@ class FakeTransport implements HerdrTransport {
   @override
   bool get supportsFiles => fs != null;
 
-  FakeFs get _fs =>
-      fs ?? (throw RemoteFileException(RemoteFileErrorKind.unsupported, 'No files here'));
+  FakeFs get _fs => fs ?? (throw RemoteFileException(RemoteFileErrorKind.unsupported, 'No files here'));
 
   @override
   Future<RemoteStat> statFile(String path) => _fs.stat(path);
@@ -191,8 +181,7 @@ class FakeTransport implements HerdrTransport {
   final List<String> uploads = [];
 
   /// Replaces the default upload (which copies the local file into [fs]).
-  UploadJob Function(String localPath, String remotePath, void Function(int, int)? onProgress)?
-      onUpload;
+  UploadJob Function(String localPath, String remotePath, void Function(int, int)? onProgress)? onUpload;
 
   @override
   UploadJob uploadFile({

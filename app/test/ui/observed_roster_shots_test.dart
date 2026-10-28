@@ -90,12 +90,7 @@ void main() {
 
   final scenarios = <String, (FakeAgentSession Function(), Future<void> Function(WidgetTester)?, Size, double)>{
     'chip-only': (() => session(swarm(), tasks: [for (final n in names) task(n)]), null, const Size(412, 160), 1),
-    'swarm': (
-      () => session(swarm(), tasks: [for (final n in names) task(n)]),
-      open,
-      const Size(412, 892),
-      1,
-    ),
+    'swarm': (() => session(swarm(), tasks: [for (final n in names) task(n)]), open, const Size(412, 892), 1),
     'swarm-narrow-scaled': (
       () => session(swarm(), tasks: [for (final n in names) task(n)]),
       open,
@@ -144,7 +139,10 @@ void main() {
       1,
     ),
     'one': (
-      () => session([entry('Alpha', SubagentState.running, tools: 2, assignment: 'Survey RL frameworks')], tasks: [task('Alpha')]),
+      () => session(
+        [entry('Alpha', SubagentState.running, tools: 2, assignment: 'Survey RL frameworks')],
+        tasks: [task('Alpha')],
+      ),
       open,
       const Size(412, 892),
       1,
@@ -176,7 +174,14 @@ void main() {
                 child: child!,
               ),
             ),
-            home: Scaffold(body: SafeArea(child: Align(alignment: Alignment.topLeft, child: SubagentsChip(session: s)))),
+            home: Scaffold(
+              body: SafeArea(
+                child: Align(
+                  alignment: Alignment.topLeft,
+                  child: SubagentsChip(session: s),
+                ),
+              ),
+            ),
           ),
         );
         await tester.pump(Dwell.tapGuard);

@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/ui/render/terminal/terminal_view.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'support/terminal_rows.dart';
 
-String _lines(int from, int to) =>
-    [for (var i = from; i < to; i++) 'line $i'].join('\r\n');
+String _lines(int from, int to) => [for (var i = from; i < to; i++) 'line $i'].join('\r\n');
 
 /// Rows as a pane read gives them: each ends with a carriage return.
 List<String> _rows(int from, int to) => [for (var i = from; i < to; i++) 'line $i\r'];
@@ -18,40 +18,26 @@ Future<void> _pump(
   bool wrap = false,
   double width = 360,
   ValueChanged<TerminalScroll>? onScrollChanged,
-}) =>
-    tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.dark(),
-        home: Scaffold(
-          body: Align(
-            alignment: Alignment.topLeft,
-            child: SizedBox(
-              width: width,
-              height: 400,
-              child: TerminalView(
-                text: text,
-                history: history,
-                top: top,
-                wrap: wrap,
-                onScrollChanged: onScrollChanged,
-              ),
-            ),
-          ),
+}) => tester.pumpWidget(
+  MaterialApp(
+    theme: AppTheme.dark(),
+    home: Scaffold(
+      body: Align(
+        alignment: Alignment.topLeft,
+        child: SizedBox(
+          width: width,
+          height: 400,
+          child: TerminalView(text: text, history: history, top: top, wrap: wrap, onScrollChanged: onScrollChanged),
         ),
       ),
-    );
+    ),
+  ),
+);
 
 /// The widget and render object showing [line].
-({Element element, RenderObject paragraph, double top}) _probe(
-  WidgetTester tester,
-  String line,
-) {
+({Element element, RenderObject paragraph, double top}) _probe(WidgetTester tester, String line) {
   final finder = terminalRow(line);
-  return (
-    element: finder.evaluate().single,
-    paragraph: tester.renderObject(finder),
-    top: tester.getTopLeft(finder).dy,
-  );
+  return (element: finder.evaluate().single, paragraph: tester.renderObject(finder), top: tester.getTopLeft(finder).dy);
 }
 
 Future<void> _scrollUp(WidgetTester tester, double pixels) async {
@@ -62,9 +48,9 @@ Future<void> _scrollUp(WidgetTester tester, double pixels) async {
 /// Scrolls to the oldest row.
 Future<void> _toTop(WidgetTester tester) async {
   final position = tester
-      .state<ScrollableState>(find
-          .descendant(of: find.byType(CustomScrollView), matching: find.byType(Scrollable))
-          .first)
+      .state<ScrollableState>(
+        find.descendant(of: find.byType(CustomScrollView), matching: find.byType(Scrollable)).first,
+      )
       .position;
   position.jumpTo(position.maxScrollExtent);
   await tester.pumpAndSettle();
@@ -86,8 +72,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('rows handed over as history do not move what is on screen',
-        (tester) async {
+    testWidgets('rows handed over as history do not move what is on screen', (tester) async {
       await _pump(tester, text: _lines(100, 300));
       await _scrollUp(tester, 600);
       final before = _probe(tester, 'line 250');
@@ -117,18 +102,12 @@ void main() {
       await _scrollUp(tester, 600);
       final before = _probe(tester, 'line 250');
 
-      await _pump(
-        tester,
-        history: [long, ..._rows(0, 50)],
-        text: _lines(100, 300),
-        wrap: true,
-      );
+      await _pump(tester, history: [long, ..._rows(0, 50)], text: _lines(100, 300), wrap: true);
 
       expect(_probe(tester, 'line 250').top, closeTo(before.top, 0.01));
     });
 
-    testWidgets('while following, new history does not detach the view from the bottom',
-        (tester) async {
+    testWidgets('while following, new history does not detach the view from the bottom', (tester) async {
       await _pump(tester, text: _lines(100, 300));
       final bottom = tester.getBottomLeft(terminalRow('line 299')).dy;
 
@@ -137,8 +116,7 @@ void main() {
       expect(tester.getBottomLeft(terminalRow('line 299')).dy, closeTo(bottom, 0.01));
     });
 
-    testWidgets('a slide that moves rows into the history changes nothing on screen',
-        (tester) async {
+    testWidgets('a slide that moves rows into the history changes nothing on screen', (tester) async {
       await _pump(tester, text: _lines(0, 300));
       await _scrollUp(tester, 600);
       final before = _probe(tester, 'line 250');
@@ -151,8 +129,7 @@ void main() {
       expect(after.element, same(before.element));
     });
 
-    testWidgets('the oldest rows being let go does not move what is on screen',
-        (tester) async {
+    testWidgets('the oldest rows being let go does not move what is on screen', (tester) async {
       await _pump(tester, history: _rows(0, 100), text: _lines(100, 300));
       await _scrollUp(tester, 600);
       final before = _probe(tester, 'line 250');
@@ -176,8 +153,7 @@ void main() {
   group('the note above the oldest row', () {
     testWidgets('says more is coming while it can be loaded', (tester) async {
       await _pump(tester, text: _lines(0, 300), top: TerminalTop.loading);
-      expect(find.textContaining('Loading earlier output'), findsNothing,
-          reason: 'only at the very top');
+      expect(find.textContaining('Loading earlier output'), findsNothing, reason: 'only at the very top');
 
       await _toTop(tester);
 
@@ -208,13 +184,8 @@ void main() {
       expect(find.textContaining('Loading'), findsNothing);
     });
 
-    testWidgets('is centred in the view, not in the width of wide output',
-        (tester) async {
-      await _pump(
-        tester,
-        text: '${_lines(0, 300)}\r\n${'x' * 300}',
-        top: TerminalTop.serverLimit,
-      );
+    testWidgets('is centred in the view, not in the width of wide output', (tester) async {
+      await _pump(tester, text: '${_lines(0, 300)}\r\n${'x' * 300}', top: TerminalTop.serverLimit);
       await _toTop(tester);
 
       final box = tester.getRect(find.textContaining('Earlier output is not available'));
@@ -226,10 +197,7 @@ void main() {
       await _toTop(tester);
 
       expect(
-        find.ancestor(
-          of: find.textContaining('Loading earlier output'),
-          matching: find.byType(SelectionContainer),
-        ),
+        find.ancestor(of: find.textContaining('Loading earlier output'), matching: find.byType(SelectionContainer)),
         findsWidgets,
       );
       final text = tester.widget<Text>(find.textContaining('Loading earlier output'));
@@ -248,8 +216,7 @@ void main() {
   });
 
   group('reporting where the user is', () {
-    testWidgets('tells once, when the view lays out, and again only on a change',
-        (tester) async {
+    testWidgets('tells once, when the view lays out, and again only on a change', (tester) async {
       final reports = <TerminalScroll>[];
       await _pump(tester, text: _lines(0, 600), onScrollChanged: reports.add);
       await tester.pump();
@@ -273,9 +240,9 @@ void main() {
 
       expect(reports.last, (nearTop: true, following: false));
       final position = tester
-          .state<ScrollableState>(find
-              .descendant(of: find.byType(CustomScrollView), matching: find.byType(Scrollable))
-              .first)
+          .state<ScrollableState>(
+            find.descendant(of: find.byType(CustomScrollView), matching: find.byType(Scrollable)).first,
+          )
           .position;
       expect(position.maxScrollExtent - position.pixels, lessThan(1.5 * 400));
 
@@ -286,28 +253,17 @@ void main() {
 
     testWidgets('output that arrives above changes the answer', (tester) async {
       final reports = <TerminalScroll>[];
-      await _pump(
-        tester,
-        text: _lines(0, 100),
-        top: TerminalTop.loading,
-        onScrollChanged: reports.add,
-      );
+      await _pump(tester, text: _lines(0, 100), top: TerminalTop.loading, onScrollChanged: reports.add);
       await _toTop(tester);
       expect(reports.last.nearTop, isTrue);
 
-      await _pump(
-        tester,
-        history: _rows(1000, 1600),
-        text: _lines(0, 100),
-        onScrollChanged: reports.add,
-      );
+      await _pump(tester, history: _rows(1000, 1600), text: _lines(0, 100), onScrollChanged: reports.add);
       await tester.pumpAndSettle();
 
       expect(reports.last, (nearTop: false, following: false));
     });
 
-    testWidgets('a short pane is near its top and following, and says so once',
-        (tester) async {
+    testWidgets('a short pane is near its top and following, and says so once', (tester) async {
       final reports = <TerminalScroll>[];
       await _pump(tester, text: 'hello', onScrollChanged: reports.add);
       await tester.pump();

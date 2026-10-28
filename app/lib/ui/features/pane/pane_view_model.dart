@@ -62,25 +62,15 @@ class PaneViewModel extends ChangeNotifier with WidgetsBindingObserver {
 
   /// The pane [paneId] of [machine]. This is the one place the pane screen
   /// reaches the machine's API: the widget tree only sees the view model.
-  factory PaneViewModel.forMachine(
-    MachineConnection machine,
-    String paneId, {
-    required bool wrap,
-  }) =>
-      PaneViewModel(
-        activity: machine.paneActivity,
-        paneId: paneId,
-        read: (source, lines) => machine.api.readPane(
-          paneId,
-          source: source,
-          lines: lines,
-          ansi: true,
-        ),
-        sendLine: (text) => machine.api.sendLine(paneId, text),
-        sendPrompt: (p) => sendTerminalPrompt(machine.api, paneId, p),
-        sendKeys: (keys) => machine.api.sendKeys(paneId, keys),
-        wrap: wrap,
-      );
+  factory PaneViewModel.forMachine(MachineConnection machine, String paneId, {required bool wrap}) => PaneViewModel(
+    activity: machine.paneActivity,
+    paneId: paneId,
+    read: (source, lines) => machine.api.readPane(paneId, source: source, lines: lines, ansi: true),
+    sendLine: (text) => machine.api.sendLine(paneId, text),
+    sendPrompt: (p) => sendTerminalPrompt(machine.api, paneId, p),
+    sendKeys: (keys) => machine.api.sendKeys(paneId, keys),
+    wrap: wrap,
+  );
 
   final String paneId;
   final PaneReader _read;
@@ -154,8 +144,7 @@ class PaneViewModel extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   /// herdr has older rows that a deeper read would add.
-  bool get _loadable =>
-      _history.truncated && _history.contiguousRows < _serverRows;
+  bool get _loadable => _history.truncated && _history.contiguousRows < _serverRows;
 
   String? get error => _error;
   bool get sending => _sending;
@@ -247,10 +236,7 @@ class PaneViewModel extends ChangeNotifier with WidgetsBindingObserver {
     _cooldown = Timer(deep ? deepReadInterval : minReadInterval, _cooledDown);
     final wrap = _wrap;
     try {
-      final read = await _read(
-        wrap ? ReadSource.recentUnwrapped : ReadSource.recent,
-        deep ? _serverRows : _tailRows,
-      );
+      final read = await _read(wrap ? ReadSource.recentUnwrapped : ReadSource.recent, deep ? _serverRows : _tailRows);
       // The mode changed while reading: this is the other source's text, and
       // setWrap already queued a read of the right one.
       if (wrap == _wrap) _apply(read: read, error: null, stale: false);

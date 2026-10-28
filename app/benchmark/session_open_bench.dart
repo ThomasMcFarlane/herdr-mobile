@@ -77,11 +77,7 @@ const _warm = 3;
 
 /// The links the open is repeated on. Bandwidth is an ASSUMPTION per link
 /// (Wi-Fi to a LAN host; LTE/5G through a tunnel), not a measurement.
-const _links = [
-  LinkModel('local', 0, 0),
-  LinkModel('rtt40', 40, 30),
-  LinkModel('rtt120', 120, 10),
-];
+const _links = [LinkModel('local', 0, 0), LinkModel('rtt40', 40, 30), LinkModel('rtt120', 120, 10)];
 
 final _out = <String>[];
 
@@ -181,7 +177,11 @@ class _Attach {
 
   /// Sends a request; completes with (sent at µs, answered at µs, byte offset
   /// where the output of this request starts).
-  Future<({int sent, int done, int from})> call(String method, Json params, {Duration timeout = const Duration(seconds: 120)}) async {
+  Future<({int sent, int done, int from})> call(
+    String method,
+    Json params, {
+    Duration timeout = const Duration(seconds: 120),
+  }) async {
     final id = ++_next;
     final waiter = (pattern: RegExp('"id"\\s*:\\s*$id\\s*[,}]'), done: Completer<int>());
     _waiters.add(waiter);
@@ -422,7 +422,11 @@ void main() {
           final r = await a.call('initialize', {'protocolVersion': 1, 'clientCapabilities': <String, Object?>{}});
           rtts.add((r.done - r.sent) / 1000);
         }
-        final load = await a.call('session/load', {'sessionId': 'bench-session', 'cwd': host.work, 'mcpServers': <Object?>[]});
+        final load = await a.call('session/load', {
+          'sessionId': 'bench-session',
+          'cwd': host.work,
+          'mcpServers': <Object?>[],
+        });
         final replay = a.replay(7, load.from, load.sent, load.done);
         await a.close();
         if (run == 0) {
@@ -487,9 +491,11 @@ void main() {
       for (var i = 0; i < _runs + 1; i++) {
         final w = CpuWatch()..start();
         var n = 0;
-        await splitLines(Stream.fromIterable([
-          for (var o = 0; o < all.length; o += 16384) Uint8List.sublistView(all, o, math.min(all.length, o + 16384)),
-        ])).forEach((_) => n++);
+        await splitLines(
+          Stream.fromIterable([
+            for (var o = 0; o < all.length; o += 16384) Uint8List.sublistView(all, o, math.min(all.length, o + 16384)),
+          ]),
+        ).forEach((_) => n++);
         if (i > 0) split.add(w.elapsedMicroseconds / 1000);
         expect(n, replay.lines.length);
       }
@@ -516,8 +522,15 @@ void main() {
       _metric('${p}fold_apply_p50_us', _median(f.applyUs));
       _metric('${p}fold_apply_p95_us', _pct(f.applyUs, .95));
       _metric('${p}fold_apply_max_us', f.applyUs.reduce(math.max));
-      _metric('${p}fold_apply_first_us', f.applyUs.take(50).fold<double>(0, (a, b) => a + b) / math.min(50, f.applyUs.length));
-      _metric('${p}fold_apply_last_us', f.applyUs.skip(math.max(0, f.applyUs.length - 50)).fold<double>(0, (a, b) => a + b) / math.min(50, f.applyUs.length));
+      _metric(
+        '${p}fold_apply_first_us',
+        f.applyUs.take(50).fold<double>(0, (a, b) => a + b) / math.min(50, f.applyUs.length),
+      );
+      _metric(
+        '${p}fold_apply_last_us',
+        f.applyUs.skip(math.max(0, f.applyUs.length - 50)).fold<double>(0, (a, b) => a + b) /
+            math.min(50, f.applyUs.length),
+      );
 
       // Tail-first: what the last 30 items alone would cost.
       final tail = _tailStart(replay.lines, 30);
@@ -577,7 +590,12 @@ void main() {
       final keeper = (await host.list()).singleWhere((k) => k.id == id);
       expect(keeper.sessionId, isNotEmpty);
       for (final link in _links) {
-        final cold = <double>[], firstRows = <double>[], coldNotes = <double>[], warm = <double>[], warmNotes = <double>[], cpu = <double>[];
+        final cold = <double>[],
+            firstRows = <double>[],
+            coldNotes = <double>[],
+            warm = <double>[],
+            warmNotes = <double>[],
+            cpu = <double>[];
         for (var run = 0; run < _runs + 1; run++) {
           final session = AcpAgentSession(machine: machine, host: LinkedHost(host, link), info: keeper);
           var notes = 0;
@@ -587,7 +605,10 @@ void main() {
           void listener() {
             notes++;
             if (firstItems == null && session.state.items.isNotEmpty) firstItems = clock.elapsedMicroseconds / 1000;
-            if (!live.isCompleted && session.link == AgentLink.live && !session.state.replaying && session.state.items.isNotEmpty) {
+            if (!live.isCompleted &&
+                session.link == AgentLink.live &&
+                !session.state.replaying &&
+                session.state.items.isNotEmpty) {
               live.complete();
             }
           }
@@ -610,7 +631,9 @@ void main() {
           final clock2 = Stopwatch();
           void warmListener() {
             warmNote++;
-            if (!warmLive.isCompleted && session.link == AgentLink.live && !session.state.replaying) warmLive.complete();
+            if (!warmLive.isCompleted && session.link == AgentLink.live && !session.state.replaying) {
+              warmLive.complete();
+            }
           }
 
           session.removeListener(listener);
@@ -640,7 +663,9 @@ void main() {
         _metric('${q}cold_cpu_ms', _median(cpu));
         _metric('${q}warm_ms', _median(warm));
         _metric('${q}warm_notifications', _median(warmNotes));
-        stdout.writeln('  ${link.name}: cold ${_median(cold).toStringAsFixed(0)} ms, warm ${_median(warm).toStringAsFixed(0)} ms');
+        stdout.writeln(
+          '  ${link.name}: cold ${_median(cold).toStringAsFixed(0)} ms, warm ${_median(warm).toStringAsFixed(0)} ms',
+        );
       }
       machine.dispose();
 
@@ -654,7 +679,9 @@ void main() {
   // -------------------------------------------------------------------------
   var uiWarmed = false;
 
-  testWidgets('screen, heavy rows', semanticsEnabled: false, timeout: const Timeout(Duration(minutes: 20)), (tester) async {
+  testWidgets('screen, heavy rows', semanticsEnabled: false, timeout: const Timeout(Duration(minutes: 20)), (
+    tester,
+  ) async {
     tester.view
       ..physicalSize = const Size(392 * 2.75, 760 * 2.75)
       ..devicePixelRatio = 2.75;
@@ -692,13 +719,18 @@ void main() {
       _metric('rows_${key}_first_frame_ms', _median([for (final f in first) f.total]));
       _metric('rows_${key}_first_build_ms', _median([for (final f in first) f.build]));
       _metric('rows_${key}_first_layout_ms', _median([for (final f in first) f.layout]));
-      _metric('rows_${key}_trans_max_ms', _median([for (final r in runs) r.frames.skip(1).map((f) => f.total).reduce(math.max)]));
+      _metric(
+        'rows_${key}_trans_max_ms',
+        _median([for (final r in runs) r.frames.skip(1).map((f) => f.total).reduce(math.max)]),
+      );
       _metric('rows_${key}_session_bytes', updates.map((u) => jsonEncode(u).length).fold<int>(0, (a, b) => a + b));
     }
   });
 
   for (final n in _sizes) {
-    testWidgets('screen, $n items', semanticsEnabled: false, timeout: const Timeout(Duration(minutes: 30)), (tester) async {
+    testWidgets('screen, $n items', semanticsEnabled: false, timeout: const Timeout(Duration(minutes: 30)), (
+      tester,
+    ) async {
       final cap = _captures[n];
       if (cap == null) fail('no capture for $n: the protocol test did not run');
       tester.view
@@ -726,7 +758,11 @@ void main() {
 
       // 2. the route opens empty and the whole transcript arrives at once.
       final fillStats = <_Opening>[];
-      final fillFrame = <double>[], fillBuild = <double>[], fillLayout = <double>[], fillPaint = <double>[], fillAfterMax = <double>[];
+      final fillFrame = <double>[],
+          fillBuild = <double>[],
+          fillLayout = <double>[],
+          fillPaint = <double>[],
+          fillAfterMax = <double>[];
       for (var run = 0; run < _uiRuns + _warm; run++) {
         final o = await _openFilled(tester, state);
         if (run < _warm) continue;
@@ -756,7 +792,13 @@ void main() {
       // 4. the transcript grows while the replay arrives, frame by frame.
       for (final link in _links) {
         final arrivals = _arrivals(cap.replay, link);
-        final frames = <double>[], reducer = <double>[], counts = <double>[], overs = <double>[], overs2 = <double>[], totals = <double>[], maxes = <double>[];
+        final frames = <double>[],
+            reducer = <double>[],
+            counts = <double>[],
+            overs = <double>[],
+            overs2 = <double>[],
+            totals = <double>[],
+            maxes = <double>[];
         for (var run = 0; run < _streamRuns + 2; run++) {
           final s = await _stream(tester, cap, arrivals);
           if (run < 2) continue;
@@ -847,16 +889,20 @@ class _Opening {
 /// whole. `fill` is the frame that takes it in.
 Future<_Opening> _openFilled(WidgetTester tester, AgentSessionState state) {
   final session = FakeAgentSession(link: AgentLink.reconnecting);
-  return _open(tester, session, afterTransition: () async {
-    session.setLink(AgentLink.live);
-    session.push(state);
-    final fill = await _frame(tester, const Duration(milliseconds: 16));
-    final after = <double>[];
-    for (var i = 0; i < 6; i++) {
-      after.add((await _frame(tester, const Duration(milliseconds: 16))).total);
-    }
-    return (fill, after);
-  });
+  return _open(
+    tester,
+    session,
+    afterTransition: () async {
+      session.setLink(AgentLink.live);
+      session.push(state);
+      final fill = await _frame(tester, const Duration(milliseconds: 16));
+      final after = <double>[];
+      for (var i = 0; i < 6; i++) {
+        after.add((await _frame(tester, const Duration(milliseconds: 16))).total);
+      }
+      return (fill, after);
+    },
+  );
 }
 
 Future<_Opening> _open(
@@ -901,9 +947,20 @@ void _report(String name, List<_Opening> runs) {
   _metric('${name}_first_layout_ms', _median([for (final r in runs) r.frames.first.layout]));
   _metric('${name}_first_paint_ms', _median([for (final r in runs) r.frames.first.paint]));
   _metric('${name}_trans_frames', _median([for (final r in runs) r.frames.length.toDouble()]));
-  _metric('${name}_trans_median_ms', _median([for (final r in runs) _median([for (final f in r.frames.skip(1)) f.total])]));
-  _metric('${name}_trans_max_ms', _median([for (final r in runs) r.frames.skip(1).map((f) => f.total).reduce(math.max)]));
-  _metric('${name}_trans_over_16ms', _median([for (final r in runs) r.frames.where((f) => f.total > 16.7).length.toDouble()]));
+  _metric(
+    '${name}_trans_median_ms',
+    _median([
+      for (final r in runs) _median([for (final f in r.frames.skip(1)) f.total]),
+    ]),
+  );
+  _metric(
+    '${name}_trans_max_ms',
+    _median([for (final r in runs) r.frames.skip(1).map((f) => f.total).reduce(math.max)]),
+  );
+  _metric(
+    '${name}_trans_over_16ms',
+    _median([for (final r in runs) r.frames.where((f) => f.total > 16.7).length.toDouble()]),
+  );
   _metric('${name}_trans_total_ms', _median([for (final r in runs) r.frames.fold<double>(0, (a, f) => a + f.total)]));
 }
 
@@ -926,7 +983,11 @@ List<double> _arrivals(_Replay replay, LinkModel link) {
 /// The screen is up (route done) and the replay arrives as [arrivals] says:
 /// every frame applies the lines that came and pushes the state, as
 /// `AcpAgentSession` does once per frame.
-Future<({List<double> frames, double reducerMs})> _stream(WidgetTester tester, _Capture cap, List<double> arrivals) async {
+Future<({List<double> frames, double reducerMs})> _stream(
+  WidgetTester tester,
+  _Capture cap,
+  List<double> arrivals,
+) async {
   final session = FakeAgentSession(link: AgentLink.connecting);
   final nav = GlobalKey<NavigatorState>();
   await tester.pumpWidget(
@@ -1023,7 +1084,9 @@ Future<void> _sshCalibration(int n, Uint8List replay, String p) async {
     _metric('${p}ssh_exec_ms', _median(ms));
     _metric('${p}ssh_exec_cpu_ms', _median(cpu));
     _metric('${p}ssh_exec_lines', lines);
-    stdout.writeln('  ssh exec: ${_median(ms).toStringAsFixed(0)} ms, cpu ${_median(cpu).toStringAsFixed(0)} ms for ${replay.length} B');
+    stdout.writeln(
+      '  ssh exec: ${_median(ms).toStringAsFixed(0)} ms, cpu ${_median(cpu).toStringAsFixed(0)} ms for ${replay.length} B',
+    );
   } on Object catch (e) {
     stdout.writeln('  ssh calibration skipped: $e');
   } finally {

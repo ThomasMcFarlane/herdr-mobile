@@ -112,12 +112,7 @@ List<MachineItem> machineLayout(Snapshot s, PlaceIndex places, Set<String> keepe
   CheckoutBlock block(Workspace w) {
     final place = places.ofWorkspace(w.id)!;
     final panes = [...own(w), ...placedIn(w.id)];
-    return (
-      workspace: w,
-      place: place,
-      panes: panes,
-      status: bestStatus(panes.map((e) => e.pane.status)),
-    );
+    return (workspace: w, place: place, panes: panes, status: bestStatus(panes.map((e) => e.pane.status)));
   }
 
   final items = <MachineItem>[];
@@ -137,12 +132,9 @@ List<MachineItem> machineLayout(Snapshot s, PlaceIndex places, Set<String> keepe
     }
     if (!emitted.add(group.repoKey)) continue;
     final blocks = [for (final c in group.checkouts) block(c)];
-    items.add(RepoItem(
-      group,
-      blocks,
-      bestStatus(blocks.map((b) => b.status)),
-      blocks.fold(0, (n, b) => n + b.panes.length),
-    ));
+    items.add(
+      RepoItem(group, blocks, bestStatus(blocks.map((b) => b.status)), blocks.fold(0, (n, b) => n + b.panes.length)),
+    );
   }
   return items;
 }

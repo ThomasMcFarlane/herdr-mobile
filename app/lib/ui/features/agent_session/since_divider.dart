@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'transcript_rows.dart';
 
 /// The line above the first thing the person has not seen: a hairline, `6
@@ -30,7 +31,11 @@ class SinceDivider extends StatelessWidget {
               line,
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: Gap.md),
-                child: Text(label, maxLines: 1, style: Type.caption.copyWith(color: ds.textSecondary, fontFeatures: Type.tabular)),
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  style: Type.caption.copyWith(color: ds.textSecondary, fontFeatures: Type.tabular),
+                ),
               ),
               line,
             ],

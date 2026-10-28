@@ -22,18 +22,21 @@ const _menu = PromptInfo(
 );
 
 ({MachineProfile profile, Map<String, dynamic> snapshot}) _machine(List<Pane> panes) => (
-      profile: const MachineProfile(id: 'a', label: 'box-a', host: 'a.example', username: 'dev'),
-      snapshot: snapshotWith(panes, title: (id) => 'task ${id.split('p').last}'),
-    );
+  profile: const MachineProfile(id: 'a', label: 'box-a', host: 'a.example', username: 'dev'),
+  snapshot: snapshotWith(panes, title: (id) => 'task ${id.split('p').last}'),
+);
 
 Pane _pane(int i, String status) => (id: 'w1:p$i', ws: 'w1', agent: 'claude', status: status);
 
 void main() {
   setUpAll(loadAppFonts);
 
-  testWidgets('cards on a board hidden behind another tab release their reads, and take them back when it shows',
-      (tester) async {
-    final h = await BoardHarness.create([_machine([_pane(1, 'working'), _pane(2, 'blocked')])]);
+  testWidgets('cards on a board hidden behind another tab release their reads, and take them back when it shows', (
+    tester,
+  ) async {
+    final h = await BoardHarness.create([
+      _machine([_pane(1, 'working'), _pane(2, 'blocked')]),
+    ]);
     h.previews.set('a/w1:p2', ['…context…'], prompt: _menu);
     await pumpBoard(tester, h, height: _tall);
     expect(find.byType(AgentCard), findsNWidgets(2));
@@ -53,15 +56,19 @@ void main() {
   });
 
   testWidgets('a card built while the board is hidden holds nothing until it shows', (tester) async {
-    final h = await BoardHarness.create([_machine([_pane(1, 'working')])]);
+    final h = await BoardHarness.create([
+      _machine([_pane(1, 'working')]),
+    ]);
     await pumpBoard(tester, h, height: _tall);
     await tester.tap(find.byKey(FloatingTabBar.tabKey('Machines')));
     await settle(tester);
     expect(h.previews.openCount, 0);
 
     // A new working agent appears while the board is hidden.
-    await h.changeStatuses(tester, 'a', [_pane(1, 'working'), _pane(2, 'working')],
-        title: (id) => 'task ${id.split('p').last}');
+    await h.changeStatuses(tester, 'a', [
+      _pane(1, 'working'),
+      _pane(2, 'working'),
+    ], title: (id) => 'task ${id.split('p').last}');
     expect(h.previews.openCount, 0);
     expect(h.previews.opened.length, 1, reason: 'never taken then dropped: only the first card ever watched');
 

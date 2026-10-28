@@ -8,14 +8,8 @@ import 'package:herdr_mobile/ui/features/machines/machine_form_view_model.dart';
 import 'support/fake_transport.dart';
 import 'support/memory_stores.dart';
 
-MachineFormValues _values({String host = 'old.local', String label = ''}) => MachineFormValues(
-      label: label,
-      host: host,
-      port: 22,
-      username: 'me',
-      auth: SshAuth.key,
-      privateKey: 'KEY',
-    );
+MachineFormValues _values({String host = 'old.local', String label = ''}) =>
+    MachineFormValues(label: label, host: host, port: 22, username: 'me', auth: SshAuth.key, privateKey: 'KEY');
 
 /// A machine that answers only when the test lets it.
 class _Gated extends FakeTransport {

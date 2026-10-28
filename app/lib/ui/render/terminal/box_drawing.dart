@@ -39,11 +39,7 @@ final class GlyphStroke {
 
 /// What to paint for one glyph, in device pixels.
 final class GlyphShape {
-  const GlyphShape({
-    this.rects = const [],
-    this.alpha = 1,
-    this.strokes = const [],
-  });
+  const GlyphShape({this.rects = const [], this.alpha = 1, this.strokes = const []});
 
   /// Axis-aligned fills with integer edges; paint without anti-aliasing.
   final List<Rect> rects;
@@ -80,10 +76,7 @@ GlyphShape? boxGlyph(
     case 4:
       return GlyphShape(strokes: _diagonals(cell, param));
     case 5:
-      return GlyphShape(rects: [
-        _eighths(cell, param & 15, (param >> 4) & 15, (param >> 8) & 15,
-            (param >> 12) & 15),
-      ]);
+      return GlyphShape(rects: [_eighths(cell, param & 15, (param >> 4) & 15, (param >> 8) & 15, (param >> 12) & 15)]);
     case 6:
       return GlyphShape(
         rects: [Rect.fromLTRB(x0.toDouble(), y0.toDouble(), x1.toDouble(), y1.toDouble())],
@@ -107,8 +100,7 @@ final class _Cell {
   int get h => y1 - y0;
 }
 
-Rect _rect(int l, int t, int r, int b) =>
-    Rect.fromLTRB(l.toDouble(), t.toDouble(), r.toDouble(), b.toDouble());
+Rect _rect(int l, int t, int r, int b) => Rect.fromLTRB(l.toDouble(), t.toDouble(), r.toDouble(), b.toDouble());
 
 /// Pixels a stroke of [weight] (1 light, 2 heavy, 3 double) takes across.
 int _thickness(int weight, int t) => weight * t;
@@ -198,9 +190,7 @@ List<Rect> _dashes(_Cell c, int code, int count) {
     final a = origin + (length * i + count ~/ 2) ~/ count + before;
     final b = origin + (length * (i + 1) + count ~/ 2) ~/ count - after;
     if (b <= a) continue;
-    out.add(horizontal
-        ? _rect(a, start, b, start + thick)
-        : _rect(start, a, start + thick, b));
+    out.add(horizontal ? _rect(a, start, b, start + thick) : _rect(start, a, start + thick, b));
   }
   return out;
 }
@@ -234,17 +224,15 @@ List<GlyphStroke> _diagonals(_Cell c, int mask) {
   final len = math.sqrt(w * w + h * h);
   final ex = c.t * w / len, ey = c.t * h / len;
   GlyphStroke line(Offset a, Offset b) => GlyphStroke(
-        Path()
-          ..moveTo(a.dx, a.dy)
-          ..lineTo(b.dx, b.dy),
-        c.t.toDouble(),
-        clip: box,
-      );
+    Path()
+      ..moveTo(a.dx, a.dy)
+      ..lineTo(b.dx, b.dy),
+    c.t.toDouble(),
+    clip: box,
+  );
   return [
-    if ((mask & 1) != 0)
-      line(Offset(c.x1 + ex, c.y0 - ey), Offset(c.x0 - ex, c.y1 + ey)),
-    if ((mask & 2) != 0)
-      line(Offset(c.x0 - ex, c.y0 - ey), Offset(c.x1 + ex, c.y1 + ey)),
+    if ((mask & 1) != 0) line(Offset(c.x1 + ex, c.y0 - ey), Offset(c.x0 - ex, c.y1 + ey)),
+    if ((mask & 2) != 0) line(Offset(c.x0 - ex, c.y0 - ey), Offset(c.x1 + ex, c.y1 + ey)),
   ];
 }
 
@@ -279,8 +267,7 @@ List<Rect> _merge(List<Rect> rects) {
         final a = out[i], b = out[j];
         final sameX = a.left == b.left && a.right == b.right;
         final sameY = a.top == b.top && a.bottom == b.bottom;
-        if (sameX && a.top <= b.bottom && b.top <= a.bottom ||
-            sameY && a.left <= b.right && b.left <= a.right) {
+        if (sameX && a.top <= b.bottom && b.top <= a.bottom || sameY && a.left <= b.right && b.left <= a.right) {
           out[i] = a.expandToInclude(b);
           out.removeAt(j);
           merged = true;

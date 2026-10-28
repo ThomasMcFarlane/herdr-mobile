@@ -44,7 +44,9 @@ double _ms(Stopwatch s) => s.elapsedMicroseconds / 1000.0;
 String _f(({double min, double med}) t) => '${t.med.toStringAsFixed(2)} ms';
 
 void main() {
-  stdout.writeln('| message | B flutter_md | C package:markdown | ours (C chunked + repairs) |');
+  stdout.writeln(
+    '| message | B flutter_md | C package:markdown | ours (C chunked + repairs) |',
+  );
   stdout.writeln('| --- | ---: | ---: | ---: |');
   for (final kb in [8, 22, 200]) {
     final text = message(kb * 1024);
@@ -52,13 +54,17 @@ void main() {
     final b = _time(() => _sink[0] += parseBlocksB(text), runs);
     final c = _time(() => _sink[0] += parseC(text).length, runs);
     final d = _time(() => _sink[0] += parseMd(text).blocks.length, runs);
-    stdout.writeln('| ${text.length ~/ 1024} KB | ${_f(b)} | ${_f(c)} | ${_f(d)} |');
+    stdout.writeln(
+      '| ${text.length ~/ 1024} KB | ${_f(b)} | ${_f(c)} | ${_f(d)} |',
+    );
   }
 
   final text = message(22 * 1024);
   const step = 6;
   final steps = (text.length / step).ceil();
-  stdout.writeln('\nStreaming replay: ${text.length} chars, $step per step, $steps steps');
+  stdout.writeln(
+    '\nStreaming replay: ${text.length} chars, $step per step, $steps steps',
+  );
   void replay(String name, void Function(int end) onStep) {
     final s = Stopwatch()..start();
     for (var e = step; e < text.length + step; e += step) {
@@ -66,12 +72,22 @@ void main() {
     }
     final total = _ms(s);
     stdout.writeln(
-        '$name: total ${total.toStringAsFixed(0)} ms, ${(total / steps).toStringAsFixed(3)} ms per step');
+      '$name: total ${total.toStringAsFixed(0)} ms, ${(total / steps).toStringAsFixed(3)} ms per step',
+    );
   }
 
-  replay('B full re-parse     ', (e) => _sink[0] += parseBlocksB(text.substring(0, e)));
-  replay('C full re-parse     ', (e) => _sink[0] += parseC(text.substring(0, e)).length);
-  replay('ours full re-parse  ', (e) => _sink[0] += parseMd(text.substring(0, e)).blocks.length);
+  replay(
+    'B full re-parse     ',
+    (e) => _sink[0] += parseBlocksB(text.substring(0, e)),
+  );
+  replay(
+    'C full re-parse     ',
+    (e) => _sink[0] += parseC(text.substring(0, e)).length,
+  );
+  replay(
+    'ours full re-parse  ',
+    (e) => _sink[0] += parseMd(text.substring(0, e)).blocks.length,
+  );
   final p = StreamingMarkdownParser();
   var fed = 0;
   replay('B own freeze        ', (e) {
@@ -106,15 +122,21 @@ void main() {
       if (ms > worst) worst = ms;
     }
     stdout.writeln(
-        '$name (${t.length ~/ 1024} KB): ${(sum / n).toStringAsFixed(3)} / ${worst.toStringAsFixed(2)} ms');
+      '$name (${t.length ~/ 1024} KB): ${(sum / n).toStringAsFixed(3)} / ${worst.toStringAsFixed(2)} ms',
+    );
   }
 
-  tail('300-item list    ', [
-    for (var i = 0; i < 300; i++) '- item $i with **bold** and `code` and [a link](https://x.y/$i)',
-  ].join('\n'));
-  tail('1000-line code   ', '```dart\n${[
-    for (var i = 0; i < 1000; i++) '  final value$i = compute($i, "line $i");',
-  ].join('\n')}\n```\n');
+  tail(
+    '300-item list    ',
+    [
+      for (var i = 0; i < 300; i++)
+        '- item $i with **bold** and `code` and [a link](https://x.y/$i)',
+    ].join('\n'),
+  );
+  tail(
+    '1000-line code   ',
+    '```dart\n${[for (var i = 0; i < 1000; i++) '  final value$i = compute($i, "line $i");'].join('\n')}\n```\n',
+  );
   tail('40x30 table      ', () {
     final head = [for (var c = 0; c < 40; c++) 'col$c'];
     return '| ${head.join(' | ')} |\n|${List.filled(40, '---').join('|')}|\n${[

@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../data/repositories/attach_target.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'attach_bars.dart';
 import 'attach_kit.dart';
 import 'files_tab.dart';
@@ -176,7 +178,11 @@ class _TabsState extends State<_Tabs> with SingleTickerProviderStateMixin {
   Widget _wrap(AttachTab t, bool fading, Widget child) {
     if (!fading) return child;
     if (t == _current) return FadeTransition(opacity: _fade, child: child);
-    if (t == _leaving) return IgnorePointer(child: FadeTransition(opacity: ReverseAnimation(_fade), child: child));
+    if (t == _leaving) {
+      return IgnorePointer(
+        child: FadeTransition(opacity: ReverseAnimation(_fade), child: child),
+      );
+    }
     return child;
   }
 }

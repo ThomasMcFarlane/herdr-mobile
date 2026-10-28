@@ -17,7 +17,10 @@ typedef HttpLogin = ({String user, String password});
 /// goes only to that page, is never kept, and is not restored after process
 /// death.
 Future<HttpLogin?> showHttpAuthSheet(BuildContext context, {required String where, String? realm}) =>
-    showAppSheet<HttpLogin>(context, builder: (ctx) => _AuthBody(where: where, realm: realm));
+    showAppSheet<HttpLogin>(
+      context,
+      builder: (ctx) => _AuthBody(where: where, realm: realm),
+    );
 
 class _AuthBody extends StatefulWidget {
   const _AuthBody({required this.where, required this.realm});

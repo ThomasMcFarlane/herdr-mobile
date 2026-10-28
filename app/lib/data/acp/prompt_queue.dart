@@ -54,7 +54,10 @@ class QueuedMessage {
   bool get held => state == QueuedState.held;
 
   /// The typed text.
-  String get text => [for (final b in blocks) if (b is TextBlock) b.text].join('\n');
+  String get text => [
+    for (final b in blocks)
+      if (b is TextBlock) b.text,
+  ].join('\n');
 
   /// Everything but the text: images and file links.
   List<ContentBlock> get attachments => [
@@ -157,7 +160,10 @@ class PromptQueue {
   /// The first message keeps its id, so a screen sees one row become one.
   /// Returns whether anything changed (nothing, with fewer than two waiting).
   bool mergeWaiting() {
-    final waiting = [for (final e in _entries) if (!e.held) e];
+    final waiting = [
+      for (final e in _entries)
+        if (!e.held) e,
+    ];
     if (waiting.length < 2) return false;
     final first = waiting.first;
     final text = [
@@ -166,18 +172,12 @@ class PromptQueue {
     ].join('\n\n');
     final merged = QueuedMessage(
       id: first.id,
-      blocks: [
-        if (text.isNotEmpty) TextBlock(text),
-        for (final e in waiting) ...e.attachments,
-      ],
+      blocks: [if (text.isNotEmpty) TextBlock(text), for (final e in waiting) ...e.attachments],
       at: first.at,
     );
     _entries = [
       for (final e in _entries)
-        if (identical(e, first))
-          merged
-        else if (e.held)
-          e,
+        if (identical(e, first)) merged else if (e.held) e,
     ];
     return true;
   }

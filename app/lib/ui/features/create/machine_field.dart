@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/repositories/machine_connection.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
 
 /// The machine, as a field that opens a sheet of the online ones. With one
@@ -37,17 +38,17 @@ class MachineField extends StatelessWidget {
     final canChoose = choices.length > 1;
 
     void choose() => showActionSheet(
-          context,
-          title: 'Machine',
-          actions: [
-            for (final c in choices)
-              SheetAction(
-                label: c.profile.label,
-                icon: c.profile.id == machine?.profile.id ? LucideIcons.check : HerdrIcons.machines,
-                onTap: () => onSelect(c.profile.id),
-              ),
-          ],
-        );
+      context,
+      title: 'Machine',
+      actions: [
+        for (final c in choices)
+          SheetAction(
+            label: c.profile.label,
+            icon: c.profile.id == machine?.profile.id ? LucideIcons.check : HerdrIcons.machines,
+            onTap: () => onSelect(c.profile.id),
+          ),
+      ],
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -99,8 +100,8 @@ class MachineField extends StatelessWidget {
             lost
                 ? 'That machine went offline. Pick another.'
                 : machine == null
-                    ? ' '
-                    : '${machine.profile.username}@${machine.profile.host}',
+                ? ' '
+                : '${machine.profile.username}@${machine.profile.host}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: Type.caption.copyWith(color: lost ? ds.dangerText : ds.textMuted),
@@ -127,20 +128,13 @@ class RecentFolders extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.only(bottom: Gap.hair),
-          child: Text(
-            'Open on this machine',
-            style: Type.label.copyWith(color: context.ds.textSecondary),
-          ),
+          child: Text('Open on this machine', style: Type.label.copyWith(color: context.ds.textSecondary)),
         ),
         Wrap(
           spacing: Gap.sm,
           children: [
             for (final path in paths)
-              AppChip(
-                label: shortPath(path),
-                selected: path == selected,
-                onTap: () => onPick(path),
-              ),
+              AppChip(label: shortPath(path), selected: path == selected, onTap: () => onPick(path)),
           ],
         ),
       ],

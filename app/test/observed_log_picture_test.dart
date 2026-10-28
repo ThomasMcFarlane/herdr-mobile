@@ -99,7 +99,13 @@ void main() {
 
       await expectLater(
         session.loadLogPicture(_keeper),
-        throwsA(isA<LogPictureException>().having((e) => e.message, 'message', 'The log changed since that picture was listed.')),
+        throwsA(
+          isA<LogPictureException>().having(
+            (e) => e.message,
+            'message',
+            'The log changed since that picture was listed.',
+          ),
+        ),
       );
       expect(await session.loadLogPicture(_keeper), [5]);
       expect(rig.source.blobCalls, hasLength(2));
@@ -126,9 +132,15 @@ void main() {
     test('a failure the host calls final is not offered again; a link failure is', () async {
       final (rig, session) = await open();
       rig.source.blobError = const AgentHostException('That picture is not in the log any more.', fatal: true);
-      await expectLater(session.loadLogPicture(_keeper), throwsA(isA<LogPictureException>().having((e) => e.retryable, 'retryable', isFalse)));
+      await expectLater(
+        session.loadLogPicture(_keeper),
+        throwsA(isA<LogPictureException>().having((e) => e.retryable, 'retryable', isFalse)),
+      );
       rig.source.blobError = const AgentHostException('The connection to the machine dropped.');
-      await expectLater(session.loadLogPicture(_keeper), throwsA(isA<LogPictureException>().having((e) => e.retryable, 'retryable', isTrue)));
+      await expectLater(
+        session.loadLogPicture(_keeper),
+        throwsA(isA<LogPictureException>().having((e) => e.retryable, 'retryable', isTrue)),
+      );
     });
   });
 
@@ -136,7 +148,8 @@ void main() {
     final ref = OmpPictureRef(sha256: _sha);
 
     test('is read over SFTP from <agent dir>/blobs/<sha256> and kept', () async {
-      final fs = FakeFs()..addFile('/home/u/.omp/agent/blobs/$_sha', Uint8List.fromList(List.generate(5000, (i) => i % 251)));
+      final fs = FakeFs()
+        ..addFile('/home/u/.omp/agent/blobs/$_sha', Uint8List.fromList(List.generate(5000, (i) => i % 251)));
       final (rig, session) = await open(fs: fs);
 
       final got = await session.loadLogPicture(ref);

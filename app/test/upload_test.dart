@@ -158,8 +158,11 @@ void main() {
       // The open is still in flight; when it lands the upload closes the new file
       // and removes it. A `remove` is only asked after the open, so this is true
       // only once the removal itself is done (not before the file ever appeared).
-      await eventually(() => slow.calls.any((c) => c.startsWith('remove')) && slow.files.isEmpty,
-          timeout: const Duration(seconds: 30), reason: 'the half-made file removed');
+      await eventually(
+        () => slow.calls.any((c) => c.startsWith('remove')) && slow.files.isEmpty,
+        timeout: const Duration(seconds: 30),
+        reason: 'the half-made file removed',
+      );
       expect(slow.calls.first, startsWith('open'));
       expect(slow.writeCount, 0);
     });
@@ -169,9 +172,11 @@ void main() {
       final job = files.upload(local('g.bin', 4 * 1024 * 1024).path, remote);
       await expectLater(
         job.done,
-        throwsA(isA<RemoteFileException>()
-            .having((e) => e.kind, 'kind', RemoteFileErrorKind.network)
-            .having((e) => e is UploadCancelled, 'cancelled', isFalse)),
+        throwsA(
+          isA<RemoteFileException>()
+              .having((e) => e.kind, 'kind', RemoteFileErrorKind.network)
+              .having((e) => e is UploadCancelled, 'cancelled', isFalse),
+        ),
       );
       await eventually(() => !server.files.containsKey(remote), reason: 'partial removed');
       expect(opens, 2, reason: 'the dead session was dropped for the removal');
@@ -192,15 +197,16 @@ void main() {
       // measure the machine's load (a link that never gave up ends in the
       // runner's test timeout).
       expect(sw.elapsedMilliseconds, greaterThanOrEqualTo(190), reason: 'it waited out the stall timeout');
-      await eventually(() => !server.files.containsKey(remote),
-          timeout: const Duration(seconds: 30), reason: 'partial removed');
+      await eventually(
+        () => !server.files.containsKey(remote),
+        timeout: const Duration(seconds: 30),
+        reason: 'partial removed',
+      );
     });
 
     test('an empty file is created and reported 0 of 0', () async {
       final seen = <(int, int)>[];
-      await files
-          .upload(local('empty.bin', 0).path, remote, onProgress: (s, t) => seen.add((s, t)))
-          .done;
+      await files.upload(local('empty.bin', 0).path, remote, onProgress: (s, t) => seen.add((s, t))).done;
       expect(server.files[remote]!.length, 0);
       expect(seen.last, (0, 0));
       expect(server.writeCount, 0);
@@ -256,17 +262,25 @@ void main() {
     });
 
     test('progress is reported at most every 100 ms', () async {
-      make(s: FakeSftpServer(rtt: const Duration(milliseconds: 2), bytesPerSecond: 40 << 20, keepBytes: false));
+      make(
+        s: FakeSftpServer(rtt: const Duration(milliseconds: 2), bytesPerSecond: 40 << 20, keepBytes: false),
+      );
       final stamps = <int>[];
       final sw = Stopwatch()..start();
       await files
-          .upload(local('j.bin', 24 * 1024 * 1024, sparse: true).path, remote,
-              onProgress: (s, t) => stamps.add(sw.elapsedMilliseconds))
+          .upload(
+            local('j.bin', 24 * 1024 * 1024, sparse: true).path,
+            remote,
+            onProgress: (s, t) => stamps.add(sw.elapsedMilliseconds),
+          )
           .done;
       // The throttle runs on the upload's own clock, which started after [sw]: a
       // slow machine only widens the bound, it cannot break it.
-      expect(stamps.length, lessThanOrEqualTo(sw.elapsedMilliseconds ~/ 100 + 3),
-          reason: '${stamps.length} callbacks in ${sw.elapsedMilliseconds} ms');
+      expect(
+        stamps.length,
+        lessThanOrEqualTo(sw.elapsedMilliseconds ~/ 100 + 3),
+        reason: '${stamps.length} callbacks in ${sw.elapsedMilliseconds} ms',
+      );
     });
 
     test('progress follows the interval it is given: an hour apart leaves start, first answer and end', () async {
@@ -277,8 +291,7 @@ void main() {
       );
       final seen = <(int, int)>[];
       await files
-          .upload(local('j2.bin', 24 * 1024 * 1024, sparse: true).path, remote,
-              onProgress: (s, t) => seen.add((s, t)))
+          .upload(local('j2.bin', 24 * 1024 * 1024, sparse: true).path, remote, onProgress: (s, t) => seen.add((s, t)))
           .done;
       expect(seen.length, lessThanOrEqualTo(3), reason: '$seen');
       expect(seen.first, (0, 24 * 1024 * 1024));
@@ -309,8 +322,10 @@ void main() {
 
     test('makeDirs refuses a file in the way and relative paths', () async {
       server.files['/home/dev/x'] = FakeRemote(0x81A4);
-      await expectLater(files.makeDirs('/home/dev/x/y'),
-          throwsA(isA<RemoteFileException>().having((e) => e.kind, 'kind', RemoteFileErrorKind.notADirectory)));
+      await expectLater(
+        files.makeDirs('/home/dev/x/y'),
+        throwsA(isA<RemoteFileException>().having((e) => e.kind, 'kind', RemoteFileErrorKind.notADirectory)),
+      );
       await expectLater(files.makeDirs('relative/dir'), throwsA(isA<RemoteFileException>()));
     });
 
@@ -318,8 +333,10 @@ void main() {
       server.files['/home/dev/old'] = FakeRemote(0x8180);
       await files.remove('/home/dev/old');
       expect(server.files, isEmpty);
-      await expectLater(files.remove('/home/dev/old'),
-          throwsA(isA<RemoteFileException>().having((e) => e.kind, 'kind', RemoteFileErrorKind.notFound)));
+      await expectLater(
+        files.remove('/home/dev/old'),
+        throwsA(isA<RemoteFileException>().having((e) => e.kind, 'kind', RemoteFileErrorKind.notFound)),
+      );
     });
   });
 
@@ -341,9 +358,11 @@ void main() {
       final job = remoteFiles.upload(localPath: big.path, remotePath: '/x');
       await expectLater(
         job.done,
-        throwsA(isA<RemoteFileException>()
-            .having((e) => e.kind, 'kind', RemoteFileErrorKind.tooLarge)
-            .having((e) => e.fatal, 'fatal', isTrue)),
+        throwsA(
+          isA<RemoteFileException>()
+              .having((e) => e.kind, 'kind', RemoteFileErrorKind.tooLarge)
+              .having((e) => e.fatal, 'fatal', isTrue),
+        ),
       );
       expect(transport.uploads, isEmpty, reason: 'nothing was asked of the connection');
 
@@ -353,17 +372,23 @@ void main() {
     });
 
     test('a missing file and a folder fail typed', () async {
-      await expectLater(remoteFiles.upload(localPath: '${tmp.path}/nope', remotePath: '/x').done,
-          throwsA(isA<RemoteFileException>().having((e) => e.kind, 'kind', RemoteFileErrorKind.notFound)));
-      await expectLater(remoteFiles.upload(localPath: tmp.path, remotePath: '/x').done,
-          throwsA(isA<RemoteFileException>().having((e) => e.kind, 'kind', RemoteFileErrorKind.notAFile)));
+      await expectLater(
+        remoteFiles.upload(localPath: '${tmp.path}/nope', remotePath: '/x').done,
+        throwsA(isA<RemoteFileException>().having((e) => e.kind, 'kind', RemoteFileErrorKind.notFound)),
+      );
+      await expectLater(
+        remoteFiles.upload(localPath: tmp.path, remotePath: '/x').done,
+        throwsA(isA<RemoteFileException>().having((e) => e.kind, 'kind', RemoteFileErrorKind.notAFile)),
+      );
       expect(transport.uploads, isEmpty);
     });
 
     test('a machine without files fails typed', () async {
       final f = RemoteFiles(FakeTransport());
-      await expectLater(f.upload(localPath: local('k.bin', 1).path, remotePath: '/x').done,
-          throwsA(isA<RemoteFileException>().having((e) => e.kind, 'kind', RemoteFileErrorKind.unsupported)));
+      await expectLater(
+        f.upload(localPath: local('k.bin', 1).path, remotePath: '/x').done,
+        throwsA(isA<RemoteFileException>().having((e) => e.kind, 'kind', RemoteFileErrorKind.unsupported)),
+      );
     });
 
     test('starts inside the call; at most two run, the rest wait in order', () async {
@@ -394,9 +419,11 @@ void main() {
       running[2].fail(const HerdrTransportException('down', fatal: true));
       await expectLater(
         c.done,
-        throwsA(isA<RemoteFileException>()
-            .having((x) => x.kind, 'kind', RemoteFileErrorKind.network)
-            .having((x) => x.fatal, 'fatal', isTrue)),
+        throwsA(
+          isA<RemoteFileException>()
+              .having((x) => x.kind, 'kind', RemoteFileErrorKind.network)
+              .having((x) => x.fatal, 'fatal', isTrue),
+        ),
       );
       running[3].finish();
       await e.done;
@@ -405,7 +432,10 @@ void main() {
     test('progress reaches the caller', () async {
       final seen = <(int, int)>[];
       final job = remoteFiles.upload(
-          localPath: local('p', 1).path, remotePath: '/p', onProgress: (s, t) => seen.add((s, t)));
+        localPath: local('p', 1).path,
+        remotePath: '/p',
+        onProgress: (s, t) => seen.add((s, t)),
+      );
       running.single.progress(5, 10);
       running.single.finish();
       await job.done;

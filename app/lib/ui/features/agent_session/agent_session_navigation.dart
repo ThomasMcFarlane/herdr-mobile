@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/repositories/observed_session.dart';
 import '../../../data/repositories/observed_sessions.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'agent_session_screen.dart';
 import 'subagent_run_session.dart';
 import 'subagent_screen.dart';
@@ -37,6 +39,8 @@ Future<void> openSubagentRun(BuildContext context, AgentSessionView session, Str
     return Future.value();
   }
   return Navigator.of(context).push(
-    MaterialPageRoute<void>(builder: (_) => SubagentRunScreen(session: owner, runId: runId)),
+    MaterialPageRoute<void>(
+      builder: (_) => SubagentRunScreen(session: owner, runId: runId),
+    ),
   );
 }

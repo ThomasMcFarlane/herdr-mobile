@@ -6,7 +6,9 @@ import 'package:flutter/material.dart';
 import '../../../data/acp/subagents/subagent_run.dart';
 import '../../../data/repositories/agent_session.dart';
 import '../../../data/words/plural.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'agent_session_navigation.dart';
 import 'observed_roster.dart' show showObservedSubagents;
 import 'session_select.dart';
@@ -137,7 +139,8 @@ class SubagentRoster extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SessionSelect<_RosterSnap>(
     session: session,
-    select: (s) => _RosterSnap(s.subagentRuns, blockedRunIds(s.state), runsAreLive(s.state, linkLive: s.link == AgentLink.live)),
+    select: (s) =>
+        _RosterSnap(s.subagentRuns, blockedRunIds(s.state), runsAreLive(s.state, linkLive: s.link == AgentLink.live)),
     same: (a, b) => a.sameAs(b),
     builder: (context, snap) {
       final ds = context.ds;
@@ -175,7 +178,10 @@ class SubagentRoster extends StatelessWidget {
         kind: SheetKind.list,
         scrolls: items.isNotEmpty,
         child: items.isEmpty
-            ? const EmptyState.inline('None started yet.', padding: EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.sm))
+            ? const EmptyState.inline(
+                'None started yet.',
+                padding: EdgeInsets.only(left: Gap.lg, right: Gap.lg, bottom: Gap.sm),
+              )
             : list,
       );
     },

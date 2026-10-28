@@ -17,11 +17,7 @@ const ompPromptChars = 60;
 /// [head] is the first bytes of the log decoded as text and [tail] the last
 /// ones. A [tail] that starts in the middle of the file ([tailStartsMidLine])
 /// has its first line dropped: it is a fragment.
-OmpSessionName parseOmpSessionName({
-  required String head,
-  required String tail,
-  bool tailStartsMidLine = false,
-}) {
+OmpSessionName parseOmpSessionName({required String head, required String tail, bool tailStartsMidLine = false}) {
   String? title;
   String? prompt;
 

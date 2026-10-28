@@ -8,6 +8,7 @@ import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/pane_answerer.dart' show promptDigest;
 import '../../../data/repositories/pane_previews.dart';
 import '../../../data/services/herdr_transport.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
 
 enum ReplyPhase {
@@ -112,17 +113,21 @@ class QuickReplyController extends ChangeNotifier {
       return Future.value(false);
     }
     final index = asked.replies.indexOf(reply);
-    return _send(() async {
-      final now = await previews.recheck(machine, paneId);
-      if (now == null || index < 0 || index >= now.replies.length || promptDigest(now) != promptDigest(asked)) {
-        throw _Changed(now, index);
-      }
-      // The digest does not cover the reasons (a cut command, a risky word
-      // the question did not have): an answer that became a gated one since the
-      // chip was drawn was not confirmed as one, and is not sent on that tap.
-      if (now.replies[index].needsConfirm && !reply.needsConfirm) throw _Changed(now, index);
-      await machine.api.sendKeys(paneId, now.replies[index].keys);
-    }, reply.label, reply: reply);
+    return _send(
+      () async {
+        final now = await previews.recheck(machine, paneId);
+        if (now == null || index < 0 || index >= now.replies.length || promptDigest(now) != promptDigest(asked)) {
+          throw _Changed(now, index);
+        }
+        // The digest does not cover the reasons (a cut command, a risky word
+        // the question did not have): an answer that became a gated one since the
+        // chip was drawn was not confirmed as one, and is not sent on that tap.
+        if (now.replies[index].needsConfirm && !reply.needsConfirm) throw _Changed(now, index);
+        await machine.api.sendKeys(paneId, now.replies[index].keys);
+      },
+      reply.label,
+      reply: reply,
+    );
   }
 
   /// A finger held a gated [reply] to the end: that is its confirmation. Primes
@@ -137,14 +142,12 @@ class QuickReplyController extends ChangeNotifier {
   }
 
   /// Types [text] and presses enter. Whitespace alone only presses enter.
-  Future<bool> sendLine(String text) => text.trim().isEmpty
-      ? sendKey('enter')
-      : _send(() => machine.api.sendLine(paneId, text), '“${_clip(text)}”');
+  Future<bool> sendLine(String text) =>
+      text.trim().isEmpty ? sendKey('enter') : _send(() => machine.api.sendLine(paneId, text), '“${_clip(text)}”');
 
   /// One herdr key (`esc`, `enter`, `up`, `down`). Moving through a menu is
   /// not an answer, so a key never locks the chips afterwards.
-  Future<bool> sendKey(String key) =>
-      _send(() => machine.api.sendKeys(paneId, [key]), key, hold: false);
+  Future<bool> sendKey(String key) => _send(() => machine.api.sendKeys(paneId, [key]), key, hold: false);
 
   /// Gives up waiting for the second activation.
   void cancelConfirm() {
@@ -163,12 +166,7 @@ class QuickReplyController extends ChangeNotifier {
     _set(ReplyPhase.idle);
   }
 
-  Future<bool> _send(
-    Future<void> Function() action,
-    String label, {
-    QuickReply? reply,
-    bool hold = true,
-  }) async {
+  Future<bool> _send(Future<void> Function() action, String label, {QuickReply? reply, bool hold = true}) async {
     if (_phase == ReplyPhase.sending) return false;
     _timer?.cancel();
     _confirming = null;

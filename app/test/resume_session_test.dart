@@ -45,13 +45,16 @@ final _t0 = DateTime.utc(2026, 3, 1, 12);
 /// clock).
 class _Outcome<T> {
   _Outcome(Future<T> f) {
-    f.then((v) {
-      value = v;
-      done = true;
-    }, onError: (Object e) {
-      error = e;
-      done = true;
-    });
+    f.then(
+      (v) {
+        value = v;
+        done = true;
+      },
+      onError: (Object e) {
+        error = e;
+        done = true;
+      },
+    );
   }
 
   T? value;
@@ -148,13 +151,8 @@ class _Fleet {
     return s;
   }
 
-  Future<AgentSessionView> resume(ResumeTargetOf s) => repo.resume(
-    machine: conn('a'),
-    agent: s.agent,
-    cwd: s.cwd,
-    sessionId: s.sessionId,
-    replaces: s.replaces,
-  );
+  Future<AgentSessionView> resume(ResumeTargetOf s) =>
+      repo.resume(machine: conn('a'), agent: s.agent, cwd: s.cwd, sessionId: s.sessionId, replaces: s.replaces);
 
   void dispose() {
     repo.dispose();
@@ -223,7 +221,11 @@ void main() {
         h.refresh();
 
         expect((h.repo.byKey('a/live')! as AcpAgentSession).resumeTarget, isNull, reason: 'it lives');
-        expect((h.repo.byKey('a/noid')! as AcpAgentSession).resumeTarget, isNull, reason: 'no session to ask the agent for');
+        expect(
+          (h.repo.byKey('a/noid')! as AcpAgentSession).resumeTarget,
+          isNull,
+          reason: 'no session to ask the agent for',
+        );
         expect((h.repo.byKey('a/gone')! as AcpAgentSession).resumeTarget, isNotNull);
 
         // Another device attaches: this one is told it was taken over.
@@ -233,7 +235,11 @@ void main() {
         async.elapse(const Duration(milliseconds: 200));
         expect(taken.link, AgentLink.ended);
         expect(taken.evicted, isTrue);
-        expect(taken.resumeTarget, isNull, reason: 'Take over is its way back; a second keeper would fight for the thread');
+        expect(
+          taken.resumeTarget,
+          isNull,
+          reason: 'Take over is its way back; a second keeper would fight for the thread',
+        );
       });
     });
 
@@ -392,7 +398,14 @@ void main() {
         final host = h.host('a');
         h.addMachine('a');
         // The same conversation twice: an exited record and a live keeper.
-        host.add(id: 'old', agent: 'codex', cwd: '/work/app', sessionId: 'sess-9', state: KeeperState.exited, exitCode: 1);
+        host.add(
+          id: 'old',
+          agent: 'codex',
+          cwd: '/work/app',
+          sessionId: 'sess-9',
+          state: KeeperState.exited,
+          exitCode: 1,
+        );
         host.add(id: 'now', agent: 'codex', cwd: '/work/app', sessionId: 'sess-9');
         h.refresh();
         final ended = h.repo.byKey('a/old')! as AcpAgentSession;
@@ -487,29 +500,32 @@ void main() {
       });
     });
 
-    test('machine and agent errors keep their words; an agent nobody installed is refused before any keeper starts', () {
-      fakeAsync((async) {
-        final r = afterReboot(async);
-        addTearDown(r.h.dispose);
-        final startsBefore = r.host.startCalls;
+    test(
+      'machine and agent errors keep their words; an agent nobody installed is refused before any keeper starts',
+      () {
+        fakeAsync((async) {
+          final r = afterReboot(async);
+          addTearDown(r.h.dispose);
+          final startsBefore = r.host.startCalls;
 
-        r.host.installed = {};
-        var out = _Outcome(r.h.resume(ResumeTargetOf(r.old)));
-        async.elapse(const Duration(seconds: 1));
-        expect((out.error! as AgentHostException).message, 'omp is not installed on studio-a.');
-        expect(r.host.startCalls, startsBefore);
+          r.host.installed = {};
+          var out = _Outcome(r.h.resume(ResumeTargetOf(r.old)));
+          async.elapse(const Duration(seconds: 1));
+          expect((out.error! as AgentHostException).message, 'omp is not installed on studio-a.');
+          expect(r.host.startCalls, startsBefore);
 
-        r.host.installed = {'omp'};
-        r.host.startFailure = const AgentHostException('/work/app does not exist on studio-a.', fatal: true);
-        out = _Outcome(r.h.resume(ResumeTargetOf(r.old)));
-        async.elapse(const Duration(seconds: 1));
-        final error = out.error! as AgentHostException;
-        expect(error.message, '/work/app does not exist on studio-a.');
-        expect(error.fatal, isTrue);
-        expect(r.h.repo.sessions, [r.old]);
-        expect(r.old.resumeTarget, isNotNull);
-      });
-    });
+          r.host.installed = {'omp'};
+          r.host.startFailure = const AgentHostException('/work/app does not exist on studio-a.', fatal: true);
+          out = _Outcome(r.h.resume(ResumeTargetOf(r.old)));
+          async.elapse(const Duration(seconds: 1));
+          final error = out.error! as AgentHostException;
+          expect(error.message, '/work/app does not exist on studio-a.');
+          expect(error.fatal, isTrue);
+          expect(r.h.repo.sessions, [r.old]);
+          expect(r.old.resumeTarget, isNotNull);
+        });
+      },
+    );
   });
 
   group('history', () {

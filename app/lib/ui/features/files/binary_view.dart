@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../data/words/elapsed.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart';
+
 import 'file_format.dart';
 import 'file_kind.dart';
 import 'file_viewer_view_model.dart';
@@ -51,7 +53,8 @@ class BinaryView extends StatelessWidget {
               icon: switch (model.kind) {
                 FileKind.svg => LucideIcons.fileImage,
                 FileKind.pdf => LucideIcons.fileText,
-                _ => fileIconForName(model.name) == LucideIcons.fileText ? LucideIcons.file : fileIconForName(model.name),
+                _ =>
+                  fileIconForName(model.name) == LucideIcons.fileText ? LucideIcons.file : fileIconForName(model.name),
               },
               size: IconSize.hero,
             ),
@@ -84,8 +87,8 @@ class BinaryView extends StatelessWidget {
           value: stat.size == null
               ? 'Unknown'
               : stat.size! < 1024
-                  ? formatBytes(stat.size)
-                  : '${formatBytes(stat.size)} (${groupDigits(stat.size!)} bytes)',
+              ? formatBytes(stat.size)
+              : '${formatBytes(stat.size)} (${groupDigits(stat.size!)} bytes)',
         ),
         if (stat.modified case final at?) InfoRow(label: 'Modified', value: formatWhen(at, DateTime.now())),
         if (perms.isNotEmpty) InfoRow(label: 'Permissions', value: perms, mono: true),
@@ -134,9 +137,7 @@ class BinaryView extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(bottom: Gap.sm),
             child: Text(
-              model.head.length < (stat.size ?? model.head.length)
-                  ? 'First ${model.head.length} bytes'
-                  : 'Contents',
+              model.head.length < (stat.size ?? model.head.length) ? 'First ${model.head.length} bytes' : 'Contents',
               style: Type.label.copyWith(color: ds.textSecondary),
             ),
           ),
@@ -184,10 +185,7 @@ class _HexDump extends StatelessWidget {
       ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: SelectableText(
-          dump(bytes),
-          style: Mono.base.copyWith(color: ds.textSecondary),
-        ),
+        child: SelectableText(dump(bytes), style: Mono.base.copyWith(color: ds.textSecondary)),
       ),
     );
   }

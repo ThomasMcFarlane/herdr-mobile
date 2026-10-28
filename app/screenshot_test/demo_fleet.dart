@@ -66,8 +66,7 @@ const _titles = {
   'e1:p1': 'Calibrate the temperature sensors',
 };
 
-MachineProfile _machine(String id, String label, String host, String user,
-        {SshAuth auth = SshAuth.key}) =>
+MachineProfile _machine(String id, String label, String host, String user, {SshAuth auth = SshAuth.key}) =>
     MachineProfile(id: id, label: label, host: host, username: user, auth: auth);
 
 /// What studio-mac's file browser can reach.
@@ -79,8 +78,7 @@ FakeFs _studioFs(Uint8List chart) {
     fs.nodes[path] = FakeNode.dir(modified: now.subtract(age));
   }
 
-  void file(String path, int size, Duration age) =>
-      fs.addFile(path, Uint8List(size), modified: now.subtract(age));
+  void file(String path, int size, Duration age) => fs.addFile(path, Uint8List(size), modified: now.subtract(age));
 
   dir('$projectDir/cmd', const Duration(days: 12));
   dir('$projectDir/db', const Duration(hours: 2));
@@ -118,7 +116,7 @@ FakeFs _studioFs(Uint8List chart) {
 /// ones. Every machine has a file system, so the Files button shows.
 class DemoFleet {
   DemoFleet._(this.machines, this.fleet, this.transports, this._skew)
-      : previews = PanePreviews(changes: fleet, connection: fleet.connection);
+    : previews = PanePreviews(changes: fleet, connection: fleet.connection);
 
   final MachineRepository machines;
   final FleetRepository fleet;
@@ -264,8 +262,9 @@ class DemoFleet {
   /// Waits until every machine is online and listening for events.
   Future<void> online(WidgetTester tester) async {
     await tester.runAsync(
-      () => eventually(() =>
-          fleet.connections.every((c) => c.isLive) && transports.values.every((t) => t.subscriptions > 0)),
+      () => eventually(
+        () => fleet.connections.every((c) => c.isLive) && transports.values.every((t) => t.subscriptions > 0),
+      ),
     );
   }
 
@@ -319,41 +318,37 @@ Widget Function(Widget) demoProviders(
   List<SingleChildWidget> extra = const [],
 }) =>
     (app) => MultiProvider(
-          providers: [
-            ChangeNotifierProvider.value(value: h.machines),
-            ChangeNotifierProvider.value(value: h.fleet),
-            ChangeNotifierProvider.value(value: h.terminalSettings),
-            ChangeNotifierProvider.value(value: h.appSettings),
-            ChangeNotifierProvider.value(value: h.agentScreens),
-            Provider<PanePreviews>.value(value: h.previews),
-            // The shell's badge and the board read it.
-            attentionSetProvider(),
-            ...extra,
-            Provider<TransportFactory>.value(
-              value: factory ?? (profile, secrets, onPin, onNotice) => UiTransport(snapshotWith(const [])),
-            ),
-          ],
-          child: app,
-        );
+      providers: [
+        ChangeNotifierProvider.value(value: h.machines),
+        ChangeNotifierProvider.value(value: h.fleet),
+        ChangeNotifierProvider.value(value: h.terminalSettings),
+        ChangeNotifierProvider.value(value: h.appSettings),
+        ChangeNotifierProvider.value(value: h.agentScreens),
+        Provider<PanePreviews>.value(value: h.previews),
+        // The shell's badge and the board read it.
+        attentionSetProvider(),
+        ...extra,
+        Provider<TransportFactory>.value(
+          value: factory ?? (profile, secrets, onPin, onNotice) => UiTransport(snapshotWith(const [])),
+        ),
+      ],
+      child: app,
+    );
 
 const _paymentsRepoKey = '$projectDir/.git';
 
 Map<String, Object> _provenance(String path, {required bool linked}) => {
-      'checkout_path': path,
-      'is_linked_worktree': linked,
-      'repo_key': _paymentsRepoKey,
-      'repo_name': 'payments-api',
-      'repo_root': projectDir,
-    };
+  'checkout_path': path,
+  'is_linked_worktree': linked,
+  'repo_key': _paymentsRepoKey,
+  'repo_name': 'payments-api',
+  'repo_root': projectDir,
+};
 
 /// Marks payments-api's workspaces as one repo group, the way herdr's
 /// `workspace.worktree` does for a primary checkout and its linked ones.
 void _groupPaymentsApi(Map<String, dynamic> snapshot) {
-  const checkouts = {
-    'a1': (projectDir, false),
-    'a3': (rateLimitDir, true),
-    'a4': (refundDir, true),
-  };
+  const checkouts = {'a1': (projectDir, false), 'a3': (rateLimitDir, true), 'a4': (refundDir, true)};
   for (final w in snapshot['workspaces'] as List) {
     final ws = w as Map<String, dynamic>;
     if (checkouts[ws['workspace_id']] case (final path, final linked)?) {
@@ -368,11 +363,7 @@ void _groupPaymentsApi(Map<String, dynamic> snapshot) {
 class _WorktreeTransport extends UiTransport {
   _WorktreeTransport(super.snapshot);
 
-  static const _branches = {
-    projectDir: 'main',
-    rateLimitDir: 'fix/rate-limit',
-    refundDir: 'feat/refund-endpoint',
-  };
+  static const _branches = {projectDir: 'main', rateLimitDir: 'fix/rate-limit', refundDir: 'feat/refund-endpoint'};
 
   @override
   Future<Map<String, dynamic>> request(String method, [Map<String, dynamic> params = const {}]) {

@@ -17,8 +17,14 @@ void main() {
       AlignedTicker(period, clock, () => ticks.add(('b', async.elapsed)));
       async.elapse(const Duration(minutes: 9));
 
-      final a = [for (final t in ticks) if (t.$1 == 'a') t.$2];
-      final b = [for (final t in ticks) if (t.$1 == 'b') t.$2];
+      final a = [
+        for (final t in ticks)
+          if (t.$1 == 'a') t.$2,
+      ];
+      final b = [
+        for (final t in ticks)
+          if (t.$1 == 'b') t.$2,
+      ];
       expect(a, b);
       expect(a.length, 2);
       expect(a[1] - a[0], period);

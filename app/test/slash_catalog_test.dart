@@ -76,8 +76,7 @@ void main() {
       final all = await _catalog(fs).load(agent: 'claude', cwd: _cwd);
 
       expect(_find(all, 'ship'), const SlashCommand('ship', 'Ship it', SlashSource.project));
-      expect(_find(all, 'git:sync'),
-          const SlashCommand('git:sync', 'Pull and rebase', SlashSource.project));
+      expect(_find(all, 'git:sync'), const SlashCommand('git:sync', 'Pull and rebase', SlashSource.project));
       expect(_find(all, 'pdf')?.description, 'Work with PDFs');
       expect(_find(all, 'mine'), const SlashCommand('mine', 'My own', SlashSource.user));
       expect(_find(all, 'deploy')?.source, SlashSource.user);
@@ -103,11 +102,7 @@ void main() {
 
       final all = await _catalog(fs).load(agent: 'claude', cwd: _cwd);
 
-      expect(all.map((c) => c.source).toSet().toList(), [
-        SlashSource.project,
-        SlashSource.user,
-        SlashSource.builtIn,
-      ]);
+      expect(all.map((c) => c.source).toSet().toList(), [SlashSource.project, SlashSource.user, SlashSource.builtIn]);
     });
 
     test('an unreadable folder or a failing machine adds nothing and does not throw', () async {
@@ -185,8 +180,11 @@ void main() {
       expect(names.first, 'compare', reason: 'project command in the name group');
 
       final starts = m.match('/co').map((c) => c.name).toList();
-      expect(starts.indexOf('compare'), lessThan(starts.indexOf('compact')),
-          reason: 'project before built-in inside a group');
+      expect(
+        starts.indexOf('compare'),
+        lessThan(starts.indexOf('compact')),
+        reason: 'project before built-in inside a group',
+      );
       expect(starts.take(3), containsAll(['compare', 'compact', 'context']));
 
       final text = m.match('/files').map((c) => c.name).toList();
@@ -302,7 +300,10 @@ void main() {
       final all = await load(fs);
 
       final reviews = all.where((c) => c.name == 'review').toList();
-      expect([for (final c in reviews) (c.trigger, c.description)], [(r'$', 'Project review'), ('/', 'Review the working tree')]);
+      expect(
+        [for (final c in reviews) (c.trigger, c.description)],
+        [(r'$', 'Project review'), ('/', 'Review the working tree')],
+      );
     });
 
     test('a machine with none of the folders adds only the built-in commands', () async {

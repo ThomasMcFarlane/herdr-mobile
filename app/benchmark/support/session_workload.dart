@@ -57,8 +57,9 @@ class TracePools {
     final tools = <ToolTemplate>[];
     final plans = <List<Json>>[];
     Json? commands;
-    final files = Directory(root).listSync(recursive: true).whereType<File>().where((f) => f.path.endsWith('.jsonl')).toList()
-      ..sort((a, b) => a.path.compareTo(b.path));
+    final files =
+        Directory(root).listSync(recursive: true).whereType<File>().where((f) => f.path.endsWith('.jsonl')).toList()
+          ..sort((a, b) => a.path.compareTo(b.path));
     for (final f in files) {
       final agent = f.path.split('/').reversed.skip(1).first;
       final text = <String, StringBuffer>{};
@@ -134,7 +135,11 @@ List<Json> buildSession(
   final out = <Json>[];
   final styles = agent == 'mixed' ? const ['omp', 'omp', 'claude', 'codex'] : [agent];
   if (p.commands != null) out.add(_copy(p.commands!));
-  out.add({'sessionUpdate': 'session_info_update', 'title': 'Fix the locale handling in the parser', 'updatedAt': '2026-10-05T01:39:08.429Z'});
+  out.add({
+    'sessionUpdate': 'session_info_update',
+    'title': 'Fix the locale handling in the parser',
+    'updatedAt': '2026-10-05T01:39:08.429Z',
+  });
   var count = 0;
   var serial = 0;
   var used = 12000;
@@ -144,7 +149,11 @@ List<Json> buildSession(
   String id(String prefix) => '$prefix-${(serial++).toRadixString(36)}-${rng.nextInt(1 << 30).toRadixString(36)}';
 
   void user(String text) {
-    out.add({'sessionUpdate': 'user_message_chunk', 'messageId': id('u'), 'content': {'type': 'text', 'text': text}});
+    out.add({
+      'sessionUpdate': 'user_message_chunk',
+      'messageId': id('u'),
+      'content': {'type': 'text', 'text': text},
+    });
     count++;
   }
 
@@ -195,8 +204,10 @@ List<Json> buildSession(
     while (b.length < bytes) {
       passed += 1 + rng.nextInt(3);
       final s = 4 + n * 7 ~/ 5;
-      b.writeln('${(s ~/ 60).toString().padLeft(2, '0')}:${(s % 60).toString().padLeft(2, '0')} +$passed: '
-          'test/feature_${n % 41}/case_${n % 13}_test.dart: group ${n % 7} parses sample ${n++} ${n % 5 == 0 ? '[E]' : ''}');
+      b.writeln(
+        '${(s ~/ 60).toString().padLeft(2, '0')}:${(s % 60).toString().padLeft(2, '0')} +$passed: '
+        'test/feature_${n % 41}/case_${n % 13}_test.dart: group ${n % 7} parses sample ${n++} ${n % 5 == 0 ? '[E]' : ''}',
+      );
     }
     return b.toString();
   }
@@ -207,16 +218,17 @@ List<Json> buildSession(
   List<Json> instantiate(ToolTemplate t, String kind, String title, int outBytes) {
     final ids = {for (final u in t.updates) u['toolCallId'] as String: id('tc')};
     final out = outBytes == 0 ? null : outputText(outBytes, kind);
-    return [
-      for (final u in t.updates) _retarget(_copy(u), ids, out, kind, title),
-    ];
+    return [for (final u in t.updates) _retarget(_copy(u), ids, out, kind, title)];
   }
 
   void editTool(int bytes, {required bool created}) {
     final path = 'lib/feature_${rng.nextInt(40)}/${pick(const ['parse', 'view', 'model', 'store', 'client'])}.dart';
     final oldText = created ? null : fileText(bytes);
     final lines = (oldText ?? fileText(bytes)).split('\n');
-    final newText = [for (final (i, l) in lines.indexed) if (i % 17 != 3) (i % 23 == 5 ? '$l // changed' : l)].join('\n');
+    final newText = [
+      for (final (i, l) in lines.indexed)
+        if (i % 17 != 3) (i % 23 == 5 ? '$l // changed' : l),
+    ].join('\n');
     final tid = id('ed');
     out
       ..add({
@@ -248,7 +260,15 @@ List<Json> buildSession(
       final bytes = forceBytes ?? (big ? logUniform(20 * 1024, 200 * 1024).round() : logUniform(300, 3000).round());
       return editTool(bytes, created: forceWant != null || (big && rng.nextDouble() < .3));
     }
-    final want = forceWant ?? (r < .45 ? 'read' : r < .75 ? 'execute' : r < .85 ? 'search' : 'other');
+    final want =
+        forceWant ??
+        (r < .45
+            ? 'read'
+            : r < .75
+            ? 'execute'
+            : r < .85
+            ? 'search'
+            : 'other');
     final templateKind = want == 'search' ? 'read' : want;
     final pool = p.tools.where((t) => t.agent == style && t.kind == templateKind).toList();
     final any = pool.isEmpty ? p.tools.where((t) => t.kind == templateKind).toList() : pool;
@@ -290,7 +310,12 @@ List<Json> buildSession(
     }
     if (count < items) chunked('agent_message_chunk', answerText());
     used += 3000 + rng.nextInt(9000);
-    out.add({'sessionUpdate': 'usage_update', 'used': used, 'size': 1000000, 'cost': {'amount': used / 1.2e6, 'currency': 'USD'}});
+    out.add({
+      'sessionUpdate': 'usage_update',
+      'used': used,
+      'size': 1000000,
+      'cost': {'amount': used / 1.2e6, 'currency': 'USD'},
+    });
   }
   for (final h in tail) {
     switch (h.kind) {
@@ -320,7 +345,9 @@ String? _outputOf(List<Json> updates) {
       if (c is List && c.isNotEmpty && (c.first as Map)['text'] is String) return (c.first as Map)['text'] as String;
     }
     final meta = u['_meta'];
-    if (meta is Map && meta['terminal_output_delta'] is Map) return (meta['terminal_output_delta'] as Map)['data'] as String?;
+    if (meta is Map && meta['terminal_output_delta'] is Map) {
+      return (meta['terminal_output_delta'] as Map)['data'] as String?;
+    }
   }
   return null;
 }
@@ -333,9 +360,13 @@ Json _retarget(Json u, Map<String, String> ids, String? output, String kind, Str
   Object? walk(Object? v, List<String> path) {
     switch (v) {
       case final Map m:
-        return {for (final e in m.entries) e.key: walk(e.value, [...path, '${e.key}'])};
+        return {
+          for (final e in m.entries) e.key: walk(e.value, [...path, '${e.key}']),
+        };
       case final List l:
-        return [for (final (i, e) in l.indexed) walk(e, [...path, '$i'])];
+        return [
+          for (final (i, e) in l.indexed) walk(e, [...path, '$i']),
+        ];
       case final String s:
         var r = s;
         for (final e in ids.entries) {
@@ -343,7 +374,8 @@ Json _retarget(Json u, Map<String, String> ids, String? output, String kind, Str
         }
         if (output == null) return r;
         final p = path.join('/');
-        final isOutput = p == 'rawOutput' ||
+        final isOutput =
+            p == 'rawOutput' ||
             p == 'rawOutput/content/0/text' ||
             p.endsWith('toolResponse/stdout') ||
             p.endsWith('toolResponse/file/content') ||

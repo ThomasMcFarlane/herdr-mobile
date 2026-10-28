@@ -218,7 +218,10 @@ class ListRow extends StatelessWidget {
                   if (leadingOnTitle)
                     _TitleLineSlot(width: leadingExtent, lineHeight: titleLine, child: leading!)
                   else
-                    SizedBox(width: leadingExtent, child: Center(child: leading)),
+                    SizedBox(
+                      width: leadingExtent,
+                      child: Center(child: leading),
+                    ),
                   const SizedBox(width: _leadingGap),
                 ],
                 Expanded(child: text),
@@ -279,12 +282,10 @@ class _RenderTitleLineSlot extends RenderShiftedBox {
   double computeMaxIntrinsicWidth(double height) => _width;
 
   @override
-  double computeMinIntrinsicHeight(double width) =>
-      math.max(_lineHeight, child?.getMinIntrinsicHeight(_width) ?? 0);
+  double computeMinIntrinsicHeight(double width) => math.max(_lineHeight, child?.getMinIntrinsicHeight(_width) ?? 0);
 
   @override
-  double computeMaxIntrinsicHeight(double width) =>
-      math.max(_lineHeight, child?.getMaxIntrinsicHeight(_width) ?? 0);
+  double computeMaxIntrinsicHeight(double width) => math.max(_lineHeight, child?.getMaxIntrinsicHeight(_width) ?? 0);
 
   @override
   Size computeDryLayout(BoxConstraints constraints) {
@@ -301,8 +302,10 @@ class _RenderTitleLineSlot extends RenderShiftedBox {
     }
     c.layout(BoxConstraints(maxWidth: _width), parentUsesSize: true);
     size = constraints.constrain(Size(_width, math.max(_lineHeight, c.size.height)));
-    (c.parentData! as BoxParentData).offset =
-        Offset((size.width - c.size.width) / 2, (size.height - c.size.height) / 2);
+    (c.parentData! as BoxParentData).offset = Offset(
+      (size.width - c.size.width) / 2,
+      (size.height - c.size.height) / 2,
+    );
   }
 }
 
@@ -375,10 +378,7 @@ class SectionLabel extends StatelessWidget {
                         style: Type.label.copyWith(color: ds.textMuted, fontFeatures: Type.tabular),
                       ),
                     ],
-                    if (expanded != null) ...[
-                      const SizedBox(width: Gap.xs),
-                      Caret(open: expanded!),
-                    ],
+                    if (expanded != null) ...[const SizedBox(width: Gap.xs), Caret(open: expanded!)],
                   ],
                 ),
               ),
@@ -407,8 +407,7 @@ class Collapse extends StatefulWidget {
 }
 
 class _CollapseState extends State<Collapse> with SingleTickerProviderStateMixin {
-  late final AnimationController _controller =
-      AnimationController(vsync: this, value: widget.open ? 1 : 0);
+  late final AnimationController _controller = AnimationController(vsync: this, value: widget.open ? 1 : 0);
   // Closing is an ease-out in time too, not the opening curve played backwards.
   late final CurvedAnimation _progress = Motion.curved(_controller);
 
@@ -433,31 +432,31 @@ class _CollapseState extends State<Collapse> with SingleTickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
-        animation: _progress,
-        child: KeyedSubtree(key: _bodyKey, child: widget.child),
-        builder: (context, child) {
-          final v = _progress.value;
-          if (v <= 0) return const SizedBox(width: double.infinity);
-          return ExcludeFocus(
-            excluding: !widget.open,
-            child: ExcludeSemantics(
-              excluding: !widget.open,
-              child: IgnorePointer(
-                ignoring: !widget.open,
-                child: v >= 1
-                    ? child!
-                    : ClipRect(
-                        child: Align(
-                          alignment: Alignment.topCenter,
-                          heightFactor: v,
-                          child: Opacity(opacity: v, child: child),
-                        ),
-                      ),
-              ),
-            ),
-          );
-        },
+    animation: _progress,
+    child: KeyedSubtree(key: _bodyKey, child: widget.child),
+    builder: (context, child) {
+      final v = _progress.value;
+      if (v <= 0) return const SizedBox(width: double.infinity);
+      return ExcludeFocus(
+        excluding: !widget.open,
+        child: ExcludeSemantics(
+          excluding: !widget.open,
+          child: IgnorePointer(
+            ignoring: !widget.open,
+            child: v >= 1
+                ? child!
+                : ClipRect(
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      heightFactor: v,
+                      child: Opacity(opacity: v, child: child),
+                    ),
+                  ),
+          ),
+        ),
       );
+    },
+  );
 }
 
 /// Quiet empty state: text first, one optional action. The art is an [icon]
@@ -467,15 +466,9 @@ class _CollapseState extends State<Collapse> with SingleTickerProviderStateMixin
 /// [EmptyState.inline] is the small form: one muted line where a list in a
 /// sheet or a section has nothing yet (`None started yet.`).
 class EmptyState extends StatelessWidget {
-  const EmptyState({
-    super.key,
-    this.icon,
-    this.mark,
-    required this.title,
-    required this.message,
-    this.action,
-  }) : assert((icon == null) != (mark == null), 'an icon or a mark, not both'),
-       padding = null;
+  const EmptyState({super.key, this.icon, this.mark, required this.title, required this.message, this.action})
+    : assert((icon == null) != (mark == null), 'an icon or a mark, not both'),
+      padding = null;
 
   /// One line in place of a list: [title] in muted secondary text. [padding]
   /// defaults to a sheet's sides.
@@ -519,16 +512,17 @@ class EmptyState extends StatelessWidget {
                   Container(
                     width: 52,
                     height: 52,
-                    decoration: BoxDecoration(
-                      color: ds.fill,
-                      borderRadius: BorderRadius.circular(Radii.md),
-                    ),
+                    decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.md)),
                     child: Icon(icon, size: 24, color: ds.textSecondary),
                   ),
               const SizedBox(height: Gap.lg),
               Semantics(
                 header: true,
-                child: Text(title, style: Type.title.copyWith(color: ds.text), textAlign: TextAlign.center),
+                child: Text(
+                  title,
+                  style: Type.title.copyWith(color: ds.text),
+                  textAlign: TextAlign.center,
+                ),
               ),
               const SizedBox(height: Gap.sm),
               Text(
