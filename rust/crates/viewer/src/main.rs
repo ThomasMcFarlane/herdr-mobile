@@ -22,11 +22,13 @@ use crossterm::{
 };
 use herdr_tui::composer::Composer;
 use herdr_tui::question::{self, Act};
+use herdr_tui::select::Selection;
 use herdr_tui::session::{Effect, Event, Phase, Record, Refused, Session, Start};
 use herdr_tui::transcript::Transcript;
 use herdr_tui::ui;
 use herdr_tui::{
-    cli, delight, fold, herdr, highlight, host, input, lines, md, sessions, termbg, theme, update,
+    cli, delight, fold, herdr, highlight, host, input, lines, md, select, sessions, termbg, theme,
+    update,
 };
 use keeper::records::StateDir;
 use std::io::{BufReader, Write};
@@ -42,7 +44,8 @@ const QUESTION_HINT: &str = "Answer on the panel: ↑↓ or a number, then Enter
 
 enum Ev {
     Key(KeyEvent),
-    /// A click or a turn of the wheel, when the mouse is ours (`input::mouse_wanted`).
+    /// A press, drag or release of the left button, or a turn of the wheel, when the mouse is ours
+    /// (`input::mouse_wanted`).
     Mouse(MouseEvent),
     Resize,
     /// Text pasted (the terminal marks it, so it is one insertion and not a run of keys).
@@ -93,6 +96,8 @@ struct App {
     /// The question and field whose text the composer holds.
     boxed: Option<(acp::Id, usize)>,
     repaint: bool,
+    /// The selection was finished: copy what it covers from the frame about to be drawn.
+    copy: bool,
     /// Whether things move: the spinner, the shimmer, the pulse and unfolds.
     motion: bool,
     /// The signal that asked the program to end, if one did.
@@ -287,6 +292,7 @@ fn main() {
         stash: None,
         boxed: None,
         repaint: false,
+        copy: false,
         motion: delight::motion_enabled(),
         signal: None,
         reporter: None,
@@ -320,7 +326,7 @@ fn main() {
     // the keyboard thread is not reading yet.
     app.theme = theme::Theme::detect(termbg::query());
     // Clicks and the wheel come to us (after the colour query, so no click lands in its reply):
-    // a click opens what it is on, and the terminal's own selection is Shift-drag.
+    // a click opens what it is on, and a drag selects and copies (`select.rs`).
     if input::mouse_wanted(|k| std::env::var(k).ok()) {
         let _ = std::io::stdout().write_all(input::MOUSE_ON);
         let _ = std::io::stdout().flush();
@@ -368,8 +374,14 @@ fn main() {
         }
         // One frame reaches the terminal whole: where it is supported, it shows nothing half-drawn.
         let _ = execute!(std::io::stdout(), BeginSynchronizedUpdate);
-        let _ = term.draw(|f| ui::draw(f, &ctx, &mut app.view));
+        let drawn = term.draw(|f| ui::draw(f, &ctx, &mut app.view));
         let _ = execute!(std::io::stdout(), EndSynchronizedUpdate);
+        // A selection was just finished: copy it from this frame, then draw again at once so the
+        // footer says so (nothing else would wake the loop to show it).
+        if app.copy && drawn.as_ref().is_ok_and(|d| app.copy_selection(d.buffer)) {
+            continue;
+        }
+        app.copy = false;
         // The loop sleeps until something happens, and wakes by itself only while something moves:
         // the elapsed counter every second, the shimmer and spinner every few frames, an unfold at
         // 60 Hz for the 160 ms it lasts. At rest nothing wakes it.
@@ -474,11 +486,14 @@ fn spawn_input(tx: mpsc::Sender<Ev>) {
                 Ok(Term::Paste(text)) => Ev::Paste(text),
                 Ok(Term::Resize(..)) => Ev::Resize,
                 Ok(Term::FocusGained) => Ev::Repaint,
-                // Only what acts: a release, a drag or a move would wake the screen for nothing.
+                // Only what acts: the buttons (a drag selects), and the wheel. A move with no
+                // button held is never asked for.
                 Ok(Term::Mouse(m))
                     if matches!(
                         m.kind,
                         MouseEventKind::Down(MouseButton::Left)
+                            | MouseEventKind::Drag(MouseButton::Left)
+                            | MouseEventKind::Up(MouseButton::Left)
                             | MouseEventKind::ScrollUp
                             | MouseEventKind::ScrollDown
                     ) =>
@@ -585,54 +600,122 @@ impl App {
         u64::try_from(self.t0.elapsed().as_millis()).unwrap_or(u64::MAX)
     }
 
-    /// The wheel scrolls; a click on an option of the asking panel chooses it, and a click on
-    /// the option already chosen answers with it (the same guards as Enter; on a question's ticks
-    /// a click ticks); a click on a tool call, a run of them or the thinking opens or closes it.
+    /// The wheel scrolls. A press starts a selection and the release ends it: dragged, it copies
+    /// what was covered; not dragged, it is a click. A click on an option of the asking panel
+    /// chooses it, and a click on the option already chosen answers with it (the same guards as
+    /// Enter; on a question's ticks a click ticks); a click on a tool call, a run of them or the
+    /// thinking opens or closes it. The click waits for the release so that a drag that starts on
+    /// a tool call selects its text instead of opening it.
     fn mouse(&mut self, m: MouseEvent) {
+        let at = (m.column, m.row);
         match m.kind {
             MouseEventKind::ScrollUp => {
+                self.view.select = None;
                 self.view.scroll = self.view.scroll.saturating_add(SCROLL_STEP);
             }
             MouseEventKind::ScrollDown => {
+                self.view.select = None;
                 self.view.scroll = self.view.scroll.saturating_sub(SCROLL_STEP);
             }
             MouseEventKind::Down(MouseButton::Left) => {
                 self.hint = None;
-                self.view.help = false;
-                if !self.session.waiting().is_empty() {
-                    if let Some(i) = self.view.option_at(m.row) {
-                        if self.asking_question() {
-                            self.ask(Act::Click(i));
-                            return;
-                        }
-                        // A first click only chooses, even on the option already marked (the
-                        // default is not a choice): the second click on it answers. A tap that
-                        // lands on a row the panel just moved under the thumb cannot approve.
-                        let armed = self.view.sel == i
-                            && matches!((&self.clicked, &self.sel_for),
-                                (Some((id, n)), Some(cur)) if id == cur && *n == i);
-                        if armed {
-                            self.answer(i);
-                        } else {
-                            self.confirm = None;
-                            self.view.sel = i;
-                            self.clicked = self.sel_for.clone().map(|id| (id, i));
-                        }
-                        return;
-                    }
-                }
+                // A press that moves off the option a standing grant waits on takes the
+                // "press again" back, as the click used to: a drag must not leave it armed.
                 self.confirm = None;
-                if self.view.click_newest(m.row) {
-                    return;
+                self.view.select = Some(Selection::begin(at));
+            }
+            MouseEventKind::Drag(MouseButton::Left) => {
+                if let Some(s) = self.view.select.as_mut().filter(|s| !s.done) {
+                    s.drag(at);
                 }
-                let now = self.motion.then(|| self.now_ms());
-                self.view.click_fold(m.row, now);
+            }
+            MouseEventKind::Up(MouseButton::Left) => {
+                // A release with no press seen (the press went to something else) is not a click.
+                let Some(mut s) = self.view.select.take().filter(|s| !s.done) else {
+                    return;
+                };
+                s.drag(at);
+                if s.range().is_some() {
+                    s.done = true;
+                    self.view.select = Some(s);
+                    self.copy = true;
+                } else {
+                    self.click(m.row);
+                }
             }
             _ => {}
         }
     }
 
+    /// The release of a press that did not move, on screen row `row`.
+    fn click(&mut self, row: u16) {
+        self.view.help = false;
+        if !self.session.waiting().is_empty() {
+            if let Some(i) = self.view.option_at(row) {
+                if self.asking_question() {
+                    self.ask(Act::Click(i));
+                    return;
+                }
+                // A first click only chooses, even on the option already marked (the
+                // default is not a choice): the second click on it answers. A tap that
+                // lands on a row the panel just moved under the thumb cannot approve.
+                let armed = self.view.sel == i
+                    && matches!((&self.clicked, &self.sel_for),
+                        (Some((id, n)), Some(cur)) if id == cur && *n == i);
+                if armed {
+                    self.answer(i);
+                } else {
+                    self.confirm = None;
+                    self.view.sel = i;
+                    self.clicked = self.sel_for.clone().map(|id| (id, i));
+                }
+                return;
+            }
+        }
+        self.confirm = None;
+        if self.view.click_newest(row) {
+            return;
+        }
+        let now = self.motion.then(|| self.now_ms());
+        self.view.click_fold(row, now);
+    }
+
+    /// Puts what the finished selection covers on the clipboard, from the frame just drawn, and
+    /// says so. False when there was nothing to copy.
+    fn copy_selection(&mut self, drawn: &ratatui::buffer::Buffer) -> bool {
+        self.copy = false;
+        let Some(range) = self.view.select.and_then(|s| s.range()) else {
+            return false;
+        };
+        let text = select::text(drawn, range);
+        if text.is_empty() {
+            return false;
+        }
+        let mut out = std::io::stdout();
+        let _ = out.write_all(&select::osc52(&text));
+        let _ = out.flush();
+        let n = text.chars().count();
+        self.hint = Some(format!(
+            "Copied {n} character{}",
+            if n == 1 { "" } else { "s" }
+        ));
+        true
+    }
+
     fn handle(&mut self, ev: Ev) {
+        // What was selected is screen cells as they were drawn: anything but the pointer itself
+        // (or output moving under a finished selection) leaves it pointing at other text.
+        match &ev {
+            Ev::Mouse(_) | Ev::Repaint => {}
+            Ev::Session(_) => {
+                // Not while the copy of a just-finished drag is still to be made: the
+                // release and this event may arrive in one batch.
+                if !self.copy && self.view.select.is_some_and(|s| s.done) {
+                    self.view.select = None;
+                }
+            }
+            _ => self.view.select = None,
+        }
         match ev {
             Ev::Key(k) => {
                 self.hint = None;

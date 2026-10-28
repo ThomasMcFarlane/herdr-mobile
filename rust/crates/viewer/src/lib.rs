@@ -16,6 +16,7 @@ pub mod input;
 pub mod lines;
 pub mod md;
 pub mod question;
+pub mod select;
 pub mod session;
 pub mod sessions;
 pub mod shell;

@@ -58,16 +58,31 @@ printing into scrollback, and the layout is ours to get right).
 - Wrapped lines are cached per (entry, width) and dropped on resize, so a redraw during
   streaming wraps only the entry that changed. Nothing is drawn when nothing changed, and
   the only timer is the 1 s elapsed counter while a turn runs.
-- The mouse is taken for clicks and the wheel only (`?1000h` + SGR `?1006h`, never motion
-  `?1002`/`?1003`, which would wake the loop on every pointer move). A click opens or closes what
-  it is on and chooses a permission option; the terminal's own selection is Shift-drag.
-  `HERDR_TUI_MOUSE=off` hands the mouse back (alternate-scroll `?1007h` still turns the wheel into
-  Up and Down). Codex takes the mouse only in its own transcript view and draws its own
-  selection; we take it always and leave selection to the terminal, because a source-mapped
-  selection is its own subsystem and Shift-drag is the convention terminals already share.
-  Unverified: whether herdr passes Shift-drag through to its own selection.
+- The mouse is taken for clicks, the wheel and drags (`?1002h` + SGR `?1006h`; never plain motion
+  `?1003`, which would wake the loop on every pointer move; `?1002` reports motion only while a
+  button is held). A click (press and release on one cell) opens or closes what it is on and
+  chooses a permission option; it acts on the release, so a drag that starts on a tool call
+  selects its text instead of opening it. `HERDR_TUI_MOUSE=off` hands the mouse back
+  (alternate-scroll `?1007h` still turns the wheel into Up and Down).
+- **Selection is ours** (`select.rs`). A terminal that has given its mouse to an application
+  selects nothing itself: herdr forwards the drag to the pane instead of copying it, and
+  Shift-drag in the outer terminal cuts a rectangle across herdr's sidebar and the other panes
+  (0.1.36, the first release with clicks, left no way to select in a herdr pane). So a drag
+  swaps the colours of the cells it covers, and on release the text of those cells (rows as
+  drawn, nothing trailing, the screen's two-column margin taken off) goes out as an OSC 52
+  write, which herdr hands to the clipboard of the machine the person sits at and most
+  terminals allow. The footer says `Copied N characters`. Any key, click, wheel turn or new
+  output drops the highlight, because it points at screen cells, not messages. It selects what
+  is on the screen: a drag does not scroll. Codex maps its selection to the message source; ours
+  is the screen: a wrapped paragraph or a long command copies with a line break at every wrap
+  (a terminal that tracks soft wraps would join them), and the bullet at the start of a message
+  copies too if the drag begins on it. Mapping the selection to the message source would fix
+  both; it is a larger piece than the screen selection and not done.
+  Unverified: inside a live herdr on a desktop (checked in a pty against the real keeper that the
+  write leaves, not that herdr puts it on the clipboard), and over a terminal that refuses OSC 52
+  (nothing arrives, and the footer still says copied: the write cannot be confirmed).
 - Cost of choosing this over printing into scrollback (codex): no native scrollback after
-  exit, and copying is limited to the terminal's selection of the visible part.
+  exit, and copying is limited to what is on the screen.
 - Tables are a box of connected lines (`╭┬╮ │ ├┼┤ ╰┴╯`), faint, with a rule under the header
   and between rows only when a cell wraps. The owner tried codex's bar-less layout (whitespace
   columns, a `━` under the header) and wanted connected lines back; what both replaced, the
