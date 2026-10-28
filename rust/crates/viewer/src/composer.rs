@@ -1,9 +1,12 @@
 //! The input box: multi-line text, a cursor, and sent-message recall.
 
+use unicode_segmentation::UnicodeSegmentation;
+
 #[derive(Default)]
 pub struct Composer {
     pub text: String,
-    /// Byte offset of the cursor, always on a char boundary.
+    /// Byte offset of the cursor, always on a grapheme cluster boundary (arrows and deletes move
+    /// by cluster, so it never sits inside a flag or a letter with its accent).
     pub cursor: usize,
     sent: Vec<String>,
     /// Index into [sent] while recalling; None when typing fresh text.
@@ -12,6 +15,9 @@ pub struct Composer {
 
 impl Composer {
     pub fn insert(&mut self, c: char) {
+        if crate::width::is_joiner(c) {
+            return;
+        }
         self.text.insert(self.cursor, c);
         self.cursor += c.len_utf8();
         self.recall = None;
@@ -19,7 +25,12 @@ impl Composer {
 
     /// Inserts a whole string at the cursor in one go (a paste).
     pub fn insert_str(&mut self, s: &str) {
-        self.text.insert_str(self.cursor, s);
+        let s: std::borrow::Cow<str> = if s.chars().any(crate::width::is_joiner) {
+            s.chars().filter(|c| !crate::width::is_joiner(*c)).collect()
+        } else {
+            s.into()
+        };
+        self.text.insert_str(self.cursor, &s);
         self.cursor += s.len();
         self.recall = None;
     }
@@ -65,7 +76,7 @@ impl Composer {
         if start == 0 {
             return false;
         }
-        let col = self.text[start..self.cursor].chars().count();
+        let col = crate::width::of(&self.text[start..self.cursor]);
         let prev_start = self.text[..start - 1].rfind('\n').map_or(0, |i| i + 1);
         self.cursor = self.at_column(prev_start, start - 1, col);
         true
@@ -77,7 +88,7 @@ impl Composer {
             return false;
         };
         let start = self.text[..self.cursor].rfind('\n').map_or(0, |i| i + 1);
-        let col = self.text[start..self.cursor].chars().count();
+        let col = crate::width::of(&self.text[start..self.cursor]);
         let next_end = self.text[nl + 1..]
             .find('\n')
             .map_or(self.text.len(), |i| nl + 1 + i);
@@ -85,12 +96,17 @@ impl Composer {
         true
     }
 
-    /// Byte offset of column `col` within the line `start..end`, or its end when shorter.
+    /// Byte offset of display column `col` within the line `start..end` (the first cluster that
+    /// starts at or after it), or its end when shorter.
     fn at_column(&self, start: usize, end: usize, col: usize) -> usize {
-        self.text[start..end]
-            .char_indices()
-            .nth(col)
-            .map_or(end, |(i, _)| start + i)
+        let mut at = 0;
+        for (i, _, w) in crate::width::cluster_indices(&self.text[start..end]) {
+            if at >= col {
+                return start + i;
+            }
+            at += w;
+        }
+        end
     }
 
     /// Delete the word before the cursor (Ctrl-W).
@@ -100,6 +116,21 @@ impl Composer {
         let at = trimmed.rfind(char::is_whitespace).map_or(0, |i| i + 1);
         self.text.drain(at..self.cursor);
         self.cursor = at;
+    }
+
+    /// Removes the text `start..end` (byte offsets on character boundaries); the cursor keeps
+    /// its place in the text.
+    pub fn delete_range(&mut self, start: usize, end: usize) {
+        if start >= end || end > self.text.len() {
+            return;
+        }
+        self.text.drain(start..end);
+        self.cursor = if self.cursor >= end {
+            self.cursor - (end - start)
+        } else {
+            self.cursor.min(start)
+        };
+        self.recall = None;
     }
 
     pub fn clear(&mut self) {
@@ -164,11 +195,14 @@ impl Composer {
     }
 
     fn prev(&self, at: usize) -> Option<usize> {
-        self.text[..at].char_indices().next_back().map(|(i, _)| i)
+        self.text[..at]
+            .grapheme_indices(true)
+            .next_back()
+            .map(|(i, _)| i)
     }
 
     fn next(&self, at: usize) -> Option<usize> {
-        self.text[at..].chars().next().map(|c| at + c.len_utf8())
+        self.text[at..].graphemes(true).next().map(|g| at + g.len())
     }
 }
 
@@ -188,6 +222,46 @@ mod tests {
         c.home();
         c.delete();
         assert_eq!(c.text, "éb");
+    }
+
+    #[test]
+    fn the_cursor_and_deletes_move_by_whole_clusters() {
+        let mut c = Composer::default();
+        c.insert_str("a🇯🇵e\u{301}👍🏽");
+        c.left();
+        assert_eq!(&c.text[c.cursor..], "👍🏽");
+        c.left();
+        assert_eq!(&c.text[c.cursor..], "e\u{301}👍🏽");
+        c.backspace();
+        assert_eq!(c.text, "ae\u{301}👍🏽", "the flag went whole");
+        c.delete();
+        assert_eq!(c.text, "a👍🏽");
+        c.right();
+        c.backspace();
+        assert_eq!(c.text, "a");
+    }
+
+    #[test]
+    fn up_and_down_keep_the_display_column_not_the_char_count() {
+        let mut c = Composer::default();
+        c.insert_str("日本語\nabcdef\ne\u{301}e\u{301}x");
+        assert!(c.up(), "three columns in, the accents add none");
+        assert!(c.text[c.cursor..].starts_with("def\n"));
+        assert!(c.up());
+        assert!(
+            c.text[c.cursor..].starts_with("語\n"),
+            "column 4 is the third wide glyph"
+        );
+        assert!(c.down());
+        assert!(c.text[c.cursor..].starts_with("ef\n"));
+    }
+
+    #[test]
+    fn emoji_selectors_and_joiners_are_dropped_whether_typed_or_pasted() {
+        let mut c = Composer::default();
+        c.insert_str("ok ☑\u{fe0f} 👨\u{200d}👩 ");
+        "❤\u{fe0f}".chars().for_each(|ch| c.insert(ch));
+        assert_eq!(c.text, "ok ☑ 👨👩 ❤");
     }
 
     #[test]
@@ -241,5 +315,29 @@ mod tests {
         "foo bar".chars().for_each(|ch| c.insert(ch));
         c.kill_word();
         assert_eq!(c.text, "foo ");
+    }
+
+    #[test]
+    fn deleting_a_range_keeps_the_cursor_in_the_same_place_in_the_text() {
+        let mut c = Composer::default();
+        "ab[x] cd".chars().for_each(|ch| c.insert(ch));
+        c.delete_range(2, 6);
+        assert_eq!(
+            (c.text.as_str(), c.cursor),
+            ("abcd", 4),
+            "after it: moves back"
+        );
+        c.cursor = 3;
+        c.delete_range(1, 3);
+        assert_eq!(
+            (c.text.as_str(), c.cursor),
+            ("ad", 1),
+            "inside it: to its start"
+        );
+        c.cursor = 0;
+        c.delete_range(1, 2);
+        assert_eq!((c.text.as_str(), c.cursor), ("a", 0), "before it: stays");
+        c.delete_range(5, 9);
+        assert_eq!(c.text, "a", "past the end: nothing");
     }
 }

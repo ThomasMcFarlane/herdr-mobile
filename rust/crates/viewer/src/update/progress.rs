@@ -62,7 +62,13 @@ const BAR_MIN: usize = 8;
 /// bar shrinks first, then the speed, the sizes and the label go. Without a known total the bar
 /// is left out and only what has arrived is said.
 #[must_use]
-fn progress_line(label: &str, done: u64, total: Option<u64>, per_sec: f64, width: usize) -> String {
+pub fn progress_line(
+    label: &str,
+    done: u64,
+    total: Option<u64>,
+    per_sec: f64,
+    width: usize,
+) -> String {
     let budget = width.saturating_sub(1);
     #[allow(
         clippy::cast_precision_loss,

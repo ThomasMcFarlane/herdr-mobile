@@ -596,6 +596,13 @@ final List<KitEntry> kitCatalog = [
           BusySpinner(size: IconSize.lead, color: c.ds.accent),
         ])),
   ]),
+  KitEntry('ProgressLine', KitStatus.beta, [
+    KitState('empty, half, full', (c) => const Column(spacing: Gap.md, children: [
+          ProgressLine(fraction: 0),
+          ProgressLine(fraction: 0.5),
+          ProgressLine(fraction: 1),
+        ])),
+  ]),
   KitEntry('LoadingRow', KitStatus.beta, [
     KitState('row', (c) => const LoadingRow('Loading sessions…'), bleed: true),
     KitState('centred, Vietnamese', (c) => const LoadingRow('Đang tải danh sách phiên làm việc từ máy chủ…', center: true), bleed: true),

@@ -1191,9 +1191,12 @@ Everything is in `AgentSessionState`
     system prompt, 14 KB), `model_usage`, `message` entries, `custom` entries, `session_exit`. The
     subagent's own `session` id is not the parent's; `parentSession` names the parent file.
   `app/lib/data/repositories/subagent_transcripts.dart` does it: `OmpSessionLocator` finds the
-  parent file by listing the sessions root (exact folder names omp would use, then folders whose
-  name contains the working directory's own name; `~/.omp/agent/sessions`, then
-  `~/.local/share/omp/sessions`), `SubagentLogReader` reads and maps the log, `SubagentTranscripts`
+  parent file: `home` and `realpath` go out together, then the folders omp would have used (exact
+  names) are looked into at the same time as the sessions root is listed, so a hit does not wait for
+  the listing (the price: a call per exact name even when it does not exist); only when none hits,
+  the root's listing gives the folders whose name contains the working directory's own name
+  (`~/.omp/agent/sessions`, then `~/.local/share/omp/sessions`). `SubagentLogReader` reads and maps
+  the log, `SubagentTranscripts`
   (one per `AcpAgentSession`, created on first use) schedules it. Rules:
   - the path is `<artifact dir>/<name>.jsonl`, `name` from the run (`progress[].id`) after
     `validSubagentName` (`subagent_log_path.dart`): letters, digits, `_`, `-`, inner single dots, at

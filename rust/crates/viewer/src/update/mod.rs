@@ -18,7 +18,7 @@ mod release;
 mod tools;
 mod watch;
 
-pub use install::{run, Action, Plan};
-pub use progress::{Console, Event, Output};
+pub use install::{request, run, Action, Plan, Request};
+pub use progress::{progress_line, Console, Event, Output};
 pub use release::{asset, base_url, version_of, Target, Version};
 pub use watch::{Change, Watch};

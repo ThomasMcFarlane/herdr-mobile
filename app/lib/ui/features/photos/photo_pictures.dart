@@ -217,23 +217,7 @@ class _Loading extends StatelessWidget {
                         const SizedBox(height: Gap.md),
                         SizedBox(
                           width: math.min(180, viewport.width - 96),
-                          height: _progressHeight,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(color: ds.fill, borderRadius: BorderRadius.circular(Radii.pill)),
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: FractionallySizedBox(
-                                widthFactor: fraction,
-                                heightFactor: 1,
-                                child: DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    color: ds.accent,
-                                    borderRadius: BorderRadius.circular(Radii.pill),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
+                          child: ProgressLine(fraction: fraction),
                         ),
                       ],
                     ],
@@ -247,6 +231,3 @@ class _Loading extends StatelessWidget {
     );
   }
 }
-
-/// The loading bar's thickness.
-const _progressHeight = 3.0;

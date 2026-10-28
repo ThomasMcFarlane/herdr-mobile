@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -158,6 +159,22 @@ class FakeExport implements PhotoExport {
   Future<void> share(Uint8List bytes, {required String name}) async {
     if (failWith != null) throw failWith!;
     shared.add('$name:${bytes.length}');
+  }
+
+  /// Basenames of the videos put in the gallery and of the files shared as they are.
+  final videos = <String>[];
+  final files = <String>[];
+
+  @override
+  Future<void> saveVideoToGallery(File file) async {
+    if (failWith != null) throw failWith!;
+    videos.add(file.uri.pathSegments.last);
+  }
+
+  @override
+  Future<void> shareFile(File file) async {
+    if (failWith != null) throw failWith!;
+    files.add(file.uri.pathSegments.last);
   }
 
   @override

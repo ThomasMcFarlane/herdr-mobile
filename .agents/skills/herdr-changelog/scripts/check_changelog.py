@@ -183,7 +183,13 @@ def check_tips(body: list[tuple[int, str]], root: Path) -> list[str]:
             if not re.search(r'[A-Za-z]', label) or label.startswith('.') or 'localhost' in label:
                 continue
             if sources is None:
-                sources = '\n'.join(p.read_text(errors='ignore') for p in (root / 'app' / 'lib').rglob('*.dart'))
+                # A label such as 'Share or save\u2026' is written with an escape; the person
+                # sees the character, so compare with it decoded.
+                sources = re.sub(
+                    r'\\u([0-9a-fA-F]{4})',
+                    lambda m: chr(int(m.group(1), 16)),
+                    '\n'.join(p.read_text(errors='ignore') for p in (root / 'app' / 'lib').rglob('*.dart')),
+                )
             if f"'{label}'" not in sources and f'"{label}"' not in sources:
                 out.append(f'label: {label} (line {n}) is not a string in app/lib; use the exact label on screen')
     return out

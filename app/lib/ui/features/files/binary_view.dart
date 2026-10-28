@@ -18,12 +18,16 @@ class BinaryView extends StatelessWidget {
     super.key,
     required this.model,
     required this.onCopyPath,
+    required this.onShare,
     this.onViewAsText,
     this.onShowAsPage,
   });
 
   final FileViewerViewModel model;
   final VoidCallback onCopyPath;
+
+  /// Hands the file to the share sheet (copied to the phone first).
+  final VoidCallback onShare;
 
   /// Offered for SVG: its source is text.
   final VoidCallback? onViewAsText;
@@ -91,6 +95,15 @@ class BinaryView extends StatelessWidget {
           AppButton(label: 'Show as page', icon: LucideIcons.globe, expand: true, onPressed: onShowAsPage),
           const SizedBox(height: Gap.sm),
         ],
+        // What there is to do with a file the viewer cannot show: take it elsewhere.
+        AppButton(
+          label: 'Share or save\u2026',
+          icon: LucideIcons.share2,
+          expand: true,
+          kind: onShowAsPage == null && onViewAsText == null ? AppButtonKind.primary : AppButtonKind.secondary,
+          onPressed: onShare,
+        ),
+        const SizedBox(height: Gap.sm),
         Row(
           children: [
             Expanded(

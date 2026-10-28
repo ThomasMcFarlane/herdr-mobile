@@ -312,6 +312,7 @@ dependencies = [
  "signal-hook",
  "syntect",
  "tempfile",
+ "unicode-segmentation",
  "unicode-width",
 ]
 

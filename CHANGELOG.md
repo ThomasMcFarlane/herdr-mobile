@@ -4,12 +4,147 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
-## [Unreleased]
+## [0.1.41] - 2026-10-28
 
-- `herdr-tui update`'s progress line fits the terminal, so on a narrow screen it stays one line instead of wrapping into many.
-- Ctrl-C during `herdr-tui update` stops cleanly: nothing is installed and no leftover folder stays beside the program.
-- A failed `herdr-tui update` download says whether the network or the version is the problem, and a slow link that keeps delivering is no longer cut off after five minutes.
-- The "newer herdr-tui is installed · Ctrl-R" hint goes away when the file is rolled back, broken or removed.
+### Videos play in the file viewer, and any file can be shared
+
+A video in a folder opens as a card with its size and `Play`, copies to the
+phone with a bar and plays with a bar to drag. Before, it opened as a hex
+dump. Any file can also be handed to another app.
+
+> [!TIP]
+> Try it: in Files, open a video (an `mp4` will do) and tap `Play`.
+
+> [!TIP]
+> Try it: on any file, open `File options` and choose `Share or save…`.
+
+- `mp4`, `mov`, `mkv`, `webm`, `avi`, `m4v` and `3gp` are videos. One up to
+  24 MB starts by itself; `Cancel` stops the copy. `Save to gallery` keeps it
+  in Pictures/herdr.
+- `Share or save…` copies the file to the phone and hands it to the share
+  sheet, so it can go to Drive, Files or another app. It is on the card of a
+  file the viewer cannot show, and in `File options`.
+
+### Select text in `herdr-tui` by dragging
+
+Drag over text in a `herdr-tui` session, in a herdr pane too: the selection is
+highlighted, copied when you let go, and the footer says how much. Since
+0.1.36 a drag did nothing there, because the mouse belonged to clicks. A click
+still opens a tool call, now when you let go, so a drag that starts on one
+selects its text instead.
+
+> [!TIP]
+> Try it: in a `herdr-tui` session, drag across a few words of the reply.
+
+- `herdr-tui update` keeps its progress on one line however narrow the
+  terminal, so on a phone-width screen it no longer wraps into many lines.
+- Ctrl-C during `herdr-tui update` stops cleanly: nothing is installed and no
+  leftover folder stays beside the program.
+- A failed `herdr-tui update` download says whether the network or the version
+  is the problem, and a slow link that keeps delivering is no longer cut off
+  after five minutes.
+- The "newer herdr-tui is installed · Ctrl-R" hint goes away when the file is
+  rolled back, broken or removed. Checked in a pty on Linux; macOS and the
+  `wget` path were not tried.
+
+## [0.1.40] - 2026-10-27
+
+[![Watch what's new · 2 changes · 0:22 · 0.3 MB](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.40/0.1.40-whats-new.jpg)](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.40/0.1.40-whats-new.mp4)
+
+### The desk client has slash commands
+
+Type `/` in a `herdr-tui` session and the commands list opens above the box:
+the desk client's own, then the agent's commands and skills. `/model`,
+`/thinking` and `/mode` open a list to pick a new setting from, and `/new`
+(also `/clear`) starts a fresh session in the same pane while the old one keeps
+running.
+
+> [!TIP]
+> Try it: in a `herdr-tui` session, type /mo and press Enter to choose a
+> model.
+
+- `/plan` goes into plan mode and, again, back to the mode it left. Shift-Tab
+  steps through the modes and skips the risky ones; `/mode` asks twice before
+  it picks one.
+- `/settings` lists every setting the agent lets you change, and `/info` (also
+  `/version`) says which herdr-tui and which session this is.
+- `/update` installs the latest herdr-tui without leaving the session
+  (`/update check` only says whether it would change anything, `/update 0.1.35`
+  installs that release). It downloads in the background with the progress in
+  the footer, checks the file before replacing it, then says `Ctrl-R loads it`.
+  Leaving during the download abandons it.
+- A word that looks like a command but is not one of the agent's (`/clera`) is
+  held once, with a hint; Enter again sends it as a message.
+
+![The herdr-tui command list open after typing a slash, with /model first and 70 more below](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.40/0.1.40-slash-commands.png)
+
+### Pictures and files go with your message
+
+Paste a file or picture path (or drop a file) into an empty box and it goes
+with your message, listed on a row above the input. A PNG, JPEG, GIF or WebP up
+to 5 MB goes as a picture the model sees; anything else goes as a link to the
+file. `Ctrl-V` attaches the screenshot on the clipboard.
+
+> [!TIP]
+> Try it: copy a screenshot, press Ctrl-V in the box of a `herdr-tui`
+> session, then name it in your message as [Image #1].
+
+- Each picture leaves `[Image #1]`, `[Image #2]`... in your message where the
+  cursor was, so you can say which one you mean. Backspace after a placeholder
+  takes the picture off with it.
+- Up to 10 files and 20 MB of pictures a message. Backspace
+  takes the last one off, Ctrl-C all of them, and `/files` lets you pick
+  one. Pasted into text, a path stays text.
+- `Ctrl-V` needs `wl-paste`, `xclip` or `pngpaste`; without one the hint says
+  so. A real clipboard was not tried on every system: this was checked with
+  `xclip` standing in.
+
+![A herdr-tui message with two attached pictures numbered 1 and 2, and the agent's answer naming the red one](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.40/0.1.40-attach-pictures.png)
+
+### The agent's plan stays in view
+
+While the agent has steps left, its plan shows as a checklist above the input
+(`✓` done, `●` doing, `○` to do), so you see how far it has got without
+scrolling. It hides when the plan is finished or the screen is short.
+
+![The herdr-tui plan checklist: two steps done, one in progress, two to do](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.40/0.1.40-plan-checklist.png)
+
+### A subagent's prompt reads as Markdown
+
+In a subagent's screen, `Asked to` shows what it was asked as Markdown (headings,
+lists, code) instead of raw characters; the card and the pinned prompt show it
+as a short line of prose, and a tap shows it whole.
+
+> [!TIP]
+> Try it: open a subagent from a session and tap `Asked to`.
+
+- Opening a subagent that is still working is quicker: its newest 120 items
+  show first and the rest fill in behind. In a test with 2,001 items the first
+  screen took 2.4 to 3.7 ms to plan, it was 43 to 91 ms. Measured on a desktop,
+  not on a phone.
+- Opening an omp subagent's log asks the host for its folders together, 944 ms
+  became 645 ms on a modelled link with a 150 ms round trip (a 437 KB log).
+  Not a real connection.
+- This was drawn in the app's test renderer; it has not been seen on a phone.
+
+![A subagent screen with the Asked to prompt drawn as Markdown: a heading, a bullet list and a code block](https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.40/0.1.40-subagent-prompt.png)
+
+**Fixed**
+
+- `/clear` in the desk client was sent to the agent as a chat message and
+  cleared nothing.
+- The desk client's tip said Up brings back your last message; it is Ctrl-P.
+- A table holding emoji such as `⚠️`, `❤️` or `✔️` came out a column too wide, and
+  scrolling past it left stray bars and glyphs on screen. Wide text no longer
+  does this in tables, lists, the folded `tool calls` line or the input box.
+  Only one terminal was tried.
+- In the input box, Left, Backspace and Delete stepped through half an emoji or
+  half an accented letter; they now move a whole one. The emoji selector and
+  joiner characters are dropped from what you type or paste.
+- `herdr-tui ls` lines its columns up when a folder or title has Japanese,
+  Chinese, Korean or emoji text.
+- In a subagent's summary, `Show all` on a long result did nothing.
+  `Summary only.` no longer shows while an omp log is still loading.
 
 ## [0.1.39] - 2026-10-27
 

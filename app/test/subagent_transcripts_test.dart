@@ -178,6 +178,13 @@ void main() {
       expect(await OmpSessionLocator(_files(fs)).artifactDir(sessionId: _sid, cwd: _cwd), _artifactDir);
     });
 
+    test('a hit in the folder omp would have used does not wait for the root\'s listing', () async {
+      // The listing of the sessions root never answers: only a lookup that
+      // does not depend on it can finish.
+      final fs = _host()..hangExact.add('/home/dev/.omp/agent/sessions');
+      expect(await OmpSessionLocator(_files(fs)).artifactDir(sessionId: _sid, cwd: _cwd), _artifactDir);
+    });
+
     test('another session in the same project is not taken', () async {
       final fs = FakeFs()..addFile('$_project/2026-10-05T07-00-00-000Z_other-session-id-1234.jsonl', '{}\n');
       expect(await OmpSessionLocator(_files(fs)).artifactDir(sessionId: _sid, cwd: _cwd), isNull);

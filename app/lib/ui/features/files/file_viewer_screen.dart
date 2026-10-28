@@ -7,11 +7,15 @@ import 'package:provider/provider.dart';
 
 import '../../../data/models/remote_file.dart';
 import '../../../data/repositories/machine_connection.dart';
+import '../../../data/services/photo_export.dart';
+import '../../../data/services/remote_file_staging.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
+import 'package:video_player/video_player.dart' show VideoPlayerController;
 import '../web/web_preview_screen.dart';
 import 'binary_view.dart';
 import 'code_view.dart';
 import '../../../data/words/elapsed.dart';
+import 'file_copy_model.dart';
 import 'file_format.dart';
 import 'file_kind.dart';
 import 'file_viewer_view_model.dart';
@@ -19,6 +23,7 @@ import 'file_widgets.dart';
 import 'photo_files.dart';
 import 'markdown_view.dart';
 import 'text_document.dart';
+import 'video_view.dart';
 
 /// The platform clipboard hands text to other apps through a size-limited
 /// channel; past this it can fail outright, so a long copy is cut short.
@@ -32,20 +37,47 @@ const _clipboardLimit = 900 * 1024;
 /// [line] is highlighted and scrolled into view (a `file:line` link). [asText]
 /// shows the file as text whatever its name and bytes say.
 class FileViewerScreen extends StatelessWidget {
-  const FileViewerScreen({super.key, required this.machine, required this.stat, this.line, this.asText = false});
+  const FileViewerScreen({
+    super.key,
+    required this.machine,
+    required this.stat,
+    this.line,
+    this.asText = false,
+    this.export,
+    this.staging,
+    this.videoPlayer,
+  });
 
   final MachineConnection machine;
   final RemoteStat stat;
   final int? line;
   final bool asText;
 
+  /// What sharing and saving go through, and where the copy to the phone is
+  /// kept; the phone's own unless a test hands in others.
+  final PhotoExport? export;
+  final RemoteFileStaging? staging;
+
+  /// Makes the player of a video; the phone's own unless a test hands one in.
+  final VideoControllerFor? videoPlayer;
+
   @override
-  Widget build(BuildContext context) => Provider<_ViewerMachine>.value(
-        value: _ViewerMachine(machine),
-        child: ChangeNotifierProvider(
-          create: (_) => FileViewerViewModel(files: machine.files, stat: stat, line: line, forceText: asText)..load(),
-          child: const _ViewerPage(),
-        ),
+  Widget build(BuildContext context) => MultiProvider(
+        providers: [
+          Provider<_ViewerMachine>.value(value: _ViewerMachine(machine)),
+          Provider<VideoControllerFor>.value(value: videoPlayer ?? VideoPlayerController.file),
+          ChangeNotifierProvider(
+            create: (_) => FileCopyModel(
+              files: machine.files,
+              staging: staging ?? RemoteFileStaging(),
+              export: export ?? const DevicePhotoExport(),
+            ),
+          ),
+          ChangeNotifierProvider(
+            create: (_) => FileViewerViewModel(files: machine.files, stat: stat, line: line, forceText: asText)..load(),
+          ),
+        ],
+        child: const _ViewerPage(),
       );
 }
 
@@ -110,6 +142,23 @@ class _ViewerPageState extends State<_ViewerPage> {
     );
   }
 
+  /// Sharing or saving the file as it is: copied to the phone first, then
+  /// handed to the share sheet (which lists the apps and folders that keep it).
+  Future<void> _share(FileViewerViewModel vm) async {
+    final result = await context.read<FileCopyModel>().share(vm.stat);
+    if (result.problem case final problem? when mounted) showToast(context, problem, kind: ToastKind.failed);
+  }
+
+  Future<void> _saveVideo(FileViewerViewModel vm) async {
+    final result = await context.read<FileCopyModel>().saveVideo(vm.stat);
+    if (!mounted) return;
+    if (result.problem case final problem?) {
+      showToast(context, problem, kind: ToastKind.failed);
+    } else if (result.done) {
+      showToast(context, 'Saved to Pictures/herdr', kind: ToastKind.success);
+    }
+  }
+
   /// Copying the file, out of the bar (it holds two actions at most).
   void _showOptions(FileViewerViewModel vm, bool ready) {
     final stat = vm.stat;
@@ -120,6 +169,10 @@ class _ViewerPageState extends State<_ViewerPage> {
         actions: [
           if (ready && vm.isText && vm.document != null && !vm.document!.isEmpty)
             SheetAction(label: 'Copy contents', icon: LucideIcons.clipboardCopy, onTap: () => _copyContents(vm)),
+          if (ready && vm.kind == FileKind.video && typeForName(vm.name).kind == FileKind.video)
+            SheetAction(label: 'Save to gallery', icon: LucideIcons.download, onTap: () => unawaited(_saveVideo(vm))),
+          if (stat.isFile && stat.size != null)
+            SheetAction(label: 'Share or save\u2026', icon: LucideIcons.share2, onTap: () => unawaited(_share(vm))),
           SheetAction(
             label: 'Copy path',
             icon: LucideIcons.link,
@@ -168,10 +221,14 @@ class _ViewerPageState extends State<_ViewerPage> {
           Expanded(
             child: Stack(
               children: [
-                _Body(vm: vm),
+                _Body(vm: vm, onShare: () => unawaited(_share(vm)), onSave: () => unawaited(_saveVideo(vm))),
                 Align(
                   alignment: Alignment.topCenter,
                   child: _ChangedSlot(vm: vm),
+                ),
+                Align(
+                  alignment: Alignment.topCenter,
+                  child: _CopySlot(vm: vm),
                 ),
               ],
             ),
@@ -253,7 +310,7 @@ class _Tools extends StatelessWidget {
   /// The info card says all of this itself.
   bool get _redundant =>
       vm.phase == ViewerPhase.ready &&
-      (vm.kind == FileKind.binary || vm.kind == FileKind.svg || vm.kind == FileKind.pdf);
+      (vm.kind == FileKind.binary || vm.kind == FileKind.svg || vm.kind == FileKind.pdf || vm.kind == FileKind.video);
 
   String get _meta {
     final s = vm.stat;
@@ -293,7 +350,7 @@ class _Tools extends StatelessWidget {
             onChanged: vm.setShowSource,
           ));
           if (vm.showSource) chips.add(wrap());
-        case FileKind.image || FileKind.svg || FileKind.pdf || FileKind.binary:
+        case FileKind.image || FileKind.svg || FileKind.pdf || FileKind.binary || FileKind.video:
           break;
       }
     }
@@ -329,9 +386,14 @@ class _Tools extends StatelessWidget {
 }
 
 class _Body extends StatelessWidget {
-  const _Body({required this.vm});
+  const _Body({required this.vm, required this.onShare, required this.onSave});
 
   final FileViewerViewModel vm;
+
+  /// Share or save the file (copied to the phone first), and save a video to
+  /// the gallery: the screen runs both, it owns the toasts.
+  final VoidCallback onShare;
+  final VoidCallback onSave;
 
   @override
   Widget build(BuildContext context) {
@@ -366,9 +428,19 @@ class _Body extends StatelessWidget {
           FileKind.markdown => _TextBody(vm: vm, doc: vm.document!, rendered: !vm.showSource),
           // Handed to the photo viewer in the same frame (see _handOverPicture).
           FileKind.image => const Skeleton(),
+          FileKind.video => VideoView(
+              key: ValueKey('${vm.stat.path}:${vm.stat.size}:${vm.stat.modified}'),
+              stat: vm.stat,
+              type: vm.type,
+              onShare: onShare,
+              onSave: onSave,
+              controllerFor: context.read<VideoControllerFor>(),
+              canSave: typeForName(vm.name).kind == FileKind.video,
+            ),
           FileKind.svg || FileKind.pdf || FileKind.binary => BinaryView(
               model: vm,
               onCopyPath: () => copyText(context, vm.stat.path, what: 'Path copied'),
+              onShare: onShare,
               onViewAsText: vm.canViewAsText ? vm.viewAsText : null,
               onShowAsPage: canShowAsPage(vm.name) ? () => unawaited(_showAsPage(context, vm.stat)) : null,
             ),
@@ -551,6 +623,33 @@ class _ChangedSlot extends StatelessWidget {
         label: 'Changed on disk',
         trailing: Text(busy ? 'Reloading' : 'Reload', style: Type.labelStrong.copyWith(color: ds.accentText)),
         onTap: busy ? null : () => unawaited(vm.refresh()),
+      ),
+    );
+  }
+}
+
+/// "Copying 12 MB of 80 MB · Cancel": a file being copied to the phone to be
+/// shared, over the top of what is shown. A video shows its own progress in
+/// place of the player, so it has none here.
+class _CopySlot extends StatelessWidget {
+  const _CopySlot({required this.vm});
+
+  final FileViewerViewModel vm;
+
+  @override
+  Widget build(BuildContext context) {
+    final ds = context.ds;
+    final copy = context.watch<FileCopyModel>();
+    final own = vm.kind == FileKind.video && vm.phase == ViewerPhase.ready;
+    return Padding(
+      padding: const EdgeInsets.only(top: Gap.xs),
+      child: FloatingPill(
+        visible: copy.running && !own,
+        size: FloatingPillSize.compact,
+        leading: const BusySpinner(size: IconSize.inline),
+        label: copy.total > 0 ? 'Copying ${formatBytes(copy.written)} of ${formatBytes(copy.total)}' : 'Copying ${formatBytes(copy.written)}',
+        trailing: Text('Cancel', style: Type.labelStrong.copyWith(color: ds.accentText)),
+        onTap: copy.cancel,
       ),
     );
   }

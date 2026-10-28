@@ -609,6 +609,25 @@ is served from the cache until it changes again (accepted: the listing is the
 only free revalidation). Not measured on a phone: disk latency, and jank while
 a thumbnail is encoded in the isolate.
 
+### Files taken to the phone: staging, not the cache
+
+`data/services/remote_file_staging.dart`, `FileCopyModel`
+(`ui/features/files/`). A video is played, and any file is shared or saved, from
+a copy on the phone: the player and the share sheet open files by path, and a
+video is far past the `DiskCache` (12 MB an entry, 192 MB in all, bytes under a
+key). So the copy goes to `remote_files/` in the temporary directory, in 2 MB
+reads (memory stays flat, a read is one SFTP round trip), to a `.part` file that
+is renamed when whole. One file at a time: starting another removes the rest; the
+last stays, because an app that was handed it may still be reading it. A copy of
+the same file (machine, path, size, mtime) is reused, so Save to gallery after
+playing does not read it again. A video up to `videoAutoCopyLimit` (24 MB) starts
+copying when opened; a bigger one waits for a tap, because a long copy over the
+radio is the person's to start. Not measured on a phone: copy speed over a mobile
+link, the player's codecs (Android decides: `mkv` and `avi` may be refused, which
+the card says and offers the share sheet for), and playback while the app is in
+the background (it pauses). Saving into the Downloads folder would need native
+MediaStore code, which this app has none of: the share sheet is the way out.
+
 ### One attach sheet
 
 `ui/features/attach/`, `docs/screens/attach.md`.
