@@ -4,6 +4,12 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [Unreleased]
+
+- Text you select in a pane is easier to see on the dark terminal: the highlight is a
+  brighter indigo, where it was almost the colour of the page. The paper terminal is
+  unchanged.
+
 ## [0.1.41] - 2026-10-28
 
 ### Videos play in the file viewer, and any file can be shared

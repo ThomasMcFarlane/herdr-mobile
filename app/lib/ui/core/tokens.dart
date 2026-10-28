@@ -144,6 +144,11 @@ class Ds extends ThemeExtension<Ds> {
   /// Selected text in a field or a selectable block.
   Color get selection => accent.withValues(alpha: 0.28);
 
+  /// Selected output in a pane on the dark page. [selection] is a near-black
+  /// indigo there; the text keeps its own colour, so this only has to be seen
+  /// (still 7:1 with the terminal foreground).
+  Color get terminalSelection => accent.withValues(alpha: 0.5);
+
   /// The underline under a markdown link: present, quieter than its text.
   Color get linkUnderline => accentText.withValues(alpha: 0.4);
 

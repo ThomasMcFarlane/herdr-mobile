@@ -539,7 +539,10 @@ class _TerminalViewState extends State<TerminalView> {
   TerminalRowEnv? _bodyEnv;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      DefaultSelectionStyle(selectionColor: context.terminal.selection, child: _buildTerminal(context));
+
+  Widget _buildTerminal(BuildContext context) {
     final metrics = _metrics!;
     final cache = _cache!;
     final wrap = widget.wrap;

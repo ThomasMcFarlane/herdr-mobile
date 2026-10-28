@@ -56,6 +56,7 @@ class TerminalPalette extends ThemeExtension<TerminalPalette> {
     required this.dim,
     required this.border,
     required this.link,
+    required this.selection,
     required this.ansi,
   });
 
@@ -70,6 +71,12 @@ class TerminalPalette extends ThemeExtension<TerminalPalette> {
   /// Links in output.
   final Color link;
 
+  /// Selected output. Stronger than `Ds.selection` on the dark page: the text
+  /// keeps its own colour, so the wash only has to be seen. The accent at 0.28
+  /// over [background] was a near-black indigo; at 0.5 it still holds 7:1 with
+  /// [foreground].
+  final Color selection;
+
   /// The 16 ANSI colours, each legible (>= 4.5:1) on [background].
   final List<Color> ansi;
 
@@ -80,6 +87,7 @@ class TerminalPalette extends ThemeExtension<TerminalPalette> {
     dim: TerminalColors.dim,
     border: TerminalColors.border,
     link: Ds.ink.accentText,
+    selection: Ds.ink.terminalSelection,
     ansi: TerminalColors.ansi,
   );
 
@@ -91,6 +99,7 @@ class TerminalPalette extends ThemeExtension<TerminalPalette> {
     dim: Ds.paper.textMuted,
     border: Ds.paper.hairline,
     link: Ds.paper.accentText,
+    selection: Ds.paper.selection,
     ansi: const [
       Color(0xFF4B5160),
       Color(0xFFB3261E),
