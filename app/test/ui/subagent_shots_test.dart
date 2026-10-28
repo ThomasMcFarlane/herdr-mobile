@@ -123,7 +123,9 @@ void main() {
   }
 
   AgentSessionState child() {
-    final u = <Json>[launch('t', type: 'Explore', description: long, prompt: 'Read every file under lib/locale and list the places that lowercase a string before normalizing it. Report the file, the line and why it matters for Hà Nội, Đà Nẵng and Huế.', status: 'in_progress')];
+    const prompt =
+        '## Task\n\nRead every file under `lib/locale` and list the places that lowercase a string before normalizing it.\n\n- Report the file, the line and why it matters for Hà Nội, Đà Nẵng and Huế.\n- Start from `lib/locale/parse.dart:42`.\n\n```dart\ns.toLowerCase();\n```';
+    final u = <Json>[launch('t', type: 'Explore', description: long, prompt: prompt, status: 'in_progress')];
     for (var i = 0; i < 24; i++) {
       u
         ..add(childTool('c$i', 't', title: 'Grep locale_$i', status: 'in_progress'))
@@ -204,7 +206,7 @@ void main() {
       null,
     ),
     'summary-omp': (
-      () => session(play(ompTask('call', [ompProgress(0, 'Alpha', 'running')]))),
+      () => session(play(ompTask('call', [ompProgress(0, 'Alpha', 'running', extra: {'assignment': '## Task\n\nRead `lib/a.ts` and report:\n\n- every call site\n- why it matters\n\n```ts\nfoo(bar);\n```'})]))),
       (s) => SubagentRunScreen(session: s, runId: 'call#0'),
       null,
     ),

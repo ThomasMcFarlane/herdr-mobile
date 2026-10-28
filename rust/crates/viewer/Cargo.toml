@@ -13,6 +13,7 @@ serde_json.workspace = true
 acp.workspace = true
 keeper = { path = "../keeper" }
 unicode-width = "0.2"
+unicode-segmentation = "1"
 signal-hook = "0.3"
 rustix = { version = "0.38", default-features = false, features = ["std", "termios"] }
 pulldown-cmark = { version = "0.12", default-features = false }

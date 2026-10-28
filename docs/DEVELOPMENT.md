@@ -184,6 +184,23 @@ widgets (real fonts, phone-sized surface, light and dark), then frames each
 render in a device mock-up with a headline (`tool/screenshots/compose.py`).
 Needs Flutter on `PATH` and Pillow (`pip install pillow`).
 
+### Screenshots in a pull request
+
+A change someone can see gets pictures in its PR description, and they never go
+into git: pictures go stale and the repository only grows. Upload them as assets
+of the `pr-screenshots` pre-release (a tag no workflow reads, so it builds
+nothing and is never "latest") and link them:
+
+```bash
+gh release upload pr-screenshots prNN-what-it-shows.png      # name them prNN-...
+# ![what](https://github.com/tuan3w/herdr-mobile/releases/download/pr-screenshots/prNN-what-it-shows.png)
+```
+
+The TUI draws a real screen into text with `tmux capture-pane -e -p`;
+`tool/tui-render-png.py in.ansi out.png dark` turns it into a picture (its font
+has no emoji: a ✅ shows as a box in the picture, not in the terminal). Delete a
+PR's assets once it is merged (`gh release delete-asset pr-screenshots NAME`).
+
 ## Agent hooks
 
 In `.omp/hooks/`:

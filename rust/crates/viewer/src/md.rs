@@ -7,19 +7,24 @@
 //! width, so wide characters never overflow a row.
 
 use crate::theme::Theme;
+use crate::width;
 use acp::is_unsafe_control;
 use pulldown_cmark::{Alignment, CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 use ratatui::{
     style::{Modifier, Style},
     text::{Line, Span},
 };
-use unicode_width::UnicodeWidthChar;
 
-/// `text` without the characters a terminal would act on (newlines and tabs stay).
+/// `text` without the characters a terminal would act on (newlines and tabs stay), and without
+/// the joiners and variation selectors terminals disagree about: `⚠️` (a symbol and U+FE0F) is
+/// two columns in a terminal that honours the selector and one in one that does not, and the
+/// screen is only right when every row is as wide as the terminal draws it. Without them the
+/// symbol is one column everywhere and a joined emoji is the emoji it joins, side by side.
 #[must_use]
 pub fn clean(text: &str) -> String {
     text.chars()
         .filter(|c| !is_unsafe_control(*c) || *c == '\n' || *c == '\t')
+        .filter(|c| !width::is_joiner(*c))
         .collect()
 }
 
@@ -41,7 +46,7 @@ fn is_bidi(c: char) -> bool {
 }
 
 fn width_of(s: &str) -> usize {
-    s.chars().map(|c| c.width().unwrap_or(0)).sum()
+    width::of(s)
 }
 
 /// One paragraph-like run of text and the prefixes its lines wear.
@@ -134,14 +139,13 @@ fn wrap_flow_at(flow: &Flow, width: usize) -> Vec<Line<'static>> {
                 // A word longer than a row: cut it by display width.
                 let mut piece = String::new();
                 let mut pw = 0;
-                for c in token.chars() {
-                    let cw = c.width().unwrap_or(0);
+                for (g, cw) in width::clusters(token) {
                     if w + pw + cw > width && !piece.is_empty() {
                         cur.push(Span::styled(std::mem::take(&mut piece), span.style));
                         newline(&mut cur, &mut w, &mut lines, &mut at_start);
                         pw = 0;
                     }
-                    piece.push(c);
+                    piece.push_str(g);
                     pw += cw;
                 }
                 cur.push(Span::styled(piece, span.style));
@@ -243,11 +247,23 @@ pub fn render_live(text: &str, width: usize, theme: Theme) -> Vec<Line<'static>>
     if !out.is_empty() {
         out.push(Line::default());
     }
-    let what = match rows {
-        0 => "… a table".to_string(),
-        1 => "… a table, 1 row so far".to_string(),
-        n => format!("… a table, {n} rows so far"),
+    // The fullest wording that fits the row; a narrow pane gets less, never a row too wide.
+    let tries = match rows {
+        0 => vec!["… a table".to_string()],
+        1 => vec![
+            "… a table, 1 row so far".to_string(),
+            "… a table, 1 row".to_string(),
+        ],
+        n => vec![
+            format!("… a table, {n} rows so far"),
+            format!("… a table, {n} rows"),
+        ],
     };
+    let what = tries
+        .into_iter()
+        .chain(["… a table".to_string(), "…".to_string()])
+        .find(|t| width_of(t) <= width)
+        .unwrap_or_else(|| "…".to_string());
     out.push(Line::from(Span::styled(what, theme.dim())));
     out
 }
@@ -640,8 +656,7 @@ pub fn cut_spans(spans: Vec<Span<'static>>, width: usize) -> Vec<Vec<Span<'stati
             continue;
         }
         let mut piece = String::new();
-        for c in span.content.chars() {
-            let cw = c.width().unwrap_or(0);
+        for (g, cw) in width::clusters(&span.content) {
             if w + cw > width {
                 if !piece.is_empty() {
                     rows.last_mut()
@@ -651,7 +666,7 @@ pub fn cut_spans(spans: Vec<Span<'static>>, width: usize) -> Vec<Vec<Span<'stati
                 rows.push(Vec::new());
                 w = 0;
             }
-            piece.push(c);
+            piece.push_str(g);
             w += cw;
         }
         if !piece.is_empty() {
@@ -696,13 +711,12 @@ fn wrap_plain(text: &str, width: usize) -> Vec<String> {
             lines.push(std::mem::take(&mut cur));
             w = 0;
         }
-        for c in word.chars() {
-            let cw = c.width().unwrap_or(0);
+        for (g, cw) in width::clusters(word) {
             if w + cw > width {
                 lines.push(std::mem::take(&mut cur));
                 w = 0;
             }
-            cur.push(c);
+            cur.push_str(g);
             w += cw;
         }
     }
@@ -993,7 +1007,16 @@ fn fit_label(h: &str, width: usize) -> String {
     if width_of(h) <= width {
         return h.to_string();
     }
-    let mut out: String = h.chars().take(width.saturating_sub(1)).collect();
+    // By columns: a wide symbol is two, and an ellipsis after it must still fit.
+    let mut out = String::new();
+    let mut w = 0;
+    for (g, cw) in width::clusters(h) {
+        if w + cw + 1 > width {
+            break;
+        }
+        out.push_str(g);
+        w += cw;
+    }
     out.push('…');
     out
 }
@@ -1076,6 +1099,45 @@ mod tests {
         assert_eq!(got[0], "▏ rust");
         assert!(got.len() > 3, "{got:?}");
         assert!(got[1].starts_with("▏ fn main()"));
+    }
+
+    /// What the terminal and ratatui's buffer make of a row: grapheme clusters, so `⚠️` (a symbol
+    /// and an emoji selector) is one two-column cell, not a one-column char and a nothing.
+    fn cells(row: &str) -> usize {
+        unicode_width::UnicodeWidthStr::width(row)
+    }
+
+    #[test]
+    fn a_table_with_emoji_keeps_every_row_as_wide_as_the_terminal_draws_it() {
+        // `⚠️` is U+26A0 U+FE0F: two columns on screen, though each char alone says 1 and 0.
+        let t = "| Task | Done | Mark |\n|:--|:-:|:-:|\n| Board | ✅ | ● |\n| pi turn | ⚠️ | ◐ |\n| Codex | ❌ | ○ |\n| Heart | ❤️ | ✔️ |";
+        for w in [60, 25] {
+            let got = md(t, w);
+            let table: Vec<&String> = got
+                .iter()
+                .filter(|r| r.contains(['│', '╭', '╰', '├']))
+                .collect();
+            assert!(table.len() >= 8, "a box at {w}: {got:#?}");
+            let first = cells(table[0]);
+            assert!(
+                table
+                    .iter()
+                    .all(|r| cells(r) == first && width_of(r) == first),
+                "every row as wide as the terminal draws it ({first}): {:?}",
+                table
+                    .iter()
+                    .map(|r| (cells(r), width_of(r), r.as_str()))
+                    .collect::<Vec<_>>()
+            );
+        }
+        // Squeezed (wrapped cells) or listed as cards, no row is wider than the screen says.
+        for w in [24, 18, 12] {
+            let got = md(t, w);
+            assert!(
+                got.iter().all(|r| cells(r) <= w && width_of(r) == cells(r)),
+                "{w}: {got:#?}"
+            );
+        }
     }
 
     #[test]
