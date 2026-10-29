@@ -108,10 +108,15 @@ class CircleButton extends StatelessWidget {
     this.size = 40,
     this.active = false,
     this.filled = true,
+    this.onLongPress,
   });
 
   final IconData icon;
   final VoidCallback? onPressed;
+
+  /// A second action on a hold (the web preview's back arrow lists the pages
+  /// of the visit). The hold is the button's own, so its tooltip stays off it.
+  final VoidCallback? onLongPress;
   final String tooltip;
   final double size;
 
@@ -131,9 +136,11 @@ class CircleButton extends StatelessWidget {
       message: tooltip,
       // The press node below carries the label; the tooltip would add a second.
       excludeFromSemantics: true,
+      triggerMode: onLongPress == null ? null : TooltipTriggerMode.manual,
       child: PressBuilder(
         onTap: onPressed,
-        scale: 0.92,
+        onLongPress: onLongPress,
+        scale: PressScale.icon,
         semanticLabel: tooltip,
         button: true,
         selected: active ? true : null,
