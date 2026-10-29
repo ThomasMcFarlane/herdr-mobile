@@ -49,6 +49,13 @@ pub enum Effect {
     RetryIn(Duration),
     /// Put this text and these files back in the input: they were not sent.
     RestoreInput(String, Vec<Attachment>),
+    /// A queued message was refused: it goes back to the front of the queue, held, for `why`.
+    RestoreQueued {
+        id: u64,
+        text: String,
+        files: Vec<Attachment>,
+        why: String,
+    },
 }
 
 /// What reached the session.
@@ -131,6 +138,8 @@ enum Call {
     Prompt {
         text: String,
         files: Vec<Attachment>,
+        /// The id of the queued message this prompt carries, when it came from the queue.
+        queued: Option<u64>,
     },
     /// A change of one select option (the model, the thinking level, the mode): the option's
     /// id and the value asked for, and the names the person sees, for the note.
@@ -361,13 +370,36 @@ impl Session {
                 }
                 Vec::new()
             }
-            (Call::Prompt { text, files }, Err(e)) => {
+            (
+                Call::Prompt {
+                    text,
+                    files,
+                    queued,
+                },
+                Err(e),
+            ) => {
+                // A prompt the agent refused outright is a failed turn: a queue behind it holds.
+                if e.code != code::SESSION_BUSY {
+                    tr.set_stop("error");
+                }
                 tr.note(if e.code == code::SESSION_BUSY {
                     "The agent is busy; not sent".to_string()
                 } else {
                     format!("Not sent: {}", e.message)
                 });
-                vec![Effect::RestoreInput(text, files)]
+                match queued {
+                    Some(id) => vec![Effect::RestoreQueued {
+                        id,
+                        text,
+                        files,
+                        why: if e.code == code::SESSION_BUSY {
+                            "the agent was busy".to_string()
+                        } else {
+                            e.message
+                        },
+                    }],
+                    None => vec![Effect::RestoreInput(text, files)],
+                }
             }
             (Call::Prompt { .. }, Ok(result)) => {
                 tr.turn_end(result.get("stopReason").and_then(Value::as_str));
@@ -527,6 +559,32 @@ impl Session {
         files: &[Attachment],
         tr: &mut Transcript,
     ) -> Result<Vec<Effect>, Refused> {
+        self.prompt(text, files, None, tr)
+    }
+
+    /// The message `id` of the queue goes out. Same refusals as [`Session::send`]; if the agent
+    /// refuses it later, [`Effect::RestoreQueued`] says so (the box is the person's, not this
+    /// message's).
+    ///
+    /// # Errors
+    /// As [`Session::send`].
+    pub fn send_queued(
+        &mut self,
+        id: u64,
+        text: &str,
+        files: &[Attachment],
+        tr: &mut Transcript,
+    ) -> Result<Vec<Effect>, Refused> {
+        self.prompt(text, files, Some(id), tr)
+    }
+
+    fn prompt(
+        &mut self,
+        text: &str,
+        files: &[Attachment],
+        queued: Option<u64>,
+        tr: &mut Transcript,
+    ) -> Result<Vec<Effect>, Refused> {
         if !self.ready() {
             return Err(Refused::NotReady);
         }
@@ -547,6 +605,7 @@ impl Session {
                         ..f.clone()
                     })
                     .collect(),
+                queued,
             },
             method::SESSION_PROMPT,
             json!({"sessionId": sid, "prompt": attach::blocks(text, files, self.images)}),
@@ -941,6 +1000,42 @@ mod tests {
         assert!(
             matches!(&tr.items().back().expect("a note").entry, crate::transcript::Entry::Note(n) if n.contains("busy"))
         );
+    }
+
+    #[test]
+    fn a_refused_queued_prompt_goes_back_to_the_queue_and_never_to_the_box() {
+        let (mut s, mut tr) = ready();
+        s.send_queued(7, "next", &[], &mut tr).expect("sent");
+        let busy = Event::Message(Message::error(
+            Id::Num(3),
+            RpcError::new(code::SESSION_BUSY, "busy"),
+        ));
+        assert_eq!(
+            s.handle(busy, 0, &mut tr),
+            [Effect::RestoreQueued {
+                id: 7,
+                text: "next".into(),
+                files: vec![],
+                why: "the agent was busy".into(),
+            }]
+        );
+        assert!(!s.prompting());
+    }
+
+    #[test]
+    fn a_prompt_the_agent_fails_is_a_failed_turn_for_the_queue_but_a_busy_one_is_not() {
+        let fail = |c: i64| {
+            let (mut s, mut tr) = ready();
+            s.send("hello", &[], &mut tr).expect("sent");
+            s.handle(
+                Event::Message(Message::error(Id::Num(3), RpcError::new(c, "no"))),
+                0,
+                &mut tr,
+            );
+            tr.take_stop()
+        };
+        assert_eq!(fail(code::METHOD_NOT_FOUND).as_deref(), Some("error"));
+        assert_eq!(fail(code::SESSION_BUSY), None);
     }
 
     #[test]

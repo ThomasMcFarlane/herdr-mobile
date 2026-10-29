@@ -8,9 +8,10 @@
 //! input, a status line and one line of facts about the session.
 
 use crate::composer::Composer;
-use crate::delight;
+use crate::elapsed;
 use crate::fold::{self, Block};
 use crate::md::{self, clean};
+use crate::queue;
 use crate::select::{self, Selection};
 use crate::session::{Ask, Phase, Session};
 use crate::shell;
@@ -65,8 +66,6 @@ pub struct View {
     pub chips: Vec<String>,
     /// How far `/update` has got, while one runs (the footer says it).
     pub update: Option<String>,
-    /// Blocks that were just opened, by key, and the animation time they began: they grow into place.
-    pub reveal: HashMap<u64, u64>,
     /// The lines of the blocks, kept from one frame to the next, and the width they were built at.
     line_cache: LineCache,
     last_width: usize,
@@ -78,6 +77,11 @@ pub struct View {
     /// there, and the panel's first row.
     option_rows: Vec<Option<usize>>,
     option_top: u16,
+    /// Per screen row of the queue above the input, the message drawn there, and its first row.
+    queue_ids: Vec<Option<u64>>,
+    queue_top: u16,
+    /// How many queued messages had no room to be drawn, as last drawn.
+    queue_hidden: usize,
     /// A block that was clicked open or closed, and the screen row its first line was on: it
     /// stays there while it changes height, as far as showing what it opened allows.
     anchor: Option<(u64, usize)>,
@@ -119,6 +123,13 @@ impl View {
         self.option_rows.get(usize::from(row)).copied().flatten()
     }
 
+    /// The queued message drawn on screen row `y`, as last drawn.
+    #[must_use]
+    pub fn queued_at(&self, y: u16) -> Option<u64> {
+        let row = y.checked_sub(self.queue_top)?;
+        self.queue_ids.get(usize::from(row)).copied().flatten()
+    }
+
     /// A click on screen row `y`: when it is on the "below · End" control, back to the newest.
     pub fn click_newest(&mut self, y: u16) -> bool {
         if self.newest_row != Some(y) {
@@ -129,9 +140,8 @@ impl View {
     }
 
     /// A click on screen row `y`: opens or closes the block drawn there, when it folds, keeping
-    /// its first row where it was. `now_ms` starts the unfold animation (`None` without motion).
-    /// `true` when something opened or closed.
-    pub fn click_fold(&mut self, y: u16, now_ms: Option<u64>) -> bool {
+    /// its first row where it was. `true` when something opened or closed.
+    pub fn click_fold(&mut self, y: u16) -> bool {
         let Some(row) = y.checked_sub(self.fold_top).map(usize::from) else {
             return false;
         };
@@ -144,13 +154,8 @@ impl View {
             .rev()
             .take_while(|k| **k == Some(key))
             .count();
-        if self.expanded.remove(&key) {
-            self.reveal.remove(&key);
-        } else {
+        if !self.expanded.remove(&key) {
             self.expanded.insert(key);
-            if let Some(now) = now_ms {
-                self.reveal.insert(key, now);
-            }
         }
         self.anchor = Some((key, row - top));
         self.invalidate_lines();
@@ -235,52 +240,6 @@ impl LineCache {
         self.ensure(b, items, width, look).len()
     }
 
-    /// What just opened: the lines it had before, for the unfold animation. Parked out of the
-    /// open blocks under its own key with the content revision set to `u64::MAX` (a value a real
-    /// revision never takes), so a second block mid-reveal reads its own height, not a neighbour's.
-    fn closed_lines(
-        &mut self,
-        b: Block,
-        items: &VecDeque<Item>,
-        width: usize,
-        expanded: &HashSet<u64>,
-        look: Look,
-    ) -> Vec<Line<'static>> {
-        let mut closed = expanded.clone();
-        let bkey = fold::key(b, items);
-        closed.remove(&bkey);
-        let was = match b {
-            Block::Run { start, end, .. } => Block::Run {
-                start,
-                end,
-                open: false,
-            },
-            one => one,
-        };
-        let key = LineKey {
-            block: bkey,
-            rev: u64::MAX,
-            width,
-            gen: self.gen,
-        };
-        if !self.lines.contains_key(&key) {
-            self.order.push_back(key);
-            let l = block_lines(
-                was,
-                items,
-                width,
-                Look {
-                    expanded: &closed,
-                    ..look
-                },
-            );
-            self.chars += line_size(&l);
-            self.lines.insert(key, l);
-            self.enforce();
-        }
-        self.lines.get(&key).expect("just inserted").clone()
-    }
-
     /// The budget: drop the oldest lines until the cache fits. A block that is evicted is
     /// rebuilt when it is needed again; its key is stable, so nothing stale is ever drawn.
     fn enforce(&mut self) {
@@ -326,12 +285,8 @@ pub struct Frame_<'a> {
     pub hint: Option<&'a str>,
     /// Seconds the current turn has run, when one does.
     pub working_secs: Option<u64>,
-    /// How many turns this run has finished (varies the waiting word).
-    pub turn: usize,
-    /// Milliseconds on the animation clock: what the spinner, shimmer, pulse and unfolds read.
-    pub anim_ms: u64,
-    /// Whether things move at all (`HERDR_TUI_MOTION=off` and friends turn it off).
-    pub motion: bool,
+    /// The messages waiting for the turn to end.
+    pub queue: &'a queue::Queue,
     /// The version of a newer herdr-tui that was installed while this one ran (`Ctrl-R` loads it).
     pub newer: Option<&'a str>,
 }
@@ -597,7 +552,7 @@ fn tool_lines(
 ) -> Vec<Line<'static>> {
     let completed = t.status == ToolStatus::Completed;
     let (glyph, gs) = match t.status {
-        ToolStatus::Completed => ("✓ ", theme.ok()),
+        ToolStatus::Completed => ("  ", theme.dim()),
         ToolStatus::Failed => ("✗ ", theme.bad()),
         ToolStatus::Pending | ToolStatus::InProgress => ("◌ ", theme.dim()),
     };
@@ -923,7 +878,7 @@ fn item_lines(
 }
 
 /// What a session with nothing in it yet says: it is ready, and a way in.
-fn welcome(ctx: &Frame_, theme: Theme) -> Vec<Line<'static>> {
+fn welcome(theme: Theme) -> Vec<Line<'static>> {
     let try_it = |t: &'static str| {
         Line::from(vec![
             Span::raw("    "),
@@ -941,11 +896,6 @@ fn welcome(ctx: &Frame_, theme: Theme) -> Vec<Line<'static>> {
         try_it("explain how this repo is laid out"),
         try_it("find out why the last test failed, and fix it"),
         Line::default(),
-        Line::from(Span::styled(
-            format!("  Tip: {}", delight::tip(ctx.turn)),
-            theme.dim(),
-        )),
-        Line::default(),
     ]
 }
 
@@ -961,7 +911,6 @@ fn home_short(path: &str) -> String {
 /// The panel that asks the person: what, the command whole, the choices, how to answer. With
 /// the lines, the option each row draws (what a click on that row chooses).
 fn panel_lines(
-    lit: bool,
     request: &acp::PermissionRequest,
     total: usize,
     sel: usize,
@@ -981,14 +930,7 @@ fn panel_lines(
         Line::default(),
         Line::from(vec![
             Span::raw("  "),
-            Span::styled(
-                if lit {
-                    "▲ Needs you"
-                } else {
-                    "△ Needs you"
-                },
-                theme.warn(),
-            ),
+            Span::styled("▲ Needs you", theme.warn()),
             Span::styled(
                 format!(" · {}{more}", fit(&clean(title), inner.saturating_sub(14))),
                 theme.bold(),
@@ -1103,16 +1045,15 @@ pub fn draw(f: &mut Frame, ctx: &Frame_, v: &mut View) {
         .map(|first| {
             let max_subject =
                 ((area.height as usize / 2).saturating_sub(9)).clamp(2, SUBJECT_MAX_ROWS);
-            let lit = !ctx.motion || delight::pulse(ctx.anim_ms);
             let (lines, options) = match &first.ask {
                 Ask::Permission(request) => {
                     v.sel = v.sel.min(request.options.len().saturating_sub(1));
-                    panel_lines(lit, request, waiting.len(), v.sel, w, max_subject, theme)
+                    panel_lines(request, waiting.len(), v.sel, w, max_subject, theme)
                 }
                 Ask::Question(form) => {
                     let max_rows = usize::from(area.height.saturating_sub(7));
                     let (rows, options) =
-                        form.lines(lit, waiting.len(), w, max_subject, max_rows, theme);
+                        form.lines(waiting.len(), w, max_subject, max_rows, theme);
                     (tint(rows, w, theme), options)
                 }
             };
@@ -1133,15 +1074,23 @@ pub fn draw(f: &mut Frame, ctx: &Frame_, v: &mut View) {
     let tinted = theme
         .band()
         .filter(|_| std::env::var("HERDR_TUI_INPUT").map_or(true, |v| v != "rules"));
-    let title = ctx.transcript.title().map(clean);
-    // The rule above carries the session's title; a tinted input needs no rule unless there is one.
-    let rule_h = u16::from(!(tinted.is_some() && title.is_none()));
+    // A rule frames an input that is not tinted.
+    let rule_h = u16::from(tinted.is_none());
     let zone_h = comp_h + if tinted.is_some() { 2 } else { 1 };
     let chips_h = u16::from(!v.chips.is_empty());
+    // The messages waiting for the turn to end sit just above the input. They take priority over
+    // the plan, and give way to the conversation, the panel and the input on a short screen.
+    let (mut queue_rows, mut queue_ids) = queue_lines(ctx.queue, w, theme);
+    let queue_room = usize::from(
+        area.height
+            .saturating_sub(panel_h + chips_h + rule_h + zone_h + 1 + 8),
+    );
+    queue_rows.truncate(queue_room);
+    let queue_h = u16::try_from(queue_rows.len()).unwrap_or(u16::MAX);
     // The agent's plan, while it has steps left: a quiet checklist above the conversation's
     // edge. It gives way to everything else (the panel, the input) on a short screen.
     let mut plan_rows = plan_lines(ctx.transcript.plan(), w, theme);
-    let kept = usize::from(panel_h + chips_h + rule_h + zone_h + 1) + 8;
+    let kept = usize::from(panel_h + queue_h + chips_h + rule_h + zone_h + 1) + 8;
     let room = usize::from(area.height).saturating_sub(kept);
     if room < 3 {
         plan_rows.clear();
@@ -1149,10 +1098,11 @@ pub fn draw(f: &mut Frame, ctx: &Frame_, v: &mut View) {
         plan_rows.truncate(room);
     }
     let plan_h = u16::try_from(plan_rows.len()).unwrap_or(u16::MAX);
-    let [hist, plan, perm, chips, rule, zone, footer] = Layout::vertical([
+    let [hist, plan, perm, queue, chips, rule, zone, footer] = Layout::vertical([
         Constraint::Min(1),
         Constraint::Length(plan_h),
         Constraint::Length(panel_h),
+        Constraint::Length(queue_h),
         Constraint::Length(chips_h),
         Constraint::Length(rule_h),
         Constraint::Length(zone_h),
@@ -1161,7 +1111,7 @@ pub fn draw(f: &mut Frame, ctx: &Frame_, v: &mut View) {
     .areas(area);
 
     let welcome = if ctx.transcript.items().is_empty() && ctx.session.ready() {
-        welcome(ctx, theme)
+        welcome(theme)
     } else {
         Vec::new()
     };
@@ -1176,24 +1126,23 @@ pub fn draw(f: &mut Frame, ctx: &Frame_, v: &mut View) {
     if let Some(rows) = panel {
         f.render_widget(Paragraph::new(rows), perm);
     }
+    queue_ids.truncate(usize::from(queue.height));
+    if queue_h > 0 {
+        f.render_widget(Paragraph::new(queue_rows), queue);
+    }
+    v.queue_ids = queue_ids;
+    v.queue_top = queue.y;
+    // Said in the footer when the rows had no room, so a short pane never swallows a message.
+    v.queue_hidden = if queue_h == 0 { ctx.queue.len() } else { 0 };
     if chips_h > 0 {
         f.render_widget(Paragraph::new(chips_line(&v.chips, w, theme)), chips);
     }
 
     if rule_h > 0 {
-        let rule_line = match title {
-            Some(t) => {
-                let t = fit(&t, w.saturating_sub(8));
-                let left = w.saturating_sub(width_of(&t) + 4 + 2);
-                Line::from(vec![
-                    Span::styled("─".repeat(left), theme.dim()),
-                    Span::styled(format!(" {t} "), theme.dim()),
-                    Span::styled("──", theme.dim()),
-                ])
-            }
-            None => Line::from(Span::styled("─".repeat(w), theme.dim())),
-        };
-        f.render_widget(Paragraph::new(rule_line), rule);
+        f.render_widget(
+            Paragraph::new(Line::from(Span::styled("─".repeat(w), theme.dim()))),
+            rule,
+        );
     }
 
     // What the input shows. When it is taller than the room, the rows around the cursor.
@@ -1206,6 +1155,11 @@ pub fn draw(f: &mut Frame, ctx: &Frame_, v: &mut View) {
         let hint = match question {
             Some(q) if q.typed() => "Type your answer",
             Some(_) => "Answer the question above",
+            None if ctx.session.ready()
+                && (ctx.transcript.running() || ctx.session.prompting()) =>
+            {
+                "Queue a message for when this turn ends"
+            }
             None if ctx.session.ready() => "Message the agent",
             None => "Opening the session…",
         };
@@ -1275,14 +1229,7 @@ pub fn draw(f: &mut Frame, ctx: &Frame_, v: &mut View) {
     // The footer is one calm row: what to do on the left, the model and the context on the right,
     // both in the same two-column gutter as everything above, with a margin at the right edge.
     // Scrolled back, the way to the newest is on the conversation's last row, not here.
-    let left = footer_left(
-        ctx,
-        v,
-        waiting.first().map(|w| match &w.ask {
-            Ask::Permission(r) => format!("choose 1–{} and press Enter", r.options.len().max(1)),
-            Ask::Question(form) => form.footer(),
-        }),
-    );
+    let left = footer_left(ctx, v);
     let inner = w.saturating_sub(GUTTER * 2);
     // Whatever the left side is, it keeps at least this much before the facts take the room.
     let keep = spans_width(&left).min(16);
@@ -1402,9 +1349,80 @@ fn chips_line(names: &[String], width: usize, theme: Theme) -> Line<'static> {
     Line::from(fit_spans(spans, width))
 }
 
+/// Queued messages drawn at once.
+const QUEUE_ROWS: usize = 3;
+
+/// How to take a queued message back, said at the right of the first one when there is room.
+const QUEUE_HOW: &str = "Backspace takes the newest back · click a row for any";
+
+/// The messages waiting for the turn to end, oldest first: `↳` and the first line of each, then
+/// how many more wait. When some are held, a first row says why and how to go on. Nothing when
+/// the queue is empty. With the rows, the message each draws (what a click on that row takes back).
+fn queue_lines(
+    q: &queue::Queue,
+    width: usize,
+    theme: Theme,
+) -> (Vec<Line<'static>>, Vec<Option<u64>>) {
+    let mut rows = Vec::new();
+    let mut ids = Vec::new();
+    if let Some(why) = q.held_reason() {
+        rows.push(Line::from(Span::styled(
+            format!("  Held · {} · Enter resumes", clean(why)),
+            theme.warn(),
+        )));
+        ids.push(None);
+    }
+    for (i, e) in q.entries().iter().take(QUEUE_ROWS).enumerate() {
+        let text = clean(&e.text);
+        let mut lines = text.lines().map(str::trim).filter(|l| !l.is_empty());
+        let first = lines.next().unwrap_or("").to_string();
+        let more = lines.next().is_some();
+        let suffix = match e.files.len() {
+            0 => String::new(),
+            1 => " · 1 file".to_string(),
+            n => format!(" · {n} files"),
+        };
+        let room = width.saturating_sub(GUTTER + 2 + width_of(&suffix) + usize::from(more));
+        let mark = if e.held.is_some() {
+            theme.warn()
+        } else {
+            theme.dim()
+        };
+        let mut spans = vec![
+            Span::raw("  "),
+            Span::styled("↳ ", mark),
+            Span::styled(fit(&first, room), theme.dim()),
+        ];
+        if more {
+            spans.push(Span::styled("…", theme.dim()));
+        }
+        if !suffix.is_empty() {
+            spans.push(Span::styled(suffix, theme.dim()));
+        }
+        // Like the files row: the way back is said where there is room, not where it would crowd.
+        let used = spans_width(&spans);
+        if i == 0 && used + 3 + width_of(QUEUE_HOW) + GUTTER <= width {
+            spans.push(Span::raw(
+                " ".repeat(width - used - width_of(QUEUE_HOW) - GUTTER),
+            ));
+            spans.push(Span::styled(QUEUE_HOW, theme.dim()));
+        }
+        rows.push(Line::from(spans));
+        ids.push(Some(e.id));
+    }
+    if q.len() > QUEUE_ROWS {
+        rows.push(Line::from(Span::styled(
+            format!("    {} more queued", q.len() - QUEUE_ROWS),
+            theme.dim(),
+        )));
+        ids.push(None);
+    }
+    (rows, ids)
+}
+
 /// What the left of the footer says, by what the person is doing. Only the keys needed to act now;
 /// the rest are behind `?`.
-fn footer_left(ctx: &Frame_, v: &View, asking: Option<String>) -> Vec<Span<'static>> {
+fn footer_left(ctx: &Frame_, v: &View) -> Vec<Span<'static>> {
     let theme = ctx.theme;
     if let Phase::Ended(e) = ctx.session.phase() {
         return vec![Span::styled(
@@ -1415,16 +1433,9 @@ fn footer_left(ctx: &Frame_, v: &View, asking: Option<String>) -> Vec<Span<'stat
     if let Some(h) = ctx.hint {
         return vec![Span::styled(h.to_string(), theme.warn())];
     }
-    if let Some(what) = asking {
-        let mark = if !ctx.motion || delight::pulse(ctx.anim_ms) {
-            "▲ "
-        } else {
-            "△ "
-        };
-        return vec![
-            Span::styled(mark, theme.warn()),
-            Span::styled(what, theme.warn()),
-        ];
+    // The panel that asks carries its own keys, next to the options: the footer says nothing.
+    if !ctx.session.waiting().is_empty() {
+        return Vec::new();
     }
     if let Some(u) = &v.update {
         return vec![
@@ -1456,38 +1467,36 @@ fn footer_left(ctx: &Frame_, v: &View, asking: Option<String>) -> Vec<Span<'stat
     }
     if ctx.transcript.running() || ctx.session.prompting() {
         let secs = ctx.working_secs.unwrap_or(0);
-        let verb = format!("{}…", delight::verb(secs, ctx.turn));
-        let mut out: Vec<Span<'static>> = Vec::new();
-        if ctx.motion {
-            // A spinner, and a sheen that crosses the word, then rests a beat. Only while a turn runs.
+        let mut out = vec![
+            Span::styled("● ", theme.accent()),
+            Span::styled("Working", theme.bold()),
+            Span::styled(format!(" {}", elapsed::duration(secs)), theme.dim()),
+        ];
+        if !ctx.composer.text.trim().is_empty() {
+            out.push(Span::styled(" · Enter queues", theme.dim()));
+        }
+        if v.queue_hidden > 0 {
             out.push(Span::styled(
-                format!("{} ", delight::spinner(ctx.anim_ms)),
-                theme.accent(),
+                format!(" · {} queued", v.queue_hidden),
+                theme.dim(),
             ));
-            let lit = delight::shimmer(verb.chars().count(), ctx.anim_ms);
-            out.extend(verb.chars().zip(lit).map(|(c, on)| {
-                Span::styled(
-                    c.to_string(),
-                    if on {
-                        theme.accent().add_modifier(Modifier::BOLD)
-                    } else {
-                        theme.bold()
-                    },
-                )
-            }));
-        } else {
-            out.push(Span::styled("● ", theme.accent()));
-            out.push(Span::styled(verb, theme.bold()));
         }
         out.push(Span::styled(
-            format!(" {}", delight::duration(secs)),
+            if ctx.queue.has_waiting() {
+                " · Ctrl-C stops and sends queued"
+            } else {
+                " · Ctrl-C stops"
+            },
             theme.dim(),
         ));
-        out.push(Span::styled(" · Ctrl-C stops", theme.dim()));
-        if let Some(tip) = delight::tip_for_turn(secs, ctx.turn) {
-            out.push(Span::styled(format!(" · Tip: {tip}"), theme.dim()));
-        }
         return out;
+    }
+    // A held queue whose rows did not fit on a short screen: the way on is said here instead.
+    if v.queue_hidden > 0 && ctx.queue.has_held() {
+        return vec![Span::styled(
+            format!("{} queued, held · Enter resumes", v.queue_hidden),
+            theme.warn(),
+        )];
     }
     // Idle, and a newer herdr-tui has been installed: say so, and how to load it. Not while a
     // turn runs or a request waits, when something else is the thing to look at.
@@ -1520,13 +1529,13 @@ fn footer_facts(ctx: &Frame_, theme: Theme) -> Vec<Vec<Span<'static>>> {
         .mode()
         .filter(|m| !m.eq_ignore_ascii_case("default"))
         .map(clean);
-    let gauge = tr.context().map(|c| {
+    let gauge = tr.context().and_then(|c| {
         let style = match c {
-            0..=59 => theme.dim(),
+            0..=59 => return None,
             60..=84 => theme.warn(),
             _ => theme.bad(),
         };
-        (format!("ctx {c}%"), style)
+        Some((format!("ctx {c}%"), style))
     });
     let place = (model.is_none()).then(|| home_short(ctx.header.cwd));
     let build = |parts: Vec<Option<(String, Style)>>| -> Vec<Span<'static>> {
@@ -1572,8 +1581,9 @@ fn footer_facts(ctx: &Frame_, theme: Theme) -> Vec<Vec<Span<'static>>> {
 
 /// The key list, opened with `?`: what is not worth a place in the footer.
 fn help_lines(width: usize, theme: Theme) -> Vec<Line<'static>> {
-    const KEYS: [(&str, &str); 19] = [
-        ("Enter", "send"),
+    const KEYS: [(&str, &str); 20] = [
+        ("Enter", "send; queued while the agent works"),
+        ("Backspace  click ↳", "take a queued message back to edit"),
         ("Ctrl-J", "new line"),
         ("/", "commands: model, plan, settings, info, new, skills"),
         ("Shift-Tab", "next mode (plan, ...)"),
@@ -1794,7 +1804,7 @@ fn draw_history(
     v: &mut View,
     welcome: Vec<Line<'static>>,
 ) {
-    let (tr, theme, anim_ms, motion) = (ctx.transcript, ctx.theme, ctx.anim_ms, ctx.motion);
+    let (tr, theme) = (ctx.transcript, ctx.theme);
     v.page = (area.height as usize).saturating_sub(2).max(1);
     let mut need = (area.height as usize).saturating_add(v.scroll);
     let items = tr.items();
@@ -1832,28 +1842,9 @@ fn draw_history(
     }
     let h = area.height as usize;
     let mut reached_start = true;
-    let mut reveals: HashMap<u64, u64> = if motion {
-        v.reveal.clone()
-    } else {
-        HashMap::new()
-    };
-    for b in &blocks {
-        if let Block::Run {
-            start,
-            end,
-            open: true,
-        } = *b
-        {
-            if let Some(&t) = reveals.get(&fold::key(*b, items)) {
-                for item in items.iter().skip(start).take(end - start) {
-                    reveals.entry(item.id).or_insert(t);
-                }
-            }
-        }
-    }
     // Pass 1, newest first: how many lines each block draws, and where, counted up from the
     // newest. A scroll walks this per block, so a long history costs a lookup each, not a
-    // clone. The count of a block that is mid-unfold is the height it has at this moment.
+    // clone.
     let mut spans: Vec<(Block, usize, usize)> = Vec::new();
     let mut found: Option<(usize, usize)> = None;
     let anchor_key = v.anchor.map(|(k, _)| k);
@@ -1870,23 +1861,7 @@ fn draw_history(
         let mut count = 0usize;
         for (bi, b) in blocks.iter().enumerate().rev() {
             let bkey = fold::key(*b, items);
-            let mut n = v.line_cache.count_for(*b, items, width, look);
-            if let Some(&started) = reveals.get(&bkey) {
-                let elapsed = anim_ms.saturating_sub(started);
-                if elapsed < delight::REVEAL_MS {
-                    let before = if v.reveal.contains_key(&bkey) {
-                        v.line_cache
-                            .closed_lines(*b, items, width, &v.expanded, look)
-                            .len()
-                    } else {
-                        0
-                    };
-                    // A block can shrink as it opens (a run folds from its calls to one line),
-                    // and the easing may ask for more rows than the block has now: cap at the
-                    // block's real height, so the pass-2 slice of its lines never runs off the end.
-                    n = delight::reveal_rows(before, n, elapsed).min(n);
-                }
-            }
+            let n = v.line_cache.count_for(*b, items, width, look);
             if v.focus == Some(bkey) {
                 found = Some((count, count + n));
             }
@@ -1918,9 +1893,6 @@ fn draw_history(
     // The "not shown" line sits oldest, just past the last built line.
     let has_drop = reached_start && tr.dropped() > 0;
     let all = total + usize::from(has_drop);
-    // Unfolds that have finished are forgotten, so the loop can go back to sleep.
-    v.reveal
-        .retain(|_, started| motion && anim_ms.saturating_sub(*started) < delight::REVEAL_MS);
     // Keep the focused block in view: bring it to the edge it is past, never further than it needs.
     if v.focus_dirty {
         if let Some((from, to)) = found {
@@ -1943,9 +1915,7 @@ fn draw_history(
             let stay = (to + row).saturating_sub(h);
             v.scroll = stay.min(from).max(to.saturating_sub(h));
         }
-        if !anchor_key.is_some_and(|k| v.reveal.contains_key(&k)) {
-            v.anchor = None;
-        }
+        v.anchor = None;
     }
     // Do not scroll past the oldest line built.
     v.scroll = v.scroll.min(all.saturating_sub(h));
@@ -2041,6 +2011,7 @@ fn lines_word(n: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::queue::Queue;
     use crate::session::Start;
     use acp::{is_unsafe_control, SessionUpdate};
     use ratatui::{backend::TestBackend, buffer::Buffer, style::Color, Terminal};
@@ -2067,43 +2038,7 @@ mod tests {
             theme,
             hint: None,
             working_secs: None,
-            turn: 0,
-            anim_ms: 0,
-            motion: false,
-            newer: None,
-        };
-        term.draw(|f| draw(f, &ctx, view)).expect("drawn");
-        term.backend().buffer().clone()
-    }
-
-    /// `draw_with`, with the unfold animation's clock and motion set, for the reveal tests.
-    #[allow(clippy::too_many_arguments)] // a test helper, like draw_with
-    fn draw_with_m(
-        tr: &Transcript,
-        session: &Session,
-        composer: &Composer,
-        theme: Theme,
-        w: u16,
-        h: u16,
-        view: &mut View,
-        motion: bool,
-        anim_ms: u64,
-    ) -> Buffer {
-        let mut term = Terminal::new(TestBackend::new(w, h)).expect("a test terminal");
-        let ctx = Frame_ {
-            transcript: tr,
-            session,
-            composer,
-            header: Header {
-                agent: "omp",
-                cwd: "/w",
-            },
-            theme,
-            hint: None,
-            working_secs: None,
-            turn: 0,
-            anim_ms,
-            motion,
+            queue: &Queue::default(),
             newer: None,
         };
         term.draw(|f| draw(f, &ctx, view)).expect("drawn");
@@ -2337,70 +2272,6 @@ mod tests {
         }
     }
 
-    /// Three finished tool calls that fold into one run, and a line after, so the run is the
-    /// block that opens.
-    fn run_transcript() -> Transcript {
-        let mut tr = Transcript::default();
-        for (k, title) in ["Read a", "Read b", "Read c"].into_iter().enumerate() {
-            tr.apply(
-                SessionUpdate::from_value(
-                    &json!({"sessionUpdate": "tool_call", "toolCallId": format!("r{k}"), "title": title, "status": "completed"}),
-                )
-                .expect("update"),
-            );
-        }
-        agent(&mut tr, "after", "done with the reads");
-        tr
-    }
-
-    #[test]
-    fn opening_a_run_that_shrinks_never_runs_off_its_lines() {
-        // The crash: a run opens by folding from its calls to one line, so mid-reveal the easing
-        // can ask for more rows than the open run has. The count must cap at the block's real
-        // height, and the frame must match a cold build of the same moment.
-        let tr = run_transcript();
-        let session = ready_session();
-        let (w, h) = (100u16, 30u16);
-        let rk = tr.items()[0].id | (1u64 << 63); // the run key (the run starts at item 0)
-        let mut warm = View::default();
-        warm.expanded.insert(rk);
-        warm.reveal.insert(rk, 0);
-        // A few frames into the unfold, before it settles.
-        for anim_ms in [10u64, 40u64, 90u64] {
-            let a = rows_of(&draw_with_m(
-                &tr,
-                &session,
-                &Composer::default(),
-                Theme::plain(),
-                w,
-                h,
-                &mut warm,
-                true,
-                anim_ms,
-            ));
-            let mut cold = View {
-                expanded: HashSet::from([rk]),
-                reveal: HashMap::from([(rk, 0u64)]),
-                ..View::default()
-            };
-            let b = rows_of(&draw_with_m(
-                &tr,
-                &session,
-                &Composer::default(),
-                Theme::plain(),
-                w,
-                h,
-                &mut cold,
-                true,
-                anim_ms,
-            ));
-            assert_eq!(
-                a, b,
-                "the cache changed the reveal frame at anim_ms={anim_ms}"
-            );
-        }
-    }
-
     #[test]
     fn a_streaming_message_is_not_frozen_at_its_first_chunk() {
         // The cache must not serve a block's old line after its text grows in place: a message
@@ -2434,62 +2305,6 @@ mod tests {
         assert!(
             second.iter().any(|r| r.contains("I am the agent")),
             "the cache served the message's first chunk: {second:?}"
-        );
-    }
-
-    #[test]
-    fn closed_lines_are_kept_per_block_not_shared() {
-        // The unfold animation keeps "what the block had before it opened" for each opening
-        // block. That was once kept under one shared key, so a block that opened first parked
-        // its closed height there, and a second block read the first's. Each block must keep
-        // its own: run A has a failed call (taller closed height) than run B, so a block that
-        // read the neighbour's height would come back the wrong size.
-        let mut tr = Transcript::default();
-        for (id, title, status) in [
-            ("a0", "Read a", "completed"),
-            ("a1", "Read b", "failed"),
-            ("a2", "Read c", "completed"),
-        ] {
-            tr.apply(SessionUpdate::from_value(&json!({"sessionUpdate": "tool_call", "toolCallId": id, "title": title, "status": status})).expect("update"));
-        }
-        agent(&mut tr, "between", "a line between the two runs");
-        for (k, id) in ["b0", "b1", "b2"].into_iter().enumerate() {
-            tr.apply(SessionUpdate::from_value(&json!({"sessionUpdate": "tool_call", "toolCallId": id, "title": format!("B {k}"), "status": "completed"})).expect("update"));
-        }
-        let items = tr.items();
-        let run_a = Block::Run {
-            start: 0,
-            end: 3,
-            open: true,
-        };
-        let run_b = Block::Run {
-            start: 4,
-            end: 7,
-            open: true,
-        };
-        let mut cache = LineCache::default();
-        let look = Look {
-            expanded: &HashSet::new(),
-            focus: None,
-            thoughts: false,
-            theme: Theme::plain(),
-            live: None,
-        };
-        let wa = cache.closed_lines(run_a, items, 100, &HashSet::new(), look);
-        let wb = cache.closed_lines(run_b, items, 100, &HashSet::new(), look);
-        assert_ne!(
-            wa.len(),
-            wb.len(),
-            "the two runs should have different closed heights: A={} B={}",
-            wa.len(),
-            wb.len()
-        );
-        // Reading A again must give A's height, not the B that was parked in between.
-        let wa2 = cache.closed_lines(run_a, items, 100, &HashSet::new(), look);
-        assert_eq!(
-            wa2.len(),
-            wa.len(),
-            "A read B's closed height after B opened"
         );
     }
 
@@ -2819,7 +2634,7 @@ mod tests {
         let theme = Theme::banded((255, 255, 255));
         let rows = tool_lines(&t, 60, false, false, theme);
         let text: String = rows[0].spans.iter().map(|s| s.content.as_ref()).collect();
-        assert_eq!(text, "✓ git status --short");
+        assert_eq!(text, "  git status --short");
         for span in rows[0].spans.iter().skip(1) {
             assert_eq!(
                 span.style.fg,
@@ -2986,11 +2801,11 @@ mod tests {
             .position(|r| r.contains("line one"))
             .expect("shown");
         assert!(
-            !view.click_fold(u16::try_from(answer).expect("on screen"), None),
+            !view.click_fold(u16::try_from(answer).expect("on screen")),
             "an answer does not fold"
         );
 
-        assert!(view.click_fold(y, None));
+        assert!(view.click_fold(y));
         let rows = draw(&mut view);
         assert!(
             rows[at].contains("▾ 3 tool calls"),
@@ -2998,7 +2813,7 @@ mod tests {
         );
         assert!(rows[at + 1].contains("Reading one"), "{rows:#?}");
 
-        assert!(view.click_fold(y, None));
+        assert!(view.click_fold(y));
         let rows = draw(&mut view);
         assert!(rows[at].contains("▸ 3 tool calls"), "{rows:#?}");
         assert!(!rows.join("\n").contains("Reading one"), "{rows:#?}");
@@ -3159,7 +2974,7 @@ mod tests {
             .iter()
             .position(|r| r.contains("… thinking"))
             .expect("folded");
-        assert!(view.click_fold(u16::try_from(at).expect("on screen"), None));
+        assert!(view.click_fold(u16::try_from(at).expect("on screen")));
         let open = rows_of(&draw_with(
             &tr,
             &session,
@@ -3174,7 +2989,7 @@ mod tests {
     }
 
     #[test]
-    fn the_context_gauge_warns_as_the_window_fills() {
+    fn the_context_gauge_warns_then_alarms_as_the_window_fills() {
         let session = ready_session();
         let colour = |pct: u64| {
             let mut tr = Transcript::default();
@@ -3200,9 +3015,8 @@ mod tests {
                 .expect("the gauge is shown");
             buf[(x, row)].fg
         };
-        let (calm, hot, full) = (colour(40), colour(70), colour(95));
-        assert_ne!(calm, hot);
-        assert_ne!(hot, full);
+        let (hot, full) = (colour(70), colour(95));
+        assert_ne!(hot, full, "warn, then alarm");
     }
 
     #[test]
@@ -3744,9 +3558,12 @@ mod tests {
             &mut view,
         ));
         assert!(
-            rows.last()
-                .is_some_and(|r| r.contains("choose 1–2 and press Enter")),
-            "{rows:#?}"
+            rows.iter().any(|r| r.contains("▲ Needs you")),
+            "the request is on the panel: {rows:#?}"
+        );
+        assert!(
+            rows.last().is_some_and(|r| !r.contains("updating")),
+            "and it outranks the update line: {rows:#?}"
         );
     }
 
@@ -3936,7 +3753,7 @@ mod tests {
     }
 
     #[test]
-    fn the_rule_carries_the_title_and_the_footer_says_where_and_how_full() {
+    fn the_rule_is_plain_and_the_footer_says_where_and_the_mode() {
         let session = ready_session();
         let mut tr = Transcript::default();
         tr.apply(
@@ -3972,10 +3789,15 @@ mod tests {
             &mut view,
         ));
         assert!(
-            rows.iter().any(|r| r.contains("─ Fix the flaky test ──")),
+            !rows.iter().any(|r| r.contains("Fix the flaky test")),
+            "the title is in the window title, not on a rule: {rows:#?}"
+        );
+        assert!(
+            rows.iter()
+                .any(|r| r.chars().all(|c| c == '─') && !r.is_empty()),
             "{rows:#?}"
         );
-        assert!(rows.last().is_some_and(|r| r.starts_with("  Enter send") && r.ends_with("omp · /w · plan · ctx 47%")), "one footer row: the hint on the left, where it runs and how full on the right: {rows:#?}");
+        assert!(rows.last().is_some_and(|r| r.starts_with("  Enter send") && r.ends_with("omp · /w · plan")), "one footer row: the hint on the left, where it runs and the mode on the right: {rows:#?}");
     }
 
     #[test]
@@ -3987,7 +3809,7 @@ mod tests {
             {"id": "thinking", "category": "thought_level", "type": "select", "currentValue": "hi", "options": [{"value": "hi", "name": "high"}]}]})).expect("update"));
         tr.apply(
             SessionUpdate::from_value(
-                &json!({"sessionUpdate": "usage_update", "used": 47, "size": 100}),
+                &json!({"sessionUpdate": "usage_update", "used": 61, "size": 100}),
             )
             .expect("update"),
         );
@@ -4007,7 +3829,7 @@ mod tests {
         ));
         assert!(
             rows.last().is_some_and(|r| r.starts_with("  Enter send")
-                && r.ends_with("Sonnet 5.5 · thinking high · ctx 47%")),
+                && r.ends_with("Sonnet 5.5 · thinking high · ctx 61%")),
             "the model leads the facts, on the right: {rows:#?}"
         );
         // On a narrow screen the hint shortens and the facts do too, down to the gauge: the row never overflows.
@@ -4023,7 +3845,7 @@ mod tests {
         assert!(
             narrow
                 .last()
-                .is_some_and(|r| r.ends_with("ctx 47%") && width_of(r) <= 30),
+                .is_some_and(|r| r.ends_with("ctx 61%") && width_of(r) <= 30),
             "{narrow:#?}"
         );
     }
@@ -4171,6 +3993,7 @@ mod tests {
         }
         let mut term = Terminal::new(TestBackend::new(w, h)).expect("a test terminal");
         let tr = Transcript::default();
+        let queue = Queue::default();
         let ctx = Frame_ {
             transcript: &tr,
             session: &session,
@@ -4182,9 +4005,7 @@ mod tests {
             theme: Theme::plain(),
             hint: None,
             working_secs: None,
-            turn: 0,
-            anim_ms: 0,
-            motion: false,
+            queue: &queue,
             newer: None,
         };
         term.draw(|f| draw(f, &ctx, &mut View::default()))
@@ -4227,35 +4048,33 @@ mod tests {
         clippy::too_many_arguments,
         reason = "a test helper: each argument is one thing a frame depends on"
     )]
-    fn draw_anim(
+    fn draw_state(
         tr: &Transcript,
         session: &Session,
+        composer: &Composer,
+        queue: &Queue,
         theme: Theme,
         w: u16,
         h: u16,
-        view: &mut View,
-        anim_ms: u64,
-        motion: bool,
+        working_secs: Option<u64>,
     ) -> Buffer {
         let mut term = Terminal::new(TestBackend::new(w, h)).expect("a test terminal");
-        let composer = Composer::default();
         let ctx = Frame_ {
             transcript: tr,
             session,
-            composer: &composer,
+            composer,
             header: Header {
                 agent: "omp",
                 cwd: "/w",
             },
             theme,
             hint: None,
-            working_secs: Some(3),
-            turn: 0,
-            anim_ms,
-            motion,
+            working_secs,
+            queue,
             newer: None,
         };
-        term.draw(|f| draw(f, &ctx, view)).expect("drawn");
+        term.draw(|f| draw(f, &ctx, &mut View::default()))
+            .expect("drawn");
         term.backend().buffer().clone()
     }
 
@@ -4270,67 +4089,60 @@ mod tests {
         tr
     }
 
-    fn row_with(buf: &Buffer, needle: &str) -> Option<u16> {
-        rows_of(buf)
-            .iter()
-            .position(|r| r.contains(needle))
-            .map(|i| i as u16)
-    }
-
-    #[test]
-    fn the_spinner_turns_with_the_clock_and_stands_still_without_motion() {
-        let (tr, session) = (working(), ready_session());
-        let status = |ms: u64, motion: bool| {
-            let buf = draw_anim(
-                &tr,
-                &session,
-                Theme::plain(),
-                70,
-                10,
-                &mut View::default(),
-                ms,
-                motion,
-            );
-            let row = row_with(&buf, "Ctrl-C stops").expect("the working line");
-            rows_of(&buf)[usize::from(row)].clone()
-        };
-        let (a, b) = (status(0, true), status(90, true));
-        assert_ne!(a, b, "the spinner moved");
-        assert_eq!(
-            a.chars().skip(3).collect::<String>(),
-            b.chars().skip(3).collect::<String>(),
-            "only the spinner changed, the words did not"
-        );
-        assert_eq!(
-            status(0, false),
-            status(5000, false),
-            "no motion: a still dot"
-        );
-        assert!(status(0, false).trim_start().starts_with('●'));
-    }
-
-    #[test]
-    fn a_sheen_lights_a_few_letters_of_the_word_and_never_the_whole_of_it() {
-        let (tr, session) = (working(), ready_session());
-        let verb_len = format!("{}…", delight::verb(3, 0)).chars().count();
-        let theme = Theme::banded((255, 255, 255));
-        let mut saw_lit = false;
-        for ms in (0..3000).step_by(70) {
-            let buf = draw_anim(&tr, &session, theme, 80, 10, &mut View::default(), ms, true);
-            let row = row_with(&buf, "Ctrl-C stops").expect("the working line");
-            let colours: Vec<Color> = (2..2 + verb_len as u16).map(|x| buf[(x, row)].fg).collect();
-            let lit = colours
-                .iter()
-                .filter(|c| **c == theme.accent().fg.expect("an accent"))
-                .count();
-            assert!(lit < verb_len, "the sheen is never the whole word");
-            saw_lit |= lit > 0;
+    fn queued(texts: &[&str]) -> Queue {
+        let mut q = Queue::default();
+        for t in texts {
+            q.push((*t).to_string(), Vec::new());
         }
-        assert!(saw_lit, "and it does cross the word");
+        q
+    }
+
+    fn state_rows(
+        tr: &Transcript,
+        composer: &Composer,
+        queue: &Queue,
+        w: u16,
+        h: u16,
+    ) -> Vec<String> {
+        rows_of(&draw_state(
+            tr,
+            &ready_session(),
+            composer,
+            queue,
+            Theme::plain(),
+            w,
+            h,
+            Some(12),
+        ))
     }
 
     #[test]
-    fn the_needs_you_mark_pulses_and_holds_still_without_motion() {
+    fn the_working_row_is_plain_and_says_how_to_queue_only_when_something_is_typed() {
+        let tr = working();
+        let rows = state_rows(&tr, &Composer::default(), &Queue::default(), 90, 10);
+        let row = rows
+            .iter()
+            .find(|r| r.contains("Ctrl-C stops"))
+            .expect("the working row");
+        assert!(
+            row.trim_start().starts_with("● Working 12s · Ctrl-C stops"),
+            "{row:?}"
+        );
+        for decoration in ["⠋", "Untangling", "Tip"] {
+            assert!(!row.contains(decoration), "{decoration}: {row:?}");
+        }
+        let mut typing = Composer::default();
+        typing.insert_str("also the docs");
+        let rows = state_rows(&tr, &typing, &Queue::default(), 90, 10);
+        assert!(
+            rows.iter()
+                .any(|r| r.contains("Working 12s · Enter queues · Ctrl-C stops")),
+            "{rows:#?}"
+        );
+    }
+
+    #[test]
+    fn a_waiting_request_is_said_once_and_the_footer_leaves_its_keys_to_the_panel() {
         let mut session = ready_session();
         let mut scratch = Transcript::default();
         session.handle(
@@ -4340,79 +4152,223 @@ mod tests {
             0,
             &mut scratch,
         );
-        let text = |ms: u64, motion: bool| {
-            rows_of(&draw_anim(
-                &Transcript::default(),
-                &session,
-                Theme::plain(),
-                70,
-                24,
-                &mut View::default(),
-                ms,
-                motion,
-            ))
-            .join("\n")
-        };
+        let rows = rows_of(&draw_state(
+            &Transcript::default(),
+            &session,
+            &Composer::default(),
+            &Queue::default(),
+            Theme::plain(),
+            70,
+            24,
+            None,
+        ));
+        let text = rows.join("\n");
+        assert_eq!(text.matches("Needs you").count(), 1, "{text}");
         assert!(
-            text(0, true).contains("▲ Needs you") && text(600, true).contains("△ Needs you"),
-            "it pulses"
+            text.contains("▲ Needs you") && !text.contains('△'),
+            "{text}"
         );
+        let footer = rows.last().expect("a footer");
+        assert!(footer.contains("omp"), "the facts stay: {footer:?}");
         assert!(
-            text(600, false).contains("▲ Needs you") && !text(600, false).contains("△"),
-            "and holds still when motion is off"
+            !footer.contains("choose") && !footer.contains("Enter"),
+            "the footer does not repeat the panel's keys: {footer:?}"
         );
-    }
-
-    fn foldable_output() -> Transcript {
-        let mut tr = Transcript::default();
-        tr.apply(SessionUpdate::from_value(&json!({"sessionUpdate": "tool_call", "toolCallId": "t", "title": "Run build", "status": "completed",
-            "content": [{"type": "content", "content": {"type": "text", "text": "out-1\nout-2\nout-3\nout-4"}}]})).expect("update"));
-        agent(&mut tr, "m", "done");
-        tr
     }
 
     #[test]
-    fn an_opened_block_grows_into_place_and_the_loop_is_told_when_it_is_done() {
-        let tr = foldable_output();
-        let session = ready_session();
-        let id = tr.items()[0].id;
-        let frame = |ms: u64, motion: bool, view: &mut View| {
-            rows_of(&draw_anim(
-                &tr,
-                &session,
-                Theme::plain(),
-                60,
-                16,
-                view,
-                ms,
-                motion,
-            ))
-            .join("\n")
-        };
-        let opening = |view: &mut View| {
-            view.expanded.insert(id);
-            view.reveal.insert(id, 0);
-        };
+    fn a_finished_call_carries_no_mark_and_a_failed_one_does() {
+        let mut tr = Transcript::default();
+        for (id, title, status) in [("a", "Read ok.rs", "completed"), ("b", "Run bad", "failed")] {
+            tr.apply(SessionUpdate::from_value(&json!({"sessionUpdate": "tool_call", "toolCallId": id, "title": title, "status": status})).expect("update"));
+        }
+        agent(&mut tr, "m", "that is all");
+        let rows = state_rows(&tr, &Composer::default(), &Queue::default(), 60, 16);
+        let ok = rows.iter().find(|r| r.contains("Read ok.rs")).expect("ok");
+        let bad = rows.iter().find(|r| r.contains("Run bad")).expect("bad");
+        assert!(!ok.contains('✓'), "success is the default: {ok:?}");
+        assert!(bad.contains('✗'), "{bad:?}");
+    }
+
+    #[test]
+    fn the_context_gauge_waits_until_the_window_is_filling() {
+        for (used, shown) in [(47, false), (59, false), (60, true), (90, true)] {
+            let mut tr = Transcript::default();
+            tr.apply(
+                SessionUpdate::from_value(
+                    &json!({"sessionUpdate": "usage_update", "used": used, "size": 100}),
+                )
+                .expect("update"),
+            );
+            let rows = state_rows(&tr, &Composer::default(), &Queue::default(), 70, 12);
+            let footer = rows.last().expect("a footer");
+            assert_eq!(
+                footer.contains(&format!("ctx {used}%")),
+                shown,
+                "{footer:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn queued_messages_sit_in_order_above_the_box_and_the_rest_are_counted() {
+        let q = queued(&["first", "second", "third", "fourth", "fifth"]);
+        let tr = working();
+        for w in [40u16, 100] {
+            let rows = state_rows(&tr, &Composer::default(), &q, w, 20);
+            let at = |n: &str| {
+                rows.iter()
+                    .position(|r| r.contains(n))
+                    .unwrap_or_else(|| panic!("{n}: {rows:#?}"))
+            };
+            assert!(at("↳ first") < at("↳ second") && at("↳ second") < at("↳ third"));
+            assert!(at("↳ third") < at("2 more queued"));
+            assert!(at("2 more queued") < at("Queue a message"));
+            assert!(!rows.iter().any(|r| r.contains("fourth")), "{rows:#?}");
+            assert!(
+                rows.iter().all(|r| width_of(r) <= usize::from(w)),
+                "{rows:#?}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_queued_message_shows_its_first_line_and_its_files() {
+        let mut q = Queue::default();
+        q.push(
+            "check the build\nthen the tests".to_string(),
+            vec![crate::attach::attachment("/w/src/a.rs", "/w")],
+        );
+        let rows = state_rows(&working(), &Composer::default(), &q, 60, 20);
+        let row = rows.iter().find(|r| r.contains("↳")).expect("a queued row");
+        assert!(
+            row.contains("check the build…") && row.ends_with(" · 1 file"),
+            "{row:?}"
+        );
+        assert!(!rows.join("\n").contains("then the tests"));
+    }
+
+    #[test]
+    fn a_click_on_a_queued_row_names_that_message_and_nothing_else_does() {
+        let mut q = queued(&["first", "second", "third", "fourth", "fifth"]);
+        q.hold_all("the turn failed");
+        let ids: Vec<u64> = q.entries().iter().map(|e| e.id).collect();
+        let (tr, session, composer) = (working(), ready_session(), Composer::default());
         let mut view = View::default();
-        opening(&mut view);
+        let mut term = Terminal::new(TestBackend::new(80, 24)).expect("a test terminal");
+        let ctx = Frame_ {
+            transcript: &tr,
+            session: &session,
+            composer: &composer,
+            header: Header {
+                agent: "omp",
+                cwd: "/w",
+            },
+            theme: Theme::plain(),
+            hint: None,
+            working_secs: Some(1),
+            queue: &q,
+            newer: None,
+        };
+        term.draw(|f| draw(f, &ctx, &mut view)).expect("drawn");
+        let rows = rows_of(term.backend().buffer());
+        let at = |needle: &str| {
+            u16::try_from(rows.iter().position(|r| r.contains(needle)).expect(needle))
+                .expect("on screen")
+        };
+        assert_eq!(view.queued_at(at("↳ first")), Some(ids[0]));
+        assert_eq!(view.queued_at(at("↳ third")), Some(ids[2]));
+        assert_eq!(
+            view.queued_at(at("Held ·")),
+            None,
+            "the header is not a message"
+        );
+        assert_eq!(view.queued_at(at("2 more queued")), None);
+        assert_eq!(
+            view.queued_at(at("Queue a message")),
+            None,
+            "nor is the box"
+        );
+        assert_eq!(view.queued_at(0), None);
+    }
+
+    #[test]
+    fn the_way_back_is_said_beside_the_queue_when_there_is_room_and_ctrl_c_says_it_sends_it() {
+        let q = queued(&["first"]);
+        let wide = state_rows(&working(), &Composer::default(), &q, 100, 20).join("\n");
+        assert!(wide.contains("Backspace takes the newest back"), "{wide}");
+        let narrow = state_rows(&working(), &Composer::default(), &q, 50, 20).join("\n");
+        assert!(!narrow.contains("Backspace"), "{narrow}");
+        assert!(wide.contains("Ctrl-C stops and sends queued"), "{wide}");
+        let none = state_rows(&working(), &Composer::default(), &Queue::default(), 100, 20);
+        let none = none.join("\n");
         assert!(
-            !frame(0, true, &mut view).contains("out-4"),
-            "it starts at the height it had"
+            none.contains("Ctrl-C stops") && !none.contains("sends queued"),
+            "{none}"
+        );
+        // A held queue is not sent by Ctrl-C's end of turn: the row does not promise it.
+        let mut held = queued(&["first"]);
+        held.hold_all("the turn failed");
+        let text = state_rows(&working(), &Composer::default(), &held, 100, 20).join("\n");
+        assert!(!text.contains("sends queued"), "{text}");
+    }
+    #[test]
+    fn a_held_queue_says_why_and_how_to_go_on() {
+        let mut q = queued(&["first", "second"]);
+        q.hold_all("the turn failed");
+        let rows = state_rows(&Transcript::default(), &Composer::default(), &q, 70, 20);
+        let held = rows
+            .iter()
+            .position(|r| r.contains("Held · the turn failed · Enter resumes"))
+            .expect("the held row");
+        let first = rows
+            .iter()
+            .position(|r| r.contains("↳ first"))
+            .expect("first");
+        assert!(held < first, "{rows:#?}");
+    }
+
+    #[test]
+    fn a_short_terminal_gives_up_the_queue_before_the_box() {
+        let q = queued(&["first", "second"]);
+        let rows = state_rows(&working(), &Composer::default(), &q, 60, 10);
+        assert!(!rows.iter().any(|r| r.contains('↳')), "{rows:#?}");
+        assert!(
+            rows.iter().any(|r| r.contains("› Queue a message")),
+            "{rows:#?}"
+        );
+        // The rows had no room, so the footer is where a message is not swallowed silently.
+        let footer = rows.last().expect("a footer");
+        assert!(footer.contains("2 queued"), "{footer:?}");
+        let mut held = queued(&["first", "second"]);
+        held.hold_all("the turn failed");
+        let rows = state_rows(&Transcript::default(), &Composer::default(), &held, 60, 10);
+        assert!(
+            rows.last()
+                .is_some_and(|r| r.contains("2 queued, held · Enter resumes")),
+            "{rows:#?}"
+        );
+    }
+
+    #[test]
+    fn the_empty_box_invites_a_message_to_queue_only_while_a_turn_runs() {
+        let idle = state_rows(
+            &Transcript::default(),
+            &Composer::default(),
+            &Queue::default(),
+            60,
+            12,
         );
         assert!(
-            !view.reveal.is_empty(),
-            "and the loop keeps drawing while it grows"
+            idle.iter().any(|r| r.contains("› Message the agent")),
+            "{idle:#?}"
         );
+        let busy = state_rows(&working(), &Composer::default(), &Queue::default(), 60, 12);
         assert!(
-            frame(delight::REVEAL_MS, true, &mut view).contains("out-4"),
-            "it ends whole"
+            busy.iter()
+                .any(|r| r.contains("› Queue a message for when this turn ends")),
+            "{busy:#?}"
         );
-        assert!(view.reveal.is_empty(), "then the loop can sleep again");
-        // Without motion it is simply open.
-        let mut still = View::default();
-        opening(&mut still);
-        assert!(frame(0, false, &mut still).contains("out-4"));
-        assert!(still.reveal.is_empty());
     }
 
     #[test]
@@ -4424,7 +4380,7 @@ mod tests {
             {"id": "mode", "category": "mode", "type": "select", "currentValue": "d", "options": [{"value": "d", "name": "Default"}]}]})).expect("update"));
         tr.apply(
             SessionUpdate::from_value(
-                &json!({"sessionUpdate": "usage_update", "used": 1, "size": 100}),
+                &json!({"sessionUpdate": "usage_update", "used": 61, "size": 100}),
             )
             .expect("update"),
         );
@@ -4440,7 +4396,7 @@ mod tests {
         let last = rows.last().expect("a footer");
         assert!(
             last.contains("Claude Sonnet 5.5")
-                && last.contains("ctx 1%")
+                && last.contains("ctx 61%")
                 && last.contains("Enter send"),
             "{last:?}"
         );
@@ -4534,12 +4490,8 @@ mod tests {
         ))
         .join("\n");
         assert!(text.contains("• Ready when you are."), "{text}");
-        let ready = text.find("Ready when you are.").expect("the greeting");
-        let tip = text.find("Tip:").expect("the tip");
-        assert!(
-            ready < tip,
-            "the greeting sits above the tip, not below it: {text}"
-        );
+        assert!(text.contains("Try"), "{text}");
+        assert!(!text.contains("Tip:"), "no tips: {text}");
     }
 
     #[test]

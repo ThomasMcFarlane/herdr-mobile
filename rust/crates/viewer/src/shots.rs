@@ -8,6 +8,7 @@
 //! Ignored by default: it writes files.
 
 use crate::composer::Composer;
+use crate::queue::Queue;
 use crate::session::{Event, Record, Session, Start};
 use crate::theme::Theme;
 use crate::transcript::Transcript;
@@ -298,6 +299,36 @@ fn frame(
     working: Option<u64>,
     hint: Option<&str>,
 ) -> String {
+    frame_with(
+        tr,
+        session,
+        composer,
+        theme,
+        w,
+        h,
+        view,
+        working,
+        hint,
+        &Queue::default(),
+    )
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "a picture is drawn from exactly these things"
+)]
+fn frame_with(
+    tr: &Transcript,
+    session: &Session,
+    composer: &Composer,
+    theme: Theme,
+    w: u16,
+    h: u16,
+    view: &mut View,
+    working: Option<u64>,
+    hint: Option<&str>,
+    queue: &Queue,
+) -> String {
     let mut term = Terminal::new(TestBackend::new(w, h)).expect("a test terminal");
     let ctx = Frame_ {
         transcript: tr,
@@ -310,9 +341,7 @@ fn frame(
         theme,
         hint,
         working_secs: working,
-        turn: 0,
-        anim_ms: 0,
-        motion: false,
+        queue,
         newer: None,
     };
     term.draw(|f| draw(f, &ctx, view)).expect("drawn");
@@ -378,6 +407,55 @@ fn shots() {
             &mut new_view(),
             Some(12),
             None,
+        ),
+    );
+
+    // Messages typed while the agent works wait above the box, then the line saying so.
+    let mut waiting = Queue::default();
+    for t in [
+        "also run the linter",
+        "then update the docs, and add the changelog entry\nwith a second line that is not shown",
+        "check the migration on a fresh database",
+        "and tell me what you skipped",
+    ] {
+        waiting.push(t.to_string(), Vec::new());
+    }
+    let mut typing_more = Composer::default();
+    typing_more.insert_str("also bump the version");
+    write(
+        "16-queued",
+        frame_with(
+            &conversation("working"),
+            &ready(),
+            &typing_more,
+            theme,
+            100,
+            30,
+            &mut new_view(),
+            Some(12),
+            None,
+            &waiting,
+        ),
+    );
+    // The turn failed: the queue is held, and says how to go on.
+    let mut held = Queue::default();
+    for t in ["also run the linter", "then update the docs"] {
+        held.push(t.to_string(), Vec::new());
+    }
+    held.hold_all("the turn failed");
+    write(
+        "17-queued-held",
+        frame_with(
+            &conversation("done"),
+            &ready(),
+            &none,
+            theme,
+            100,
+            30,
+            &mut new_view(),
+            None,
+            None,
+            &held,
         ),
     );
 

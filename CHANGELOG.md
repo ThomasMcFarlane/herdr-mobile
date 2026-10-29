@@ -4,6 +4,18 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [Unreleased]
+
+- In `herdr-tui`, pressing `Enter` while the agent works now queues the message: it
+  waits above the box as `↳` and goes out when the turn ends, one at a time. `Backspace`
+  on an empty box, or a click on its row, takes one back to edit. If the turn failed or was stopped elsewhere the
+  queue is held (`Held · … · Enter resumes`); your own `Ctrl-C` lets it go on, with
+  what you typed meanwhile as one message. Leaving with messages queued asks twice and
+  prints `Not sent:` for each.
+- `herdr-tui` is calmer: the working row is still (`Working 12s`), folds open at once,
+  `▲ Needs you` does not pulse or repeat in the footer, finished tool calls carry no
+  `✓`, the rule above the box no longer carries the title, and `ctx` shows from 60 %.
+
 ## [0.1.43] - 2026-10-28
 
 ### Selected text in the desk client is easy to read

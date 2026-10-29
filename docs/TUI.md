@@ -103,11 +103,16 @@ printing into scrollback, and the layout is ours to get right).
 
 ## Small touches (and why they are allowed)
 
-The app's rule is that nothing moves at rest and delight is friction that vanished. These keep it:
-the waiting word and tip change only on the 1 s tick a running turn already has (no timer at rest);
-the end-of-turn line answers "what did it do?" (question 3) instead of decorating; the bell and the
-window title serve "does anything need me?" for a pane nobody is looking at. A tip waits 10 s into a
-turn so it never competes with a short answer. All of it is in `delight.rs`, pure and tested.
+The app's rule is that nothing moves at rest and delight is friction that vanished. The viewer
+keeps it literally: the only thing that moves is the elapsed counter on the 1 s tick a running turn
+already has (`elapsed.rs`). No spinner, sheen, rotating verb or tip, pulse, or fold animation:
+each was motion on a frequent path answering no question (a fold opens in the frame after the
+click; the anchor keeps the clicked row where it was). A request that needs the person is said once,
+on its panel (`▲ Needs you`, still), and the footer leaves the panel's keys to it. A finished tool
+call carries no mark (success is the default, so the `✗` stays the one mark in the column), the
+rule above the box carries no title (the window title has it), and `ctx` appears from 60 % (not
+actionable before). The end-of-turn line answers "what did it do?" (question 3); the bell and the
+window title serve "does anything need me?" for a pane nobody is looking at.
 
 ## Journeys
 
@@ -125,6 +130,22 @@ call finishes, folded; the status line names the running one.
 
 **Steer.** `Enter` sends, `Ctrl-J` / `Alt-Enter` newline, `Ctrl-P` recalls (Up scrolls), `Ctrl-C`
 stops a running turn and (idle, empty) leaves. Typed text survives a failed send.
+
+**Queue.** `Enter` while a turn runs does not send: the message waits (`queue.rs`, at most 10,
+memory only, per viewer, not shared with the phone's queue) as a `↳` row above the box, and goes
+out one at a time when the turn ends; pictures are read then, not when queued. Same rule as the
+phone: a turn that failed, was refused or was stopped from elsewhere *holds* the queue (`Held ·
+reason · Enter resumes`; `Enter` on an empty box resumes it, and a held message blocks the ones
+behind it so a refusal never reorders them); the person's own `Ctrl-C` is "stop this turn and send
+what is queued now" (the working row says so), and what was typed meanwhile becomes one message
+(messages with files are never merged: `[Image #n]` restarts at 1 per message). To edit one,
+`Backspace` on an empty box takes the newest back (the gesture that takes the last attached file
+off), and a click on a `↳` row takes that one back; there is no command for it, and `Alt-↑` is not
+used because many terminals deliver the wheel as Up/Down. Because the queue dies with the program,
+`Ctrl-D` and the idle `Ctrl-C` ask twice,
+`/new` and `Ctrl-R` refuse, and exit prints `Not sent: …` for each. There is no steering from the
+desk, even for agents that take it: the keeper does not log a steered message, so a re-attach would
+lose it from the replay (`docs/AGENT_SESSIONS.md`, "Known gap, in the keeper").
 
 **Commands.** `/` opens a list above the input (this program's commands first, then the agent's
 from `available_commands_update`); `Tab` completes, `Enter` runs, `Esc` closes. `/model`,

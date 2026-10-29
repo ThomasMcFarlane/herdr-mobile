@@ -8,8 +8,8 @@
 pub mod attach;
 pub mod clip;
 pub mod composer;
-pub mod delight;
 pub mod diff;
+pub mod elapsed;
 pub mod fold;
 pub mod herdr;
 pub mod highlight;
@@ -18,6 +18,7 @@ pub mod input;
 pub mod lines;
 pub mod md;
 pub mod question;
+pub mod queue;
 pub mod risk;
 pub mod select;
 pub mod session;
