@@ -4,6 +4,13 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [Unreleased]
+
+- The Agents board says how many agents need you once, in one line at the top, with how many are working and when it last heard from your machines. The filter chips and the floating pill are gone.
+- The first agent that needs you keeps its card; the others are rows under it, and `Answer one by one` walks them. Needs you can no longer be folded away.
+- On an agent's question, the command it wants to run is the largest text, the answers that allow come first, and `No` sits apart below them. A "don't ask again" answer is in the full list behind `more…`, still held.
+- `Past sessions` moved to the new-session form, behind `+`. The agent list density is in Settings.
+
 ## [0.1.45] - 2026-10-29
 
 ### Switch to the agent that needs you, from any chat
