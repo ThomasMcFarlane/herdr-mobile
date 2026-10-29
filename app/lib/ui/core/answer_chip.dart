@@ -203,15 +203,21 @@ class AnswerChip extends StatelessWidget {
       AnswerChipState.rest => null,
     };
     // A resting hint that the answer asks for more; red is for the chip that is
-    // actually primed.
+    // actually primed. A held answer says "Hold" at rest: a triangle alone did
+    // not tell the person that a tap would not send.
+    final markColor = danger ? ds.dangerText : ds.textSecondary;
     final marker = state != AnswerChipState.rest
         ? null
         : switch (risk) {
-            AnswerRisk.gate => Icon(
-              LucideIcons.triangleAlert,
-              size: IconSize.inline,
-              color: danger ? ds.dangerText : ds.textSecondary,
+            AnswerRisk.gate when this.hold => Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Hold', style: Type.caption.copyWith(color: markColor)),
+                const SizedBox(width: Gap.xs),
+                Icon(LucideIcons.triangleAlert, size: IconSize.inline, color: markColor),
+              ],
             ),
+            AnswerRisk.gate => Icon(LucideIcons.triangleAlert, size: IconSize.inline, color: markColor),
             AnswerRisk.elevated => Icon(LucideIcons.shieldHalf, size: IconSize.inline, color: ds.textSecondary),
             AnswerRisk.none => null,
           };
