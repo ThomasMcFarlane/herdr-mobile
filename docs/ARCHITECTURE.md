@@ -404,8 +404,8 @@ line.
 ### One "needs you" set
 
 `AttentionSet` (`app/lib/data/repositories/attention_set.dart`) is the single
-answer to "does anything need me?". The Agents tab badge, the triage pill, the
-board sections, the Machines tab and the notifier all read it.
+answer to "does anything need me?". The Agents tab badge, the board's status line
+and sections, the triage sheet, the Machines tab and the notifier all read it.
 
 - It counts terminal panes that are blocked and agent sessions that are
   blocked on a permission or a question.

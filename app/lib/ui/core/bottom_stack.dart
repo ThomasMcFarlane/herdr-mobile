@@ -45,8 +45,9 @@ class TabSpec {
 ///
 /// The bottom stack is lanes, from the bottom edge up, each present only while
 /// it has content: the inset; the Dock ([height]: the tab bar, or the batch bar
-/// while the board picks); the Pin ([pin]: the triage pill); the toast. Every
-/// gap is [margin]. One motion for every lane ([BottomStackTransition]).
+/// while the board picks); the toast. Every gap is [margin]. There was a Pin
+/// lane (a triage pill over the Dock); it went with the calm board, whose
+/// status line and tab badge already say what it said. One motion for every lane ([BottomStackTransition]).
 abstract final class FloatingBar {
   static const height = 56.0;
   static const pad = 4.0;
@@ -54,9 +55,6 @@ abstract final class FloatingBar {
   static const margin = 8.0;
   static const side = 12.0;
   static const maxWidth = 312.0;
-
-  /// The Pin lane: a pill over the Dock (the triage pill).
-  static const pin = 44.0;
 
   /// How much the pill grows while a finger carries the tab capsule: it is
   /// an object in the hand (Telegram lifts its bar the same way, 1.019).
@@ -66,13 +64,9 @@ abstract final class FloatingBar {
   /// next lane (or a toast) stands.
   static double clearance(BuildContext context) => height + margin * 2 + MediaQuery.paddingOf(context).bottom;
 
-  /// Where a toast stands while the Pin shows.
-  static double pinLift(BuildContext context) => clearance(context) + pin + margin;
-
   /// The space a scrolling list keeps free at its end, so its last row can be
-  /// read above the lanes: the Dock, and the Pin while it shows.
-  static double listEnd(BuildContext context, {bool pin = false}) =>
-      clearance(context) + margin + (pin ? FloatingBar.pin + margin : 0);
+  /// read above the Dock.
+  static double listEnd(BuildContext context) => clearance(context) + margin;
 }
 
 /// Where a [FloatingBarPill] stands: [FloatingBar.margin] above the system

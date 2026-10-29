@@ -4,11 +4,61 @@ How the Agents board shows, sorts, answers and reviews agents.
 
 The design system (tokens, kit, motion, words) is `docs/DESIGN.md`; this file holds what this screen does and why.
 
+## Calm by default
+
+Most people run their agents on auto-accept, so "needs you" is rare and the
+board's common job is the glance: does anything need me, is everything alive.
+It answers both from the header and keeps everything else quiet.
+
+- **One status line, one count.** Under the title: `2 need you · 3 working ·
+  heard just now · 1 not connected` (`nothing running` when nothing waits or
+  works). The needs-you part is the only loud words (`blockedText`); the
+  `Needs you` and `Working` headers carry no count of their own, and the tab
+  badge is the one count off this screen. Why: the count was said four times
+  on one screen (a filter chip, the section header, a floating triage pill
+  and the badge), and every repeat is chrome that costs the focus a glance is
+  made of.
+- **No filter chips, no triage pill.** The chips repeated the section headers
+  and the pill repeated the count. The triage walk is `Answer one by one` on
+  the Needs you header, shown when more than one agent waits (with one, the
+  card in front is the whole walk). The header keeps the action's 44 dp box
+  when it has none, so a second agent starting to wait moves nothing under
+  the thumb.
+- **One decision in front.** In the default `Compact` density
+  (`BoardDensity.compact`), the first agent of Needs you that can be answered
+  is an `AgentCard` with its answers; every other waiting agent is a one-line
+  row under it, and Done, Working and Idle are rows. `Cards` (Settings > Look >
+  Agent list) draws every agent as a card. There was an `Auto` (cards below
+  five agents); it went, since compact is now right at any count, and a saved
+  `auto` reads as the default.
+- **Needs you never folds.** A section fold is restored after the process is
+  reclaimed; a folded Needs you would hide the one loud section.
+- **The header has one action, the `+`.** Density is a setting, and `Past
+  sessions` is a row of the `New agent session` form (resuming is a way to
+  start); three header buttons were past the two-action budget.
+- **The connection strip stays a strip** under the title, not words in the
+  status line: it carries the next step (`Retry`, `Approve`, the Machines tab),
+  which the status line cannot. The status line still says `N not connected`.
+
 ## Blocked prompts
 
 A blocked card shows the question and, under it, what the agent asks to run or
 touch (`PromptInfo.subject`) in mono, three lines at most; the reply sheet shows
-all of it. Answers are 44 high chips. A risky answer is held, not tapped: press
+all of it. The subject is the largest text on the wash (`Mono.input`) and the
+question a secondary line above it. Why: the command is what is approved, and
+in `Mono.base` under a `Type.prompt` question it was smaller than both the
+question and the answers.
+
+Answers are 44 high chips, labelled with the agent's words, number included
+(it names the agent's row; the keys come from the option). They are grouped
+(`ReplyLayout`, `reply_chips.dart`): the answers that allow, then a `Gap.lg`
+and the ones that decline (`isNegativeReply`), drawn quiet, with no fill at
+rest. On the card a standing grant (`standingPermission`) is not a chip: it
+waits behind `N more…` in the reply sheet, which shows every option in the
+same groups and still holds it. Why: in the agent's order as identical fills,
+`3. No` looked like the `2. Yes, don't ask again` above it, and a permission
+that outlives the answer was one glance-tap away. The card reserves exactly
+the grouped chips' height (`ReplyChips.heightFor`). A risky answer is held, not tapped: press
 and hold (about 700 ms; a linear danger fill, label `Hold to send · pushes to a
 remote`) sends it, an early release snaps the fill back and sends nothing, and a
 plain tap only shows the same hint. A standing grant ("don't ask again",
@@ -65,8 +115,8 @@ thumb instead of jumping by a whole card; reduced motion skips the gap.
 
 `AttentionSet` (`data/repositories/attention_set.dart`) is the one answer to
 "does anything need me?". Every surface reads it: the Agents tab badge, the
-triage pill and sheet, the board's Needs you and Done headers and their filter
-chips, the Machines tab's chip, the arrival haptic and the notifier's `need
+board's status line, the triage sheet, the board's Needs you and Done
+sections, the Machines tab's chip, the arrival haptic and the notifier's `need
 you` count. Why: each used to count for itself, and they disagreed (a badge of
 3 beside a pill saying 1, a sheet saying `All clear` while a session waited, a
 Machines chip counting offline panes).
@@ -85,18 +135,19 @@ Machines chip counting offline panes).
   board each built and sorted every agent on every notify, three passes per
   change on the UI thread.
 - **The badge is loud for needs you only.** It shows the needs-you count in
-  the blocked colour; finished work is not in it (the pill's `· 2 to review`
-  and the Done section carry that, quietly). Why: three finished agents read
+  the blocked colour; finished work is not in it (the Done section's count
+  carries that, quietly). Why: three finished agents read
   as three questions in the loud colour, and attention must be the only loud
   thing.
 - **One board, one place per status.** Agent sessions sit in the same status
   sections as terminal agents (a session row in Needs you, Done, Working or
-  Idle), so the status filter narrows them too. Why: a separate sessions
+  Idle). Why: a separate sessions
   section jumped above the terminal cards whenever a session started or
   stopped waiting, moving every answer under the thumb, and "what waits" had
   two places to look. A session row still only tells; it is answered in the
   session for now.
-- **The triage sheet walks the set** (`showTriageSheet`): a terminal agent
+- **The triage sheet walks the set** (`showTriageSheet`, from `Answer one by
+  one` on the Needs you header): a terminal agent
   with its chips and composer, an agent session with what it asks
   (`blockedSummary`) and `Answer in the session`, which opens it over the
   sheet; the walk moves on when the person comes back. `All clear` only when
@@ -112,8 +163,8 @@ Machines chip counting offline panes).
 ## Selection mode (batch actions)
 
 A long press on a card or row selects it; taps toggle; the header reads `N
-selected` with All and Cancel; the tab bar and the triage pill step aside and
-Stop, Message and Close take the tab bar's slot in the same pill (the Dock
+selected` with All and Cancel; the tab bar steps aside and Stop, Message and
+Close take the tab bar's slot in the same pill (the Dock
 lane, cells shaped like tab cells, contents cross-faded), so the bottom keeps
 its shape and the actions are where the tabs were. Picking ends when the board
 is left (another tab, or Machines through the connection strip) unless a batch
@@ -131,8 +182,8 @@ is. Results land in one toast (`Stopped 3 · 1 failed: build-box offline`).
 machine's screen open `New agent session` directly (the machine screen's has
 its machine chosen, and is dimmed while the machine is offline); the Machines
 tab's adds a machine. Same icon, same place (top right), no sheet in between.
-`Past sessions` is its own history icon beside it in the Agents header, and
-`Add machine` lives on the Machines tab (and the first-run empty state), not in
+`Past sessions` is a row of the `New agent session` form, and `Add machine`
+lives on the Machines tab (and the first-run empty state), not in
 a menu on another tab. Why: the `+` used to open a four-row sheet on the board,
 start a terminal workspace on a machine's screen and add a machine on the
 Machines tab, so the same mark meant three different things.
@@ -181,7 +232,7 @@ reason (`SheetAction.unavailable`), dimmed.
   starts waiting is felt though the count stayed the same. Not during the
   first 3 s after start-up or after resuming (the fleet catching up is not
   news), at most one per 2 s, nothing for an agent that stops waiting. The
-  Agents badge and the triage pill's count roll when they change (`RollText`,
+  Agents badge's count rolls when it changes (`RollText`,
   `ui/core/roll_text.dart`: only the changed digits move, up when the count
   rises, over `Motion.settle`); the badge (`CountBadge`) arrives and leaves with
   a scale. Reduced motion changes them at once.

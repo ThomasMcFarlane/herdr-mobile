@@ -157,16 +157,23 @@ holds both kinds of agent:
 **Sections.** Agents are grouped by what they need, in this order:
 
 - `Needs you`: blocked on a question or a permission. Longest waiting first.
+  The first is a card with its answers; the others are rows under it, and
+  `Answer one by one` on the header walks through them all (see below). This
+  section never folds.
 - `Working`
 - `Done`: finished and not yet reviewed. Longest waiting first.
 - `Idle`: agents and phone sessions together, by recency: those that stopped
   within the last day, newest first; then those the app has no date for; then
   the older ones, newest first. The first five show; the rest sit behind one
   line (`22 more idle`, with the names of the first two under it) that opens
-  them in place and then reads `Show less`. The `Idle` chip shows them all.
+  them in place and then reads `Show less`.
 
-Tap a section header to fold it. The chips under the title filter the board
-to one status.
+Tap a section header to fold it (all but `Needs you`).
+
+**The status line.** Under the title, one line says how the board stands:
+`2 need you · 3 working · heard just now`, then `1 not connected` when a
+machine is out of reach (its strip under the title says which, with `Retry`).
+With nothing waiting or working it says `nothing running`.
 
 **When an idle agent stopped.** herdr gives no timestamps, so the app dates a
 change when it sees it. An agent that was already idle when the app first
@@ -189,22 +196,19 @@ file) when a pane needs a name and again when its status changes, never while
 the app is in the background. An idle omp pane with a good title costs one
 `stat`, for the date above.
 
-**Cards or compact.** Cards show the last lines of the agent's terminal and
-how long it has been in its state; the compact list shows one row per agent.
-Switch with the button in the header (`Compact list` / `Cards with preview`),
-or pick a default in Settings > Look > `Agent list`: `Auto` (cards up to
-four agents, compact from five), `Cards` or `Compact`. A blocked agent always
-keeps its answers.
+**Compact or cards.** By default the board is compact: the first agent that
+needs you is a card with its answers, and every other agent is one row. Cards
+show every agent with the last lines of its terminal. Choose in Settings >
+Look > `Agent list`: `Compact` or `Cards`.
 
 **The count.** One number answers "does anything need me?": the badge on the
-Agents tab, the `Needs you` section, the triage pill and the notifications all
-count the same set. It counts only agents you can answer now: an agent on a
+Agents tab, the board's status line, the triage sheet and the notifications
+all count the same set. The board says it once, in the status line. It counts only agents you can answer now: an agent on a
 machine that is offline is listed, dimmed and marked `offline`, but not
 counted (the section header says `2 offline` instead).
 
-**The triage pill.** While anything needs you, a pill floats above the tab bar:
-`2 need you · 3 to review`. Tap it to walk through every waiting agent, one
-at a time, longest waiting first (`1 of 2 need you`, `Previous agent`,
+**Answer one by one.** When more than one agent needs you, `Answer one by one`
+on the `Needs you` header walks through every waiting agent, one at a time, longest waiting first (`1 of 2 need you`, `Previous agent`,
 `Next agent`). A terminal agent shows its answers and a message box; an agent
 session shows what it asks and `Answer in the session`. When the last one is
 answered the sheet says `All clear`.
@@ -237,7 +241,7 @@ agents you can switch on `Send anyway` (off by default). A waiting agent
 session is never typed into.
 
 **Pull to refresh** reconnects every machine. The `+` in the header starts a
-`New agent session`; the history icon next to it opens `Past sessions`.
+`New agent session`; `Past sessions` is a row of that form.
 
 ## 5. Answering an agent
 
@@ -252,7 +256,7 @@ opens the reply sheet with all of them. The reply button on a card
 (`Message Claude Code…`, named after the agent) and `Open full` for the agent's screen.
 
 Agent sessions on the board say what they ask but are answered inside the
-session (open it, or `Answer in the session` from the pill).
+session (open it, or `Answer in the session` from `Answer one by one`).
 
 **Hold for risky answers.** An answer that does something hard to take back
 (a push, a delete) or grants standing permission ("don't ask again",

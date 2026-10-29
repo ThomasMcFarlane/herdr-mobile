@@ -28,7 +28,7 @@ like a host or address.
 | `🦊 refactor` | An emoji first: grapheme handling in initials and truncation |
 | 0, 1, 40, 120 agents across machines | Empty board, a single card, a lazy list (builds < 30), section counts |
 | Every status at once: blocked, working, done, idle, unknown, offline | Section order, glyph shapes without colour |
-| 5 blocked at once | Triage pill count, `N need you`, the walk through them |
+| 5 blocked at once | The status line's `N need you`, one card in front and four rows, `Answer one by one` |
 | A blocked agent whose prompt the detector can't read | The fallback when there are no one-tap answers |
 | A session that is only a saved copy (`cachedAsOf`) | `Updating…`, nothing answerable |
 | An agent that finished while you were away (unseen done) | Done section, `N new`, swipe to review |

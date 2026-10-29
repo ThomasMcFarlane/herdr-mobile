@@ -135,7 +135,7 @@ class _HomeShellState extends State<HomeShell> with RestorationMixin, SingleTick
   Widget build(BuildContext context) {
     // Only what needs an answer and can be given one: the loud colour is for
     // a question, so finished work to review is not in the badge (the board's
-    // Done section and the pill carry it). The same set as the pill, the
+    // Done section carries it). The same set as the board's status line, the
     // sections, the triage sheet, the Machines tab and the notifications.
     final needsYou = context.select<AttentionSet, int>((a) => a.needsYou.length);
     // The arrival haptic is for an agent that starts waiting, by key: one

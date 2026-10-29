@@ -1,4 +1,4 @@
-// The agents tab through the real shell: filtering, collapsing, connection
+// The agents tab through the real shell: sections, collapsing, connection
 // notices and the states around an empty or failing fleet.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -33,8 +33,6 @@ void _push(UiHarness h, List<Pane> panes) {
   h.transports['a']!.emit(_statusEvent);
 }
 
-Finder _chip(String label) => find.widgetWithText(AppChip, label);
-
 Finder _row(String title) => find.widgetWithText(AgentCard, title);
 
 /// The card's tappable body: one semantics node reading the whole card.
@@ -56,83 +54,6 @@ Future<void> _failAll(WidgetTester tester, UiHarness h, String error) async {
 
 void main() {
   setUpAll(loadAppFonts);
-
-  group('filter chips', () {
-    Future<UiHarness> mixed() => UiHarness.create([
-      (
-        profile: _machine('a', 'workstation'),
-        snapshot: snapshotWith([
-          _pane(1, 'blocked'),
-          _pane(2, 'working'),
-          _pane(3, 'working'),
-          _pane(4, 'idle'),
-        ], title: (id) => 'task ${id.split('p').last}'),
-      ),
-    ]);
-
-    testWidgets('one chip per status that has agents, with its count', (tester) async {
-      final h = await mixed();
-      await pumpUi(tester, h, height: _tall);
-
-      expect(find.byType(AppChip), findsNWidgets(3));
-      expect(find.descendant(of: _chip('Working'), matching: find.text('2')), findsOneWidget);
-      expect(_chip('Done'), findsNothing, reason: 'no done agents, so no chip');
-      await teardownUi(tester, h);
-    });
-
-    testWidgets('tapping a chip narrows the list, tapping it again restores it', (tester) async {
-      final h = await mixed();
-      await pumpUi(tester, h, height: _tall);
-      expect(find.byType(AgentCard), findsNWidgets(4));
-
-      await tester.tap(_chip('Working'));
-      await settle(tester);
-      expect(find.byType(AgentCard), findsNWidgets(2));
-      expect(_row('task 2'), findsOneWidget);
-      expect(_row('task 1'), findsNothing);
-
-      // Choosing another chip replaces the filter instead of adding to it.
-      await tester.tap(_chip('Idle'));
-      await settle(tester);
-      expect(find.byType(AgentCard), findsNWidgets(1));
-      expect(_row('task 4'), findsOneWidget);
-
-      await tester.tap(_chip('Idle'));
-      await settle(tester);
-      expect(find.byType(AgentCard), findsNWidgets(4));
-      await teardownUi(tester, h);
-    });
-
-    testWidgets('a filter whose agents disappeared stops hiding everything', (tester) async {
-      final h = await mixed();
-      await pumpUi(tester, h, height: _tall);
-      await tester.tap(_chip('Idle'));
-      await settle(tester);
-      expect(find.byType(AgentCard), findsNWidgets(1));
-
-      _push(h, [_pane(1, 'blocked'), _pane(2, 'working')]);
-      await settle(tester);
-
-      expect(find.byType(AgentCard), findsNWidgets(2));
-      await teardownUi(tester, h);
-    });
-
-    testWidgets('and does not come back when an agent of that status returns', (tester) async {
-      final h = await mixed();
-      await pumpUi(tester, h, height: _tall);
-      await tester.tap(_chip('Idle'));
-      await settle(tester);
-
-      _push(h, [_pane(1, 'blocked'), _pane(2, 'working')]);
-      await settle(tester);
-      _push(h, [_pane(1, 'blocked'), _pane(2, 'working'), _pane(4, 'idle')]);
-      await settle(tester);
-
-      expect(find.byType(AgentCard), findsNWidgets(3), reason: 'the old filter must not re-apply');
-      expect(tester.widget<AppChip>(_chip('Idle')).selected, isFalse);
-      await teardownUi(tester, h);
-    });
-  });
 
   group('sections', () {
     testWidgets('are ordered by urgency and can be collapsed', (tester) async {
@@ -226,7 +147,7 @@ void main() {
         ),
       ]);
       await pumpUi(tester, h, height: _tall);
-      expect(find.descendant(of: _chip('Working'), matching: find.text('120')), findsOneWidget);
+      expect(find.textContaining('120 working'), findsOneWidget);
 
       await tester.fling(find.byType(CustomScrollView).first, const Offset(0, -20000), 20000);
       await settle(tester);
@@ -254,7 +175,7 @@ void main() {
       await teardownUi(tester, h);
     });
 
-    testWidgets('machines with no agents show no filters and say so', (tester) async {
+    testWidgets('machines with no agents say so', (tester) async {
       final h = await UiHarness.create([
         (profile: _machine('a', 'solo'), snapshot: snapshotWith(const [])),
         (profile: _machine('b', 'duo'), snapshot: snapshotWith(const [])),
@@ -262,8 +183,6 @@ void main() {
       await pumpUi(tester, h, height: _tall);
 
       expect(find.text('No agents running'), findsOneWidget);
-      expect(find.byType(AppChip), findsNothing);
-      expect(find.textContaining('2 machines · no agents'), findsOneWidget);
       await teardownUi(tester, h);
     });
 
@@ -480,7 +399,7 @@ void main() {
     });
   });
 
-  group('chips under the header', () {
+  group('under the tab bar', () {
     Future<UiHarness> many() => UiHarness.create([
       (
         profile: _machine('a', 'workstation'),
@@ -491,34 +410,12 @@ void main() {
       ),
     ]);
 
-    testWidgets('are tappable while visible and not once they slid under the bar', (tester) async {
-      final h = await many();
-      await pumpUi(tester, h, height: _tall);
-      final scroll = find.byType(CustomScrollView).first;
-
-      await tester.drag(scroll, const Offset(0, -60));
-      await tester.pump(const Duration(milliseconds: 400));
-      await tester.tap(_chip('Working'));
-      await tester.pump(const Duration(milliseconds: 400));
-      expect(tester.widget<AppChip>(_chip('Working')).selected, isTrue);
-      await tester.tap(_chip('Working'));
-      await tester.pump(const Duration(milliseconds: 400));
-
-      await tester.drag(scroll, const Offset(0, -400));
-      await tester.pump(const Duration(milliseconds: 400));
-      expect(tester.getCenter(_chip('Working')).dy, lessThan(56));
-      await tester.tap(_chip('Working'), warnIfMissed: false);
-      await tester.pump(const Duration(milliseconds: 400));
-      expect(tester.widget<AppChip>(_chip('Working')).selected, isFalse);
-      await teardownUi(tester, h);
-    });
-
     testWidgets('rows fading out behind the tab bar can still be tapped', (tester) async {
       final h = await many();
       await pumpUi(tester, h, height: _tall);
 
       final bar = tester.getRect(find.byType(FloatingTabBar));
-      // Above the pill, in the strip the fade covers, left of the "needs you" pill.
+      // Above the tab bar, in the strip the fade covers.
       await tester.tapAt(Offset(24, bar.top - 8));
       await settle(tester);
       expect(find.byType(PaneScreen), findsOneWidget);

@@ -1300,7 +1300,6 @@ void main() {
         AgentStatus.idle,
         AgentStatus.unknown,
       ]);
-      expect(filterableStatuses, [AgentStatus.blocked, AgentStatus.done, AgentStatus.working, AgentStatus.idle]);
       // Collapsed sections are stored as bits of this index.
       expect(AgentStatus.values, [
         AgentStatus.blocked,
@@ -1328,23 +1327,14 @@ void main() {
   });
 
   group('board density', () {
-    test('is auto until chosen: cards up to four agents, compact from five', () async {
+    test('is compact until chosen, and Cards is every agent a card', () async {
       final settings = AppSettings(MemoryAppSettingsStore());
       await settings.load();
+      expect(settings.density, BoardDensity.compact);
+      expect(settings.cards, isFalse);
 
-      expect(settings.density, BoardDensity.auto);
-      expect(AppSettings.autoCompactFrom, 5);
-      expect([for (var n = 0; n <= 6; n++) settings.cardsFor(n)], [true, true, true, true, true, false, false]);
-    });
-
-    test('a choice wins over the count, both ways', () async {
-      final settings = AppSettings(MemoryAppSettingsStore());
       await settings.setDensity(BoardDensity.cards);
-      expect(settings.cardsFor(10), isTrue);
-
-      await settings.setDensity(BoardDensity.compact);
-      expect(settings.cardsFor(1), isFalse);
-      expect(settings.cardsFor(0), isFalse);
+      expect(settings.cards, isTrue);
     });
 
     test('is saved, restored, and notifies once per change', () async {
@@ -1353,17 +1343,17 @@ void main() {
       var notified = 0;
       settings.addListener(() => notified++);
 
-      await settings.setDensity(BoardDensity.compact);
-      await settings.setDensity(BoardDensity.compact);
+      await settings.setDensity(BoardDensity.cards);
+      await settings.setDensity(BoardDensity.cards);
       expect(notified, 1);
-      expect(store.writes, ['density compact', 'density compact']);
+      expect(store.writes, ['density cards', 'density cards']);
 
       final reopened = AppSettings(store);
       await reopened.load();
-      expect(reopened.density, BoardDensity.compact);
+      expect(reopened.density, BoardDensity.cards);
     });
 
-    test('preferences keep it; an unknown value is auto', () async {
+    test('preferences keep it; an unknown value, or the old auto, is compact', () async {
       SharedPreferences.resetStatic();
       SharedPreferences.setMockInitialValues({});
       final first = AppSettings(PrefsAppSettingsStore());
@@ -1377,7 +1367,13 @@ void main() {
       SharedPreferences.setMockInitialValues({'app.density.v1': 'tiles'});
       final third = AppSettings(PrefsAppSettingsStore());
       await third.load();
-      expect(third.density, BoardDensity.auto);
+      expect(third.density, BoardDensity.compact);
+
+      SharedPreferences.resetStatic();
+      SharedPreferences.setMockInitialValues({'app.density.v1': 'auto'});
+      final fourth = AppSettings(PrefsAppSettingsStore());
+      await fourth.load();
+      expect(fourth.density, BoardDensity.compact);
     });
   });
 

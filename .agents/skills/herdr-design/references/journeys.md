@@ -11,7 +11,7 @@ shape itself changes, update this file.
 | Role | Surfaces |
 | --- | --- |
 | Overview | the Agents board (every agent on every machine, by what it needs), the Machines tab |
-| Attention | the needs-you notification, the in-app arrival haptic, the badge, the triage pill and sheet |
+| Attention | the needs-you notification, the in-app arrival haptic, the badge, the board's status line, the triage sheet |
 | Answer | the board card's chips, the reply sheet, the pane's answer dock, the session's prompt dock, the notification's buttons |
 | Follow | an agent screen: the terminal pane (live edge, jump pill) or the agent session (transcript, status line, overview, background strip), the swipe along the agents that want the person, the options' `Show terminal` / `Show chat` |
 | Steer | the composers, the key row, the slash and command palettes, quick phrases, the attach sheet, mode and model |
@@ -52,11 +52,16 @@ these already means it.
 ### 2. Glance: is everything all right?
 
 - **Moment.** A habit check, many times a day, a second or two.
-- **Ideal shape.** Open → the board says, without scrolling or reading: how many
-  need me, what is working and for how long, what finished, and which machines
-  are unreachable → close. Zero taps.
+- **Ideal shape.** Open → the board's status line says, without scrolling: how
+  many need me, how many are working, how fresh that is, and how many machines
+  are unreachable; the one decision in front is a card, everything else a
+  quiet row → close. Zero taps. Chrome (filter chips, a floating pill, extra
+  header buttons) costs focus here: most people run on auto-accept, so the
+  common glance finds nothing waiting.
 - **Must hold:**
-  - counts agree everywhere (badge, pill, sections, the Machines tab, notifications);
+  - counts agree everywhere (badge, status line, sections, the Machines tab, notifications),
+    and each surface says a count once (the board said it four times: a
+    filter chip, the section header, a triage pill and the badge);
   - stale data looks stale;
   - a fresh launch paints the last state at once and doesn't announce the
     catch-up as news.
@@ -173,8 +178,9 @@ these already means it.
 - **Moment.** Set it up once, rarely revisited.
 - **Ideal shape.** A few settings that matter (theme, density, terminal font and
   wrap, quick phrases, notifications), applied at once.
-- **Must hold:** a setting that also appears in place (wrap, density) is the same
-  setting in both places.
+- **Must hold:** a setting that also appears in place (wrap) is the same
+  setting in both places. Board density is in Settings only: a header button
+  for it was chrome on the screen people glance at.
 
 ## Seams that recur
 
@@ -185,7 +191,7 @@ for them in every review:
   jump buttons, two forms) that slowly diverge in guards, haptics and words.
 - **Uneven coverage:** a guard, a haptic, an Undo or a reason that one surface
   has and its twin lacks.
-- **Counts that disagree** between the badge, the pill, the sections and the
+- **Counts that disagree** between the badge, the status line, the sections and the
   notifications.
 - **Dead ends:** an error whose only action can't succeed, or a link that lands
   on the wrong tab.

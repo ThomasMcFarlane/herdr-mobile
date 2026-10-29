@@ -21,7 +21,6 @@ import 'package:herdr_mobile/ui/core/kit.dart';
 import '../../support/step_clock.dart';
 import '../../support/tap_guard.dart';
 import '../create/new_agent_session_screen.dart';
-import '../history/past_sessions_navigation.dart';
 import '../machines/machine_form_screen.dart';
 import 'agent_card.dart';
 import 'agent_more_row.dart';
@@ -32,14 +31,19 @@ import 'batch_actions_sheet.dart';
 import 'board_selection.dart';
 import 'reply_sheet.dart';
 import 'swipe_review.dart';
-import 'triage_pill.dart';
 
 /// Every agent across every machine, grouped by how much it needs you:
 /// terminal agents and agent sessions in the same sections, so "what waits"
 /// has one place to look and the sections never trade places as sessions
 /// start or stop waiting (they used to lead the board then, moving every card
 /// under the thumb). Needs you and Done count and order what [AttentionSet]
-/// says, the same as the badge, the pill and the triage sheet.
+/// says, the same as the tab badge and the triage sheet.
+///
+/// Calm by default: one status line says the count once (the tab badge is the
+/// one count off this screen), the first waiting agent is a card with its
+/// answers and every other agent is a row. Why: the count used to be said four
+/// times on one screen (a filter chip, the section header, a floating pill and
+/// the badge), and chrome costs the focus a glance is made of.
 class AgentsScreen extends StatefulWidget {
   const AgentsScreen({super.key, this.onShowMachines, this.onSelectingChanged, this.current = true});
 
@@ -63,8 +67,6 @@ class AgentsScreen extends StatefulWidget {
 }
 
 class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
-  AgentStatus? _filter;
-
   // Idle shows its first rows and folds the rest ([idleShown]); true opens them.
   // Not kept: the board opens folded again, the way a long inbox does.
   bool _idleOpen = false;
@@ -72,7 +74,8 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
   AgentSessions? _sessions;
 
   // Collapsed sections, one bit per status, so the set survives the process
-  // being reclaimed. Nothing secret lives here.
+  // being reclaimed. Nothing secret lives here. Needs you's bit is ignored
+  // (`agentEntries`): it never folds.
   final _collapsedBits = RestorableInt(0);
 
   // The last page built. A hidden tab hands this back instead of rebuilding,
@@ -156,10 +159,6 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
 
   void _newSession() => unawaited(openNewAgentSession(context));
 
-  void _pastSessions() => unawaited(openPastSessions(context));
-
-  void _toggleFilter(AgentStatus s) => setState(() => _filter = _filter == s ? null : s);
-
   void _toggleSection(AgentStatus s) => setState(() => _collapsedBits.value ^= 1 << s.index);
 
   void _toggleIdle() => setState(() => _idleOpen = !_idleOpen);
@@ -175,14 +174,6 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
     });
   }
 
-  /// The pill's count while it leaves: the last one it showed.
-  int _pillCount = 0;
-
-  /// An explicit choice, from what the board shows now (which `auto` may have
-  /// decided): the other look, and it stays.
-  void _toggleDensity({required bool cards}) =>
-      unawaited(context.read<AppSettings>().setDensity(cards ? BoardDensity.compact : BoardDensity.cards));
-
   @override
   Widget build(BuildContext context) {
     final visible = TickerMode.valuesOf(context).enabled;
@@ -191,12 +182,10 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
       if (_page case final page?) return page;
     }
     final overview = context.select<FleetRepository, AgentsOverview>(AgentsOverview.of);
-    // Rebuilds on a density choice; what the choice means depends on how many
-    // agents there are (`auto`), so it is read with the overview in hand.
-    context.select<AppSettings, BoardDensity>((s) => s.density);
+    // Set in Settings > Look > Agent list.
+    final cards = context.select<AppSettings, bool>((s) => s.cards);
     final sessions = _sessions = context.watch<AgentSessions?>();
     final attention = context.watch<AttentionSet>();
-    final cards = context.read<AppSettings>().cardsFor(overview.agents.length);
     return _page = _buildPage(context, overview, sessions, attention, cards: cards);
   }
 
@@ -207,7 +196,6 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
     AttentionSet attention, {
     required bool cards,
   }) {
-    final ds = context.ds;
     final clearance = FloatingBar.clearance(context);
 
     if (overview.machineCount == 0) {
@@ -233,27 +221,17 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
 
     final sessionList = sessions?.sessions ?? const <AgentSessionView>[];
     final sections = boardSections(overview.agents, sessionList, attention);
-    // A filter whose agents are all gone cannot be cleared by its chip any
-    // more. Drop it for good, so it does not come back by itself when an
-    // agent of that status shows up again.
-    if (_filter != null && !sections.any((s) => s.status == _filter)) _filter = null;
-    final filter = _filter;
-    final entries = agentEntries(sections, filter: filter, collapsed: _collapsed, idleOpen: _idleOpen);
-    _armGateWhenAnswersMove(entries);
+    final entries = agentEntries(sections, collapsed: _collapsed, idleOpen: _idleOpen);
+    _armGateWhenAnswersMove(entries, cards: cards);
     final listed = _withFolding(entries, overview);
     final indexes = entryIndexes(listed);
 
-    final chips = [
-      for (final s in sections)
-        if (filterableStatuses.contains(s.status)) s,
-    ];
-    final chipsHeight = chips.isEmpty ? 0.0 : AppChip.height;
     final troubled = overview.troubled;
-    final blockedCount = attention.needsYou.length;
+    final needYouCount = attention.needsYou.length;
     final review = attention.toReview.length;
-    if (blockedCount > 0) _pillCount = blockedCount;
+    final working = sections.where((s) => s.status == AgentStatus.working).firstOrNull?.items.length ?? 0;
 
-    // What All picks: the rows the board shows (open sections, this filter),
+    // What All picks: the rows the board shows (open sections),
     // and what a pane that went away takes out of the selection.
     _visibleRefs = [
       for (final e in entries)
@@ -269,61 +247,37 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
       onRefresh: () async {
         await Future.wait([context.read<FleetRepository>().retryAll(), if (sessions != null) sessions.refresh()]);
       },
-      edgeOffset: SliverLargeTitle.extent(context, hasSubtitle: true, bottomHeight: chipsHeight),
+      edgeOffset: SliverLargeTitle.extent(context, hasSubtitle: true),
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
           SliverLargeTitle(
             title: 'Agents',
-            // Steps once a minute, so "heard 3m ago" grows while nothing else
-            // changes: a board that went quiet says so instead of looking live.
+            // The board's one status line. Steps once a minute, so "heard 3m
+            // ago" grows while nothing else changes: a board that went quiet
+            // says so instead of looking live.
             subtitle: MinuteBuilder(
-              builder: (context, _) => Text(
-                [
-                  _summary(overview, sessionList.length),
-                  ?heardLabel(context.read<FleetRepository>().connections),
-                ].join(' · '),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Type.secondary.copyWith(color: ds.textSecondary),
+              builder: (context, _) => _StatusLine(
+                waiting: needYouCount,
+                working: working,
+                agents: overview.agents.length + sessionList.length,
+                machines: overview.machineCount,
+                troubled: troubled.length,
+                heard: heardLabel(context.read<FleetRepository>().connections),
               ),
             ),
-            actions: [
-              CircleButton(
-                icon: cards ? LucideIcons.list : LucideIcons.layoutGrid,
-                tooltip: cards ? 'Compact list' : 'Cards with preview',
-                onPressed: () => _toggleDensity(cards: cards),
-              ),
-              CircleButton(icon: LucideIcons.history, tooltip: 'Past sessions', onPressed: _pastSessions),
-              CircleButton(icon: LucideIcons.plus, tooltip: 'New agent session', onPressed: _newSession),
-            ],
-            bottom: chips.isEmpty
-                ? null
-                : SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    // Chips slide out through the page gutter, not under it.
-                    clipBehavior: Clip.none,
-                    child: Row(
-                      children: [
-                        for (final (i, s) in chips.indexed) ...[
-                          if (i > 0) const SizedBox(width: Gap.sm),
-                          AppChip(
-                            label: s.status.label,
-                            count: s.count,
-                            leading: StatusGlyph(status: s.status, size: IconSize.inline),
-                            selected: filter == s.status,
-                            onTap: () => _toggleFilter(s.status),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-            bottomHeight: chipsHeight,
+            // One action. Density is a setting (Settings > Look > Agent list)
+            // and Past sessions is a row of the `+` form, where resuming is
+            // one of the ways to start: the header held three buttons, past
+            // the two-action budget (DESIGN.md Hierarchy 6).
+            actions: [CircleButton(icon: LucideIcons.plus, tooltip: 'New agent session', onPressed: _newSession)],
           ),
+          // Kept as a strip, not folded into the status line: it carries the
+          // next step (Retry, Approve, or the Machines tab), which words in a
+          // subtitle cannot. It sits right under the header, where the status
+          // line is, and both come back with the top of the list.
           if (troubled.isNotEmpty)
             SliverPadding(
-              // The chip row's 44dp box and the section label's top padding
-              // already leave air around the strip.
               padding: const EdgeInsets.symmetric(horizontal: Gap.gutter),
               sliver: SliverToBoxAdapter(
                 child: _ConnectionStrip(troubled: troubled, onShowMachines: widget.onShowMachines),
@@ -349,12 +303,14 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
                 final AgentHeader h => SectionLabel(
                   key: h.key,
                   label: h.status.label,
-                  // Only offline ones listed: "Needs you · 2 offline", not
-                  // a 0 that reads as a count of nothing beside them.
-                  count: h.count == 0 && h.offline > 0 ? null : h.count,
-                  expanded: h.expanded,
-                  onTap: () => _toggleSection(h.status),
-                  trailing: _headerTrailing(h, review: review),
+                  // Needs you and Working are counted by the status line, so
+                  // their headers do not say it again. Elsewhere, with only
+                  // offline ones listed: "Done · 2 offline", not a 0 that
+                  // reads as a count of nothing beside them.
+                  count: _countedAbove(h.status) || (h.count == 0 && h.offline > 0) ? null : h.count,
+                  expanded: h.collapsible ? h.expanded : null,
+                  onTap: h.collapsible ? () => _toggleSection(h.status) : null,
+                  trailing: _headerTrailing(h, review: review, needYou: needYouCount),
                 ),
                 final AgentLine l => Collapse(
                   key: l.key,
@@ -363,10 +319,11 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
                   // [_withFolding]); the key follows the line.
                   child: KeyedSubtree(
                     key: _measure.putIfAbsent(l.agent.key, GlobalKey.new),
-                    // The board's job is to let you answer: an agent that is
-                    // blocked and reachable keeps its card and its answers
-                    // even in the compact list.
-                    child: cards || (l.agent.status == AgentStatus.blocked && !l.agent.stale)
+                    // The board's job is to let you answer: the agent in
+                    // front of Needs you keeps its card and its answers in
+                    // the compact list; the others waiting are named in rows
+                    // (the triage walk, from the header, answers them in turn).
+                    child: cards || l.front
                         ? AgentCard(agent: l.agent)
                         : AgentCompactRow(agent: l.agent, divider: !l.last),
                   ),
@@ -380,19 +337,14 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
                 final AgentFolding f => _FoldAway(key: f.key, height: f.height, onDone: () => _folded(f.agentKey)),
               },
             ),
-            // Room under the last row for the lanes: the Dock, and the Pin
-            // (the triage pill) while it shows.
-            SliverToBoxAdapter(
-              child: SizedBox(height: FloatingBar.listEnd(context, pin: blockedCount > 0)),
-            ),
+            // Room under the last row for the Dock.
+            SliverToBoxAdapter(child: SizedBox(height: FloatingBar.listEnd(context))),
           ],
         ],
       ),
     );
-    // Always a Stack, so the list keeps its elements (rows, scroll offset)
-    // when the pill comes and goes. Picking agents puts a bar over the title
-    // bar and one over the tab bar's place (the shell hides its own), and the
-    // pill steps aside.
+    // Picking agents puts a bar over the title bar and one over the tab bar's
+    // place (the shell hides its own).
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<BoardSelection>.value(value: _selection),
@@ -415,35 +367,6 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
               bottom: 0,
               child: BatchActionBar(onAction: (action) => unawaited(performBatchAction(context, action, _selection))),
             ),
-            // The Pin lane: 8 above the Dock, in the Dock's slot (the same
-            // side margins and width), toasts standing above it while it
-            // shows. It comes and goes like every lane, and steps aside while
-            // the board picks.
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: ListenableBuilder(
-                listenable: _selection,
-                builder: (context, child) =>
-                    BottomStackTransition(visible: blockedCount > 0 && !_selection.active, builder: (_) => child!),
-                child: FloatingBarSlot(
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: FloatingBar.height + FloatingBar.margin),
-                    child: ToastShelf(
-                      lift: FloatingBar.pinLift(context),
-                      child: TriagePill(
-                        count: _pillCount,
-                        review: review,
-                        // The sheet walks the same set, in the same order:
-                        // terminal agents and agent sessions.
-                        onTap: () => showTriageSheet(context),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
       ),
@@ -453,10 +376,10 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
   /// Closes [_gate] when the cards above an answer changed: one was removed or
   /// inserted, or the order changed. A card appended below the last answer
   /// moves nothing.
-  void _armGateWhenAnswersMove(List<AgentEntry> entries) {
+  void _armGateWhenAnswersMove(List<AgentEntry> entries, {required bool cards}) {
     var last = -1;
     for (final (i, e) in entries.indexed) {
-      if (e is AgentLine && e.agent.status == AgentStatus.blocked && !e.agent.stale) last = i;
+      if (e is AgentLine && e.agent.status == AgentStatus.blocked && !e.agent.stale && (cards || e.front)) last = i;
     }
     final layout = [for (final e in entries.take(last + 1)) e.key];
     final before = _answerLayout;
@@ -512,17 +435,39 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
     if (mounted && _folding.remove(agentKey) != null) setState(() {});
   }
 
+  /// Whether the status line already counts this section.
+  static bool _countedAbove(AgentStatus s) => s == AgentStatus.blocked || s == AgentStatus.working;
+
   /// What a section header carries on its right. Needs you: how many of its
-  /// rows are out of reach. Done: the same, then "Mark all reviewed" when
-  /// something can be marked (an offline agent cannot: it is not counted and
-  /// the note says why, instead of a button that would do nothing) and
-  /// "Select all".
-  Widget? _headerTrailing(AgentHeader h, {required int review}) => switch (h.status) {
-    AgentStatus.blocked when h.offline > 0 => _OfflineNote(count: h.offline),
-    AgentStatus.done => _ReviewActions(
+  /// rows are out of reach, then the walk through every waiting agent (the
+  /// triage sheet) when more than one waits: only the first is a card. Done:
+  /// the offline note, then "Mark all reviewed" when something can be marked
+  /// (an offline agent cannot: it is not counted and the note says why,
+  /// instead of a button that would do nothing) and "Select all".
+  Widget? _headerTrailing(AgentHeader h, {required int review, required int needYou}) => switch (h.status) {
+    // The action's 44 dp box, kept while there is no action: a second agent
+    // starting to wait must not move the card in front under the thumb.
+    AgentStatus.blocked when h.offline == 0 && needYou < 2 => const SizedBox(height: kMinTap),
+    AgentStatus.blocked => _HeaderActions(
       offline: h.offline,
-      onMarkAll: review > 0 ? _markAllReviewed : null,
-      onSelectAll: _selectAllDone,
+      actions: [
+        if (needYou > 1)
+          // The sheet walks the same set, in the same order: terminal agents
+          // and agent sessions.
+          TextAction(
+            key: const ValueKey('answer-one-by-one'),
+            label: 'Answer one by one',
+            onTap: () => unawaited(showTriageSheet(context)),
+          ),
+      ],
+    ),
+    AgentStatus.done => _HeaderActions(
+      offline: h.offline,
+      actions: [
+        if (review > 0)
+          TextAction(key: const ValueKey('mark-all-reviewed'), label: 'Mark all reviewed', onTap: _markAllReviewed),
+        TextAction(key: const ValueKey('select-all-done'), label: 'Select all', onTap: _selectAllDone),
+      ],
     ),
     _ => null,
   };
@@ -573,8 +518,8 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
 }
 
 /// "2 offline" on a section header: rows listed as last known, whose machine
-/// or link is down. They are not in the section's count, the badge or the
-/// pill, and nothing on the board can act on them until they are back.
+/// or link is down. They are not in the status line's count or the badge,
+/// and nothing on the board can act on them until they are back.
 class _OfflineNote extends StatelessWidget {
   const _OfflineNote({required this.count});
 
@@ -589,16 +534,15 @@ class _OfflineNote extends StatelessWidget {
   );
 }
 
-/// The ghost buttons on the header of finished work: clear it all as reviewed
-/// (one Undo; absent when nothing can be reached to mark), or pick it all for
-/// a batch action, after the note of how many are offline. The row shrinks
-/// (the labels ellipsize) before it can push the section's name off a narrow,
-/// large-text screen.
-class _ReviewActions extends StatelessWidget {
-  const _ReviewActions({required this.onMarkAll, required this.onSelectAll, this.offline = 0});
+/// The ghost buttons on a section header, after the note of how many of its
+/// rows are offline: Needs you's walk, Done's "Mark all reviewed" (absent
+/// when nothing can be reached to mark) and "Select all". The row shrinks
+/// (the labels ellipsize) before it can push the section's name off a
+/// narrow, large-text screen.
+class _HeaderActions extends StatelessWidget {
+  const _HeaderActions({required this.actions, this.offline = 0});
 
-  final VoidCallback? onMarkAll;
-  final VoidCallback onSelectAll;
+  final List<Widget> actions;
   final int offline;
 
   @override
@@ -609,16 +553,11 @@ class _ReviewActions extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (offline > 0) ...[Flexible(child: _OfflineNote(count: offline)), const SizedBox(width: Gap.sm)],
-          if (onMarkAll case final markAll?) ...[
-            Flexible(
-              child: TextAction(key: const ValueKey('mark-all-reviewed'), label: 'Mark all reviewed', onTap: markAll),
-            ),
-            const SizedBox(width: Gap.md),
+          if (offline > 0) ...[
+            Flexible(child: _OfflineNote(count: offline)),
+            if (actions.isNotEmpty) const SizedBox(width: Gap.sm),
           ],
-          Flexible(
-            child: TextAction(key: const ValueKey('select-all-done'), label: 'Select all', onTap: onSelectAll),
-          ),
+          for (final (i, a) in actions.indexed) ...[if (i > 0) const SizedBox(width: Gap.md), Flexible(child: a)],
         ],
       ),
     );
@@ -659,13 +598,56 @@ String? heardLabel(List<MachineConnection> connections) {
       : 'heard ${Elapsed.compact(oldest, seconds: false)} ago';
 }
 
-String _summary(AgentsOverview o, int agentSessions) {
-  return [
-    countOf(o.machineCount, 'machine'),
-    o.agents.isEmpty ? 'no agents' : countOf(o.agents.length, 'agent'),
-    if (agentSessions > 0) countOf(agentSessions, 'agent session'),
-    if (o.troubled.isNotEmpty) '${o.troubled.length} not connected',
-  ].join(' · ');
+/// The board's one status line: `2 need you · 3 working · heard just now ·
+/// 1 not connected`. The needs-you count is the only loud words on it (the
+/// blocked text colour), and the only place the board says it: the tab badge
+/// carries it off this screen. A board with nothing waiting or working says
+/// `nothing running`, so the line always answers "is everything alive?".
+class _StatusLine extends StatelessWidget {
+  const _StatusLine({
+    required this.waiting,
+    required this.working,
+    required this.agents,
+    required this.machines,
+    required this.troubled,
+    required this.heard,
+  });
+
+  final int waiting;
+  final int working;
+  final int agents;
+  final int machines;
+  final int troubled;
+  final String? heard;
+
+  @override
+  Widget build(BuildContext context) {
+    final ds = context.ds;
+    final quiet = [
+      if (working > 0) '$working working' else if (waiting == 0 && agents > 0) 'nothing running',
+      ?heard,
+      if (troubled > 0) '$troubled not connected',
+    ];
+    if (waiting == 0 && quiet.isEmpty) quiet.add(countOf(machines, 'machine'));
+    final style = Type.secondary.copyWith(color: ds.textSecondary, fontFeatures: Type.tabular);
+    return Text.rich(
+      TextSpan(
+        children: [
+          if (waiting > 0) ...[
+            TextSpan(
+              text: needYou(waiting),
+              style: Type.secondaryStrong.copyWith(color: ds.blockedText),
+            ),
+            if (quiet.isNotEmpty) const TextSpan(text: ' · '),
+          ],
+          TextSpan(text: quiet.join(' · ')),
+        ],
+      ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: style,
+    );
+  }
 }
 
 /// Machines that are not connected, in one line. One machine is named and can

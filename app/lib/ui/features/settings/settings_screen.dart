@@ -161,7 +161,6 @@ class _LookGroup extends StatelessWidget {
   };
 
   static String _density(BoardDensity density) => switch (density) {
-    BoardDensity.auto => 'Auto',
     BoardDensity.cards => 'Cards',
     BoardDensity.compact => 'Compact',
   };
@@ -202,16 +201,14 @@ class _LookGroup extends StatelessWidget {
           id: 'density',
           child: SettingsField(
             title: 'Agent list',
-            // Only where the setting hides a rule: Cards and Compact say it all.
-            hint: density == BoardDensity.auto
-                ? 'Cards up to ${AppSettings.autoCompactFrom - 1} agents, the compact list from '
-                      '${AppSettings.autoCompactFrom}; a blocked agent always keeps its answers.'
+            // Only where the setting hides a rule: Cards says it all.
+            hint: density == BoardDensity.compact
+                ? 'The first agent that needs you keeps its card and answers; the rest are rows.'
                 : null,
             child: Segmented<BoardDensity>(
               options: const [
-                SegmentOption(BoardDensity.auto, 'Auto', icon: LucideIcons.sparkles),
-                SegmentOption(BoardDensity.cards, 'Cards', icon: LucideIcons.layoutGrid),
                 SegmentOption(BoardDensity.compact, 'Compact', icon: LucideIcons.list),
+                SegmentOption(BoardDensity.cards, 'Cards', icon: LucideIcons.layoutGrid),
               ],
               value: density,
               onChanged: (next) => unawaited(settings.setDensity(next)),

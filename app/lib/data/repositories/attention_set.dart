@@ -65,8 +65,8 @@ final class SessionAttention extends AttentionItem {
 }
 
 /// The one answer to "does anything need me?", for every surface: the Agents
-/// tab badge, the triage pill and sheet, the board's sections and filter
-/// chips, the Machines tab, the arrival haptic and the notifier's counts.
+/// tab badge, the board's status line and sections, the triage sheet, the
+/// Machines tab, the arrival haptic and the notifier's counts.
 /// Before it, each surface counted for itself and they disagreed (a badge of
 /// 3 beside a pill saying 1, a sheet saying `All clear` while a session
 /// waited).

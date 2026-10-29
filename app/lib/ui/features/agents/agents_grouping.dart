@@ -19,10 +19,6 @@ import '../../../data/words/where_line.dart';
 /// agents and agent sessions share the sections.
 const boardOrder = [AgentStatus.blocked, AgentStatus.done, AgentStatus.working, AgentStatus.idle, AgentStatus.unknown];
 
-/// Statuses that get a filter chip, in board order. Unknown agents still show
-/// in their own section but are not worth a chip.
-const filterableStatuses = [AgentStatus.blocked, AgentStatus.done, AgentStatus.working, AgentStatus.idle];
-
 /// The state a row is in, as a word for screen readers: the visible label
 /// says it with the glyph and the time's colour. Empty for "unknown".
 String stateWord(AgentStatus status) => switch (status) {
@@ -260,6 +256,11 @@ sealed class AgentEntry {
 class AgentHeader extends AgentEntry {
   const AgentHeader(this.status, this.count, {this.offline = 0, required this.expanded});
 
+  /// Whether the person can fold this section. Needs you never folds: a fold
+  /// is kept across launches, and a folded Needs you would hide the one loud
+  /// section the board exists for.
+  bool get collapsible => status != AgentStatus.blocked;
+
   final AgentStatus status;
 
   /// What counts (see [BoardSection.count]).
@@ -276,11 +277,17 @@ class AgentHeader extends AgentEntry {
 /// A row stays in the list while its section is collapsed so that it can
 /// animate away; it costs one empty box, not a built row.
 class AgentLine extends AgentEntry {
-  const AgentLine(this.agent, {required this.open, required this.last});
+  const AgentLine(this.agent, {required this.open, required this.last, this.front = false});
 
   final AgentRowData agent;
   final bool open;
   final bool last;
+
+  /// The first row of Needs you: the one decision in front, drawn as a card
+  /// with its answers whatever the density. The other waiting agents are
+  /// named in rows under it, so one question is in front and the rest are
+  /// known, not stacked as cards the thumb has to scroll past.
+  final bool front;
 
   @override
   Key get key => ValueKey(agent.key);
@@ -363,9 +370,9 @@ class BoardSection {
   final AgentStatus status;
   final List<BoardItem> items;
 
-  /// The number on the header and the filter chip. For Needs you and Done it
-  /// is the [AttentionSet]'s (what can be reached), the number the badge,
-  /// the pill and the triage sheet show; for the others, every row.
+  /// What the section counts. For Needs you and Done it is the
+  /// [AttentionSet]'s (what can be reached), the number the badge, the status
+  /// line and the triage sheet show; for the others, every row.
   final int count;
 
   /// Needs you and Done: rows listed (last known) whose machine or link is
@@ -458,41 +465,34 @@ List<BoardItem> _idleInOrder(List<BoardItem> items, DateTime now) {
   return [for (final (_, item) in indexed) item];
 }
 
-/// The lines to list: a header per section, then its rows. With [filter] set
-/// only that section shows; a filter whose section is gone shows everything.
+/// The lines to list: a header per section, then its rows. Needs you is never
+/// collapsed, whatever [collapsed] holds (see [AgentHeader.collapsible]), and
+/// its first row is the one in front ([AgentLine.front]).
 ///
 /// Idle shows its first [idleShown] rows and folds the rest behind one
-/// [AgentMore] line (opened by [idleOpen]), unless it is the filtered section
-/// (the person asked for exactly those) or folding would hide a single row. The
-/// rows are in the list either way, closed, so that they animate away.
+/// [AgentMore] line (opened by [idleOpen]), unless folding would hide a single
+/// row. The rows are in the list either way, closed, so that they animate away.
 List<AgentEntry> agentEntries(
   List<BoardSection> sections, {
-  AgentStatus? filter,
   Set<AgentStatus> collapsed = const {},
   bool idleOpen = false,
 }) {
-  final only = sections.any((s) => s.status == filter) ? filter : null;
+  bool expanded(AgentStatus s) => s == AgentStatus.blocked || !collapsed.contains(s);
   String titleOf(BoardItem item) => switch (item) {
     PaneItem(:final row) => row.title,
     SessionItem(:final session) => session.title,
   };
   return [
-    for (final section in sections)
-      if (only == null || only == section.status) ...[
-        AgentHeader(
-          section.status,
-          section.count,
-          offline: section.offline,
-          expanded: !collapsed.contains(section.status),
-        ),
-        ..._lines(
-          section,
-          sectionOpen: !collapsed.contains(section.status),
-          foldable: only == null && section.status == AgentStatus.idle && section.items.length > idleShown + 1,
-          idleOpen: idleOpen,
-          titleOf: titleOf,
-        ),
-      ],
+    for (final section in sections) ...[
+      AgentHeader(section.status, section.count, offline: section.offline, expanded: expanded(section.status)),
+      ..._lines(
+        section,
+        sectionOpen: expanded(section.status),
+        foldable: section.status == AgentStatus.idle && section.items.length > idleShown + 1,
+        idleOpen: idleOpen,
+        titleOf: titleOf,
+      ),
+    ],
   ];
 }
 
@@ -509,7 +509,12 @@ List<AgentEntry> _lines(
     final open = sectionOpen && (!folded || i < idleShown);
     final last = i == items.length - 1;
     return switch (items[i]) {
-      PaneItem(:final row) => AgentLine(row, open: open, last: last),
+      PaneItem(:final row) => AgentLine(
+        row,
+        open: open,
+        last: last,
+        front: i == 0 && section.status == AgentStatus.blocked && !row.stale,
+      ),
       SessionItem(:final session) => SessionLine(session, open: open, last: last),
     };
   }

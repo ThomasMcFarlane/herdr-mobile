@@ -538,8 +538,8 @@ An ended session whose keeper is gone shows its saved transcript read-only and t
 link strip says `Session ended` with `The agent kept the conversation.` and a
 `Continue` button (the one allowed `BusySpinner` while it resumes; a failure is a
 toast with the host's words and the button comes back; evicted sessions keep
-`Take over`). `Past sessions` (the history icon in the Agents board header, and a row
-in the new-agent-session form that passes the typed folder) lists what an agent
+`Take over`). `Past sessions` (a row in the new-agent-session form, which passes the
+typed folder; the board reaches it through its `+`) lists what an agent
 remembers on a machine: machine chips when more than one is online, agent chips,
 a `This folder` chip when the opener passed a folder, search past six rows. Row =
 title (`Untitled session`), folder tail, `5m ago · 14 messages`; whole row is

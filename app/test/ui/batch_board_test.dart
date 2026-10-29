@@ -14,7 +14,6 @@ import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_card.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_session_rows.dart';
 import 'package:herdr_mobile/ui/features/agents/batch_actions_sheet.dart';
-import 'package:herdr_mobile/ui/features/agents/triage_pill.dart';
 import 'package:herdr_mobile/ui/shell/home_shell.dart';
 import 'package:herdr_mobile/ui/support/home_tabs.dart';
 import 'package:provider/provider.dart';
@@ -196,19 +195,6 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('the triage pill steps aside while picking and returns after', (tester) async {
-      final h = await _studio([_pane(1, 'working'), _pane(2, 'blocked')]);
-      await _pump(tester, h);
-      expect(find.byType(TriagePill), findsOneWidget);
-
-      await _longPress(tester, _row('task 1'));
-      expect(find.byType(TriagePill), findsNothing);
-
-      await _tap(tester, find.text('Cancel'));
-      expect(find.byType(TriagePill), findsOneWidget);
-      await teardownBoard(tester, h);
-    });
-
     testWidgets('back leaves picking first, and the board stays', (tester) async {
       final h = await _studio([_pane(1, 'working')]);
       await _pump(tester, h);
@@ -289,23 +275,6 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('a toast stands above the triage pill, never over it', (tester) async {
-      final h = await _studio([_pane(1, 'working'), _pane(2, 'blocked')]);
-      await _pump(tester, h, width: 412, height: 892);
-      for (final scale in [1.0, 2.0]) {
-        await _pump(tester, h, width: scale == 1 ? 412 : 320, height: scale == 1 ? 892 : 640, textScale: scale);
-        Toaster.of(tester.element(find.byType(TriagePill))).show('Marked reviewed', action: ToastAction('Undo', () {}));
-        await _settle(tester);
-        final toast = tester.getRect(find.byKey(toastKey));
-        final pill = tester.getRect(find.byType(TriagePill));
-        final bar = tester.getRect(find.byType(FloatingTabBar));
-        expect(toast.bottom, lessThanOrEqualTo(pill.top - 8), reason: 'x$scale: 8 above the pill');
-        expect(pill.bottom, lessThanOrEqualTo(bar.top - 8 + 0.01), reason: 'x$scale: the pill 8 above the bar');
-        await tester.pump(const Duration(seconds: 6));
-      }
-      await teardownBoard(tester, h);
-    });
-
     testWidgets('compact rows pick the same way', (tester) async {
       final h = await _studio([_pane(1, 'working'), _pane(2, 'idle')]);
       await h.appSettings.setDensity(BoardDensity.compact);
@@ -318,17 +287,6 @@ void main() {
       await _tap(tester, _row('task 2'));
       expect(_selected(2), findsOneWidget);
       expect(h.agentScreens.front, isNull);
-      await teardownBoard(tester, h);
-    });
-
-    testWidgets('All picks what the current filter shows, nothing else', (tester) async {
-      final h = await _studio(_ten());
-      await _pump(tester, h);
-      await _tap(tester, find.byWidgetPredicate((w) => w is AppChip && w.label == 'Working'));
-
-      await _longPress(tester, _row('task 1'));
-      await _tap(tester, find.text('All'));
-      expect(_selected(3), findsOneWidget);
       await teardownBoard(tester, h);
     });
 

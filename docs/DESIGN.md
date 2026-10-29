@@ -75,7 +75,9 @@ element has the same weight" is a fail.
    w600 when it needs you, `textMuted` otherwise); a screen reader still hears
    the words. The rule covers only what the glyph already says: a quiet
    working agent reads `quiet 14m`, because the working glyph does not say
-   quiet. The section header and the filter chips are the summary.
+   quiet. A screen's status line and its section headers are the summary,
+   and say a count once (the board's needs-you count is in its status line,
+   not its header: the count said four times on one screen was noise).
 6. **Header budget.** A top bar holds at most two trailing actions, ⋯
    included (`AppTopBar` asserts it): a third truncated the title, which is
    what the person is answering for.
@@ -156,8 +158,9 @@ glyph as well.
 | `bodyStrong` | 15 / 600 | a Markdown heading below level 3 |
 
 Mono (JetBrains Mono, ligatures off): `Mono.small` 11.5 (log tails, ids),
-`Mono.base` 12.5 (commands, paths, code, a question's subject), `Mono.input`
-13.5 (typed shell text, key caps), `Mono.preview` 11 (a card's terminal
+`Mono.base` 12.5 (commands, paths, code), `Mono.input`
+13.5 (typed shell text, key caps, a question's subject: what an answer
+approves is the largest thing on its wash), `Mono.preview` 11 (a card's terminal
 preview). The terminal keeps its own user-sized style. Counts use tabular
 figures.
 
@@ -281,7 +284,7 @@ change. Status: **stable** = a catalog entry, a semantics test and this row.
 | `RowList` / `RowColumn` + `RowSpec` | `row_kit.dart` | settings-style lists declared as data; dividers from neighbours | per-screen padding and `divider:` flags |
 | `Panel`, `FoldPanel` | `panel.dart` | a group in content; a group that folds | eleven hand-made containers |
 | `StatusStrip`, `StatusPanel` | `status_panel.dart` | a state in one line; a state that needs a sentence (tint, no outline) | |
-| `QuestionWash`, `AnswerChip` | `question_wash.dart`, `answer_chip.dart` | what an agent asks; an answer, held when risky | six washes, five chips |
+| `QuestionWash`, `AnswerChip` | `question_wash.dart`, `answer_chip.dart` | what an agent asks; an answer, held when risky, quiet (no fill) when it declines | six washes, five chips |
 | `HoldToConfirm` | `hold_confirm.dart` | the hold guard | |
 | `AppTopBar`, `AppBackButton` | `top_bar.dart` | every top bar | seven bars, twelve Backs |
 | `SliverLargeTitle` | `large_title.dart` | a root or list page's title | |
@@ -359,7 +362,7 @@ first.
   mark for `success` / `failed`. No outline, no shadow. Why: the old card was
   `surface` with the input outline and read as a text field; under Android's
   own black "Copied" toast it looked like a second, white system.
-- **Place.** 8 above the highest `ToastShelf` (the tab bar, the triage pill, a
+- **Place.** 8 above the highest `ToastShelf` (the tab bar, a
   form's action bar, a composer region), or 8 above the bottom inset; it glides
   when a shelf moves. A shelf counts only while its route is showing.
 - **Motion.** It rises from behind the bar it stands on (clipped to its own
@@ -394,12 +397,13 @@ a check for `Dwell.copied`: the feedback stays where the eye is.
 
 The bottom of a root screen is lanes, from the bottom edge up, each present only
 while it has content: the inset; **Dock** (`FloatingTabBar`, or the batch bar
-while picking on the board), 56; **Pin** (the triage pill), 44; **Toast**.
+while picking on the board), 56; **Toast**. (A **Pin** lane, the board's
+triage pill, sat between them; it went when the board's status line took the
+count, since it only repeated it.)
 Every gap is 8. Every floating lane goes through `FloatingBarSlot` (12 from the
 sides plus the inset, centred, at most 312), with `surface`, a hairline,
 `floatShadow` and round ends. `FloatingBar.clearance` is the Dock's height and
-margins plus the inset; a list ends `clearance + 8` (plus the Pin while it
-shows). `FloatingBarScrim` fades rows out above the Dock; its solid lower half
+margins plus the inset; a list ends `clearance + 8`. `FloatingBarScrim` fades rows out above the Dock; its solid lower half
 takes taps, so nothing is tapped beside the pill by accident.
 
 One motion for every lane: up from `Motion.travel` with a fade in, `sheetIn`;

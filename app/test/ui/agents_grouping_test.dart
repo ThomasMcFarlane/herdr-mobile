@@ -178,20 +178,26 @@ void main() {
       );
     });
 
-    test('a filter keeps one group; one whose group is gone keeps all', () {
-      final one = agentEntries(sections(groups), filter: AgentStatus.working);
-      expect(one.whereType<AgentHeader>().map((h) => h.status), [AgentStatus.working]);
-      final all = agentEntries(sections(groups), filter: AgentStatus.done);
-      expect(all.whereType<AgentHeader>(), hasLength(3));
-    });
-
     test('a collapsed group keeps its rows in the list, closed', () {
-      final e = agentEntries(sections(groups), collapsed: {AgentStatus.blocked});
-      final header = e.whereType<AgentHeader>().first;
+      final e = agentEntries(sections(groups), collapsed: {AgentStatus.working});
+      final header = e.whereType<AgentHeader>().firstWhere((h) => h.status == AgentStatus.working);
       expect(header.expanded, isFalse);
       final lines = e.whereType<AgentLine>().toList();
-      expect(lines.take(2).every((l) => !l.open), isTrue);
-      expect(lines.skip(2).every((l) => l.open), isTrue);
+      expect([for (final l in lines) l.open], [true, true, false, true]);
+    });
+
+    test('Needs you never collapses, even with a fold saved from before', () {
+      final e = agentEntries(sections(groups), collapsed: {AgentStatus.blocked});
+      final header = e.whereType<AgentHeader>().first;
+      expect(header.status, AgentStatus.blocked);
+      expect(header.collapsible, isFalse);
+      expect(header.expanded, isTrue);
+      expect(e.whereType<AgentLine>().take(2).every((l) => l.open), isTrue);
+    });
+
+    test('only the first waiting agent is in front', () {
+      final e = agentEntries(sections(groups));
+      expect([for (final l in e.whereType<AgentLine>()) l.front], [true, false, false, false]);
     });
 
     test('keys are unique, and a group keeps its key when others come and go', () {
@@ -365,13 +371,6 @@ void main() {
       expect(open(entries), everyElement(isTrue));
       expect(entries.last, isA<AgentMore>().having((m) => m.open, 'open', isTrue));
       expect(folds(entries), hasLength(1));
-    });
-
-    test('the Idle chip asks for exactly those rows: they all show, with no fold', () {
-      final entries = agentEntries([section(AgentStatus.idle, 9)], filter: AgentStatus.idle);
-
-      expect(folds(entries), isEmpty);
-      expect(open(entries), everyElement(isTrue));
     });
 
     test('a folded section has no fold line, and Idle is the only section that folds', () {

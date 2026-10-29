@@ -6,12 +6,12 @@ import 'package:flutter/services.dart' show SystemChannels;
 import 'package:herdr_mobile/data/models/machine_profile.dart';
 import 'package:herdr_mobile/data/models/pane_preview.dart';
 import 'package:herdr_mobile/data/repositories/agent_screens.dart';
+import 'package:herdr_mobile/data/repositories/app_settings.dart';
 import 'package:herdr_mobile/data/services/herdr_transport.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/support/step_clock.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_card.dart';
 import 'package:herdr_mobile/ui/features/agents/reply_sheet.dart';
-import 'package:herdr_mobile/ui/features/agents/triage_pill.dart';
 import 'package:herdr_mobile/ui/features/pane/pane_screen.dart';
 import 'package:herdr_mobile/ui/shell/home_shell.dart';
 import 'package:provider/provider.dart';
@@ -195,13 +195,13 @@ void main() {
       await pumpBoard(tester, h, height: _tall);
       expect(h.previews.openCount, 2);
 
-      await tester.tap(find.byTooltip('Compact list'));
+      await h.appSettings.setDensity(BoardDensity.compact);
       await settle(tester);
       expect(find.byType(AgentCompactRow), findsOneWidget, reason: 'the working one');
       expect(find.byType(AgentCard), findsOneWidget, reason: 'the blocked one still asks');
       expect(h.previews.openCount, 1, reason: 'only the blocked card reads its pane');
 
-      await tester.tap(find.byTooltip('Cards with preview'));
+      await h.appSettings.setDensity(BoardDensity.cards);
       await settle(tester);
       expect(find.byType(AgentCard), findsNWidgets(2));
       expect(h.previews.openCount, 2);
@@ -214,7 +214,7 @@ void main() {
       ]);
       h.previews.set('a/w1:p1', ['…context…'], prompt: _menu);
       await pumpBoard(tester, h, height: _tall);
-      await tester.tap(find.byTooltip('Compact list'));
+      await h.appSettings.setDensity(BoardDensity.compact);
       await settle(tester);
 
       for (final r in _menu.replies) {
@@ -232,7 +232,7 @@ void main() {
         _machine('a', [_pane(1, 'blocked')]),
       ]);
       await pumpBoard(tester, h, height: _tall);
-      await tester.tap(find.byTooltip('Compact list'));
+      await h.appSettings.setDensity(BoardDensity.compact);
       await settle(tester);
       expect(find.byType(AgentCard), findsOneWidget);
 
@@ -577,18 +577,18 @@ void main() {
   });
 
   group('triage', () {
-    testWidgets('the pill counts agents that can be answered, and goes when none is', (tester) async {
+    testWidgets('the status line counts agents that can be answered, and stops when none is', (tester) async {
       final h = await BoardHarness.create([
         _machine('a', [_pane(1, 'blocked'), _pane(2, 'blocked'), _pane(3, 'working')]),
         _machine('b', [_pane(4, 'blocked')]),
       ]);
       await pumpBoard(tester, h, height: _tall);
-      expect(find.text('3 need you'), findsOneWidget);
+      expect(find.textContaining('3 need you'), findsOneWidget);
 
       h.network.goOffline();
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300)); // it leaves like every lane
-      expect(find.byType(TriagePill), findsNothing, reason: 'offline: nothing can be answered');
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.textContaining('need you'), findsNothing, reason: 'offline: nothing can be answered');
       h.network.goOnline();
       await teardownBoard(tester, h);
     });
@@ -602,7 +602,7 @@ void main() {
       h.previews.set('b/w1:p2', ['y'], prompt: _risky);
       await pumpBoard(tester, h, height: _tall);
 
-      await tester.tap(find.text('2 need you'));
+      await tester.tap(find.byKey(const ValueKey('answer-one-by-one')));
       await settle(tester);
       expect(find.text('1 of 2 need you'), findsOneWidget);
       expect(find.descendant(of: find.byType(ReplySheet), matching: find.text('task 1')), findsOneWidget);
@@ -630,7 +630,7 @@ void main() {
       h.previews.set('a/w1:p2', ['y'], prompt: _risky);
       await pumpBoard(tester, h, height: _tall);
 
-      await tester.tap(find.text('2 need you'));
+      await tester.tap(find.byKey(const ValueKey('answer-one-by-one')));
       await settle(tester);
       Finder inSheet(Finder f) => find.descendant(of: find.byType(ReplySheet), matching: f);
       expect(inSheet(find.text('task 1')), findsOneWidget);
@@ -655,7 +655,7 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
       await settle(tester);
       expect(find.byType(ReplySheet), findsNothing, reason: 'all answered: the sheet leaves');
-      expect(find.byType(TriagePill), findsNothing);
+      expect(find.textContaining('need you'), findsNothing);
       await tester.pump(const Duration(seconds: 4));
       await teardownBoard(tester, h);
     });
@@ -730,7 +730,7 @@ void main() {
       h.previews.set('a/w1:p1', ['x'], prompt: _menu);
       h.previews.set('a/w1:p2', ['y'], prompt: _menu);
       await pumpBoard(tester, h, height: _tall);
-      await tester.tap(find.text('2 need you'));
+      await tester.tap(find.byKey(const ValueKey('answer-one-by-one')));
       await settle(tester);
       Finder inSheet(Finder f) => find.descendant(of: find.byType(ReplySheet), matching: f);
 
@@ -769,7 +769,7 @@ void main() {
       h.previews.set('a/w1:p1', ['x'], prompt: _menu);
       h.previews.set('a/w1:p2', ['y'], prompt: _menu);
       await pumpBoard(tester, h, height: _tall);
-      await tester.tap(find.text('2 need you'));
+      await tester.tap(find.byKey(const ValueKey('answer-one-by-one')));
       await settle(tester);
 
       await tester.tap(find.descendant(of: find.byType(ReplySheet), matching: find.text('esc')));
@@ -782,7 +782,7 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('the pill appearing doesn’t rebuild the list or move its scroll position', (tester) async {
+    testWidgets('an agent starting to wait doesn’t rebuild the list or move its scroll position', (tester) async {
       final h = await BoardHarness.create([
         _machine('a', [for (var i = 1; i <= 12; i++) _pane(i, 'working')]),
       ]);
@@ -802,13 +802,13 @@ void main() {
       await h.changeStatuses(tester, 'a', [
         for (var i = 1; i <= 12; i++) _pane(i, i == 12 ? 'blocked' : 'working'),
       ], title: _title);
-      expect(find.byType(TriagePill), findsOneWidget);
+      expect(find.descendant(of: find.byType(FloatingTabBar), matching: find.text('1')), findsOneWidget);
       expect(tester.state<ScrollableState>(find.byType(Scrollable).first).position.pixels, offset);
-      expect(tester.element(_card(visible)), same(card), reason: 'cards were inflated again when the pill showed up');
+      expect(tester.element(_card(visible)), same(card), reason: 'cards were inflated again when one started waiting');
       await teardownBoard(tester, h);
     });
 
-    testWidgets('the last card clears both the pill and the tab bar', (tester) async {
+    testWidgets('the last card clears the tab bar', (tester) async {
       final h = await BoardHarness.create([
         _machine('a', [_pane(1, 'blocked'), for (var i = 2; i <= 8; i++) _pane(i, 'working')]),
       ]);
@@ -817,13 +817,15 @@ void main() {
         await tester.fling(find.byType(CustomScrollView).first, const Offset(0, -5000), 5000);
         await settle(tester);
       }
-      final pill = tester.getRect(find.byType(TriagePill));
       final last = tester
           .widgetList(find.byType(AgentCard))
           .map((w) => tester.getRect(find.byWidget(w)).bottom)
           .reduce((a, b) => a > b ? a : b);
-      expect(last, lessThanOrEqualTo(pill.top), reason: 'the pill must never cover the last agent');
-      expect(pill.bottom, lessThanOrEqualTo(tester.getRect(find.byType(FloatingTabBar)).top));
+      expect(
+        last,
+        lessThanOrEqualTo(tester.getRect(find.byType(FloatingTabBar)).top),
+        reason: 'the tab bar must never cover the last agent',
+      );
       await teardownBoard(tester, h);
     });
   });
@@ -944,7 +946,7 @@ void main() {
     await settle(tester);
     expect(find.byType(AgentCard), findsOneWidget);
 
-    await tester.tap(find.byTooltip('Compact list'));
+    await h.appSettings.setDensity(BoardDensity.compact);
     await settle(tester);
     await tester.restartAndRestore();
     await settle(tester);
@@ -972,7 +974,7 @@ void main() {
         _machine('a', [_pane(1, 'working')]),
       ]);
       await pumpBoard(tester, h, height: _tall);
-      await tester.tap(find.byTooltip('Compact list'));
+      await h.appSettings.setDensity(BoardDensity.compact);
       await settle(tester);
 
       await tester.tap(find.text('task 1'));

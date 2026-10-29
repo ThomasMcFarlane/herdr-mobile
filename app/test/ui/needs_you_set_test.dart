@@ -99,10 +99,8 @@ void main() {
       'Agents, 2 need you',
       reason: 'the pane and the session; not the offline pane, not the finished session',
     );
-    // The pill.
-    expect(find.text('2 need you · 1 to review'), findsOneWidget);
-    // The section and its chip.
-    expect(tester.widget<SectionLabel>(_section('Needs you')).count, 2);
+    // The board's status line, the one place the board counts it.
+    expect(find.textContaining('2 need you'), findsOneWidget);
     expect(find.text('1 offline'), findsOneWidget, reason: 'the offline pane is listed, last known, and said so');
     expect(tester.widget<SectionLabel>(_section('Done')).count, 1);
     // The notifier's "need you".
@@ -115,7 +113,7 @@ void main() {
     expect(sessionTop, lessThan(offlineTop), reason: 'what cannot be answered comes last');
 
     // The triage sheet walks the same two, in the same order, sessions too.
-    await tester.tap(find.text('2 need you · 1 to review'));
+    await tester.tap(find.byKey(const ValueKey('answer-one-by-one')));
     await _settle(tester);
     expect(find.byType(ReplySheet), findsOneWidget);
     expect(find.text('1 of 2 need you'), findsOneWidget);
