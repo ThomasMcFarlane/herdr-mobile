@@ -121,10 +121,8 @@ Widget _firstRun({int badge = 0}) => Stack(
   children: [
     EmptyState(
       mark: const BrandMark(animate: false),
-      title: 'Your agents, in your pocket',
-      message:
-          'Connect a machine running herdr to see every coding '
-          'agent, know the moment one needs you, and reply from anywhere.',
+      title: 'No machines yet',
+      message: 'Add a machine running herdr and its agents show here.',
       action: AppButton(label: 'Add your first machine', icon: LucideIcons.plus, onPressed: () {}),
     ),
     Align(

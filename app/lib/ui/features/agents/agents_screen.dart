@@ -218,10 +218,8 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
               padding: EdgeInsets.only(bottom: clearance),
               child: EmptyState(
                 mark: const BrandMark(),
-                title: 'Your agents, in your pocket',
-                message:
-                    'Connect a machine running herdr to see every coding '
-                    'agent, know the moment one needs you, and reply from anywhere.',
+                title: 'No machines yet',
+                message: 'Add a machine running herdr and its agents show here.',
                 action: AppButton(label: 'Add your first machine', icon: LucideIcons.plus, onPressed: _addMachine),
               ),
             ),
@@ -329,7 +327,7 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
                 child: const EmptyState(
                   icon: LucideIcons.moon,
                   title: 'No agents running',
-                  message: 'Start one in herdr and it will appear here.',
+                  message: 'Start one in herdr and it shows here.',
                 ),
               ),
             )

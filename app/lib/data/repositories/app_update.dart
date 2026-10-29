@@ -235,7 +235,7 @@ class AppUpdate extends ChangeNotifier {
       }
       _checkProblem = null;
     } on Object catch (e) {
-      if (manual) _checkProblem = e is UpdateException ? e.message : 'Could not look for updates.';
+      if (manual) _checkProblem = e is UpdateException ? e.message : 'Couldn’t look for updates.';
     } finally {
       _lastCheck = _now();
       _stage = _apk != null && _release != null ? UpdateStage.ready : UpdateStage.idle;

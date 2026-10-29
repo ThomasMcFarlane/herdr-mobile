@@ -97,7 +97,7 @@ class _QueuedMessagesState extends State<QueuedMessages> {
                     ? visibleText(m.heldReason!)
                     : null,
                 onEdit: () => unawaited(editQueuedMessage(context, widget.session, m.id)),
-                onRemove: () => widget.session.removeQueued(m.id),
+                onRemove: () => unawaited(_confirmRemove(context, widget.session, m.id)),
               ),
             ),
           if (queued.length > queuedRowsShown)
@@ -194,6 +194,20 @@ class _QueuedRow extends StatelessWidget {
   }
 }
 
+/// Asks before dropping queued message [id]. The session cannot put a message
+/// back (it may have gone out, and its attachments with it), so an Undo is not
+/// possible and the guard comes first. True when it was removed.
+Future<bool> _confirmRemove(BuildContext context, AgentSessionView session, String id) async {
+  final ok = await showConfirmSheet(
+    context,
+    title: 'Remove this queued message?',
+    message: 'It won’t be sent. Its text and attachments are dropped.',
+    confirmLabel: 'Remove',
+  );
+  if (ok) session.removeQueued(id);
+  return ok;
+}
+
 /// Opens queued message [id] to edit its text or remove it. A message that
 /// went out meanwhile says so and can no longer be changed.
 Future<void> editQueuedMessage(BuildContext context, AgentSessionView session, String id) => showAppSheet<void>(
@@ -240,9 +254,10 @@ class _EditQueuedState extends State<_EditQueued> {
     Navigator.of(context).pop();
   }
 
-  void _remove() {
-    widget.session.removeQueued(widget.id);
-    Navigator.of(context).pop();
+  Future<void> _remove() async {
+    final nav = Navigator.of(context);
+    if (!await _confirmRemove(context, widget.session, widget.id)) return;
+    nav.pop();
   }
 
   @override
@@ -264,6 +279,7 @@ class _EditQueuedState extends State<_EditQueued> {
               const SizedBox(height: Gap.sm),
               LabeledField(
                 label: 'Message',
+                prose: true,
                 controller: _text,
                 minLines: 2,
                 maxLines: 6,

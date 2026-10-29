@@ -71,7 +71,7 @@ void main() {
       expect(parseAgentLink('herdr://agent/box/w1%3Ap1/'), want);
     });
 
-    test('rejects anything that is not exactly an agent link', () {
+    test('rejects anything that isn’t exactly an agent link', () {
       for (final bad in <String?>[
         null,
         '',
@@ -108,12 +108,12 @@ void main() {
       expect(parseSessionLink('HERDR://Session/box/abc/'), const SessionLink('box', 'abc'));
     });
 
-    test('is not an agent link, and an agent link is not a session link', () {
+    test('isn’t an agent link, and an agent link isn’t a session link', () {
       expect(parseAgentLink('herdr://session/box/k1'), isNull);
       expect(parseSessionLink('herdr://agent/box/w1%3Ap1'), isNull);
     });
 
-    test('rejects anything that is not exactly a session link', () {
+    test('rejects anything that isn’t exactly a session link', () {
       for (final bad in <String?>[
         null,
         '',
@@ -292,7 +292,7 @@ void main() {
       await tearDownApp(tester);
     });
 
-    testWidgets('a route that is not a herdr link is swallowed, not pushed', (tester) async {
+    testWidgets('a route that isn’t a herdr link is swallowed, not pushed', (tester) async {
       await pumpApp(tester);
       await pushLink(tester, '/settings');
       expect(opened, isEmpty);
@@ -329,7 +329,7 @@ void main() {
       await tearDownApp(tester);
     });
 
-    testWidgets('a pane the live machine does not have shows a toast', (tester) async {
+    testWidgets('a pane the live machine doesn’t have shows a toast', (tester) async {
       await pumpApp(tester);
       await pushLink(tester, 'herdr://agent/Mac%20mini/w1%3Ap404');
       expect(opened, isEmpty);
@@ -342,7 +342,7 @@ void main() {
       await pumpApp(tester);
       await pushLink(tester, 'herdr://agent/onlyone');
       expect(opened, isEmpty);
-      expect(find.text("That link isn't one herdr can open."), findsOneWidget);
+      expect(find.text("That link isn’t one herdr can open."), findsOneWidget);
       await tester.pumpAndSettle(const Duration(seconds: 5));
       await tearDownApp(tester);
     });
@@ -381,7 +381,7 @@ void main() {
       expect(find.byKey(toastKey), findsNothing);
       await tester.pump(const Duration(seconds: 2));
       expect(opened, isEmpty);
-      expect(find.text("Couldn't reach Mac mini to open that agent."), findsOneWidget);
+      expect(find.text("Couldn’t reach Mac mini to open that agent."), findsOneWidget);
       await tester.pumpAndSettle(const Duration(seconds: 5));
       await tearDownApp(tester);
     });
@@ -438,7 +438,7 @@ void main() {
       await tearDownApp(tester);
     });
 
-    testWidgets('a session the phone has not listed yet is looked for on the host first', (tester) async {
+    testWidgets('a session the phone hasn’t listed yet is looked for on the host first', (tester) async {
       final sessions = _LateSessions();
       await pumpApp(tester, sessions: sessions);
       await pushLink(tester, 'herdr://session/Mac%20mini/k9');
@@ -456,10 +456,10 @@ void main() {
       await tearDownApp(tester);
     });
 
-    testWidgets('without sessions to open, a session link is not one this app can open', (tester) async {
+    testWidgets('without sessions to open, a session link isn’t one this app can open', (tester) async {
       await pumpApp(tester);
       await pushLink(tester, 'herdr://session/Mac%20mini/k1');
-      expect(find.text("That link isn't one herdr can open."), findsOneWidget);
+      expect(find.text("That link isn’t one herdr can open."), findsOneWidget);
       await tester.pumpAndSettle(const Duration(seconds: 5));
       await tearDownApp(tester);
     });

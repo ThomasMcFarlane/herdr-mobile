@@ -59,6 +59,8 @@ void main() {
         // An unchosen count sits on the pill, the chosen one on the capsule.
         expect(contrast(ds.textMuted, ds.fill), greaterThanOrEqualTo(4.5));
         expect(contrast(ds.textSecondary, capsule), greaterThanOrEqualTo(4.5));
+        // The edge of a field is the only thing that says where to type.
+        expect(contrast(ds.controlBorder, ds.surface), greaterThanOrEqualTo(3), reason: 'field edge');
       });
 
       test('$name status text holds on its own wash, pressed too', () {

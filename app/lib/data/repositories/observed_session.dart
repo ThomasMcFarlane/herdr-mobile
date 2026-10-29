@@ -635,7 +635,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
     if (_problem != null) return _problem;
     if (_isSub && parent!.link == AgentLink.ended) return parent!.error;
     if (_gone) return 'This pane is gone from ${machine.profile.label}.';
-    if (_exited) return '$agentLabel is not running in this pane any more.';
+    if (_exited) return '$agentLabel isn’t running in this pane any more.';
     return _failure;
   }
 
@@ -840,7 +840,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
       final bytes = await files.readAll(file, size: size, chunk: 2 * 1024 * 1024);
       // A file that shrank under the read comes back short, and would be kept
       // under its content name for good: whole, or not at all.
-      if (bytes.length != size) throw const LogPictureException('The picture did not come through whole.');
+      if (bytes.length != size) throw const LogPictureException('The picture didn’t come through whole.');
       return bytes;
     } on RemoteFileException catch (e) {
       if (e.kind == RemoteFileErrorKind.notFound) throw logPictureGone;
@@ -1130,7 +1130,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
           failure = HerdrTransportException(e.message);
         } on Object catch (e) {
           if (!_alive(epoch)) return;
-          _fail('The log could not be read: $e');
+          _fail('The log couldn’t be read: $e');
           return;
         }
         if (attempt >= maxAttempts) {
@@ -1164,7 +1164,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
       final info = parent!._mapper.subagents.where((s) => s.name == name).firstOrNull ?? SubagentInfo(name: name);
       final path = await subs.pathOf(machine, parentPath, info);
       if (path == null || !isReadableLogPath(path)) {
-        return const NotYet('This subagent has not written its transcript yet.');
+        return const NotYet('This subagent hasn’t written its transcript yet.');
       }
       return Located(path);
     }
@@ -1876,7 +1876,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
   Future<void> _confirmSent(int before) async {
     final seen = await _waitFor(() => _userMessages() > before, confirmWithin);
     if (!seen && !_disposed && _logLink == AgentLink.live) {
-      _setProblem('The message is not in the agent’s log yet. Check the terminal.');
+      _setProblem('The message isn’t in the agent’s log yet. Check the terminal.');
     }
   }
 
@@ -1896,11 +1896,11 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
   /// not ([failure] in place of the error's own words).
   Future<String?> _deliver(Future<void> Function() go, {String? failure}) async {
     if (_disposed) return 'This session is closed.';
-    if (!machine.isLive || _pane == null) return 'Not connected. The message was not sent.';
+    if (!machine.isLive || _pane == null) return 'Not connected. The message wasn’t sent.';
     if (_blocked || _pending != null) {
       return _pending is PendingQuestion
-          ? 'The agent is waiting for an answer. Answer it first; the message was not sent.'
-          : 'The agent needs you in the terminal. The message was not sent.';
+          ? 'The agent is waiting for an answer. Answer it first; the message wasn’t sent.'
+          : 'The agent needs you in the terminal. The message wasn’t sent.';
     }
     try {
       await go();
@@ -2084,7 +2084,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
     }
   }
 
-  static const _notTaken = 'The terminal did not take that answer. Open the terminal.';
+  static const _notTaken = 'The terminal didn’t take that answer. Open the terminal.';
 
   Future<void> _answerAsk(PendingQuestion p, PendingAsk ask, List<AskAnswer> answers) async {
     _busy = true;

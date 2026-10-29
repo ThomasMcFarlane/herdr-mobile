@@ -371,7 +371,7 @@ void main() {
       expect(find.text('Update available').hitTestable(), findsOneWidget);
     });
 
-    testWidgets('found while the page is showing does not move it', (tester) async {
+    testWidgets('found while the page is showing doesn’t move it', (tester) async {
       final u = _updater(tester);
       await _pump(tester, update: u.update, size: const Size(320, 640), textScale: 2);
       await openSettingsGroup(tester, 'About');
@@ -455,16 +455,16 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('leads with the release\'s walkthrough clip, which plays in the app; a failure offers Retry', (
+    testWidgets('leads with the release’s walkthrough clip, which plays in the app; a failure offers Retry', (
       tester,
     ) async {
       const clip =
-          "[![Watch what's new · 6 changes · 0:19 · 7.5 MB]($_base/99.0.0-whats-new.jpg)]($_base/99.0.0-whats-new.mp4)";
+          "[![Watch what’s new · 6 changes · 0:19 · 7.5 MB]($_base/99.0.0-whats-new.jpg)]($_base/99.0.0-whats-new.mp4)";
       final u = _updater(tester, release: _release(notes: '$clip\n\n### One new thing\n\nIt does what it says.'));
       await u.update.check();
       await _pump(tester, update: u.update);
       await _openSheet(tester);
-      expect(find.text("Watch what's new · 6 changes · 0:19 · 7.5 MB"), findsOneWidget);
+      expect(find.text("Watch what’s new · 6 changes · 0:19 · 7.5 MB"), findsOneWidget);
       expect(find.text('It does what it says.'), findsOneWidget);
 
       // No video plugin under test: the clip cannot load, which is the
@@ -473,12 +473,12 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
       expect(find.text('What\u2019s new in 99.0.0'), findsOneWidget);
-      expect(find.text('Couldn\u2019t play the clip. Check the connection and try again.'), findsOneWidget);
+      expect(find.text('Couldn\u2019t play the clip. Check the connection, then Retry.'), findsOneWidget);
       expect(find.text('Retry'), findsOneWidget);
     });
 
     testWidgets('fetches nothing a notes line names on another host', (tester) async {
-      const elsewhere = "[![Watch what's new](https://evil.example/99.0.0-whats-new.jpg)]($_base/99.0.0-whats-new.mp4)";
+      const elsewhere = "[![Watch what’s new](https://evil.example/99.0.0-whats-new.jpg)]($_base/99.0.0-whats-new.mp4)";
       final u = _updater(tester, release: _release(notes: '$elsewhere\n\nIt does what it says.'));
       await u.update.check();
       await _pump(tester, update: u.update);
@@ -492,7 +492,7 @@ void main() {
       await u.update.check();
       await _pump(tester, update: u.update);
       await openSettingsGroup(tester, 'About');
-      expect(find.text('Version $appVersion'), findsOneWidget, reason: 'only About\'s own row');
+      expect(find.text('Version $appVersion'), findsOneWidget, reason: 'only About’s own row');
       expect(find.textContaining('99.0.0 is available'), findsOneWidget);
     });
   });
@@ -517,7 +517,7 @@ void main() {
       expect(first.bottom, lessThanOrEqualTo(640 - 72), reason: 'not under the tab bar (56 + 16 dp)');
     });
 
-    testWidgets('one that already fits does not move the page', (tester) async {
+    testWidgets('one that already fits doesn’t move the page', (tester) async {
       await _pump(tester);
       await tester.tap(find.text('Agents'));
       await tester.pump();

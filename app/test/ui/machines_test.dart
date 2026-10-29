@@ -24,6 +24,7 @@ import '../support/fake_agent_session.dart';
 import '../support/fake_transport.dart';
 import '../support/memory_stores.dart';
 import '../support/worktree_fixtures.dart';
+import 'hold_support.dart';
 import 'ui_harness.dart';
 
 HerdrTransport _noTransport(
@@ -303,7 +304,7 @@ void main() {
       await _pump(tester, const MachinesScreen(), fleet: h);
 
       // Disable through the ellipsis button.
-      await tester.tap(find.byTooltip('More').first);
+      await tester.tap(find.byTooltip('More options for solo'));
       await _flush(tester);
       await tester.tap(find.text('Disable'));
       await _flush(tester);
@@ -326,13 +327,17 @@ void main() {
       await _flush(tester);
       await tester.tap(find.text('Remove'));
       await _flush(tester);
-      await tester.tap(find.widgetWithText(AppButton, 'Remove'));
+      // Credentials are deleted for good: a tap only says to hold.
+      await tester.tap(find.descendant(of: find.byType(HoldToConfirm), matching: find.text('Remove')));
+      await _flush(tester);
+      expect(h.machines.machines.map((m) => m.id), ['a', 'b'], reason: 'a tap does not remove');
+      await holdFor(tester, find.byType(HoldToConfirm));
       await _flush(tester);
       expect(h.machines.machines.map((m) => m.id), ['b']);
       expect(find.text('solo'), findsNothing);
 
       // Edit opens the form for that machine.
-      await tester.tap(find.byTooltip('More'));
+      await tester.tap(find.byTooltip('More options for other'));
       await _flush(tester);
       await tester.tap(find.text('Edit'));
       await _flush(tester);
@@ -902,7 +907,7 @@ void main() {
       );
 
       await tapButton(tester, 'Test connection');
-      expect(find.text('Could not connect'), findsOneWidget);
+      expect(find.text('Couldn’t connect'), findsOneWidget);
       expect(find.text('Connection refused by 10.0.0.5:22'), findsOneWidget);
       await _tearDown(tester);
     });
@@ -931,6 +936,29 @@ void main() {
       await _flush(tester);
       expect(find.text('Approve this sign-in'), findsNothing);
       expect(find.textContaining('Connected'), findsOneWidget);
+      await _tearDown(tester);
+    });
+
+    testWidgets('Test and Save do not run together: each waits while the other is busy', (tester) async {
+      final repo = await repoWith([_m('t', 'box', auth: SshAuth.none)]);
+      final gate = Completer<void>();
+      await _pump(
+        tester,
+        MachineFormScreen(
+          existing: repo.machines.single,
+          transportFactory: (profile, secrets, pin, notice) => _Gated(gate.future),
+        ),
+        repo: repo,
+      );
+      AppButton button(String label) => tester.widget<AppButton>(find.widgetWithText(AppButton, label));
+
+      await tapButton(tester, 'Test connection');
+      expect(button('Save').onPressed, isNull, reason: 'a save would read a test that is still out');
+
+      gate.complete();
+      await _flush(tester);
+      expect(button('Save').onPressed, isNotNull);
+      expect(button('Test connection').onPressed, isNotNull);
       await _tearDown(tester);
     });
 

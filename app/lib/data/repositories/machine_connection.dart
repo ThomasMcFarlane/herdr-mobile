@@ -13,6 +13,7 @@ import '../services/herdr_api.dart';
 import '../services/herdr_transport.dart';
 import '../services/remote_files.dart';
 import '../services/snapshot_cache.dart';
+import '../words/error_words.dart';
 import 'reviewed_state.dart';
 import 'screen_waits.dart';
 import 'web_preview.dart';
@@ -586,7 +587,7 @@ class MachineConnection extends ChangeNotifier {
             _set(LinkState.attention, error: e.message);
             return;
           }
-          error = e.message;
+          error = describeError(e, machine: profile.label);
         } on HerdrApiException catch (e) {
           if (!alive()) return;
           // The status-only subscription named a pane that closed after the
@@ -594,14 +595,14 @@ class MachineConnection extends ChangeNotifier {
           if (e.code == 'pane_not_found' && _background && raced++ < 2) {
             continue;
           }
-          error = e.toString();
+          error = describeError(e, machine: profile.label);
         } on Object catch (e) {
           // A reply this app cannot read (a field of another type, a shape it
           // does not know): the same as a failed attempt. Left alone it would
           // end the loop with the link still shown as online or connecting,
           // and nothing would ever retry.
           if (!alive()) return;
-          error = 'Unexpected reply from the machine (${e.runtimeType})';
+          error = describeError(e, machine: profile.label);
         }
         _set(LinkState.reconnecting, error: error);
         await _sleep(_retryDelay(attempt++));

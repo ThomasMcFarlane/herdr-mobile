@@ -277,7 +277,7 @@ class _AgentsGroup extends StatelessWidget {
           child: SettingsField(
             title: 'Open agents as',
             hint: openAs == OpenAgentsAs.chat
-                ? 'omp, Claude Code and Codex open as a chat when the app can find their session log; the terminal is one tap away. Any other agent, or one it cannot find, opens as a terminal.'
+                ? 'omp, Claude Code and Codex open as a chat when the app can find their session log; the terminal is one tap away. Any other agent, or one it can’t find, opens as a terminal.'
                 : 'A running agent opens as its terminal.',
             child: Segmented<OpenAgentsAs>(
               options: const [
@@ -501,7 +501,7 @@ class _StorageGroupState extends State<_StorageGroup> {
             id: 'clear-cache',
             title: 'Clear cache',
             titleMaxLines: 1,
-            subtitle: 'Copies of what you looked at on your machines, kept so it is not downloaded twice. At most 192 MB, the oldest go first.',
+            subtitle: 'Copies of what you looked at on your machines, kept so it isn’t downloaded twice. At most 192 MB, the oldest go first.',
             subtitleMaxLines: 4,
             trailing: Icon(LucideIcons.trash2, size: IconSize.row, color: context.ds.textTertiary),
             // A plain tap is the right guard: all of it can be downloaded again.

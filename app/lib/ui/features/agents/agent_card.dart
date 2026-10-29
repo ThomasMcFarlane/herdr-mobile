@@ -331,8 +331,9 @@ class _AgentCardState extends State<AgentCard>
       ],
     );
     card = NotificationListener<SizeChangedLayoutNotification>(onNotification: _onResize, child: card);
-    // One Opacity layer for the (rare) stale card; none for a live one.
-    if (a.stale) card = Opacity(opacity: 0.55, child: card);
+    // A stale card keeps its words at full strength (they are what the person
+    // opens it to read, and `offline` is spelled out beside the title); only
+    // the glyph recedes.
     return SwipeToReview(
       enabled: swipeable,
       onReviewed: review,
@@ -390,7 +391,7 @@ class _Header extends StatelessWidget {
           width: IconSize.lead,
           height: math.max(titleLine, IconSize.lead),
           child: Center(
-            child: StatusGlyph(status: agent.status, size: IconSize.lead),
+            child: StatusGlyph(status: agent.status, size: IconSize.lead, dim: agent.stale),
           ),
         ),
         const SizedBox(width: Gap.md),
@@ -399,7 +400,7 @@ class _Header extends StatelessWidget {
             agent.title,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: _titleStyle.copyWith(color: ds.text),
+            style: _titleStyle.copyWith(color: agent.stale ? ds.textSecondary : ds.text),
           ),
         ),
         if (showTime) ...[const SizedBox(width: Gap.sm), StateTime(agent: agent)],
@@ -624,7 +625,7 @@ class AgentCompactRow extends StatelessWidget {
           enabled: swipeable,
           onReviewed: review,
           child: ListRow(
-            // Staleness dims the whole row once; the glyph is not dimmed again.
+            // Staleness dims the row's glyph and softens its words (see ListRow.dim).
             leading: StatusGlyph(status: agent.status, size: IconSize.lead),
             title: agent.title,
             subtitle: agent.subtitle,

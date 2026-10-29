@@ -437,14 +437,24 @@ class _AgentSessionScreenState extends State<AgentSessionScreen> with WidgetsBin
   /// back, and goes out as a prompt when the turn has ended.
   void _submit({bool after = false}) {
     final session = widget.session;
-    if (session.link != AgentLink.live || session.sendBlocked != null) return;
+    // Nothing typed, nothing refused: an empty Send has nothing to explain.
+    final hasContent = _input.text.trim().isNotEmpty || !_attachments.isEmpty;
+    void refuse(String why) {
+      if (!hasContent) return;
+      Haptics.failed();
+      showToast(context, why);
+    }
+
+    if (session.link != AgentLink.live) return refuse('Not connected. Try again when it is back');
+    final blocked = session.sendBlocked;
+    if (blocked != null) return refuse(blocked);
     // An agent in a terminal says `working` while it waits on a job; that
     // wait is not a turn, so a message may go.
     if (session.isObserved &&
         session.relayNote == null &&
         session.phase != AgentPhase.idle &&
         !session.waitingOnBackground) {
-      return;
+      return refuse('The agent is working. Send it once it is idle');
     }
     if (!_attachments.canSend) return;
     final text = _input.text.trim();
@@ -864,7 +874,7 @@ class _LinkStrip extends StatelessWidget {
           color: ds.blocked,
           state: LinkState.attention,
           title: 'Needs you in the terminal',
-          detail: 'It asks something the chat cannot show.',
+          detail: 'It asks something the chat can’t show.',
           action: openTerminal,
         );
       }

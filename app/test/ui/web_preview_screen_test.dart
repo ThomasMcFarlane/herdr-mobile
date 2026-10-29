@@ -95,7 +95,7 @@ void main() {
     final gate = transport.webGate = Completer();
     await pump(tester, ServerPage(Uri.parse('http://localhost:3000/')));
 
-    expect(find.text('localhost:3000'), findsOneWidget, reason: 'the machine\'s port, not the phone\'s 51111');
+    expect(find.text('localhost:3000'), findsOneWidget, reason: 'the machine’s port, not the phone’s 51111');
     expect(
       find.text('build-box'),
       findsOneWidget,
@@ -157,7 +157,7 @@ void main() {
   });
 
   testWidgets(
-    '⋯ shows the whole link, and Copy link copies it: the address on the machine, never the phone\'s tokened URL',
+    '⋯ shows the whole link, and Copy link copies it: the address on the machine, never the phone’s tokened URL',
     (tester) async {
       await pump(tester, ServerPage(Uri.parse('http://localhost:3000/')));
       await web.navigate('http://localhost:51111/page2.html?tab=logs#b');
@@ -178,7 +178,7 @@ void main() {
     },
   );
 
-  testWidgets('a file\'s page copies its path on the machine', (tester) async {
+  testWidgets('a file’s page copies its path on the machine', (tester) async {
     transport.webInfo = const WebBridgeInfo(port: 51111, token: _token);
     transport.fs = FakeFs()..addFile('/home/dev/site/index.html', '<h1>hi</h1>');
     await pump(tester, const FilePage('/home/dev/site/index.html'));
@@ -219,10 +219,10 @@ void main() {
     await _settle(tester);
     expect(launcher.opened, isEmpty);
     expect(find.text('http://example.org/a'), findsOneWidget);
-    expect(find.text('This link is not encrypted.'), findsOneWidget);
+    expect(find.text('This link isn’t encrypted.'), findsOneWidget);
   });
 
-  testWidgets('a page posted to another site says it is not from the machine, and copies its own address', (
+  testWidgets('a page posted to another site says it isn’t from the machine, and copies its own address', (
     tester,
   ) async {
     await pump(tester, ServerPage(Uri.parse('http://localhost:3000/')));
@@ -230,12 +230,12 @@ void main() {
     web.land('https://evil.example.com/login');
     await _settle(tester);
 
-    expect(find.text('evil.example.com'), findsWidgets, reason: 'the real host, not the machine\'s address');
-    expect(find.textContaining('build-box'), findsNothing, reason: 'another site never sits under the machine\'s name');
+    expect(find.text('evil.example.com'), findsWidgets, reason: 'the real host, not the machine’s address');
+    expect(find.textContaining('build-box'), findsNothing, reason: 'another site never sits under the machine’s name');
     expect(
       find.descendant(of: find.byType(AppTopBar), matching: find.textContaining('localhost:3000')),
       findsNothing,
-      reason: 'never the machine\'s address over another site',
+      reason: 'never the machine’s address over another site',
     );
 
     await tester.tap(find.byTooltip('Page options'));
@@ -245,14 +245,14 @@ void main() {
     expect(copied, ['https://evil.example.com/login']);
   });
 
-  testWidgets('another port of the machine is not loaded on its own, is one deliberate tap away, and Back returns', (
+  testWidgets('another port of the machine isn’t loaded on its own, is one deliberate tap away, and Back returns', (
     tester,
   ) async {
     await pump(tester, ServerPage(Uri.parse('http://localhost:3000/')));
 
     expect(await web.navigate('http://localhost:8791/api'), isFalse);
     await _settle(tester);
-    expect(launcher.opened, isEmpty, reason: 'the phone\'s own localhost is not the machine\'s');
+    expect(launcher.opened, isEmpty, reason: 'the phone’s own localhost isn’t the machine’s');
     expect(find.text('localhost:8791 isn’t open on this phone.'), findsOneWidget);
 
     transport.webInfo = const WebBridgeInfo(port: 8791, token: _token, entryPort: 51999);
@@ -281,7 +281,7 @@ void main() {
     expect(find.textContaining('herdr doesn’t download files'), findsOneWidget);
   });
 
-  testWidgets('a single-page app\'s route gets its title once the app has set it', (tester) async {
+  testWidgets('a single-page app’s route gets its title once the app has set it', (tester) async {
     web.titles['http://localhost:51111/'] = 'Dashboard';
     await pump(tester, ServerPage(Uri.parse('http://localhost:3000/')));
     web.pushState('http://localhost:51111/settings');
@@ -353,7 +353,7 @@ void main() {
     expect(bar(), findsNothing);
   });
 
-  testWidgets('while nothing is shown the view is the screen\'s colour; a page gets the web\'s white', (tester) async {
+  testWidgets('while nothing is shown the view is the screen’s colour; a page gets the web’s white', (tester) async {
     final gate = transport.webGate = Completer();
     await pump(tester, ServerPage(Uri.parse('http://localhost:3000/')));
     expect(web.backgrounds, isNotEmpty);
@@ -399,7 +399,7 @@ void main() {
       await _settle(tester);
 
       expect(find.byType(SheetScaffold), findsOneWidget, reason: 'one sheet, not one per request');
-      expect(find.textContaining('staging'), findsOneWidget, reason: 'the server\'s own words for what it protects');
+      expect(find.textContaining('staging'), findsOneWidget, reason: 'the server’s own words for what it protects');
       expect(find.textContaining('build-box'), findsWidgets);
       expect(answers, isEmpty, reason: 'the view waits for the answer');
 

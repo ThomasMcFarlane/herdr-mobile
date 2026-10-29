@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 
-const _floatLight = [BoxShadow(color: Color(0x14000000), blurRadius: 20, offset: Offset(0, 4))];
-const _floatDark = [BoxShadow(color: Color(0x73000000), blurRadius: 20, offset: Offset(0, 4))];
+// Light: a crisp edge shadow under a soft ambient one. Dark: a black shadow
+// vanishes on near-black, so the lift is a faint light ring instead.
+const _floatLight = [
+  BoxShadow(color: Color(0x0F000000), blurRadius: 2, offset: Offset(0, 1)),
+  BoxShadow(color: Color(0x14000000), blurRadius: 24, offset: Offset(0, 8)),
+];
+const _floatDark = [BoxShadow(color: Color(0x14FFFFFF), blurRadius: 0, spreadRadius: 1)];
 
 /// Design tokens, in three tiers: a private palette (the hex values below),
 /// the roles a screen reads ([Ds], [Type], [Mono], [Gap], [Radii],
@@ -30,6 +35,7 @@ class Ds extends ThemeExtension<Ds> {
     required this.textMuted,
     required this.textTertiary,
     required this.border,
+    required this.controlBorder,
     required this.accent,
     required this.onAccent,
     required this.accentText,
@@ -74,8 +80,13 @@ class Ds extends ThemeExtension<Ds> {
   /// text: it does not reach 4.5:1.
   final Color textTertiary;
 
-  /// Input outline (~1.5:1): stronger than [hairline], which is a divider.
+  /// A drawn outline that is decoration (~1.5:1): diagram boxes, table rules,
+  /// quote bars. Stronger than [hairline], which is a divider.
   final Color border;
+
+  /// The edge of a control the person must find and fill (a text field, a
+  /// picker): >= 3:1 against [surface] (WCAG 1.4.11), where [border] is not.
+  final Color controlBorder;
 
   /// The one accent. Fills (primary button) use [accent] with [onAccent] text;
   /// accent-coloured text and icons use [accentText] for contrast.
@@ -184,6 +195,7 @@ class Ds extends ThemeExtension<Ds> {
     textMuted: Color(0xFF6E6D69),
     textTertiary: Color(0xFF8F8E8A),
     border: Color(0xFFD3D1CC),
+    controlBorder: Color(0xFF8F8E8A),
     accent: Color(0xFF5E6AD2),
     onAccent: Color(0xFFFFFFFF),
     accentText: Color(0xFF4B57BE),
@@ -213,6 +225,7 @@ class Ds extends ThemeExtension<Ds> {
     textMuted: Color(0xFF868993),
     textTertiary: Color(0xFF6A6D75),
     border: Color(0xFF3A3D44),
+    controlBorder: Color(0xFF60646D),
     accent: Color(0xFF5E6AD2),
     onAccent: Color(0xFFFFFFFF),
     accentText: Color(0xFF9AA3F2),
@@ -242,6 +255,7 @@ class Ds extends ThemeExtension<Ds> {
     textMuted: textMuted,
     textTertiary: textTertiary,
     border: border,
+    controlBorder: controlBorder,
     accent: accent,
     onAccent: onAccent,
     accentText: accentText,
@@ -274,6 +288,7 @@ class Ds extends ThemeExtension<Ds> {
       textMuted: l(textMuted, other.textMuted),
       textTertiary: l(textTertiary, other.textTertiary),
       border: l(border, other.border),
+      controlBorder: l(controlBorder, other.controlBorder),
       accent: l(accent, other.accent),
       onAccent: l(onAccent, other.onAccent),
       accentText: l(accentText, other.accentText),

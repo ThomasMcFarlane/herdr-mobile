@@ -4,6 +4,18 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [Unreleased]
+
+- Tapping a row or card answers the instant your finger lands, not a moment after.
+- Switching tabs is instant: the screen no longer fades up from nothing, so quick taps don’t blink.
+- A toast, pill or sheet that is dismissed while it is still arriving leaves smoothly instead of jumping.
+- An offline agent keeps readable text; only its status mark dims.
+- Text fields have a clearer edge, and the floating bars lift properly in dark mode.
+- Messages you type to an agent get suggestions and capital letters; passwords can be filled by a password manager.
+- Pressing Send on the keyboard when the agent can’t take a message now says why.
+- Removing a machine needs a hold; removing a queued message, a saved phrase or remembered messages asks or can be undone.
+- Errors read as plain sentences with a next step, never `code: message`.
+
 ## [0.1.44] - 2026-10-29
 
 ### Queue messages while the agent works

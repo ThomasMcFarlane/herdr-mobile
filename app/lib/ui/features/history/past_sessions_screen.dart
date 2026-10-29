@@ -157,7 +157,7 @@ class _BodyState extends State<_Body> {
             EmptyState(
               icon: LucideIcons.circleAlert,
               title: 'Couldn’t read past sessions',
-              message: vm.failure ?? 'The machine did not answer.',
+              message: vm.failure ?? 'The machine didn’t answer.',
               action: AppButton(label: 'Retry', kind: AppButtonKind.secondary, onPressed: vm.retry),
             ),
           ),

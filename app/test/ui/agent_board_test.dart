@@ -139,7 +139,7 @@ void main() {
       expect(find.descendant(of: _card('task 1'), matching: find.text('offline')), findsOneWidget);
       expect(find.descendant(of: _card('task 1'), matching: find.byType(Opacity)), findsOneWidget);
       expect(find.text('last known line'), findsOneWidget, reason: 'the data stays, marked stale');
-      expect(find.byTooltip('Reply to task 1'), findsNothing, reason: 'cannot answer offline');
+      expect(find.byTooltip('Reply to task 1'), findsNothing, reason: 'can’t answer offline');
       await teardownBoard(tester, h);
     });
   });
@@ -227,7 +227,7 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('an offline machine\'s blocked agent cannot be answered, so it is a compact row', (tester) async {
+    testWidgets('an offline machine’s blocked agent can’t be answered, so it is a compact row', (tester) async {
       final h = await BoardHarness.create([
         _machine('a', [_pane(1, 'blocked')]),
       ]);
@@ -782,7 +782,7 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('the pill appearing does not rebuild the list or move its scroll position', (tester) async {
+    testWidgets('the pill appearing doesn’t rebuild the list or move its scroll position', (tester) async {
       final h = await BoardHarness.create([
         _machine('a', [for (var i = 1; i <= 12; i++) _pane(i, 'working')]),
       ]);
@@ -909,7 +909,7 @@ void main() {
       h.transports['a']!.failure = const HerdrTransportException('Host unreachable');
       await tester.tap(find.text('esc'));
       await tester.pump(const Duration(milliseconds: 50));
-      expect(find.text('Couldn’t send: Host unreachable'), findsOneWidget);
+      expect(find.textContaining('Couldn’t send: No connection to'), findsOneWidget);
       h.transports['a']!.failure = null;
       await tester.pump(const Duration(milliseconds: 100)); // the failure haptic's echo
       await teardownBoard(tester, h);

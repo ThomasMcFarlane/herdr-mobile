@@ -611,7 +611,7 @@ Future<void> _openMade(
   } on RemoteFileException catch (e) {
     failed(
       e.kind == RemoteFileErrorKind.notFound
-          ? '${visibleText(asset.title)} is not on the machine any more.'
+          ? '${visibleText(asset.title)} isn’t on the machine any more.'
           : visibleText(e.message),
     );
   } finally {
@@ -960,7 +960,7 @@ class _PictureTileState extends State<_PictureTile> {
     return PressBuilder(
       onTap: !widget.enabled ? null : (unknown ? _retry : widget.onTap),
       haptic: true,
-      semanticLabel: unknown ? '$name, could not be loaded, tap to retry' : name,
+      semanticLabel: unknown ? '$name, couldn’t be loaded, tap to retry' : name,
       builder: (context, pressed) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
