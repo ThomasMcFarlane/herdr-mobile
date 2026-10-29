@@ -1,4 +1,4 @@
-// The shell's motion and Back: the tab fade, tapping the active tab, Back
+// The shell's motion and Back: the tab switch, tapping the active tab, Back
 // through the tabs, and what sheets and pages do under reduced motion.
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -98,12 +98,6 @@ void main() {
 
   int tabIndex(WidgetTester tester) => tester.widget<FloatingTabBar>(find.byType(FloatingTabBar)).index;
 
-  // The fade over a tab's content, as the shell wraps it.
-  double opacityOf(WidgetTester tester, Type screen) => tester
-      .widget<FadeTransition>(find.ancestor(of: find.byType(screen), matching: find.byType(FadeTransition)).first)
-      .opacity
-      .value;
-
   ScrollPosition boardScroll(WidgetTester tester) => tester
       .state<ScrollableState>(
         find.descendant(
@@ -120,45 +114,18 @@ void main() {
   }
 
   group('tab switch', () {
-    testWidgets('the incoming tab fades in over ~120 ms, opacity only', (tester) async {
+    testWidgets('the incoming tab shows at once: nothing fades or slides', (tester) async {
       final h = await pump(tester);
-      expect(MediaQuery.disableAnimationsOf(tester.element(find.byType(HomeShell))), isFalse);
-      expect(opacityOf(tester, AgentsScreen), 1, reason: 'nothing animates at rest or at first paint');
-
       await tapTab(tester, 'Machines');
       expect(find.byType(MachinesScreen), findsOneWidget);
-      final first = opacityOf(tester, MachinesScreen);
-      expect(first, lessThan(0.1), reason: 'starts from transparent, never one frame at full opacity');
-
-      await tester.pump(const Duration(milliseconds: 40));
-      final mid = opacityOf(tester, MachinesScreen);
-      expect(mid, greaterThan(first));
-      expect(mid, lessThan(1));
-      // No slide: the content sits where it will rest.
-      final top = tester.getTopLeft(find.byType(MachinesScreen));
-      await tester.pump(const Duration(milliseconds: 100));
-      expect(opacityOf(tester, MachinesScreen), 1);
-      expect(tester.getTopLeft(find.byType(MachinesScreen)), top);
-      expect(Motion.fade, lessThanOrEqualTo(const Duration(milliseconds: 150)));
-      await teardownBoard(tester, h);
-    });
-
-    testWidgets('switching again restarts the fade for the new tab', (tester) async {
-      final h = await pump(tester);
-      await tapTab(tester, 'Machines');
-      await tester.pump(const Duration(milliseconds: 200));
+      expect(
+        find.ancestor(of: find.byType(MachinesScreen), matching: find.byType(FadeTransition)),
+        findsNothing,
+        reason: 'a tab switch is the most repeated action; a fade from zero made quick taps blink',
+      );
       await tapTab(tester, 'Settings');
-      expect(find.byType(SettingsScreen), findsOneWidget);
-      expect(opacityOf(tester, SettingsScreen), lessThan(0.1));
-      await tester.pump(const Duration(milliseconds: 150));
-      expect(opacityOf(tester, SettingsScreen), 1);
-      await teardownBoard(tester, h);
-    });
-
-    testWidgets('reduced motion: no fade at all', (tester) async {
-      final h = await pump(tester, reduceMotion: true);
       await tapTab(tester, 'Machines');
-      expect(opacityOf(tester, MachinesScreen), 1);
+      expect(find.byType(MachinesScreen), findsOneWidget);
       await teardownBoard(tester, h);
     });
 
@@ -230,7 +197,6 @@ void main() {
       await tester.pumpAndSettle();
       expect(position.pixels, 0);
       expect(tabIndex(tester), 2);
-      expect(opacityOf(tester, SettingsScreen), 1);
       expect(platformCalls.where((c) => c.method == 'HapticFeedback.vibrate'), isEmpty);
 
       // Leaving and coming back is still not "back to the top".
@@ -259,7 +225,6 @@ void main() {
       await tapTab(tester, 'Settings');
       await tester.pumpAndSettle();
       expect(changed, [2], reason: 'no onTabChanged churn');
-      expect(opacityOf(tester, SettingsScreen), 1, reason: 'no new fade');
       expect(platformCalls.where((c) => c.method == 'HapticFeedback.vibrate'), isEmpty);
       await teardownBoard(tester, h);
     });
@@ -298,7 +263,6 @@ void main() {
       expect(tabIndex(tester), 0);
       expect(systemPops, 0);
       expect(changed, [2, 0], reason: 'the tab the app is left on is remembered');
-      expect(opacityOf(tester, AgentsScreen), 1);
 
       // Now at the root: Back is the app's again.
       await back(tester);

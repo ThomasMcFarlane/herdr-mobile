@@ -887,7 +887,7 @@ class _Reveal extends StatefulWidget {
 
 class _RevealState extends State<_Reveal> with SingleTickerProviderStateMixin {
   AnimationController? _controller;
-  CurvedAnimation? _curve;
+  ExitCurvedAnimation? _curve;
 
   /// Keeps the row's state when the reveal's wrappers go at its end.
   GlobalKey? _childKey;
