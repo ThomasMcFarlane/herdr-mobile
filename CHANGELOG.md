@@ -4,23 +4,51 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
-## [Unreleased]
+## [0.1.45] - 2026-10-29
 
-- Tapping a row or card answers the instant your finger lands, not a moment after.
-- Switching tabs is instant: the screen no longer fades up from nothing, so quick taps don’t blink.
-- A toast, pill or sheet that is dismissed while it is still arriving leaves smoothly instead of jumping.
-- An offline agent keeps readable text; only its status mark dims.
-- Text fields have a clearer edge, and the floating bars lift properly in dark mode.
-- Messages you type to an agent get suggestions and capital letters; passwords can be filled by a password manager.
-- Pressing Send on the keyboard when the agent can’t take a message now says why.
-- Removing a machine needs a hold; removing a queued message, a saved phrase or remembered messages asks or can be undone.
-- Errors read as plain sentences with a next step, never `code: message`.
-- The Agents board says when it last heard from your machines (“heard just now”, “heard 3m ago”), so a board that went quiet no longer looks live.
-- An answer that needs a hold says “Hold” on the chip, before you try a tap.
-- From any agent’s chat or terminal, tap its title to switch to another agent: every agent the board lists, grouped Needs you / Working / Done, with a count beside the title when others need you.
-- Swiping sideways in an agent now walks only the agents that need you, then the finished ones, and swiping back always returns where you were. The card that peeks in says what the agent asks or did last.
+### Switch to the agent that needs you, from any chat
+
+Tap an agent's title to reach any other agent without going back to the
+board, and swipe sideways to walk only the agents that need you.
+
+> [!TIP]
+> Try it: in an agent's chat, tap its title (`Switch agent`); the last row,
+> `All agents on the board`, goes back to the board.
+
+- A small count beside the title says how many other agents need you. It
+  never moves and adds no row to the chat.
+- Swiping sideways now walks the agents that need you, then the finished
+  ones, and swiping back always returns where you were, even after you
+  answered one. At the end it says `All caught up`. The card that peeks in
+  shows what the agent asks or did last, and where it is in the walk.
 - Agents in several worktrees of one folder are told apart by their branch.
-- In a page from your machine, `✕` returns to the chat from any depth; the arrow goes back one page, and holding it lists the pages of this visit. `Reload` moved into the `⋯` options.
+- The Agents board says when it last heard from your machines (heard just
+  now, heard 3m ago), so a board that went quiet no longer looks live.
+- In a page from your machine, the `✕` at the top (`Close page`) returns
+  from any depth. The arrow (`Previous page`) goes back one page, and holding
+  it lists the `Pages in this visit`. `Reload` moved into the `⋯` options.
+- Tapping a row or card answers the instant your finger lands, and switching
+  tabs is instant.
+- An answer that needs a hold says Hold on its chip before you try a tap.
+- An offline agent keeps readable text; only its status mark dims. Text
+  fields have a clearer edge, and the floating bars lift in dark mode.
+- Messages you type to an agent get suggestions and capital letters, and a
+  password manager can fill machine passwords.
+- Removing a machine needs a hold. Removing a queued message or remembered
+  messages asks first, and a deleted quick phrase can be undone.
+- Errors read as a plain sentence with what to do next.
+
+Nothing in this release was measured on a phone.
+
+**Fixed**
+
+- A toast, pill or sheet dismissed while it was still arriving no longer
+  jumps before it leaves.
+- Pressing Send on the keyboard while the agent can't take a message no
+  longer does nothing silently: it says why.
+- The machine form's `Test connection` and Save no longer run at once, and
+  the port field takes digits only.
+- Errors no longer show internal codes or type names.
 
 ## [0.1.44] - 2026-10-29
 
