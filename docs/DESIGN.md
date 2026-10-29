@@ -33,8 +33,9 @@ without one gets deleted by the next person who does not understand it.
    the inverse surface instead. No backdrop blur: a full-screen blur pass per
    frame is too expensive on a mid-range GPU (Telegram's own fallback is a flat
    colour). Chrome text stops growing at `kBarTextScale` (1.15).
-6. **Press, don't ripple.** Feedback starts on pointer-down (after the scroll
-   intent delay): a soft tint (`Ds.pressTint`) or a scale from `PressScale`.
+6. **Press, don't ripple.** Feedback starts on pointer-down, at once (a scroll
+   that takes over cancels it): a soft tint (`Ds.pressTint`) or a scale from
+   `PressScale`. Waiting for the gesture arena showed nothing for a quick tap.
 7. **Motion is quiet** (see Motion). Nothing moves at rest; durations, curves
    and springs come from `motion.dart`.
 8. **Icons are Lucide, and ours where they sit as peers** (24 grid, stroke 2,
@@ -45,8 +46,9 @@ without one gets deleted by the next person who does not understand it.
    smaller; every control has one accessible name.
 10. **Say it once; tint, don't outline.** A state is named in one place on a
     row and once in a screen's summary. Controls are tints, never rings. The
-    one outline is a primed risky answer (`Ds.armedEdge`), because it must not
-    be missed.
+    one outline is the armed edge (`Ds.armedEdge`): a primed risky answer, and
+    an agent swipe's peek once letting go opens it, because what acts next
+    must not be missed under the thumb.
 
 ## Hierarchy
 

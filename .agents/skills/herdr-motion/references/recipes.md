@@ -10,8 +10,8 @@ changed, update this file.
 ## Press feedback
 
 `PressBuilder(scale: PressScale.chip, builder: (context, pressed) => ...)`. The tint or
-scale goes in on pointer-down after the scroll-intent delay
-(`Motion.press`, 100 ms) and comes out on release (`Motion.release`, 180 ms). A
+scale goes in on pointer-down, at once (`Motion.press`, 100 ms; a scroll that
+takes over cancels it) and comes out on release (`Motion.release`, 180 ms). A
 drag away cancels it. Rows use a tint, not a scale. No ripple anywhere.
 
 ## Something appears or leaves in place (a pill, a badge, a chip)

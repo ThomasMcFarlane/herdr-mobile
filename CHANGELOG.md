@@ -17,6 +17,10 @@ release.
 - Errors read as plain sentences with a next step, never `code: message`.
 - The Agents board says when it last heard from your machines (“heard just now”, “heard 3m ago”), so a board that went quiet no longer looks live.
 - An answer that needs a hold says “Hold” on the chip, before you try a tap.
+- From any agent’s chat or terminal, tap its title to switch to another agent: every agent the board lists, grouped Needs you / Working / Done, with a count beside the title when others need you.
+- Swiping sideways in an agent now walks only the agents that need you, then the finished ones, and swiping back always returns where you were. The card that peeks in says what the agent asks or did last.
+- Agents in several worktrees of one folder are told apart by their branch.
+- In a page from your machine, `✕` returns to the chat from any depth; the arrow goes back one page, and holding it lists the pages of this visit. `Reload` moved into the `⋯` options.
 
 ## [0.1.44] - 2026-10-29
 

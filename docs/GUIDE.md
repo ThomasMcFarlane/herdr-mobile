@@ -294,16 +294,30 @@ checks the question before sending.
 Tap an agent on the board to open it. A terminal agent opens as its live
 terminal; an agent session opens as a chat. Back always returns to the board.
 
-**Swiping between agents.** On an agent's screen, swipe sideways to go to the
-next agent in board order (left for next, right for previous). As your finger
-moves, a card slides in showing which agent is there; let go once it has
-come far enough (it tints and ticks) to go, or bring it back to stay where
-you are. A quick flick goes at once. Swipes that start at the screen's edges
-are left to Android's back gesture, and anything that scrolls sideways (a
-wide table, a terminal with wrap off) keeps its swipe. At either end of the
-list the card says `No next agent` or `No previous agent`. With TalkBack,
-the screen's actions include `Next agent` and `Previous agent`. When the app
-is restarted, it reopens the agent screen that was in front.
+**Swiping between agents.** On an agent's screen, swipe left to go to the
+next agent that wants you: first those that need you, then those that
+finished and you have not reviewed, longest waiting first. Swipe right to go
+back the way you came. The order is fixed when you start swiping, so an
+agent you just answered stays where it was and swiping back finds it.
+Working and idle agents are not on the way; reach them from the title (below)
+or the board. As your finger moves, a card slides in showing which agent is
+there, what it asks or last said (when the app already knows), and where you
+are (`2 of 4`); let go once it says `Let go to open` (it tints and ticks), or
+bring it back to stay where you are. A quick flick goes at once. Swipes that
+start at the screen's edges are left to Android's back gesture, and anything
+that scrolls sideways (a wide table, a terminal with wrap off) keeps its
+swipe. After the last one the card says `All caught up` and how many agents
+are still working; before the first, `No previous agent`. With TalkBack, the
+screen's actions include `Next agent` and `Previous agent`, which go the same
+way. When the app is restarted, it reopens the agent screen that was in front.
+
+**Switching from the title.** The title at the top of an agent's screen has a
+small arrow after it, and a number while other agents need you. Tap it for a
+list of every agent, grouped as on the board; the one you are on says `Here`.
+Tap another to go to it (Back still returns to the board), or `All agents on
+the board` to go back. Agents in worktrees of one repo show their branch
+beside the folder, once the phone knows it (open the machine's screen to
+read the branches).
 
 ### The terminal pane
 
@@ -551,14 +565,16 @@ wrote, opens as a page inside herdr: `Open page` on a `localhost` link,
 an app or page in a session's `Made` sheet, or `Show as page` in the file
 viewer. The bar names the page, with where it comes from under the title
 (`devbox · python label_server.py` for an app opened from `Made`, which says
-what started it; `localhost:5173 · devbox` otherwise); `Reload` and `⋯` sit on
-the right. Back
-goes back in the page first, then leaves. While the page is open herdr keeps
+what started it; `localhost:5173 · devbox` otherwise). `✕` on the left closes
+the page from however deep you went; on the right, the arrow goes back one
+page (hold it for `Pages in this visit`, to jump back to any of them) and `⋯`
+holds `Reload`. The phone's Back goes back in the page first, then leaves, as
+in a browser. While the page is open herdr keeps
 its machine's connection up, also when you switch apps or turn the screen
 off, with the Watching notice (below); if the connection drops anyway, the
 page says so and comes back by itself when it is up again. A link to the web
 never opens by itself: herdr says where it leads (`github.com isn't from
-devbox.`) and `Open` takes it to your phone's browser. `⋯` holds `Copy link`
+devbox.`) and `Open` takes it to your phone's browser. `⋯` also holds `Copy link`
 (the address on the machine; `Copy path` for a file) and `Open in browser`,
 for a page that needs your phone's browser, such as a Google sign-in: the
 browser's copy works only while the page stays open in herdr. A page that
