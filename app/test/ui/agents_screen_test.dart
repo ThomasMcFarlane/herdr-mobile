@@ -263,7 +263,7 @@ void main() {
 
       expect(find.text('No agents running'), findsOneWidget);
       expect(find.byType(AppChip), findsNothing);
-      expect(find.text('2 machines · no agents'), findsOneWidget);
+      expect(find.textContaining('2 machines · no agents'), findsOneWidget);
       await teardownUi(tester, h);
     });
 

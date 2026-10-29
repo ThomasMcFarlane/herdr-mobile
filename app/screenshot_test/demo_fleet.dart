@@ -7,6 +7,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:herdr_mobile/ui/support/step_clock.dart';
 import 'package:herdr_mobile/data/models/machine_profile.dart';
 import 'package:herdr_mobile/data/repositories/app_settings.dart';
 import 'package:herdr_mobile/data/repositories/fleet_repository.dart';
@@ -283,6 +284,15 @@ class DemoFleet {
       await tester.pump(const Duration(milliseconds: 350));
     }
     _skew.ago = Duration.zero;
+    // Back on real time, the machines answer now, as a live board's poll
+    // would: otherwise the board says it last heard from them minutes ago.
+    for (final c in fleet.connections) {
+      unawaited(c.refresh());
+    }
+    await tester.pump(const Duration(milliseconds: 350));
+    // Freshness labels read on the minute step; take one now so they show it.
+    StepClock.minute.steps.value++;
+    await tester.pump();
   }
 
   /// Changes one agent's state now, as it would while the app is open.

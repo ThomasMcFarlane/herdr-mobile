@@ -147,6 +147,11 @@ class MachineConnection extends ChangeNotifier {
   Snapshot _snapshot = Snapshot.empty;
   ReviewedState? _reviewed;
   DateTime? _lastSync;
+
+  /// When the machine last said anything: a snapshot answered or an event
+  /// arrived. Not a notifier: events come many times a second, and the board
+  /// reads it on its own minute step ([heardAgo]).
+  DateTime? _lastHeard;
   bool _disposed = false;
   bool _forgotten = false;
   bool _seeding = false;
@@ -271,6 +276,14 @@ class MachineConnection extends ChangeNotifier {
   }
 
   DateTime? get lastSync => _lastSync;
+
+  /// How long ago the machine last said anything, on this connection's own
+  /// clock; null before it first has. In the background profile only status
+  /// changes and a slow poll arrive, so this can honestly be minutes.
+  Duration? heardAgo() => switch (_lastHeard) {
+    final at? => _clock().difference(at),
+    null => null,
+  };
   bool get isLive => _state == LinkState.online;
 
   bool _background = false;
@@ -625,8 +638,9 @@ class MachineConnection extends ChangeNotifier {
   Future<void> _refresh() async {
     final s = await _api.snapshot();
     if (_disposed) return;
-    _lastSync = DateTime.now();
     final now = _clock();
+    _lastSync = now;
+    _lastHeard = now;
     final rawChanged = s != _raw;
     _trackStatuses(s, now);
     _raw = s;
@@ -838,6 +852,7 @@ class MachineConnection extends ChangeNotifier {
   ///  * anything else (title, cwd)                            -> throttled.
   void _onEvent(Map<String, dynamic> event, _RefreshScheduler refresher) {
     _events++;
+    _lastHeard = _clock();
     if (event['event'] != 'pane_updated') {
       refresher.schedule(urgent: true);
       return;
