@@ -15,6 +15,8 @@ release.
 - Pressing Send on the keyboard when the agent can’t take a message now says why.
 - Removing a machine needs a hold; removing a queued message, a saved phrase or remembered messages asks or can be undone.
 - Errors read as plain sentences with a next step, never `code: message`.
+- The Agents board says when it last heard from your machines (“heard just now”, “heard 3m ago”), so a board that went quiet no longer looks live.
+- An answer that needs a hold says “Hold” on the chip, before you try a tap.
 
 ## [0.1.44] - 2026-10-29
 

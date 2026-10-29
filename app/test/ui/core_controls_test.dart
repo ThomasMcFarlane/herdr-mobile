@@ -704,6 +704,13 @@ void main() {
       expect(tester.getRect(find.byKey(const Key('below'))).top, rest);
     });
 
+    testWidgets('a held answer says so at rest; one that sends on a tap does not', (tester) async {
+      await pumpCore(tester, chip());
+      expect(find.text('Hold'), findsOneWidget, reason: 'a tap would not send it: the chip has to say');
+      await pumpCore(tester, chip(hold: false));
+      expect(find.text('Hold'), findsNothing);
+    });
+
     testWidgets('a failed held answer says it needs a hold to retry; a tapped one says Retry', (tester) async {
       await pumpCore(tester, chip(state: AnswerChipState.failed));
       expect(find.textContaining('Hold to retry'), findsOneWidget);

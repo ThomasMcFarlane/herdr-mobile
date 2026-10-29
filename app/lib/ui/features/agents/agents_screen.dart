@@ -9,13 +9,16 @@ import 'package:provider/provider.dart';
 import '../../../data/models/herdr_models.dart';
 import '../../../data/repositories/app_settings.dart';
 import '../../../data/repositories/fleet_repository.dart';
+import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/agent_session.dart';
+import '../../../data/words/elapsed.dart';
 import '../../../data/words/plural.dart';
 import '../../../data/repositories/attention_set.dart';
 import '../machines/approval_button.dart';
 
 import 'package:herdr_mobile/ui/core/kit.dart';
 
+import '../../support/step_clock.dart';
 import '../../support/tap_guard.dart';
 import '../create/new_agent_session_screen.dart';
 import '../history/past_sessions_navigation.dart';
@@ -272,11 +275,18 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
         slivers: [
           SliverLargeTitle(
             title: 'Agents',
-            subtitle: Text(
-              _summary(overview, sessionList.length),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Type.secondary.copyWith(color: ds.textSecondary),
+            // Steps once a minute, so "heard 3m ago" grows while nothing else
+            // changes: a board that went quiet says so instead of looking live.
+            subtitle: MinuteBuilder(
+              builder: (context, _) => Text(
+                [
+                  _summary(overview, sessionList.length),
+                  ?heardLabel(context.read<FleetRepository>().connections),
+                ].join(' · '),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Type.secondary.copyWith(color: ds.textSecondary),
+              ),
             ),
             actions: [
               CircleButton(
@@ -630,6 +640,23 @@ class _BackLeavesSelection extends StatelessWidget {
     },
     child: child,
   );
+}
+
+/// How fresh the board is: the connected machine heard from longest ago, so
+/// one that stopped answering shows before it is declared offline. Null when
+/// no connected machine has answered yet.
+String? heardLabel(List<MachineConnection> connections) {
+  Duration? oldest;
+  for (final c in connections) {
+    if (c.state != LinkState.online) continue;
+    final ago = c.heardAgo();
+    if (ago != null && (oldest == null || ago > oldest)) oldest = ago;
+  }
+  if (oldest == null) return null;
+  // design-lint: allow(raw-duration) the label's own resolution, not a timer
+  return oldest < const Duration(minutes: 1)
+      ? 'heard just now'
+      : 'heard ${Elapsed.compact(oldest, seconds: false)} ago';
 }
 
 String _summary(AgentsOverview o, int agentSessions) {

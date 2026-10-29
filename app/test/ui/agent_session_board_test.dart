@@ -288,7 +288,7 @@ void main() {
       await _pump(tester, e);
 
       expect(find.byType(AgentSessionRow), findsNothing);
-      expect(find.text('1 machine · 1 agent'), findsOneWidget);
+      expect(find.textContaining('1 machine · 1 agent'), findsOneWidget);
       await _teardown(tester, e);
     });
 
@@ -299,7 +299,7 @@ void main() {
 
       expect(find.text('No agents running'), findsNothing);
       expect(_row('Only one'), findsOneWidget);
-      expect(find.text('1 machine · no agents · 1 agent session'), findsOneWidget);
+      expect(find.textContaining('1 machine · no agents · 1 agent session'), findsOneWidget);
       await _teardown(tester, e);
     });
 
