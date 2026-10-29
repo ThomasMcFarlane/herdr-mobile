@@ -440,12 +440,13 @@ fn main() {
             }
             app.settle_queue();
         }
-        app.attend();
-        app.report();
-        // The turn just ended: the next queued message goes out at once.
+        // The turn just ended: the next queued message goes out at once, before herdr or the
+        // window title are told the pane is idle.
         if app.pump_queue() {
             continue;
         }
+        app.attend();
+        app.report();
         let working_secs = app.turn_started.map(|t| t.elapsed().as_secs());
         let ctx = ui::Frame_ {
             transcript: &app.transcript,
@@ -1374,6 +1375,10 @@ impl App {
             return;
         };
         self.confirm = None;
+        // Withdrawing a permission ends the turn by the person's own hand: the queue goes on.
+        if self.session.permission_waiting() {
+            self.stop_requested = true;
+        }
         let result = self
             .session
             .dismiss_for(&shown, self.now_ms(), &mut self.transcript);
@@ -1539,6 +1544,10 @@ impl App {
 
     /// Puts a queued message (the newest, or the one with `id`) back into the box to edit.
     fn take_back(&mut self, id: Option<u64>) {
+        // A question's box is the question's: what lands there would be wiped or sent as an answer.
+        if self.asking_question() {
+            return;
+        }
         if !self.composer.text.is_empty() || !self.files.is_empty() {
             self.hint = Some("Send or clear what you are typing first".to_string());
             return;

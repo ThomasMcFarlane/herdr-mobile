@@ -80,6 +80,8 @@ pub struct View {
     /// Per screen row of the queue above the input, the message drawn there, and its first row.
     queue_ids: Vec<Option<u64>>,
     queue_top: u16,
+    /// How many queued messages had no room to be drawn, as last drawn.
+    queue_hidden: usize,
     /// A block that was clicked open or closed, and the screen row its first line was on: it
     /// stays there while it changes height, as far as showing what it opened allows.
     anchor: Option<(u64, usize)>,
@@ -1130,6 +1132,8 @@ pub fn draw(f: &mut Frame, ctx: &Frame_, v: &mut View) {
     }
     v.queue_ids = queue_ids;
     v.queue_top = queue.y;
+    // Said in the footer when the rows had no room, so a short pane never swallows a message.
+    v.queue_hidden = if queue_h == 0 { ctx.queue.len() } else { 0 };
     if chips_h > 0 {
         f.render_widget(Paragraph::new(chips_line(&v.chips, w, theme)), chips);
     }
@@ -1471,6 +1475,12 @@ fn footer_left(ctx: &Frame_, v: &View) -> Vec<Span<'static>> {
         if !ctx.composer.text.trim().is_empty() {
             out.push(Span::styled(" · Enter queues", theme.dim()));
         }
+        if v.queue_hidden > 0 {
+            out.push(Span::styled(
+                format!(" · {} queued", v.queue_hidden),
+                theme.dim(),
+            ));
+        }
         out.push(Span::styled(
             if ctx.queue.has_waiting() {
                 " · Ctrl-C stops and sends queued"
@@ -1480,6 +1490,13 @@ fn footer_left(ctx: &Frame_, v: &View) -> Vec<Span<'static>> {
             theme.dim(),
         ));
         return out;
+    }
+    // A held queue whose rows did not fit on a short screen: the way on is said here instead.
+    if v.queue_hidden > 0 && ctx.queue.has_held() {
+        return vec![Span::styled(
+            format!("{} queued, held · Enter resumes", v.queue_hidden),
+            theme.warn(),
+        )];
     }
     // Idle, and a newer herdr-tui has been installed: say so, and how to load it. Not while a
     // turn runs or a request waits, when something else is the thing to look at.
@@ -4318,6 +4335,17 @@ mod tests {
         assert!(!rows.iter().any(|r| r.contains('↳')), "{rows:#?}");
         assert!(
             rows.iter().any(|r| r.contains("› Queue a message")),
+            "{rows:#?}"
+        );
+        // The rows had no room, so the footer is where a message is not swallowed silently.
+        let footer = rows.last().expect("a footer");
+        assert!(footer.contains("2 queued"), "{footer:?}");
+        let mut held = queued(&["first", "second"]);
+        held.hold_all("the turn failed");
+        let rows = state_rows(&Transcript::default(), &Composer::default(), &held, 60, 10);
+        assert!(
+            rows.last()
+                .is_some_and(|r| r.contains("2 queued, held · Enter resumes")),
             "{rows:#?}"
         );
     }

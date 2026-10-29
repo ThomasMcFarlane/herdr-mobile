@@ -378,6 +378,10 @@ impl Session {
                 },
                 Err(e),
             ) => {
+                // A prompt the agent refused outright is a failed turn: a queue behind it holds.
+                if e.code != code::SESSION_BUSY {
+                    tr.set_stop("error");
+                }
                 tr.note(if e.code == code::SESSION_BUSY {
                     "The agent is busy; not sent".to_string()
                 } else {
@@ -1016,6 +1020,22 @@ mod tests {
             }]
         );
         assert!(!s.prompting());
+    }
+
+    #[test]
+    fn a_prompt_the_agent_fails_is_a_failed_turn_for_the_queue_but_a_busy_one_is_not() {
+        let fail = |c: i64| {
+            let (mut s, mut tr) = ready();
+            s.send("hello", &[], &mut tr).expect("sent");
+            s.handle(
+                Event::Message(Message::error(Id::Num(3), RpcError::new(c, "no"))),
+                0,
+                &mut tr,
+            );
+            tr.take_stop()
+        };
+        assert_eq!(fail(code::METHOD_NOT_FOUND).as_deref(), Some("error"));
+        assert_eq!(fail(code::SESSION_BUSY), None);
     }
 
     #[test]

@@ -191,6 +191,12 @@ impl Transcript {
         self.stop.take()
     }
 
+    /// Records why the turn that just ended stopped, when no `turn_end` carried it (a prompt the
+    /// agent answered with an error).
+    pub fn set_stop(&mut self, reason: &str) {
+        self.stop = Some(reason.to_string());
+    }
+
     /// Whether the agent is working on a turn.
     #[must_use]
     pub fn running(&self) -> bool {
