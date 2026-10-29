@@ -253,7 +253,7 @@ void main() {
     expect(web.loaded.first.queryParameters['to'], '/app');
     expect(launcher.opened, isEmpty, reason: 'not the phone’s browser');
 
-    await tester.tap(find.byTooltip('Back'));
+    await tester.tap(find.byTooltip('Close page'));
     await _settle(tester);
     expect(find.byType(WebPreviewScreen), findsNothing);
     expect(find.text('Made in this session'), findsOneWidget, reason: 'Back lands on the list, not on the board');

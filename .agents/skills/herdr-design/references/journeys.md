@@ -13,7 +13,7 @@ shape itself changes, update this file.
 | Overview | the Agents board (every agent on every machine, by what it needs), the Machines tab |
 | Attention | the needs-you notification, the in-app arrival haptic, the badge, the triage pill and sheet |
 | Answer | the board card's chips, the reply sheet, the pane's answer dock, the session's prompt dock, the notification's buttons |
-| Follow | an agent screen: the terminal pane (live edge, jump pill) or the agent session (transcript, status line, overview, background strip), the swipe to the next agent in the board's order, the options' `Show terminal` / `Show chat` |
+| Follow | an agent screen: the terminal pane (live edge, jump pill) or the agent session (transcript, status line, overview, background strip), the swipe along the agents that want the person, the options' `Show terminal` / `Show chat` |
 | Steer | the composers, the key row, the slash and command palettes, quick phrases, the attach sheet, mode and model |
 | Start | the `+` (Agents tab, machine screen), the new agent session form, Duplicate, past sessions |
 | Review | the done section, swipe to review, Mark all reviewed, the Changed card, the file viewer, the photo viewer |
@@ -71,10 +71,14 @@ these already means it.
   doing now and for how long → what changed since they last looked → jump to the
   latest when they want it → swipe to the next agent, or back.
 - **Switching.** One agent per screen; the board is the only list of agents.
-  A sideways swipe inside the screen shows the next (or previous) agent in
-  the board's order, needs-you first, coming in with the finger; letting go
-  far enough (or with a flick) goes there, replacing the screen, so Back
-  always lands on the board; letting go short takes the card back. An agent
+  A sideways swipe inside the screen walks the agents that want the person
+  (needs you, then done, in the board's attention order), coming in with the
+  finger; the walk's order is frozen when it starts, so a swipe back
+  retraces it exactly (read live, answering the agent in front moved it and
+  the way back was lost). Letting go far enough (or with a flick) goes
+  there, replacing the screen, so Back always lands on the board; letting go
+  short takes the card back. Working and idle agents are reached from the
+  title or the board, not the walk. An agent
   with both views has `Show terminal` in the
   chat's options and `Show chat` in the terminal's options; it swaps the view
   in place, and the view chosen and an unsent draft stay with the agent for
@@ -86,7 +90,8 @@ these already means it.
   - the terminal pane and the agent session offer the same jump and since-you-left
     behaviour;
   - the swipe never takes a gesture from content that scrolls sideways or from
-    the system's edge back gesture; at either end nothing moves, and it says so.
+    the system's edge back gesture; at either end nothing moves, and it says so
+    (`All caught up` at the end of the walk).
 
 ### 4. Steer it
 

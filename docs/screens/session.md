@@ -7,9 +7,9 @@ The design system (tokens, kit, motion, words) is `docs/DESIGN.md`; this file ho
 ## Agent session screen (ACP)
 
 Slim bar like the pane bar (status glyph by phase, title over
-`agent · machine · folder`, a tap on the title area opens the session
-overview, `Session options`, which also holds `Show terminal` for a followed
-pane's chat); plan header (`1 of 3` + the
+`agent · machine · folder`, a tap on the title area opens the agent
+switcher (`docs/screens/agent-screens.md`), `Session options`, which holds the
+session overview and `Show terminal` for a followed pane's chat); plan header (`1 of 3` + the
 current step); a virtualized transcript stuck to the bottom with Jump to
 latest; the permission dock; the composer (send becomes stop while a turn
 runs). The permission dock is a safety surface: the command is always visible
@@ -396,8 +396,8 @@ desktop only (2,001 items, JIT): 43-91 ms for the first frame before, 2.4-3.7 ms
 after; not measured on a phone.
 
 **Session overview** (`session_overview.dart`,
-`session_overview_model.dart`). A tap on the bar's title area, or `Session
-overview` in the options sheet, opens a sheet (`showAppSheet`: it stops below
+`session_overview_model.dart`). `Session overview` in the options sheet
+opens a sheet (`showAppSheet`: it stops below
 the status bar and scrolls when it is taller than the room). In order: the status in words and how long
 (`Working · 4 min`), `Goal` (the first message, three lines), `Plan · 1 of 3
 done` with a thin bar and the step in progress, `Changed · 12 files +310 −42`

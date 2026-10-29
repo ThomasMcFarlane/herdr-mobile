@@ -1196,7 +1196,7 @@ void main() {
         expect(find.text('The machine doesn’t allow port forwarding.'), findsOneWidget);
         expect(web.loaded, isEmpty);
         expect(launcher.opened, isEmpty);
-        await tester.tap(find.byTooltip('Back'));
+        await tester.tap(find.byTooltip('Close page'));
         await _settle(tester);
         await tapText(tester, 'listening on', column: 16);
         expect(find.text('Copy link'), findsOneWidget);

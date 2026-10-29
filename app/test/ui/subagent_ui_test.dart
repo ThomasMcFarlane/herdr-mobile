@@ -795,16 +795,11 @@ void main() {
       expect(find.text('Context 91%'), findsOneWidget);
     });
 
-    testWidgets('a tap on the title opens the overview; the options sheet has it too', (tester) async {
+    // The title switches agent (agent_switcher_test.dart); the overview is in
+    // the options.
+    testWidgets('the options sheet opens the overview', (tester) async {
       final session = withContext(40);
       await _pump(tester, _app(SessionBar(session: session)));
-      await tester.tap(find.text('payments-api'));
-      await tester.pumpAndSettle();
-      expect(find.text('Session overview'), findsOneWidget);
-      await tester.tapAt(const Offset(10, 10));
-      await tester.pumpAndSettle();
-      expect(find.text('Session overview'), findsNothing);
-
       await tester.tap(find.byTooltip('Session options'));
       await tester.pumpAndSettle();
       expect(find.text('Session overview'), findsOneWidget);
