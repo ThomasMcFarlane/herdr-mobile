@@ -4,17 +4,40 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
-## [Unreleased]
+## [0.1.44] - 2026-10-29
 
-- In `herdr-tui`, pressing `Enter` while the agent works now queues the message: it
-  waits above the box as `↳` and goes out when the turn ends, one at a time. `Backspace`
-  on an empty box, or a click on its row, takes one back to edit. If the turn failed or was stopped elsewhere the
-  queue is held (`Held · … · Enter resumes`); your own `Ctrl-C` lets it go on, with
-  what you typed meanwhile as one message. Leaving with messages queued asks twice and
-  prints `Not sent:` for each.
-- `herdr-tui` is calmer: the working row is still (`Working 12s`), folds open at once,
-  `▲ Needs you` does not pulse or repeat in the footer, finished tool calls carry no
-  `✓`, the rule above the box no longer carries the title, and `ctx` shows from 60 %.
+### Queue messages while the agent works
+
+In `herdr-tui`, press `Enter` while the agent is busy and the message waits
+above the box as `↳`. When the turn ends it is sent, one at a time, as on
+the phone.
+
+> [!TIP]
+> Try it: start a turn, type a message and press `Enter`. Press Backspace on
+> the empty box, or click the queued row, to take it back and edit it.
+
+- `Ctrl-C` stops the turn and sends what is queued at once; several messages
+  typed meanwhile go as one.
+- If the turn failed, the agent refused, or the turn was stopped from
+  elsewhere, the queue is held (`Held · … · Enter resumes`); `Enter` on an
+  empty box lets it go on.
+- Leaving with messages queued asks twice; `/new` and `Ctrl-R` refuse. On exit
+  each unsent message is printed as `Not sent:`. The queue holds 10 messages
+  and lives only in that `herdr-tui`.
+- On a very short pane the footer says `N queued` when there is no room to
+  list them.
+
+### A calmer desk client
+
+Nothing in `herdr-tui` moves any more except the elapsed counter while a turn
+runs.
+
+- The working row is still: `● Working 12s · Ctrl-C stops`. The spinner, the
+  changing word and the tips are gone, and a fold opens at once.
+- `▲ Needs you` is said once, on its panel, and no longer pulses or repeats in
+  the footer.
+- Finished tool calls carry no `✓`, so a `✗` stands out. The rule above the box
+  no longer carries the session title, and `ctx` shows from 60 %.
 
 ## [0.1.43] - 2026-10-28
 
