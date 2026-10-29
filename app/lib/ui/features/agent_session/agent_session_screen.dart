@@ -64,7 +64,7 @@ const _bottomShare = 0.8;
 /// nothing else.
 ///
 /// Opened as an agent ([agent], see `openAgent`), a swipe on the transcript
-/// goes to the next agent in the board's order, an agent in a pane has `Show
+/// goes to the next agent that wants the person, an agent in a pane has `Show
 /// terminal` in the options sheet, and the draft is kept outside the
 /// screen. A subagent's transcript is not an agent of the board: it has none
 /// of those.
@@ -603,7 +603,7 @@ class _AgentSessionScreenState extends State<AgentSessionScreen> with WidgetsBin
       backgroundColor: ds.bg,
       body: Column(
         children: [
-          SessionBar(session: widget.session),
+          SessionBar(session: widget.session, agent: widget.agent),
           _LinkStrip(session: widget.session, agent: widget.agent),
           Expanded(
             // Shares are worked out when the area is laid out, not when it is
