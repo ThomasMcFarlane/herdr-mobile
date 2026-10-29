@@ -390,7 +390,7 @@ abstract final class Mono {
     fontFeatures: noLigatures,
   );
 
-  /// Commands, paths, code blocks, the subject of a question.
+  /// Commands, paths, code blocks.
   static const base = TextStyle(
     fontFamily: monoFamily,
     fontSize: 12.5,
@@ -399,7 +399,8 @@ abstract final class Mono {
     fontFeatures: noLigatures,
   );
 
-  /// Typed shell text and key caps.
+  /// Typed shell text, key caps, and the subject of a question (what an
+  /// answer approves is the largest thing on its wash).
   static const input = TextStyle(
     fontFamily: monoFamily,
     fontSize: 13.5,

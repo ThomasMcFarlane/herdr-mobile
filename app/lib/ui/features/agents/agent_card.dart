@@ -42,7 +42,7 @@ const replyGutter = kMinTap - Gap.xs;
 /// one-tap answers.
 ///
 /// The card's height depends only on its status and the prompt (its question,
-/// its subject and its option count), never on how many lines have arrived or
+/// its subject and how its answers group, see `ReplyLayout`), never on how many lines have arrived or
 /// on the state of the chips, so the board does not jump while a preview fills
 /// in. It watches its pane's preview only while it is built and on a screen
 /// the person can see (a virtualised list builds the ones near the screen; a
@@ -203,8 +203,7 @@ class _AgentCardState extends State<AgentCard>
     final rows = previewRowCount(a.status);
     final shown = prompt == null ? math.max(rows, 0) : 0;
     final slim = rows == 0;
-    final chips = prompt == null ? 0 : ReplyChips.count(prompt);
-    final chipsHeight = ReplyChips.heightFor(chips);
+    final chipsHeight = prompt == null ? 0.0 : ReplyChips.heightFor(prompt);
     final canReply = !a.stale;
     // The answers are deaf and dimmed while they are new under the thumb: the
     // card's own guard (its question changed, or it grew) or the board's gate

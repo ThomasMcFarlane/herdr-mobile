@@ -47,6 +47,12 @@ enum AnswerChipTone {
 
   /// The answer stops or ends something: danger words, a danger wash at rest.
   danger,
+
+  /// The answer declines (`3. No`): no fill at rest and secondary words, so
+  /// it reads apart from the filled answers that allow. Pressed, it fills
+  /// like any chip. Why: as one more identical fill, `No` looked like the
+  /// `Yes, don't ask again` above it.
+  quiet,
 }
 
 /// One answer to an agent: the option text exactly as the agent gave it, on a
@@ -167,6 +173,7 @@ class AnswerChip extends StatelessWidget {
   Widget _body(BuildContext context, {required bool pressed, HoldState? hold}) {
     final ds = context.ds;
     final danger = tone == AnswerChipTone.danger;
+    final quiet = tone == AnswerChipTone.quiet;
     final showsHold = hold?.showsHold ?? false;
     final (bg, pressedBg, fg, edge) = switch (state) {
       AnswerChipState.primed => (ds.wash(ds.danger), ds.washPressed(ds.danger), ds.dangerText, ds.armedEdge(ds.danger)),
@@ -174,6 +181,7 @@ class AnswerChip extends StatelessWidget {
       AnswerChipState.failed => (ds.wash(ds.danger), ds.washPressed(ds.danger), ds.dangerText, null),
       AnswerChipState.changed => (ds.blockedWash, ds.blockedWash, ds.blockedText, null),
       _ when danger => (ds.wash(ds.danger), ds.washPressed(ds.danger), ds.dangerText, null),
+      _ when quiet => (Colors.transparent, ds.fill, ds.textSecondary, null),
       _ => (ds.fill, ds.fillPressed, ds.text, null),
     };
     final shown = showsHold
