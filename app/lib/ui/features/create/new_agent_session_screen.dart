@@ -266,6 +266,10 @@ class _FormState extends State<_Form> {
                                   helper: 'An absolute path on the machine',
                                   keyboardType: TextInputType.url,
                                   textInputAction: TextInputAction.done,
+                                  // Done on the keyboard is Start, as the button says.
+                                  onSubmitted: (_) {
+                                    if (_vm.canStart) unawaited(_start(open: false));
+                                  },
                                   validator: agentFolderError,
                                   suffix: machine == null || !machineSupportsFiles(machine)
                                       ? null

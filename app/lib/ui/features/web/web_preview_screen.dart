@@ -288,7 +288,7 @@ class _WebPreviewScreenState extends State<WebPreviewScreen> {
       _fail(
         'Couldn’t open this page',
         e.kind == RemoteFileErrorKind.notFound
-            ? '${visibleText(widget.page.label)} is not on the machine any more.'
+            ? '${visibleText(widget.page.label)} isn’t on the machine any more.'
             : visibleText(e.message),
         at,
       );
@@ -574,7 +574,7 @@ class _WebPreviewScreenState extends State<WebPreviewScreen> {
         'The server on $machine closed the connection without an answer. Is it still running? Retry asks again.',
       _ when error.description.contains('CONNECTION_RESET') =>
         'The connection to $machine broke while the page loaded. Retry asks again.',
-      _ => 'It didn’t load (${error.description}). Retry asks again.',
+      _ => 'It didn’t load. Retry asks again.',
     };
   }
 

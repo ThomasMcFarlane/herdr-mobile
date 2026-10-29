@@ -527,8 +527,8 @@ final List<KitEntry> kitCatalog = [
       'icon, message, action',
       (c) => const EmptyState(
         icon: LucideIcons.bot,
-        title: 'No agents yet',
-        message: 'Start one on a machine and it shows here, with what it needs from you.',
+        title: 'No agents running',
+        message: 'Start one in herdr and it shows here.',
         action: AppButton(label: 'Add machine', onPressed: _noop),
       ),
     ),

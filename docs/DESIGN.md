@@ -29,7 +29,7 @@ without one gets deleted by the next person who does not understand it.
    a slash (`StatusGlyph.failed`, `.cancelled`: not agent statuses, so
    `AgentStatus` is unchanged). Readable without colour.
 5. **Hairlines, not elevation.** One physical pixel. The one shadow is
-   `Ds.floatShadow`, for the floating bars and pills. Transient messages are on
+   `Ds.floatShadow`, for the floating bars and pills (two layers on paper; on ink a faint light ring, because a black shadow vanishes on near-black). Transient messages are on
    the inverse surface instead. No backdrop blur: a full-screen blur pass per
    frame is too expensive on a mid-range GPU (Telegram's own fallback is a flat
    colour). Chrome text stops growing at `kBarTextScale` (1.15).
@@ -100,7 +100,8 @@ named by its role, so every timing lives in `motion.dart` and is tuned there.
 | `surface` | `#FFFFFF` | `#16171A` | raised: sheets, inputs, floating bars |
 | `fill` / `fillPressed` | `#F1F0EE` / `#E8E7E4` | `#1C1D21` / `#25262B` | controls, panels in content |
 | `hairline` | `#EAE9E6` | `#24262A` | dividers |
-| `border` | `#D3D1CC` | `#3A3D44` | input outline only |
+| `border` | `#D3D1CC` | `#3A3D44` | decorative outline: diagram boxes, table rules, quote bars |
+| `controlBorder` | `#8F8E8A` | `#60646D` | the edge of a field or picker (3:1 on `surface`, WCAG 1.4.11) |
 | `text` | `#37352F` | `#ECEDEF` | titles, values |
 | `textSecondary` | `#5F5E5A` | `#8D9098` | subtitles, labels, unselected tabs |
 | `textMuted` | `#6E6D69` | `#868993` | meta lines, counts, helper text |
@@ -199,7 +200,7 @@ does not.
 | Token | ms | Use |
 | --- | --- | --- |
 | `press` / `release` | 100 / 180 | a control under the finger (`Motion.pressing`) |
-| `fade` | 120 | an opacity-only change: tab switch, reduced-motion page |
+| `fade` | 120 | an opacity-only change: the bars swapping in place, reduced-motion page. A tab switch has none |
 | `standard` | 200 | a state change, a small element |
 | `expand` | 220 | a section opening, a scroll the app makes |
 | `settle` | 240 | a one-shot draw-in: glyph, badge arriving, a number rolling |
@@ -518,7 +519,7 @@ follows:
 `tool/design_lint.dart` runs in `tool/check.sh` and CI. Rules: `raw-color`,
 `raw-type`, `raw-alpha`, `raw-radius`, `raw-duration`, `raw-curve`,
 `raw-spring`, `raw-size` (screens), `raw-haptic`, `clipboard`, `material`,
-`modal-sheet`, `spinner` (`BusySpinner` only), `loop`, `kit-import` (features
+`voice` (curly apostrophes, contractions), `modal-sheet`, `spinner` (`BusySpinner` only), `loop`, `kit-import` (features
 import `kit.dart` only) and `layer` (the kit imports nothing above it;
 renderers import no feature; `data/words` is pure Dart). Rules match across
 lines, so a wrapped argument list is checked whole. A size used once in a

@@ -75,6 +75,7 @@ class Toaster {
   /// the `MaterialApp`).
   factory Toaster.of(BuildContext context) {
     final overlay = Overlay.maybeOf(context, rootOverlay: true);
+    // design-lint: allow(voice) a developer assertion, never shown to a person
     assert(overlay != null, 'showToast needs a context under the app\'s Navigator.');
     return Toaster(overlay!);
   }

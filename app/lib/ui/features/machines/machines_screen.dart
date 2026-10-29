@@ -112,6 +112,8 @@ class _MachineRow extends StatelessWidget {
           'The saved connection and its credentials are deleted from this '
           'phone. Agents on the machine keep running.',
       confirmLabel: 'Remove',
+      // Credentials are deleted and cannot be brought back: a hold, not a tap.
+      hold: true,
     );
     if (ok) await repo.remove(p.id);
   }
@@ -217,7 +219,7 @@ class _MachineRow extends StatelessWidget {
               const SizedBox(width: Gap.xs),
               CircleButton(
                 icon: LucideIcons.ellipsis,
-                tooltip: 'More',
+                tooltip: 'More options for ${p.label}',
                 filled: false,
                 size: CircleButton.compact,
                 onPressed: () => _menu(context),

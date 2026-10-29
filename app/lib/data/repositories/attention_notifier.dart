@@ -630,7 +630,7 @@ class AttentionNotifier {
           title: answerNotSentTitle,
           body: outcome == AnswerOutcome.changed
               ? 'The question changed, so nothing was sent. Tap to see it.'
-              : 'Could not reach ${machine ?? 'the machine'}, so nothing was sent. Tap to open the agent.',
+              : 'Couldn’t reach ${machine ?? 'the machine'}, so nothing was sent. Tap to open the agent.',
           link: agentLinkFor(answer.machineId, answer.paneId),
         );
         unawaited(_safe(() => _notifier.show(notification)));

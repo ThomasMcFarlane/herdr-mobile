@@ -16,10 +16,10 @@ abstract final class Motion {
   /// first, like the entrance. A plain reverse of [easeOut] would be ease-in.
   static final easeOutExit = easeOut.flipped;
 
-  /// [parent] through [easeOut], and through [easeOutExit] when it reverses.
+  /// [parent] through [easeOut], and through [easeOutExit] when it reverses,
+  /// continuing from where it is if it reverses mid-flight ([ExitCurvedAnimation]).
   /// Every curved animation that can run both ways uses this.
-  static CurvedAnimation curved(Animation<double> parent) =>
-      CurvedAnimation(parent: parent, curve: easeOut, reverseCurve: easeOutExit);
+  static ExitCurvedAnimation curved(Animation<double> parent) => ExitCurvedAnimation(parent);
 
   /// Press-down feedback: snap in.
   static const press = Duration(milliseconds: 100);
@@ -81,6 +81,37 @@ abstract final class Motion {
   /// Duration for a control's pressed/released colour and scale: snap in,
   /// ease out.
   static Duration pressing(bool down) => down ? press : release;
+}
+
+/// [Motion.easeOut] forward and [Motion.easeOutExit] in reverse, without the
+/// jump a plain `CurvedAnimation(reverseCurve:)` makes when it turns round
+/// mid-flight: it swaps curves at the same controller value, so a toast
+/// replaced a third of the way in goes from ~0.8 shown to ~0.03. The exit
+/// instead starts from what is on screen and runs the exit curve to zero.
+class ExitCurvedAnimation extends Animation<double> with AnimationWithParentMixin<double> {
+  ExitCurvedAnimation(this.parent);
+
+  @override
+  final Animation<double> parent;
+
+  /// The parent's value when the current exit began, once read.
+  double? _from;
+
+  @override
+  double get value {
+    final p = parent.value;
+    if (parent.status != AnimationStatus.reverse) {
+      _from = null;
+      return Motion.easeOut.transform(p);
+    }
+    final from = _from ??= p;
+    if (from <= 0) return 0;
+    return Motion.easeOut.transform(from) * Motion.easeOutExit.transform((p / from).clamp(0.0, 1.0));
+  }
+
+  /// Nothing to release (it holds no listener of its own); kept so it can
+  /// stand in for the `CurvedAnimation` it replaces.
+  void dispose() {}
 }
 
 /// How far a control shrinks under the finger, by its size: the bigger the

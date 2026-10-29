@@ -204,7 +204,7 @@ class BottomStackTransition extends StatefulWidget {
 
 class _BottomStackTransitionState extends State<BottomStackTransition> with SingleTickerProviderStateMixin {
   late final AnimationController _shown = AnimationController(vsync: this, value: widget.visible ? 1 : 0);
-  late final CurvedAnimation _curve = Motion.curved(_shown);
+  late final ExitCurvedAnimation _curve = Motion.curved(_shown);
 
   @override
   void didUpdateWidget(BottomStackTransition old) {

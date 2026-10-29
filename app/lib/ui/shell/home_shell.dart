@@ -71,12 +71,6 @@ class _HomeShellState extends State<HomeShell> with RestorationMixin, SingleTick
   // there.
   final _scrolls = List.generate(3, (_) => ScrollController());
 
-  // A tab switch fades the incoming content in: opacity only, no slide, and
-  // not at all under reduced motion. Rests at 1, so nothing is composited
-  // outside the 120 ms of a switch.
-  late final _fade = AnimationController(vsync: this, duration: Motion.fade, value: 1);
-  late final _opacity = Motion.curved(_fade);
-
   @override
   String get restorationId => 'home';
 
@@ -107,8 +101,6 @@ class _HomeShellState extends State<HomeShell> with RestorationMixin, SingleTick
     for (final s in _scrolls) {
       s.dispose();
     }
-    _opacity.dispose();
-    _fade.dispose();
     super.dispose();
   }
 
@@ -123,9 +115,6 @@ class _HomeShellState extends State<HomeShell> with RestorationMixin, SingleTick
       _toTop(i);
       return;
     }
-    // From zero before the new tab is built, so it never shows a frame at
-    // full opacity first.
-    if (!Motion.reduced(context)) _fade.forward(from: 0);
     setState(() => _tab.value = i);
     widget.onTabChanged?.call(i);
   }
@@ -163,47 +152,39 @@ class _HomeShellState extends State<HomeShell> with RestorationMixin, SingleTick
       body: Stack(
         children: [
           // Hidden tabs must not keep ticking, and do not rebuild with the fleet.
-          // The incoming tab fades in (see [_fade]); the outgoing one is simply
-          // gone, so two tabs never overlap. The Agents list scrolls on the
+          // The incoming tab shows at once and the outgoing one is simply gone:
+          // a tab switch is the most repeated action in the app, and a fade
+          // from zero made quick taps blink. The Agents list scrolls on the
           // shell's own controller, not the route's primary one that all three
           // tabs would share.
           IndexedStack(
             index: index,
             children: [
-              FadeTransition(
-                opacity: _opacity,
-                child: TickerMode(
-                  enabled: index == _agents,
-                  child: PrimaryScrollController(
-                    controller: _scrolls[_agents],
-                    child: AgentsScreen(
-                      onShowMachines: () => _select(_machines),
-                      onSelectingChanged: (selecting) => _selecting.value = selecting,
-                      current: index == _agents,
-                    ),
+              TickerMode(
+                enabled: index == _agents,
+                child: PrimaryScrollController(
+                  controller: _scrolls[_agents],
+                  child: AgentsScreen(
+                    onShowMachines: () => _select(_machines),
+                    onSelectingChanged: (selecting) => _selecting.value = selecting,
+                    current: index == _agents,
                   ),
                 ),
               ),
-              FadeTransition(
-                opacity: _opacity,
-                child: TickerMode(
-                  enabled: index == _machines,
-                  child: _machinesOpened
-                      ? PrimaryScrollController(controller: _scrolls[_machines], child: const MachinesScreen())
-                      : const SizedBox.shrink(),
-                ),
+              TickerMode(
+                enabled: index == _machines,
+                child: _machinesOpened
+                    ? PrimaryScrollController(controller: _scrolls[_machines], child: const MachinesScreen())
+                    : const SizedBox.shrink(),
               ),
-              FadeTransition(
-                opacity: _opacity,
-                child: TickerMode(
-                  enabled: index == _settings,
-                  child: _settingsOpened
-                      ? PrimaryScrollController(
-                          controller: _scrolls[_settings],
-                          child: SettingsScreen(update: widget.update),
-                        )
-                      : const SizedBox.shrink(),
-                ),
+              TickerMode(
+                enabled: index == _settings,
+                child: _settingsOpened
+                    ? PrimaryScrollController(
+                        controller: _scrolls[_settings],
+                        child: SettingsScreen(update: widget.update),
+                      )
+                    : const SizedBox.shrink(),
               ),
             ],
           ),

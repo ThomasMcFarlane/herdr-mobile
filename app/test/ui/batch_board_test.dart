@@ -279,7 +279,7 @@ void main() {
       expect(find.byType(FloatingTabBar), findsOneWidget, reason: 'Machines has its tab bar');
       tabs.select(HomeTab.agents);
       await _settle(tester);
-      expect(_selected(1), findsOneWidget, reason: 'a running batch is not cancelled by a tab switch');
+      expect(_selected(1), findsOneWidget, reason: 'a running batch isn’t cancelled by a tab switch');
       expect(find.text('Closing 1 agent…'), findsOneWidget);
       expect(find.byType(FloatingTabBar), findsNothing);
 
@@ -332,7 +332,7 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('a collapsed section is not "visible": All leaves it out', (tester) async {
+    testWidgets('a collapsed section isn’t "visible": All leaves it out', (tester) async {
       final h = await _studio(_ten());
       await _pump(tester, h);
       await _tap(tester, find.descendant(of: find.byType(SectionLabel), matching: find.text('Done')));
@@ -595,7 +595,7 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('a blocked agent is not typed into unless "Send anyway" is on', (tester) async {
+    testWidgets('a blocked agent isn’t typed into unless "Send anyway" is on', (tester) async {
       final h = await _studio(_ten());
       await _pump(tester, h);
       await _pick(tester, ['task 8', 'task 4']);
@@ -661,7 +661,7 @@ void main() {
       expect(_confirm('Message 3 agents'), findsOneWidget);
 
       await h.changeStatuses(tester, 'a', [_pane(1, 'blocked'), _pane(2, 'idle'), _pane(3, 'blocked')]);
-      expect(tester.widget<SwitchRow>(find.byType(SwitchRow)).value, isFalse, reason: 'it was not meant for task 1');
+      expect(tester.widget<SwitchRow>(find.byType(SwitchRow)).value, isFalse, reason: 'it wasn’t meant for task 1');
       expect(_confirm('Message 1 agent'), findsOneWidget);
       await teardownBoard(tester, h);
     });
@@ -704,7 +704,7 @@ void main() {
       await _tap(tester, find.text('Close'));
 
       expect(find.text('Close agents'), findsOneWidget);
-      expect(find.textContaining('cannot be undone'), findsOneWidget);
+      expect(find.textContaining('can’t be undone'), findsOneWidget);
       expect(find.text('task 6'), findsNWidgets(2));
       expect(find.text('task 7'), findsNWidgets(2));
       expect(_confirm('Close 2 agents'), findsOneWidget);
@@ -793,7 +793,7 @@ void main() {
     });
 
     testWidgets(
-      'a blocked session is never offered the switch, and sessions that cannot take a message are not sent one',
+      'a blocked session is never offered the switch, and sessions that can’t take a message are not sent one',
       (tester) async {
         final h = await _studio([_pane(1, 'blocked')]);
         final working = session(h, 'k1', 'agent one', state: stateWith(turnActive: true));
@@ -830,7 +830,7 @@ void main() {
       },
     );
 
-    testWidgets('a session that is not live can be neither closed nor messaged', (tester) async {
+    testWidgets('a session that isn’t live can be neither closed nor messaged', (tester) async {
       final h = await _studio([_pane(1, 'idle')]);
       final gone = session(h, 'k1', 'agent one')..setLink(AgentLink.reconnecting);
       final sessions = _Sessions([gone]);

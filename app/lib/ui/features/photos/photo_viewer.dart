@@ -140,7 +140,7 @@ class PhotoViewerState extends State<PhotoViewer> with SingleTickerProviderState
   );
   final _dismiss = ValueNotifier<double>(0);
   late final AnimationController _chrome = AnimationController(vsync: this, duration: Motion.standard, value: 1);
-  late final CurvedAnimation _chromeCurve = Motion.curved(_chrome);
+  late final ExitCurvedAnimation _chromeCurve = Motion.curved(_chrome);
   final _chromeKey = GlobalKey();
   late final ThemeData _theme = AppTheme.dark();
 
