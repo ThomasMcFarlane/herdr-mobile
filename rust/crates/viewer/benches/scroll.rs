@@ -10,6 +10,7 @@
 
 use acp::{Id, Message, SessionUpdate};
 use herdr_tui::composer::Composer;
+use herdr_tui::queue::Queue;
 use herdr_tui::session::{Event, Record, Session, Start};
 use herdr_tui::theme::Theme;
 use herdr_tui::transcript::Transcript;
@@ -196,6 +197,7 @@ fn main() {
     let mut term = Terminal::new(TestBackend::new(W, H)).expect("a test terminal");
     let theme = Theme::detect(None);
     let working_secs: u64 = 5;
+    let queue = Queue::default();
 
     // Warm up: allocations and caches settle before anything is measured.
     for _ in 0..24 {
@@ -211,9 +213,7 @@ fn main() {
             theme,
             hint: None,
             working_secs: Some(working_secs),
-            turn: TURNS,
-            anim_ms: 16,
-            motion: true,
+            queue: &queue,
             newer: None,
         };
         term.draw(|f| draw(f, &ctx, &mut view)).expect("drawn");
@@ -248,9 +248,7 @@ fn main() {
             theme,
             hint: None,
             working_secs: Some(working_secs),
-            turn: TURNS,
-            anim_ms: 16 * (n as u64 + 1),
-            motion: true,
+            queue: &queue,
             newer: None,
         };
         let t0 = std::time::Instant::now();

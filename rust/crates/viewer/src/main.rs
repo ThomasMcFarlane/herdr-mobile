@@ -28,8 +28,8 @@ use herdr_tui::session::{Effect, Event, Phase, Record, Refused, Session, Start};
 use herdr_tui::transcript::Transcript;
 use herdr_tui::ui;
 use herdr_tui::{
-    cli, clip, delight, fold, herdr, highlight, host, input, lines, md, risk, select, sessions,
-    slash, termbg, theme, update,
+    cli, clip, elapsed, fold, herdr, highlight, host, input, lines, md, queue, risk, select,
+    sessions, slash, termbg, theme, update,
 };
 use keeper::records::StateDir;
 use std::io::{BufReader, Write};
@@ -86,7 +86,6 @@ struct App {
     /// A standing grant waits for the same key a second time.
     confirm: Option<(acp::Id, usize)>,
     turn_live: bool,
-    turns_done: usize,
     was_attention: bool,
     last_title: String,
     /// The request the chosen option belongs to; a new one starts at the first option.
@@ -111,8 +110,6 @@ struct App {
     repaint: bool,
     /// The selection was finished: copy what it covers from the frame about to be drawn.
     copy: bool,
-    /// Whether things move: the spinner, the shimmer, the pulse and unfolds.
-    motion: bool,
     /// The signal that asked the program to end, if one did.
     signal: Option<i32>,
     /// Tells herdr what this session is doing, when run inside a herdr pane.
@@ -147,6 +144,13 @@ struct App {
     clipping: bool,
     /// The number the last picture of this message was given (`[Image #n]`); 0 with none.
     next_picture: u32,
+    /// Messages typed while the agent works, sent one at a time when the turn ends. Memory only.
+    queue: queue::Queue,
+    /// The person pressed Stop on the running turn: the queue goes on after it.
+    stop_requested: bool,
+    /// A leave was refused because messages are queued; an immediate repeat leaves.
+    leave_asked: bool,
+    leave_was: bool,
 }
 
 /// While this program owns the screen, a background job of the same terminal that tries to write
@@ -341,7 +345,6 @@ fn main() {
         turn_started: None,
         confirm: None,
         turn_live: false,
-        turns_done: 0,
         was_attention: false,
         last_title: String::new(),
         sel_for: None,
@@ -354,7 +357,6 @@ fn main() {
         boxed: None,
         repaint: false,
         copy: false,
-        motion: delight::motion_enabled(),
         signal: None,
         reporter: None,
         t0: Instant::now(),
@@ -373,6 +375,10 @@ fn main() {
         mode_confirm: None,
         clipping: false,
         next_picture: 0,
+        queue: queue::Queue::default(),
+        stop_requested: false,
+        leave_asked: false,
+        leave_was: false,
     };
     // A fresh session started from another one (`/new`): say where the earlier one went.
     if let Some(prev) = std::env::var("HERDR_TUI_PREVIOUS")
@@ -431,11 +437,15 @@ fn main() {
             // ended while the history was replaying is not news.
             if app.turn_live && app.session.ready() {
                 app.transcript.done(started.elapsed().as_secs());
-                app.turns_done += 1;
             }
+            app.settle_queue();
         }
         app.attend();
         app.report();
+        // The turn just ended: the next queued message goes out at once.
+        if app.pump_queue() {
+            continue;
+        }
         let working_secs = app.turn_started.map(|t| t.elapsed().as_secs());
         let ctx = ui::Frame_ {
             transcript: &app.transcript,
@@ -448,9 +458,7 @@ fn main() {
             theme: app.theme,
             hint: app.hint.as_deref(),
             working_secs,
-            turn: app.turns_done,
-            anim_ms: app.now_ms(),
-            motion: app.motion,
+            queue: &app.queue,
             newer: app.newer.as_deref(),
         };
         if std::mem::take(&mut app.repaint) {
@@ -466,15 +474,9 @@ fn main() {
             continue;
         }
         app.copy = false;
-        // The loop sleeps until something happens, and wakes by itself only while something moves:
-        // the elapsed counter every second, the shimmer and spinner every few frames, an unfold at
-        // 60 Hz for the 160 ms it lasts. At rest nothing wakes it.
-        let wake = delight::next_wake(
-            app.motion,
-            working,
-            !app.session.waiting().is_empty(),
-            !app.view.reveal.is_empty(),
-        );
+        // The loop sleeps until something happens, and wakes by itself only while a turn runs
+        // (the elapsed counter, once a second). At rest nothing wakes it.
+        let wake = elapsed::next_wake(working);
         let first = match wake {
             Some(d) => match rx.recv_timeout(d) {
                 Ok(ev) => ev,
@@ -495,6 +497,10 @@ fn main() {
     restore_modes();
     let _ = execute!(std::io::stdout(), LeaveAlternateScreen);
     ratatui::restore();
+    // Queued messages live in this program only: say which were never sent.
+    for q in app.queue.entries() {
+        eprintln!("Not sent: {}", md::one_line(&q.text, 200));
+    }
     // The pane is no agent any more.
     if let Some(reporter) = app.reporter.take() {
         reporter.release();
@@ -774,11 +780,14 @@ impl App {
             }
         }
         self.confirm = None;
+        if let Some(id) = self.view.queued_at(row) {
+            self.take_back(Some(id));
+            return;
+        }
         if self.view.click_newest(row) {
             return;
         }
-        let now = self.motion.then(|| self.now_ms());
-        self.view.click_fold(row, now);
+        self.view.click_fold(row);
     }
 
     /// Puts what the finished selection covers on the clipboard, from the frame just drawn, and
@@ -826,6 +835,8 @@ impl App {
                 if k.code != KeyCode::Enter {
                     self.mode_confirm = None;
                 }
+                // Only an immediate repeat of the key that asked ("press again to leave") passes.
+                self.leave_was = std::mem::take(&mut self.leave_asked);
                 self.key(k);
             }
             Ev::Mouse(m) => self.mouse(m),
@@ -886,6 +897,11 @@ impl App {
         } else if !self.files.is_empty() {
             self.hint =
                 Some("Send the files or take them off (/files) first, then Ctrl-R".to_string());
+        } else if !self.queue.is_empty() {
+            self.hint = Some(
+                "Queued messages would be lost: send or take them back (Backspace) first, then Ctrl-R"
+                    .to_string(),
+            );
         } else if !self.session.waiting().is_empty() {
             self.hint = Some("Answer the request first, then Ctrl-R".to_string());
         } else {
@@ -937,8 +953,8 @@ impl App {
 
     /// Carries out effects. Reading the record answers at once, so it may produce more.
     fn run(&mut self, effects: Vec<Effect>) {
-        let mut queue = std::collections::VecDeque::from(effects);
-        while let Some(fx) = queue.pop_front() {
+        let mut pending = std::collections::VecDeque::from(effects);
+        while let Some(fx) = pending.pop_front() {
             match fx {
                 Effect::Send(m) => {
                     let mut line = m.to_line();
@@ -947,7 +963,7 @@ impl App {
                         let more =
                             self.session
                                 .handle(Event::Closed, self.now_ms(), &mut self.transcript);
-                        queue.extend(more);
+                        pending.extend(more);
                     }
                 }
                 Effect::ReadRecord => {
@@ -962,7 +978,7 @@ impl App {
                         self.now_ms(),
                         &mut self.transcript,
                     );
-                    queue.extend(more);
+                    pending.extend(more);
                 }
                 Effect::RetryIn(d) => {
                     let tx = self.tx.clone();
@@ -978,6 +994,22 @@ impl App {
                         self.files = files;
                     }
                 }
+                // A queued message the agent refused keeps its place, held; the box is the
+                // person's and is left alone.
+                Effect::RestoreQueued {
+                    id,
+                    text,
+                    files,
+                    why,
+                } => self.queue.hold_front(
+                    queue::Queued {
+                        id,
+                        text,
+                        files,
+                        held: None,
+                    },
+                    why,
+                ),
             }
         }
     }
@@ -1068,14 +1100,7 @@ impl App {
         };
         // What was focused may have been dropped to stay in budget.
         let focus = self.view.focus.filter(|f| keys.contains(f)).unwrap_or(last);
-        let (to, opened) = fold::navigate(nav, focus, &keys, &mut self.view.expanded);
-        // What was just opened grows into place.
-        let now = self.now_ms();
-        if self.motion {
-            for key in opened {
-                self.view.reveal.insert(key, now);
-            }
-        }
+        let to = fold::navigate(nav, focus, &keys, &mut self.view.expanded);
         self.view.invalidate_lines();
         self.view.focus = Some(to);
         self.view.focus_dirty = true;
@@ -1114,20 +1139,28 @@ impl App {
                 self.enter_browse()
             }
             KeyCode::Esc if self.composer.text.is_empty() => self.dismiss(),
-            KeyCode::Char('d') if ctrl => self.quit = true,
+            KeyCode::Char('d') if ctrl => {
+                if self.may_leave() {
+                    self.quit = true;
+                }
+            }
             KeyCode::Char('c') if ctrl => {
                 // A picker open: Ctrl-C closes it, whatever else it would do.
                 if self.view.picker.take().is_some() {
                     return;
                 }
-                if self.transcript.running() || self.session.prompting() {
+                if self.working() {
+                    // The person's own Stop: the queue goes on once the turn ends (`settle_queue`).
+                    self.stop_requested = true;
                     let fx = self.session.cancel(&mut self.transcript);
                     self.run(fx);
                 } else if attach::only_placeholders(&self.composer.text) && !self.files.is_empty() {
                     self.take_all_files();
                     self.hint = Some("Took the files off".to_string());
                 } else if self.composer.text.is_empty() {
-                    self.quit = true;
+                    if self.may_leave() {
+                        self.quit = true;
+                    }
                 } else {
                     self.composer.clear();
                 }
@@ -1199,6 +1232,15 @@ impl App {
                 self.answer(c as usize - '1' as usize);
             }
             KeyCode::Char(c) if !ctrl && !alt => self.composer.insert(c),
+            // Nothing typed, nothing attached: Backspace takes the newest queued message back.
+            KeyCode::Backspace
+                if self.composer.text.is_empty()
+                    && self.files.is_empty()
+                    && !self.queue.is_empty()
+                    && !self.asking_question() =>
+            {
+                self.take_back(None);
+            }
             // Right after a picture's placeholder: Backspace takes the whole of it, and the
             // picture, off.
             KeyCode::Backspace if self.take_placeholder() => {}
@@ -1365,6 +1407,9 @@ impl App {
         let text = self.composer.text.trim().to_string();
         let raw = self.composer.text.clone();
         if text.is_empty() && self.files.is_empty() {
+            if self.queue.release() {
+                self.hint = Some("Resuming the queue".to_string());
+            }
             return;
         }
         match slash::classify(&text, self.transcript.commands()) {
@@ -1394,6 +1439,11 @@ impl App {
             }
             slash::Run::Agent | slash::Run::Message => {}
         }
+        // Typed while the agent works, or behind messages that already wait: it joins the queue.
+        if self.session.ready() && (self.working() || self.queue.has_waiting()) {
+            self.enqueue(text);
+            return;
+        }
         // Pictures are read now, when the message goes, and not when they were pasted: a draft
         // may never be sent.
         if let Err(why) = self.load_pictures() {
@@ -1414,6 +1464,110 @@ impl App {
             Err(Refused::Busy) => self.hint = Some("The agent is working; not sent".to_string()),
             Err(_) => {}
         }
+    }
+
+    /// A turn is running: the agent's, or one this program's prompt started.
+    fn working(&self) -> bool {
+        self.transcript.running() || self.session.prompting()
+    }
+
+    /// Enter while the agent works: the message waits (`↳` above the box) and goes when the
+    /// turn ends. Its pictures are read then, not now: their bytes would sit in memory for the
+    /// whole wait.
+    fn enqueue(&mut self, text: String) {
+        if self.queue.is_full() {
+            self.hint = Some(format!(
+                "{} messages are queued already · Backspace takes one back",
+                queue::MAX
+            ));
+            return;
+        }
+        self.queue.push(text, std::mem::take(&mut self.files));
+        self.composer.take();
+        self.next_picture = 0;
+        self.held = None;
+        self.view.scroll = 0;
+    }
+
+    /// Sends the oldest queued message when nothing is running and nothing asks. `true` when one
+    /// went. A held message blocks the ones behind it, so a refusal never reorders the queue.
+    fn pump_queue(&mut self) -> bool {
+        if !self.session.ready()
+            || self.working()
+            || !self.session.waiting().is_empty()
+            || self.queue.has_held()
+        {
+            return false;
+        }
+        let Some(mut q) = self.queue.pop_waiting() else {
+            return false;
+        };
+        if let Err(why) = load_files(&mut q.files, self.session.accepts_pictures()) {
+            self.queue.hold_front(q, why);
+            return false;
+        }
+        match self
+            .session
+            .send_queued(q.id, &q.text, &q.files, &mut self.transcript)
+        {
+            Ok(fx) => {
+                self.run(fx);
+                true
+            }
+            Err(_) => {
+                self.queue.requeue_front(q);
+                false
+            }
+        }
+    }
+
+    /// A turn the person watched just ended: decide what happens to the queue. The person's own
+    /// Stop goes on (messages typed meanwhile become one); a failed turn or one stopped from
+    /// elsewhere holds everything, so nothing goes out on top of a problem unseen.
+    fn settle_queue(&mut self) {
+        let reason = self.transcript.take_stop();
+        let mine = std::mem::take(&mut self.stop_requested);
+        if self.queue.is_empty() {
+            return;
+        }
+        match queue::after_turn(mine, reason.as_deref()) {
+            queue::Disposition::Merge => self.queue.merge_waiting(),
+            queue::Disposition::Hold(why) => self.queue.hold_all(why),
+            queue::Disposition::Go => {}
+        }
+    }
+
+    /// Puts a queued message (the newest, or the one with `id`) back into the box to edit.
+    fn take_back(&mut self, id: Option<u64>) {
+        if !self.composer.text.is_empty() || !self.files.is_empty() {
+            self.hint = Some("Send or clear what you are typing first".to_string());
+            return;
+        }
+        let q = match id {
+            Some(i) => self.queue.take(i),
+            None => self.queue.take_newest(),
+        };
+        let Some(q) = q else {
+            return;
+        };
+        self.composer.restore(q.text);
+        self.next_picture = q.files.iter().map(|f| f.number).max().unwrap_or(0);
+        self.files = q.files;
+        self.hint = Some("Took it back to edit".to_string());
+    }
+
+    /// Leaving loses the queue: the first press says so, an immediate repeat leaves.
+    fn may_leave(&mut self) -> bool {
+        let n = self.queue.len();
+        if n == 0 || self.leave_was {
+            return true;
+        }
+        self.leave_asked = true;
+        self.hint = Some(format!(
+            "{n} queued message{} will be lost · press again to leave",
+            if n == 1 { "" } else { "s" }
+        ));
+        false
     }
 
     /// The command list and the picker follow what is typed. A request takes the panel, so a
@@ -1615,6 +1769,13 @@ impl App {
             slash::Local::Fresh => {
                 if !self.files.is_empty() {
                     self.hint = Some("Send the files or take them off (/files) first".to_string());
+                    return;
+                }
+                if !self.queue.is_empty() {
+                    self.hint = Some(
+                        "Queued messages would be lost: send or take them back (Backspace) first"
+                            .to_string(),
+                    );
                     return;
                 }
                 self.fresh = true;
@@ -1978,21 +2139,9 @@ impl App {
         true
     }
 
-    /// Reads the files that go as pictures into the prompt. A picture that has grown past the
-    /// limit since it was pasted goes as a link instead.
+    /// Reads the files that go as pictures into the prompt (see [`load_files`]).
     fn load_pictures(&mut self) -> Result<(), String> {
-        let takes = self.session.accepts_pictures();
-        for f in &mut self.files {
-            if f.is_picture(takes) && f.data.is_none() {
-                match attach::read_picture(&f.path) {
-                    Ok(Some(bytes)) => f.data = Some(attach::base64(&bytes)),
-                    // No longer a regular file, or grown past the limit: it goes as a link.
-                    Ok(None) => f.link = true,
-                    Err(e) => return Err(format!("Could not read {}: {e}", f.short())),
-                }
-            }
-        }
-        Ok(())
+        load_files(&mut self.files, self.session.accepts_pictures())
     }
 
     /// A mode that lowers the guard (`risk::assess`, the phone's rules) is chosen on purpose: the
@@ -2044,4 +2193,20 @@ impl App {
             Err(_) => {}
         }
     }
+}
+
+/// Reads the files that go as pictures into the prompt. A picture that has grown past the
+/// limit since it was pasted goes as a link instead.
+fn load_files(files: &mut [attach::Attachment], takes: bool) -> Result<(), String> {
+    for f in files {
+        if f.is_picture(takes) && f.data.is_none() {
+            match attach::read_picture(&f.path) {
+                Ok(Some(bytes)) => f.data = Some(attach::base64(&bytes)),
+                // No longer a regular file, or grown past the limit: it goes as a link.
+                Ok(None) => f.link = true,
+                Err(e) => return Err(format!("Could not read {}: {e}", f.short())),
+            }
+        }
+    }
+    Ok(())
 }

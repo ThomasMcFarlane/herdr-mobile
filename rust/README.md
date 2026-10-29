@@ -81,14 +81,12 @@ for good, `herdr-tui kill ID` (or stop it from the app).
 
 ## Small touches
 
-- While the agent works, the status line names the wait (*Untangling…*, *Following the thread…*) with a
-  spinner, keeps the clock, and a sheen crosses the word and rests a beat; after 10 s it adds a tip.
-- A request that needs you pulses its mark (`▲` / `△`), the one thing worth moving for. A fold you open
-  grows into place in 160 ms instead of jumping.
-- Motion is for a desktop, and costs only while something moves: measured here, 0 CPU ticks in 5 s at rest
-  and about 0.2% of a core while a turn runs (desktop; unmeasured on a phone). `HERDR_TUI_MOTION=off`,
-  `NO_MOTION` or `REDUCED_MOTION` leave a still dot and still folds, and the loop then wakes only for the
-  elapsed counter.
+- While the agent works the status row is still: `● Working 12s · Ctrl-C stops`. Nothing in the
+  viewer moves except that counter, once a second; at rest nothing wakes the loop.
+- A request that needs you is said once, on its panel (`▲ Needs you`, not pulsing); the footer does
+  not repeat it. A fold you open is open in the next frame.
+- `Enter` while the agent works queues the message (`↳` above the box); it goes out when the turn
+  ends. `Backspace` on an empty box or a click on its row takes one back. `Ctrl-C` stops the turn and sends the queue now. See `docs/TUI.md`, "Queue".
 - Every turn ends with one line of what it did: `✓ Done in 16s · 1 file +6 −2 · 5 tools · 1 failed`.
   The mark turns to `!` only when the last call failed and nothing put it right.
 - A new session says it is ready and offers two things to try.
@@ -99,7 +97,8 @@ for good, `herdr-tui kill ID` (or stop it from the app).
 
 | Key | Does |
 | --- | --- |
-| `Enter` | send the message (or, with the box empty and a request waiting, confirm the chosen option; on a question, confirm the field) |
+| `Enter` | send the message (queued while the agent works; with the box empty, resumes a held queue; or, with a request waiting, confirm the chosen option; on a question, confirm the field) |
+| `Backspace` | with the box empty and messages queued, take the newest back into the box (a click on a `↳` row takes that one) |
 | `Ctrl-J` / `Alt-Enter` | new line in the message |
 | `↑` `↓` | scroll the conversation 3 lines; with a request waiting and the box empty, choose an option; inside a multi-line message they move the cursor |
 | mouse wheel | scroll the conversation 3 lines |
@@ -116,7 +115,7 @@ for good, `herdr-tui kill ID` (or stop it from the app).
 | `Ctrl-W` `Ctrl-U` | delete a word, clear the box |
 | `Ctrl-R` | when the footer says a newer herdr-tui is installed, load it into this session |
 | `Ctrl-L` | repaint the screen (also happens when the window regains focus), for when another program has written on the terminal |
-| `Ctrl-D` | leave (the session keeps running) |
+| `Ctrl-D` | leave (the session keeps running); with messages queued, press twice |
 
 An answer that stays allowed (*Always allow*) asks for the same number, Enter or click twice.
 
@@ -168,9 +167,10 @@ What you said sits in a tinted band behind a `›`; the agent's words hang from 
 and results open in the same two-column gutter. A shell command is coloured (command names blue, flags
 red). A permission request is a tinted panel with the question, the command whole, the choices and the
 chosen one marked. The input is its own tinted block, like your messages above it (or, where the tint is
-unknown, a rule above and below; `HERDR_TUI_INPUT=rules` asks for that). The rule above it carries the
-session's title. The last line says what you are talking to and where:
-`Sonnet 5.5 · thinking high · act · ctx 47% · omp · ~/workspace/herdr-mobile`. The model, thinking level
+unknown, a rule above and below; `HERDR_TUI_INPUT=rules` asks for that). The last line says what you
+are talking to and where:
+`Sonnet 5.5 · thinking high · act · ctx 72% · omp · ~/workspace/herdr-mobile` (`ctx` appears from 60 %).
+The model, thinking level
 and mode come from what the agent reports (its config options), so a line shows only what it has said.
 
 The tint is derived from your terminal's real background (asked once at start with OSC 11), so it is a
@@ -195,6 +195,7 @@ Each has a `-light` twin in `docs/tui/`, drawn from the real frames by `python3 
 | Coloured code, numbered list past 9, a link | `12-code` |
 | A table still arriving | `13-streaming` |
 | An agent's question | `14-question` |
+| Messages queued while the agent works; a held queue | `16-queued`, `17-queued-held` |
 
 ## Inside herdr
 

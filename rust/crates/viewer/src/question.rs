@@ -594,36 +594,14 @@ impl Form {
         md::one_line(&all.join(" · "), 300)
     }
 
-    /// What the footer tells the person to do now.
-    #[must_use]
-    pub fn footer(&self) -> String {
-        let send = self.at + 1 >= self.fields.len();
-        let then = if send { "to send" } else { "for the next" };
-        match self.field().map(|f| &f.kind) {
-            None => "press Enter to send".into(),
-            // Digits pick only the first nine rows: past them the arrows are the way.
-            Some(Kind::One(o)) if o.len() > 9 => {
-                format!("choose with ↑↓ and press Enter {then}")
-            }
-            Some(Kind::One(o)) => format!("choose 1–{} and press Enter {then}", o.len().max(1)),
-            Some(Kind::Bool) => format!("choose Yes or No and press Enter {then}"),
-            Some(Kind::Many { .. }) => format!("tick with Space and press Enter {then}"),
-            Some(Kind::Text { .. } | Kind::Number { .. }) => {
-                format!("type the answer and press Enter {then}")
-            }
-            Some(Kind::Unknown(_)) => format!("press Enter {then}"),
-        }
-    }
-
     /// The panel's lines, untinted, with the option of the field on screen each row draws (what
-    /// a click on that row does). `lit`: the header's mark, which pulses. `total`: the requests
-    /// waiting, this one included. The agent's message is cut at `max_message` rows. `max_rows`:
+    /// a click on that row does). `total`: the requests waiting, this one included. The agent's
+    /// message is cut at `max_message` rows. `max_rows`:
     /// the rows the panel has room for; over it, answered fields fold into a count and the
     /// descriptions are cut, never the field on screen or the keys line.
     #[must_use]
     pub fn lines(
         &self,
-        lit: bool,
         total: usize,
         width: usize,
         max_message: usize,
@@ -640,14 +618,7 @@ impl Form {
             Line::default(),
             Line::from(vec![
                 Span::raw("  "),
-                Span::styled(
-                    if lit {
-                        "▲ Needs you"
-                    } else {
-                        "△ Needs you"
-                    },
-                    theme.warn(),
-                ),
+                Span::styled("▲ Needs you", theme.warn()),
                 Span::styled(format!(" · Question{more}"), theme.bold()),
             ]),
             Line::default(),
@@ -808,7 +779,7 @@ impl Form {
             tail.extend(text(
                 &format!(
                     "The agent goes on without an answer {} after it asked.",
-                    crate::delight::duration(ms.div_ceil(1000))
+                    crate::elapsed::duration(ms.div_ceil(1000))
                 ),
                 theme.dim(),
                 "  ",
@@ -1184,7 +1155,7 @@ mod tests {
     #[test]
     fn the_panel_maps_each_choice_row_to_its_option_and_shows_earlier_answers() {
         let mut f = form(claude_ask());
-        let (rows, options) = f.lines(true, 1, 60, 10, 100, Theme::plain());
+        let (rows, options) = f.lines(1, 60, 10, 100, Theme::plain());
         let text: Vec<String> = rows
             .iter()
             .map(|l| l.spans.iter().map(|s| s.content.as_ref()).collect())
@@ -1197,7 +1168,7 @@ mod tests {
 
         f.act(Act::Pick(1), 0).expect("picked");
         enter(&mut f, "").expect("next");
-        let (rows, options) = f.lines(true, 1, 60, 10, 100, Theme::plain());
+        let (rows, options) = f.lines(1, 60, 10, 100, Theme::plain());
         let text: String = rows
             .iter()
             .flat_map(|l| l.spans.iter().map(|s| s.content.to_string()))
@@ -1233,8 +1204,8 @@ mod tests {
             f.act(Act::Pick(0), 0).expect("picked");
             enter(&mut f, "").expect("next");
         }
-        let (all, _) = f.lines(true, 1, 40, 10, 100, Theme::plain());
-        let (rows, options) = f.lines(true, 1, 40, 10, 18, Theme::plain());
+        let (all, _) = f.lines(1, 40, 10, 100, Theme::plain());
+        let (rows, options) = f.lines(1, 40, 10, 18, Theme::plain());
         assert!(rows.len() < all.len() && rows.len() <= 18, "{}", rows.len());
         let text: Vec<String> = rows
             .iter()
@@ -1254,7 +1225,7 @@ mod tests {
         assert_eq!(options[row_of("Step 5")], None);
 
         // Tighter still: nothing is left to fold but the count, so the description is cut.
-        let (rows, _) = f.lines(true, 1, 40, 10, 15, Theme::plain());
+        let (rows, _) = f.lines(1, 40, 10, 15, Theme::plain());
         let tight: String = rows
             .iter()
             .map(|l| {
@@ -1269,18 +1240,6 @@ mod tests {
         for needle in ["1. red", "2. green", "Esc declines", "answered", "…"] {
             assert!(tight.contains(needle), "{needle}:\n{tight}");
         }
-    }
-
-    #[test]
-    fn the_footer_names_digits_only_up_to_nine() {
-        let many = |n: usize| {
-            let names: Vec<String> = (0..n).map(|i| format!("o{i}")).collect();
-            form(
-                json!({"requestedSchema": {"properties": {"p": {"type": "string", "enum": names}}}}),
-            )
-        };
-        assert!(many(9).footer().contains("1–9"));
-        assert!(!many(12).footer().contains("1–12"), "{}", many(12).footer());
     }
 
     #[test]

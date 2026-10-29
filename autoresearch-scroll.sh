@@ -19,7 +19,7 @@
 #   peak_rss_kib        peak resident memory of the whole run: the "low
 #                       memory" half of the ask
 # The theme and motion switch on ambient env; pin them so the frames are the same every run.
-unset NO_COLOR COLORFGBG HERDR_TUI_THEME HERDR_TUI_MOTION HERDR_TUI_INPUT
+unset NO_COLOR COLORFGBG HERDR_TUI_THEME HERDR_TUI_INPUT
 # A run takes ~5 s once built (a cold release build of the workspace is ~40 s).
 set -euo pipefail
 

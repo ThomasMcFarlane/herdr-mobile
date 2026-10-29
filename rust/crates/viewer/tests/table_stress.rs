@@ -10,6 +10,7 @@
 use acp::{Id, Message, SessionUpdate};
 use herdr_tui::composer::Composer;
 use herdr_tui::md;
+use herdr_tui::queue::Queue;
 use herdr_tui::session::{Event, Record, Session, Start};
 use herdr_tui::theme::Theme;
 use herdr_tui::transcript::Transcript;
@@ -401,9 +402,7 @@ fn frame(
         theme: Theme::detect(None),
         hint: None,
         working_secs: None,
-        turn: 0,
-        anim_ms: 0,
-        motion: false,
+        queue: &Queue::default(),
         newer: None,
     };
     term.draw(|f| draw(f, &ctx, view)).expect("drawn");

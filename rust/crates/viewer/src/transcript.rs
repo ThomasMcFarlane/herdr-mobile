@@ -37,7 +37,7 @@ impl Stats {
     /// `Done in 41s · 1 file +6 −2 · 4 tools · 1 failed`.
     #[must_use]
     pub fn summary(&self, secs: u64) -> String {
-        let mut parts = vec![format!("Done in {}", crate::delight::duration(secs))];
+        let mut parts = vec![format!("Done in {}", crate::elapsed::duration(secs))];
         if self.files > 0 {
             parts.push(format!(
                 "{} file{} +{} −{}",
@@ -138,6 +138,11 @@ pub struct Transcript {
     tool_at: HashMap<String, u64>,
     /// Items whose tool call has not finished: the ones a turn's end must close.
     open_tools: BTreeSet<u64>,
+    /// Why the last turn stopped (`cancelled`, `error`, ...), until it is read with
+    /// [`Transcript::take_stop`]. `turn_end` runs twice per turn (the state update and the prompt's
+    /// response) and again during a replay: reading and clearing at the observed end keeps a
+    /// replayed turn's reason from leaking into a live one.
+    stop: Option<String>,
 }
 
 impl Default for Transcript {
@@ -164,6 +169,7 @@ impl Transcript {
             plan: Vec::new(),
             tool_at: HashMap::new(),
             open_tools: BTreeSet::new(),
+            stop: None,
         }
     }
 
@@ -180,6 +186,11 @@ impl Transcript {
     pub fn bytes(&self) -> usize {
         self.bytes
     }
+    /// The stop reason of the turn that just ended, once.
+    pub fn take_stop(&mut self) -> Option<String> {
+        self.stop.take()
+    }
+
     /// Whether the agent is working on a turn.
     #[must_use]
     pub fn running(&self) -> bool {
@@ -291,6 +302,8 @@ impl Transcript {
     /// The person's own message, shown at once (the keeper does not echo a
     /// prompt back to the client that sent it).
     pub fn user(&mut self, text: impl Into<String>) {
+        // A new turn starts with the person's message: the last one's stop reason is old news.
+        self.stop = None;
         self.push(Entry::Message {
             role: Role::User,
             message_id: None,
@@ -307,7 +320,10 @@ impl Transcript {
             SessionUpdate::State {
                 state: AgentState::Running,
                 ..
-            } => self.running = true,
+            } => {
+                self.running = true;
+                self.stop = None;
+            }
             SessionUpdate::State {
                 state: AgentState::Idle,
                 stop_reason,
@@ -331,6 +347,9 @@ impl Transcript {
 
     /// The turn is over: a call still marked running will never finish.
     pub fn turn_end(&mut self, stop_reason: Option<&str>) {
+        if let Some(r) = stop_reason {
+            self.stop = Some(r.to_string());
+        }
         self.running = false;
         // A call still open will never finish. Items are found by id each time: closing one can
         // drop others off the front to stay in budget, so positions do not hold still.
@@ -1006,6 +1025,30 @@ mod tests {
             json!({"sessionUpdate": "session_info_update", "title": null}),
         ));
         assert_eq!(t.title(), None);
+    }
+
+    #[test]
+    fn the_stop_reason_of_a_turn_is_read_once_and_a_new_turn_forgets_it() {
+        let idle = |reason: &str| {
+            update(json!({"sessionUpdate": "state_update", "state": "idle", "stopReason": reason}))
+        };
+        let mut t = Transcript::default();
+        t.apply(idle("cancelled"));
+        assert_eq!(t.take_stop().as_deref(), Some("cancelled"));
+        assert_eq!(t.take_stop(), None, "read once");
+        // A replayed turn's reason must not reach the live turn that follows it.
+        t.apply(idle("error"));
+        t.apply(update(
+            json!({"sessionUpdate": "state_update", "state": "running"}),
+        ));
+        assert_eq!(t.take_stop(), None, "running clears it");
+        t.apply(idle("refusal"));
+        t.user("next");
+        assert_eq!(
+            t.take_stop(),
+            None,
+            "the person's message starts a new turn"
+        );
     }
 
     #[test]

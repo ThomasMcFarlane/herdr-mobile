@@ -146,52 +146,35 @@ pub enum Nav {
     CloseAll,
 }
 
-/// Applies `nav` to the focus. Returns the new focus, and the keys newly opened (to animate).
-pub fn navigate(
-    nav: Nav,
-    focus: u64,
-    keys: &[u64],
-    expanded: &mut HashSet<u64>,
-) -> (u64, Vec<u64>) {
+/// Applies `nav` to the focus and returns the new focus.
+pub fn navigate(nav: Nav, focus: u64, keys: &[u64], expanded: &mut HashSet<u64>) -> u64 {
     let at = keys.iter().position(|k| *k == focus);
     match nav {
-        Nav::Prev => (
-            at.map_or(keys.last().copied(), |i| {
+        Nav::Prev => at
+            .map_or(keys.last().copied(), |i| {
                 keys.get(i.saturating_sub(1)).copied()
             })
             .unwrap_or(focus),
-            Vec::new(),
-        ),
-        Nav::Next => (
-            at.map_or(keys.first().copied(), |i| {
+        Nav::Next => at
+            .map_or(keys.first().copied(), |i| {
                 keys.get((i + 1).min(keys.len().saturating_sub(1))).copied()
             })
             .unwrap_or(focus),
-            Vec::new(),
-        ),
-        Nav::Open => (
-            focus,
-            if expanded.insert(focus) {
-                vec![focus]
-            } else {
-                Vec::new()
-            },
-        ),
+        Nav::Open => {
+            expanded.insert(focus);
+            focus
+        }
         Nav::Close => {
             expanded.remove(&focus);
-            (focus, Vec::new())
+            focus
         }
         Nav::OpenAll => {
-            let opened: Vec<u64> = keys
-                .iter()
-                .copied()
-                .filter(|k| expanded.insert(*k))
-                .collect();
-            (focus, opened)
+            expanded.extend(keys.iter().copied());
+            focus
         }
         Nav::CloseAll => {
             expanded.clear();
-            (focus, Vec::new())
+            focus
         }
     }
 }
@@ -343,26 +326,26 @@ mod tests {
     fn navigation_moves_between_foldables_and_stops_at_the_ends() {
         let keys = [10, 20, 30];
         let mut open = HashSet::new();
-        assert_eq!(navigate(Nav::Next, 10, &keys, &mut open).0, 20);
-        assert_eq!(navigate(Nav::Next, 30, &keys, &mut open).0, 30);
-        assert_eq!(navigate(Nav::Prev, 10, &keys, &mut open).0, 10);
-        assert_eq!(navigate(Nav::Prev, 30, &keys, &mut open).0, 20);
+        assert_eq!(navigate(Nav::Next, 10, &keys, &mut open), 20);
+        assert_eq!(navigate(Nav::Next, 30, &keys, &mut open), 30);
+        assert_eq!(navigate(Nav::Prev, 10, &keys, &mut open), 10);
+        assert_eq!(navigate(Nav::Prev, 30, &keys, &mut open), 20);
         // A focus that is no longer foldable falls to an end.
-        assert_eq!(navigate(Nav::Prev, 99, &keys, &mut open).0, 30);
+        assert_eq!(navigate(Nav::Prev, 99, &keys, &mut open), 30);
     }
 
     #[test]
-    fn opening_reports_what_is_new_so_only_that_animates() {
+    fn navigation_opens_and_closes_what_is_focused() {
         let keys = [10, 20];
         let mut open = HashSet::new();
-        assert_eq!(navigate(Nav::Open, 10, &keys, &mut open).1, [10]);
-        assert!(
-            navigate(Nav::Open, 10, &keys, &mut open).1.is_empty(),
-            "already open"
-        );
-        assert_eq!(navigate(Nav::OpenAll, 10, &keys, &mut open).1, [20]);
+        navigate(Nav::Open, 10, &keys, &mut open);
+        assert_eq!(open, HashSet::from([10]));
+        navigate(Nav::Open, 10, &keys, &mut open);
+        assert_eq!(open, HashSet::from([10]), "already open");
+        navigate(Nav::OpenAll, 10, &keys, &mut open);
+        assert_eq!(open, HashSet::from([10, 20]));
         navigate(Nav::Close, 10, &keys, &mut open);
-        assert!(!open.contains(&10) && open.contains(&20));
+        assert_eq!(open, HashSet::from([20]));
         navigate(Nav::CloseAll, 10, &keys, &mut open);
         assert!(open.is_empty());
     }
