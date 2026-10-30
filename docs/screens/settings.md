@@ -16,7 +16,7 @@ the Agents board under a page. The system bars follow the resolved brightness, s
 Settings is a page over home, opened from the gear in the board's header
 (`features/settings/`): five rows, each saying what
 it is set to and opening in place (`SettingsGroup`, on `Collapse`), one at a
-time. Look (theme, agent list density, the terminal font size stepper 8 to 22
+time. Look (theme, the terminal font size stepper 8 to 22
 with a sample line, wrap, Dark terminal, and Smooth text: streaming answers at
 an even pace, on by default, `AppSettings.smoothText`; the terminal ones edit
 the pane's `TerminalSettings`), Agents (how agents open, and Quick phrases, a

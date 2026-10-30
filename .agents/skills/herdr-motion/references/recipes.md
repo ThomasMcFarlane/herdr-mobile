@@ -43,8 +43,9 @@ motion the gap is skipped. Taps on items that moved are guarded (`SettleGate`,
 
 Fade the old shape and draw the new one once over `Motion.settle`, then stop
 the ticker. A glyph built with its status never animates (`StatusGlyph`,
-`ui/core/glyphs.dart`). A card that changed section gets a wash that fades over
-`Motion.arrival`: a highlight decaying, not a movement.
+`ui/core/glyphs.dart`). The glyph is the one mark of a status change: the
+board's card is only ever the waiting agent in front, so it never changes
+status in place (the arrival wash it had went with the Cards density).
 
 ## A count that changes
 

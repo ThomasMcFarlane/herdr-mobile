@@ -21,12 +21,6 @@ class _BrokenStore implements AppSettingsStore {
   Future<void> writeDarkTerminal(bool dark) async {}
 
   @override
-  Future<BoardDensity?> readDensity() async => throw StateError('disk gone');
-
-  @override
-  Future<void> writeDensity(BoardDensity density) async {}
-
-  @override
   Future<OpenAgentsAs?> readOpenAgentsAs() async => throw StateError('disk gone');
 
   @override
@@ -53,6 +47,16 @@ void main() {
       final settings = AppSettings(_BrokenStore());
       await settings.load();
       expect(settings.theme, ThemeChoice.light);
+    });
+
+    // The board density setting went (the board is rows with one decision
+    // card); a phone that saved one must still start, with what else it saved.
+    test('a board density saved by an older version is ignored', () async {
+      SharedPreferences.resetStatic();
+      SharedPreferences.setMockInitialValues({'app.density.v1': 'cards', 'app.theme.v1': 'dark'});
+      final settings = AppSettings(PrefsAppSettingsStore());
+      await settings.load();
+      expect(settings.theme, ThemeChoice.dark);
     });
 
     test('every stored choice survives a restart', () async {

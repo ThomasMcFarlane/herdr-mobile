@@ -236,13 +236,13 @@ void main() {
       await pumpScreen(tester, app: app, terminal: TerminalSettings(MemoryTerminalSettingsStore()));
       expect(find.text('Settings'), findsOneWidget);
       await openSettingsGroup(tester, 'Look');
-      expect(find.text('Light · Compact · 11.5 pt'), findsOneWidget);
+      expect(find.text('Light · 11.5 pt'), findsOneWidget);
 
       await tester.tap(find.text('Dark'));
       await tester.pump(const Duration(milliseconds: 300));
       expect(app.theme, ThemeChoice.dark);
       expect(store.writes, ['theme dark']);
-      expect(find.text('Dark · Compact · 11.5 pt'), findsOneWidget, reason: 'the row says what it is set to');
+      expect(find.text('Dark · 11.5 pt'), findsOneWidget, reason: 'the row says what it is set to');
 
       await tester.tap(find.text('System'));
       await tester.pump(const Duration(milliseconds: 300));

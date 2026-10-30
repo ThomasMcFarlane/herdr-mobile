@@ -70,9 +70,8 @@ Future<void> showAgentView(BuildContext context, AgentRef agent, AgentView view)
 /// The triage walk a swipe between agents follows: the agent the walk began
 /// on, then every agent that wants the person, in the board's own order:
 /// Needs you ([AttentionSet]'s: what can be reached first, longest waiting
-/// first), then the finished ones to review, project by project as the board
-/// lists them. Working and idle agents are not in it (the board and the
-/// title reach them).
+/// first), then To review (newest first). Working and idle agents are not in
+/// it (the board and the title reach them).
 ///
 /// The order is frozen when the walk begins (the first swipe, or the first
 /// `Next agent` / `Previous agent`), so a swipe back retraces it exactly. Why:
@@ -108,11 +107,9 @@ _AgentWalk _walkFrom(BuildContext context, AgentRef agent) {
   if (walk != null && walk.current == agent) return walk;
   final layout = boardLayoutOf(context);
   final wanting = [
-    for (final item in layout.needsYou)
-      if (item.agent != agent) item.agent,
-    for (final group in layout.groups)
-      for (final item in group.items)
-        if (statusOfItem(item) == AgentStatus.done && item.agent != agent) item.agent,
+    for (final status in const [AgentStatus.blocked, AgentStatus.done])
+      for (final item in layout.section(status)?.items ?? const <BoardItem>[])
+        if (item.agent != agent) item.agent,
   ];
   return _walks[navigator] = _AgentWalk([agent, ...wanting]);
 }
@@ -176,7 +173,7 @@ void swipeToAgent(BuildContext context, AgentRef agent, int delta) {
 }
 
 /// The board's layout, as the board lists it now: the one order the swipe
-/// walk and the title switcher both follow. Its folded groups are a way of
+/// walk and the title switcher both follow. Its folded sections are a way of
 /// looking, not an order, and are not applied. [attention] lets a caller that
 /// watches the set pass it in.
 BoardLayout boardLayoutOf(BuildContext context, {AttentionSet? attention}) {

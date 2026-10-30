@@ -113,7 +113,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
-/// How the app and the terminal look: theme, the agent list, the terminal's
+/// How the app and the terminal look: theme, the terminal's
 /// size and wrapping, and how an answer is shown.
 class _LookGroup extends StatelessWidget {
   const _LookGroup({required this.open, required this.onToggle});
@@ -127,17 +127,11 @@ class _LookGroup extends StatelessWidget {
     ThemeChoice.system => 'System',
   };
 
-  static String _density(BoardDensity density) => switch (density) {
-    BoardDensity.cards => 'Cards',
-    BoardDensity.compact => 'Compact',
-  };
-
   @override
   Widget build(BuildContext context) {
     final settings = context.read<AppSettings>();
     final terminal = context.read<TerminalSettings>();
     final theme = context.select<AppSettings, ThemeChoice>((s) => s.theme);
-    final density = context.select<AppSettings, BoardDensity>((s) => s.density);
     final smoothText = context.select<AppSettings, bool>((s) => s.smoothText);
     final darkTerminal = context.select<AppSettings, bool>((s) => s.darkTerminal);
     final wrap = context.select<TerminalSettings, bool>((s) => s.wrap);
@@ -145,7 +139,7 @@ class _LookGroup extends StatelessWidget {
     return SettingsGroup(
       icon: HerdrIcons.look,
       title: 'Look',
-      summary: '${_theme(theme)} \u00b7 ${_density(density)} \u00b7 ${FontSizeControl.format(fontSize)} pt',
+      summary: '${_theme(theme)} \u00b7 ${FontSizeControl.format(fontSize)} pt',
       open: open,
       onToggle: onToggle,
       rows: [
@@ -161,24 +155,6 @@ class _LookGroup extends StatelessWidget {
               ],
               value: theme,
               onChanged: (next) => unawaited(settings.setTheme(next)),
-            ),
-          ),
-        ),
-        CustomRow(
-          id: 'density',
-          child: SettingsField(
-            title: 'Agent list',
-            // Only where the setting hides a rule: Cards says it all.
-            hint: density == BoardDensity.compact
-                ? 'The first agent that needs you keeps its card and answers; the rest are rows.'
-                : null,
-            child: Segmented<BoardDensity>(
-              options: const [
-                SegmentOption(BoardDensity.compact, 'Compact', icon: LucideIcons.list),
-                SegmentOption(BoardDensity.cards, 'Cards', icon: LucideIcons.layoutGrid),
-              ],
-              value: density,
-              onChanged: (next) => unawaited(settings.setDensity(next)),
             ),
           ),
         ),

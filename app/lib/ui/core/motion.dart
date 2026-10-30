@@ -51,10 +51,6 @@ abstract final class Motion {
   /// The check that draws itself after a connection test passes.
   static const draw = Duration(milliseconds: 320);
 
-  /// How long the wash on a card that just changed section takes to fade. A
-  /// fade-out of a highlight, not a movement: it may outlast a transition.
-  static const arrival = Duration(milliseconds: 420);
-
   /// The brand mark drawing itself on first run.
   static const brand = Duration(milliseconds: 420);
 

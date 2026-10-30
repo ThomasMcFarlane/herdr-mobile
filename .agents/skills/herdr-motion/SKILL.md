@@ -35,8 +35,8 @@ Then name the purpose in one word. If you can't, don't build it:
 - **Feedback**: the touch landed (press scale, hold fill, haptic).
 - **Continuity**: where something came from or went (sheet from the bottom, the gap a
   departing card leaves closing under the thumb: `AgentFolding`).
-- **State change**: a change the person would otherwise miss (`StatusGlyph` settle, the
-  arrival wash, `RollText` rolling a changed count, `CountBadge` arriving).
+- **State change**: a change the person would otherwise miss (`StatusGlyph` settle,
+  `RollText` rolling a changed count, `CountBadge` arriving).
 - **Preventing a jump**: content would teleport (`AnimatedSize` when a card's question
   appears).
 
@@ -80,7 +80,7 @@ that the ticker stops.
 ## 4. Curves and durations come from `Motion`
 
 `Motion` (`ui/core/motion.dart`) names each motion by its role: press and
-release, fade, standard, expand, settle, sheet in and out, page, arrival.
+release, fade, standard, expand, settle, sheet in and out, page.
 `Springs` holds the springs (`carry`, `settle`, `snap`, `recoil`, `out`) and
 their tolerances, `PressScale` the press scales and `Dwell` the timers (tap
 guard, hold, toast times). Read the file for the current values. Pick the

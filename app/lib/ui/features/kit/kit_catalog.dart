@@ -1326,7 +1326,6 @@ class _MotionSheet extends StatelessWidget {
     ('sheetOut', Motion.sheetOut),
     ('page', Motion.page),
     ('draw', Motion.draw),
-    ('arrival', Motion.arrival),
     ('brand', Motion.brand),
     ('holdFill', Motion.holdFill),
     ('holdSnapBack', Motion.holdSnapBack),
