@@ -4,19 +4,46 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
-## [Unreleased]
+## [0.1.46] - 2026-10-30
 
-- The Agents board says how many agents need you once, in one line at the top, with how many are working and when it last heard from your machines. The filter chips and the floating pill are gone.
-- The first agent that needs you keeps its card; the others are rows under it, and `Answer one by one` walks them. Needs you can no longer be folded away.
-- On an agent's question, the command it wants to run is the largest text, the answers that allow come first, and `No` sits apart below them. A "don't ask again" answer is in the full list behind `more…`, still held.
-- `Past sessions` moved to the new-session form, behind `+`. The agent list density is in Settings.
-- The tab bar is gone: the board is home and runs to the bottom of the screen. Tap the machine count at the top left (`4 of 5 machines`, with a ring when one is not online) to open Machines, and the gear at the top right for Settings; Back returns to the board. A newer version puts a small dot on the gear.
-- On Machines, a machine that is fine has a quiet grey dot instead of a green one; one connecting has a ring, and one that needs you a ring with a dot, so it stands out even without colour. A long address keeps its start and its end, without the gap that used to sit in the middle.
-- On a narrow phone or with large text, the board's top line takes a second line instead of cutting off how many machines are not connected, and `Mark reviewed` (was `Mark all reviewed`) moves under the Done heading instead of squeezing it to `Do…`.
-- In Session overview, red marks only a failed command. A nearly full context turns amber, and a failed command's `exit 1` is grey beside its red mark.
-- Symbols agents draw in their terminals now show on the card and in the pane: Claude Code's `⏵⏵ auto mode on`, `⏺`, `⎿` and its spinner stars, checkboxes and braille spinners were empty boxes on some phones.
-- A card's reply is a quiet `Reply…` at the end of its last line instead of a ↩ circle that read as undo or back.
+### A calmer home: the board is the whole app
 
+The tab bar is gone and the board runs to the bottom of the screen. It says
+how many agents need you once, at the top, and puts one question in front
+with the command it wants to run as the largest text.
+
+> [!TIP]
+> Try it: tap the machine count at the top left to open Machines, and the
+> gear at the top right (`Settings`) for Settings; Back returns to the board.
+
+- The top line reads like `1 needs you · 4 working · heard just now`; on a
+  narrow phone or with large text it takes a second line instead of cutting
+  off how many machines are not connected.
+- The first agent that needs you keeps its card; the others are rows under
+  it, and `Answer one by one` walks them. Needs you can no longer be folded
+  away.
+- On a question, the answers that allow come first and `No` sits apart
+  below them with a ✕. A "don't ask again" answer is in the full list
+  behind `more…`, still held. The card's reply is a quiet `Reply…`.
+- The filter chips and the floating pill are gone. `Past sessions` moved to
+  the new-session form behind `+`, and the agent list density to Settings.
+  A newer version puts a small dot on the gear.
+- On Machines, a machine that is fine has a quiet grey dot; one connecting
+  has a ring, one that needs you a ring with a dot, so it stands out even
+  without colour.
+- In Session overview, red marks only a failed command; a nearly full
+  context turns amber.
+
+Nothing in this release was measured on a phone.
+
+**Fixed**
+
+- Symbols agents draw in their terminals, such as Claude Code's
+  `⏵⏵ auto mode on`, `⏺`, `⎿`, spinner stars and braille spinners, no
+  longer show as empty boxes on the card and in the pane.
+- A long machine address no longer leaves a gap in the middle of the cut.
+- `Mark reviewed` (was `Mark all reviewed`) no longer squeezes the Done
+  heading to `Do…` at large text.
 
 ## [0.1.45] - 2026-10-29
 
