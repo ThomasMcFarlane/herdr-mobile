@@ -162,17 +162,22 @@ void main() {
       expect(h.previews.openCount, 0, reason: 'a leaked watcher reads forever');
     });
 
-    testWidgets('collapsing a section releases its cards', (tester) async {
+    testWidgets('folding a project releases its cards', (tester) async {
       final h = await BoardHarness.create([
-        _machine('a', [_pane(1, 'working'), _pane(2, 'working'), _pane(3, 'done')]),
+        _machine('a', [
+          _pane(1, 'working'),
+          _pane(2, 'working'),
+          (id: 'w2:p3', ws: 'w2', agent: 'claude', status: 'done'),
+        ]),
       ]);
       await pumpBoard(tester, h, height: _tall);
       expect(h.previews.openCount, 3);
 
-      await tester.tap(find.text('Working').last);
+      // The panes of workspace w1 work in `/work/w1`: one project.
+      await tester.tap(find.byKey(const ValueKey('group/a:/work/w1')));
       await tester.pump();
       await settle(tester);
-      expect(h.previews.openCount, 1, reason: 'only the done card is still on the board');
+      expect(h.previews.openCount, 1, reason: 'only the other project\'s card is still on the board');
       await teardownBoard(tester, h);
     });
 

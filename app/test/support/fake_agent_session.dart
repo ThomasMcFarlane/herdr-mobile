@@ -137,6 +137,10 @@ class FakeAgentSession extends ChangeNotifier implements AgentSessionView {
   /// What [lastActivity] says; tests set it.
   @override
   DateTime? lastActivity;
+
+  /// When the keeper started; tests set it.
+  @override
+  DateTime? startedAt;
   @override
   bool get unseenDone => _unseenDone;
 

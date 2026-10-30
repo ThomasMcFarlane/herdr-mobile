@@ -39,8 +39,6 @@ Future<void> _settle(WidgetTester tester, [int steps = 6]) async {
 
 double _top(WidgetTester tester, Finder f) => tester.getTopLeft(f).dy;
 
-Finder _section(String label) => find.byWidgetPredicate((w) => w is SectionLabel && w.label == label);
-
 void main() {
   testWidgets('a blocked pane, a blocked session, a blocked pane offline and a done session: every surface says 2, '
       'and the triage walks the board\'s order', (tester) async {
@@ -100,7 +98,7 @@ void main() {
       reason: 'the pane and the session; not the offline pane, not the finished session',
     );
     expect(find.text('1 offline'), findsOneWidget, reason: 'the offline pane is listed, last known, and said so');
-    expect(tester.widget<SectionLabel>(_section('Done')).count, 1);
+    expect(toReviewCount(tester), 1, reason: 'the finished session, in the status line');
     // The notifier's "need you".
     expect(notifier.glances.last.blocked, 2);
     // The board's order: longest waiting first, panes and sessions mixed.

@@ -664,6 +664,10 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
   @override
   DateTime? get lastActivity => null;
 
+  /// A followed log is not on the board, which is what orders by this.
+  @override
+  DateTime? get startedAt => null;
+
   @override
   DateTime? get phaseSince {
     if (!_isSub) {

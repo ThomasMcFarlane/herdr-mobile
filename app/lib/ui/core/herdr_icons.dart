@@ -25,6 +25,9 @@ abstract final class HerdrIcons {
   /// Stop inside a round button (the composer): `stop` without its ring, the button being the ring.
   static const IconData stopMark = IconData(0xE013, fontFamily: 'HerdrIcons');
 
+  /// Mark finished agents reviewed (the selection bar).
+  static const IconData reviewed = IconData(0xE014, fontFamily: 'HerdrIcons');
+
   /// A message to an agent, and a chat: the selection bar, Read as chat, the chat view.
   static const IconData message = IconData(0xE011, fontFamily: 'HerdrIcons');
 

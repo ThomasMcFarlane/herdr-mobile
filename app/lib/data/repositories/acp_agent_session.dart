@@ -354,6 +354,9 @@ class AcpAgentSession extends ChangeNotifier implements AgentSessionView {
   DateTime? get lastActivity => activityAt;
 
   @override
+  DateTime? get startedAt => _info.startedAt;
+
+  @override
   DateTime? get turnStartedAt => _turnStartedAt;
 
   @override

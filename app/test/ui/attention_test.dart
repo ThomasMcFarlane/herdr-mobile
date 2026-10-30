@@ -1,7 +1,8 @@
-// The board and its chrome tell one story about what needs you: the badge, the
-// pill and the sections agree, what is out of reach says so instead of being
-// counted, reviewing clears Done on this phone only, wait times are honest,
-// rows follow the wait, and density follows the count.
+// The board and its chrome tell one story about what needs you: the status
+// line, Needs you and its `to review` count agree, what is out of reach says
+// so instead of being counted, reviewing clears to review on this phone only,
+// wait times are honest, Needs you follows the wait while rows keep their
+// places, and density follows the count.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/machine_profile.dart';
@@ -38,10 +39,7 @@ int? _sectionCount(WidgetTester tester, String label) =>
     tester.widget<SectionLabel>(find.byWidgetPredicate((w) => w is SectionLabel && w.label == label)).count;
 
 /// The board's status line, under the title.
-String _statusLine(WidgetTester tester) => tester
-    .widget<Text>(find.descendant(of: find.byType(SliverLargeTitle), matching: find.byType(Text)).at(1))
-    .textSpan!
-    .toPlainText();
+String _statusLine(WidgetTester tester) => statusLine(tester);
 
 double _top(WidgetTester tester, Finder f) => tester.getTopLeft(f).dy;
 
@@ -76,10 +74,10 @@ void main() {
       ]);
       await pumpBoard(tester, h, height: _tall);
 
-      expect(_statusLine(tester), startsWith('2 need you · 1 working'));
+      expect(_statusLine(tester), startsWith('2 need you · 2 to review · 1 working'));
       expect(find.textContaining('need you'), findsOneWidget, reason: 'the board says it once');
       expect(_sectionCount(tester, 'Needs you'), isNull, reason: 'the status line counts it');
-      expect(_sectionCount(tester, 'Done'), 2);
+      expect(toReviewCount(tester), 2);
       expect(statusNeedsYou(tester), '2 need you', reason: 'questions only: finished work is not counted');
       expect(_wanted(tester), 4);
       expect(find.byType(AppChip), findsNothing, reason: 'no filter chips: they repeated the sections');
@@ -107,9 +105,9 @@ void main() {
       await pumpBoard(tester, h, height: _tall);
 
       expect(find.textContaining('need'), findsNothing);
-      expect(_statusLine(tester), startsWith('1 working'));
+      expect(_statusLine(tester), startsWith('2 to review · 1 working'));
       expect(statusNeedsYou(tester), isNull);
-      expect(_sectionCount(tester, 'Done'), 2, reason: 'the board still lists it, quietly');
+      expect(toReviewCount(tester), 2, reason: 'the board still says it, quietly');
       semantics.dispose();
       await teardownBoard(tester, h);
     });
@@ -134,8 +132,8 @@ void main() {
         _machine('b', [_pane(3, 'blocked')]),
       ]);
       await pumpBoard(tester, h, height: _tall);
-      expect(_statusLine(tester), startsWith('2 need you'));
-      expect(find.byKey(const ValueKey('mark-all-reviewed')), findsOneWidget);
+      expect(_statusLine(tester), startsWith('2 need you · 1 to review'));
+      expect(find.byKey(toReviewKey), findsOneWidget);
 
       h.network.goOffline();
       await tester.pump(const Duration(milliseconds: 300));
@@ -143,17 +141,13 @@ void main() {
       expect(find.textContaining('need you'), findsNothing, reason: 'nothing out of reach is counted');
       expect(_wanted(tester), 0, reason: 'nothing out of reach can be answered or marked reviewed');
       expect(find.text('2 offline'), findsOneWidget, reason: 'Needs you lists them, last known');
-      expect(find.text('1 offline'), findsOneWidget, reason: 'and so does Done');
-      expect(
-        find.byKey(const ValueKey('mark-all-reviewed')),
-        findsNothing,
-        reason: 'a button that would do nothing is not offered',
-      );
+      expect(_statusLine(tester), contains('1 offline to review'), reason: 'said, not counted');
+      expect(find.byKey(toReviewKey), findsNothing, reason: 'a button that would pick nothing is not offered');
       h.network.goOnline();
       await teardownBoard(tester, h);
     });
 
-    testWidgets('sections run Needs you, Done, Working, Idle', (tester) async {
+    testWidgets('the board runs Needs you, then the project in the order its agents were started', (tester) async {
       final h = await BoardHarness.create([
         _machine('a', [_pane(1, 'idle'), _pane(2, 'working'), _pane(3, 'done'), _pane(4, 'blocked')]),
       ]);
@@ -161,10 +155,14 @@ void main() {
 
       Finder section(String label) => find.widgetWithText(SectionLabel, label);
       final ys = [
-        for (final s in ['Needs you', 'Done', 'Working', 'Idle']) _top(tester, section(s)),
+        _top(tester, section('Needs you')),
+        _top(tester, _card('task 4')),
+        // Every pane works in `/work/w1`: one project.
+        _top(tester, find.byKey(const ValueKey('group/a:/work/w1'))),
+        for (final i in [1, 2, 3]) _top(tester, _card('task $i')),
       ];
       expect(ys, orderedEquals([...ys]..sort()), reason: 'top to bottom');
-      expect(ys.toSet(), hasLength(4));
+      expect(ys.toSet(), hasLength(ys.length));
       await teardownBoard(tester, h);
     });
   });
@@ -178,7 +176,7 @@ void main() {
         _machine('a', [_pane(1, 'blocked'), _pane(2, 'done'), _pane(3, 'done')]),
       ]);
       await pumpBoard(tester, h, height: _tall);
-      expect(_sectionCount(tester, 'Done'), 2);
+      expect(toReviewCount(tester), 2);
       expect(statusNeedsYou(tester), '1 needs you');
 
       await tester.tap(_card('task 2'));
@@ -189,8 +187,7 @@ void main() {
 
       expect(_statusLine(tester), startsWith('1 needs you'));
       expect(statusNeedsYou(tester), '1 needs you', reason: 'reviewing does not touch what needs you');
-      expect(_sectionCount(tester, 'Done'), 1);
-      expect(_sectionCount(tester, 'Idle'), 1, reason: 'the reviewed agent is idle on this phone');
+      expect(toReviewCount(tester), 1);
       expect(h.fleet.agents.firstWhere((a) => a.pane.id == 'w1:p2').pane.status.name, 'idle');
 
       final calls = h.transports['a']!.calls.map((c) => c.$1);
@@ -218,7 +215,7 @@ void main() {
 
       expect(_wanted(tester), 1);
       await _back(tester);
-      expect(_sectionCount(tester, 'Done'), 1);
+      expect(toReviewCount(tester), 1);
       await teardownBoard(tester, h);
     });
 
@@ -236,7 +233,7 @@ void main() {
       await h.changeStatuses(tester, 'a', [_pane(1, 'done')], title: _title);
 
       expect(_wanted(tester), 1);
-      expect(_sectionCount(tester, 'Done'), 1);
+      expect(toReviewCount(tester), 1);
       await teardownBoard(tester, h);
     });
   });
@@ -275,7 +272,7 @@ void main() {
     });
   });
 
-  group('order inside a section', () {
+  group('order', () {
     testWidgets('Needs you: the one that has waited longest is on top, not the one with the lowest id', (tester) async {
       final h = await BoardHarness.create([
         _machine('a', [_pane(1, 'working'), _pane(2, 'working'), _pane(3, 'working')]),
@@ -315,7 +312,7 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('Done: oldest first too', (tester) async {
+    testWidgets('inside a project, agents keep their places as they finish', (tester) async {
       final h = await BoardHarness.create([
         _machine('a', [_pane(1, 'working'), _pane(2, 'working')]),
       ]);
@@ -324,27 +321,26 @@ void main() {
       await h.changeStatuses(
         tester,
         'a',
-        [_pane(1, 'done'), _pane(2, 'working')],
-        ago: const Duration(minutes: 2),
+        [_pane(1, 'working'), _pane(2, 'done')],
+        ago: const Duration(minutes: 40),
         title: _title,
       );
+      expect(_top(tester, _card('task 1')), lessThan(_top(tester, _card('task 2'))), reason: 'started first');
       await h.changeStatuses(
         tester,
         'a',
         [_pane(1, 'done'), _pane(2, 'done')],
-        ago: const Duration(minutes: 40),
+        ago: const Duration(minutes: 2),
         title: _title,
       );
 
-      expect(_top(tester, _card('task 2')), lessThan(_top(tester, _card('task 1'))));
+      expect(_top(tester, _card('task 1')), lessThan(_top(tester, _card('task 2'))), reason: 'finishing moves nothing');
       await teardownBoard(tester, h);
     });
   });
 
   group('quiet', () {
-    testWidgets('a working agent quiet for minutes says so; the order moves with a refresh, not an event', (
-      tester,
-    ) async {
+    testWidgets('a working agent quiet for minutes says so; the order never moves for it', (tester) async {
       // The stream went live 14 minutes ago (the connection's clock starts that
       // far behind) and has heard nothing since.
       final h = await BoardHarness.create([
@@ -359,7 +355,7 @@ void main() {
       expect(
         _top(tester, _card('task 1')),
         lessThan(_top(tester, _card('task 2'))),
-        reason: 'equally quiet: machine, then pane',
+        reason: 'the order they were started in',
       );
 
       // task 1 speaks up: a burst of events, no refresh.
@@ -377,17 +373,11 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pump(const Duration(milliseconds: 100));
       expect(notified, 0, reason: 'no notification per event');
+      await h.changeStatuses(tester, 'a', panes, title: _title);
       expect(
         _top(tester, _card('task 1')),
         lessThan(_top(tester, _card('task 2'))),
-        reason: 'the order waits for the next refresh',
-      );
-
-      await h.changeStatuses(tester, 'a', panes, title: _title);
-      expect(
-        _top(tester, _card('task 2')),
-        lessThan(_top(tester, _card('task 1'))),
-        reason: 'now the quietest one is first',
+        reason: 'quiet or not, a row keeps its place',
       );
       expect(_said('working, quiet for 14 minutes'), findsOneWidget, reason: 'only task 2 is still quiet');
       await teardownBoard(tester, h);
@@ -426,7 +416,7 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('Needs you cannot be folded; the other sections can', (tester) async {
+    testWidgets('Needs you cannot be folded; a project can', (tester) async {
       final h = await BoardHarness.create([
         _machine('a', [_pane(1, 'blocked'), _pane(2, 'working')]),
       ]);
@@ -437,22 +427,26 @@ void main() {
       await settle(tester);
       expect(_card('task 1'), findsOneWidget, reason: 'still there');
 
-      await tester.tap(find.widgetWithText(SectionLabel, 'Working'));
+      await tester.tap(find.byKey(const ValueKey('group/a:/work/w1')));
       await settle(tester);
-      expect(_row('task 2').hitTestable(), findsNothing, reason: 'Working folds');
+      expect(_row('task 2').hitTestable(), findsNothing, reason: 'the project folds');
       await teardownBoard(tester, h);
     });
 
-    testWidgets('Done’s header actions are quiet: secondary words, not the accent', (tester) async {
+    testWidgets('the to-review count is a quiet button: secondary words, not the accent', (tester) async {
+      final semantics = tester.ensureSemantics();
       final h = await BoardHarness.create([
         _machine('a', [_pane(1, 'done'), _pane(2, 'done'), _pane(3, 'working')]),
       ]);
       await pumpBoard(tester, h, height: _tall);
       final ds = tester.element(find.byType(HomeShell)).ds;
-      for (final label in ['Mark reviewed', 'Select all']) {
-        final words = tester.widget<Text>(find.descendant(of: find.byType(TextAction), matching: find.text(label)));
-        expect(words.style?.color, ds.textSecondary, reason: label);
-      }
+      final words = tester.widget<Text>(find.descendant(of: find.byKey(toReviewKey), matching: find.byType(Text)));
+      expect(words.style?.color, ds.textSecondary, reason: 'it tidies, it answers nothing');
+      expect(
+        tester.getSemantics(find.byKey(toReviewKey)),
+        isSemantics(label: '2 to review, select them', isButton: true, hasTapAction: true),
+      );
+      semantics.dispose();
       await teardownBoard(tester, h);
     });
 

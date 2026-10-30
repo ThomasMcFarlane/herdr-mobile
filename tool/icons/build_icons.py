@@ -99,6 +99,10 @@ GLYPHS = [
          # read as one drawing; at IconSize.row in the composer's 36 dp button it
          # weighs with Send's arrow beside it (at IconSize.bar it outweighed it).
          fills=[rrect(5, 5, 19, 19, 3.25)]),
+    dict(cp=0xE014, name='reviewed', doc='Mark finished agents reviewed (the selection bar).',
+         # A check in Stop's ring: the two ringed actions of the bar read as a
+         # pair, and the check alone weighed half the ring beside it.
+         rings=[(12, 12, 9)], strokes=['M8 12.25L10.75 15L16 9.5']),
     dict(cp=0xE011, name='message', doc='A message to an agent, and a chat: the selection bar, Read as chat, the chat view.',
          # A speech bubble whose left edge runs on into the tail, as Lucide's does.
          strokes=['M6 4H18A3 3 0 0 1 21 7V13.5A3 3 0 0 1 18 16.5H8L3.5 20.5V7A3 3 0 0 1 6 4Z']),

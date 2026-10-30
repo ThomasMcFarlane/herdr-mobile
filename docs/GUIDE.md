@@ -157,21 +157,39 @@ nothing under it. It holds both kinds of agent:
 - **Terminal agents**: agents running in herdr panes, as herdr sees them.
 - **Agent sessions**: agents started from the phone (section 6).
 
-**Sections.** Agents are grouped by what they need, in this order:
+**What needs you, then your projects.** From the top:
 
-- `Needs you`: blocked on a question or a permission. Longest waiting first.
-  The first is a card with its answers; the others are rows under it, and
-  `Answer one by one` on the header walks through them all (see below). This
-  section never folds.
-- `Working`
-- `Done`: finished and not yet reviewed. Longest waiting first.
-- `Idle`: agents and phone sessions together, by recency: those that stopped
-  within the last day, newest first; then those the app has no date for; then
-  the older ones, newest first. The first five show; the rest sit behind one
-  line (`22 more idle`, with the names of the first two under it) that opens
-  them in place and then reads `Show less`.
+- `Needs you`: every agent blocked on a question or a permission, whatever
+  project it is in. Longest waiting first. The first is a card with its
+  answers; the others are rows under it, and `Answer one by one` on the header
+  walks through them all (see below). It never folds.
+- Then one group per project: a repo with all its worktrees together, else
+  a folder (agents with no folder at all are under `Other`). The header is
+  the repo's or folder's name and one line saying what is in it
+  (`2 working · 1 done · 4 worktrees`, led by the machine when you have
+  several). A project with one agent, or the only project on the board, has
+  no such line; its machine, when you have several, sits beside its name.
+  Each agent is a row named by its task, with its branch (or its checkout's
+  folder) and the agent under it: `fix/rate-limit · omp`.
 
-Tap a section header to fold it (all but `Needs you`).
+**Nothing moves unless you move it.** Projects are in name order (then
+machine). Inside a project, agents are in the order they were started:
+terminal agents in herdr's order, then agent sessions by when they started. A
+new agent joins the end of its project; an agent that finishes, starts or
+goes idle stays where it is and only its mark changes. Only `Needs you`
+follows the wait: an agent that needs you moves up there, and goes back to
+its place once answered.
+
+Tap a project's header to fold it; the fold is kept. In a project with many
+idle agents the five started last show; the older ones sit behind one line
+after the project's rows (`22 more idle`, with the names of the first two)
+that opens them in their places and then reads `Show less`.
+
+**Branches.** herdr groups a repo's checkouts once you open a worktree in it;
+before that, each folder is its own project. The board reads the branches of
+a machine's repos once per app run, the first time it shows them (one
+request per repo with several checkouts); until then, and for a checkout
+opened later, a row shows its checkout's folder instead.
 
 **The top of the board.** At the top left, `4 of 5 machines` says how many of
 your machines (those switched on) are online: a filled green dot when all
@@ -181,7 +199,7 @@ an agent session) and the gear for Settings, which carries a small dot when a
 newer version is out.
 
 **The status line.** Under the title, one line says how the board stands:
-`2 need you · 3 working · heard just now`, then `1 not connected` when a
+`2 need you · 3 to review · 3 working · heard just now`, then `1 not connected` when a
 machine is out of reach (its strip under the title says which, with `Retry`).
 With nothing waiting or working it says `nothing running`.
 
@@ -191,8 +209,7 @@ looked has no date of its own; an omp agent whose session is reported (see
 below) is dated by when its session file was last written, which is when its
 last turn ended. A phone session is dated by when it last did anything. An
 agent with no date was idle before the app first looked, so it may be an hour
-old or a month: it sits between the ones that stopped within a day and the older
-ones, in machine and pane order, rather than under them.
+old or a month.
 
 **What an agent is called.** The name you gave the pane in herdr, else the
 title the program set. An omp pane whose title is only its folder (omp shows
@@ -215,7 +232,8 @@ Look > `Agent list`: `Compact` or `Cards`.
 status line, the triage sheet and the notifications all count the same
 set. The board says it once, in the status line. It counts only agents you can answer now: an agent on a
 machine that is offline is listed, dimmed and marked `offline`, but not
-counted (the section header says `2 offline` instead).
+counted (the `Needs you` header says `2 offline` instead, and the status line
+`1 offline to review`, or `3 to review, 1 offline`).
 
 **Answer one by one.** When more than one agent needs you, `Answer one by one`
 on the `Needs you` header walks through every waiting agent, one at a time, longest waiting first (`1 of 2 need you`, `Previous agent`,
@@ -223,20 +241,25 @@ on the `Needs you` header walks through every waiting agent, one at a time, long
 session shows what it asks and `Answer in the session`. When the last one is
 answered the sheet says `All clear`.
 
-**Reviewing finished work.** A finished agent stays in `Done` until you
-review it:
+**Reviewing finished work.** A finished agent shows a check and counts in the
+status line's `3 to review` until you review it:
 
 - Swipe a done card or row left until it shows `Reviewed`, or flick it.
-- `Mark all reviewed` on the `Done` header reviews every finished agent you
-  can reach.
+- Tap `3 to review`: it selects exactly those agents (opening the projects
+  they are in), and `Reviewed` in the bar at the bottom reviews them all
+  under one `Undo`. Drop any you want to keep first.
 - Opening a finished agent session reviews it.
 
 Each shows a `Marked reviewed` toast with `Undo`. This is a mark on the phone
 only; herdr's own state is not touched.
 
 **Selecting several agents.** Long-press a card or row to start selecting;
-taps then add or remove agents (`All` and `Cancel` are at the top,
-`Select all` on the `Done` header). The bar at the bottom offers:
+taps then add or remove agents (`All` and `Cancel` are at the top; `3 to
+review` in the status line picks exactly the finished ones). The bar at the
+bottom offers:
+
+- `Reviewed`: marks the finished agents among them reviewed, at once, with
+  one `Undo`.
 
 - `Stop`: sends Esc to each terminal agent and stops the turn of each
   agent session.
@@ -309,8 +332,9 @@ Tap an agent on the board to open it. A terminal agent opens as its live
 terminal; an agent session opens as a chat. Back always returns to the board.
 
 **Swiping between agents.** On an agent's screen, swipe left to go to the
-next agent that wants you: first those that need you, then those that
-finished and you have not reviewed, longest waiting first. Swipe right to go
+next agent that wants you: first those that need you, longest waiting first,
+then those that finished and you have not reviewed, project by project as
+the board lists them. Swipe right to go
 back the way you came. The order is fixed when you start swiping, so an
 agent you just answered stays where it was and swiping back finds it.
 Working and idle agents are not on the way; reach them from the title (below)
@@ -327,11 +351,10 @@ way. When the app is restarted, it reopens the agent screen that was in front.
 
 **Switching from the title.** The title at the top of an agent's screen has a
 small arrow after it, and a number while other agents need you. Tap it for a
-list of every agent, grouped as on the board; the one you are on says `Here`.
-Tap another to go to it (Back still returns to the board), or `All agents on
-the board` to go back. Agents in worktrees of one repo show their branch
-beside the folder, once the phone knows it (open the machine's screen to
-read the branches).
+list of every agent, grouped as on the board (`Needs you`, then each
+project); the one you are on says `Here`. Tap another to go to it (Back still
+returns to the board), or `All agents on the board` to go back. Agents in
+worktrees of one repo show their branch, once the phone has read it.
 
 ### The terminal pane
 

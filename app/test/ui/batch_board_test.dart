@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:ui' show Tristate;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/acp/session_state.dart';
 import 'package:herdr_mobile/data/models/machine_profile.dart';
@@ -12,7 +13,9 @@ import 'package:herdr_mobile/data/repositories/app_settings.dart';
 import 'package:herdr_mobile/data/services/herdr_transport.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_card.dart';
+import 'package:herdr_mobile/ui/features/agents/agent_more_row.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_session_rows.dart';
+import 'package:herdr_mobile/ui/features/agents/batch_action_bar.dart';
 import 'package:herdr_mobile/ui/features/agents/batch_actions_sheet.dart';
 import 'package:herdr_mobile/ui/features/agents/agents_screen.dart';
 import 'package:herdr_mobile/ui/features/machines/machines_screen.dart';
@@ -43,12 +46,17 @@ String _title(String paneId) => 'task ${paneId.split('p').last}';
 
 /// The ten agents of the acceptance case on one machine: tasks 1-3 work,
 /// 4-5 wait for an answer, 6-7 are done, 8-10 are idle.
+/// Ten agents; the two finished ones work in a project of their own
+/// (`/work/w2`), so it can be folded alone.
 List<Pane> _ten() => [
   for (var i = 1; i <= 3; i++) _pane(i, 'working'),
   for (var i = 4; i <= 5; i++) _pane(i, 'blocked'),
-  for (var i = 6; i <= 7; i++) _pane(i, 'done'),
+  for (var i = 6; i <= 7; i++) (id: 'w2:p$i', ws: 'w2', agent: 'claude', status: 'done'),
   for (var i = 8; i <= 10; i++) _pane(i, 'idle'),
 ];
+
+/// The header of the project the finished agents of [_ten] work in.
+final _doneProject = find.byKey(const ValueKey('group/a:/work/w2'));
 
 Future<BoardHarness> _studio(List<Pane> panes) => BoardHarness.create([_machine('a', panes, label: 'studio-mac')]);
 
@@ -271,10 +279,10 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('a collapsed section isn’t "visible": All leaves it out', (tester) async {
+    testWidgets('a folded project isn’t "visible": All leaves it out', (tester) async {
       final h = await _studio(_ten());
       await _pump(tester, h);
-      await _tap(tester, find.descendant(of: find.byType(SectionLabel), matching: find.text('Done')));
+      await _tap(tester, _doneProject);
 
       await _longPress(tester, _row('task 1'));
       await _tap(tester, find.text('All'));
@@ -282,17 +290,75 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('Select all done picks the finished ones, even from a collapsed section', (tester) async {
+    testWidgets('to review picks exactly the finished ones, even from a folded project', (tester) async {
       final h = await _studio(_ten());
       await _pump(tester, h);
-      await _tap(tester, find.descendant(of: find.byType(SectionLabel), matching: find.text('Done')));
+      await _tap(tester, _doneProject);
       expect(_row('task 6'), findsNothing);
 
-      await _tap(tester, find.byKey(const ValueKey('select-all-done')));
+      await _tap(tester, find.byKey(toReviewKey));
       expect(_selected(2), findsOneWidget);
       expect(_row('task 6'), findsOneWidget, reason: 'what is picked is on screen');
+      expect(_enabled(tester, 'Reviewed'), isTrue);
       expect(_enabled(tester, 'Close'), isTrue);
       expect(_enabled(tester, 'Stop'), isFalse);
+      await teardownBoard(tester, h);
+    });
+
+    testWidgets('to review replaces what was picked before', (tester) async {
+      final h = await _studio(_ten());
+      await _pump(tester, h);
+      await _longPress(tester, _row('task 1'));
+      expect(_selected(1), findsOneWidget);
+
+      await _tap(tester, find.byKey(toReviewKey));
+      expect(_selected(2), findsOneWidget, reason: 'exactly the finished ones, not the working one too');
+      expect(_enabled(tester, 'Stop'), isFalse);
+      await teardownBoard(tester, h);
+    });
+
+    testWidgets('the count is hit from a 44 dp band, though its line is shorter', (tester) async {
+      final h = await _studio(_ten());
+      await _pump(tester, h);
+      final words = tester.getRect(find.byKey(toReviewKey));
+      expect(words.height, lessThan(kMinTap), reason: 'it paints at the line\'s height');
+      final target = tester.renderObject(
+        find.descendant(of: find.byKey(toReviewKey), matching: find.byType(Listener)).first,
+      );
+      bool hits(double y) {
+        final result = HitTestResult();
+        RendererBinding.instance.hitTestInView(result, Offset(words.center.dx, y), tester.view.viewId);
+        return result.path.any((e) => e.target == target);
+      }
+
+      var top = words.center.dy, bottom = words.center.dy;
+      while (hits(top - 1)) {
+        top--;
+      }
+      while (hits(bottom + 1)) {
+        bottom++;
+      }
+      expect(bottom - top + 1, greaterThanOrEqualTo(kMinTap), reason: 'the status line takes two lines here');
+
+      await tester.tapAt(Offset(words.center.dx, top + 1));
+      await _settle(tester);
+      expect(_selected(2), findsOneWidget, reason: 'a tap at the band\'s edge picks them');
+      await teardownBoard(tester, h);
+    });
+
+    testWidgets('Reviewed marks the picked finished agents with one toast; Undo brings them back', (tester) async {
+      final h = await _studio(_ten());
+      await _pump(tester, h);
+      await _tap(tester, find.byKey(toReviewKey));
+      await _tap(tester, find.descendant(of: find.byType(BatchActionBar), matching: find.text('Reviewed')));
+
+      expect(find.text('Marked 2 reviewed'), findsOneWidget, reason: 'one toast for both');
+      expect(find.byKey(toReviewKey), findsNothing, reason: 'nothing left to review');
+      expect(find.text('2 selected'), findsNothing, reason: 'picking ends');
+      expect(find.byType(BatchSheet), findsNothing, reason: 'cheap and undone in a tap: no confirm sheet');
+
+      await _tap(tester, find.text('Undo'));
+      expect(toReviewCount(tester), 2);
       await teardownBoard(tester, h);
     });
 
@@ -651,11 +717,11 @@ void main() {
   });
 
   group('close', () {
-    testWidgets('Select all done, then Close: the finished panes are closed, nothing else', (tester) async {
+    testWidgets('to review, then Close: the finished panes are closed, nothing else', (tester) async {
       final h = await _studio(_ten());
       await _pump(tester, h);
 
-      await _tap(tester, find.byKey(const ValueKey('select-all-done')));
+      await _tap(tester, find.byKey(toReviewKey));
       await _tap(tester, find.text('Close'));
 
       expect(find.text('Close agents'), findsOneWidget);
@@ -665,7 +731,7 @@ void main() {
       expect(_confirm('Close 2 agents'), findsOneWidget);
 
       await _tap(tester, find.text('Close 2 agents'));
-      expect(_panesOf(_sent(h, 'a', 'pane.close')), ['w1:p6', 'w1:p7']);
+      expect(_panesOf(_sent(h, 'a', 'pane.close')), ['w2:p6', 'w2:p7']);
       expect(find.text('Closed 2'), findsOneWidget);
       await teardownBoard(tester, h);
     });
@@ -682,7 +748,7 @@ void main() {
       expect(find.text('Waiting for an answer'), findsOneWidget);
 
       await _tap(tester, find.text('Close 2 agents'));
-      expect(_panesOf(_sent(h, 'a', 'pane.close')), ['w1:p6', 'w1:p8']);
+      expect(_panesOf(_sent(h, 'a', 'pane.close')), ['w2:p6', 'w1:p8']);
       expect(find.text('Closed 2 · 2 skipped'), findsOneWidget);
       await teardownBoard(tester, h);
     });
@@ -864,6 +930,12 @@ void main() {
         ]);
         await _pump(tester, h, width: 320, height: 640, textScale: 2, brightness: brightness, bottomInset: 24);
 
+        // Open the project's idle fold (after its rows), so All has every
+        // agent to pick, then back up to the first one.
+        await tester.scrollUntilVisible(find.byType(AgentMoreRow), 400, scrollable: find.byType(Scrollable).first);
+        await _tap(tester, find.byType(AgentMoreRow));
+        await tester.scrollUntilVisible(_row(longTitle('w1:p1')), -400, scrollable: find.byType(Scrollable).first);
+        await _settle(tester);
         await _longPress(tester, _row(longTitle('w1:p1')));
         expect(tester.takeException(), isNull);
         expect(_selected(1), findsOneWidget);
