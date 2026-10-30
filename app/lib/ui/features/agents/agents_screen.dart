@@ -33,12 +33,15 @@ import 'board_selection.dart';
 import 'reply_sheet.dart';
 import 'swipe_review.dart';
 
-/// Every agent across every machine, grouped by how much it needs you:
-/// terminal agents and agent sessions in the same sections, so "what waits"
-/// has one place to look and the sections never trade places as sessions
-/// start or stop waiting (they used to lead the board then, moving every card
-/// under the thumb). Needs you and Done count and order what [AttentionSet]
-/// says, the same as the triage sheet and the notifications.
+/// Every agent across every machine: what needs the person pinned on top
+/// across every project, then one group per project (a repo with all its
+/// worktrees, else a folder), each agent a row named by its task with its
+/// branch under it. Why (owner decision): people run several features of one
+/// repo in separate worktrees, and status sections scattered one repo's
+/// features across Working, Done and Idle. Terminal agents and agent sessions
+/// share every place, so "what waits" has one place to look. Needs you and
+/// To review count and order what [AttentionSet] says, the same as the triage
+/// sheet and the notifications.
 ///
 /// Calm by default: one status line says the count once, the first waiting
 /// agent is a card with its answers and every other agent is a row. Why: the
@@ -66,16 +69,18 @@ class AgentsScreen extends StatefulWidget {
 }
 
 class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
-  // Idle shows its first rows and folds the rest ([idleShown]); true opens them.
-  // Not kept: the board opens folded again, the way a long inbox does.
-  bool _idleOpen = false;
+  // A group shows its first idle rows and folds the rest ([idleShown]); the
+  // groups whose fold is open. Not kept: the board opens folded again, the
+  // way a long inbox does.
+  final _openFolds = <String>{};
   bool? _reportedVisible;
   AgentSessions? _sessions;
 
-  // Collapsed sections, one bit per status, so the set survives the process
-  // being reclaimed. Nothing secret lives here. Needs you's bit is ignored
-  // (`agentEntries`): it never folds.
-  final _collapsedBits = RestorableInt(0);
+  // Folded groups, by [BoardGroup.key], one per line, so the set survives the
+  // process being reclaimed. Nothing secret lives here (machine ids and
+  // folders). Needs you never folds. It replaced one bit per status section
+  // under another id: a restored int read as this string would throw.
+  final _foldedGroups = RestorableString('');
 
   // The last page built. Hidden under a pushed page, the board hands this
   // back instead of rebuilding, so fleet updates cost it one cheap build call.
@@ -109,7 +114,7 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
 
   @override
   void restoreState(RestorationBucket? oldBucket, bool initialRestore) {
-    registerForRestoration(_collapsedBits, 'collapsed');
+    registerForRestoration(_foldedGroups, 'folded-groups');
   }
 
   @override
@@ -135,14 +140,16 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
       ..removeListener(_onSelection)
       ..dispose();
     _gate.dispose();
-    _collapsedBits.dispose();
+    _foldedGroups.dispose();
     super.dispose();
   }
 
-  Set<AgentStatus> get _collapsed => {
-    for (final s in AgentStatus.values)
-      if (_collapsedBits.value & (1 << s.index) != 0) s,
+  Set<String> get _foldedKeys => {
+    for (final key in _foldedGroups.value.split('\n'))
+      if (key.isNotEmpty) key,
   };
+
+  void _setFolded(Set<String> keys) => _foldedGroups.value = keys.join('\n');
 
   void _addMachine() => openMachineForm(context);
 
@@ -168,9 +175,33 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
 
   static final _noUpdate = Listenable.merge(const <Listenable>[]);
 
-  void _toggleSection(AgentStatus s) => setState(() => _collapsedBits.value ^= 1 << s.index);
+  void _toggleGroup(String key) => setState(() {
+    final folded = _foldedKeys;
+    if (!folded.remove(key)) folded.add(key);
+    _setFolded(folded);
+  });
 
-  void _toggleIdle() => setState(() => _idleOpen = !_idleOpen);
+  void _toggleFold(String key) => setState(() {
+    if (!_openFolds.remove(key)) _openFolds.add(key);
+  });
+
+  /// Reads the branches of a machine whose repos the board shows with
+  /// several checkouts, once per machine for the app run
+  /// ([MachineConnection.loadBranchesOnce]), after the frame: the rows are
+  /// named by their checkout's folder until then. Never per rebuild: a
+  /// machine already asked is skipped here.
+  void _askBranches(BoardLayout layout) {
+    final machines = {
+      for (final g in layout.groups)
+        if (g.checkouts > 1 && g.machine.isLive && !g.machine.branchesAsked) g.machine,
+    };
+    if (machines.isEmpty) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (final m in machines) {
+        m.loadBranchesOnce();
+      }
+    });
+  }
 
   /// Tells the sessions when the board is on screen (not under a pushed
   /// page): they list their hosts every minute only then.
@@ -235,8 +266,14 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
     }
 
     final sessionList = sessions?.sessions ?? const <AgentSessionView>[];
-    final sections = boardSections(overview.agents, sessionList, attention);
-    final entries = agentEntries(sections, collapsed: _collapsed, idleOpen: _idleOpen);
+    final layout = boardLayout(overview.agents, sessionList, attention);
+    _askBranches(layout);
+    final entries = boardEntries(
+      layout,
+      collapsed: _foldedKeys,
+      openFolds: _openFolds,
+      showMachine: overview.machineCount > 1,
+    );
     _armGateWhenAnswersMove(entries, cards: cards);
     final listed = _withFolding(entries, overview);
     final indexes = entryIndexes(listed);
@@ -244,9 +281,9 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
     final troubled = overview.troubled;
     final needYouCount = attention.needsYou.length;
     final review = attention.toReview.length;
-    final working = sections.where((s) => s.status == AgentStatus.working).firstOrNull?.items.length ?? 0;
+    final working = layout.working;
 
-    // What All picks: the rows the board shows (open sections),
+    // What All picks: the rows the board shows (open groups),
     // and what a pane that went away takes out of the selection.
     _visibleRefs = [
       for (final e in entries)
@@ -341,17 +378,32 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
               itemCount: listed.length,
               findChildIndexCallback: (key) => indexes[key],
               itemBuilder: (context, i) => switch (listed[i]) {
-                final AgentHeader h => _SectionHeader(
+                // Counted by the status line, so its header does not say it
+                // again.
+                final NeedsYouHeader h => _SectionHeader(
                   key: h.key,
-                  label: h.status.label,
-                  // Needs you and Working are counted by the status line, so
-                  // their headers do not say it again. Elsewhere, with only
-                  // offline ones listed: "Done · 2 offline", not a 0 that
-                  // reads as a count of nothing beside them.
-                  count: _countedAbove(h.status) || (h.count == 0 && h.offline > 0) ? null : h.count,
-                  expanded: h.collapsible ? h.expanded : null,
-                  onTap: h.collapsible ? () => _toggleSection(h.status) : null,
-                  actions: _headerActions(h, review: review, needYou: needYouCount),
+                  label: AgentStatus.blocked.label,
+                  count: null,
+                  expanded: null,
+                  onTap: null,
+                  actions: _needsYouActions(h, needYou: needYouCount),
+                ),
+                // With only offline ones listed: "To review · 2 offline", not
+                // a 0 that reads as a count of nothing beside them.
+                final ReviewHeader h => _SectionHeader(
+                  key: h.key,
+                  label: _toReview,
+                  count: h.count == 0 && h.offline > 0 ? null : h.count,
+                  expanded: null,
+                  onTap: null,
+                  actions: _reviewActions(h, review: review),
+                ),
+                final GroupHeader h => _GroupHeader(
+                  key: h.key,
+                  label: h.group.label,
+                  summary: h.summary,
+                  expanded: h.expanded,
+                  onTap: () => _toggleGroup(h.group.key),
                 ),
                 final AgentLine l => Collapse(
                   key: l.key,
@@ -372,9 +424,9 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
                 final SessionLine l => Collapse(
                   key: l.key,
                   open: l.open,
-                  child: AgentSessionRow(session: l.session, divider: !l.last),
+                  child: AgentSessionRow(session: l.session, divider: !l.last, where: l.where),
                 ),
-                final AgentMore m => AgentMoreRow(key: m.key, more: m, onTap: _toggleIdle),
+                final AgentMore m => AgentMoreRow(key: m.key, more: m, onTap: () => _toggleFold(m.groupKey)),
                 final AgentFolding f => _FoldAway(key: f.key, height: f.height, onDone: () => _folded(f.agentKey)),
               },
             ),
@@ -475,72 +527,80 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
     if (mounted && _folding.remove(agentKey) != null) setState(() {});
   }
 
-  /// Whether the status line already counts this section.
-  static bool _countedAbove(AgentStatus s) => s == AgentStatus.blocked || s == AgentStatus.working;
-
-  /// What a section header carries on its right. Needs you: how many of its
-  /// rows are out of reach, then the walk through every waiting agent (the
-  /// triage sheet) when more than one waits: only the first is a card. Done:
-  /// the offline note, then "Mark reviewed" when something can be marked
-  /// (an offline agent cannot: it is not counted and the note says why,
-  /// instead of a button that would do nothing) and "Select all". The
-  /// section already says "all": the words were "Mark all reviewed" and
-  /// wrapped on a 320 dp phone.
-  _HeaderActions? _headerActions(AgentHeader h, {required int review, required int needYou}) => switch (h.status) {
-    AgentStatus.blocked => _HeaderActions(
-      offline: h.offline,
-      // The action's room is kept while there is no action (its 44 dp box,
-      // and the choice of line made as if it were there): a second agent
-      // starting to wait must not move the card in front under the thumb.
-      holdsFor: _answerOneByOne,
-      actions: [
-        if (needYou > 1)
-          // The sheet walks the same set, in the same order: terminal agents
-          // and agent sessions.
-          (
-            key: const ValueKey('answer-one-by-one'),
-            label: _answerOneByOne,
-            tone: TextActionTone.accent,
-            onTap: () => unawaited(showTriageSheet(context)),
-          ),
-      ],
-    ),
-    AgentStatus.done => _HeaderActions(
-      offline: h.offline,
-      actions: [
-        if (review > 0)
-          (
-            key: const ValueKey('mark-all-reviewed'),
-            label: 'Mark reviewed',
-            tone: TextActionTone.quiet,
-            onTap: _markAllReviewed,
-          ),
+  /// What the Needs you header carries on its right: how many of its rows are
+  /// out of reach, then the walk through every waiting agent (the triage
+  /// sheet) when more than one waits: only the first is a card.
+  _HeaderActions _needsYouActions(NeedsYouHeader h, {required int needYou}) => _HeaderActions(
+    offline: h.offline,
+    // The action's room is kept while there is no action (its 44 dp box,
+    // and the choice of line made as if it were there): a second agent
+    // starting to wait must not move the card in front under the thumb.
+    holdsFor: _answerOneByOne,
+    actions: [
+      if (needYou > 1)
+        // The sheet walks the same set, in the same order: terminal agents
+        // and agent sessions.
         (
-          key: const ValueKey('select-all-done'),
-          label: 'Select all',
-          tone: TextActionTone.quiet,
-          onTap: _selectAllDone,
+          key: const ValueKey('answer-one-by-one'),
+          label: _answerOneByOne,
+          tone: TextActionTone.accent,
+          onTap: () => unawaited(showTriageSheet(context)),
         ),
-      ],
-    ),
-    _ => null,
-  };
+    ],
+  );
+
+  /// What the `To review` line carries: the offline note, then "Mark
+  /// reviewed" when something can be marked (an offline agent cannot: it is
+  /// not counted and the note says why, instead of a button that would do
+  /// nothing) and "Select all". One line above the groups rather than one per
+  /// group: Mark reviewed is one batch (one toast, one Undo) over every
+  /// finished agent wherever it is listed, and Select all picks them all for
+  /// one batch action; split per project they would be several batches. The
+  /// words were "Mark all reviewed" and wrapped on a 320 dp phone.
+  _HeaderActions _reviewActions(ReviewHeader h, {required int review}) => _HeaderActions(
+    offline: h.offline,
+    actions: [
+      if (review > 0)
+        (
+          key: const ValueKey('mark-all-reviewed'),
+          label: 'Mark reviewed',
+          tone: TextActionTone.quiet,
+          onTap: _markAllReviewed,
+        ),
+      (key: const ValueKey('select-all-done'), label: 'Select all', tone: TextActionTone.quiet, onTap: _selectAllDone),
+    ],
+  );
 
   static const _answerOneByOne = 'Answer one by one';
+  static const _toReview = 'To review';
 
-  /// Picks every finished agent (terminal and session), opening the section
-  /// they sit in so that what is picked is on screen.
+  /// Picks every finished agent (terminal and session), opening the groups
+  /// they sit in (and a fold that hides one) so that what is picked is on
+  /// screen.
   void _selectAllDone() {
     final overview = AgentsOverview.of(context.read<FleetRepository>());
     final sessions = _sessions?.sessions ?? const <AgentSessionView>[];
-    final done = [
-      for (final a in overview.agents)
-        if (a.status == AgentStatus.done) paneRef(a.key),
-      for (final s in sessions)
-        if (boardStatus(s) == AgentStatus.done) sessionRef(s.key),
-    ];
+    final attention = context.read<AttentionSet>();
+    final layout = boardLayout(overview.agents, sessions, attention);
+    bool isDone(BoardItem item) => statusOfItem(item) == AgentStatus.done;
+    final done = <String>[];
+    final groups = <String>{};
+    final folds = <String>{};
+    for (final g in layout.groups) {
+      for (final item in g.items.where(isDone)) {
+        groups.add(g.key);
+        done.add(switch (item) {
+          PaneItem(:final row) => paneRef(row.key),
+          SessionItem(:final session) => sessionRef(session.key),
+        });
+      }
+      if (foldedItems(g).any(isDone)) folds.add(g.key);
+    }
     if (done.isEmpty) return;
-    setState(() => _collapsedBits.value &= ~(1 << AgentStatus.done.index));
+    setState(() {
+      _setFolded(_foldedKeys.difference(groups));
+      _openFolds.addAll(folds);
+    });
     _selection.selectAll(done);
   }
 
@@ -594,9 +654,9 @@ class _OfflineNote extends StatelessWidget {
 /// its words before it decides where they go.
 typedef _HeaderAction = ({Key key, String label, TextActionTone tone, VoidCallback onTap});
 
-/// What a section header carries after its name: the note of how many of
-/// its rows are offline, then its ghost buttons (Needs you's walk, Done's
-/// "Mark reviewed" and "Select all").
+/// What a header carries after its name: the note of how many of its agents
+/// are offline, then its ghost buttons (Needs you's walk, To review's "Mark
+/// reviewed" and "Select all").
 class _HeaderActions {
   const _HeaderActions({required this.actions, this.offline = 0, this.holdsFor});
 
@@ -721,6 +781,78 @@ class _SectionHeader extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// A project's header on the board: its name (a repo, else a folder) and a
+/// one-line summary of what its rows are doing, in the words the board
+/// already uses (`2 working · 1 done · 4 worktrees`). A tap folds it; folded,
+/// the summary is what still says what is inside. Quiet on purpose: the
+/// name of a thing in the text colour, the summary muted, no count in a
+/// status colour (attention is Needs you's, pinned above).
+class _GroupHeader extends StatelessWidget {
+  const _GroupHeader({
+    super.key,
+    required this.label,
+    required this.summary,
+    required this.expanded,
+    required this.onTap,
+  });
+
+  final String label;
+  final String summary;
+  final bool expanded;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ds = context.ds;
+    return Padding(
+      padding: const EdgeInsets.only(top: Gap.md),
+      child: Semantics(
+        header: true,
+        expanded: expanded,
+        child: PressRow(
+          onTap: () {
+            Haptics.tick();
+            onTap();
+          },
+          minHeight: kMinTap,
+          padding: const EdgeInsets.symmetric(horizontal: Gap.gutter - PressRow.inset, vertical: Gap.sm),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Type.row.copyWith(color: ds.text),
+                    ),
+                  ),
+                  const SizedBox(width: Gap.xs),
+                  Caret(open: expanded),
+                ],
+              ),
+              if (summary.isNotEmpty) ...[
+                const SizedBox(height: Gap.hair),
+                // Two lines at most: at large text on a narrow phone one line
+                // cut the counts the fold exists to show. It breaks only
+                // between facts, so a count never leaves its word (`1 / done`).
+                Text(
+                  summary.split(' · ').map((f) => f.replaceAll(' ', '\u00a0')).join(' · '),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Type.secondary.copyWith(color: ds.textMuted, fontFeatures: Type.tabular),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -68,9 +68,10 @@ Future<void> showAgentView(BuildContext context, AgentRef agent, AgentView view)
 }
 
 /// The triage walk a swipe between agents follows: the agent the walk began
-/// on, then every agent that wants the person, Needs you then Done, in the
-/// board's own order ([AttentionSet]'s: what can be reached first, longest
-/// waiting first). Working and idle agents are not in it (the board and the
+/// on, then every agent that wants the person, in the board's own order:
+/// Needs you ([AttentionSet]'s: what can be reached first, longest waiting
+/// first), then the finished ones to review, project by project as the board
+/// lists them. Working and idle agents are not in it (the board and the
 /// title reach them).
 ///
 /// The order is frozen when the walk begins (the first swipe, or the first
@@ -105,11 +106,13 @@ _AgentWalk _walkFrom(BuildContext context, AgentRef agent) {
   final navigator = Navigator.of(context);
   final walk = _walks[navigator];
   if (walk != null && walk.current == agent) return walk;
+  final layout = boardLayoutOf(context);
   final wanting = [
-    for (final section in boardSectionsOf(context))
-      if (section.status == AgentStatus.blocked || section.status == AgentStatus.done)
-        for (final item in section.items)
-          if (item.agent != agent) item.agent,
+    for (final item in layout.needsYou)
+      if (item.agent != agent) item.agent,
+    for (final group in layout.groups)
+      for (final item in group.items)
+        if (statusOfItem(item) == AgentStatus.done && item.agent != agent) item.agent,
   ];
   return _walks[navigator] = _AgentWalk([agent, ...wanting]);
 }
@@ -138,8 +141,7 @@ WalkStop? neighbourOf(BuildContext context, AgentRef agent, int delta) {
 
 /// The agents working now, as the board counts them: what the end of the
 /// walk says is going on without the person.
-int agentsWorking(BuildContext context) =>
-    boardSectionsOf(context).where((s) => s.status == AgentStatus.working).firstOrNull?.items.length ?? 0;
+int agentsWorking(BuildContext context) => boardLayoutOf(context).working;
 
 /// A swipe's step: shows [to], [delta] steps along the walk from the agent
 /// in front (+1 the next one, for a swipe to the left), in place of this
@@ -173,14 +175,14 @@ void swipeToAgent(BuildContext context, AgentRef agent, int delta) {
   stepToAgent(context, to.item.agent, delta);
 }
 
-/// The board's sections, as the board lists them now: the one order the swipe
-/// walk and the title switcher both follow. Its filter and collapsed sections
-/// are a way of looking, not an order, and are not applied. [attention] lets a
-/// caller that watches the set pass it in.
-List<BoardSection> boardSectionsOf(BuildContext context, {AttentionSet? attention}) {
+/// The board's layout, as the board lists it now: the one order the swipe
+/// walk and the title switcher both follow. Its folded groups are a way of
+/// looking, not an order, and are not applied. [attention] lets a caller that
+/// watches the set pass it in.
+BoardLayout boardLayoutOf(BuildContext context, {AttentionSet? attention}) {
   attention ??= context.read<AttentionSet?>();
-  if (attention == null) return const [];
-  return boardSections(
+  if (attention == null) return const BoardLayout();
+  return boardLayout(
     AgentsOverview.of(context.read<FleetRepository>()).agents,
     context.read<AgentSessions?>()?.sessions ?? const [],
     attention,
@@ -188,7 +190,7 @@ List<BoardSection> boardSectionsOf(BuildContext context, {AttentionSet? attentio
 }
 
 /// Every row the board lists, in its order.
-List<BoardItem> _boardItems(BuildContext context) => [for (final section in boardSectionsOf(context)) ...section.items];
+List<BoardItem> _boardItems(BuildContext context) => boardLayoutOf(context).items.toList();
 
 /// The agent a board row stands for.
 extension BoardItemAgent on BoardItem {

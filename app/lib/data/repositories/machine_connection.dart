@@ -260,6 +260,30 @@ class MachineConnection extends ChangeNotifier {
     noteBranches([for (final l in lists) ...l]);
   }
 
+  bool _branchesAsked = false;
+
+  /// Whether [loadBranchesOnce] has asked already.
+  bool get branchesAsked => _branchesAsked;
+
+  /// [loadBranches] at most once for this connection's life (an app run): the
+  /// board names a repo's agents by branch without the person opening the
+  /// machine, and a board that rebuilds on every event must not ask again.
+  /// One `worktree.list` per repo with several open checkouts, the first time
+  /// the board shows them; a checkout opened later is named by its folder
+  /// until the machine screen or the start form reads it. Not counted as asked
+  /// while the link is down or no repo has several checkouts, so it is asked
+  /// when they come.
+  void loadBranchesOnce() {
+    if (_branchesAsked || !isLive || places.repos.isEmpty) return;
+    _branchesAsked = true;
+    unawaited(loadBranches());
+  }
+
+  /// Bumped whenever a branch is learnt or forgotten, so a summary of the
+  /// fleet (the board's) can tell that the names it shows changed.
+  int get branchesVersion => _branchesVersion;
+  int _branchesVersion = 0;
+
   /// Remembers the branches in [worktrees]; repaints only when one changed.
   void noteBranches(List<WorktreeInfo> worktrees) {
     var changed = false;
@@ -272,6 +296,7 @@ class MachineConnection extends ChangeNotifier {
         changed = true;
       }
     }
+    if (changed) _branchesVersion++;
     if (changed && !_disposed) notifyListeners();
   }
 

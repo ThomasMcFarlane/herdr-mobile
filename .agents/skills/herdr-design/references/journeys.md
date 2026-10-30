@@ -10,13 +10,13 @@ shape itself changes, update this file.
 
 | Role | Surfaces |
 | --- | --- |
-| Overview | the Agents board, the app's home with no bar under it (every agent on every machine, by what it needs; its header's machines chip says how many are online), the Machines page it opens |
+| Overview | the Agents board, the app's home with no bar under it (Needs you across every project on top, then one group per project: a repo with its worktrees, else a folder; its header's machines chip says how many are online), the Machines page it opens |
 | Attention | the needs-you notification, the in-app arrival haptic, the board's status line, the triage sheet |
 | Answer | the board card's chips, the reply sheet, the pane's answer dock, the session's prompt dock, the notification's buttons |
 | Follow | an agent screen: the terminal pane (live edge, jump pill) or the agent session (transcript, status line, overview, background strip), the swipe along the agents that want the person, the options' `Show terminal` / `Show chat` |
 | Steer | the composers, the key row, the slash and command palettes, quick phrases, the attach sheet, mode and model |
 | Start | the `+` (the board's header, machine screen), the new agent session form, Duplicate, past sessions |
-| Review | the done section, swipe to review, Mark all reviewed, the Changed card, the file viewer, the photo viewer |
+| Review | done rows in each project, the To review line (Mark reviewed, Select all), swipe to review, the Changed card, the file viewer, the photo viewer |
 | Set up | the machine form (keys, Tailscale, connection test), Settings (the gear in the board's header) |
 | Trouble | status strips and panels, stale dimming, the session link strip, Retry |
 | Away | the background profile, the Watching notice, notifications |
@@ -59,7 +59,7 @@ these already means it.
   header buttons) costs focus here: most people run on auto-accept, so the
   common glance finds nothing waiting.
 - **Must hold:**
-  - counts agree everywhere (status line, sections, the Machines page, notifications),
+  - counts agree everywhere (status line, Needs you, To review, the Machines page, notifications),
     and each surface says a count once (the board said it four times: a
     filter chip, the section header, a triage pill and the tab badge);
   - stale data looks stale;
@@ -77,7 +77,8 @@ these already means it.
   latest when they want it → swipe to the next agent, or back.
 - **Switching.** One agent per screen; the board is the only list of agents.
   A sideways swipe inside the screen walks the agents that want the person
-  (needs you, then done, in the board's attention order), coming in with the
+  (needs you in the board's attention order, then done project by project
+  as the board lists them), coming in with the
   finger; the walk's order is frozen when it starts, so a swipe back
   retraces it exactly (read live, answering the agent in front moved it and
   the way back was lost). Letting go far enough (or with a flick) goes
@@ -125,7 +126,7 @@ these already means it.
 ### 6. Review finished work
 
 - **Moment.** Agents finished while they were away. They want the outcome and to clear the list.
-- **Ideal shape.** The done section → the answer and what changed, at a glance →
+- **Ideal shape.** The done rows (a check, in their project) → the answer and what changed, at a glance →
   open a changed file in one tap → mark it reviewed (swipe, tap, or all at once) →
   one Undo covers what they just did.
 - **Must hold:** review is per device and never touches herdr's own state. Every way
@@ -191,7 +192,7 @@ for them in every review:
   jump buttons, two forms) that slowly diverge in guards, haptics and words.
 - **Uneven coverage:** a guard, a haptic, an Undo or a reason that one surface
   has and its twin lacks.
-- **Counts that disagree** between the status line, the sections, the Machines
+- **Counts that disagree** between the status line, Needs you, To review, the Machines
   page and the notifications.
 - **Dead ends:** an error whose only action can't succeed, or a link that lands
   on the wrong page.

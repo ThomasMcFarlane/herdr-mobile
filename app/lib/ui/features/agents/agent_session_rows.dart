@@ -99,16 +99,20 @@ String sessionStateWords(AgentSessionView s, DateTime now) {
 /// swipes left to be marked reviewed without opening it (as a terminal
 /// agent's card does).
 class AgentSessionRow extends StatelessWidget {
-  const AgentSessionRow({super.key, required this.session, required this.divider});
+  const AgentSessionRow({super.key, required this.session, required this.divider, this.where});
 
   final AgentSessionView session;
   final bool divider;
+
+  /// Where it runs, in place of [sessionMeta]: inside a project's group the
+  /// line leaves out the repo, which is the group's name.
+  final String? where;
 
   @override
   Widget build(BuildContext context) {
     final status = boardStatus(session);
     final summary = status == AgentStatus.blocked ? blockedSummary(session) : null;
-    final meta = sessionMeta(session);
+    final meta = where ?? sessionMeta(session);
     final live = session.link == AgentLink.live;
     final ref = sessionRef(session.key);
     final sel = rowSelect(context, ref);

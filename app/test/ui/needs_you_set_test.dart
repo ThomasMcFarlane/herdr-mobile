@@ -100,7 +100,7 @@ void main() {
       reason: 'the pane and the session; not the offline pane, not the finished session',
     );
     expect(find.text('1 offline'), findsOneWidget, reason: 'the offline pane is listed, last known, and said so');
-    expect(tester.widget<SectionLabel>(_section('Done')).count, 1);
+    expect(tester.widget<SectionLabel>(_section('To review')).count, 1);
     // The notifier's "need you".
     expect(notifier.glances.last.blocked, 2);
     // The board's order: longest waiting first, panes and sessions mixed.

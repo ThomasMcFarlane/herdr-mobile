@@ -132,7 +132,7 @@ class _AgentCardState extends State<AgentCard>
     syncShown();
     final news = widget.agent.status == AgentStatus.blocked || widget.agent.status == AgentStatus.done;
     if (news && old.agent.status != widget.agent.status && !Motion.reduced(context)) {
-      // The card changed section: a faint accent wash that fades finds it.
+      // The card changed status: a faint accent wash that fades finds it.
       (_arrival ??= AnimationController(vsync: this, duration: Motion.arrival)).forward(from: 0);
     }
   }

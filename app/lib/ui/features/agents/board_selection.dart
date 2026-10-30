@@ -17,8 +17,8 @@ String sessionRef(String sessionKey) => 's:$sessionKey';
 
 /// Which board rows are picked for a batch action, and whether the board is
 /// picking at all. Its own small notifier: only the rows (through
-/// [rowSelect]) and the bars listen, so `AgentsOverview` and the sections
-/// never rebuild for a tap. Not saved: a restart starts without it.
+/// [rowSelect]) and the bars listen, so `AgentsOverview` and the board's
+/// layout never rebuild for a tap. Not saved: a restart starts without it.
 class BoardSelection extends ChangeNotifier {
   final Set<String> _refs = {};
   bool _active = false;
@@ -140,7 +140,7 @@ class SelectableRowFrame extends StatelessWidget {
   }
 }
 
-/// The picked agents as they are right now: the terminal agents by section,
+/// The picked agents as they are right now: the terminal agents by status,
 /// then the agent sessions. A pane or session that is gone is simply not
 /// there.
 List<BatchTarget> resolveBatchTargets({

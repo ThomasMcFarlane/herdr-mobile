@@ -6,6 +6,7 @@ class Place {
   const Place({
     required this.repoKey,
     required this.repoName,
+    required this.repoRoot,
     required this.checkoutPath,
     required this.workspaceId,
     required this.isLinked,
@@ -13,6 +14,13 @@ class Place {
 
   final String repoKey;
   final String repoName;
+
+  /// The repo's primary checkout (herdr's `repo_root`), the same for every
+  /// checkout of the repo: what the board groups a repo's agents by, since a
+  /// folder herdr knows nothing about is grouped by its own path, and an agent
+  /// in the primary checkout then keeps its group when herdr's grouping
+  /// arrives (`repoKeyIn`).
+  final String repoRoot;
   final String checkoutPath;
 
   /// The herdr workspace that is this checkout.
@@ -58,6 +66,7 @@ class PlaceIndex {
         Place(
           repoKey: wt.repoKey,
           repoName: wt.repoName,
+          repoRoot: _trimSlash(wt.repoRoot),
           checkoutPath: _trimSlash(wt.checkoutPath),
           workspaceId: w.id,
           isLinked: wt.isLinked,

@@ -1,5 +1,6 @@
 // One agent per screen: a quick swipe walks the agents that want the person
-// (needs you, then done, in an order frozen at the first swipe) and replaces
+// (needs you, then done project by project as the board lists them, in an
+// order frozen at the first swipe) and replaces
 // the screen, the bar's toggle shows the other view of the
 // same agent, a screen whose machine is gone says so, and launch puts the
 // agent screen that was in front back.
@@ -252,6 +253,23 @@ void main() {
 
       await _back(tester);
       _expectHome();
+      await teardownUi(tester, h);
+    });
+
+    testWidgets('after Needs you the walk takes the finished agents project by project, as the board lists them', (
+      tester,
+    ) async {
+      Pane at(String ws, int i, String status) => (id: '$ws:p$i', ws: ws, agent: 'claude', status: status);
+      final h = await _harness(
+        panes: [at('w1', 1, 'done'), at('w2', 2, 'done'), at('w2', 3, 'working'), at('w1', 4, 'blocked')],
+      );
+      await _pump(tester, h, home: [('w1:p4', const PaneAgent(_machine, 'w1:p4'))]);
+      await _open(tester, 'w1:p4');
+
+      await _swipeLeft(tester);
+      expect(_onScreen(tester), 'w2:p2', reason: 'its project has work running, so the board lists it first');
+      await _swipeLeft(tester);
+      expect(_onScreen(tester), 'w1:p1');
       await teardownUi(tester, h);
     });
 

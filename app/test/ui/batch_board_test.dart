@@ -12,6 +12,7 @@ import 'package:herdr_mobile/data/repositories/app_settings.dart';
 import 'package:herdr_mobile/data/services/herdr_transport.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_card.dart';
+import 'package:herdr_mobile/ui/features/agents/agent_more_row.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_session_rows.dart';
 import 'package:herdr_mobile/ui/features/agents/batch_actions_sheet.dart';
 import 'package:herdr_mobile/ui/features/agents/agents_screen.dart';
@@ -43,12 +44,17 @@ String _title(String paneId) => 'task ${paneId.split('p').last}';
 
 /// The ten agents of the acceptance case on one machine: tasks 1-3 work,
 /// 4-5 wait for an answer, 6-7 are done, 8-10 are idle.
+/// Ten agents; the two finished ones work in a project of their own
+/// (`/work/w2`), so it can be folded alone.
 List<Pane> _ten() => [
   for (var i = 1; i <= 3; i++) _pane(i, 'working'),
   for (var i = 4; i <= 5; i++) _pane(i, 'blocked'),
-  for (var i = 6; i <= 7; i++) _pane(i, 'done'),
+  for (var i = 6; i <= 7; i++) (id: 'w2:p$i', ws: 'w2', agent: 'claude', status: 'done'),
   for (var i = 8; i <= 10; i++) _pane(i, 'idle'),
 ];
+
+/// The header of the project the finished agents of [_ten] work in.
+final _doneProject = find.byKey(const ValueKey('group/a:/work/w2'));
 
 Future<BoardHarness> _studio(List<Pane> panes) => BoardHarness.create([_machine('a', panes, label: 'studio-mac')]);
 
@@ -271,10 +277,10 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('a collapsed section isn’t "visible": All leaves it out', (tester) async {
+    testWidgets('a folded project isn’t "visible": All leaves it out', (tester) async {
       final h = await _studio(_ten());
       await _pump(tester, h);
-      await _tap(tester, find.descendant(of: find.byType(SectionLabel), matching: find.text('Done')));
+      await _tap(tester, _doneProject);
 
       await _longPress(tester, _row('task 1'));
       await _tap(tester, find.text('All'));
@@ -282,10 +288,10 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('Select all done picks the finished ones, even from a collapsed section', (tester) async {
+    testWidgets('Select all done picks the finished ones, even from a folded project', (tester) async {
       final h = await _studio(_ten());
       await _pump(tester, h);
-      await _tap(tester, find.descendant(of: find.byType(SectionLabel), matching: find.text('Done')));
+      await _tap(tester, _doneProject);
       expect(_row('task 6'), findsNothing);
 
       await _tap(tester, find.byKey(const ValueKey('select-all-done')));
@@ -665,7 +671,7 @@ void main() {
       expect(_confirm('Close 2 agents'), findsOneWidget);
 
       await _tap(tester, find.text('Close 2 agents'));
-      expect(_panesOf(_sent(h, 'a', 'pane.close')), ['w1:p6', 'w1:p7']);
+      expect(_panesOf(_sent(h, 'a', 'pane.close')), ['w2:p6', 'w2:p7']);
       expect(find.text('Closed 2'), findsOneWidget);
       await teardownBoard(tester, h);
     });
@@ -682,7 +688,7 @@ void main() {
       expect(find.text('Waiting for an answer'), findsOneWidget);
 
       await _tap(tester, find.text('Close 2 agents'));
-      expect(_panesOf(_sent(h, 'a', 'pane.close')), ['w1:p6', 'w1:p8']);
+      expect(_panesOf(_sent(h, 'a', 'pane.close')), ['w2:p6', 'w1:p8']);
       expect(find.text('Closed 2 · 2 skipped'), findsOneWidget);
       await teardownBoard(tester, h);
     });
@@ -864,6 +870,11 @@ void main() {
         ]);
         await _pump(tester, h, width: 320, height: 640, textScale: 2, brightness: brightness, bottomInset: 24);
 
+        // Open the project's idle fold, so All has every agent to pick.
+        await tester.scrollUntilVisible(find.byType(AgentMoreRow), 400, scrollable: find.byType(Scrollable).first);
+        await _tap(tester, find.byType(AgentMoreRow));
+        await tester.drag(find.byType(Scrollable).first, const Offset(0, 20000));
+        await _settle(tester);
         await _longPress(tester, _row(longTitle('w1:p1')));
         expect(tester.takeException(), isNull);
         expect(_selected(1), findsOneWidget);

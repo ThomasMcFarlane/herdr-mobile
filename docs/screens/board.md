@@ -1,6 +1,6 @@
 # The board (home)
 
-How the Agents board, the app's home, shows, sorts, answers and reviews
+How the Agents board, the app's home, shows, groups, answers and reviews
 agents, and how Machines and Settings are reached from it.
 
 The design system (tokens, kit, motion, words) is `docs/DESIGN.md`; this file holds what this screen does and why.
@@ -14,7 +14,7 @@ It answers both from the header and keeps everything else quiet.
 - **One status line, one count.** Under the title: `2 need you · 3 working ·
   heard just now · 1 not connected` (`nothing running` when nothing waits or
   works). The needs-you part is the only loud words (`blockedText`); the
-  `Needs you` and `Working` headers carry no count of their own. Why: the
+  `Needs you` header carries no count of its own. Why: the
   count was said four times on one screen (a filter chip, the section
   header, a floating triage pill and the tab badge), and every repeat is
   chrome that costs the focus a glance is made of. On a narrow phone the
@@ -31,11 +31,11 @@ It answers both from the header and keeps everything else quiet.
 - **One decision in front.** In the default `Compact` density
   (`BoardDensity.compact`), the first agent of Needs you that can be answered
   is an `AgentCard` with its answers; every other waiting agent is a one-line
-  row under it, and Done, Working and Idle are rows. `Cards` (Settings > Look >
+  row under it, and every agent in a project is a row. `Cards` (Settings > Look >
   Agent list) draws every agent as a card. There was an `Auto` (cards below
   five agents); it went, since compact is now right at any count, and a saved
   `auto` reads as the default.
-- **Needs you never folds.** A section fold is restored after the process is
+- **Needs you never folds.** A project's fold is restored after the process is
   reclaimed; a folded Needs you would hide the one loud section.
 - **No bar under home.** There is no tab bar (it held Agents, Machines and
   Settings). Why (owner decision): most of the time the person cares about
@@ -44,7 +44,7 @@ It answers both from the header and keeps everything else quiet.
   the batch bar is the only bottom bar, and only while picking (the list then
   keeps its room). Re-tapping the Agents tab used to scroll the board to the
   top; that gesture went with the tab, and nothing replaces it: the calm
-  board is short (Idle folds, sections fold) and a fling is one gesture,
+  board is short (idle rows fold, projects fold) and a fling is one gesture,
   while a tappable title would be a target nobody could see.
 - **The header: the machines chip on the left, `+` and Settings on the
   right.** The chip (`_MachineHealth`) says `4 of 5 machines` with a mark:
@@ -72,6 +72,70 @@ It answers both from the header and keeps everything else quiet.
 - **The connection strip stays a strip** under the title, not words in the
   status line: it carries the next step (`Retry`, `Approve`, or Machines),
   which the status line cannot. The status line still says `N not connected`.
+
+## Grouped by project
+
+Owner decision, chosen from a prototype: people run several features of one
+repo in separate git worktrees, and status sections (Needs you, Done, Working,
+Idle) scattered one repo's features across the board and named rows by agent
+kind. The board now reads, top to bottom (`boardLayout`,
+`agents_grouping.dart`):
+
+- **Needs you**, across every project, exactly as before: the attention
+  order, the one decision card, rows for the rest, `Answer one by one`, never
+  folded. An agent that needs the person is pinned here and not repeated in
+  its project.
+- **To review**, one line while anything finished waits: the count (quiet),
+  `N offline`, `Mark reviewed` and `Select all`. Why one line above the
+  projects and not one per project: `Mark reviewed` is one batch (one toast,
+  one Undo) over every finished agent wherever it is listed, and `Select all`
+  picks them all for one batch action; split per project they became several
+  batches and several Undos. `Select all` unfolds the projects (and opens a
+  fold) holding what it picked, so what is picked is on screen.
+- **One group per project**: its name (`Type.row`, the name of a thing, in
+  the text colour) with a caret, and one muted summary line in the board's
+  own words: `studio-mac · 2 working · 1 quiet · 1 done · 3 idle · 4 worktrees`
+  (the machine only when the board spans several; `quiet` counts the working
+  rows that say quiet; `worktrees` only for a repo with several open
+  checkouts; two lines at most, since one line cut the counts at large text
+  on a narrow phone). No status colour: attention is Needs you's. A tap
+  folds it, kept by the project's key across a reclaimed process. Folded,
+  the summary says what is inside.
+
+**The project's key** (`repoKeyIn`) is per machine: the repo's primary
+checkout (herdr's `repo_root`) when herdr places the folder in a repo, else
+the folder itself, else one `Other` per machine for an agent with no folder.
+herdr reports a repo only for workspaces in a worktree group, so a plain
+workspace is its own folder until the first worktree is opened beside it. The
+key is chosen so that it does not move as that data arrives: an agent in the
+primary checkout's folder has the same key before (its folder) and after (the
+repo root). One in a linked checkout or a sub-folder joins its repo's group
+then, once. Nothing is fetched to guess sooner (`PathFinder`'s SFTP probe is
+per folder, too costly for a board).
+
+**Rows inside a project** are every agent but the waiting ones, ordered
+working (quietest first), done, idle, then offline or ended, the most recent
+first inside each (a working session by its phase, not its activity, so the
+order does not churn while it streams). Projects: the one with the most urgent
+row first (working before done before idle), then the most recent, then by
+name. A row is named by its task; the line under it is the branch, else the
+checkout's folder, then the agent kind (`fix/rate-limit · omp`). The repo is
+the header's and is not repeated, and a folder that is the project's own name
+is left out (`Claude Code`). The idle `N more` fold is per project
+(`idleShown`, 5), opened per project and not kept.
+
+**Branches** come from `MachineConnection.loadBranchesOnce`: one
+`worktree.list` per repo with several open checkouts, at most once per
+machine per app run, after the first frame that shows such a repo. Never per
+rebuild (the board checks `branchesAsked`); no timer. A failure leaves the
+checkout's folder on the row. A checkout opened later is named by its folder
+until the machine screen or the start form reads it. The board rebuilds when
+a branch is learnt (`AgentsOverview.branches`).
+
+The swipe walk (needs you, then done project by project), `agentsWorking`
+and the title switcher (Needs you, then each project, its rows named as on
+the board) read the same layout (`boardLayoutOf`), so their order is the
+board's.
 
 ## Blocked prompts
 
@@ -141,8 +205,7 @@ once and its spinner through the read and the send. Why: previews are read at
 most every 1.5 s, so a question answered on the desktop could still be on the
 phone, and its `1` would have answered whatever the agent asked next.
 
-A card that stops waiting (answered, or answered elsewhere) goes to its new
-section at once and leaves a gap of its own height that closes over
+A card that stops waiting (answered, or answered elsewhere) goes to its project at once and leaves a gap of its own height that closes over
 `Motion.expand` (`AgentFolding`), so the next question glides up under the
 thumb instead of jumping by a whole card; reduced motion skips the gap.
 
@@ -150,7 +213,7 @@ thumb instead of jumping by a whole card; reduced motion skips the gap.
 
 `AttentionSet` (`data/repositories/attention_set.dart`) is the one answer to
 "does anything need me?". Every surface reads it: the board's status line,
-the triage sheet, the board's Needs you and Done sections, the Machines
+the triage sheet, the board's Needs you and To review, the Machines
 page's chip, the arrival haptic and the notifier's `need you` count. Why: each used to count for itself, and they disagreed (a badge of
 3 beside a pill saying 1, a sheet saying `All clear` while a session waited, a
 Machines chip counting offline panes).
@@ -160,7 +223,8 @@ Machines chip counting offline panes).
   question whose machine and link are live. **To review** = finished and not
   reviewed, same reachability. Something out of reach cannot be answered or
   marked, so it is not counted; where it is listed (the board, last known) the
-  section header says `N offline` instead of a count that would include it.
+  Needs you header or the To review line says `N offline` instead of a count
+  that would include it.
 - **Order**: longest waiting first, panes and sessions mixed (a wait whose
   start is unknown last), then machine and key. The board's Needs you section
   and the triage walk use this one order.
@@ -169,13 +233,14 @@ Machines chip counting offline panes).
   the board each built and sorted every agent on every notify, three passes per
   change on the UI thread.
 - **The count is loud for needs you only.** The status line says the
-  needs-you count in the blocked colour; finished work is not in it (the Done
-  section's count carries that, quietly). Why: three finished agents read as
+  needs-you count in the blocked colour; finished work is not in it (the To
+  review line's count carries that, quietly). Why: three finished agents read
+  as
   three questions in the loud colour, and attention must be the only loud
   thing.
-- **One board, one place per status.** Agent sessions sit in the same status
-  sections as terminal agents (a session row in Needs you, Done, Working or
-  Idle). Why: a separate sessions
+- **One board, one place per agent.** Agent sessions sit with the terminal
+  agents (a session row in Needs you or in its project). Why: a separate
+  sessions
   section jumped above the terminal cards whenever a session started or
   stopped waiting, moving every answer under the thumb, and "what waits" had
   two places to look. A session row still only tells; it is answered in the
@@ -277,17 +342,18 @@ reason (`SheetAction.unavailable`), dimmed.
   the end; screen readers get a `Mark reviewed` action.
 - **Mark reviewed**: a quiet text action (`TextActionTone.quiet`, grey,
   as is Select all beside it: they tidy, they do not answer anything, so the
-  accent stays for what does) on the Done section header. It reviews every finished, reachable terminal agent and session
+  accent stays for what does) on the To review line. It reviews every
+  finished, reachable terminal agent and session
   (`AttentionSet.toReview`) at once under ONE toast, `Marked 4 reviewed`, whose
   Undo restores them all (and joins a swipe's toast still showing). Absent
   when nothing finished can be reached: the header says `2 offline` instead.
   Why: offline finished agents used to stay counted and the button did
   nothing, silently. Per-device state only; herdr's own seen state is never
-  touched. The words were `Mark all reviewed`; the section already says all,
-  and the longer words wrapped at 320 dp. When a header's name and its
+  touched. The words were `Mark all reviewed`; the longer words wrapped at 320
+  dp. When a header's name and its
   actions do not fit one line (large text), the actions drop to their own
   line under the name and wrap if they must: an ellipsized action cannot be
-  read, and a squeezed name (`Do…`) hid which section they act on. Needs you
+  read, and a squeezed name (`To…`) hid what they act on. Needs you
   keeps the room of `Answer one by one` (and chooses its line as if it were
   there) while only one agent waits, so a second one arriving moves no card
   under the thumb; at large text that is an empty 44 dp line.

@@ -4,6 +4,13 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [Unreleased]
+
+- The board groups your agents by project: what needs you stays on top, then
+  one group per repo (all its worktrees together, else a folder) with a
+  one-line summary, and each agent is named by its task with its branch under
+  it, so the features of one repo are side by side.
+
 ## [0.1.46] - 2026-10-30
 
 ### A calmer home: the board is the whole app

@@ -1,6 +1,6 @@
-// Agent sessions on the Agents board: in the same status sections as the
-// terminal agents (so the sections never trade places), one-line rows, the
-// tab badge and the pill, and the sections' behaviour at the extremes.
+// Agent sessions on the board: in Needs you and in the projects with the
+// terminal agents (one place per status and project, whatever started the
+// agent), one-line rows, the counts, and the board at the extremes.
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -102,20 +102,27 @@ Finder _section(String label) => find.byWidgetPredicate((w) => w is SectionLabel
 
 Finder _row(String title) => find.widgetWithText(AgentSessionRow, title);
 
+/// A project's header on studio-mac, by its folder.
+Finder _project(String path) => find.byKey(ValueKey('group/a:$path'));
+
+/// The board's status line.
+Finder _statusLine(String text) =>
+    find.descendant(of: find.byType(SliverLargeTitle), matching: find.textContaining(text));
+
 double _top(WidgetTester tester, Finder f) => tester.getTopLeft(f).dy;
 
 /// Sessions whose finished turn nobody looked at.
 int _toReview(_Env e) => e.repo.sessions.where(AttentionSet.sessionToReview).length;
 
-/// What the Done header counts (0 when there is no Done section).
+/// What the To review line counts (0 when there is none).
 int _doneCount(WidgetTester tester) {
-  final done = _section('Done');
+  final done = _section('To review');
   return done.evaluate().isEmpty ? 0 : tester.widget<SectionLabel>(done).count ?? 0;
 }
 
 void main() {
   group('the sections', () {
-    testWidgets('sessions sit in the status sections with the terminal agents, as one-line rows', (tester) async {
+    testWidgets('sessions sit in their projects with the terminal agents, as one-line rows', (tester) async {
       final e = await _env(panes: [_pane(1, 'working')]);
       e.host
         ..add(id: 'k1', title: 'Fix login', cwd: '/home/u/api')
@@ -125,23 +132,21 @@ void main() {
       unawaited(e.repo.byKey('a/k2')!.send('go'));
       await _settle(tester);
 
-      expect(_section('Agent sessions'), findsNothing, reason: 'one place per status, whatever started the agent');
-      expect(find.textContaining('2 working'), findsOneWidget, reason: 'the pane and the session');
-      expect(tester.widget<SectionLabel>(_section('Idle')).count, 1);
+      expect(_section('Agent sessions'), findsNothing, reason: 'one place per project, whatever started the agent');
+      expect(_statusLine('2 working'), findsOneWidget, reason: 'the pane and the session');
+      expect(_project('/home/u/api'), findsOneWidget);
       expect(_row('Fix login'), findsOneWidget);
-      expect(find.descendant(of: _row('Fix login'), matching: find.text('omp · studio-mac · api')), findsOneWidget);
-      expect(
-        find.descendant(of: _row('Refactor billing'), matching: find.text('Claude Code · studio-mac · billing')),
-        findsOneWidget,
-      );
+      // The folder is the project's name, so the row says the agent kind.
+      expect(find.descendant(of: _row('Fix login'), matching: find.text('omp')), findsOneWidget);
+      expect(find.descendant(of: _row('Refactor billing'), matching: find.text('Claude Code')), findsOneWidget);
       expect(find.descendant(of: _row('Refactor billing'), matching: _said('working, under a minute')), findsOneWidget);
       expect(find.descendant(of: _row('Fix login'), matching: _said('idle, under a minute')), findsOneWidget);
       expect(
         _top(tester, _row('Refactor billing')),
-        lessThan(_top(tester, _section('Idle'))),
-        reason: 'working before idle',
+        lessThan(_top(tester, _project('/home/u/api'))),
+        reason: 'a project with work running before an idle one',
       );
-      expect(_top(tester, _row('Fix login')), greaterThan(_top(tester, _section('Idle'))));
+      expect(_top(tester, _row('Fix login')), greaterThan(_top(tester, _project('/home/u/api'))));
       await _teardown(tester, e);
     });
 
@@ -168,7 +173,7 @@ void main() {
       expect(_top(tester, _section('Needs you')), header, reason: 'no section jumps above the terminal cards');
       expect(_top(tester, card), before, reason: 'the card that waited longer keeps its place under the thumb');
       expect(_top(tester, _row('Deploy')), greaterThan(before), reason: 'the newer wait comes after it');
-      expect(_top(tester, _row('Deploy')), lessThan(_top(tester, _section('Working'))), reason: 'inside Needs you');
+      expect(_top(tester, _row('Deploy')), lessThan(_top(tester, _project('/work/w1'))), reason: 'inside Needs you');
       final row = _row('Deploy');
       expect(find.descendant(of: row, matching: find.text('npm test -- --coverage --watchAll=false')), findsOneWidget);
       expect(find.descendant(of: row, matching: _said('needs you, under a minute')), findsOneWidget);
@@ -205,7 +210,7 @@ void main() {
       await _teardown(tester, e);
     });
 
-    testWidgets('the tab badge and the status line count what needs you, panes and sessions; Done what is to review', (
+    testWidgets('the status line counts what needs you, panes and sessions; To review what is to review', (
       tester,
     ) async {
       final semantics = tester.ensureSemantics();
@@ -219,12 +224,12 @@ void main() {
 
       expect(statusNeedsYou(tester), '2 need you', reason: '1 pane + 1 session; finished work is not a question');
       expect(find.textContaining('2 need you'), findsOneWidget);
-      expect(tester.widget<SectionLabel>(_section('Done')).count, 2);
+      expect(_doneCount(tester), 2);
 
       e.repo.byKey('a/k2')!.markSeen();
       await _settle(tester);
       expect(statusNeedsYou(tester), '2 need you');
-      expect(tester.widget<SectionLabel>(_section('Done')).count, 1);
+      expect(_doneCount(tester), 1);
       semantics.dispose();
       await _teardown(tester, e);
     });
@@ -267,7 +272,7 @@ void main() {
       await _pump(tester, e);
 
       expect(find.byType(AgentSessionRow), findsNothing);
-      expect(find.textContaining('1 working'), findsOneWidget);
+      expect(_statusLine('1 working'), findsOneWidget);
       await _teardown(tester, e);
     });
 
@@ -282,18 +287,18 @@ void main() {
       await _teardown(tester, e);
     });
 
-    testWidgets('a session folds away and back with its section', (tester) async {
+    testWidgets('a session folds away and back with its project', (tester) async {
       final e = await _env(panes: [_pane(1, 'working')]);
       e.host.add(id: 'k1', title: 'Foldable');
       await _pump(tester, e);
       expect(_row('Foldable'), findsOneWidget);
 
-      await tester.tap(_section('Idle'));
+      await tester.tap(_project('/home/u/proj'));
       await _settle(tester, 8);
       expect(_row('Foldable'), findsNothing);
-      expect(tester.widget<SectionLabel>(_section('Idle')).expanded, isFalse);
+      expect(find.text('terminal 1'), findsOneWidget, reason: 'the other project stays open');
 
-      await tester.tap(_section('Idle'));
+      await tester.tap(_project('/home/u/proj'));
       await _settle(tester, 8);
       expect(_row('Foldable'), findsOneWidget);
       await _teardown(tester, e);
@@ -310,7 +315,9 @@ void main() {
       }
       await _pump(tester, e, width: 320, height: 640, textScale: 2);
 
-      expect(tester.widget<SectionLabel>(_section('Idle')).count, 30);
+      // Thirty folders: thirty projects, each named by its long folder.
+      expect(find.byType(AgentSessionRow), findsWidgets);
+      expect(_project('/home/dev/Dự án thử nghiệm ${'thư mục ' * 12}0'), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.drag(find.byType(CustomScrollView).first, const Offset(0, -3000));
       await _settle(tester);
