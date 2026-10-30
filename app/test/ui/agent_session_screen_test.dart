@@ -612,11 +612,11 @@ void main() {
       await tester.pump();
       expect(session.sent, isEmpty);
       await tester.pump(Dwell.tapGuard);
-      await tester.tap(find.byIcon(LucideIcons.square));
+      await tester.tap(find.byIcon(HerdrIcons.stopMark));
       await tester.pump(const Duration(milliseconds: 50));
       expect(session.cancelCount, 1);
       // The stop is under way: its button is a spinner now and takes no tap.
-      expect(find.byIcon(LucideIcons.square), findsNothing);
+      expect(find.byIcon(HerdrIcons.stopMark), findsNothing);
     });
 
     testWidgets('Stop takes no tap right after a turn starts: a double tap on Send cannot cancel it', (tester) async {
@@ -628,14 +628,14 @@ void main() {
       await tester.tap(find.byIcon(LucideIcons.arrowUp));
       await tester.pump(const Duration(milliseconds: 50));
       expect(session.sent, ['go']);
-      expect(find.byIcon(LucideIcons.square), findsOneWidget, reason: 'Stop appeared beside Send');
+      expect(find.byIcon(HerdrIcons.stopMark), findsOneWidget, reason: 'Stop appeared beside Send');
 
-      await tester.tap(find.byIcon(LucideIcons.square));
+      await tester.tap(find.byIcon(HerdrIcons.stopMark));
       await tester.pump(const Duration(milliseconds: 50));
       expect(session.cancelCount, 0, reason: 'the second tap of a double tap on Send');
 
       await tester.pump(Dwell.tapGuard);
-      await tester.tap(find.byIcon(LucideIcons.square));
+      await tester.tap(find.byIcon(HerdrIcons.stopMark));
       await tester.pump(const Duration(milliseconds: 50));
       expect(session.cancelCount, 1);
     });

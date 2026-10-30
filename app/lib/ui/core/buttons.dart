@@ -109,6 +109,8 @@ class CircleButton extends StatelessWidget {
     this.active = false,
     this.filled = true,
     this.onLongPress,
+    this.mark = false,
+    this.markLabel = '',
   });
 
   final IconData icon;
@@ -129,6 +131,17 @@ class CircleButton extends StatelessWidget {
   /// Draw the soft disc; false for a bare icon.
   final bool filled;
 
+  /// A small plain dot in the accent on the disc's corner: something behind
+  /// the button is worth a look and nothing needs the person (a newer version
+  /// behind Settings). Never a count: the loud colour is for a question.
+  /// [markLabel] is its meaning for screen readers.
+  final bool mark;
+  final String markLabel;
+
+  /// The mark's size; its ring is the page's colour, so it reads cut out of
+  /// the disc.
+  static const _dot = 10.0;
+
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
@@ -141,32 +154,59 @@ class CircleButton extends StatelessWidget {
         onTap: onPressed,
         onLongPress: onLongPress,
         scale: PressScale.icon,
-        semanticLabel: tooltip,
+        semanticLabel: mark ? '$tooltip, $markLabel' : tooltip,
         button: true,
         selected: active ? true : null,
         minTapSize: kMinTap,
-        builder: (context, pressed) => AnimatedContainer(
-          duration: Motion.pressing(pressed),
-          curve: Motion.easeOut,
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: active
-                ? ds.accentWash
-                : filled
-                ? (pressed ? ds.fillPressed : ds.fill)
-                : (pressed ? ds.fill : Colors.transparent),
-          ),
-          alignment: Alignment.center,
-          // A disabled button keeps its disc; the icon fades to decoration.
-          child: Icon(
-            icon,
-            size: size * 0.5,
-            color: onPressed == null ? ds.textTertiary : (active ? ds.accentText : ds.text),
+        builder: (context, pressed) => _withMark(
+          ds,
+          AnimatedContainer(
+            duration: Motion.pressing(pressed),
+            curve: Motion.easeOut,
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: active
+                  ? ds.accentWash
+                  : filled
+                  ? (pressed ? ds.fillPressed : ds.fill)
+                  : (pressed ? ds.fill : Colors.transparent),
+            ),
+            alignment: Alignment.center,
+            // A disabled button keeps its disc; the icon fades to decoration.
+            child: Icon(
+              icon,
+              size: size * 0.5,
+              color: onPressed == null ? ds.textTertiary : (active ? ds.accentText : ds.text),
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _withMark(Ds ds, Widget disc) {
+    if (!mark) return disc;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        disc,
+        Positioned(
+          right: 0,
+          top: 0,
+          child: Container(
+            key: const ValueKey('circle-button-mark'),
+            width: _dot,
+            height: _dot,
+            decoration: BoxDecoration(
+              color: ds.accent,
+              shape: BoxShape.circle,
+              border: Border.all(color: ds.bg, width: 1.5),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

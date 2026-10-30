@@ -104,8 +104,6 @@ Finder _row(String title) => find.widgetWithText(AgentSessionRow, title);
 
 double _top(WidgetTester tester, Finder f) => tester.getTopLeft(f).dy;
 
-String _badge(WidgetTester tester) => tester.getSemantics(find.byKey(FloatingTabBar.tabKey('Agents'))).label;
-
 /// Sessions whose finished turn nobody looked at.
 int _toReview(_Env e) => e.repo.sessions.where(AttentionSet.sessionToReview).length;
 
@@ -128,7 +126,7 @@ void main() {
       await _settle(tester);
 
       expect(_section('Agent sessions'), findsNothing, reason: 'one place per status, whatever started the agent');
-      expect(tester.widget<SectionLabel>(_section('Working')).count, 2, reason: 'the pane and the session');
+      expect(find.textContaining('2 working'), findsOneWidget, reason: 'the pane and the session');
       expect(tester.widget<SectionLabel>(_section('Idle')).count, 1);
       expect(_row('Fix login'), findsOneWidget);
       expect(find.descendant(of: _row('Fix login'), matching: find.text('omp · studio-mac · api')), findsOneWidget);
@@ -171,12 +169,11 @@ void main() {
       expect(_top(tester, card), before, reason: 'the card that waited longer keeps its place under the thumb');
       expect(_top(tester, _row('Deploy')), greaterThan(before), reason: 'the newer wait comes after it');
       expect(_top(tester, _row('Deploy')), lessThan(_top(tester, _section('Working'))), reason: 'inside Needs you');
-      expect(tester.widget<SectionLabel>(_section('Needs you')).count, 2);
       final row = _row('Deploy');
       expect(find.descendant(of: row, matching: find.text('npm test -- --coverage --watchAll=false')), findsOneWidget);
       expect(find.descendant(of: row, matching: _said('needs you, under a minute')), findsOneWidget);
       expect(find.text('Allow'), findsNothing, reason: 'answers are given inside the session');
-      expect(find.text('2 need you'), findsOneWidget, reason: 'the pill counts it');
+      expect(find.textContaining('2 need you'), findsOneWidget, reason: 'the status line counts it');
       await _teardown(tester, e);
     });
 
@@ -202,13 +199,13 @@ void main() {
       expect(_row('Deploy'), findsOneWidget);
       expect(find.text('terminal 1'), findsOneWidget, reason: 'an ordinary pane is still an agent');
       expect(find.text('terminal 2'), findsNothing, reason: 'the session is already on the board');
-      expect(tester.widget<SectionLabel>(_section('Needs you')).count, 2);
-      expect(_badge(tester), 'Agents, 2 need you');
+      expect(find.textContaining('2 need you'), findsOneWidget);
+      expect(statusNeedsYou(tester), '2 need you');
       semantics.dispose();
       await _teardown(tester, e);
     });
 
-    testWidgets('the tab badge counts what needs you, panes and sessions; the pill adds what is to review', (
+    testWidgets('the tab badge and the status line count what needs you, panes and sessions; Done what is to review', (
       tester,
     ) async {
       final semantics = tester.ensureSemantics();
@@ -220,33 +217,15 @@ void main() {
       unawaited(e.repo.byKey('a/k2')!.send('work'));
       await _settle(tester);
 
-      expect(_badge(tester), 'Agents, 2 need you', reason: '1 pane + 1 session; finished work is not a question');
-      expect(find.text('2 need you · 2 to review'), findsOneWidget);
-      expect(tester.widget<SectionLabel>(_section('Needs you')).count, 2);
+      expect(statusNeedsYou(tester), '2 need you', reason: '1 pane + 1 session; finished work is not a question');
+      expect(find.textContaining('2 need you'), findsOneWidget);
       expect(tester.widget<SectionLabel>(_section('Done')).count, 2);
 
       e.repo.byKey('a/k2')!.markSeen();
       await _settle(tester);
-      expect(_badge(tester), 'Agents, 2 need you');
-      expect(find.text('2 need you · 1 to review'), findsOneWidget);
+      expect(statusNeedsYou(tester), '2 need you');
+      expect(tester.widget<SectionLabel>(_section('Done')).count, 1);
       semantics.dispose();
-      await _teardown(tester, e);
-    });
-
-    testWidgets('the status filter narrows sessions too', (tester) async {
-      final e = await _env(panes: [_pane(1, 'working'), _pane(2, 'idle')]);
-      e.host
-        ..add(id: 'k1', title: 'Quiet one')
-        ..add(id: 'k2', title: 'Busy one');
-      await _pump(tester, e);
-      e.host.keepers['k2']!.turn = Completer<String>();
-      unawaited(e.repo.byKey('a/k2')!.send('go'));
-      await _settle(tester);
-
-      await tester.tap(find.widgetWithText(AppChip, 'Working'));
-      await _settle(tester);
-      expect(_row('Busy one'), findsOneWidget);
-      expect(_row('Quiet one'), findsNothing, reason: 'an idle session is filtered out like an idle pane');
       await _teardown(tester, e);
     });
 
@@ -288,7 +267,7 @@ void main() {
       await _pump(tester, e);
 
       expect(find.byType(AgentSessionRow), findsNothing);
-      expect(find.textContaining('1 machine · 1 agent'), findsOneWidget);
+      expect(find.textContaining('1 working'), findsOneWidget);
       await _teardown(tester, e);
     });
 
@@ -299,7 +278,7 @@ void main() {
 
       expect(find.text('No agents running'), findsNothing);
       expect(_row('Only one'), findsOneWidget);
-      expect(find.textContaining('1 machine · no agents · 1 agent session'), findsOneWidget);
+      expect(find.textContaining('nothing running'), findsOneWidget);
       await _teardown(tester, e);
     });
 
@@ -366,14 +345,12 @@ void main() {
       await tester.pump(tick);
       expect(e.host.listCalls, base + 1);
 
-      await tester.tap(find.byKey(FloatingTabBar.tabKey('Machines')));
-      await _settle(tester);
+      await openHomePage(tester, 'Machines');
       final away = e.host.listCalls;
       await tester.pump(const Duration(minutes: 3));
       expect(e.host.listCalls, away, reason: 'a hidden board lists nothing');
 
-      await tester.tap(find.byKey(FloatingTabBar.tabKey('Agents')));
-      await _settle(tester);
+      await backHome(tester);
       await tester.pump(tick);
       expect(e.host.listCalls, away + 1);
       await _teardown(tester, e);

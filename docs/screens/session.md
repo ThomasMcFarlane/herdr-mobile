@@ -404,9 +404,11 @@ done` with a thin bar and the step in progress, `Changed · 12 files +310 −42`
 (the files of every turn merged by path, eight, then `N more` in steps of 16;
 a tap opens the file's diff in place with `ChangedFileRow` and `DiffPanel`),
 `Commands · 14 · 2 failed` (five: the failed ones first, then the newest, mono,
-`exit 1` in `dangerText` with a cross; a tap shows all of the command),
-`Subagents` (one row into the roster), `Mode and model` (a dangerous mode in
-the danger tint with its reason), `Context and cost` (a thin bar, `182k of 200k
+a failed one with the failed disc and `exit 1` muted beside it: the disc and
+the `2 failed` count are the sheet's only red, so they do not compete with
+`Needs you`; a tap shows all of the command),
+`Subagents` (one row into the roster), `Mode and model` (a dangerous mode's
+name and warning icon in the danger tint, its reason muted), `Context and cost` (a thin bar, `182k of 200k
 tokens · 91% of context`, the cost with its currency, the last turn's tokens)
 and `Needs you` (what asks, `From subagent: …`; a tap closes the sheet,
 the dock is under it). A part the session has nothing for is absent, never a
@@ -416,7 +418,9 @@ rebuilds only when a list it reads is replaced, so a streaming answer costs it
 nothing. **Context warning**: from 85% (`contextWarnAt`) the bar's subtitle
 line adds `Context 91%` in `dangerText` (the words, at weight 600, next to the
 place line, which gives way first); nothing below that and nothing without a
-window size; the overview bar turns to the danger colour at the same point.
+window size; at the same point the overview's bar takes the working colour
+and its words their weight (a nearly full context is worth a look, not a
+failure: red there outshouted what needs the person).
 
 **Content the agents send** (`content_blocks.dart`
 and the `content_*.dart` files). Every block that is not Markdown text goes
@@ -538,8 +542,8 @@ An ended session whose keeper is gone shows its saved transcript read-only and t
 link strip says `Session ended` with `The agent kept the conversation.` and a
 `Continue` button (the one allowed `BusySpinner` while it resumes; a failure is a
 toast with the host's words and the button comes back; evicted sessions keep
-`Take over`). `Past sessions` (the history icon in the Agents board header, and a row
-in the new-agent-session form that passes the typed folder) lists what an agent
+`Take over`). `Past sessions` (a row in the new-agent-session form, which passes the
+typed folder; the board reaches it through its `+`) lists what an agent
 remembers on a machine: machine chips when more than one is online, agent chips,
 a `This folder` chip when the opener passed a folder, search past six rows. Row =
 title (`Untitled session`), folder tail, `5m ago · 14 messages`; whole row is

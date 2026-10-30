@@ -361,7 +361,7 @@ abstract final class IconSize {
   /// A status glyph in a row's 32 dp leading column.
   static const lead = 20.0;
 
-  /// The tab bar and the batch bar.
+  /// The batch bar's actions and the attach sheet's bars.
   static const nav = 24.0;
 
   /// An empty state's tile.
@@ -371,9 +371,15 @@ abstract final class IconSize {
   static const hero = 48.0;
 }
 
-/// Terminal and code text (JetBrains Mono): proper box-drawing and symbol
-/// coverage for agent UIs.
+/// Terminal and code text (JetBrains Mono): proper box drawing for agent
+/// UIs; the symbols it lacks come from [monoFallback].
 const monoFamily = 'JetBrainsMono';
+
+/// What mono text falls back to for the symbols JetBrains Mono lacks: Claude
+/// Code's `⏵⏵ auto mode on`, `⏺`, `⎿` and spinner stars, braille spinners.
+/// Subset from Noto onto JetBrains Mono's cell (tool/fonts/build_symbols.py),
+/// because the phone's own fallback drew them as boxes (`▯▯ auto mode on`).
+const monoFallback = ['HerdrSymbols'];
 
 /// Mono text by role. Ligatures are off: code is read character by character
 /// (`!=` must not become one glyph). The terminal keeps its own, user-sized
@@ -384,24 +390,28 @@ abstract final class Mono {
   /// Dense meta: a log tail, a hex id.
   static const small = TextStyle(
     fontFamily: monoFamily,
+    fontFamilyFallback: monoFallback,
     fontSize: 11.5,
     height: 1.4,
     letterSpacing: 0,
     fontFeatures: noLigatures,
   );
 
-  /// Commands, paths, code blocks, the subject of a question.
+  /// Commands, paths, code blocks.
   static const base = TextStyle(
     fontFamily: monoFamily,
+    fontFamilyFallback: monoFallback,
     fontSize: 12.5,
     height: 1.4,
     letterSpacing: 0,
     fontFeatures: noLigatures,
   );
 
-  /// Typed shell text and key caps.
+  /// Typed shell text, key caps, and the subject of a question (what an
+  /// answer approves is the largest thing on its wash).
   static const input = TextStyle(
     fontFamily: monoFamily,
+    fontFamilyFallback: monoFallback,
     fontSize: 13.5,
     height: 1.45,
     letterSpacing: 0,
@@ -411,6 +421,7 @@ abstract final class Mono {
   /// The terminal preview on a board card.
   static const preview = TextStyle(
     fontFamily: monoFamily,
+    fontFamilyFallback: monoFallback,
     fontSize: 11,
     height: 1.38,
     letterSpacing: 0,
@@ -565,7 +576,7 @@ abstract final class Type {
     fontFeatures: tabular,
   );
 
-  /// The number in a count badge (the tab bar's, a machine's).
+  /// The number in a count badge (the agent switcher's, a machine's).
   static const badge = TextStyle(
     fontFamily: family,
     fontSize: 11,

@@ -214,8 +214,8 @@ class _FormState extends State<_Form> {
                   icon: HerdrIcons.machinesOff,
                   title: 'No machine is online',
                   message:
-                      'An agent session starts on a connected machine. Check the Machines '
-                      'tab, then come back.',
+                      'An agent session starts on a connected machine. Check Machines, '
+                      'then come back.',
                   action: AppButton(
                     label: 'Back',
                     kind: AppButtonKind.secondary,
@@ -277,7 +277,7 @@ class _FormState extends State<_Form> {
                                           widthFactor: 1,
                                           heightFactor: 1,
                                           child: CircleButton(
-                                            icon: LucideIcons.folderOpen,
+                                            icon: HerdrIcons.folder,
                                             tooltip: 'Browse folders',
                                             filled: false,
                                             size: CircleButton.compact,

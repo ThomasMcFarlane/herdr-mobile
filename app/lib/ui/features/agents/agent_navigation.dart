@@ -260,7 +260,7 @@ SheetAction agentViewAction(BuildContext context, AgentRef agent, AgentView show
   final toTerminal = shown == AgentView.chat;
   return SheetAction(
     label: toTerminal ? 'Show terminal' : 'Show chat',
-    icon: toTerminal ? LucideIcons.terminal : LucideIcons.messageSquare,
+    icon: toTerminal ? LucideIcons.terminal : HerdrIcons.message,
     onTap: () => unawaited(showAgentView(context, agent, toTerminal ? AgentView.terminal : AgentView.chat)),
   );
 }

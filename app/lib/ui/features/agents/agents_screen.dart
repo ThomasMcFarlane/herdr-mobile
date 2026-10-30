@@ -18,10 +18,10 @@ import '../machines/approval_button.dart';
 
 import 'package:herdr_mobile/ui/core/kit.dart';
 
+import '../../shell/home_pages.dart';
 import '../../support/step_clock.dart';
 import '../../support/tap_guard.dart';
 import '../create/new_agent_session_screen.dart';
-import '../history/past_sessions_navigation.dart';
 import '../machines/machine_form_screen.dart';
 import 'agent_card.dart';
 import 'agent_more_row.dart';
@@ -32,30 +32,33 @@ import 'batch_actions_sheet.dart';
 import 'board_selection.dart';
 import 'reply_sheet.dart';
 import 'swipe_review.dart';
-import 'triage_pill.dart';
 
 /// Every agent across every machine, grouped by how much it needs you:
 /// terminal agents and agent sessions in the same sections, so "what waits"
 /// has one place to look and the sections never trade places as sessions
 /// start or stop waiting (they used to lead the board then, moving every card
 /// under the thumb). Needs you and Done count and order what [AttentionSet]
-/// says, the same as the badge, the pill and the triage sheet.
+/// says, the same as the triage sheet and the notifications.
+///
+/// Calm by default: one status line says the count once, the first waiting
+/// agent is a card with its answers and every other agent is a row. Why: the
+/// count used to be said four times on one screen (a filter chip, the section
+/// header, a floating pill and the tab badge), and chrome costs the focus a
+/// glance is made of.
+///
+/// This is home: no bar under it. Its header opens Machines (the chip that
+/// says how many are online) and Settings (the gear), as pages pushed over it
+/// ([HomePages]). A pushed page leaves a picked set waiting for the person's
+/// return, as any other pushed screen does: Back always comes home.
 class AgentsScreen extends StatefulWidget {
-  const AgentsScreen({super.key, this.onShowMachines, this.onSelectingChanged, this.current = true});
+  const AgentsScreen({super.key, this.pages = const HomePages(), this.onSelectingChanged});
 
-  /// Whether the Agents tab is the shell's chosen tab. Picking ends when it
-  /// stops being (unless a batch is running), so the tab bar is never left
-  /// hidden over another tab. A route pushed over the shell (a notification,
-  /// a deep link) leaves the tab chosen, and the picked set waits for the
-  /// person's return.
-  final bool current;
-
-  /// Takes the person to the Machines tab, where connection problems are
-  /// explained and fixed.
-  final VoidCallback? onShowMachines;
+  /// Opens Machines (where connection problems are explained and fixed) and
+  /// Settings, and carries the update for the gear's dot.
+  final HomePages pages;
 
   /// Called with true when the board starts picking agents for a batch action
-  /// and false when it stops: the shell hides its tab bar meanwhile.
+  /// and false when it stops: Back is the board's then, not the app's.
   final ValueChanged<bool>? onSelectingChanged;
 
   @override
@@ -63,8 +66,6 @@ class AgentsScreen extends StatefulWidget {
 }
 
 class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
-  AgentStatus? _filter;
-
   // Idle shows its first rows and folds the rest ([idleShown]); true opens them.
   // Not kept: the board opens folded again, the way a long inbox does.
   bool _idleOpen = false;
@@ -72,11 +73,12 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
   AgentSessions? _sessions;
 
   // Collapsed sections, one bit per status, so the set survives the process
-  // being reclaimed. Nothing secret lives here.
+  // being reclaimed. Nothing secret lives here. Needs you's bit is ignored
+  // (`agentEntries`): it never folds.
   final _collapsedBits = RestorableInt(0);
 
-  // The last page built. A hidden tab hands this back instead of rebuilding,
-  // so fleet updates cost the tab that is not on screen one cheap build call.
+  // The last page built. Hidden under a pushed page, the board hands this
+  // back instead of rebuilding, so fleet updates cost it one cheap build call.
   Widget? _page;
 
   // Which agents are picked for a batch action. Not restored: a restart
@@ -116,24 +118,14 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
     _selection.addListener(_onSelection);
   }
 
-  /// Tells the shell when picking starts and ends, so it can put its tab bar
-  /// away.
-  @override
-  void didUpdateWidget(AgentsScreen old) {
-    super.didUpdateWidget(old);
-    if (old.current && !widget.current && _selection.active && _selection.busy == null) {
-      // After this frame: cancelling notifies the shell, which is building.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && !widget.current && _selection.busy == null) _selection.cancel();
-      });
-    }
-  }
-
+  /// Tells the shell when picking starts and ends (Back is the board's
+  /// then), and makes room at the list's end for the batch bar.
   void _onSelection() {
     final active = _selection.active;
     if (active == _wasSelecting) return;
     _wasSelecting = active;
     widget.onSelectingChanged?.call(active);
+    setState(() {});
   }
 
   @override
@@ -156,16 +148,32 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
 
   void _newSession() => unawaited(openNewAgentSession(context));
 
-  void _pastSessions() => unawaited(openPastSessions(context));
+  void _showMachines() => widget.pages.open(context, HomePage.machines);
 
-  void _toggleFilter(AgentStatus s) => setState(() => _filter = _filter == s ? null : s);
+  void _showSettings() => widget.pages.open(context, HomePage.settings);
+
+  /// Settings, with a quiet dot while a newer version waits there (a
+  /// suggestion, never a count: it is not something that needs the person).
+  Widget _settingsButton() => ListenableBuilder(
+    listenable: widget.pages.update ?? _noUpdate,
+    builder: (context, _) => CircleButton(
+      key: const ValueKey('settings'),
+      icon: HerdrIcons.settings,
+      tooltip: 'Settings',
+      mark: widget.pages.update?.release != null,
+      markLabel: 'update available',
+      onPressed: _showSettings,
+    ),
+  );
+
+  static final _noUpdate = Listenable.merge(const <Listenable>[]);
 
   void _toggleSection(AgentStatus s) => setState(() => _collapsedBits.value ^= 1 << s.index);
 
   void _toggleIdle() => setState(() => _idleOpen = !_idleOpen);
 
-  /// Tells the sessions when the tab is on screen: they list their hosts
-  /// every minute only then.
+  /// Tells the sessions when the board is on screen (not under a pushed
+  /// page): they list their hosts every minute only then.
   void _reportVisible(bool visible) {
     if (_reportedVisible == visible) return;
     _reportedVisible = visible;
@@ -175,14 +183,6 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
     });
   }
 
-  /// The pill's count while it leaves: the last one it showed.
-  int _pillCount = 0;
-
-  /// An explicit choice, from what the board shows now (which `auto` may have
-  /// decided): the other look, and it stays.
-  void _toggleDensity({required bool cards}) =>
-      unawaited(context.read<AppSettings>().setDensity(cards ? BoardDensity.compact : BoardDensity.cards));
-
   @override
   Widget build(BuildContext context) {
     final visible = TickerMode.valuesOf(context).enabled;
@@ -191,12 +191,10 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
       if (_page case final page?) return page;
     }
     final overview = context.select<FleetRepository, AgentsOverview>(AgentsOverview.of);
-    // Rebuilds on a density choice; what the choice means depends on how many
-    // agents there are (`auto`), so it is read with the overview in hand.
-    context.select<AppSettings, BoardDensity>((s) => s.density);
+    // Set in Settings > Look > Agent list.
+    final cards = context.select<AppSettings, bool>((s) => s.cards);
     final sessions = _sessions = context.watch<AgentSessions?>();
     final attention = context.watch<AttentionSet>();
-    final cards = context.read<AppSettings>().cardsFor(overview.agents.length);
     return _page = _buildPage(context, overview, sessions, attention, cards: cards);
   }
 
@@ -207,18 +205,23 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
     AttentionSet attention, {
     required bool cards,
   }) {
-    final ds = context.ds;
-    final clearance = FloatingBar.clearance(context);
+    // No bar under home: the list ends above the system inset, and keeps the
+    // batch bar's room only while it is up, so the last row can be read
+    // above it.
+    final inset = MediaQuery.paddingOf(context).bottom;
+    final listEnd = _selection.active ? FloatingBar.listEnd(context) : inset + Gap.xl;
 
     if (overview.machineCount == 0) {
       return CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
-          const SliverLargeTitle(title: 'Agents'),
+          // Settings stays one tap away before the first machine; there is no
+          // fleet yet for the chip to sum up, and nothing to start.
+          SliverLargeTitle(title: 'Agents', actions: [_settingsButton()]),
           SliverFillRemaining(
             hasScrollBody: false,
             child: Padding(
-              padding: EdgeInsets.only(bottom: clearance),
+              padding: EdgeInsets.only(bottom: inset),
               child: EmptyState(
                 mark: const BrandMark(),
                 title: 'No machines yet',
@@ -233,27 +236,17 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
 
     final sessionList = sessions?.sessions ?? const <AgentSessionView>[];
     final sections = boardSections(overview.agents, sessionList, attention);
-    // A filter whose agents are all gone cannot be cleared by its chip any
-    // more. Drop it for good, so it does not come back by itself when an
-    // agent of that status shows up again.
-    if (_filter != null && !sections.any((s) => s.status == _filter)) _filter = null;
-    final filter = _filter;
-    final entries = agentEntries(sections, filter: filter, collapsed: _collapsed, idleOpen: _idleOpen);
-    _armGateWhenAnswersMove(entries);
+    final entries = agentEntries(sections, collapsed: _collapsed, idleOpen: _idleOpen);
+    _armGateWhenAnswersMove(entries, cards: cards);
     final listed = _withFolding(entries, overview);
     final indexes = entryIndexes(listed);
 
-    final chips = [
-      for (final s in sections)
-        if (filterableStatuses.contains(s.status)) s,
-    ];
-    final chipsHeight = chips.isEmpty ? 0.0 : AppChip.height;
     final troubled = overview.troubled;
-    final blockedCount = attention.needsYou.length;
+    final needYouCount = attention.needsYou.length;
     final review = attention.toReview.length;
-    if (blockedCount > 0) _pillCount = blockedCount;
+    final working = sections.where((s) => s.status == AgentStatus.working).firstOrNull?.items.length ?? 0;
 
-    // What All picks: the rows the board shows (open sections, this filter),
+    // What All picks: the rows the board shows (open sections),
     // and what a pane that went away takes out of the selection.
     _visibleRefs = [
       for (final e in entries)
@@ -265,75 +258,77 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
     _liveRefs = {for (final a in overview.agents) paneRef(a.key), for (final s in sessionList) sessionRef(s.key)};
     if (_selection.active) _queueRetain();
 
+    final status = _StatusLine(
+      waiting: needYouCount,
+      working: working,
+      agents: overview.agents.length + sessionList.length,
+      machines: overview.machineCount,
+      troubled: troubled.length,
+    );
+    // Measured once per build with the longest "heard" the minute can grow
+    // into, so the header does not change height (and move the list) as the
+    // minutes tick.
+    final heard = heardLabel(context.read<FleetRepository>().connections);
+    final statusLines = status.lines(context, heard: heard == null ? null : _StatusLine.longestHeard);
+
     final list = AppRefresh(
       onRefresh: () async {
         await Future.wait([context.read<FleetRepository>().retryAll(), if (sessions != null) sessions.refresh()]);
       },
-      edgeOffset: SliverLargeTitle.extent(context, hasSubtitle: true, bottomHeight: chipsHeight),
+      edgeOffset: SliverLargeTitle.extent(context, hasSubtitle: true, subtitleLines: statusLines),
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
           SliverLargeTitle(
             title: 'Agents',
-            // Steps once a minute, so "heard 3m ago" grows while nothing else
-            // changes: a board that went quiet says so instead of looking live.
+            // The board's one status line. Steps once a minute, so "heard 3m
+            // ago" grows while nothing else changes: a board that went quiet
+            // says so instead of looking live. It takes a second line rather
+            // than cut its end ("1 not connected") on a narrow phone.
             subtitle: MinuteBuilder(
-              builder: (context, _) => Text(
-                [
-                  _summary(overview, sessionList.length),
-                  ?heardLabel(context.read<FleetRepository>().connections),
-                ].join(' · '),
-                maxLines: 1,
+              builder: (context, _) => Text.rich(
+                status.span(context, heard: heardLabel(context.read<FleetRepository>().connections)),
+                maxLines: statusLines,
                 overflow: TextOverflow.ellipsis,
-                style: Type.secondary.copyWith(color: ds.textSecondary),
               ),
             ),
+            subtitleLines: statusLines,
+            // Scrolled, the bar keeps the chip and the two actions, and no
+            // centred `Agents` to collide with the chip (home needs no name).
+            compactTitle: false,
+            // The fleet's health, and the way to Machines: status first, a
+            // way in second.
+            leading: _MachineHealth(
+              online: overview.enabledCount - troubled.length,
+              enabled: overview.enabledCount,
+              worst: troubled.isEmpty ? null : worstLinkState(troubled.map((t) => t.state)),
+              onTap: _showMachines,
+            ),
+            // Two actions, the budget (DESIGN.md Hierarchy 6): start an agent,
+            // and Settings. Density is a setting (Settings > Look > Agent
+            // list) and Past sessions is a row of the `+` form, where resuming
+            // is one of the ways to start.
             actions: [
-              CircleButton(
-                icon: cards ? LucideIcons.list : LucideIcons.layoutGrid,
-                tooltip: cards ? 'Compact list' : 'Cards with preview',
-                onPressed: () => _toggleDensity(cards: cards),
-              ),
-              CircleButton(icon: LucideIcons.history, tooltip: 'Past sessions', onPressed: _pastSessions),
               CircleButton(icon: LucideIcons.plus, tooltip: 'New agent session', onPressed: _newSession),
+              _settingsButton(),
             ],
-            bottom: chips.isEmpty
-                ? null
-                : SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    // Chips slide out through the page gutter, not under it.
-                    clipBehavior: Clip.none,
-                    child: Row(
-                      children: [
-                        for (final (i, s) in chips.indexed) ...[
-                          if (i > 0) const SizedBox(width: Gap.sm),
-                          AppChip(
-                            label: s.status.label,
-                            count: s.count,
-                            leading: StatusGlyph(status: s.status, size: IconSize.inline),
-                            selected: filter == s.status,
-                            onTap: () => _toggleFilter(s.status),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-            bottomHeight: chipsHeight,
           ),
+          // Kept as a strip, not folded into the status line: it carries the
+          // next step (Retry, Approve, or Machines), which words in a subtitle
+          // cannot. It sits right under the header, where the status line is,
+          // and both come back with the top of the list.
           if (troubled.isNotEmpty)
             SliverPadding(
-              // The chip row's 44dp box and the section label's top padding
-              // already leave air around the strip.
               padding: const EdgeInsets.symmetric(horizontal: Gap.gutter),
               sliver: SliverToBoxAdapter(
-                child: _ConnectionStrip(troubled: troubled, onShowMachines: widget.onShowMachines),
+                child: _ConnectionStrip(troubled: troubled, onShowMachines: _showMachines),
               ),
             ),
           if (overview.agents.isEmpty && troubled.isEmpty && sessionList.isEmpty)
             SliverFillRemaining(
               hasScrollBody: false,
               child: Padding(
-                padding: EdgeInsets.only(bottom: clearance),
+                padding: EdgeInsets.only(bottom: inset),
                 child: const EmptyState(
                   icon: LucideIcons.moon,
                   title: 'No agents running',
@@ -346,15 +341,17 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
               itemCount: listed.length,
               findChildIndexCallback: (key) => indexes[key],
               itemBuilder: (context, i) => switch (listed[i]) {
-                final AgentHeader h => SectionLabel(
+                final AgentHeader h => _SectionHeader(
                   key: h.key,
                   label: h.status.label,
-                  // Only offline ones listed: "Needs you · 2 offline", not
-                  // a 0 that reads as a count of nothing beside them.
-                  count: h.count == 0 && h.offline > 0 ? null : h.count,
-                  expanded: h.expanded,
-                  onTap: () => _toggleSection(h.status),
-                  trailing: _headerTrailing(h, review: review),
+                  // Needs you and Working are counted by the status line, so
+                  // their headers do not say it again. Elsewhere, with only
+                  // offline ones listed: "Done · 2 offline", not a 0 that
+                  // reads as a count of nothing beside them.
+                  count: _countedAbove(h.status) || (h.count == 0 && h.offline > 0) ? null : h.count,
+                  expanded: h.collapsible ? h.expanded : null,
+                  onTap: h.collapsible ? () => _toggleSection(h.status) : null,
+                  actions: _headerActions(h, review: review, needYou: needYouCount),
                 ),
                 final AgentLine l => Collapse(
                   key: l.key,
@@ -363,10 +360,11 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
                   // [_withFolding]); the key follows the line.
                   child: KeyedSubtree(
                     key: _measure.putIfAbsent(l.agent.key, GlobalKey.new),
-                    // The board's job is to let you answer: an agent that is
-                    // blocked and reachable keeps its card and its answers
-                    // even in the compact list.
-                    child: cards || (l.agent.status == AgentStatus.blocked && !l.agent.stale)
+                    // The board's job is to let you answer: the agent in
+                    // front of Needs you keeps its card and its answers in
+                    // the compact list; the others waiting are named in rows
+                    // (the triage walk, from the header, answers them in turn).
+                    child: cards || l.front
                         ? AgentCard(agent: l.agent)
                         : AgentCompactRow(agent: l.agent, divider: !l.last),
                   ),
@@ -380,19 +378,13 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
                 final AgentFolding f => _FoldAway(key: f.key, height: f.height, onDone: () => _folded(f.agentKey)),
               },
             ),
-            // Room under the last row for the lanes: the Dock, and the Pin
-            // (the triage pill) while it shows.
-            SliverToBoxAdapter(
-              child: SizedBox(height: FloatingBar.listEnd(context, pin: blockedCount > 0)),
-            ),
+            SliverToBoxAdapter(child: SizedBox(height: listEnd)),
           ],
         ],
       ),
     );
-    // Always a Stack, so the list keeps its elements (rows, scroll offset)
-    // when the pill comes and goes. Picking agents puts a bar over the title
-    // bar and one over the tab bar's place (the shell hides its own), and the
-    // pill steps aside.
+    // Picking agents puts a bar over the title bar and the batch bar at the
+    // bottom, the one bar home ever has there.
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<BoardSelection>.value(value: _selection),
@@ -415,35 +407,6 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
               bottom: 0,
               child: BatchActionBar(onAction: (action) => unawaited(performBatchAction(context, action, _selection))),
             ),
-            // The Pin lane: 8 above the Dock, in the Dock's slot (the same
-            // side margins and width), toasts standing above it while it
-            // shows. It comes and goes like every lane, and steps aside while
-            // the board picks.
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: ListenableBuilder(
-                listenable: _selection,
-                builder: (context, child) =>
-                    BottomStackTransition(visible: blockedCount > 0 && !_selection.active, builder: (_) => child!),
-                child: FloatingBarSlot(
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: FloatingBar.height + FloatingBar.margin),
-                    child: ToastShelf(
-                      lift: FloatingBar.pinLift(context),
-                      child: TriagePill(
-                        count: _pillCount,
-                        review: review,
-                        // The sheet walks the same set, in the same order:
-                        // terminal agents and agent sessions.
-                        onTap: () => showTriageSheet(context),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
       ),
@@ -453,10 +416,10 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
   /// Closes [_gate] when the cards above an answer changed: one was removed or
   /// inserted, or the order changed. A card appended below the last answer
   /// moves nothing.
-  void _armGateWhenAnswersMove(List<AgentEntry> entries) {
+  void _armGateWhenAnswersMove(List<AgentEntry> entries, {required bool cards}) {
     var last = -1;
     for (final (i, e) in entries.indexed) {
-      if (e is AgentLine && e.agent.status == AgentStatus.blocked && !e.agent.stale) last = i;
+      if (e is AgentLine && e.agent.status == AgentStatus.blocked && !e.agent.stale && (cards || e.front)) last = i;
     }
     final layout = [for (final e in entries.take(last + 1)) e.key];
     final before = _answerLayout;
@@ -512,20 +475,58 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
     if (mounted && _folding.remove(agentKey) != null) setState(() {});
   }
 
+  /// Whether the status line already counts this section.
+  static bool _countedAbove(AgentStatus s) => s == AgentStatus.blocked || s == AgentStatus.working;
+
   /// What a section header carries on its right. Needs you: how many of its
-  /// rows are out of reach. Done: the same, then "Mark all reviewed" when
-  /// something can be marked (an offline agent cannot: it is not counted and
-  /// the note says why, instead of a button that would do nothing) and
-  /// "Select all".
-  Widget? _headerTrailing(AgentHeader h, {required int review}) => switch (h.status) {
-    AgentStatus.blocked when h.offline > 0 => _OfflineNote(count: h.offline),
-    AgentStatus.done => _ReviewActions(
+  /// rows are out of reach, then the walk through every waiting agent (the
+  /// triage sheet) when more than one waits: only the first is a card. Done:
+  /// the offline note, then "Mark reviewed" when something can be marked
+  /// (an offline agent cannot: it is not counted and the note says why,
+  /// instead of a button that would do nothing) and "Select all". The
+  /// section already says "all": the words were "Mark all reviewed" and
+  /// wrapped on a 320 dp phone.
+  _HeaderActions? _headerActions(AgentHeader h, {required int review, required int needYou}) => switch (h.status) {
+    AgentStatus.blocked => _HeaderActions(
       offline: h.offline,
-      onMarkAll: review > 0 ? _markAllReviewed : null,
-      onSelectAll: _selectAllDone,
+      // The action's room is kept while there is no action (its 44 dp box,
+      // and the choice of line made as if it were there): a second agent
+      // starting to wait must not move the card in front under the thumb.
+      holdsFor: _answerOneByOne,
+      actions: [
+        if (needYou > 1)
+          // The sheet walks the same set, in the same order: terminal agents
+          // and agent sessions.
+          (
+            key: const ValueKey('answer-one-by-one'),
+            label: _answerOneByOne,
+            tone: TextActionTone.accent,
+            onTap: () => unawaited(showTriageSheet(context)),
+          ),
+      ],
+    ),
+    AgentStatus.done => _HeaderActions(
+      offline: h.offline,
+      actions: [
+        if (review > 0)
+          (
+            key: const ValueKey('mark-all-reviewed'),
+            label: 'Mark reviewed',
+            tone: TextActionTone.quiet,
+            onTap: _markAllReviewed,
+          ),
+        (
+          key: const ValueKey('select-all-done'),
+          label: 'Select all',
+          tone: TextActionTone.quiet,
+          onTap: _selectAllDone,
+        ),
+      ],
     ),
     _ => null,
   };
+
+  static const _answerOneByOne = 'Answer one by one';
 
   /// Picks every finished agent (terminal and session), opening the section
   /// they sit in so that what is picked is on screen.
@@ -573,54 +574,153 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
 }
 
 /// "2 offline" on a section header: rows listed as last known, whose machine
-/// or link is down. They are not in the section's count, the badge or the
-/// pill, and nothing on the board can act on them until they are back.
+/// or link is down. They are not in the status line's count,
+/// and nothing on the board can act on them until they are back.
 class _OfflineNote extends StatelessWidget {
   const _OfflineNote({required this.count});
 
   final int count;
 
+  static String words(int count) => '$count offline';
+
+  static TextStyle style(Ds ds) => Type.label.copyWith(color: ds.textMuted, fontFeatures: Type.tabular);
+
   @override
-  Widget build(BuildContext context) => Text(
-    '$count offline',
-    maxLines: 1,
-    overflow: TextOverflow.ellipsis,
-    style: Type.label.copyWith(color: context.ds.textMuted, fontFeatures: Type.tabular),
-  );
+  Widget build(BuildContext context) =>
+      Text(words(count), maxLines: 1, overflow: TextOverflow.ellipsis, style: style(context.ds));
 }
 
-/// The ghost buttons on the header of finished work: clear it all as reviewed
-/// (one Undo; absent when nothing can be reached to mark), or pick it all for
-/// a batch action, after the note of how many are offline. The row shrinks
-/// (the labels ellipsize) before it can push the section's name off a narrow,
-/// large-text screen.
-class _ReviewActions extends StatelessWidget {
-  const _ReviewActions({required this.onMarkAll, required this.onSelectAll, this.offline = 0});
+/// One ghost button on a section header, as data, so the header can measure
+/// its words before it decides where they go.
+typedef _HeaderAction = ({Key key, String label, TextActionTone tone, VoidCallback onTap});
 
-  final VoidCallback? onMarkAll;
-  final VoidCallback onSelectAll;
+/// What a section header carries after its name: the note of how many of
+/// its rows are offline, then its ghost buttons (Needs you's walk, Done's
+/// "Mark reviewed" and "Select all").
+class _HeaderActions {
+  const _HeaderActions({required this.actions, this.offline = 0, this.holdsFor});
+
+  final List<_HeaderAction> actions;
   final int offline;
+
+  /// The label of an action that may come and go: its room is kept, and the
+  /// header is laid out as if it were there, so its arrival moves nothing.
+  final String? holdsFor;
+
+  bool get isEmpty => actions.isEmpty && offline == 0 && holdsFor == null;
+
+  /// The width the note and the buttons take on one line.
+  double width(BuildContext context) {
+    final ds = context.ds;
+    final scaler = MediaQuery.textScalerOf(context);
+    final labels = [
+      for (final a in actions) a.label,
+      if (holdsFor case final held? when !actions.any((a) => a.label == held)) held,
+    ];
+    final parts = [
+      if (offline > 0) _textWidth(_OfflineNote.words(offline), _OfflineNote.style(ds), scaler),
+      for (final l in labels) _textWidth(l, Type.labelStrong, scaler),
+    ];
+    final gaps = offline > 0 && labels.isNotEmpty
+        ? Gap.sm + Gap.md * (labels.length - 1)
+        : Gap.md * (labels.length - 1);
+    return parts.fold(0.0, (a, b) => a + b) + (parts.length > 1 ? gaps : 0);
+  }
+
+  List<Widget> children() => [
+    if (offline > 0) _OfflineNote(count: offline),
+    for (final a in actions) TextAction(key: a.key, label: a.label, tone: a.tone, onTap: a.onTap),
+  ];
+}
+
+double _textWidth(String text, TextStyle style, TextScaler scaler) {
+  final painter = TextPainter(
+    text: TextSpan(text: text, style: style),
+    textDirection: TextDirection.ltr,
+    textScaler: scaler,
+    maxLines: 1,
+  )..layout();
+  final width = painter.width;
+  painter.dispose();
+  return width;
+}
+
+/// A board section's header. Its name always shows whole: when the name and
+/// the actions do not fit on one line (a narrow phone, large text), the
+/// actions drop to their own line under it, left-aligned with the name, and
+/// wrap if they must. Why not shrink them: an ellipsized "Mark re…" is an
+/// action the person cannot read, and squeezing the name ("Do…") hid which
+/// section the actions belong to.
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({
+    super.key,
+    required this.label,
+    required this.count,
+    required this.expanded,
+    required this.onTap,
+    required this.actions,
+  });
+
+  final String label;
+  final int? count;
+  final bool? expanded;
+  final VoidCallback? onTap;
+  final _HeaderActions? actions;
+
+  /// The width the header's name, count and caret need on one line.
+  double _labelWidth(BuildContext context) {
+    final scaler = MediaQuery.textScalerOf(context);
+    return _textWidth(label, Type.labelStrong, scaler) +
+        (count == null ? 0 : Gap.sm + _textWidth('$count', Type.label.copyWith(fontFeatures: Type.tabular), scaler)) +
+        (expanded == null ? 0 : Gap.xs + IconSize.row);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final room = MediaQuery.sizeOf(context).width - 2 * Gap.gutter - 96;
-    return ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: math.max(room, 120)),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (offline > 0) ...[Flexible(child: _OfflineNote(count: offline)), const SizedBox(width: Gap.sm)],
-          if (onMarkAll case final markAll?) ...[
-            Flexible(
-              child: TextAction(key: const ValueKey('mark-all-reviewed'), label: 'Mark all reviewed', onTap: markAll),
-            ),
-            const SizedBox(width: Gap.md),
+    final actions = this.actions;
+    SectionLabel header({Widget? trailing}) =>
+        SectionLabel(label: label, count: count, expanded: expanded, onTap: onTap, trailing: trailing);
+    if (actions == null) return header();
+    if (actions.isEmpty) return header();
+    final room = MediaQuery.sizeOf(context).width - 2 * Gap.gutter;
+    // One dp of slack for rounding between the measure and the layout.
+    final oneLine = _labelWidth(context) + Gap.sm + actions.width(context) + 1 <= room;
+    final items = actions.children();
+    if (oneLine) {
+      if (items.isEmpty) return header(trailing: const SizedBox(height: kMinTap));
+      return header(
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final (i, w) in items.indexed) ...[
+              if (i > 0) SizedBox(width: i == 1 && actions.offline > 0 ? Gap.sm : Gap.md),
+              w,
+            ],
           ],
-          Flexible(
-            child: TextAction(key: const ValueKey('select-all-done'), label: 'Select all', onTap: onSelectAll),
+        ),
+      );
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        header(),
+        Container(
+          constraints: const BoxConstraints(minHeight: kMinTap),
+          padding: const EdgeInsets.symmetric(horizontal: Gap.gutter),
+          child: Wrap(
+            spacing: Gap.md,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              for (final w in items)
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: kMinTap),
+                  child: Align(widthFactor: 1, heightFactor: 1, child: w),
+                ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -659,18 +759,91 @@ String? heardLabel(List<MachineConnection> connections) {
       : 'heard ${Elapsed.compact(oldest, seconds: false)} ago';
 }
 
-String _summary(AgentsOverview o, int agentSessions) {
-  return [
-    countOf(o.machineCount, 'machine'),
-    o.agents.isEmpty ? 'no agents' : countOf(o.agents.length, 'agent'),
-    if (agentSessions > 0) countOf(agentSessions, 'agent session'),
-    if (o.troubled.isNotEmpty) '${o.troubled.length} not connected',
-  ].join(' · ');
+/// The board's one status line: `2 need you · 3 working · heard just now ·
+/// 1 not connected`. The needs-you count is the only loud words on it (the
+/// blocked text colour), and the only place the board says it. A board with nothing waiting or working says
+/// `nothing running`, so the line always answers "is everything alive?".
+/// Counts are tabular, so a number that changes does not shift the words
+/// after it.
+class _StatusLine {
+  const _StatusLine({
+    required this.waiting,
+    required this.working,
+    required this.agents,
+    required this.machines,
+    required this.troubled,
+  });
+
+  final int waiting;
+  final int working;
+  final int agents;
+  final int machines;
+  final int troubled;
+
+  /// The longest [heardLabel] in practice (`Elapsed.compact` past an hour),
+  /// for measuring.
+  static const longestHeard = 'heard 23h 59m ago';
+
+  /// The facts in order; the needs-you count is the loud one.
+  List<({String text, bool loud})> _facts(String? heard) {
+    final quiet = [
+      if (working > 0) '$working working' else if (waiting == 0 && agents > 0) 'nothing running',
+      ?heard,
+      if (troubled > 0) '$troubled not connected',
+    ];
+    if (waiting == 0 && quiet.isEmpty) quiet.add(countOf(machines, 'machine'));
+    return [if (waiting > 0) (text: needYou(waiting), loud: true), for (final q in quiet) (text: q, loud: false)];
+  }
+
+  static TextSpan _join(Ds ds, List<({String text, bool loud})> facts, {int breakAt = -1}) => TextSpan(
+    style: Type.secondary.copyWith(color: ds.textSecondary, fontFeatures: Type.tabular),
+    children: [
+      for (final (i, f) in facts.indexed) ...[
+        if (i > 0) TextSpan(text: i == breakAt ? '\n' : ' · '),
+        TextSpan(
+          text: f.text,
+          style: f.loud ? Type.secondaryStrong.copyWith(color: ds.blockedText, fontFeatures: Type.tabular) : null,
+        ),
+      ],
+    ],
+  );
+
+  /// The line, with [heard] for this minute. When it does not fit one line
+  /// it breaks between two facts, never inside one: `2 not` / `connected`
+  /// read as two broken facts.
+  TextSpan span(BuildContext context, {required String? heard}) {
+    final ds = context.ds;
+    final facts = _facts(heard);
+    final whole = _join(ds, facts);
+    if (_fits(context, whole)) return whole;
+    var at = facts.length - 1;
+    while (at > 1 && !_fits(context, _join(ds, facts.sublist(0, at)))) {
+      at--;
+    }
+    return _join(ds, facts, breakAt: at);
+  }
+
+  /// 1, or 2 when the line does not fit the large title's width.
+  int lines(BuildContext context, {required String? heard}) => _fits(context, _join(context.ds, _facts(heard))) ? 1 : 2;
+
+  /// Whether [text] fits one line of the large title (with the header's own
+  /// text-scale cap, [kBarTextScale]).
+  static bool _fits(BuildContext context, TextSpan text) {
+    final painter = TextPainter(
+      text: text,
+      textDirection: TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context).clamp(maxScaleFactor: kBarTextScale),
+      maxLines: 1,
+    )..layout(maxWidth: math.max(0, MediaQuery.sizeOf(context).width - 2 * Gap.gutter));
+    final fits = !painter.didExceedMaxLines;
+    painter.dispose();
+    return fits;
+  }
 }
 
 /// Machines that are not connected, in one line. One machine is named and can
-/// be retried here; several are summed up and the detail lives on the
-/// Machines tab, so the agents stay on the first screen.
+/// be retried here; several are summed up and the detail lives on Machines,
+/// so the agents stay on the first screen.
 class _ConnectionStrip extends StatelessWidget {
   const _ConnectionStrip({required this.troubled, required this.onShowMachines});
 
@@ -720,4 +893,73 @@ class _FoldAway extends StatelessWidget {
     onEnd: onDone,
     builder: (context, h, _) => SizedBox(height: h, width: double.infinity),
   );
+}
+
+/// The fleet at a glance, on the left of home's header: `2 of 3 machines`
+/// with a mark, and a tap opens Machines. It reads as status, not as a
+/// button: no fill at rest (the round buttons on the right have one),
+/// secondary words, and its mark and words start on the large title's edge.
+/// The mark is the [LinkDot] of the machine that most needs the person, the
+/// same shape as its row on Machines: the quiet filled dot when every machine
+/// that is on is online, the working ring while one connects, the blocked
+/// ring with a dot for one to fix or approve, a quiet ring when every machine
+/// is off. A switched-off machine is neither a problem nor online: it is not
+/// counted.
+class _MachineHealth extends StatelessWidget {
+  const _MachineHealth({required this.online, required this.enabled, required this.worst, required this.onTap});
+
+  final int online;
+  final int enabled;
+
+  /// The state that most needs the person among the machines not online;
+  /// null when every one that is on is.
+  final LinkState? worst;
+  final VoidCallback onTap;
+
+  static const _height = 36.0;
+
+  /// From the bar's padded edge to the large title's: the mark lines up
+  /// with the title's first letter.
+  static const _inset = Gap.gutter - AppTopBar.edge;
+
+  @override
+  Widget build(BuildContext context) {
+    final ds = context.ds;
+    final state = worst ?? (enabled == 0 ? LinkState.disabled : LinkState.online);
+    final words = enabled == 0 ? 'All machines off' : '$online of ${countOf(enabled, 'machine')}';
+    final spoken = enabled == 0 ? words : '$words online';
+    return PressBuilder(
+      key: const ValueKey('machine-health'),
+      onTap: onTap,
+      scale: PressScale.chip,
+      button: true,
+      minTapSize: kMinTap,
+      semanticLabel: spoken,
+      builder: (context, pressed) => AnimatedContainer(
+        duration: Motion.pressing(pressed),
+        curve: Motion.easeOut,
+        height: _height,
+        padding: const EdgeInsets.symmetric(horizontal: _inset),
+        decoration: BoxDecoration(
+          color: pressed ? ds.fill : Colors.transparent,
+          borderRadius: BorderRadius.circular(Radii.pill),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            LinkDot(key: const ValueKey('machine-health-mark'), state: state),
+            const SizedBox(width: Gap.sm),
+            Flexible(
+              child: Text(
+                words,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Type.label.copyWith(color: ds.textSecondary, fontFeatures: Type.tabular),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

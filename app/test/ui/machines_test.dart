@@ -20,6 +20,7 @@ import 'package:herdr_mobile/ui/features/machines/machines_screen.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
+import '../support/shot.dart' show loadAppFonts;
 import '../support/fake_agent_session.dart';
 import '../support/fake_transport.dart';
 import '../support/memory_stores.dart';
@@ -145,6 +146,10 @@ Future<void> _approve(WidgetTester tester, UiHarness h) async {
 }
 
 void main() {
+  // The address line measures text to cut it in the middle, so it needs the
+  // app's fonts, loaded here rather than borrowed from another file in a shard.
+  setUpAll(loadAppFonts);
+
   group('machines tab', () {
     for (final (width, scale) in [(360.0, 1.0), (320.0, 1.0), (320.0, 2.0)]) {
       testWidgets('every connection state is said in words at ${width.toInt()}dp ${scale}x', (tester) async {
@@ -154,8 +159,8 @@ void main() {
 
         expect(find.text('workstation'), findsOneWidget);
         expect(find.textContaining('agent'), findsWidgets, reason: 'online meta line');
-        expect(find.text('Offline'), findsOneWidget);
-        expect(find.text('Needs attention'), findsOneWidget);
+        expect(find.textContaining('Offline'), findsOneWidget);
+        expect(find.textContaining('Needs attention'), findsOneWidget);
         expect(find.text('Permission denied (publickey).'), findsOneWidget, reason: 'the reason, not just the state');
         expect(find.textContaining('Reconnecting'), findsOneWidget);
         expect(find.text('Waiting for approval'), findsOneWidget);
@@ -194,7 +199,7 @@ void main() {
         expect(find.text('Tuấn Nguyễn'), findsOneWidget);
         expect(find.text('x'), findsOneWidget);
         // A machine with no agents says so rather than "0 agents".
-        if (scale == 1) expect(find.text('No agents'), findsOneWidget);
+        if (scale == 1) expect(find.textContaining('No agents'), findsOneWidget);
       }
       await _tearDown(tester, h);
     });
@@ -206,13 +211,52 @@ void main() {
           snapshot: snapshotWith(_agents(2)),
         ),
       ]);
-      // The test font draws every glyph a full em wide, so the row needs a
-      // wide screen for the address to show at all.
-      await _pump(tester, const MachinesScreen(), fleet: h, width: 700);
+      // The row shares one line with the count, so a phone-width screen cuts it.
+      await _pump(tester, const MachinesScreen(), fleet: h, width: 320);
 
-      expect(find.text('2 agents'), findsOneWidget, reason: 'the count is never cut');
-      expect(find.text('ute.internal'), findsOneWidget, reason: 'the last characters of the address');
+      final line = find.textContaining('2 agents', findRichText: true);
+      expect(line, findsOneWidget, reason: 'the count is never cut');
+      final shown = tester.widget<RichText>(line).text.toPlainText();
+      expect(shown, startsWith('2 agents · dev@'), reason: 'the start of the address');
+      expect(shown, endsWith('…ute.internal'), reason: 'the end, right after the cut: no gap before it');
       expect(tester.takeException(), isNull);
+      await _tearDown(tester, h);
+    });
+
+    test('the middle cut keeps as much of the start as fits, and the end whole', () {
+      double width(String s) => s.length.toDouble();
+      expect(middleCut('dev@studio.ts.net', 40, width, tailKept: 6), 'dev@studio.ts.net', reason: 'fits: whole');
+      expect(middleCut('maya@studio-mac.tail1a2b.ts.net', 20, width, tailKept: 12), 'maya@st…l1a2b.ts.net');
+      expect(middleCut('maya@studio-mac.tail1a2b.ts.net', 20, width, tailKept: 12)!.length, 20, reason: 'no gap');
+      expect(middleCut('maya@studio-mac.tail1a2b.ts.net', 12, width, tailKept: 12), isNull, reason: 'not even the end');
+    });
+
+    testWidgets('the dot says the link by shape: online quiet, on its way a ring, needs you a ring with a dot', (
+      tester,
+    ) async {
+      final h = await _everyState();
+      await _pump(tester, const MachinesScreen(), fleet: h, height: 3000);
+      await _approve(tester, h);
+      final ds = tester.element(find.byType(MachinesScreen)).ds;
+      LinkDot dot(String label) => tester.widget<LinkDot>(
+        find.descendant(of: find.widgetWithText(PressRow, label), matching: find.byType(LinkDot)),
+      );
+
+      final online = dot('workstation');
+      expect(online.mark, LinkMark.dot);
+      expect(online.colorIn(ds), ds.textTertiary, reason: 'healthy is not news: no status colour');
+
+      expect(dot('flaky').mark, LinkMark.ring, reason: 'reconnecting: not there yet');
+      expect(dot('flaky').colorIn(ds), ds.working);
+      expect(dot('laptop').mark, LinkMark.ring, reason: 'offline');
+      expect(dot('laptop').colorIn(ds), ds.textTertiary);
+      expect(dot('sleepy').mark, LinkMark.ring, reason: 'switched off');
+
+      for (final label in ['staging', 'tailnet']) {
+        expect(dot(label).mark, LinkMark.target, reason: '$label needs the person: told apart by shape');
+        expect(dot(label).mark, isNot(online.mark));
+        expect(dot(label).colorIn(ds), ds.blocked);
+      }
       await _tearDown(tester, h);
     });
 
@@ -233,7 +277,7 @@ void main() {
       await _pump(tester, const MachinesScreen(), fleet: h);
 
       expect(find.text('1 machine'), findsOneWidget);
-      expect(find.text('1 agent'), findsOneWidget);
+      expect(find.textContaining('1 agent'), findsOneWidget);
       expect(find.textContaining('herdr '), findsNothing, reason: 'the version is on the machine screen, not the row');
       await _tearDown(tester, h);
     });
@@ -265,7 +309,7 @@ void main() {
       await _pump(tester, const MachinesScreen(), fleet: h);
 
       expect(find.text('Retry'), findsNothing);
-      expect(find.text('Needs attention'), findsNothing);
+      expect(find.textContaining('Needs attention'), findsNothing);
       await tester.tap(find.widgetWithText(AppButton, 'Enable'));
       await _flush(tester);
 
@@ -291,7 +335,7 @@ void main() {
       await h.fleet.connection('b')!.refresh();
       await tester.pump();
 
-      expect(find.text('2 agents'), findsOneWidget, reason: 'the row did update');
+      expect(find.textContaining('2 agents'), findsOneWidget, reason: 'the row did update');
       expect(dotsRebuilt, 1, reason: 'only the machine that changed');
       await _tearDown(tester, h);
     });
@@ -350,14 +394,14 @@ void main() {
       h.transports['a']!.failure = _fatal;
       h.fleet.connection('a')!.reconnect();
       await _pump(tester, const MachinesScreen(), fleet: h);
-      expect(find.text('Needs attention'), findsOneWidget);
+      expect(find.textContaining('Needs attention'), findsOneWidget);
 
       h.transports['a']!.failure = null;
       await tester.tap(find.text('Retry'));
       await _flush(tester);
 
       expect(h.fleet.connection('a')!.state, LinkState.online);
-      expect(find.text('Needs attention'), findsNothing);
+      expect(find.textContaining('Needs attention'), findsNothing);
       expect(find.text('Retry'), findsNothing);
       await _tearDown(tester, h);
     });

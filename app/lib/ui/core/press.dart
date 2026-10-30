@@ -7,7 +7,8 @@ import 'motion.dart';
 const kMinTap = 44.0;
 
 /// Where chrome bars stop growing with the system text size: their blocks
-/// are fixed height, and three tab cells hold "Machines" at 320 dp at this.
+/// are fixed height, and the batch bar's three cells hold their names at
+/// 320 dp at this.
 const kBarTextScale = 1.15;
 
 /// Press handling shared by every control: feedback on pointer-down, at once

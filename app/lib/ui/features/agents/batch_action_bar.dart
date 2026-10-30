@@ -81,9 +81,9 @@ class SelectionHeader extends StatelessWidget {
   }
 }
 
-/// The three actions on the picked agents, in the tab bar's slot and the same
-/// pill while the board is picking, so the bottom keeps its shape and the
-/// thumb finds the actions where the tabs were. An action is enabled when it
+/// The three actions on the picked agents, in a floating pill at the bottom
+/// while the board is picking: the one bar home ever has there, within the
+/// thumb's reach. An action is enabled when it
 /// would touch at least one of them (a message also when the only candidates
 /// are agents waiting for an answer, which the confirm sheet offers to type
 /// into on the person's say so). While a batch runs the bar says so with a
@@ -98,10 +98,8 @@ class BatchActionBar extends StatelessWidget {
     final selection = context.watch<BoardSelection?>();
     if (selection == null) return const SizedBox.shrink();
     final clearance = FloatingBar.clearance(context);
-    // Toasts stand above it, as above the tab bar it replaces. The shell hides
-    // its scrim with the tab bar, and the board sits under the shell's
-    // overlays, so the bar brings its own. It swaps with the tab bar in place:
-    // a fade, no slide.
+    // Toasts stand above it. The bar brings its own scrim, so rows fade out
+    // above it. It comes and goes with a fade, no slide.
     return BottomStackTransition(
       visible: selection.active,
       slide: false,
@@ -168,7 +166,7 @@ class BatchActionBar extends StatelessWidget {
   }
 }
 
-/// One action as a tab cell: the tab bar's icon over a name, its height and
+/// One action as a cell: an icon over a name, its height and
 /// its capsule for the press (`fillPressed`: `fill` on the pill's surface is
 /// about 1.1:1 and vanishes in dark).
 class _BarAction extends StatelessWidget {

@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
@@ -29,7 +28,7 @@ import 'update_group.dart';
 /// The groups of Settings, top to bottom. The page opens one at a time.
 enum _Open { look, agents, notifications, storage, about }
 
-/// The third root tab: five groups (Look, Agents, Notifications, Storage, About), each
+/// Settings, a page over home opened from its header's gear: five groups (Look, Agents, Notifications, Storage, About), each
 /// a row that says what it is set to and opens in place, one at a time, with
 /// a newer version's row above them (it opens the update sheet). Everything
 /// here applies at once and is remembered.
@@ -50,45 +49,13 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  // Closed on every visit: one group opens at a time, on a tap.
+  // Closed on every visit: one group opens at a time, on a tap. Each visit is
+  // a new page that opens at its top, so a newer version's Update row, the
+  // first row, is in view when the gear's dot brings the person here. (As a
+  // tab the page kept its place, and had to scroll itself back to that row.)
   _Open? _open;
 
-  // The page keeps its place between visits, and the Update row is its first
-  // row, so a person who had scrolled down had only the tab's dot to say a
-  // newer version was there. Arriving on the page with a version whose sheet
-  // was not opened yet puts the row back in view: the dot is what brought the
-  // person here. Not while the page is showing: nothing moves under the thumb.
-  // The page scrolls with the shell's primary controller (re-tapping the tab
-  // scrolls it to the top too), so it is read from there, not owned here.
-  String? _openedVersion;
-  ValueListenable<TickerModeData>? _shown;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final shown = TickerMode.getValuesNotifier(context);
-    if (shown == _shown) return;
-    _shown?.removeListener(_onShown);
-    _shown = shown..addListener(_onShown);
-  }
-
-  @override
-  void dispose() {
-    _shown?.removeListener(_onShown);
-    super.dispose();
-  }
-
-  void _onShown() {
-    final release = widget.update?.release;
-    if (!mounted || _shown?.value.enabled != true || release == null || release.version == _openedVersion) return;
-    final scroll = PrimaryScrollController.maybeOf(context);
-    if (scroll != null && scroll.hasClients && scroll.offset > 0) scroll.jumpTo(0);
-  }
-
-  void _openUpdate(AppUpdate update) {
-    _openedVersion = update.release?.version;
-    unawaited(showUpdateSheet(context, update));
-  }
+  void _openUpdate(AppUpdate update) => unawaited(showUpdateSheet(context, update));
 
   void _toggle(_Open group) => setState(() => _open = _open == group ? null : group);
 
@@ -100,7 +67,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: CustomScrollView(
         primary: true,
         slivers: [
-          const SliverLargeTitle(title: 'Settings'),
+          const SliverLargeTitle.back(title: 'Settings'),
           // Each group draws its own hairline (it opens in place), so the
           // groups are custom rows that bring their own separation. Built
           // whole, not lazily: five groups, and an opening group measures
@@ -136,7 +103,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   id: 'about',
                   child: _AboutGroup(update: update, open: _open == _Open.about, onToggle: () => _toggle(_Open.about)),
                 ),
-                GapRow(id: 'clearance', height: FloatingBar.listEnd(context)),
+                GapRow(id: 'clearance', height: MediaQuery.paddingOf(context).bottom + Gap.xl),
               ],
             ),
           ),
@@ -161,7 +128,6 @@ class _LookGroup extends StatelessWidget {
   };
 
   static String _density(BoardDensity density) => switch (density) {
-    BoardDensity.auto => 'Auto',
     BoardDensity.cards => 'Cards',
     BoardDensity.compact => 'Compact',
   };
@@ -202,16 +168,14 @@ class _LookGroup extends StatelessWidget {
           id: 'density',
           child: SettingsField(
             title: 'Agent list',
-            // Only where the setting hides a rule: Cards and Compact say it all.
-            hint: density == BoardDensity.auto
-                ? 'Cards up to ${AppSettings.autoCompactFrom - 1} agents, the compact list from '
-                      '${AppSettings.autoCompactFrom}; a blocked agent always keeps its answers.'
+            // Only where the setting hides a rule: Cards says it all.
+            hint: density == BoardDensity.compact
+                ? 'The first agent that needs you keeps its card and answers; the rest are rows.'
                 : null,
             child: Segmented<BoardDensity>(
               options: const [
-                SegmentOption(BoardDensity.auto, 'Auto', icon: LucideIcons.sparkles),
-                SegmentOption(BoardDensity.cards, 'Cards', icon: LucideIcons.layoutGrid),
                 SegmentOption(BoardDensity.compact, 'Compact', icon: LucideIcons.list),
+                SegmentOption(BoardDensity.cards, 'Cards', icon: LucideIcons.layoutGrid),
               ],
               value: density,
               onChanged: (next) => unawaited(settings.setDensity(next)),
@@ -281,7 +245,7 @@ class _AgentsGroup extends StatelessWidget {
                 : 'A running agent opens as its terminal.',
             child: Segmented<OpenAgentsAs>(
               options: const [
-                SegmentOption(OpenAgentsAs.chat, 'Chat', icon: LucideIcons.messageSquare),
+                SegmentOption(OpenAgentsAs.chat, 'Chat', icon: HerdrIcons.message),
                 SegmentOption(OpenAgentsAs.terminal, 'Terminal', icon: LucideIcons.terminal),
               ],
               value: openAs,

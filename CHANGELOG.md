@@ -4,6 +4,20 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [Unreleased]
+
+- The Agents board says how many agents need you once, in one line at the top, with how many are working and when it last heard from your machines. The filter chips and the floating pill are gone.
+- The first agent that needs you keeps its card; the others are rows under it, and `Answer one by one` walks them. Needs you can no longer be folded away.
+- On an agent's question, the command it wants to run is the largest text, the answers that allow come first, and `No` sits apart below them. A "don't ask again" answer is in the full list behind `more…`, still held.
+- `Past sessions` moved to the new-session form, behind `+`. The agent list density is in Settings.
+- The tab bar is gone: the board is home and runs to the bottom of the screen. Tap the machine count at the top left (`4 of 5 machines`, with a ring when one is not online) to open Machines, and the gear at the top right for Settings; Back returns to the board. A newer version puts a small dot on the gear.
+- On Machines, a machine that is fine has a quiet grey dot instead of a green one; one connecting has a ring, and one that needs you a ring with a dot, so it stands out even without colour. A long address keeps its start and its end, without the gap that used to sit in the middle.
+- On a narrow phone or with large text, the board's top line takes a second line instead of cutting off how many machines are not connected, and `Mark reviewed` (was `Mark all reviewed`) moves under the Done heading instead of squeezing it to `Do…`.
+- In Session overview, red marks only a failed command. A nearly full context turns amber, and a failed command's `exit 1` is grey beside its red mark.
+- Symbols agents draw in their terminals now show on the card and in the pane: Claude Code's `⏵⏵ auto mode on`, `⏺`, `⎿` and its spinner stars, checkboxes and braille spinners were empty boxes on some phones.
+- A card's reply is a quiet `Reply…` at the end of its last line instead of a ↩ circle that read as undo or back.
+
+
 ## [0.1.45] - 2026-10-29
 
 ### Switch to the agent that needs you, from any chat

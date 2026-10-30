@@ -233,7 +233,7 @@ class _ToastSlot {
   }
 }
 
-/// Wrap a bar that sits over the page's bottom edge (the tab bar, the batch
+/// Wrap a bar that sits over the page's bottom edge (the board's batch
 /// bar, a form's action bar) so toasts stand above it instead of covering its
 /// buttons. It counts only while its route is the one showing (under a pushed
 /// screen the bar is not there to clear) and while it is built.

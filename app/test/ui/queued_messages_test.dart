@@ -188,7 +188,7 @@ void main() {
     await tester.pump();
     expect(find.byIcon(LucideIcons.listPlus), findsOneWidget);
 
-    await tester.tap(find.byIcon(LucideIcons.square));
+    await tester.tap(find.byIcon(HerdrIcons.stopMark));
     await tester.pump(const Duration(milliseconds: 50));
     expect(session.cancelCount, 1);
     expect(tester.widget<TextField>(field).controller!.text, 'a draft', reason: 'Stop doesn’t touch the draft');
@@ -200,7 +200,7 @@ void main() {
     final session = working();
     await pump(tester, session);
     final sendAt = tester.getCenter(find.byIcon(LucideIcons.listPlus));
-    final stopAt = tester.getCenter(find.byIcon(LucideIcons.square));
+    final stopAt = tester.getCenter(find.byIcon(HerdrIcons.stopMark));
     expect(stopAt.dx, lessThan(sendAt.dx), reason: 'Stop sits left of Send');
 
     await tester.enterText(field, 'then run the tests');
@@ -212,9 +212,9 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
     expect(session.queued, hasLength(1), reason: 'the second tap met an empty field');
     expect(session.cancelCount, 0);
-    expect(tester.getCenter(find.byIcon(LucideIcons.square)), stopAt, reason: 'sending moves nothing');
+    expect(tester.getCenter(find.byIcon(HerdrIcons.stopMark)), stopAt, reason: 'sending moves nothing');
 
-    await tester.tap(find.byIcon(LucideIcons.square));
+    await tester.tap(find.byIcon(HerdrIcons.stopMark));
     await tester.pump(const Duration(milliseconds: 50));
     expect(session.cancelCount, 1);
   });
@@ -222,16 +222,16 @@ void main() {
   testWidgets('Stop appearing with a turn takes no tap for 450 ms', (tester) async {
     final session = FakeAgentSession();
     await pump(tester, session);
-    expect(find.byIcon(LucideIcons.square), findsNothing);
+    expect(find.byIcon(HerdrIcons.stopMark), findsNothing);
 
     session.update((s) => s.withTurnStarted());
     await tester.pump();
-    await tester.tap(find.byIcon(LucideIcons.square));
+    await tester.tap(find.byIcon(HerdrIcons.stopMark));
     await tester.pump(const Duration(milliseconds: 50));
     expect(session.cancelCount, 0, reason: 'a tap meant for Send');
 
     await tester.pump(Dwell.tapGuard);
-    await tester.tap(find.byIcon(LucideIcons.square));
+    await tester.tap(find.byIcon(HerdrIcons.stopMark));
     await tester.pump(const Duration(milliseconds: 50));
     expect(session.cancelCount, 1);
   });
@@ -256,7 +256,7 @@ void main() {
   testWidgets('an agent in a terminal has no queue: it only stops', (tester) async {
     final session = working()..observed = true;
     await pump(tester, session);
-    expect(find.byIcon(LucideIcons.square), findsOneWidget);
+    expect(find.byIcon(HerdrIcons.stopMark), findsOneWidget);
     await tester.enterText(field, 'hello');
     await tester.pump();
     expect(find.byIcon(LucideIcons.listPlus), findsNothing);

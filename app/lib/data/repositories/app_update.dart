@@ -95,8 +95,8 @@ enum UpdateStage {
 /// to Android's installer: the app's own update, for a phone that installs
 /// from the release page by hand.
 ///
-/// Quiet by design: an update is never an interruption. It shows as a mark on
-/// the Settings tab and a panel at the top of Settings, never a toast or a
+/// Quiet by design: an update is never an interruption. It shows as a dot on
+/// home's Settings gear and a panel at the top of Settings, never a toast or a
 /// notification. GitHub is asked once a [checkEvery] while the app is in
 /// front (and the person allows it), or at once on request; the APK is
 /// downloaded only when the person taps Download, and installed only after
