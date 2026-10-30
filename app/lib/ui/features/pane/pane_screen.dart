@@ -240,7 +240,7 @@ class _PaneScreenState extends State<PaneScreen> {
           if (machine != null && connectTarget != null)
             SheetAction(
               label: 'Read as chat…',
-              icon: LucideIcons.messageSquare,
+              icon: HerdrIcons.message,
               onTap: () => unawaited(showConnectChat(context, machine, _paneId, connectTarget)),
             ),
           _duplicateAction(),
@@ -917,7 +917,7 @@ class _BannerState extends State<_Banner> {
         color: link.state.color(ds),
         icon: switch (link.state) {
           LinkState.connecting => LucideIcons.loader,
-          LinkState.attention => LucideIcons.triangleAlert,
+          LinkState.attention => LucideIcons.circleAlert,
           LinkState.approval => LucideIcons.keyRound,
           LinkState.disabled => LucideIcons.ban,
           _ => LucideIcons.wifiOff,

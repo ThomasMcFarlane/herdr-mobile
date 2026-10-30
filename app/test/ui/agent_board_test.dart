@@ -16,7 +16,6 @@ import 'package:herdr_mobile/ui/features/pane/pane_screen.dart';
 import 'package:herdr_mobile/ui/shell/home_shell.dart';
 import 'package:herdr_mobile/data/repositories/attention_set.dart';
 import 'package:provider/provider.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../support/shot.dart' show loadAppFonts;
 import 'board_support.dart';
@@ -140,7 +139,7 @@ void main() {
       expect(find.descendant(of: _card('task 1'), matching: find.text('offline')), findsOneWidget);
       expect(find.descendant(of: _card('task 1'), matching: find.byType(Opacity)), findsOneWidget);
       expect(find.text('last known line'), findsOneWidget, reason: 'the data stays, marked stale');
-      expect(find.byTooltip('Reply to task 1'), findsNothing, reason: 'can’t answer offline');
+      expect(replyTo('task 1'), findsNothing, reason: 'can’t answer offline');
       await teardownBoard(tester, h);
     });
   });
@@ -538,7 +537,25 @@ void main() {
       await pumpBoard(tester, h, height: _tall);
 
       expect(find.text('Allow the agent to edit 3 files?'), findsOneWidget);
-      expect(find.byTooltip('Reply to task 1'), findsOneWidget);
+      expect(replyTo('task 1'), findsOneWidget);
+      await teardownBoard(tester, h);
+    });
+
+    testWidgets('Reply… keeps a full tap target and clear of the words it floats over', (tester) async {
+      final h = await BoardHarness.create([
+        _machine('a', [_pane(1, 'working')]),
+      ]);
+      final long = 'npm run test -- --watch=false ${'x' * 200}';
+      h.previews.set('a/w1:p1', [long]);
+      await pumpBoard(tester, h, width: 320, height: _tall, textScale: 1.6);
+
+      final reply = tester.getRect(replyTo('task 1'));
+      expect(reply.height, greaterThanOrEqualTo(kMinTap));
+      expect(reply.width, greaterThanOrEqualTo(kMinTap));
+      final word = tester.getRect(find.text('Reply…'));
+      final line = tester.getRect(find.textContaining('npm run test'));
+      expect(line.right, lessThanOrEqualTo(word.left), reason: 'the last row ends before Reply… begins');
+      expect(word.center.dy, moreOrLessEquals(line.center.dy, epsilon: 1), reason: 'on the last row');
       await teardownBoard(tester, h);
     });
 
@@ -839,7 +856,7 @@ void main() {
       ]);
       h.previews.set('a/w1:p1', ['step one', 'step two']);
       await pumpBoard(tester, h, height: _tall);
-      await tester.tap(find.byTooltip('Reply to task 1'));
+      await tester.tap(replyTo('task 1'));
       await settle(tester);
       return h;
     }
@@ -1058,7 +1075,7 @@ void main() {
       h.previews.set('a/w1:p3', const []);
       await pumpBoard(tester, h, width: 320, height: _tall, textScale: 2);
       expect(tester.takeException(), isNull);
-      await tester.tap(find.byIcon(LucideIcons.reply).first);
+      await tester.tap(find.text('Reply…').first);
       await settle(tester);
       expect(tester.takeException(), isNull);
       await teardownBoard(tester, h);

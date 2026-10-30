@@ -3,6 +3,7 @@ import 'dart:ui' show Tristate;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:herdr_mobile/data/models/herdr_models.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 
@@ -710,6 +711,14 @@ void main() {
       await pumpCore(tester, chip(state: AnswerChipState.failed, hold: false));
       expect(find.textContaining('Hold to retry'), findsNothing);
       expect(find.textContaining('Retry'), findsOneWidget);
+    });
+
+    testWidgets('a failed answer is marked as a failure, not with the caution a primed one shows', (tester) async {
+      await pumpCore(tester, chip(state: AnswerChipState.primed));
+      expect(find.byIcon(LucideIcons.triangleAlert), findsOneWidget);
+      await pumpCore(tester, chip(state: AnswerChipState.failed));
+      expect(find.byIcon(LucideIcons.circleAlert), findsOneWidget);
+      expect(find.byIcon(LucideIcons.triangleAlert), findsNothing);
     });
   });
 

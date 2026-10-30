@@ -261,8 +261,8 @@ session is never typed into.
 understands, its options appear as chips on the card, with the command or
 path it asks about under the question. Tap an option to send it. When there
 are more than five options, the last chip on the card is `N more…`, which
-opens the reply sheet with all of them. The reply button on a card
-(`Reply to <agent>`) opens the same sheet, with a message box
+opens the reply sheet with all of them. `Reply…` at the end of a card's
+last line opens the same sheet, with a message box
 (`Message Claude Code…`, named after the agent) and `Open full` for the agent's screen.
 
 Agent sessions on the board say what they ask but are answered inside the

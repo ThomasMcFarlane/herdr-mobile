@@ -99,7 +99,7 @@ final List<KitEntry> kitCatalog = [
           CircleButton(icon: LucideIcons.plus, tooltip: 'Add', onPressed: _noop),
           CircleButton(icon: LucideIcons.textWrap, tooltip: 'Wrap lines', active: true, onPressed: _noop),
           CircleButton(icon: LucideIcons.ellipsis, tooltip: 'More', filled: false, onPressed: _noop),
-          CircleButton(icon: LucideIcons.folder, tooltip: 'Files', onPressed: null),
+          CircleButton(icon: HerdrIcons.folder, tooltip: 'Files', onPressed: null),
         ],
       ),
     ),
@@ -511,7 +511,7 @@ final List<KitEntry> kitCatalog = [
       (c) => const SectionLabel(
         label: _viShort,
         count: 3,
-        trailing: TextAction(label: 'Mark all reviewed', onTap: _noop),
+        trailing: TextAction(label: 'Mark reviewed', onTap: _noop),
       ),
       bleed: true,
     ),
@@ -767,7 +767,7 @@ final List<KitEntry> kitCatalog = [
         subtitle: 'omp · máy chủ',
         glyph: StatusGlyph(status: AgentStatus.working, size: IconSize.row),
         actions: [
-          CircleButton(icon: LucideIcons.folder, tooltip: 'Files', onPressed: _noop),
+          CircleButton(icon: HerdrIcons.folder, tooltip: 'Files', onPressed: _noop),
           CircleButton(icon: LucideIcons.ellipsis, tooltip: 'More', onPressed: _noop),
         ],
       ),
@@ -817,7 +817,7 @@ final List<KitEntry> kitCatalog = [
               SheetActionRow(
                 action: SheetAction(
                   label: 'Open files',
-                  icon: LucideIcons.folder,
+                  icon: HerdrIcons.folder,
                   unavailable: 'The machine is offline.',
                   onTap: _noop,
                 ),
@@ -1256,8 +1256,10 @@ class _HerdrIconSheet extends StatelessWidget {
           ('machinesOff', HerdrIcons.machinesOff),
           ('settings', HerdrIcons.settings),
           ('stop', HerdrIcons.stop),
+          ('stopMark', HerdrIcons.stopMark),
           ('message', HerdrIcons.message),
           ('close', HerdrIcons.close),
+          ('folder', HerdrIcons.folder),
         ])
           Column(
             mainAxisSize: MainAxisSize.min,

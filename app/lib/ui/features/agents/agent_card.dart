@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/models/herdr_models.dart';
@@ -32,9 +31,29 @@ int previewRowCount(AgentStatus status) => switch (status) {
   AgentStatus.idle || AgentStatus.unknown => 0,
 };
 
-/// Room at a panel's end for the reply circle that floats over it: its 44 hit
-/// box less the panel's own inset.
-const replyGutter = kMinTap - Gap.xs;
+/// The card's way to answer in words, at the end of its last line (the
+/// question's, the preview's or the subtitle's). A quiet word, not the ↩
+/// circle it replaced: the arrow read as undo or back.
+const _replyLabel = 'Reply…';
+
+/// The painted width of [_replyLabel] at each text scale: measured once, not
+/// on every preview refresh.
+final _replyWidths = <double, double>{};
+
+double _replyWidth(TextScaler scaler) => _replyWidths[scaler.scale(1)] ??= () {
+  final painter = TextPainter(
+    text: const TextSpan(text: _replyLabel, style: Type.labelStrong),
+    textScaler: scaler,
+    textDirection: TextDirection.ltr,
+    maxLines: 1,
+  )..layout();
+  final width = painter.width;
+  painter.dispose();
+  return width;
+}();
+
+/// A line's height in [style] at [scaler].
+double _lineOf(TextStyle style, TextScaler scaler) => scaler.scale(style.fontSize!) * style.height!;
 
 /// One agent as a board card: what it is doing (task, where, how long), a calm
 /// live look at the end of its terminal, and, when it is blocked on a prompt
@@ -205,6 +224,12 @@ class _AgentCardState extends State<AgentCard>
     final slim = rows == 0;
     final chipsHeight = prompt == null ? 0.0 : ReplyChips.heightFor(prompt);
     final canReply = !a.stale;
+    final scaler = MediaQuery.textScalerOf(context);
+    final replyWidth = _replyWidth(scaler);
+    // What a line keeps clear at its end for `Reply…`.
+    final replyRoom = replyWidth + Gap.sm;
+    final stackTime = _stackTime(context);
+    final slimReplyEnd = slim && canReply ? EdgeInsets.only(right: replyRoom) : EdgeInsets.zero;
     // The answers are deaf and dimmed while they are new under the thumb: the
     // card's own guard (its question changed, or it grew) or the board's gate
     // (a card above them came or went, see `SettleGate`).
@@ -252,16 +277,14 @@ class _AgentCardState extends State<AgentCard>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _Header(agent: a, showTime: !_stackTime(context)),
+                    _Header(agent: a, showTime: !stackTime),
                     Padding(
-                      padding:
-                          const EdgeInsets.only(left: _glyphColumn) +
-                          (slim && canReply ? const EdgeInsets.only(right: replyGutter) : EdgeInsets.zero),
+                      padding: const EdgeInsets.only(left: _glyphColumn) + slimReplyEnd,
                       child: _Subtitle(text: a.subtitle),
                     ),
-                    if (_stackTime(context))
+                    if (stackTime)
                       Padding(
-                        padding: const EdgeInsets.only(left: _glyphColumn),
+                        padding: const EdgeInsets.only(left: _glyphColumn) + slimReplyEnd,
                         child: StateTime(agent: a),
                       ),
                     if (!slim) const SizedBox(height: Gap.md),
@@ -269,13 +292,13 @@ class _AgentCardState extends State<AgentCard>
                       QuestionWash(
                         question: prompt.question,
                         subject: prompt.subject,
-                        // Room for the reply circle that floats over the wash's end.
-                        trailing: const SizedBox(width: _replyRoom),
+                        // Room for the `Reply…` that floats over the wash's end.
+                        trailing: canReply ? SizedBox(width: replyRoom) : null,
                         onReadAll: _more,
                       ),
                       SizedBox(height: Gap.md + chipsHeight),
                     ] else if (shown > 0)
-                      _PreviewPanel(rows: shown, lines: preview?.lines, reserveReply: canReply),
+                      _PreviewPanel(rows: shown, lines: preview?.lines, replyRoom: canReply ? replyRoom : 0),
                   ],
                 ),
               ),
@@ -285,49 +308,54 @@ class _AgentCardState extends State<AgentCard>
       ),
     );
 
-    Widget card = Stack(
-      // The selection mark sits on the card's corner.
-      clipBehavior: Clip.none,
-      children: [
-        // A height change moves the answers pinned to the card's bottom.
-        SizeChangedLayoutNotifier(child: body),
-        if (prompt != null)
-          Positioned(
-            left: _pad,
-            right: _pad,
-            bottom: _pad,
-            height: chipsHeight,
-            // Picking agents: a tap on the answers picks the card.
-            child: IgnorePointer(
-              ignoring: sel.active,
-              child: ReplyChips(
-                prompt: prompt,
-                controller: answerController,
-                onChoose: (r) => _choose(prompt, r),
-                onMore: _more,
-                guarded: guarded,
+    // The card's width says whether the wash cuts its question (`Read all`),
+    // which decides the line `Reply…` sits on.
+    Widget card = LayoutBuilder(
+      builder: (context, box) => Stack(
+        // The selection mark sits on the card's corner.
+        clipBehavior: Clip.none,
+        children: [
+          // A height change moves the answers pinned to the card's bottom.
+          SizeChangedLayoutNotifier(child: body),
+          if (prompt != null)
+            Positioned(
+              left: _pad,
+              right: _pad,
+              bottom: _pad,
+              height: chipsHeight,
+              // Picking agents: a tap on the answers picks the card.
+              child: IgnorePointer(
+                ignoring: sel.active,
+                child: ReplyChips(
+                  prompt: prompt,
+                  controller: answerController,
+                  onChoose: (r) => _choose(prompt, r),
+                  onMore: _more,
+                  guarded: guarded,
+                ),
               ),
             ),
-          ),
-        if (canReply)
-          Positioned(
-            // The 44 hit box of the 32 circle ends at the panel's edge, so
-            // the circle is painted 6 inside the panel.
-            right: _pad,
-            bottom: (slim ? _replyInset : _pad) + (prompt != null ? chipsHeight + Gap.md : 0),
-            child: IgnorePointer(
+          if (canReply)
+            _replyAt(
+              // The text's right edge and the centre of the line it ends, from
+              // the card's bottom right.
+              right: _pad + (prompt != null ? Gap.md : (slim ? 0 : Gap.sm + Gap.hair)),
+              centre: prompt != null
+                  ? _pad +
+                        chipsHeight +
+                        Gap.md +
+                        Gap.md +
+                        _questionLastLine(prompt, context, box.maxWidth, replyRoom) / 2
+                  : slim
+                  ? _pad + _lineOf(stackTime ? Type.caption : Type.secondary, scaler) / 2
+                  : _pad + Gap.sm + _PreviewPanel.lineOf(context) / 2,
+              width: replyWidth,
+              title: a.title,
               ignoring: sel.active,
-              child: CircleButton(
-                icon: LucideIcons.reply,
-                tooltip: 'Reply to ${a.title}',
-                size: _replySize,
-                filled: false,
-                onPressed: _openSheet,
-              ),
             ),
-          ),
-        if (sel.active) Positioned(left: -4, top: -4, child: SelectMark(selected: sel.selected)),
-      ],
+          if (sel.active) Positioned(left: -4, top: -4, child: SelectMark(selected: sel.selected)),
+        ],
+      ),
     );
     card = NotificationListener<SizeChangedLayoutNotification>(onNotification: _onResize, child: card);
     // A stale card keeps its words at full strength (they are what the person
@@ -341,6 +369,41 @@ class _AgentCardState extends State<AgentCard>
         child: card,
       ),
     );
+  }
+
+  /// `Reply…`: its text ends [right] from the card's right edge, centred
+  /// [centre] above the card's bottom, in a 44 dp hit box.
+  Widget _replyAt({
+    required double right,
+    required double centre,
+    required double width,
+    required String title,
+    required bool ignoring,
+  }) {
+    final box = math.max(width, kMinTap);
+    return Positioned(
+      right: right - (box - width) / 2,
+      bottom: centre - kMinTap / 2,
+      child: IgnorePointer(
+        ignoring: ignoring,
+        child: TextAction(
+          label: _replyLabel,
+          tone: TextActionTone.quiet,
+          semanticLabel: 'Reply to $title',
+          onTap: _openSheet,
+        ),
+      ),
+    );
+  }
+
+  /// The height of the wash's last line: the `Read all` row when the wash
+  /// cuts its text, else the subject's (or the question's) last line.
+  double _questionLastLine(PromptInfo prompt, BuildContext context, double cardWidth, double replyRoom) {
+    final scaler = MediaQuery.textScalerOf(context);
+    // The card's 1 dp edge, its inset and the wash's.
+    final width = cardWidth - 2 * (1 + _pad + Gap.md) - replyRoom;
+    if (QuestionWash.cuts(prompt.question, prompt.subject, width, scaler, Directionality.of(context))) return kMinTap;
+    return _lineOf(prompt.subject.isEmpty ? Type.prompt : Mono.input, scaler);
   }
 
   String _semanticLabel(PromptInfo? prompt) => [
@@ -358,16 +421,8 @@ class _AgentCardState extends State<AgentCard>
   static const _margin = Gap.lg;
   static const _radius = Radii.md;
 
-  /// The reply circle, and how far inside its 44 hit box it is painted.
-  static const _replySize = 32.0;
-  static const _replyInset = (kMinTap - _replySize) / 2;
-
   /// Glyph + gap: text starts here.
   static const _glyphColumn = IconSize.lead + Gap.md;
-
-  /// The reply circle's 44 hit box ends at the wash's edge: its text stops
-  /// this much before the wash's own padding.
-  static const _replyRoom = kMinTap - Gap.md;
 }
 
 class _Header extends StatelessWidget {
@@ -484,22 +539,31 @@ class _Subtitle extends StatelessWidget {
 /// [rows] lines (no jumping as lines arrive), text bottom-aligned, a soft fade
 /// at the top, nothing wraps. `lines == null` is "still loading".
 class _PreviewPanel extends StatelessWidget {
-  const _PreviewPanel({required this.rows, required this.lines, required this.reserveReply});
+  const _PreviewPanel({required this.rows, required this.lines, required this.replyRoom});
 
   final int rows;
   final List<PreviewLine>? lines;
 
-  /// Room at the right for the reply button that floats over the panel.
-  final bool reserveReply;
+  /// What the last rows keep clear at their end for the `Reply…` that floats
+  /// over the panel; 0 for none.
+  final double replyRoom;
 
   static const _style = Mono.preview;
+
+  /// Terminal text is a picture of a screen: it takes some scaling, not all.
+  static TextScaler _scaler(BuildContext context) => MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.15);
+
+  /// One row's height.
+  static double lineOf(BuildContext context) => _lineOf(_style, _scaler(context));
 
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
-    // Terminal text is a picture of a screen: allow some scaling, not all.
-    final scaler = MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.15);
-    final line = scaler.scale(_style.fontSize!) * _style.height!;
+    final scaler = _scaler(context);
+    final line = lineOf(context);
+    // `Reply…` is centred on the last row; at a large text size it is taller
+    // than a row and reaches into the one above.
+    final keep = replyRoom == 0 ? 0 : (_lineOf(Type.labelStrong, MediaQuery.textScalerOf(context)) / line).ceil();
     final shown = lines;
     final last = shown == null || shown.isEmpty ? null : shown.length - 1;
     final tail = shown == null || shown.length <= rows ? shown : shown.sublist(shown.length - rows);
@@ -537,13 +601,16 @@ class _PreviewPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           for (final (i, l) in tail.indexed)
-            Text(
-              l.text,
-              maxLines: 1,
-              softWrap: false,
-              overflow: TextOverflow.ellipsis,
-              textScaler: scaler,
-              style: _style.copyWith(color: i == tail.length - 1 && last != null ? ds.text : ds.textSecondary),
+            Padding(
+              padding: i >= tail.length - keep ? EdgeInsets.only(right: replyRoom) : EdgeInsets.zero,
+              child: Text(
+                l.text,
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.ellipsis,
+                textScaler: scaler,
+                style: _style.copyWith(color: i == tail.length - 1 && last != null ? ds.text : ds.textSecondary),
+              ),
             ),
         ],
       );
@@ -561,12 +628,7 @@ class _PreviewPanel extends StatelessWidget {
               children: [
                 Positioned.fill(
                   child: Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      Gap.sm + Gap.hair,
-                      Gap.sm,
-                      reserveReply ? replyGutter : Gap.sm + Gap.hair,
-                      Gap.sm,
-                    ),
+                    padding: EdgeInsets.fromLTRB(Gap.sm + Gap.hair, Gap.sm, Gap.sm + Gap.hair, Gap.sm),
                     child: content,
                   ),
                 ),

@@ -474,7 +474,7 @@ class _FailureView extends StatelessWidget {
       PhotoFailureKind.tooLarge => (LucideIcons.fileWarning, 'Too large to open here'),
       PhotoFailureKind.notAnImage => (HerdrIcons.pictureOff, 'Can’t show this as a picture'),
       PhotoFailureKind.network => (LucideIcons.cloudOff, 'Connection lost'),
-      PhotoFailureKind.unreadable => (LucideIcons.triangleAlert, 'Couldn’t open this photo'),
+      PhotoFailureKind.unreadable => (LucideIcons.circleAlert, 'Couldn’t open this photo'),
     };
     final exporting = entry.exporting;
     final large = failure.kind == PhotoFailureKind.tooLarge && model.canShareLarge;

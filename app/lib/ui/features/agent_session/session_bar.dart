@@ -333,7 +333,7 @@ class _OptionsSheetState extends State<_OptionsSheet> {
             ),
             if (machineSupportsFiles(widget.session.machine))
               SheetActionRow(
-                action: SheetAction(label: 'Files', icon: LucideIcons.folderOpen, onTap: _files),
+                action: SheetAction(label: 'Files', icon: HerdrIcons.folder, onTap: _files),
                 onTap: _files,
               ),
             // Always here: the chip under the title only shows once something

@@ -277,7 +277,7 @@ class _FormState extends State<_Form> {
                                           widthFactor: 1,
                                           heightFactor: 1,
                                           child: CircleButton(
-                                            icon: LucideIcons.folderOpen,
+                                            icon: HerdrIcons.folder,
                                             tooltip: 'Browse folders',
                                             filled: false,
                                             size: CircleButton.compact,

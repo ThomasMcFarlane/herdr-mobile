@@ -22,7 +22,10 @@ abstract final class HerdrIcons {
   /// Stop agents (the selection bar).
   static const IconData stop = IconData(0xE010, fontFamily: 'HerdrIcons');
 
-  /// Message agents (the selection bar).
+  /// Stop inside a round button (the composer): `stop` without its ring, the button being the ring.
+  static const IconData stopMark = IconData(0xE013, fontFamily: 'HerdrIcons');
+
+  /// A message to an agent, and a chat: the selection bar, Read as chat, the chat view.
   static const IconData message = IconData(0xE011, fontFamily: 'HerdrIcons');
 
   /// Close agents (the selection bar).
@@ -64,6 +67,9 @@ abstract final class HerdrIcons {
   /// About: version, repository, licences (Settings).
   static const IconData about = IconData(0xE034, fontFamily: 'HerdrIcons');
 
-  /// Update available: an arrow into a tray (Settings).
+  /// Browse a machine's files: the pane bar, the session options, the machine, the folder field.
+  static const IconData folder = IconData(0xE040, fontFamily: 'HerdrIcons');
+
+  /// An update: an arrow into a tray (Settings, its row and its Download).
   static const IconData update = IconData(0xE035, fontFamily: 'HerdrIcons');
 }

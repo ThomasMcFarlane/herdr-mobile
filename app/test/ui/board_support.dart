@@ -225,6 +225,12 @@ Future<void> pumpBoard(
   }
 }
 
+/// A card's `Reply…`, by the agent it answers (its screen-reader name).
+Finder replyTo(String title) => find.byWidgetPredicate(
+  (w) => w is TextAction && w.semanticLabel == 'Reply to $title',
+  description: 'Reply to $title',
+);
+
 Future<void> teardownBoard(WidgetTester tester, BoardHarness h) async {
   await tester.pumpWidget(const SizedBox());
   h.dispose();

@@ -20,7 +20,7 @@ import 'board_selection.dart';
 import 'preconnect_tap.dart';
 import 'swipe_review.dart';
 
-/// A finished session that a swipe or "Mark all reviewed" may mark seen: done
+/// A finished session that a swipe or "Mark reviewed" may mark seen: done
 /// on the board and reachable (`AttentionSet.sessionReachable`: a session
 /// whose machine or link is down shows what it knew and is not acted on).
 bool sessionReviewable(AgentSessionView s) => AttentionSet.sessionToReview(s) && AttentionSet.sessionReachable(s);

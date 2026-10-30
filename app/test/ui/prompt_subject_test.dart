@@ -295,7 +295,7 @@ void main() {
       final prompt = PromptInfo(question: _question, subject: subject, replies: _push.replies);
       final h = await _board(tester, prompt);
 
-      await tester.tap(find.byTooltip('Reply to task 1'));
+      await tester.tap(replyTo('task 1'));
       await settle(tester);
 
       final inSheet = find.descendant(of: find.byType(ReplySheet), matching: find.text(subject));
@@ -320,7 +320,7 @@ void main() {
 
     testWidgets('its confirm chip names the reason too', (tester) async {
       final h = await _board(tester, _push);
-      await tester.tap(find.byTooltip('Reply to task 1'));
+      await tester.tap(replyTo('task 1'));
       await settle(tester);
 
       Finder inSheet(String text) => find.descendant(of: find.byType(ReplySheet), matching: find.text(text));

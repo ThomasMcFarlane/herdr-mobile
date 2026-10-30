@@ -206,8 +206,9 @@ class AnswerChip extends StatelessWidget {
     final lead = switch (state) {
       AnswerChipState.sending => const BusySpinner(size: IconSize.inline),
       AnswerChipState.sent => Icon(LucideIcons.check, size: IconSize.row, color: ds.done),
-      AnswerChipState.primed ||
-      AnswerChipState.failed => Icon(LucideIcons.triangleAlert, size: IconSize.row, color: fg),
+      // Primed is caution before acting; failed is a failure (docs/DESIGN.md, icons).
+      AnswerChipState.primed => Icon(LucideIcons.triangleAlert, size: IconSize.row, color: fg),
+      AnswerChipState.failed => Icon(LucideIcons.circleAlert, size: IconSize.row, color: fg),
       AnswerChipState.changed => Icon(LucideIcons.refreshCw, size: IconSize.row, color: fg),
       // Inline-sized, inside the one-line 44 a card reserves per chip.
       AnswerChipState.rest when quiet => Icon(LucideIcons.x, size: IconSize.inline, color: color),

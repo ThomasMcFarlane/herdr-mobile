@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/acp/acp_models.dart';
@@ -755,7 +754,7 @@ class _TranscriptViewState extends State<TranscriptView> with TickerProviderStat
         return const Center(
           child: SingleChildScrollView(
             child: EmptyState(
-              icon: LucideIcons.messageSquare,
+              icon: HerdrIcons.message,
               title: 'Nothing said yet',
               message: 'Tell the agent what to do.',
             ),

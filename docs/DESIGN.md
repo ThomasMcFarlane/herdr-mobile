@@ -27,7 +27,12 @@ without one gets deleted by the next person who does not understand it.
    unknown = dashed ring; a call, run or plan step that ended without being
    done adds failed = danger disc with a cross and cancelled = quiet ring with
    a slash (`StatusGlyph.failed`, `.cancelled`: not agent statuses, so
-   `AgentStatus` is unchanged). Readable without colour.
+   `AgentStatus` is unchanged). Readable without colour. A machine's link
+   (`LinkDot`) follows the same rule: online is a quiet filled dot in
+   `textTertiary` (health is not news; a green dot on every machine was
+   decoration), connecting a ring in the working colour, offline or off a
+   quiet ring, and a link that needs the person a blocked ring with a dot.
+   `LinkDot.live` (filled, done colour) marks something running now.
 5. **Hairlines, not elevation.** One physical pixel. The one shadow is
    `Ds.floatShadow`, for the floating bars and pills (two layers on paper; on ink a faint light ring, because a black shadow vanishes on near-black). Transient messages are on
    the inverse surface instead. No backdrop blur: a full-screen blur pass per
@@ -164,7 +169,11 @@ Mono (JetBrains Mono, ligatures off): `Mono.small` 11.5 (log tails, ids),
 13.5 (typed shell text, key caps, a question's subject: what an answer
 approves is the largest thing on its wash), `Mono.preview` 11 (a card's terminal
 preview). The terminal keeps its own user-sized style. Counts use tabular
-figures.
+figures. Mono and the terminal fall back to `HerdrSymbols` (`monoFallback`):
+the symbols agents' TUIs draw that JetBrains Mono lacks (`⏵ ⏸ ⏺ ⎿ ✻ ✳ ☐ ☒`,
+braille spinners), subset from Noto onto the mono cell by
+`tool/fonts/build_symbols.py` (OFL, about 50 KB in the APK). Why: the phone's
+own fallback drew Claude Code's `⏵⏵ auto mode on` as `▯▯ auto mode on`.
 
 ### Space, radius, icons
 
@@ -180,12 +189,15 @@ figures.
   (a row's status glyph), `nav` 24 (the batch bar, the attach sheet's bars), `empty` 28, `hero` 48.
 - **Drawn icons** (`HerdrIcons`, `herdr_icons.dart`, generated with its font by
   `tool/icons/build_icons.py`): the selection bar, the Settings gear, the agent
-  and machine everywhere, and the `Made` list (a glyph per kind: a window with a
+  and machine everywhere, Stop (`stop`; `stopMark`, its square alone, inside a
+  round button: the composer), a message or a chat (`message`), browsing a
+  machine's files (`folder`, lighter than Lucide's open folder, which had four
+  times the ink of the `⋯` beside it), and the `Made` list (a glyph per kind: a window with a
   pulse for a server, a window with text for a page, a picture, a document; a
   sparkle on the chip), the picture wherever one is the content (`picture`,
   `pictureOff` for one that cannot be shown, `pictures` for the gallery; a file
   TYPE in a file list stays Lucide's `fileImage`), and the Settings groups (look, notifications and
-  notifications off, storage, about, update; Agents uses the agent). Why: Lucide draws on one grid with no keylines, so
+  notifications off, storage, about, update, also on its Download; Agents uses the agent). Why: Lucide draws on one grid with no keylines, so
   peers in one bar differed in weight (its `server` enclosed 1.7x the area of
   its `bot` and popped out of the (since removed) tab bar; its 14-unit `x` sank next to
   `circleStop`). Ours keep Lucide's grammar, fit keylines, and are balanced by
@@ -193,6 +205,13 @@ figures.
   1.5 dp blur) within about 1.5. An open shape (`close`) cannot enclose much;
   it is drawn larger instead. Draw a new glyph only for a peer set or an
   object of the app; generic actions stay Lucide.
+- **Failure or caution.** `circleAlert` says something failed (a send, a read,
+  a copy, a link that needs attention); `triangleAlert` says look before you
+  act (a held answer, a risk under a question, an unencrypted link, a
+  dangerous mode, a secret field, a Markdown warning). Why: a failed answer
+  and a primed one (waiting for its hold) both showed the triangle, and
+  failures elsewhere used either icon, so the triangle could not tell "look
+  before you act" from "this broke".
 - Rows are at least 56 high; `ListRow` text starts at 64 (gutter 20 + 32
   leading column + 12). A small leading widget is centred on the title line.
 
@@ -273,7 +292,7 @@ change. Status: **stable** = a catalog entry, a semantics test and this row.
 | --- | --- | --- | --- |
 | `PressBuilder` | `press.dart` | every tappable: press feedback, 44 dp hit, one semantics node | `InkWell`, raw `GestureDetector` taps |
 | `AppButton`, `CircleButton` | `buttons.dart` | buttons; round icon buttons (`mark`: a quiet accent dot on the disc for something worth a look, never a count: the update on the Settings gear) | Material buttons |
-| `TextAction` | `text_action.dart` | a word to tap (`Read all`, `Mark all reviewed`) | six text-link styles; one exception, the board's `N more…` under its answer chips (`reply_chips.dart`): it is a row of that stack, with the chips' height and fill, and it greys out while an answer is in flight, which a `TextAction` cannot |
+| `TextAction` | `text_action.dart` | a word to tap (`Read all`, `Mark reviewed`) | six text-link styles; one exception, the board's `N more…` under its answer chips (`reply_chips.dart`): it is a row of that stack, with the chips' height and fill, and it greys out while an answer is in flight, which a `TextAction` cannot |
 | `AppChip` | `chips.dart` | filter, tag, pick-one; selected = accent wash; `enabled: false` keeps an unavailable choice, at half strength, untappable | outlined chips, an `Opacity` over a chip |
 | `Segmented` | `segmented.dart` | "this or that": one capsule that travels | two chips used as a switch |
 | `AppSwitch`, `SwitchRow` | `switch.dart` | on/off | |

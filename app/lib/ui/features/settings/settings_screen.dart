@@ -245,7 +245,7 @@ class _AgentsGroup extends StatelessWidget {
                 : 'A running agent opens as its terminal.',
             child: Segmented<OpenAgentsAs>(
               options: const [
-                SegmentOption(OpenAgentsAs.chat, 'Chat', icon: LucideIcons.messageSquare),
+                SegmentOption(OpenAgentsAs.chat, 'Chat', icon: HerdrIcons.message),
                 SegmentOption(OpenAgentsAs.terminal, 'Terminal', icon: LucideIcons.terminal),
               ],
               value: openAs,

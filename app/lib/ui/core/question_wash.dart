@@ -73,18 +73,13 @@ class QuestionWash extends StatelessWidget {
     final ds = context.ds;
     final compact = size == QuestionWashSize.compact;
     final subject = this.subject ?? '';
-    final questionStyle = subject.isEmpty
-        ? Type.prompt.copyWith(color: ds.text)
-        : Type.secondaryStrong.copyWith(color: ds.textSecondary);
-    final subjectStyle = Mono.input.copyWith(color: ds.text);
+    final questionStyle = _questionStyle(subject).copyWith(color: subject.isEmpty ? ds.text : ds.textSecondary);
+    final subjectStyle = _subjectStyle.copyWith(color: ds.text);
     final scaler = MediaQuery.textScalerOf(context);
     final direction = Directionality.of(context);
 
     Widget text(BoxConstraints? box) {
-      final cut =
-          box != null &&
-          (_cut(question, questionStyle, box.maxWidth, scaler, direction, _lines) ||
-              (subject.isNotEmpty && _cut(subject, subjectStyle, box.maxWidth, scaler, direction, _subjectLines)));
+      final cut = box != null && cuts(question, subject, box.maxWidth, scaler, direction);
       Widget q = Text(
         question,
         maxLines: compact ? _lines : null,
@@ -150,6 +145,18 @@ class QuestionWash extends StatelessWidget {
               ],
             ),
     );
+  }
+
+  static TextStyle _questionStyle(String subject) => subject.isEmpty ? Type.prompt : Type.secondaryStrong;
+  static const _subjectStyle = Mono.input;
+
+  /// Whether a compact wash cuts [question] or [subject] at a text [width]
+  /// (and so shows `Read all` as its last row). For a caller that places
+  /// something on the wash's last line (the board card's `Reply…`).
+  static bool cuts(String question, String? subject, double width, TextScaler scaler, TextDirection direction) {
+    final s = subject ?? '';
+    return _cut(question, _questionStyle(s), width, scaler, direction, _lines) ||
+        (s.isNotEmpty && _cut(s, _subjectStyle, width, scaler, direction, _subjectLines));
   }
 
   static bool _cut(String text, TextStyle style, double width, TextScaler scaler, TextDirection direction, int lines) {

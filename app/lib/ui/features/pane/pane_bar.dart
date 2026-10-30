@@ -85,7 +85,7 @@ class PaneTopBar extends StatelessWidget {
     final machine = this.machine;
     final files = machine != null && machineSupportsFiles(machine) && onOpenFiles != null;
     final actions = [
-      if (files) CircleButton(icon: LucideIcons.folderOpen, tooltip: 'Browse files', onPressed: onOpenFiles),
+      if (files) CircleButton(icon: HerdrIcons.folder, tooltip: 'Browse files', onPressed: onOpenFiles),
       CircleButton(icon: LucideIcons.ellipsis, tooltip: 'Pane options', onPressed: onMore),
     ];
     // Rebuilds the bar only when the count changes.
