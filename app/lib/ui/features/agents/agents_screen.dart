@@ -18,6 +18,7 @@ import '../machines/approval_button.dart';
 
 import 'package:herdr_mobile/ui/core/kit.dart';
 
+import '../../shell/home_pages.dart';
 import '../../support/step_clock.dart';
 import '../../support/tap_guard.dart';
 import '../create/new_agent_session_screen.dart';
@@ -37,29 +38,27 @@ import 'swipe_review.dart';
 /// has one place to look and the sections never trade places as sessions
 /// start or stop waiting (they used to lead the board then, moving every card
 /// under the thumb). Needs you and Done count and order what [AttentionSet]
-/// says, the same as the tab badge and the triage sheet.
+/// says, the same as the triage sheet and the notifications.
 ///
-/// Calm by default: one status line says the count once (the tab badge is the
-/// one count off this screen), the first waiting agent is a card with its
-/// answers and every other agent is a row. Why: the count used to be said four
-/// times on one screen (a filter chip, the section header, a floating pill and
-/// the badge), and chrome costs the focus a glance is made of.
+/// Calm by default: one status line says the count once, the first waiting
+/// agent is a card with its answers and every other agent is a row. Why: the
+/// count used to be said four times on one screen (a filter chip, the section
+/// header, a floating pill and the tab badge), and chrome costs the focus a
+/// glance is made of.
+///
+/// This is home: no bar under it. Its header opens Machines (the chip that
+/// says how many are online) and Settings (the gear), as pages pushed over it
+/// ([HomePages]). A pushed page leaves a picked set waiting for the person's
+/// return, as any other pushed screen does: Back always comes home.
 class AgentsScreen extends StatefulWidget {
-  const AgentsScreen({super.key, this.onShowMachines, this.onSelectingChanged, this.current = true});
+  const AgentsScreen({super.key, this.pages = const HomePages(), this.onSelectingChanged});
 
-  /// Whether the Agents tab is the shell's chosen tab. Picking ends when it
-  /// stops being (unless a batch is running), so the tab bar is never left
-  /// hidden over another tab. A route pushed over the shell (a notification,
-  /// a deep link) leaves the tab chosen, and the picked set waits for the
-  /// person's return.
-  final bool current;
-
-  /// Takes the person to the Machines tab, where connection problems are
-  /// explained and fixed.
-  final VoidCallback? onShowMachines;
+  /// Opens Machines (where connection problems are explained and fixed) and
+  /// Settings, and carries the update for the gear's dot.
+  final HomePages pages;
 
   /// Called with true when the board starts picking agents for a batch action
-  /// and false when it stops: the shell hides its tab bar meanwhile.
+  /// and false when it stops: Back is the board's then, not the app's.
   final ValueChanged<bool>? onSelectingChanged;
 
   @override
@@ -78,8 +77,8 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
   // (`agentEntries`): it never folds.
   final _collapsedBits = RestorableInt(0);
 
-  // The last page built. A hidden tab hands this back instead of rebuilding,
-  // so fleet updates cost the tab that is not on screen one cheap build call.
+  // The last page built. Hidden under a pushed page, the board hands this
+  // back instead of rebuilding, so fleet updates cost it one cheap build call.
   Widget? _page;
 
   // Which agents are picked for a batch action. Not restored: a restart
@@ -119,24 +118,14 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
     _selection.addListener(_onSelection);
   }
 
-  /// Tells the shell when picking starts and ends, so it can put its tab bar
-  /// away.
-  @override
-  void didUpdateWidget(AgentsScreen old) {
-    super.didUpdateWidget(old);
-    if (old.current && !widget.current && _selection.active && _selection.busy == null) {
-      // After this frame: cancelling notifies the shell, which is building.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && !widget.current && _selection.busy == null) _selection.cancel();
-      });
-    }
-  }
-
+  /// Tells the shell when picking starts and ends (Back is the board's
+  /// then), and makes room at the list's end for the batch bar.
   void _onSelection() {
     final active = _selection.active;
     if (active == _wasSelecting) return;
     _wasSelecting = active;
     widget.onSelectingChanged?.call(active);
+    setState(() {});
   }
 
   @override
@@ -159,12 +148,32 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
 
   void _newSession() => unawaited(openNewAgentSession(context));
 
+  void _showMachines() => widget.pages.open(context, HomePage.machines);
+
+  void _showSettings() => widget.pages.open(context, HomePage.settings);
+
+  /// Settings, with a quiet dot while a newer version waits there (a
+  /// suggestion, never a count: it is not something that needs the person).
+  Widget _settingsButton() => ListenableBuilder(
+    listenable: widget.pages.update ?? _noUpdate,
+    builder: (context, _) => CircleButton(
+      key: const ValueKey('settings'),
+      icon: HerdrIcons.settings,
+      tooltip: 'Settings',
+      mark: widget.pages.update?.release != null,
+      markLabel: 'update available',
+      onPressed: _showSettings,
+    ),
+  );
+
+  static final _noUpdate = Listenable.merge(const <Listenable>[]);
+
   void _toggleSection(AgentStatus s) => setState(() => _collapsedBits.value ^= 1 << s.index);
 
   void _toggleIdle() => setState(() => _idleOpen = !_idleOpen);
 
-  /// Tells the sessions when the tab is on screen: they list their hosts
-  /// every minute only then.
+  /// Tells the sessions when the board is on screen (not under a pushed
+  /// page): they list their hosts every minute only then.
   void _reportVisible(bool visible) {
     if (_reportedVisible == visible) return;
     _reportedVisible = visible;
@@ -196,17 +205,23 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
     AttentionSet attention, {
     required bool cards,
   }) {
-    final clearance = FloatingBar.clearance(context);
+    // No bar under home: the list ends above the system inset, and keeps the
+    // batch bar's room only while it is up, so the last row can be read
+    // above it.
+    final inset = MediaQuery.paddingOf(context).bottom;
+    final listEnd = _selection.active ? FloatingBar.listEnd(context) : inset + Gap.xl;
 
     if (overview.machineCount == 0) {
       return CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
-          const SliverLargeTitle(title: 'Agents'),
+          // Settings stays one tap away before the first machine; there is no
+          // fleet yet for the chip to sum up, and nothing to start.
+          SliverLargeTitle(title: 'Agents', actions: [_settingsButton()]),
           SliverFillRemaining(
             hasScrollBody: false,
             child: Padding(
-              padding: EdgeInsets.only(bottom: clearance),
+              padding: EdgeInsets.only(bottom: inset),
               child: EmptyState(
                 mark: const BrandMark(),
                 title: 'No machines yet',
@@ -266,28 +281,42 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
                 heard: heardLabel(context.read<FleetRepository>().connections),
               ),
             ),
-            // One action. Density is a setting (Settings > Look > Agent list)
-            // and Past sessions is a row of the `+` form, where resuming is
-            // one of the ways to start: the header held three buttons, past
-            // the two-action budget (DESIGN.md Hierarchy 6).
-            actions: [CircleButton(icon: LucideIcons.plus, tooltip: 'New agent session', onPressed: _newSession)],
+            // Scrolled, the bar keeps the chip and the two actions, and no
+            // centred `Agents` to collide with the chip (home needs no name).
+            compactTitle: false,
+            // The fleet's health, and the way to Machines: status first, a
+            // way in second.
+            leading: _MachineHealth(
+              online: overview.enabledCount - troubled.length,
+              enabled: overview.enabledCount,
+              worst: troubled.isEmpty ? null : worstLinkState(troubled.map((t) => t.state)),
+              onTap: _showMachines,
+            ),
+            // Two actions, the budget (DESIGN.md Hierarchy 6): start an agent,
+            // and Settings. Density is a setting (Settings > Look > Agent
+            // list) and Past sessions is a row of the `+` form, where resuming
+            // is one of the ways to start.
+            actions: [
+              CircleButton(icon: LucideIcons.plus, tooltip: 'New agent session', onPressed: _newSession),
+              _settingsButton(),
+            ],
           ),
           // Kept as a strip, not folded into the status line: it carries the
-          // next step (Retry, Approve, or the Machines tab), which words in a
-          // subtitle cannot. It sits right under the header, where the status
-          // line is, and both come back with the top of the list.
+          // next step (Retry, Approve, or Machines), which words in a subtitle
+          // cannot. It sits right under the header, where the status line is,
+          // and both come back with the top of the list.
           if (troubled.isNotEmpty)
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: Gap.gutter),
               sliver: SliverToBoxAdapter(
-                child: _ConnectionStrip(troubled: troubled, onShowMachines: widget.onShowMachines),
+                child: _ConnectionStrip(troubled: troubled, onShowMachines: _showMachines),
               ),
             ),
           if (overview.agents.isEmpty && troubled.isEmpty && sessionList.isEmpty)
             SliverFillRemaining(
               hasScrollBody: false,
               child: Padding(
-                padding: EdgeInsets.only(bottom: clearance),
+                padding: EdgeInsets.only(bottom: inset),
                 child: const EmptyState(
                   icon: LucideIcons.moon,
                   title: 'No agents running',
@@ -337,14 +366,13 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
                 final AgentFolding f => _FoldAway(key: f.key, height: f.height, onDone: () => _folded(f.agentKey)),
               },
             ),
-            // Room under the last row for the Dock.
-            SliverToBoxAdapter(child: SizedBox(height: FloatingBar.listEnd(context))),
+            SliverToBoxAdapter(child: SizedBox(height: listEnd)),
           ],
         ],
       ),
     );
-    // Picking agents puts a bar over the title bar and one over the tab bar's
-    // place (the shell hides its own).
+    // Picking agents puts a bar over the title bar and the batch bar at the
+    // bottom, the one bar home ever has there.
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<BoardSelection>.value(value: _selection),
@@ -465,8 +493,18 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
       offline: h.offline,
       actions: [
         if (review > 0)
-          TextAction(key: const ValueKey('mark-all-reviewed'), label: 'Mark all reviewed', onTap: _markAllReviewed),
-        TextAction(key: const ValueKey('select-all-done'), label: 'Select all', onTap: _selectAllDone),
+          TextAction(
+            key: const ValueKey('mark-all-reviewed'),
+            label: 'Mark all reviewed',
+            tone: TextActionTone.quiet,
+            onTap: _markAllReviewed,
+          ),
+        TextAction(
+          key: const ValueKey('select-all-done'),
+          label: 'Select all',
+          tone: TextActionTone.quiet,
+          onTap: _selectAllDone,
+        ),
       ],
     ),
     _ => null,
@@ -518,7 +556,7 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
 }
 
 /// "2 offline" on a section header: rows listed as last known, whose machine
-/// or link is down. They are not in the status line's count or the badge,
+/// or link is down. They are not in the status line's count,
 /// and nothing on the board can act on them until they are back.
 class _OfflineNote extends StatelessWidget {
   const _OfflineNote({required this.count});
@@ -600,8 +638,7 @@ String? heardLabel(List<MachineConnection> connections) {
 
 /// The board's one status line: `2 need you · 3 working · heard just now ·
 /// 1 not connected`. The needs-you count is the only loud words on it (the
-/// blocked text colour), and the only place the board says it: the tab badge
-/// carries it off this screen. A board with nothing waiting or working says
+/// blocked text colour), and the only place the board says it. A board with nothing waiting or working says
 /// `nothing running`, so the line always answers "is everything alive?".
 class _StatusLine extends StatelessWidget {
   const _StatusLine({
@@ -651,8 +688,8 @@ class _StatusLine extends StatelessWidget {
 }
 
 /// Machines that are not connected, in one line. One machine is named and can
-/// be retried here; several are summed up and the detail lives on the
-/// Machines tab, so the agents stay on the first screen.
+/// be retried here; several are summed up and the detail lives on Machines,
+/// so the agents stay on the first screen.
 class _ConnectionStrip extends StatelessWidget {
   const _ConnectionStrip({required this.troubled, required this.onShowMachines});
 
@@ -702,4 +739,84 @@ class _FoldAway extends StatelessWidget {
     onEnd: onDone,
     builder: (context, h, _) => SizedBox(height: h, width: double.infinity),
   );
+}
+
+/// The fleet at a glance, on the left of home's header: `2 of 3 machines`
+/// with a mark, and a tap opens Machines. It reads as status, not as a
+/// button: no fill at rest (the round buttons on the right have one),
+/// secondary words, and its mark and words start on the large title's edge.
+/// The mark is a shape first: filled when every machine that is on is
+/// online (the done colour), a ring otherwise, coloured by the machine that
+/// most needs the person (the blocked colour for one to fix or approve, the
+/// working colour while one connects). A switched-off machine is neither a
+/// problem nor online: it is not counted.
+class _MachineHealth extends StatelessWidget {
+  const _MachineHealth({required this.online, required this.enabled, required this.worst, required this.onTap});
+
+  final int online;
+  final int enabled;
+
+  /// The state that most needs the person among the machines not online;
+  /// null when every one that is on is.
+  final LinkState? worst;
+  final VoidCallback onTap;
+
+  static const _mark = 8.0;
+  static const _ring = 2.0;
+  static const _height = 36.0;
+
+  /// From the bar's padded edge to the large title's: the mark lines up
+  /// with the title's first letter.
+  static const _inset = Gap.gutter - AppTopBar.edge;
+
+  @override
+  Widget build(BuildContext context) {
+    final ds = context.ds;
+    final allOn = worst == null && enabled > 0;
+    final color = allOn ? ds.done : (worst?.color(ds) ?? ds.textTertiary);
+    final words = enabled == 0 ? 'All machines off' : '$online of ${countOf(enabled, 'machine')}';
+    final spoken = enabled == 0 ? words : '$words online';
+    return PressBuilder(
+      key: const ValueKey('machine-health'),
+      onTap: onTap,
+      scale: PressScale.chip,
+      button: true,
+      minTapSize: kMinTap,
+      semanticLabel: spoken,
+      builder: (context, pressed) => AnimatedContainer(
+        duration: Motion.pressing(pressed),
+        curve: Motion.easeOut,
+        height: _height,
+        padding: const EdgeInsets.symmetric(horizontal: _inset),
+        decoration: BoxDecoration(
+          color: pressed ? ds.fill : Colors.transparent,
+          borderRadius: BorderRadius.circular(Radii.pill),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              key: const ValueKey('machine-health-mark'),
+              width: _mark,
+              height: _mark,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: allOn ? color : null,
+                border: allOn ? null : Border.all(color: color, width: _ring),
+              ),
+            ),
+            const SizedBox(width: Gap.sm),
+            Flexible(
+              child: Text(
+                words,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Type.label.copyWith(color: ds.textSecondary, fontFeatures: Type.tabular),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

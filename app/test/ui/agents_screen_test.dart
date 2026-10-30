@@ -11,7 +11,6 @@ import 'package:herdr_mobile/ui/features/agents/agent_card.dart';
 import 'package:herdr_mobile/ui/features/agents/agents_screen.dart';
 import 'package:herdr_mobile/ui/features/machines/machine_form_screen.dart';
 import 'package:herdr_mobile/ui/features/machines/machines_screen.dart';
-import 'package:herdr_mobile/ui/features/pane/pane_screen.dart';
 import 'package:herdr_mobile/ui/shell/home_shell.dart';
 import 'package:provider/provider.dart';
 
@@ -137,7 +136,7 @@ void main() {
       await expectLine(['a', 'b'], 'Claude Code · box-a · main');
     });
 
-    testWidgets('120 agents in one section: counted in full, last row clears the tab bar', (tester) async {
+    testWidgets('120 agents in one section: counted in full, the list ends clear of the bottom edge', (tester) async {
       final h = await UiHarness.create([
         (
           profile: _machine('a', 'workstation'),
@@ -158,8 +157,56 @@ void main() {
           .widgetList(find.byType(AgentCard))
           .map((w) => tester.getRect(find.byWidget(w)).bottom)
           .reduce((a, b) => a > b ? a : b);
-      final bar = tester.getRect(find.byType(FloatingTabBar));
-      expect(last, lessThanOrEqualTo(bar.top), reason: 'the last agent must not hide behind the floating tab bar');
+      final screen = tester.view.physicalSize.height / tester.view.devicePixelRatio;
+      expect(last, lessThanOrEqualTo(screen - Gap.xl + 0.01), reason: 'the list ends clear of the bottom edge');
+      await teardownUi(tester, h);
+    });
+  });
+
+  // The left of home's header: the fleet at a glance, and the way to Machines.
+  group('the machines chip', () {
+    BoxDecoration mark(WidgetTester tester) =>
+        tester.widget<Container>(find.byKey(const ValueKey('machine-health-mark'))).decoration! as BoxDecoration;
+
+    testWidgets('counts the machines that are on; one not online turns its dot to a ring', (tester) async {
+      final h = await UiHarness.create([
+        (profile: _machine('a', 'one'), snapshot: snapshotWith([_pane(1, 'working')])),
+        (profile: _machine('b', 'two'), snapshot: snapshotWith([_pane(2, 'working')])),
+        (
+          profile: const MachineProfile(id: 'c', label: 'off', host: 'c.example', username: 'dev', enabled: false),
+          snapshot: snapshotWith(const []),
+        ),
+      ]);
+      await pumpUi(tester, h, height: _tall);
+      final ds = tester.element(find.byType(AgentsScreen)).ds;
+
+      expect(find.text('2 of 2 machines'), findsOneWidget, reason: 'switched off is neither a problem nor online');
+      expect(mark(tester).color, ds.done, reason: 'all online: a filled dot');
+      expect(mark(tester).border, isNull);
+
+      h.transports['b']!.failure = const HerdrTransportException('Host key changed', fatal: true);
+      h.fleet.connection('b')!.reconnect();
+      await settle(tester);
+      expect(find.text('1 of 2 machines'), findsOneWidget);
+      expect(mark(tester).color, isNull, reason: 'not all online: a ring');
+      expect((mark(tester).border! as Border).top.color, ds.blocked, reason: 'one needs the person');
+      expect(find.bySemanticsLabel('1 of 2 machines online'), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('machine-health')));
+      await settle(tester);
+      expect(find.byType(MachinesScreen).hitTestable(), findsOneWidget);
+      await teardownUi(tester, h);
+    });
+
+    testWidgets('a long count at 320 dp and large text shrinks, it never pushes the actions off', (tester) async {
+      final h = await UiHarness.create([
+        for (var i = 0; i < 12; i++)
+          (profile: _machine('m$i', 'box $i'), snapshot: snapshotWith([_pane(i, 'working')])),
+      ]);
+      await pumpUi(tester, h, width: 320, height: 640, textScale: 2);
+      expect(tester.takeException(), isNull);
+      expect(find.byTooltip('Settings').hitTestable(), findsOneWidget);
+      expect(find.byTooltip('New agent session').hitTestable(), findsOneWidget);
       await teardownUi(tester, h);
     });
   });
@@ -186,7 +233,7 @@ void main() {
       await teardownUi(tester, h);
     });
 
-    testWidgets('every machine failing: one strip sums it up and leads to the Machines tab', (tester) async {
+    testWidgets('every machine failing: one strip sums it up and leads to Machines', (tester) async {
       final h = await UiHarness.create([
         for (final id in ['a', 'b', 'c'])
           (
@@ -203,7 +250,7 @@ void main() {
 
       expect(find.byType(StatusStrip), findsOneWidget);
       expect(find.text('3 machines not connected'), findsOneWidget);
-      expect(find.text('Retry'), findsNothing, reason: 'the Machines tab has the detail');
+      expect(find.text('Retry'), findsNothing, reason: 'Machines has the detail');
       expect(find.textContaining('3 not connected'), findsOneWidget);
 
       // The agents the person came for are still on the first screen.
@@ -297,7 +344,7 @@ void main() {
     });
   });
 
-  testWidgets('the Agents tab badge counts what needs you, not finished work', (tester) async {
+  testWidgets('the status line counts what needs you, not finished work', (tester) async {
     final h = await UiHarness.create([
       (
         profile: _machine('a', 'solo'),
@@ -307,7 +354,7 @@ void main() {
     await pumpUi(tester, h, height: _tall);
 
     expect(
-      find.descendant(of: find.byType(FloatingTabBar), matching: find.text('1')),
+      find.textContaining('1 needs you'),
       findsOneWidget,
       reason: 'the loud colour is for a question; the finished one waits quietly on the board',
     );
@@ -399,32 +446,8 @@ void main() {
     });
   });
 
-  group('under the tab bar', () {
-    Future<UiHarness> many() => UiHarness.create([
-      (
-        profile: _machine('a', 'workstation'),
-        snapshot: snapshotWith([
-          _pane(0, 'blocked'),
-          for (var i = 1; i <= 40; i++) _pane(i, 'working'),
-        ], title: (id) => 'task ${id.split('p').last}'),
-      ),
-    ]);
-
-    testWidgets('rows fading out behind the tab bar can still be tapped', (tester) async {
-      final h = await many();
-      await pumpUi(tester, h, height: _tall);
-
-      final bar = tester.getRect(find.byType(FloatingTabBar));
-      // Above the tab bar, in the strip the fade covers.
-      await tester.tapAt(Offset(24, bar.top - 8));
-      await settle(tester);
-      expect(find.byType(PaneScreen), findsOneWidget);
-      await teardownUi(tester, h);
-    });
-  });
-
   group('rebuilds', () {
-    /// Elements rebuilt under the agents tab while the next frame is pumped.
+    /// Elements rebuilt under the board while the next frame is pumped.
     Future<int> rebuiltUnderAgents(WidgetTester tester) async {
       var n = 0;
       final previous = debugOnRebuildDirtyWidget;
@@ -443,10 +466,7 @@ void main() {
       return n;
     }
 
-    // Only the selected tab shows its label, so tabs are found by key.
-    Finder tab(String label) => find.byKey(FloatingTabBar.tabKey(label));
-
-    testWidgets('only a change to what the tab draws rebuilds it, and not while hidden', (tester) async {
+    testWidgets('only a change to what the board draws rebuilds it, and not while hidden', (tester) async {
       final h = await UiHarness.create([
         (
           profile: _machine('a', 'workstation'),
@@ -455,7 +475,7 @@ void main() {
       ]);
       await pumpUi(tester, h, height: _tall);
 
-      // The fleet spoke but nothing the tab draws changed.
+      // The fleet spoke but nothing the board draws changed.
       _push(h, [_pane(1, 'working'), _pane(2, 'idle')]);
       expect(await rebuiltUnderAgents(tester), 0);
 
@@ -463,14 +483,14 @@ void main() {
       _push(h, [_pane(1, 'done'), _pane(2, 'idle')]);
       expect(await rebuiltUnderAgents(tester), greaterThan(0));
 
-      // The Machines tab is on screen: the Agents tab sleeps...
-      await tester.tap(tab('Machines'));
+      // Machines is in front: the board under it sleeps...
+      await tester.tap(find.byKey(const ValueKey('machine-health')));
       await settle(tester);
       _push(h, [_pane(1, 'blocked'), _pane(2, 'idle')]);
       expect(await rebuiltUnderAgents(tester), 0);
 
       // ...and is up to date the moment it returns.
-      await tester.tap(tab('Agents'));
+      await tester.binding.handlePopRoute();
       await settle(tester);
       expect(find.text('Needs you'), findsWidgets);
       await teardownUi(tester, h);
@@ -519,7 +539,7 @@ void main() {
       await settle(tester);
     }
 
-    testWidgets('the open tab and the collapsed sections survive the process', (tester) async {
+    testWidgets('the collapsed sections survive the process', (tester) async {
       final h = await UiHarness.create([
         (
           profile: _machine('a', 'workstation'),
@@ -538,12 +558,6 @@ void main() {
       await settle(tester);
       expect(_row('task 1'), findsOneWidget);
       expect(_row('task 2'), findsNothing, reason: 'Working stayed collapsed');
-
-      await tester.tap(find.byKey(FloatingTabBar.tabKey('Machines')));
-      await settle(tester);
-      await tester.restartAndRestore();
-      await settle(tester);
-      expect(find.byType(MachinesScreen).hitTestable(), findsOneWidget);
       await teardownUi(tester, h);
     });
   });

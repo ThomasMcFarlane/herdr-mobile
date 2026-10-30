@@ -250,29 +250,22 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('tab bar reports the selected tab and a spoken badge', (tester) async {
+    testWidgets('a round button with a mark says what the mark means', (tester) async {
       final handle = tester.ensureSemantics();
       await pumpCore(
         tester,
-        Align(
-          alignment: Alignment.bottomCenter,
-          child: FloatingTabBar(
-            index: 0,
-            onChanged: (_) {},
-            tabs: const [
-              TabSpec(icon: Icons.list, label: 'Agents', badge: 2),
-              TabSpec(icon: Icons.dns, label: 'Machines'),
-            ],
+        Center(
+          child: CircleButton(
+            icon: Icons.settings,
+            tooltip: 'Settings',
+            mark: true,
+            markLabel: 'update available',
+            onPressed: () {},
           ),
         ),
       );
-      final agents = tester.getSemantics(find.byKey(FloatingTabBar.tabKey('Agents')));
-      expect(agents.label, 'Agents, 2 need you');
-      expect(agents.flagsCollection.isSelected, Tristate.isTrue);
-      expect(
-        tester.getSemantics(find.byKey(FloatingTabBar.tabKey('Machines'))).flagsCollection.isSelected,
-        Tristate.isFalse,
-      );
+      expect(find.byKey(const ValueKey('circle-button-mark')), findsOneWidget);
+      expect(find.bySemanticsLabel('Settings, update available'), findsOneWidget);
       handle.dispose();
     });
 
@@ -749,48 +742,6 @@ void main() {
       visible.value = true;
       await tester.pumpAndSettle();
       expect(inits, 1);
-    });
-
-    testWidgets('after a scrub, tapping away and back puts the capsule under the selected tab', (tester) async {
-      final index = ValueNotifier(0);
-      addTearDown(index.dispose);
-      await pumpCore(
-        tester,
-        Align(
-          alignment: Alignment.bottomCenter,
-          child: ValueListenableBuilder<int>(
-            valueListenable: index,
-            builder: (context, i, _) => FloatingTabBar(
-              index: i,
-              onChanged: (n) => index.value = n,
-              tabs: const [
-                TabSpec(icon: Icons.list, label: 'Agents'),
-                TabSpec(icon: Icons.dns, label: 'Machines'),
-                TabSpec(icon: Icons.settings, label: 'Settings'),
-              ],
-            ),
-          ),
-        ),
-      );
-      double capsule() => tester.getCenter(find.byKey(FloatingTabBar.capsuleKey)).dx;
-      double tab(String l) => tester.getCenter(find.byKey(FloatingTabBar.tabKey(l))).dx;
-
-      // Scrub from Agents to Settings and let the spring land.
-      final cell = tab('Machines') - tab('Agents');
-      await tester.timedDrag(
-        find.byKey(FloatingTabBar.tabKey('Agents')),
-        Offset(cell * 2, 0),
-        const Duration(milliseconds: 300),
-      );
-      await tester.pumpAndSettle();
-      expect(index.value, 2);
-
-      await tester.tap(find.byKey(FloatingTabBar.tabKey('Machines')));
-      await tester.pump(const Duration(milliseconds: 60));
-      await tester.tap(find.byKey(FloatingTabBar.tabKey('Settings')));
-      await tester.pumpAndSettle();
-      expect(index.value, 2);
-      expect(capsule(), moreOrLessEquals(tab('Settings'), epsilon: 1));
     });
   });
 }

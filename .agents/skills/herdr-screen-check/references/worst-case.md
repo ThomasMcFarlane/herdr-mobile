@@ -92,7 +92,7 @@ like a host or address.
 | --- | --- |
 | 320x640 | Every overflow at once |
 | 892x412 plus keyboard (compact) | The dock, the palette and the quick phrases hidden; the composer still reachable |
-| Text scale 1.6 and 2.0 | Fixed heights that clip growing text; the tab bar |
+| Text scale 1.6 and 2.0 | Fixed heights that clip growing text; home's header, the batch bar |
 | Dark, light, dark terminal on paper | Hard-coded colours, invisible hairlines |
 | Reduced motion | Sheets with no animation, page fade, no settle, roll or badge scale |
 | TalkBack | One node per control, headers, a hold as prime-then-send |

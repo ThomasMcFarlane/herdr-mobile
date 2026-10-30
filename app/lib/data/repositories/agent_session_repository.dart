@@ -24,7 +24,7 @@ typedef AgentHostFactory = AgentHost Function(MachineConnection machine);
 ///
 /// For each machine that is online it lists the keepers with ONE short `list`
 /// (when the machine connects, when the app comes back to the foreground, on
-/// [refresh], and every [refreshEvery] while the Agents tab is visible: no
+/// [refresh], and every [refreshEvery] while the board is visible: no
 /// timer runs otherwise) and holds one [AcpAgentSession] per keeper. The board
 /// shows every session from that listing (a waiting request, a turn in flight,
 /// a finished turn nobody saw).
@@ -42,7 +42,7 @@ typedef AgentHostFactory = AgentHost Function(MachineConnection machine);
 /// (the same caps and order) and the hosts are listed every
 /// [backgroundRefreshEvery].
 ///
-/// Listeners (the board, the tab badge) are told only when something the board
+/// Listeners (the board, the attention set) are told only when something the board
 /// shows changes: a phase, a link, a title, a waiting request. Streaming text
 /// does not reach them; a screen that wants it listens to its session.
 class AgentSessionRepository extends ChangeNotifier implements AgentSessions {
@@ -86,7 +86,7 @@ class AgentSessionRepository extends ChangeNotifier implements AgentSessions {
   /// recently active first.
   final int recentAttached;
 
-  /// How often the Agents tab, while visible, lists the hosts again.
+  /// How often the board, while visible, lists the hosts again.
   final Duration refreshEvery;
 
   /// How often the hosts are listed while the app is in the background and

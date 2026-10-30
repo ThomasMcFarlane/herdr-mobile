@@ -233,3 +233,39 @@ Future<void> teardownBoard(WidgetTester tester, BoardHarness h) async {
 class _Shift {
   Duration ago = Duration.zero;
 }
+
+/// What home's status line says needs the person (`2 need you`), or null
+/// when it says nothing does. The Agents tab badge that said it off the board
+/// went with the tab bar; this line is the one place home counts it.
+String? statusNeedsYou(WidgetTester tester) {
+  final texts = find.descendant(of: find.byType(SliverLargeTitle), matching: find.byType(Text));
+  for (final e in texts.evaluate()) {
+    final text = e.widget as Text;
+    final plain = text.data ?? text.textSpan?.toPlainText() ?? '';
+    final match = RegExp(r'^\d+ needs? you').firstMatch(plain);
+    if (match != null) return match.group(0);
+  }
+  return null;
+}
+
+/// Opens a page from home's header, as the person does: the machines chip
+/// for Machines, the gear for Settings.
+Future<void> openHomePage(WidgetTester tester, String page) async {
+  await tester.tap(page == 'Machines' ? find.byKey(const ValueKey('machine-health')) : find.byTooltip(page));
+  await _pageMoves(tester);
+}
+
+// Fixed frames, not pumpAndSettle: a board can hold a spinner that never
+// settles. Longer than a page transition.
+Future<void> _pageMoves(WidgetTester tester) async {
+  await tester.pump();
+  for (var i = 0; i < 6; i++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+}
+
+/// Back, as the system's Back does: from a page over home, home.
+Future<void> backHome(WidgetTester tester) async {
+  await tester.binding.handlePopRoute();
+  await _pageMoves(tester);
+}

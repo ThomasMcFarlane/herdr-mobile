@@ -58,7 +58,8 @@ looked for in that user's home.
    browser or file manager you opened it with). Allow it, then install.
 4. Later releases install over this one and keep your machines and settings.
    You do not have to come back to this page: when a new version is out,
-   Settings gets a small dot. Tap `Update available` there: the update sheet
+   the gear (Settings) at the top of the board gets a small dot. Tap it, then
+   `Update available`: the update sheet
    opens on what's new (a short clip of the changes when the release has one;
    `Play` plays it), then `Download`, then `Install`. herdr
    checks the file against the release's checksum first, and Android asks you
@@ -71,8 +72,9 @@ looked for in that user's home.
 
 ![Machines](screenshots/machines.png)
 
-On first start the Agents tab shows `Add your first machine`. Later, use the
-`+` on the Machines tab (`Add machine`).
+On first start the board shows `Add your first machine`. Later, tap the
+machines count at the top left of the board (`3 of 3 machines`) to open
+Machines, and use its `+` (`Add machine`).
 
 1. Under `Machine`, fill in:
    - `Name`: what the app calls it (for example `Build server`). Blank uses
@@ -133,7 +135,8 @@ know why. To accept a new key, remove the machine and add it again.
   `remote-api-bridge`. Set it when herdr's socket is not where the app looks
   by default.
 
-**Managing machines.** On the Machines tab each machine shows its state (the
+**Managing machines.** On Machines (the count at the top left of the board)
+each machine shows its state (the
 dot in front), `N agents · user@host` and, when agents need you, their count. Its
 `More` menu has `Edit`, `Disable` (stop connecting without deleting it) and
 `Remove` (deletes the connection and its credentials from the phone). Tap a
@@ -148,8 +151,8 @@ there or remove the worktree (held, never forced). `Browse files` and the `+`
 
 ![The board](screenshots/board.png)
 
-The Agents tab is the board: every agent on every machine in one list. It
-holds both kinds of agent:
+The board is the app's home: every agent on every machine in one list, and
+nothing under it. It holds both kinds of agent:
 
 - **Terminal agents**: agents running in herdr panes, as herdr sees them.
 - **Agent sessions**: agents started from the phone (section 6).
@@ -169,6 +172,13 @@ holds both kinds of agent:
   them in place and then reads `Show less`.
 
 Tap a section header to fold it (all but `Needs you`).
+
+**The top of the board.** At the top left, `4 of 5 machines` says how many of
+your machines (those switched on) are online: a filled green dot when all
+are, a ring when one is connecting (yellow) or needs you (orange). Tap it to
+open Machines; Back comes back to the board. At the top right are `+` (start
+an agent session) and the gear for Settings, which carries a small dot when a
+newer version is out.
 
 **The status line.** Under the title, one line says how the board stands:
 `2 need you · 3 working · heard just now`, then `1 not connected` when a
@@ -201,9 +211,9 @@ needs you is a card with its answers, and every other agent is one row. Cards
 show every agent with the last lines of its terminal. Choose in Settings >
 Look > `Agent list`: `Compact` or `Cards`.
 
-**The count.** One number answers "does anything need me?": the badge on the
-Agents tab, the board's status line, the triage sheet and the notifications
-all count the same set. The board says it once, in the status line. It counts only agents you can answer now: an agent on a
+**The count.** One number answers "does anything need me?": the board's
+status line, the triage sheet and the notifications all count the same
+set. The board says it once, in the status line. It counts only agents you can answer now: an agent on a
 machine that is offline is listed, dimmed and marked `offline`, but not
 counted (the section header says `2 offline` instead).
 
@@ -391,7 +401,7 @@ its screen. The agent runs inside a small keeper process on the machine, so
 it keeps working when the phone's connection drops, and the app reattaches
 when it can.
 
-**Starting one.** Tap `+` on the Agents tab (or on a machine's screen) to open
+**Starting one.** Tap `+` at the top of the board (or on a machine's screen) to open
 `New agent session`:
 
 ![New agent session](screenshots/new-session.png)

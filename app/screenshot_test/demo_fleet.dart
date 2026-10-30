@@ -335,7 +335,7 @@ Widget Function(Widget) demoProviders(
         ChangeNotifierProvider.value(value: h.appSettings),
         ChangeNotifierProvider.value(value: h.agentScreens),
         Provider<PanePreviews>.value(value: h.previews),
-        // The shell's badge and the board read it.
+        // The board, the triage and the arrival cue read it.
         attentionSetProvider(),
         ...extra,
         Provider<TransportFactory>.value(

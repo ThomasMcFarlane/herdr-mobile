@@ -104,8 +104,6 @@ Finder _row(String title) => find.widgetWithText(AgentSessionRow, title);
 
 double _top(WidgetTester tester, Finder f) => tester.getTopLeft(f).dy;
 
-String _badge(WidgetTester tester) => tester.getSemantics(find.byKey(FloatingTabBar.tabKey('Agents'))).label;
-
 /// Sessions whose finished turn nobody looked at.
 int _toReview(_Env e) => e.repo.sessions.where(AttentionSet.sessionToReview).length;
 
@@ -202,7 +200,7 @@ void main() {
       expect(find.text('terminal 1'), findsOneWidget, reason: 'an ordinary pane is still an agent');
       expect(find.text('terminal 2'), findsNothing, reason: 'the session is already on the board');
       expect(find.textContaining('2 need you'), findsOneWidget);
-      expect(_badge(tester), 'Agents, 2 need you');
+      expect(statusNeedsYou(tester), '2 need you');
       semantics.dispose();
       await _teardown(tester, e);
     });
@@ -219,13 +217,13 @@ void main() {
       unawaited(e.repo.byKey('a/k2')!.send('work'));
       await _settle(tester);
 
-      expect(_badge(tester), 'Agents, 2 need you', reason: '1 pane + 1 session; finished work is not a question');
+      expect(statusNeedsYou(tester), '2 need you', reason: '1 pane + 1 session; finished work is not a question');
       expect(find.textContaining('2 need you'), findsOneWidget);
       expect(tester.widget<SectionLabel>(_section('Done')).count, 2);
 
       e.repo.byKey('a/k2')!.markSeen();
       await _settle(tester);
-      expect(_badge(tester), 'Agents, 2 need you');
+      expect(statusNeedsYou(tester), '2 need you');
       expect(tester.widget<SectionLabel>(_section('Done')).count, 1);
       semantics.dispose();
       await _teardown(tester, e);
@@ -347,14 +345,12 @@ void main() {
       await tester.pump(tick);
       expect(e.host.listCalls, base + 1);
 
-      await tester.tap(find.byKey(FloatingTabBar.tabKey('Machines')));
-      await _settle(tester);
+      await openHomePage(tester, 'Machines');
       final away = e.host.listCalls;
       await tester.pump(const Duration(minutes: 3));
       expect(e.host.listCalls, away, reason: 'a hidden board lists nothing');
 
-      await tester.tap(find.byKey(FloatingTabBar.tabKey('Agents')));
-      await _settle(tester);
+      await backHome(tester);
       await tester.pump(tick);
       expect(e.host.listCalls, away + 1);
       await _teardown(tester, e);

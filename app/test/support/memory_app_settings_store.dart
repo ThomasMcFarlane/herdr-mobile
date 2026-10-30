@@ -6,7 +6,6 @@ class MemoryAppSettingsStore implements AppSettingsStore {
 
   ThemeChoice? theme;
   bool? darkTerminal;
-  int? homeTab;
   BoardDensity? density;
   OpenAgentsAs? openAgentsAs;
   final writes = <String>[];
@@ -27,15 +26,6 @@ class MemoryAppSettingsStore implements AppSettingsStore {
   Future<void> writeDarkTerminal(bool dark) async {
     darkTerminal = dark;
     writes.add('darkTerminal $dark');
-  }
-
-  @override
-  Future<int?> readHomeTab() async => homeTab;
-
-  @override
-  Future<void> writeHomeTab(int tab) async {
-    homeTab = tab;
-    writes.add('homeTab $tab');
   }
 
   @override

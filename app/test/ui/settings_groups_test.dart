@@ -77,8 +77,8 @@ Future<void> _closeSheet(WidgetTester tester) async {
 
 ScrollPosition _position(WidgetTester tester) => tester.state<ScrollableState>(find.byType(Scrollable).first).position;
 
-/// [showing] is whether the tab is in front: the shell turns tickers off in the
-/// tabs that are not.
+/// [showing] is whether the page is in front: a page pushed over it turns its
+/// tickers off.
 Future<void> _pump(
   WidgetTester tester, {
   AppUpdate? update,
@@ -241,7 +241,7 @@ void main() {
       await tester.pump(const Duration(seconds: 6));
     });
 
-    testWidgets('the size is read again when the tab comes back and when the group opens, not once per run', (
+    testWidgets('the size is read again when the page comes back and when the group opens, not once per run', (
       tester,
     ) async {
       await tester.runAsync(() => store.ready);
@@ -249,7 +249,7 @@ void main() {
       await _pump(tester, showing: showing);
       await until(tester, () => find.text('Cache \u00b7 empty').evaluate().isNotEmpty);
 
-      // The person browses photos on another tab: the cache grows.
+      // The person browses photos on a page pushed over it: the cache grows.
       showing.value = false;
       await tester.pump();
       // (Not in runAsync: the screen already queued work on this cache in the
@@ -259,7 +259,7 @@ void main() {
       showing.value = true;
       await until(tester, () => find.text('Cache \u00b7 3 MB').evaluate().isNotEmpty);
 
-      // And with the tab in front the whole time, opening the group looks again.
+      // And with the page in front the whole time, opening the group looks again.
       unawaited(store.put('b', Uint8List(1024 * 1024)));
       await until(tester, () => store.knows('b'));
       await openSettingsGroup(tester, 'Storage');
@@ -351,26 +351,6 @@ void main() {
       expect(find.text('Download 48 MB'), findsOneWidget, reason: 'never a dead end');
     });
 
-    testWidgets('found while the tab is behind another puts the row back in view when it is next shown', (
-      tester,
-    ) async {
-      final u = _updater(tester);
-      final showing = ValueNotifier(true);
-      await _pump(tester, update: u.update, showing: showing, size: const Size(320, 640), textScale: 2);
-      await openSettingsGroup(tester, 'About');
-      await tester.pump(Motion.expand * 2);
-      expect(_position(tester).pixels, greaterThan(0), reason: 'the person left the page scrolled down');
-
-      showing.value = false;
-      await tester.pump();
-      await u.update.check();
-      await tester.pump();
-      showing.value = true;
-      await tester.pump();
-      expect(_position(tester).pixels, 0, reason: 'the dot brought the person here');
-      expect(find.text('Update available').hitTestable(), findsOneWidget);
-    });
-
     testWidgets('found while the page is showing doesn’t move it', (tester) async {
       final u = _updater(tester);
       await _pump(tester, update: u.update, size: const Size(320, 640), textScale: 2);
@@ -382,25 +362,6 @@ void main() {
       await u.update.check();
       await tester.pump();
       expect(_position(tester).pixels, before, reason: 'nothing moves under the thumb');
-    });
-
-    testWidgets('once its sheet was opened, coming back leaves the page where the person left it', (tester) async {
-      final u = _updater(tester);
-      await u.update.check();
-      final showing = ValueNotifier(true);
-      await _pump(tester, update: u.update, showing: showing, size: const Size(320, 640), textScale: 2);
-      await _openSheet(tester);
-      await _closeSheet(tester);
-      await openSettingsGroup(tester, 'About');
-      await tester.pump(Motion.expand * 2);
-      final before = _position(tester).pixels;
-      expect(before, greaterThan(0));
-
-      showing.value = false;
-      await tester.pump();
-      showing.value = true;
-      await tester.pump();
-      expect(_position(tester).pixels, before);
     });
 
     testWidgets('keeps its progress in sight on the row after the sheet is put away', (tester) async {
@@ -501,7 +462,7 @@ void main() {
     ScrollPosition position(WidgetTester tester) =>
         tester.state<ScrollableState>(find.byType(Scrollable).first).position;
 
-    testWidgets('a tall one at 320 dp and 2x text: its first row is above the tab bar, its row under the title bar', (
+    testWidgets('a tall one at 320 dp and 2x text: its first row is on screen, its row under the title bar', (
       tester,
     ) async {
       await _pump(tester, size: const Size(320, 640), textScale: 2);
@@ -514,7 +475,7 @@ void main() {
       expect(position(tester).pixels, greaterThan(0), reason: 'it had to move');
       expect(tester.getRect(find.text('About')).top, greaterThanOrEqualTo(bar), reason: 'not under the title bar');
       final first = tester.getRect(find.text('Connection'));
-      expect(first.bottom, lessThanOrEqualTo(640 - 72), reason: 'not under the tab bar (56 + 16 dp)');
+      expect(first.bottom, lessThanOrEqualTo(640 - Gap.xl), reason: 'clear of the page end');
     });
 
     testWidgets('one that already fits doesn’t move the page', (tester) async {

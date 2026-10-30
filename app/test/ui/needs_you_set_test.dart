@@ -1,5 +1,5 @@
 // One "needs you": the badge, the pill, the board's sections, the triage
-// sheet, the Machines tab and the notifier's count are the same set, in the
+// sheet, the Machines page and the notifier's count are the same set, in the
 // same order, terminal agents and agent sessions alike; what is out of reach
 // is not counted; a handover does not make old waits new.
 import 'dart:async';
@@ -93,14 +93,12 @@ void main() {
     h.fleet.connection('b')!.goOffline();
     await _settle(tester, 30);
 
-    // The badge.
+    // The board's status line, the one place home counts it.
     expect(
-      tester.getSemantics(find.byKey(FloatingTabBar.tabKey('Agents'))).label,
-      'Agents, 2 need you',
+      statusNeedsYou(tester),
+      '2 need you',
       reason: 'the pane and the session; not the offline pane, not the finished session',
     );
-    // The board's status line, the one place the board counts it.
-    expect(find.textContaining('2 need you'), findsOneWidget);
     expect(find.text('1 offline'), findsOneWidget, reason: 'the offline pane is listed, last known, and said so');
     expect(tester.widget<SectionLabel>(_section('Done')).count, 1);
     // The notifier's "need you".
@@ -131,9 +129,8 @@ void main() {
     Navigator.of(tester.element(find.byType(ReplySheet))).pop();
     await _settle(tester);
 
-    // The Machines tab.
-    await tester.tap(find.byKey(FloatingTabBar.tabKey('Machines')));
-    await _settle(tester);
+    // Machines.
+    await openHomePage(tester, 'Machines');
     expect(find.bySemanticsLabel(RegExp(r'^studio-mac, .*, 2 need you$')), findsOneWidget);
     expect(
       find.bySemanticsLabel(RegExp(r'^old-box, .*need you')),

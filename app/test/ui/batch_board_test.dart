@@ -14,8 +14,10 @@ import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_card.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_session_rows.dart';
 import 'package:herdr_mobile/ui/features/agents/batch_actions_sheet.dart';
+import 'package:herdr_mobile/ui/features/agents/agents_screen.dart';
+import 'package:herdr_mobile/ui/features/machines/machines_screen.dart';
+import 'package:herdr_mobile/ui/shell/home_pages.dart';
 import 'package:herdr_mobile/ui/shell/home_shell.dart';
-import 'package:herdr_mobile/ui/support/home_tabs.dart';
 import 'package:provider/provider.dart';
 
 import '../support/fake_agent_session.dart';
@@ -84,7 +86,6 @@ Future<void> _pump(
   double textScale = 1,
   Brightness brightness = Brightness.dark,
   double bottomInset = 0,
-  HomeTabs? tabs,
 }) async {
   tester.view
     ..physicalSize = Size(width, height) * 2
@@ -106,7 +107,7 @@ Future<void> _pump(
           data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
           child: child!,
         ),
-        home: HomeShell(tabs: tabs),
+        home: const HomeShell(),
       ),
     ),
   );
@@ -162,12 +163,12 @@ void main() {
     testWidgets('a long press starts, taps toggle, All picks the rest, Cancel leaves', (tester) async {
       final h = await _studio([_pane(1, 'working'), _pane(2, 'working'), _pane(3, 'idle'), _pane(4, 'done')]);
       await _pump(tester, h);
-      expect(find.byType(FloatingTabBar), findsOneWidget);
+      expect(find.byType(FloatingBarPill), findsNothing, reason: 'home has no bar at rest');
       expect(find.text('All'), findsNothing);
 
       await _longPress(tester, _row('task 1'));
       expect(_selected(1), findsOneWidget);
-      expect(find.byType(FloatingTabBar), findsNothing, reason: 'the action bar takes its place');
+      expect(find.byType(FloatingBarPill), findsOneWidget, reason: 'the batch bar, only while picking');
       expect(find.text('All'), findsOneWidget);
       expect(find.text('Cancel'), findsOneWidget);
       expect(tester.getSemantics(_row('task 1')).flagsCollection.isSelected, Tristate.isTrue);
@@ -183,7 +184,7 @@ void main() {
 
       await _tap(tester, find.text('Cancel'));
       expect(find.textContaining('selected'), findsNothing);
-      expect(find.byType(FloatingTabBar), findsOneWidget);
+      expect(find.byType(FloatingBarPill), findsNothing);
       await teardownBoard(tester, h);
     });
 
@@ -205,26 +206,7 @@ void main() {
       await _settle(tester);
       expect(find.textContaining('selected'), findsNothing);
       expect(find.byType(HomeShell), findsOneWidget);
-      expect(find.byType(FloatingTabBar), findsOneWidget);
-      await teardownBoard(tester, h);
-    });
-
-    testWidgets('leaving the board ends picking: the tab bar is never left hidden over another tab', (tester) async {
-      final tabs = HomeTabs();
-      final h = await _studio([_pane(1, 'working'), _pane(2, 'blocked')]);
-      await _pump(tester, h, tabs: tabs);
-      await _longPress(tester, _row('task 1'));
-      expect(find.byType(FloatingTabBar), findsNothing, reason: 'the action bar takes its place on the board');
-
-      tabs.select(HomeTab.machines);
-      await _settle(tester);
-      expect(find.byType(FloatingTabBar), findsOneWidget, reason: 'Machines has its tab bar');
-      expect(find.text('Cancel'), findsNothing);
-
-      tabs.select(HomeTab.agents);
-      await _settle(tester);
-      expect(find.textContaining('selected'), findsNothing, reason: 'picking ended when the board was left');
-      expect(find.byType(FloatingTabBar), findsOneWidget);
+      expect(find.byType(FloatingBarPill), findsNothing);
       await teardownBoard(tester, h);
     });
 
@@ -245,29 +227,28 @@ void main() {
       await tester.binding.handlePopRoute();
       await _settle(tester);
       expect(_selected(2), findsOneWidget, reason: 'the person comes back to the set they picked');
-      expect(find.byType(FloatingTabBar), findsNothing, reason: 'the action bar is still up');
+      expect(find.byType(FloatingBarPill), findsOneWidget, reason: 'the action bar is still up');
       await teardownBoard(tester, h);
     });
 
-    testWidgets('a running batch, then another tab: the set and its bar are kept', (tester) async {
-      final tabs = HomeTabs();
+    testWidgets('a running batch, then Machines and back: the set and its bar are kept', (tester) async {
       final h = await _studio([_pane(1, 'idle')]);
       final slow = _SlowEnd(key: 'a/k1', title: 'agent one', machine: h.fleet.connection('a'));
       final sessions = _Sessions([slow]);
-      await _pump(tester, h, sessions: sessions, tabs: tabs);
+      await _pump(tester, h, sessions: sessions);
       await _pick(tester, ['agent one']);
       await _tap(tester, find.text('Close'));
       await _tap(tester, find.text('Close 1 agent'));
       expect(find.text('Closing 1 agent…'), findsOneWidget);
 
-      tabs.select(HomeTab.machines);
+      const HomePages().open(tester.element(find.byType(AgentsScreen)), HomePage.machines);
       await _settle(tester);
-      expect(find.byType(FloatingTabBar), findsOneWidget, reason: 'Machines has its tab bar');
-      tabs.select(HomeTab.agents);
+      expect(find.byType(MachinesScreen), findsOneWidget);
+      await tester.binding.handlePopRoute();
       await _settle(tester);
-      expect(_selected(1), findsOneWidget, reason: 'a running batch isn’t cancelled by a tab switch');
+      expect(_selected(1), findsOneWidget, reason: 'a running batch isn’t cancelled by a page');
       expect(find.text('Closing 1 agent…'), findsOneWidget);
-      expect(find.byType(FloatingTabBar), findsNothing);
+      expect(find.byType(FloatingBarPill), findsOneWidget);
 
       slow.gate.complete();
       await _settle(tester);
@@ -421,13 +402,29 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('stands exactly where the tab bar stood, so the bottom keeps its shape', (tester) async {
-      final h = await _studio([_pane(1, 'working')]);
+    testWidgets('stands one margin above the system inset, and the last row clears it', (tester) async {
+      final h = await _studio([for (var i = 1; i <= 12; i++) _pane(i, 'working')]);
       await _pump(tester, h, width: 320, height: 640, textScale: 2, bottomInset: 40);
-      final tabs = tester.getRect(find.byType(FloatingBarPill));
       await _longPress(tester, _row('task 1'));
-      expect(find.byType(FloatingTabBar), findsNothing);
-      expect(tester.getRect(find.byType(FloatingBarPill)), tabs);
+      final bar = tester.getRect(find.byType(FloatingBarPill));
+      expect(bar.bottom, moreOrLessEquals(640 - 40 - FloatingBar.margin));
+      final scroll = tester
+          .state<ScrollableState>(
+            find.descendant(
+              of: find.byType(AgentsScreen),
+              matching: find.byWidgetPredicate((w) => w is Scrollable && w.axis == Axis.vertical),
+            ),
+          )
+          .position;
+      // A lazy list learns its length as it goes: jump until the end holds.
+      while (scroll.pixels < scroll.maxScrollExtent) {
+        scroll.jumpTo(scroll.maxScrollExtent);
+        await tester.pump();
+      }
+      await _settle(tester);
+      final rows = find.byWidgetPredicate((w) => w is AgentCard || w is AgentCompactRow);
+      final last = tester.getRect(rows.last);
+      expect(last.bottom, lessThanOrEqualTo(bar.top), reason: 'the list keeps the bar’s room while picking');
       await teardownBoard(tester, h);
     });
   });
@@ -455,7 +452,7 @@ void main() {
       expect(_sent(h, 'a', 'pane.send_input'), isEmpty);
       expect(find.text('Stopped 3'), findsOneWidget);
       expect(find.textContaining('selected'), findsNothing, reason: 'picking ends');
-      expect(find.byType(FloatingTabBar), findsOneWidget);
+      expect(find.byType(FloatingBarPill), findsNothing);
       await teardownBoard(tester, h);
     });
 

@@ -38,7 +38,8 @@ class MachinesScreen extends StatelessWidget {
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
-                SliverLargeTitle(
+                // A page over home, opened from its header: Back returns there.
+                SliverLargeTitle.back(
                   title: 'Machines',
                   subtitle: Text(
                     count == 0 ? 'None yet' : countOf(count, 'machine'),
@@ -56,7 +57,7 @@ class MachinesScreen extends StatelessWidget {
                   SliverFillRemaining(
                     hasScrollBody: false,
                     child: Padding(
-                      padding: EdgeInsets.only(bottom: FloatingBar.clearance(context)),
+                      padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom),
                       child: EmptyState(
                         icon: HerdrIcons.machines,
                         title: 'No machines yet',
@@ -77,7 +78,7 @@ class MachinesScreen extends StatelessWidget {
                     itemBuilder: (_, i) =>
                         _MachineRow(key: ValueKey(connections[i].profile.id), machine: connections[i]),
                   ),
-                  SliverToBoxAdapter(child: SizedBox(height: FloatingBar.listEnd(context))),
+                  SliverToBoxAdapter(child: SizedBox(height: MediaQuery.paddingOf(context).bottom + Gap.xl)),
                 ],
               ],
             ),
@@ -148,7 +149,7 @@ class _MachineRow extends StatelessWidget {
     final ds = context.ds;
     final p = machine.profile;
     final state = machine.state;
-    // The same "needs you" as the badge and the board: reachable panes and
+    // The same "needs you" as the board and the notifications: reachable panes and
     // agent sessions of this machine. An offline machine's last-known waits
     // are not counted; its status line says it is offline.
     final waiting = context.select<AttentionSet, int>((a) => a.needsYouOn(p.id));

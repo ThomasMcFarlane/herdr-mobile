@@ -14,6 +14,7 @@ import 'package:herdr_mobile/ui/features/agents/agent_card.dart';
 import 'package:herdr_mobile/ui/features/agents/reply_sheet.dart';
 import 'package:herdr_mobile/ui/features/pane/pane_screen.dart';
 import 'package:herdr_mobile/ui/shell/home_shell.dart';
+import 'package:herdr_mobile/data/repositories/attention_set.dart';
 import 'package:provider/provider.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -802,13 +803,17 @@ void main() {
       await h.changeStatuses(tester, 'a', [
         for (var i = 1; i <= 12; i++) _pane(i, i == 12 ? 'blocked' : 'working'),
       ], title: _title);
-      expect(find.descendant(of: find.byType(FloatingTabBar), matching: find.text('1')), findsOneWidget);
+      expect(
+        tester.element(find.byType(AgentCard).first).read<AttentionSet>().needsYou,
+        hasLength(1),
+        reason: 'it is counted',
+      );
       expect(tester.state<ScrollableState>(find.byType(Scrollable).first).position.pixels, offset);
       expect(tester.element(_card(visible)), same(card), reason: 'cards were inflated again when one started waiting');
       await teardownBoard(tester, h);
     });
 
-    testWidgets('the last card clears the tab bar', (tester) async {
+    testWidgets('the last card ends above the bottom edge, with room to spare', (tester) async {
       final h = await BoardHarness.create([
         _machine('a', [_pane(1, 'blocked'), for (var i = 2; i <= 8; i++) _pane(i, 'working')]),
       ]);
@@ -821,11 +826,8 @@ void main() {
           .widgetList(find.byType(AgentCard))
           .map((w) => tester.getRect(find.byWidget(w)).bottom)
           .reduce((a, b) => a > b ? a : b);
-      expect(
-        last,
-        lessThanOrEqualTo(tester.getRect(find.byType(FloatingTabBar)).top),
-        reason: 'the tab bar must never cover the last agent',
-      );
+      expect(find.byType(FloatingBarPill), findsNothing, reason: 'home has no bar over the list');
+      expect(last, lessThanOrEqualTo(740 - Gap.xl + 0.01), reason: 'the list ends clear of the bottom edge');
       await teardownBoard(tester, h);
     });
   });
@@ -985,7 +987,7 @@ void main() {
   });
 
   group('the clock', () {
-    testWidgets('working agents do not animate; labels tick only while the Agents tab shows', (tester) async {
+    testWidgets('working agents do not animate; labels tick only while the board shows', (tester) async {
       final h = await BoardHarness.create([
         _machine('a', [_pane(1, 'working'), _pane(2, 'working')]),
       ]);
@@ -993,12 +995,12 @@ void main() {
       // Only the minute labels hold the clock: no glyph does.
       expect(StepClock.minute.leases, lessThanOrEqualTo(2));
 
-      await tester.tap(find.byKey(FloatingTabBar.tabKey('Machines')));
-      await settle(tester);
-      expect(StepClock.minute.running, isFalse, reason: 'a hidden tab must not tick');
+      await tester.tap(find.byKey(const ValueKey('machine-health')));
+      await tester.pumpAndSettle();
+      expect(StepClock.minute.running, isFalse, reason: 'the board under Machines must not tick');
 
-      await tester.tap(find.byKey(FloatingTabBar.tabKey('Agents')));
-      await settle(tester);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
       await teardownBoard(tester, h);
       expect(StepClock.minute.leases, 0);
     });

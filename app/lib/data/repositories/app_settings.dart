@@ -30,10 +30,6 @@ abstract interface class AppSettingsStore {
 
   Future<void> writeDarkTerminal(bool dark);
 
-  Future<int?> readHomeTab();
-
-  Future<void> writeHomeTab(int tab);
-
   Future<BoardDensity?> readDensity();
 
   Future<void> writeDensity(BoardDensity density);
@@ -50,7 +46,6 @@ abstract interface class AppSettingsStore {
 class PrefsAppSettingsStore implements AppSettingsStore {
   static const _themeKey = 'app.theme.v1';
   static const _darkTerminalKey = 'app.darkTerminal.v1';
-  static const _homeTabKey = 'app.homeTab.v1';
   static const _densityKey = 'app.density.v1';
   static const _openAsKey = 'app.openAgentsAs.v1';
   static const _smoothTextKey = 'app.smoothText.v1';
@@ -81,18 +76,6 @@ class PrefsAppSettingsStore implements AppSettingsStore {
   Future<void> writeDarkTerminal(bool dark) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_darkTerminalKey, dark);
-  }
-
-  @override
-  Future<int?> readHomeTab() async {
-    final saved = (await SharedPreferences.getInstance()).get(_homeTabKey);
-    return saved is int ? saved : null;
-  }
-
-  @override
-  Future<void> writeHomeTab(int tab) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_homeTabKey, tab);
   }
 
   @override
@@ -150,12 +133,8 @@ class AppSettings extends ChangeNotifier {
   /// that predates this setting.
   static const defaultTheme = ThemeChoice.light;
 
-  /// The root tabs: Agents, Machines, Settings.
-  static const homeTabCount = 3;
-
   ThemeChoice _theme = defaultTheme;
   bool _darkTerminal = false;
-  int _homeTab = 0;
   BoardDensity _density = BoardDensity.compact;
   OpenAgentsAs _openAs = OpenAgentsAs.chat;
   bool _smoothText = true;
@@ -165,9 +144,6 @@ class AppSettings extends ChangeNotifier {
   /// Panes stay dark on the light theme. Off by default: a pane is drawn in
   /// the colours of the theme.
   bool get darkTerminal => _darkTerminal;
-
-  /// The root tab the app opens on: the one it was left on.
-  int get homeTab => _homeTab;
 
   /// What the person chose for the board's rows; [BoardDensity.compact]
   /// until they choose.
@@ -191,15 +167,12 @@ class AppSettings extends ChangeNotifier {
     try {
       _theme = await _store.readTheme() ?? defaultTheme;
       _darkTerminal = await _store.readDarkTerminal() ?? false;
-      final tab = await _store.readHomeTab() ?? 0;
-      _homeTab = tab >= 0 && tab < homeTabCount ? tab : 0;
       _density = await _store.readDensity() ?? BoardDensity.compact;
       _openAs = await _store.readOpenAgentsAs() ?? OpenAgentsAs.chat;
       _smoothText = await _store.readSmoothText() ?? true;
     } on Object {
       _theme = defaultTheme;
       _darkTerminal = false;
-      _homeTab = 0;
       _density = BoardDensity.compact;
       _openAs = OpenAgentsAs.chat;
       _smoothText = true;
@@ -249,14 +222,5 @@ class AppSettings extends ChangeNotifier {
       notifyListeners();
     }
     return _store.writeSmoothText(_smoothText);
-  }
-
-  /// Remembers the root tab being shown. Nothing listens: the shell already
-  /// shows it, so this does not rebuild anything.
-  Future<void> setHomeTab(int tab) {
-    if (tab < 0 || tab >= homeTabCount) return Future.value();
-    if (tab == _homeTab) return Future.value();
-    _homeTab = tab;
-    return _store.writeHomeTab(tab);
   }
 }

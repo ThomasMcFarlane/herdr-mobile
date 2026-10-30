@@ -14,6 +14,7 @@ import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_card.dart';
 import 'package:herdr_mobile/ui/features/agents/reply_chips.dart';
 import 'package:herdr_mobile/ui/features/agents/reply_sheet.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../support/shot.dart' show loadAppFonts;
 import 'board_support.dart';
@@ -132,6 +133,13 @@ void main() {
       final no = tester.getRect(find.ancestor(of: _inCard('4. No'), matching: find.byType(AnimatedContainer)).first);
       expect(no.top - more.bottom, Gap.lg, reason: 'declining is a group of its own');
       expect(_fill(tester, _inCard('4. No')), isNot(_fill(tester, _inCard('1. Yes'))), reason: 'not the same fill');
+      expect(_fill(tester, _inCard('4. No')), Colors.transparent, reason: 'no fill: a fill read as another yes');
+      Finder cross(String label) => find.descendant(
+        of: find.ancestor(of: _inCard(label), matching: find.byType(AnswerChip)),
+        matching: find.byIcon(LucideIcons.x),
+      );
+      expect(cross('4. No'), findsOneWidget, reason: 'a small ✕ says it is an answer to tap');
+      expect(cross('1. Yes'), findsNothing);
 
       await tester.tap(_inCard('4. No'));
       await tester.pump(const Duration(milliseconds: 50));

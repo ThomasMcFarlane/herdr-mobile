@@ -361,7 +361,7 @@ abstract final class IconSize {
   /// A status glyph in a row's 32 dp leading column.
   static const lead = 20.0;
 
-  /// The tab bar and the batch bar.
+  /// The batch bar's actions and the attach sheet's bars.
   static const nav = 24.0;
 
   /// An empty state's tile.
@@ -566,7 +566,7 @@ abstract final class Type {
     fontFeatures: tabular,
   );
 
-  /// The number in a count badge (the tab bar's, a machine's).
+  /// The number in a count badge (the agent switcher's, a machine's).
   static const badge = TextStyle(
     fontFamily: family,
     fontSize: 11,

@@ -49,9 +49,10 @@ enum AnswerChipTone {
   danger,
 
   /// The answer declines (`3. No`): no fill at rest and secondary words, so
-  /// it reads apart from the filled answers that allow. Pressed, it fills
-  /// like any chip. Why: as one more identical fill, `No` looked like the
-  /// `Yes, don't ask again` above it.
+  /// it reads apart from the filled answers that allow, led by a small ✕ so
+  /// it still reads as an answer to tap. Pressed, it fills like any chip.
+  /// Why no fill: as one more identical fill, `No` looked like the
+  /// `Yes, don't ask again` above it; with a fill and no mark it still did.
   quiet,
 }
 
@@ -208,6 +209,8 @@ class AnswerChip extends StatelessWidget {
       AnswerChipState.primed ||
       AnswerChipState.failed => Icon(LucideIcons.triangleAlert, size: IconSize.row, color: fg),
       AnswerChipState.changed => Icon(LucideIcons.refreshCw, size: IconSize.row, color: fg),
+      // Inline-sized, inside the one-line 44 a card reserves per chip.
+      AnswerChipState.rest when quiet => Icon(LucideIcons.x, size: IconSize.inline, color: color),
       AnswerChipState.rest => null,
     };
     // A resting hint that the answer asks for more; red is for the chip that is

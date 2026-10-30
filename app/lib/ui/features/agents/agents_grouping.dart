@@ -96,10 +96,15 @@ typedef TroubledMachine = ({
   String? approvalUrl,
 });
 
-/// What the agents tab needs from the fleet, and nothing more.
+/// What the board needs from the fleet, and nothing more.
 @immutable
 class AgentsOverview {
-  const AgentsOverview({required this.machineCount, required this.agents, required this.troubled});
+  const AgentsOverview({
+    required this.machineCount,
+    required this.agents,
+    required this.troubled,
+    required this.enabledCount,
+  });
 
   factory AgentsOverview.of(FleetRepository fleet) => AgentsOverview.from(fleet.connections, fleet.agents);
 
@@ -107,6 +112,7 @@ class AgentsOverview {
     final several = connections.length > 1;
     return AgentsOverview(
       machineCount: connections.length,
+      enabledCount: connections.where((c) => c.state != LinkState.disabled).length,
       agents: [for (final a in agents) agentRow(a, showMachine: several)],
       troubled: [
         for (final c in connections)
@@ -118,6 +124,9 @@ class AgentsOverview {
   }
 
   final int machineCount;
+
+  /// Machines that are switched on: the ones home's header counts.
+  final int enabledCount;
   final List<AgentRowData> agents;
   final List<TroubledMachine> troubled;
 
@@ -125,11 +134,12 @@ class AgentsOverview {
   bool operator ==(Object other) =>
       other is AgentsOverview &&
       other.machineCount == machineCount &&
+      other.enabledCount == enabledCount &&
       listEquals(other.agents, agents) &&
       listEquals(other.troubled, troubled);
 
   @override
-  int get hashCode => Object.hash(machineCount, Object.hashAll(agents), Object.hashAll(troubled));
+  int get hashCode => Object.hash(machineCount, enabledCount, Object.hashAll(agents), Object.hashAll(troubled));
 }
 
 AgentRowData agentRow(FleetAgent a, {required bool showMachine}) {
@@ -371,8 +381,8 @@ class BoardSection {
   final List<BoardItem> items;
 
   /// What the section counts. For Needs you and Done it is the
-  /// [AttentionSet]'s (what can be reached), the number the badge, the status
-  /// line and the triage sheet show; for the others, every row.
+  /// [AttentionSet]'s (what can be reached), the number the status line and
+  /// the triage sheet show; for the others, every row.
   final int count;
 
   /// Needs you and Done: rows listed (last known) whose machine or link is

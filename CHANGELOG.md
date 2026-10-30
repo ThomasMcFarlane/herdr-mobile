@@ -10,6 +10,7 @@ release.
 - The first agent that needs you keeps its card; the others are rows under it, and `Answer one by one` walks them. Needs you can no longer be folded away.
 - On an agent's question, the command it wants to run is the largest text, the answers that allow come first, and `No` sits apart below them. A "don't ask again" answer is in the full list behind `more…`, still held.
 - `Past sessions` moved to the new-session form, behind `+`. The agent list density is in Settings.
+- The tab bar is gone: the board is home and runs to the bottom of the screen. Tap the machine count at the top left (`4 of 5 machines`, with a ring when one is not online) to open Machines, and the gear at the top right for Settings; Back returns to the board. A newer version puts a small dot on the gear.
 
 ## [0.1.45] - 2026-10-29
 

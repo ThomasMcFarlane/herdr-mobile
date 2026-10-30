@@ -25,6 +25,7 @@ class SliverLargeTitle extends StatelessWidget {
     this.actions = const [],
     this.bottom,
     this.bottomHeight = 0,
+    this.compactTitle = true,
   });
 
   /// A pushed screen's header: [AppBackButton] leads.
@@ -35,14 +36,15 @@ class SliverLargeTitle extends StatelessWidget {
     this.actions = const [],
     this.bottom,
     this.bottomHeight = 0,
-  }) : leading = const AppBackButton();
+  }) : leading = const AppBackButton(),
+       compactTitle = true;
 
   final String title;
 
   /// One quiet line under the big title.
   final Widget? subtitle;
 
-  /// The root tabs have none; pushed screens use [SliverLargeTitle.back].
+  /// Pushed screens use [SliverLargeTitle.back]; home has its machines chip.
   final Widget? leading;
   final List<Widget> actions;
 
@@ -51,6 +53,12 @@ class SliverLargeTitle extends StatelessWidget {
 
   /// Height reserved for [bottom]; [AppChip.height] (44) for a chip row.
   final double bottomHeight;
+
+  /// Whether the title fades into the bar once the large title has scrolled
+  /// away. Home turns it off: its leading chip says the fleet's health where
+  /// a centred `Agents` would collide with it on a narrow phone, and home
+  /// needs no name to say where the person is.
+  final bool compactTitle;
 
   static const _barHeight = 56.0;
   static const _titleBlock = 50.0;
@@ -81,6 +89,7 @@ class SliverLargeTitle extends StatelessWidget {
       actions: actions,
       bottom: bottom,
       bottomHeight: bottomHeight,
+      compactTitle: compactTitle,
       ds: context.ds,
       reduced: Motion.reduced(context),
     ),
@@ -96,6 +105,7 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
     required this.actions,
     required this.bottom,
     required this.bottomHeight,
+    required this.compactTitle,
     required this.ds,
     required this.reduced,
   });
@@ -107,6 +117,7 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
   final List<Widget> actions;
   final Widget? bottom;
   final double bottomHeight;
+  final bool compactTitle;
   final Ds ds;
   final bool reduced;
 
@@ -203,7 +214,7 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      if (compact > 0)
+                      if (compactTitle && compact > 0)
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 64),
                           child: Semantics(
@@ -225,8 +236,12 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
                         padding: const EdgeInsets.symmetric(horizontal: AppTopBar.edge),
                         child: Row(
                           children: [
-                            ?leading,
-                            const Spacer(),
+                            // The leading control takes what the actions
+                            // leave, so a wide one (home's machines chip)
+                            // shrinks and ellipsizes instead of overflowing.
+                            Expanded(
+                              child: Align(alignment: AlignmentDirectional.centerStart, child: leading),
+                            ),
                             for (final (i, a) in actions.indexed) ...[if (i > 0) const SizedBox(width: 4), a],
                           ],
                         ),
@@ -263,6 +278,7 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
       old.ds != ds ||
       old.topInset != topInset ||
       old.bottomHeight != bottomHeight ||
+      old.compactTitle != compactTitle ||
       old.leading != leading ||
       old.subtitle != subtitle ||
       old.bottom != bottom ||

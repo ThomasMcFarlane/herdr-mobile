@@ -140,9 +140,6 @@ abstract final class Springs {
   /// Back to rest with no overshoot (a drag cancelled, a double tap).
   static final settle = SpringDescription.withDampingRatio(mass: 1, stiffness: 420, ratio: 1);
 
-  /// A light, quick object (the tab bar's capsule after a scrub).
-  static final snap = SpringDescription.withDampingRatio(mass: 1, stiffness: 1500, ratio: 0.85);
-
   /// A swiped row that did not go far enough, coming back.
   static final recoil = SpringDescription.withDurationAndBounce(
     duration: const Duration(milliseconds: 380),
@@ -158,9 +155,8 @@ abstract final class Springs {
   static const swipe = Tolerance(distance: 0.2, velocity: 8);
 
   /// Seconds of a fling's speed that carry on after the finger lifts, to pick
-  /// where a sheet or the tab capsule lands (Apple's projection).
+  /// where a sheet or a swiped card lands (Apple's projection).
   static const projectSheet = 0.25;
-  static const projectTab = 0.1;
 }
 
 /// Timers, not animations: how long something waits or stays.

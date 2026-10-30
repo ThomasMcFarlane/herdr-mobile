@@ -214,8 +214,8 @@ class _FormState extends State<_Form> {
                   icon: HerdrIcons.machinesOff,
                   title: 'No machine is online',
                   message:
-                      'An agent session starts on a connected machine. Check the Machines '
-                      'tab, then come back.',
+                      'An agent session starts on a connected machine. Check Machines, '
+                      'then come back.',
                   action: AppButton(
                     label: 'Back',
                     kind: AppButtonKind.secondary,

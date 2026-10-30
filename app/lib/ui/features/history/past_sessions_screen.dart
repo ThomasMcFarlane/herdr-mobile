@@ -143,7 +143,7 @@ class _BodyState extends State<_Body> {
               title: vm.machineLost ? 'That machine went offline' : 'No machine is online',
               message: vm.machineLost
                   ? 'Pick another machine above.'
-                  : 'Past sessions are read from the machine that ran them. Check the Machines tab, then come back.',
+                  : 'Past sessions are read from the machine that ran them. Check Machines, then come back.',
             ),
           ),
         ];

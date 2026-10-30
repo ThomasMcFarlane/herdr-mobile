@@ -7,10 +7,10 @@ import 'package:flutter/widgets.dart';
 /// sit as peers in one bar (Lucide's differ in visual weight there). Same
 /// grammar as Lucide: 24 grid, stroke 2, round caps; any [IconSize].
 abstract final class HerdrIcons {
-  /// An agent: the Agents tab, subagents, agent rows.
+  /// An agent: subagents, agent rows, the switcher.
   static const IconData agents = IconData(0xE000, fontFamily: 'HerdrIcons');
 
-  /// A machine: the Machines tab, machine rows and pickers, what lives on it.
+  /// A machine: machine rows and pickers, what lives on it.
   static const IconData machines = IconData(0xE001, fontFamily: 'HerdrIcons');
 
   /// A machine the app cannot reach: the machine, slashed.

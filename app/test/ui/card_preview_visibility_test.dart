@@ -4,7 +4,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/machine_profile.dart';
 import 'package:herdr_mobile/data/models/pane_preview.dart';
-import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_card.dart';
 
 import '../support/shot.dart' show loadAppFonts;
@@ -31,7 +30,7 @@ Pane _pane(int i, String status) => (id: 'w1:p$i', ws: 'w1', agent: 'claude', st
 void main() {
   setUpAll(loadAppFonts);
 
-  testWidgets('cards on a board hidden behind another tab release their reads, and take them back when it shows', (
+  testWidgets('cards on a board hidden under Machines release their reads, and take them back when it shows', (
     tester,
   ) async {
     final h = await BoardHarness.create([
@@ -42,12 +41,10 @@ void main() {
     expect(find.byType(AgentCard), findsNWidgets(2));
     expect(h.previews.openCount, 2);
 
-    await tester.tap(find.byKey(FloatingTabBar.tabKey('Machines')));
-    await settle(tester);
+    await openHomePage(tester, 'Machines');
     expect(h.previews.openCount, 0, reason: 'the board is not in front: nothing is read for it');
 
-    await tester.tap(find.byKey(FloatingTabBar.tabKey('Agents')));
-    await settle(tester);
+    await backHome(tester);
     expect(h.previews.openCount, 2, reason: 'back in front: the cards read again');
     expect(find.text('1. Yes'), findsOneWidget, reason: 'and the question is there to answer');
 
@@ -60,8 +57,7 @@ void main() {
       _machine([_pane(1, 'working')]),
     ]);
     await pumpBoard(tester, h, height: _tall);
-    await tester.tap(find.byKey(FloatingTabBar.tabKey('Machines')));
-    await settle(tester);
+    await openHomePage(tester, 'Machines');
     expect(h.previews.openCount, 0);
 
     // A new working agent appears while the board is hidden.
@@ -72,8 +68,7 @@ void main() {
     expect(h.previews.openCount, 0);
     expect(h.previews.opened.length, 1, reason: 'never taken then dropped: only the first card ever watched');
 
-    await tester.tap(find.byKey(FloatingTabBar.tabKey('Agents')));
-    await settle(tester);
+    await backHome(tester);
     expect(h.previews.openCount, 2);
     await teardownBoard(tester, h);
   });
