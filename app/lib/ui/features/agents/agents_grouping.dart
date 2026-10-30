@@ -10,6 +10,7 @@ import '../../../data/repositories/fleet_repository.dart';
 import '../../../data/repositories/machine_connection.dart';
 import '../../../data/words/agent_names.dart';
 import '../../../data/words/elapsed.dart';
+
 import 'package:herdr_mobile/ui/core/kit.dart' show AgentStatusColor;
 
 /// The board's sections, top to bottom ([boardLayout]): what needs the
