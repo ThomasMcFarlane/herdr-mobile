@@ -4,23 +4,34 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
-## [Unreleased]
+## [0.1.48] - 2026-10-30
 
-- The board is back in sections by what each agent needs: `Needs you`, then
-  `Working`, then `To review`, then `Idle`. Inside each, the newest is on top,
-  so the agent that just finished or just stopped is the first you see; one
-  waiting on you longest still leads `Needs you`.
+### The board says what to look at again
+
+The board is back in sections by what each agent needs: `Needs you`, then
+`Working`, then `To review`, then `Idle`, with the newest on top in each, so
+the agent that just finished or just stopped is the first you see.
+
+> [!TIP]
+> Try it: tap a section's name, like `Idle`, to fold it; the fold is kept.
+
 - Every agent is one row, except the first one that needs you, which keeps
   its card with the answers. Under each title, the row says which feature it
   is: the repo, the branch and the agent (`herdr-mobile · fix/login · omp`),
   and the machine when you have several.
+- In `Needs you`, the agent waiting longest still leads, so its card does not
+  change under your thumb when another agent starts waiting.
 - The `Agent list` setting (`Compact` or `Cards`) is gone from Settings,
   `Look`: the board is always rows.
-- Tap a section's name to fold it; the fold is kept. `Idle` shows its five
-  newest and folds the rest behind `N more idle`; an agent you saw while
-  looking stays in view until you next open the board.
-- The dotted `to review` count at the top still selects the finished agents,
+- `Idle` shows its five newest and folds the rest behind `N more idle`; an
+  agent you saw while looking stays in view until you next open the board.
+- The dotted "to review" count at the top still selects the finished agents,
   and `Reviewed` in the bar still marks them all with one `Undo`.
+
+**Fixed**
+
+- Idle agents no longer show as cards with `Reply…`, and one repo is no
+  longer split into a group per machine.
 
 ## [0.1.47] - 2026-10-30
 
