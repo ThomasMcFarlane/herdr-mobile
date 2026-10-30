@@ -14,6 +14,7 @@ import 'package:herdr_mobile/data/repositories/agent_session_repository.dart';
 import 'package:herdr_mobile/data/repositories/attention_set.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_session_rows.dart';
+import 'package:herdr_mobile/ui/features/agents/batch_action_bar.dart';
 import 'package:herdr_mobile/ui/shell/home_shell.dart';
 import 'package:provider/provider.dart';
 
@@ -114,10 +115,15 @@ double _top(WidgetTester tester, Finder f) => tester.getTopLeft(f).dy;
 /// Sessions whose finished turn nobody looked at.
 int _toReview(_Env e) => e.repo.sessions.where(AttentionSet.sessionToReview).length;
 
-/// What the To review line counts (0 when there is none).
-int _doneCount(WidgetTester tester) {
-  final done = _section('To review');
-  return done.evaluate().isEmpty ? 0 : tester.widget<SectionLabel>(done).count ?? 0;
+/// What the status line counts to review (0 when there is none).
+int _doneCount(WidgetTester tester) => toReviewCount(tester);
+
+/// Marks everything to review reviewed, as the person does: the status
+/// line's `N to review` picks them, the batch bar's Reviewed marks them.
+Future<void> _markAllReviewed(WidgetTester tester) async {
+  await tester.tap(find.byKey(toReviewKey));
+  await _settle(tester);
+  await tester.tap(find.descendant(of: find.byType(BatchActionBar), matching: find.text('Reviewed')));
 }
 
 void main() {
@@ -142,9 +148,9 @@ void main() {
       expect(find.descendant(of: _row('Refactor billing'), matching: _said('working, under a minute')), findsOneWidget);
       expect(find.descendant(of: _row('Fix login'), matching: _said('idle, under a minute')), findsOneWidget);
       expect(
-        _top(tester, _row('Refactor billing')),
-        lessThan(_top(tester, _project('/home/u/api'))),
-        reason: 'a project with work running before an idle one',
+        _top(tester, _project('/home/u/api')),
+        lessThan(_top(tester, _row('Refactor billing'))),
+        reason: 'projects by name, whatever their agents are doing',
       );
       expect(_top(tester, _row('Fix login')), greaterThan(_top(tester, _project('/home/u/api'))));
       await _teardown(tester, e);
@@ -210,9 +216,7 @@ void main() {
       await _teardown(tester, e);
     });
 
-    testWidgets('the status line counts what needs you, panes and sessions; To review what is to review', (
-      tester,
-    ) async {
+    testWidgets('the status line counts what needs you, panes and sessions, and what is to review', (tester) async {
       final semantics = tester.ensureSemantics();
       final e = await _env(panes: [_pane(1, 'blocked'), _pane(2, 'done')]);
       final blocked = e.host.add(id: 'k1', title: 'Blocked one');
@@ -512,7 +516,9 @@ void main() {
       await _teardown(tester, e);
     });
 
-    testWidgets('Mark all reviewed clears finished panes and sessions with one toast and one Undo', (tester) async {
+    testWidgets('to review, then Reviewed, clears finished panes and sessions with one toast and one Undo', (
+      tester,
+    ) async {
       final semantics = tester.ensureSemantics();
       final e = await _env(panes: [_pane(1, 'done'), _pane(2, 'done'), _pane(3, 'working')]);
       e.host.add(id: 'k1', title: 'Docs');
@@ -526,7 +532,7 @@ void main() {
       await _settle(tester);
       expect(_doneCount(tester), 4);
 
-      await tester.tap(find.byKey(const ValueKey('mark-all-reviewed')));
+      await _markAllReviewed(tester);
       await _settle(tester, 10);
 
       expect(paneStatus(e, 1), AgentStatus.idle);
@@ -552,7 +558,7 @@ void main() {
       await _teardown(tester, e);
     });
 
-    testWidgets('Mark all reviewed after a swipe joins its toast, and Undo takes back both', (tester) async {
+    testWidgets('Reviewed after a swipe joins its toast, and Undo takes back both', (tester) async {
       final e = await _env(panes: [_pane(1, 'done')]);
       e.host.add(id: 'k1', title: 'Docs');
       e.host.add(id: 'k2', title: 'Billing');
@@ -564,7 +570,7 @@ void main() {
       await _settle(tester, 10);
       expect(find.text('Marked reviewed'), findsOneWidget);
 
-      await tester.tap(find.byKey(const ValueKey('mark-all-reviewed')));
+      await _markAllReviewed(tester);
       await _settle(tester, 10);
       expect(find.text('Marked 3 reviewed'), findsOneWidget, reason: 'the swipe, the pane and the other session');
 
@@ -576,22 +582,23 @@ void main() {
       await _teardown(tester, e);
     });
 
-    testWidgets('with only sessions finished, the Done header carries Mark all reviewed', (tester) async {
+    testWidgets('with only sessions finished, the status line offers them to review', (tester) async {
       final e = await _env(panes: [_pane(1, 'working')]);
       e.host.add(id: 'k1', title: 'Docs');
       e.host.add(id: 'k2', title: 'Billing');
       await _pump(tester, e);
-      expect(find.byKey(const ValueKey('mark-all-reviewed')), findsNothing, reason: 'nothing to clear');
+      expect(find.byKey(toReviewKey), findsNothing, reason: 'nothing to clear');
       await finish(tester, e, 'k1');
       await finish(tester, e, 'k2');
-      expect(find.byKey(const ValueKey('mark-all-reviewed')), findsOneWidget);
+      expect(find.byKey(toReviewKey), findsOneWidget);
 
-      await tester.tap(find.byKey(const ValueKey('mark-all-reviewed')));
+      await _markAllReviewed(tester);
       await _settle(tester, 10);
 
       expect(find.text('Marked 2 reviewed'), findsOneWidget);
       expect(_toReview(e), 0);
-      expect(find.byKey(const ValueKey('mark-all-reviewed')), findsNothing, reason: 'nothing left to clear');
+      expect(find.byKey(toReviewKey), findsNothing, reason: 'nothing left to clear');
+      expect(find.text('2 selected'), findsNothing, reason: 'picking ends with the batch');
       await _teardown(tester, e);
     });
   });

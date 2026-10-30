@@ -254,6 +254,32 @@ String? statusNeedsYou(WidgetTester tester) {
   return null;
 }
 
+/// Home's status line as it reads (`2 need you · 3 to review · 1 working`),
+/// the words of its `to review` button in its place.
+String statusLine(WidgetTester tester) {
+  final line = find.descendant(
+    of: find.byType(SliverLargeTitle),
+    matching: find.byWidgetPredicate((w) => w is Text && w.textSpan != null),
+  );
+  final out = StringBuffer();
+  tester.widget<Text>(line.first).textSpan!.visitChildren((span) {
+    if (span is TextSpan) {
+      out.write(span.text ?? '');
+    } else if (span is WidgetSpan && span.child.key == toReviewKey) {
+      out.write(tester.widget<Text>(find.descendant(of: find.byKey(toReviewKey), matching: find.byType(Text))).data);
+    }
+    return true;
+  });
+  return out.toString();
+}
+
+/// The status line's `3 to review`, a button that picks those agents.
+const toReviewKey = ValueKey('to-review');
+
+/// What the status line counts to review (0 when it says nothing is).
+int toReviewCount(WidgetTester tester) =>
+    int.tryParse(RegExp(r'(\d+) to review').firstMatch(statusLine(tester))?.group(1) ?? '') ?? 0;
+
 /// Opens a page from home's header, as the person does: the machines chip
 /// for Machines, the gear for Settings.
 Future<void> openHomePage(WidgetTester tester, String page) async {

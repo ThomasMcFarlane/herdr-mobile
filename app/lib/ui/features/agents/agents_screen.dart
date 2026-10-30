@@ -40,8 +40,10 @@ import 'swipe_review.dart';
 /// repo in separate worktrees, and status sections scattered one repo's
 /// features across Working, Done and Idle. Terminal agents and agent sessions
 /// share every place, so "what waits" has one place to look. Needs you and
-/// To review count and order what [AttentionSet] says, the same as the triage
-/// sheet and the notifications.
+/// the status line's `to review` count and order what [AttentionSet] says,
+/// the same as the triage sheet and the notifications. Nothing on it moves
+/// unless the person moves it: projects by name, rows in the order they were
+/// started ([boardLayout]).
 ///
 /// Calm by default: one status line says the count once, the first waiting
 /// agent is a card with its answers and every other agent is a row. Why: the
@@ -108,6 +110,9 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
   final _measure = <String, GlobalKey>{};
   final _folding = <String, ({double height, Key? after, int at})>{};
   List<AgentEntry> _lastEntries = const [];
+
+  // The layout the last build showed: what `to review` unfolds to show.
+  BoardLayout _layout = const BoardLayout();
 
   @override
   String get restorationId => 'agents';
@@ -266,7 +271,7 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
     }
 
     final sessionList = sessions?.sessions ?? const <AgentSessionView>[];
-    final layout = boardLayout(overview.agents, sessionList, attention);
+    final layout = _layout = boardLayout(overview.agents, sessionList, attention);
     _askBranches(layout);
     final entries = boardEntries(
       layout,
@@ -280,7 +285,6 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
 
     final troubled = overview.troubled;
     final needYouCount = attention.needsYou.length;
-    final review = attention.toReview.length;
     final working = layout.working;
 
     // What All picks: the rows the board shows (open groups),
@@ -297,6 +301,9 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
 
     final status = _StatusLine(
       waiting: needYouCount,
+      review: layout.toReviewCount,
+      reviewOffline: layout.toReviewOffline,
+      onReview: _selectToReview,
       working: working,
       agents: overview.agents.length + sessionList.length,
       machines: overview.machineCount,
@@ -388,19 +395,10 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
                   onTap: null,
                   actions: _needsYouActions(h, needYou: needYouCount),
                 ),
-                // With only offline ones listed: "To review · 2 offline", not
-                // a 0 that reads as a count of nothing beside them.
-                final ReviewHeader h => _SectionHeader(
-                  key: h.key,
-                  label: _toReview,
-                  count: h.count == 0 && h.offline > 0 ? null : h.count,
-                  expanded: null,
-                  onTap: null,
-                  actions: _reviewActions(h, review: review),
-                ),
                 final GroupHeader h => _GroupHeader(
                   key: h.key,
                   label: h.group.label,
+                  machine: h.machine,
                   summary: h.summary,
                   expanded: h.expanded,
                   onTap: () => _toggleGroup(h.group.key),
@@ -457,7 +455,10 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
               left: 0,
               right: 0,
               bottom: 0,
-              child: BatchActionBar(onAction: (action) => unawaited(performBatchAction(context, action, _selection))),
+              child: BatchActionBar(
+                onAction: (action) => unawaited(performBatchAction(context, action, _selection)),
+                onReview: _markReviewed,
+              ),
             ),
           ],
         ),
@@ -549,78 +550,53 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
     ],
   );
 
-  /// What the `To review` line carries: the offline note, then "Mark
-  /// reviewed" when something can be marked (an offline agent cannot: it is
-  /// not counted and the note says why, instead of a button that would do
-  /// nothing) and "Select all". One line above the groups rather than one per
-  /// group: Mark reviewed is one batch (one toast, one Undo) over every
-  /// finished agent wherever it is listed, and Select all picks them all for
-  /// one batch action; split per project they would be several batches. The
-  /// words were "Mark all reviewed" and wrapped on a 320 dp phone.
-  _HeaderActions _reviewActions(ReviewHeader h, {required int review}) => _HeaderActions(
-    offline: h.offline,
-    actions: [
-      if (review > 0)
-        (
-          key: const ValueKey('mark-all-reviewed'),
-          label: 'Mark reviewed',
-          tone: TextActionTone.quiet,
-          onTap: _markAllReviewed,
-        ),
-      (key: const ValueKey('select-all-done'), label: 'Select all', tone: TextActionTone.quiet, onTap: _selectAllDone),
-    ],
-  );
-
   static const _answerOneByOne = 'Answer one by one';
-  static const _toReview = 'To review';
 
-  /// Picks every finished agent (terminal and session), opening the groups
-  /// they sit in (and a fold that hides one) so that what is picked is on
-  /// screen.
-  void _selectAllDone() {
-    final overview = AgentsOverview.of(context.read<FleetRepository>());
-    final sessions = _sessions?.sessions ?? const <AgentSessionView>[];
-    final attention = context.read<AttentionSet>();
-    final layout = boardLayout(overview.agents, sessions, attention);
-    bool isDone(BoardItem item) => statusOfItem(item) == AgentStatus.done;
-    final done = <String>[];
+  /// The status line's `3 to review`: picks exactly the finished agents that
+  /// can be marked ([toReviewRefs]), for the batch bar's Reviewed (one toast,
+  /// one Undo) or any other batch action, and opens the projects (and a fold)
+  /// holding them so that what is picked is on screen. Why a selection and
+  /// not a Mark reviewed at once: the person sees what they clear before they
+  /// clear it, and can drop one.
+  void _selectToReview() {
+    final refs = toReviewRefs(context.read<AttentionSet>());
+    if (refs.isEmpty) return;
+    String refOf(BoardItem item) => switch (item) {
+      PaneItem(:final row) => paneRef(row.key),
+      SessionItem(:final session) => sessionRef(session.key),
+    };
     final groups = <String>{};
     final folds = <String>{};
-    for (final g in layout.groups) {
-      for (final item in g.items.where(isDone)) {
-        groups.add(g.key);
-        done.add(switch (item) {
-          PaneItem(:final row) => paneRef(row.key),
-          SessionItem(:final session) => sessionRef(session.key),
-        });
-      }
-      if (foldedItems(g).any(isDone)) folds.add(g.key);
+    for (final g in _layout.groups) {
+      if (g.items.any((i) => refs.contains(refOf(i)))) groups.add(g.key);
+      if (foldedItems(g).any((i) => refs.contains(refOf(i)))) folds.add(g.key);
     }
-    if (done.isEmpty) return;
     setState(() {
       _setFolded(_foldedKeys.difference(groups));
       _openFolds.addAll(folds);
     });
-    _selection.selectAll(done);
+    _selection.selectOnly(refs);
   }
 
-  /// Marks every finished terminal agent and agent session reviewed at once,
-  /// with one toast and one Undo: the "to review" of [AttentionSet], what a
-  /// swipe could mark (reachable).
-  void _markAllReviewed() {
+  /// The batch bar's Reviewed: marks the picked agents that are to review
+  /// ([refs]) reviewed at once, under one toast whose Undo restores them
+  /// all, and ends picking.
+  void _markReviewed(Set<String> refs) {
     final toReview = context.read<AttentionSet>().toReview;
     final n = markAllReviewedWithUndo(
       context,
       panes: [
         for (final item in toReview)
-          if (item case PaneAttention(:final agent)) (machine: agent.machine, paneId: agent.pane.id),
+          if (item case PaneAttention(:final agent) when refs.contains(paneRef(item.key)))
+            (machine: agent.machine, paneId: agent.pane.id),
       ],
       sessions: [
         for (final item in toReview)
-          if (item case SessionAttention(:final session)) session,
+          if (item case SessionAttention(:final session) when refs.contains(sessionRef(session.key))) session,
       ],
     );
     if (n > 0) Haptics.sent();
+    _selection.cancel();
   }
 
   void _queueRetain() {
@@ -655,8 +631,7 @@ class _OfflineNote extends StatelessWidget {
 typedef _HeaderAction = ({Key key, String label, TextActionTone tone, VoidCallback onTap});
 
 /// What a header carries after its name: the note of how many of its agents
-/// are offline, then its ghost buttons (Needs you's walk, To review's "Mark
-/// reviewed" and "Select all").
+/// are offline, then its ghost buttons (Needs you's walk).
 class _HeaderActions {
   const _HeaderActions({required this.actions, this.offline = 0, this.holdsFor});
 
@@ -790,7 +765,9 @@ class _SectionHeader extends StatelessWidget {
 /// already uses (`2 working · 1 done · 4 worktrees`). A tap folds it; folded,
 /// the summary is what still says what is inside. Quiet on purpose: the
 /// name of a thing in the text colour, the summary muted, no count in a
-/// status colour (attention is Needs you's, pinned above).
+/// status colour (attention is Needs you's, pinned above). Without a summary
+/// (one agent, or the only project) it is one line, the machine muted beside
+/// the name when the board spans several.
 class _GroupHeader extends StatelessWidget {
   const _GroupHeader({
     super.key,
@@ -798,9 +775,11 @@ class _GroupHeader extends StatelessWidget {
     required this.summary,
     required this.expanded,
     required this.onTap,
+    this.machine,
   });
 
   final String label;
+  final String? machine;
   final String summary;
   final bool expanded;
   final VoidCallback onTap;
@@ -825,9 +804,21 @@ class _GroupHeader extends StatelessWidget {
             children: [
               Row(
                 children: [
+                  // One text: the name keeps its room and the machine after
+                  // it gives way first (two flexible boxes split the row and
+                  // cut a short name's machine at 320 dp).
                   Flexible(
-                    child: Text(
-                      label,
+                    child: Text.rich(
+                      TextSpan(
+                        text: label,
+                        children: [
+                          if (machine case final machine?)
+                            TextSpan(
+                              text: '  $machine',
+                              style: Type.secondary.copyWith(color: ds.textMuted),
+                            ),
+                        ],
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Type.row.copyWith(color: ds.text),
@@ -891,15 +882,20 @@ String? heardLabel(List<MachineConnection> connections) {
       : 'heard ${Elapsed.compact(oldest, seconds: false)} ago';
 }
 
-/// The board's one status line: `2 need you · 3 working · heard just now ·
-/// 1 not connected`. The needs-you count is the only loud words on it (the
-/// blocked text colour), and the only place the board says it. A board with nothing waiting or working says
+/// The board's one status line: `2 need you · 3 to review · 3 working ·
+/// heard just now · 1 not connected`. The needs-you count is the only loud
+/// words on it (the blocked text colour), and the only place the board says
+/// it. `3 to review` is a quiet button: a tap picks those agents for the
+/// batch bar's Reviewed. A board with nothing waiting or working says
 /// `nothing running`, so the line always answers "is everything alive?".
 /// Counts are tabular, so a number that changes does not shift the words
 /// after it.
 class _StatusLine {
   const _StatusLine({
     required this.waiting,
+    required this.review,
+    required this.reviewOffline,
+    required this.onReview,
     required this.working,
     required this.agents,
     required this.machines,
@@ -907,6 +903,12 @@ class _StatusLine {
   });
 
   final int waiting;
+
+  /// Finished agents that can be marked reviewed, and those out of reach
+  /// (listed, last known, but not counted: nothing can mark them now).
+  final int review;
+  final int reviewOffline;
+  final VoidCallback onReview;
   final int working;
   final int agents;
   final int machines;
@@ -916,26 +918,51 @@ class _StatusLine {
   /// for measuring.
   static const longestHeard = 'heard 23h 59m ago';
 
-  /// The facts in order; the needs-you count is the loud one.
-  List<({String text, bool loud})> _facts(String? heard) {
+  /// The facts in order; the needs-you count is the loud one, the review
+  /// count the button.
+  List<_Fact> _facts(String? heard) {
     final quiet = [
       if (working > 0) '$working working' else if (waiting == 0 && agents > 0) 'nothing running',
       ?heard,
       if (troubled > 0) '$troubled not connected',
     ];
-    if (waiting == 0 && quiet.isEmpty) quiet.add(countOf(machines, 'machine'));
-    return [if (waiting > 0) (text: needYou(waiting), loud: true), for (final q in quiet) (text: q, loud: false)];
+    if (waiting == 0 && review + reviewOffline == 0 && quiet.isEmpty) quiet.add(countOf(machines, 'machine'));
+    return [
+      if (waiting > 0) (text: needYou(waiting), kind: _FactKind.loud, tail: ''),
+      // Offline ones are said, not counted: `3 to review, 1 offline`, or
+      // `2 offline to review` when none can be marked now.
+      if (review > 0)
+        (text: '$review to review', kind: _FactKind.review, tail: reviewOffline > 0 ? ', $reviewOffline offline' : '')
+      else if (reviewOffline > 0)
+        (text: '$reviewOffline offline to review', kind: _FactKind.quiet, tail: ''),
+      for (final q in quiet) (text: q, kind: _FactKind.quiet, tail: ''),
+    ];
   }
 
-  static TextSpan _join(Ds ds, List<({String text, bool loud})> facts, {int breakAt = -1}) => TextSpan(
+  /// The line. [onReview] null: for measuring, the button as plain words of
+  /// the same style and width.
+  static TextSpan _join(Ds ds, List<_Fact> facts, {int breakAt = -1, VoidCallback? onReview}) => TextSpan(
     style: Type.secondary.copyWith(color: ds.textSecondary, fontFeatures: Type.tabular),
     children: [
       for (final (i, f) in facts.indexed) ...[
         if (i > 0) TextSpan(text: i == breakAt ? '\n' : ' · '),
-        TextSpan(
-          text: f.text,
-          style: f.loud ? Type.secondaryStrong.copyWith(color: ds.blockedText, fontFeatures: Type.tabular) : null,
-        ),
+        switch (f.kind) {
+          _FactKind.loud => TextSpan(
+            text: f.text,
+            style: Type.secondaryStrong.copyWith(color: ds.blockedText, fontFeatures: Type.tabular),
+          ),
+          _FactKind.quiet => TextSpan(text: f.text),
+          _FactKind.review when onReview == null => TextSpan(
+            text: f.text,
+            style: _ReviewCount.style(ds, pressed: false),
+          ),
+          _FactKind.review => WidgetSpan(
+            alignment: PlaceholderAlignment.baseline,
+            baseline: TextBaseline.alphabetic,
+            child: _ReviewCount(key: const ValueKey('to-review'), text: f.text, onTap: onReview!),
+          ),
+        },
+        if (f.tail.isNotEmpty) TextSpan(text: f.tail),
       ],
     ],
   );
@@ -946,13 +973,12 @@ class _StatusLine {
   TextSpan span(BuildContext context, {required String? heard}) {
     final ds = context.ds;
     final facts = _facts(heard);
-    final whole = _join(ds, facts);
-    if (_fits(context, whole)) return whole;
+    if (_fits(context, _join(ds, facts))) return _join(ds, facts, onReview: onReview);
     var at = facts.length - 1;
     while (at > 1 && !_fits(context, _join(ds, facts.sublist(0, at)))) {
       at--;
     }
-    return _join(ds, facts, breakAt: at);
+    return _join(ds, facts, breakAt: at, onReview: onReview);
   }
 
   /// 1, or 2 when the line does not fit the large title's width.
@@ -971,6 +997,43 @@ class _StatusLine {
     painter.dispose();
     return fits;
   }
+}
+
+enum _FactKind { loud, quiet, review }
+
+/// One fact of the status line: its words, how they are drawn, and words
+/// that follow it without a break (`, 1 offline`).
+typedef _Fact = ({String text, _FactKind kind, String tail});
+
+/// `3 to review` on the status line: a quiet button (secondary words, bold as
+/// a quiet [TextAction] is, warming to the text colour on pointer-down). It
+/// paints at the line's height; the large title gives the status line a
+/// 44 dp band to hit ([SliverLargeTitle]), so the thumb need not find a
+/// 22 dp line.
+class _ReviewCount extends StatelessWidget {
+  const _ReviewCount({super.key, required this.text, required this.onTap});
+
+  final String text;
+  final VoidCallback onTap;
+
+  static TextStyle style(Ds ds, {required bool pressed}) =>
+      Type.secondaryStrong.copyWith(color: pressed ? ds.text : ds.textSecondary, fontFeatures: Type.tabular);
+
+  @override
+  // A node of its own: inline, its button would take the whole line's words.
+  Widget build(BuildContext context) => Semantics(
+    container: true,
+    child: PressBuilder(
+      onTap: onTap,
+      haptic: true,
+      button: true,
+      semanticLabel: '$text, select them',
+      // The line scales an inline widget by its text scale itself.
+      builder: (context, pressed) => MediaQuery.withNoTextScaling(
+        child: Text(text, maxLines: 1, style: style(context.ds, pressed: pressed)),
+      ),
+    ),
+  );
 }
 
 /// Machines that are not connected, in one line. One machine is named and can

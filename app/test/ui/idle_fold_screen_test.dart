@@ -1,5 +1,5 @@
-// The Idle section of the agents tab through the real shell: a long list folds
-// behind one line that says how many and what, and opens in place.
+// A project's idle rows through the real shell: a long list folds its older
+// rows behind one line that says how many and what, and opens them in place.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/machine_profile.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_more_row.dart';
@@ -20,28 +20,39 @@ void main() {
     ),
   ]);
 
-  testWidgets('27 idle agents show five, then one line that names the next two; a tap opens it, a tap closes it', (
+  testWidgets('27 idle agents show the five started last, then one line that names the first two it holds', (
     tester,
   ) async {
     final h = await fleet(27);
     await pumpUi(tester, h, height: 3000);
 
-    expect(find.text('Task 05'), findsOneWidget);
-    expect(find.text('Task 06'), findsNothing, reason: 'folded away');
+    expect(find.text('Task 23'), findsOneWidget);
+    expect(find.text('Task 27'), findsOneWidget);
+    expect(find.text('Task 22'), findsNothing, reason: 'folded away');
     final fold = find.byType(AgentMoreRow);
     expect(fold, findsOneWidget);
+    expect(
+      tester.getTopLeft(fold).dy,
+      greaterThan(tester.getTopLeft(find.text('Task 27')).dy),
+      reason: 'after the rows',
+    );
     expect(find.text('${27 - idleShown} more idle'), findsOneWidget);
-    expect(find.text('Task 06 \u00B7 Task 07'), findsOneWidget, reason: 'what is inside, not a guess');
+    expect(find.text('Task 01 \u00B7 Task 02'), findsOneWidget, reason: 'what is inside, not a guess');
 
     await tester.tap(fold);
     await settle(tester);
-    expect(find.text('Task 27'), findsOneWidget, reason: 'every row shows');
+    expect(find.text('Task 01'), findsOneWidget, reason: 'every row shows');
+    expect(
+      tester.getTopLeft(find.text('Task 01')).dy,
+      lessThan(tester.getTopLeft(find.text('Task 27')).dy),
+      reason: 'in its own place',
+    );
     expect(find.text('Show less'), findsOneWidget);
     expect(find.textContaining('more idle'), findsNothing);
 
     await tester.tap(find.text('Show less'));
     await settle(tester);
-    expect(find.text('Task 06'), findsNothing);
+    expect(find.text('Task 01'), findsNothing);
     expect(find.text('${27 - idleShown} more idle'), findsOneWidget);
     await teardownUi(tester, h);
   });

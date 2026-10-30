@@ -66,7 +66,9 @@ void main() {
   setUpAll(loadAppFonts);
 
   group('sections', () {
-    testWidgets('Needs you first, then the project by urgency; a project folds, Needs you stays', (tester) async {
+    testWidgets('Needs you first, then the project in the order its agents started; it folds, Needs you stays', (
+      tester,
+    ) async {
       final h = await UiHarness.create([
         (
           profile: _machine('a', 'workstation'),
@@ -80,8 +82,8 @@ void main() {
       await pumpUi(tester, h, height: _tall);
 
       double y(String t) => tester.getTopLeft(_row(t)).dy;
-      expect(y('task 3'), lessThan(y('task 2')));
-      expect(y('task 2'), lessThan(y('task 1')));
+      expect(y('task 3'), lessThan(y('task 1')));
+      expect(y('task 1'), lessThan(y('task 2')), reason: 'started first, though idle');
 
       await tester.tap(_project('/work/w1'));
       await settle(tester);
@@ -131,7 +133,7 @@ void main() {
     testWidgets('a row says what tells it apart in its project; the project names the machine only among several', (
       tester,
     ) async {
-      Future<void> expectLine(List<String> machines, String line, String summary) async {
+      Future<void> expectLine(List<String> machines, String line, String? machine) async {
         final h = await UiHarness.create([
           for (final id in machines)
             (
@@ -143,13 +145,18 @@ void main() {
         ]);
         await pumpUi(tester, h, height: _tall);
         expect(find.descendant(of: _row('Task'), matching: find.text(line)), findsOneWidget);
-        expect(find.descendant(of: _project('/src/main'), matching: _summary(summary)), findsOneWidget);
+        // One agent: no summary line; the machine sits beside the name.
+        expect(find.descendant(of: _project('/src/main'), matching: _summary('working', whole: false)), findsNothing);
+        expect(
+          find.descendant(of: _project('/src/main'), matching: find.textContaining('box-a', findRichText: true)),
+          findsNWidgets(machine == null ? 0 : 1),
+        );
         await teardownUi(tester, h);
       }
 
       // The folder is the project's name, so the row does not repeat it.
-      await expectLine(['a'], 'Claude Code', '1 working');
-      await expectLine(['a', 'b'], 'Claude Code', 'box-a · 1 working');
+      await expectLine(['a'], 'Claude Code', null);
+      await expectLine(['a', 'b'], 'Claude Code', 'box-a');
     });
 
     testWidgets('120 agents in one section: counted in full, the list ends clear of the bottom edge', (tester) async {
@@ -236,7 +243,6 @@ void main() {
       expect(reads(), 1, reason: 'one repo with several checkouts: one read');
       expect(find.descendant(of: _row('task 2'), matching: find.text('fix/login · Claude Code')), findsOneWidget);
       expect(find.descendant(of: _row('task 1'), matching: find.text('main · Claude Code')), findsOneWidget);
-      expect(find.descendant(of: _project(primary), matching: _summary('2 worktrees', whole: false)), findsOneWidget);
 
       for (final status in ['done', 'working', 'idle']) {
         transport.snapshot = repoSnapshot(panes(status));
@@ -493,32 +499,28 @@ void main() {
       });
     }
 
-    testWidgets('To review\'s actions fit beside its name at 320 dp, and drop under it at 2x', (tester) async {
+    testWidgets('the to-review count stays whole and tappable at 320 dp and 2x, beside a long line', (tester) async {
       final h = await UiHarness.create([
         (
           profile: _machine('a', 'studio'),
-          snapshot: snapshotWith([_pane(1, 'done'), _pane(2, 'done'), _pane(3, 'working')]),
+          snapshot: snapshotWith([_pane(1, 'blocked'), _pane(2, 'done'), _pane(3, 'done'), _pane(4, 'working')]),
         ),
+        (profile: _machine('b', 'laptop'), snapshot: snapshotWith([_pane(5, 'working')])),
       ]);
-      final done = find.descendant(of: find.byType(SectionLabel), matching: find.text('To review'));
-      final mark = find.text('Mark reviewed');
-
-      await pumpUi(tester, h, width: 320, height: _tall);
-      expect(mark, findsOneWidget);
-      final oneLine = Type.labelStrong.fontSize! * 2;
-      expect(tester.getSize(mark).height, lessThan(oneLine), reason: 'one line, not wrapped');
-      expect(
-        (tester.getCenter(mark).dy - tester.getCenter(done).dy).abs(),
-        lessThan(2),
-        reason: 'beside the section\'s name',
-      );
-
       await pumpUi(tester, h, width: 320, height: _tall, textScale: 2);
-      expect(paragraph(tester, done).didExceedMaxLines, isFalse, reason: 'the line\'s name is never "To…"');
-      expect(paragraph(tester, mark).didExceedMaxLines, isFalse);
-      expect(tester.getRect(mark).top, greaterThan(tester.getRect(done).bottom), reason: 'on its own line');
-      expect(mark.hitTestable(), findsOneWidget);
-      expect(find.text('Select all').hitTestable(), findsOneWidget);
+      h.transports['b']!.failure = const HerdrTransportException('Host key changed', fatal: true);
+      h.fleet.connection('b')!.reconnect();
+      await settle(tester);
+
+      final count = find.descendant(of: find.byKey(const ValueKey('to-review')), matching: find.text('2 to review'));
+      expect(count, findsOneWidget);
+      expect(paragraph(tester, count).didExceedMaxLines, isFalse);
+      expect(count.hitTestable(), findsOneWidget);
+      final line = find.descendant(
+        of: find.byType(SliverLargeTitle),
+        matching: find.textContaining('not connected', findRichText: true),
+      );
+      expect(paragraph(tester, line).didExceedMaxLines, isFalse, reason: 'the end still shows');
       expect(tester.takeException(), isNull);
       await teardownUi(tester, h);
     });

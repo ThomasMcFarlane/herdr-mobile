@@ -267,9 +267,9 @@ void main() {
       await _open(tester, 'w1:p4');
 
       await _swipeLeft(tester);
-      expect(_onScreen(tester), 'w2:p2', reason: 'its project has work running, so the board lists it first');
+      expect(_onScreen(tester), 'w1:p1', reason: 'projects in name order, as the board lists them');
       await _swipeLeft(tester);
-      expect(_onScreen(tester), 'w1:p1');
+      expect(_onScreen(tester), 'w2:p2', reason: 'though its project has work running');
       await teardownUi(tester, h);
     });
 

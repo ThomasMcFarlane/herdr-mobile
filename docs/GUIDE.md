@@ -163,22 +163,27 @@ nothing under it. It holds both kinds of agent:
   project it is in. Longest waiting first. The first is a card with its
   answers; the others are rows under it, and `Answer one by one` on the header
   walks through them all (see below). It never folds.
-- `To review`: how many finished agents you have not looked at, with
-  `Mark reviewed` and `Select all` (see below). Shown while there are any.
 - Then one group per project: a repo with all its worktrees together, else
   a folder (agents with no folder at all are under `Other`). The header is
   the repo's or folder's name and one line saying what is in it
   (`2 working · 1 done · 4 worktrees`, led by the machine when you have
-  several). Each agent is a row named by its task, with its branch (or its
-  checkout's folder) and the agent under it: `fix/rate-limit · omp`. Inside a
-  project: working first, then done, then idle, then anything offline or
-  ended, the most recent first. Projects with work running come first, then
-  those with finished work, then idle ones.
+  several). A project with one agent, or the only project on the board, has
+  no such line; its machine, when you have several, sits beside its name.
+  Each agent is a row named by its task, with its branch (or its checkout's
+  folder) and the agent under it: `fix/rate-limit · omp`.
+
+**Nothing moves unless you move it.** Projects are in name order (then
+machine). Inside a project, agents are in the order they were started:
+terminal agents in herdr's order, then agent sessions by when they started. A
+new agent joins the end of its project; an agent that finishes, starts or
+goes idle stays where it is and only its mark changes. Only `Needs you`
+follows the wait: an agent that needs you moves up there, and goes back to
+its place once answered.
 
 Tap a project's header to fold it; the fold is kept. In a project with many
-idle agents the first five show; the rest sit behind one line (`22 more idle`,
-with the names of the first two under it) that opens them in place and then
-reads `Show less`.
+idle agents the five started last show; the older ones sit behind one line
+after the project's rows (`22 more idle`, with the names of the first two)
+that opens them in their places and then reads `Show less`.
 
 **Branches.** herdr groups a repo's checkouts once you open a worktree in it;
 before that, each folder is its own project. The board reads the branches of
@@ -194,7 +199,7 @@ an agent session) and the gear for Settings, which carries a small dot when a
 newer version is out.
 
 **The status line.** Under the title, one line says how the board stands:
-`2 need you · 3 working · heard just now`, then `1 not connected` when a
+`2 need you · 3 to review · 3 working · heard just now`, then `1 not connected` when a
 machine is out of reach (its strip under the title says which, with `Retry`).
 With nothing waiting or working it says `nothing running`.
 
@@ -204,8 +209,7 @@ looked has no date of its own; an omp agent whose session is reported (see
 below) is dated by when its session file was last written, which is when its
 last turn ended. A phone session is dated by when it last did anything. An
 agent with no date was idle before the app first looked, so it may be an hour
-old or a month: it sits between the ones that stopped within a day and the older
-ones, in machine and pane order, rather than under them.
+old or a month.
 
 **What an agent is called.** The name you gave the pane in herdr, else the
 title the program set. An omp pane whose title is only its folder (omp shows
@@ -228,8 +232,8 @@ Look > `Agent list`: `Compact` or `Cards`.
 status line, the triage sheet and the notifications all count the same
 set. The board says it once, in the status line. It counts only agents you can answer now: an agent on a
 machine that is offline is listed, dimmed and marked `offline`, but not
-counted (the `Needs you` header or the `To review` line says `2 offline`
-instead).
+counted (the `Needs you` header says `2 offline` instead, and the status line
+`1 offline to review`, or `3 to review, 1 offline`).
 
 **Answer one by one.** When more than one agent needs you, `Answer one by one`
 on the `Needs you` header walks through every waiting agent, one at a time, longest waiting first (`1 of 2 need you`, `Previous agent`,
@@ -237,21 +241,25 @@ on the `Needs you` header walks through every waiting agent, one at a time, long
 session shows what it asks and `Answer in the session`. When the last one is
 answered the sheet says `All clear`.
 
-**Reviewing finished work.** A finished agent shows a check and counts in
-`To review` until you review it:
+**Reviewing finished work.** A finished agent shows a check and counts in the
+status line's `3 to review` until you review it:
 
 - Swipe a done card or row left until it shows `Reviewed`, or flick it.
-- `Mark reviewed` on the `To review` line reviews every finished agent you
-  can reach, in every project, under one `Undo`.
+- Tap `3 to review`: it selects exactly those agents (opening the projects
+  they are in), and `Reviewed` in the bar at the bottom reviews them all
+  under one `Undo`. Drop any you want to keep first.
 - Opening a finished agent session reviews it.
 
 Each shows a `Marked reviewed` toast with `Undo`. This is a mark on the phone
 only; herdr's own state is not touched.
 
 **Selecting several agents.** Long-press a card or row to start selecting;
-taps then add or remove agents (`All` and `Cancel` are at the top,
-`Select all` on the `To review` line picks every finished agent and opens the
-projects they are in). The bar at the bottom offers:
+taps then add or remove agents (`All` and `Cancel` are at the top; `3 to
+review` in the status line picks exactly the finished ones). The bar at the
+bottom offers:
+
+- `Reviewed`: marks the finished agents among them reviewed, at once, with
+  one `Undo`.
 
 - `Stop`: sends Esc to each terminal agent and stops the turn of each
   agent session.

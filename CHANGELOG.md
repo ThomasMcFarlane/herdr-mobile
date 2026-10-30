@@ -10,6 +10,11 @@ release.
   one group per repo (all its worktrees together, else a folder) with a
   one-line summary, and each agent is named by its task with its branch under
   it, so the features of one repo are side by side.
+- Nothing on the board moves unless you move it: projects in name order,
+  agents in the order they were started, and an agent that finishes only
+  changes its mark.
+- `3 to review` in the status line selects the finished agents, and
+  `Reviewed` in the selection bar marks them with one Undo.
 
 ## [0.1.46] - 2026-10-30
 

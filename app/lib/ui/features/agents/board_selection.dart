@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/repositories/agent_session.dart';
+import '../../../data/repositories/attention_set.dart';
 import '../../../data/repositories/batch_actions.dart';
 import '../../../data/repositories/fleet_repository.dart';
 
@@ -54,6 +55,17 @@ class BoardSelection extends ChangeNotifier {
     _notify();
   }
 
+  /// Picks exactly [refs], dropping anything picked before (the status
+  /// line's `3 to review`).
+  void selectOnly(Iterable<String> refs) {
+    if (_busy != null) return;
+    _refs
+      ..clear()
+      ..addAll(refs);
+    _active = true;
+    _notify();
+  }
+
   /// Drops what the board no longer lists. Silent for the person: the count
   /// just goes down.
   void retain(Set<String> live) {
@@ -93,6 +105,16 @@ class BoardSelection extends ChangeNotifier {
     super.dispose();
   }
 }
+
+/// The selection's names of what [attention] says is to review: finished,
+/// not reviewed and reachable, so a Mark reviewed can act on every one.
+Set<String> toReviewRefs(AttentionSet attention) => {
+  for (final item in attention.toReview)
+    switch (item) {
+      PaneAttention(:final agent) => paneRef('${agent.machine.profile.id}/${agent.pane.id}'),
+      SessionAttention(:final session) => sessionRef(session.key),
+    },
+};
 
 /// What a board row needs of the selection.
 typedef RowSelect = ({bool active, bool selected});

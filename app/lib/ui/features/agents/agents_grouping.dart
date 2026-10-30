@@ -336,8 +336,8 @@ class BoardGroup {
   final String label;
   final MachineConnection machine;
 
-  /// Working first, then done, idle, then what is out of reach; recent first
-  /// inside each ([boardLayout]).
+  /// In the order the agents were started ([boardLayout]): a status change
+  /// never moves one.
   final List<GroupRow> rows;
 
   /// The repo's checkouts open in herdr when it has several (`4 worktrees`),
@@ -372,7 +372,7 @@ class BoardLayout {
   final int needsYouOffline;
 
   /// Finished agents not reviewed that can be marked ([AttentionSet.toReview]),
-  /// and those out of reach: the board's `To review` line.
+  /// and those out of reach: the status line's `3 to review`.
   final int toReviewCount;
   final int toReviewOffline;
 
@@ -390,8 +390,9 @@ class BoardLayout {
   int get working => items.where((i) => statusOfItem(i) == AgentStatus.working).length;
 }
 
-/// Where a row sits inside its group: working, done, idle, then what cannot be
-/// reached now (offline, ended) last.
+/// What a row is, for the group's summary and its fold: working (or
+/// waiting), done, idle, then what cannot be reached now (offline, ended).
+/// Not an order: rows keep the order they were started in.
 int _rankOf(BoardItem item) => switch (item) {
   PaneItem(:final row) => row.stale ? 3 : _statusRank(row.status),
   SessionItem(:final session) => AttentionSet.sessionReachable(session) ? _statusRank(boardStatus(session)) : 3,
@@ -404,25 +405,69 @@ int _statusRank(AgentStatus s) => switch (s) {
   AgentStatus.unknown => 3,
 };
 
-/// When a row's state began, as far as known. A working session by its phase
-/// (its activity moves with every event, and the order must not churn while
-/// it streams); any other session by when it last did anything.
-DateTime? _timeOf(BoardItem item) => switch (item) {
-  PaneItem(:final row) => row.since?.at,
-  SessionItem(:final session) =>
-    boardStatus(session) == AgentStatus.working ? session.phaseSince : (session.lastActivity ?? session.phaseSince),
-};
-
 int _quietOf(BoardItem item) => switch (item) {
   PaneItem(:final row) => row.quietMinutes,
   SessionItem() => 0,
 };
 
-/// Newest first; an unknown time after every known one.
-int _newestFirst(DateTime? a, DateTime? b) {
-  if (a != null && b != null) return b.compareTo(a);
-  if (a != null || b != null) return a != null ? -1 : 1;
-  return 0;
+/// A herdr pane id's two counters: `wZ:p4` is pane `4` of workspace `Z`.
+/// herdr numbers both with counters that only grow and never reuses a number
+/// (its `session.json` keeps a `next_public_pane_number` per workspace, and
+/// workspaces are `wB` ... `wZ`, `w11`, `w12` in the order they were made, kept
+/// across restarts), so the pair is the order the panes were started in. Null
+/// for an id of another shape.
+({String workspace, String pane})? herdrPaneCounters(String paneId) {
+  final m = _paneId.firstMatch(paneId);
+  return m == null ? null : (workspace: m.group(1)!, pane: m.group(2)!);
+}
+
+final _paneId = RegExp(r'^w([0-9A-Za-z]+):p([0-9A-Za-z]+)$');
+
+/// Two of herdr's counters (base 36, `Z` < `10`): the shorter is the smaller,
+/// then the text decides.
+int _compareCounters(String a, String b) => a.length != b.length ? a.length - b.length : a.compareTo(b);
+
+/// Where a row sits in its group: the order it was started in, known on the
+/// first frame and never changed by its status.
+typedef _Start = ({int tier, String workspace, String pane, int at, String cwd, String key});
+
+/// Terminal agents first, by herdr's pane counters ([herdrPaneCounters]); a
+/// pane id of another shape after them, by folder then id. Agent sessions
+/// next, by when their keeper started ([AgentSessionView.startedAt]); one the
+/// host gave no time for last, by folder then key. Not the branch: it is read
+/// after the first frame, and rows would shuffle once it arrived.
+_Start _startOf(BoardItem item, String? cwd) {
+  final folder = cwd ?? '';
+  switch (item) {
+    case PaneItem(:final row):
+      final c = herdrPaneCounters(row.paneId);
+      return c == null
+          ? (tier: 1, workspace: '', pane: '', at: 0, cwd: folder, key: row.key)
+          : (tier: 0, workspace: c.workspace, pane: c.pane, at: 0, cwd: folder, key: row.key);
+    case SessionItem(:final session):
+      final at = session.startedAt;
+      return (
+        tier: at == null ? 3 : 2,
+        workspace: '',
+        pane: '',
+        at: at?.millisecondsSinceEpoch ?? 0,
+        cwd: folder,
+        key: session.key,
+      );
+  }
+}
+
+int _byStart(_Start a, _Start b) {
+  final byTier = a.tier.compareTo(b.tier);
+  if (byTier != 0) return byTier;
+  final byWorkspace = _compareCounters(a.workspace, b.workspace);
+  if (byWorkspace != 0) return byWorkspace;
+  final byPane = _compareCounters(a.pane, b.pane);
+  if (byPane != 0) return byPane;
+  final byTime = a.at.compareTo(b.at);
+  if (byTime != 0) return byTime;
+  final byFolder = a.cwd.compareTo(b.cwd);
+  return byFolder != 0 ? byFolder : a.key.compareTo(b.key);
 }
 
 /// The line under a row's title inside its group: the branch checked out
@@ -452,18 +497,14 @@ String _whereInGroup(
 /// Needs you follows [attention]: what can be reached first, longest waiting
 /// first, panes and sessions mixed (the order the triage sheet walks), then
 /// what is out of reach. Every other agent is in its project's group
-/// ([repoKeyOf]). Inside a group: working (quietest first), done, idle (by
-/// [compareIdleTimes]), then what is offline or ended; newest first inside
-/// each. Groups: the one with the most urgent row first (working before done
-/// before idle), then the most recent, then by name. [now] is the moment
-/// recency is measured from.
-BoardLayout boardLayout(
-  List<AgentRowData> rows,
-  List<AgentSessionView> sessions,
-  AttentionSet attention, {
-  DateTime? now,
-}) {
-  final at = now ?? DateTime.now();
+/// ([repoKeyOf]).
+///
+/// Nothing else moves unless the person moves it (owner decision: a
+/// predictable board). Groups by name (case-insensitive), then machine, then
+/// key; rows inside a group in the order they were started ([_startOf]). A
+/// status change only changes a row's glyph, and a new agent appends to its
+/// group.
+BoardLayout boardLayout(List<AgentRowData> rows, List<AgentSessionView> sessions, AttentionSet attention) {
   final all = <BoardItem>[for (final r in rows) PaneItem(r), for (final s in sessions) SessionItem(s)];
 
   // [attention]'s order; anything it does not list keeps its own order, last.
@@ -484,8 +525,8 @@ BoardLayout boardLayout(
         return byRank != 0 ? byRank : a.$1.compareTo(b.$1);
       });
 
-  final byGroup = <String, ({RepoKey repo, MachineConnection machine, List<(int, GroupRow)> rows})>{};
-  for (final (i, item) in all.indexed) {
+  final byGroup = <String, ({RepoKey repo, MachineConnection machine, List<(_Start, GroupRow)> rows})>{};
+  for (final item in all) {
     if (statusOfItem(item) == AgentStatus.blocked) continue;
     final (machine, cwd, kind, title) = switch (item) {
       PaneItem(:final row) => (
@@ -499,25 +540,9 @@ BoardLayout boardLayout(
     final repo = repoKeyOf(machine, cwd);
     final where = _whereInGroup(machine, cwd, kind: kind, title: title, group: repo.label);
     byGroup.putIfAbsent(repo.key, () => (repo: repo, machine: machine, rows: [])).rows.add((
-      i,
+      _startOf(item, cwd),
       (item: item, where: where),
     ));
-  }
-
-  int inGroup((int, GroupRow) a, (int, GroupRow) b) {
-    final x = a.$2.item;
-    final y = b.$2.item;
-    final byRank = _rankOf(x).compareTo(_rankOf(y));
-    if (byRank != 0) return byRank;
-    final byTime = switch (_rankOf(x)) {
-      0 => switch (_quietOf(y).compareTo(_quietOf(x))) {
-        0 => _newestFirst(_timeOf(x), _timeOf(y)),
-        final q => q,
-      },
-      2 => compareIdleTimes(_timeOf(x), _timeOf(y), at),
-      _ => _newestFirst(_timeOf(x), _timeOf(y)),
-    };
-    return byTime != 0 ? byTime : a.$1.compareTo(b.$1);
   }
 
   final groups = [
@@ -526,30 +551,18 @@ BoardLayout boardLayout(
         key: g.repo.key,
         label: g.repo.label,
         machine: g.machine,
-        rows: [for (final (_, row) in g.rows..sort(inGroup)) row],
+        rows: [for (final (_, row) in g.rows..sort((a, b) => _byStart(a.$1, b.$1))) row],
         checkouts: switch (g.repo.repo) {
           final repo? => g.machine.places.repos.where((r) => r.repoKey == repo).firstOrNull?.checkouts.length ?? 0,
           null => 0,
         },
       ),
   ];
-  int urgency(BoardGroup g) => _rankOf(g.rows.first.item);
-  DateTime? latest(BoardGroup g) {
-    DateTime? best;
-    for (final item in g.items) {
-      final t = _timeOf(item);
-      if (t != null && (best == null || t.isAfter(best))) best = t;
-    }
-    return best;
-  }
-
   groups.sort((a, b) {
-    final byUrgency = urgency(a).compareTo(urgency(b));
-    if (byUrgency != 0) return byUrgency;
-    final byTime = _newestFirst(latest(a), latest(b));
-    if (byTime != 0) return byTime;
     final byName = a.label.toLowerCase().compareTo(b.label.toLowerCase());
-    return byName != 0 ? byName : a.key.compareTo(b.key);
+    if (byName != 0) return byName;
+    final byMachine = a.machine.profile.label.toLowerCase().compareTo(b.machine.profile.label.toLowerCase());
+    return byMachine != 0 ? byMachine : a.key.compareTo(b.key);
   });
 
   return BoardLayout(
@@ -621,27 +634,20 @@ class NeedsYouHeader extends AgentEntry {
   Key get key => const ValueKey('header/needs-you');
 }
 
-/// The `To review` line above the groups: how many finished agents can be
-/// marked, and the actions that review them all at once. One line for every
-/// project, since one Mark reviewed (one toast, one Undo) and one Select all
-/// cover finished agents wherever they are listed.
-class ReviewHeader extends AgentEntry {
-  const ReviewHeader({required this.count, this.offline = 0});
-
-  final int count;
-  final int offline;
-
-  @override
-  Key get key => const ValueKey('header/to-review');
-}
-
 /// A project's header: its name and summary; a tap folds it.
 class GroupHeader extends AgentEntry {
-  const GroupHeader(this.group, {required this.summary, required this.expanded});
+  const GroupHeader(this.group, {required this.summary, required this.expanded, this.machine});
 
   final BoardGroup group;
+
+  /// Empty when the group has no summary line: one agent, or the board's only
+  /// project (the status line says it all).
   final String summary;
   final bool expanded;
+
+  /// The group's machine, said beside its name when it has no summary to say
+  /// it in and the board spans several machines; else null.
+  final String? machine;
 
   @override
   Key get key => ValueKey('group/${group.key}');
@@ -755,15 +761,21 @@ AgentRowData _withSubtitle(AgentRowData row, String subtitle) => (
 );
 
 /// The lines to list: Needs you's header and rows (its first row the one in
-/// front, [AgentLine.front]), the `To review` line when anything finished
-/// waits, then each group's header and rows. Needs you never folds; a group
-/// in [collapsed] (by [BoardGroup.key]) does. [showMachine]: the board spans
-/// several machines, so each group's summary names its own.
+/// front, [AgentLine.front]), then each group's header and rows. Needs you
+/// never folds; a group in [collapsed] (by [BoardGroup.key]) does.
+/// [showMachine]: the board spans several machines, so each group names its
+/// own (in its summary, else beside its name).
 ///
-/// A group shows its first [idleShown] idle (or offline) rows and folds the
-/// rest behind one [AgentMore] line (opened when its key is in [openFolds]),
-/// unless folding would hide a single row. The rows are in the list either
-/// way, closed, so that they animate away.
+/// A group with one agent, and the board's only group, have no summary: the
+/// row and the status line already say it. Why (owner decision): a summary
+/// over one row repeated the row, and one over the only project repeated the
+/// status line.
+///
+/// A group shows its last [idleShown] idle (or offline) rows and folds the
+/// older ones behind one [AgentMore] line after its rows (opened when its
+/// key is in [openFolds]), unless folding would hide a single row
+/// ([_folded]). The rows are in the list either way, closed, so that they
+/// animate away.
 List<AgentEntry> boardEntries(
   BoardLayout layout, {
   Set<String> collapsed = const {},
@@ -789,14 +801,20 @@ List<AgentEntry> boardEntries(
           SessionItem(:final session) => SessionLine(session, open: true, last: i == waiting.length - 1),
         },
     ],
-    if (layout.toReviewCount + layout.toReviewOffline > 0)
-      ReviewHeader(count: layout.toReviewCount, offline: layout.toReviewOffline),
     for (final group in layout.groups) ...[
-      GroupHeader(
-        group,
-        summary: groupSummary(group, showMachine: showMachine),
-        expanded: !collapsed.contains(group.key),
-      ),
+      if (group.rows.length > 1 && layout.groups.length > 1)
+        GroupHeader(
+          group,
+          summary: groupSummary(group, showMachine: showMachine),
+          expanded: !collapsed.contains(group.key),
+        )
+      else
+        GroupHeader(
+          group,
+          summary: '',
+          expanded: !collapsed.contains(group.key),
+          machine: showMachine ? group.machine.profile.label : null,
+        ),
       ..._groupLines(
         group,
         open: !collapsed.contains(group.key),
@@ -807,22 +825,21 @@ List<AgentEntry> boardEntries(
   ];
 }
 
-/// Where [group]'s fold begins: the index of its first row the fold holds,
-/// or null when it has no fold. The tail that folds is idle and what is out
-/// of reach, which sort last; the fold holds what follows its first
-/// [idleShown] rows, unless it would hold a single row.
-int? _foldAt(BoardGroup group) {
-  final rows = group.rows;
-  final tailStart = rows.indexWhere((r) => _rankOf(r.item) >= 2);
-  final tail = tailStart < 0 ? 0 : rows.length - tailStart;
-  return tail > idleShown + 1 ? tailStart + idleShown : null;
+/// The rows of [group] its fold holds, by index: the idle and out-of-reach
+/// rows ("inventory") but the last [idleShown] of them, so the agents started
+/// most recently stay in view. None when folding would hide a single row.
+/// Rows keep their place either way: the fold only hides, it never reorders,
+/// so an idle agent that starts working again shows where it always was.
+Set<int> _folded(BoardGroup group) {
+  final tail = [
+    for (final (i, r) in group.rows.indexed)
+      if (_rankOf(r.item) >= 2) i,
+  ];
+  return tail.length > idleShown + 1 ? tail.take(tail.length - idleShown).toSet() : const {};
 }
 
 /// The rows of [group] its fold holds (none when it has no fold).
-Iterable<BoardItem> foldedItems(BoardGroup group) => switch (_foldAt(group)) {
-  final at? => group.items.skip(at),
-  null => const <BoardItem>[],
-};
+Iterable<BoardItem> foldedItems(BoardGroup group) => [for (final i in _folded(group)) group.rows[i].item];
 
 List<AgentEntry> _groupLines(
   BoardGroup group, {
@@ -831,13 +848,12 @@ List<AgentEntry> _groupLines(
   required String Function(BoardItem) titleOf,
 }) {
   final rows = group.rows;
-  final at = _foldAt(group);
-  final foldable = at != null;
+  final hidden = _folded(group);
+  final foldable = hidden.isNotEmpty;
   final folded = foldable && !foldOpen;
-  final foldAt = at ?? rows.length;
 
   AgentEntry line(int i) {
-    final shown = open && (!folded || i < foldAt);
+    final shown = open && (!folded || !hidden.contains(i));
     final last = i == rows.length - 1;
     final GroupRow(:item, :where) = rows[i];
     return switch (item) {
@@ -847,24 +863,20 @@ List<AgentEntry> _groupLines(
   }
 
   AgentMore more() {
-    final hidden = rows.skip(foldAt);
+    final held = [for (final i in hidden) rows[i]];
     return AgentMore(
       group.key,
-      rows.length - foldAt,
-      [for (final r in hidden.take(2)) titleOf(r.item)],
+      held.length,
+      [for (final r in held.take(2)) titleOf(r.item)],
       open: foldOpen,
-      kind: hidden.every((r) => _rankOf(r.item) == 2) ? 'idle' : null,
+      kind: held.every((r) => _rankOf(r.item) == 2) ? 'idle' : null,
     );
   }
 
   return [
-    for (var i = 0; i < rows.length; i++) ...[
-      line(i),
-      // Closed, the fold comes right after the rows that show.
-      if (folded && open && i == foldAt - 1) more(),
-    ],
-    // Open, it comes last: "Show less" where the list ends.
-    if (foldable && foldOpen && open) more(),
+    for (var i = 0; i < rows.length; i++) line(i),
+    // After the group's rows, open ("Show less") or closed ("12 more idle").
+    if (foldable && open) more(),
   ];
 }
 

@@ -5,7 +5,6 @@ import 'package:herdr_mobile/data/models/herdr_models.dart' show AgentStatus;
 import 'package:herdr_mobile/data/models/worktrees.dart';
 import 'package:herdr_mobile/data/models/machine_profile.dart';
 import 'package:herdr_mobile/data/models/places.dart';
-import 'package:herdr_mobile/data/models/status_time.dart';
 import 'package:herdr_mobile/data/repositories/attention_set.dart';
 import 'package:herdr_mobile/data/repositories/machine_connection.dart';
 import 'package:herdr_mobile/data/services/herdr_transport.dart';
@@ -229,17 +228,33 @@ void main() {
       expect(entryIndexes(e)[notes], 5);
     });
 
-    test('a To review line sits above the projects while anything finished waits', () {
-      final e = boardEntries(
+    test('a one-agent project has no summary; its machine sits beside its name when there are several', () {
+      final board = BoardLayout(
+        groups: [
+          group('app', [_row('3', AgentStatus.working, m), _row('5', AgentStatus.done, m)]),
+          group('notes', [_row('4', AgentStatus.idle, m)]),
+        ],
+      );
+      Map<String, GroupHeader> headers({bool showMachine = false}) => {
+        for (final h in boardEntries(board, showMachine: showMachine).whereType<GroupHeader>()) h.group.key: h,
+      };
+
+      expect(headers()['app']!.summary, isNotEmpty);
+      expect(headers()['notes']!.summary, isEmpty, reason: 'one row says it all');
+      expect(headers()['notes']!.machine, isNull, reason: 'one machine is not named');
+      expect(headers(showMachine: true)['notes']!.machine, 'm-a');
+      expect(headers(showMachine: true)['app']!.machine, isNull, reason: 'its summary names it');
+    });
+
+    test('the only project has no summary: the status line already says it', () {
+      final only = boardEntries(
         BoardLayout(
-          toReviewCount: 2,
           groups: [
-            group('app', [_row('5', AgentStatus.done, m)]),
+            group('app', [_row('3', AgentStatus.working, m), _row('5', AgentStatus.done, m)]),
           ],
         ),
       );
-      expect(e.first, isA<ReviewHeader>().having((r) => r.count, 'count', 2));
-      expect(boardEntries(layout()).whereType<ReviewHeader>(), isEmpty);
+      expect(only.whereType<GroupHeader>().single.summary, isEmpty);
     });
   });
 
@@ -376,33 +391,112 @@ void main() {
 
         final groups = {for (final g in layoutOf(h).groups) g.label: g};
         expect(groups.keys.toSet(), {'app', 'notes', otherGroupLabel});
-        expect(idsOf(groups['app']!), ['w1:p1', 'w2:p2', 'w3:p3'], reason: 'working, then done, then idle');
+        expect(idsOf(groups['app']!), ['w1:p1', 'w2:p2', 'w3:p3'], reason: 'the order they were started in');
         expect(idsOf(groups['notes']!), ['w4:p4']);
         expect(idsOf(groups[otherGroupLabel]!), ['w4:p5']);
         expect(groupSummary(groups['app']!), '1 working · 1 done · 1 idle · 3 worktrees');
       },
     );
 
-    test('projects with work running come first, then finished ones, then idle ones', () async {
-      final h = await repoFleet(
-        [at('w4:p5', 'w4', 'idle'), at('w1:p1', 'w1', 'done'), at('w2:p2', 'w2', 'idle'), at('w4:p4', 'w4', 'idle')],
-        {'w4:p5': null, 'w1:p1': primary, 'w2:p2': login, 'w4:p4': '/src/notes'},
-      );
-      addTearDown(h.dispose);
-      expect(
-        [for (final g in layoutOf(h).groups) g.label].first,
-        'app',
-        reason: 'its finished agent outranks idle ones',
-      );
+    // Owner decision: a predictable board. Nothing moves unless the person
+    // moves it.
+    List<List<String>> boardOf(UiHarness h) => [
+      for (final g in layoutOf(h).groups) [g.label, ...idsOf(g)],
+    ];
 
+    Future<void> setStatuses(UiHarness h, Map<String, String> statuses) async {
       h.transports['a']!.snapshot['panes'] = [
         for (final p in h.transports['a']!.snapshot['panes'] as List)
-          if ((p as Map<String, dynamic>)['pane_id'] == 'w4:p4') {...p, 'agent_status': 'working'} else p,
+          if (statuses[(p as Map<String, dynamic>)['pane_id']] case final s?) {...p, 'agent_status': s} else p,
       ];
       // Read now, as the event's refresh would after its delay.
       await h.fleet.connections.single.refresh();
       await pumpEventQueue(times: 50);
-      expect([for (final g in layoutOf(h).groups) g.label], ['notes', 'app', otherGroupLabel]);
+    }
+
+    test('projects by name and rows in the order they were started, whatever they are doing', () async {
+      final h = await repoFleet(
+        [
+          at('w4:p5', 'w4', 'working'),
+          at('w3:p3', 'w3', 'working'),
+          at('w1:p1', 'w1', 'idle'),
+          at('w2:p2', 'w2', 'done'),
+          at('w4:p4', 'w4', 'idle'),
+        ],
+        {'w4:p5': null, 'w3:p3': search, 'w1:p1': primary, 'w2:p2': login, 'w4:p4': '/src/notes'},
+      );
+      addTearDown(h.dispose);
+      expect(boardOf(h), [
+        ['app', 'w1:p1', 'w2:p2', 'w3:p3'],
+        ['notes', 'w4:p4'],
+        [otherGroupLabel, 'w4:p5'],
+      ]);
+    });
+
+    test('a status change moves no project and no row: only the glyph changes', () async {
+      final h = await repoFleet(
+        [at('w1:p1', 'w1', 'working'), at('w2:p2', 'w2', 'idle'), at('w3:p3', 'w3', 'done'), at('w4:p4', 'w4', 'idle')],
+        {'w1:p1': primary, 'w2:p2': login, 'w3:p3': search, 'w4:p4': '/src/notes'},
+      );
+      addTearDown(h.dispose);
+      final before = boardOf(h);
+
+      await setStatuses(h, {'w1:p1': 'done', 'w2:p2': 'working', 'w4:p4': 'working'});
+      expect(boardOf(h), before, reason: 'working to done, idle to working');
+      await setStatuses(h, {'w1:p1': 'idle', 'w3:p3': 'idle', 'w4:p4': 'done'});
+      expect(boardOf(h), before, reason: 'done to idle (reviewed)');
+
+      await setStatuses(h, {'w2:p2': 'blocked'});
+      expect(boardOf(h), [
+        ['app', 'w1:p1', 'w3:p3'],
+        ['notes', 'w4:p4'],
+      ], reason: 'a waiting agent is pinned in Needs you');
+      await setStatuses(h, {'w2:p2': 'working'});
+      expect(boardOf(h), before, reason: 'answered, it is back in its own place');
+    });
+
+    test('a new agent appends to its project; the projects stay put', () async {
+      final h = await repoFleet(
+        [at('w1:p1', 'w1', 'idle'), at('w3:p3', 'w3', 'done'), at('w4:p4', 'w4', 'working')],
+        {'w1:p1': primary, 'w3:p3': search, 'w4:p4': '/src/notes', 'w3:p6': search},
+      );
+      addTearDown(h.dispose);
+      final snapshot = h.transports['a']!.snapshot;
+      final first = (snapshot['panes'] as List).first as Map<String, dynamic>;
+      snapshot['panes'] = [
+        ...snapshot['panes'] as List,
+        {...first, 'pane_id': 'w3:p6', 'workspace_id': 'w3', 'cwd': search, 'agent_status': 'working'},
+      ];
+      await h.fleet.connections.single.refresh();
+      await pumpEventQueue(times: 50);
+
+      expect(boardOf(h), [
+        ['app', 'w1:p1', 'w3:p3', 'w3:p6'],
+        ['notes', 'w4:p4'],
+      ]);
+    });
+
+    test('a herdr pane id is its workspace and pane counters', () {
+      expect(herdrPaneCounters('w11:p4'), (workspace: '11', pane: '4'));
+      expect(herdrPaneCounters('pane-7'), isNull);
+    });
+
+    test('rows follow herdr\'s workspace then pane counters, not the text of the id', () async {
+      final h = await _fleet({'a': const []});
+      addTearDown(h.dispose);
+      final m = h.fleet.connections.single;
+      final attention = AttentionSet(fleet: h.fleet);
+      addTearDown(attention.dispose);
+      AgentRowData row(String id) => _row(id, AgentStatus.idle, m);
+      final layout = boardLayout(
+        [row('w11:p1'), row('wZ:p10'), row('wZ:p9'), row('w9:p2'), row('wB:p1')],
+        const [],
+        attention,
+      );
+      expect(
+        [for (final i in layout.groups.single.items) (i as PaneItem).row.paneId],
+        ['w9:p2', 'wB:p1', 'wZ:p9', 'wZ:p10', 'w11:p1'],
+      );
     });
 
     test('a row is named by its branch once read, else its checkout; the repo is left to the header', () async {
@@ -517,60 +611,44 @@ void main() {
     });
   });
 
-  group('inside a project, idle panes and sessions together', () {
+  group('inside a project, panes and sessions together', () {
     final noon = DateTime.utc(2026, 1, 1, 12);
 
-    test(
-      'a session the person used ten minutes ago is not under the panes: all by when they last did something',
-      () async {
-        final h = await _fleet({'a': const []});
-        final machine = h.fleet.connections.single;
-        final attention = AttentionSet(fleet: h.fleet);
-        AgentRowData pane(String key, StatusTime? since) => (
-          key: key,
-          machine: machine,
-          paneId: key,
-          status: AgentStatus.idle,
-          title: key,
-          subtitle: '',
-          stale: false,
-          since: since,
-          quietMinutes: 0,
-        );
-        // No folder, like the panes above: one group.
-        FakeAgentSession session(String key, DateTime? activity) =>
-            FakeAgentSession(key: key, machine: machine, cwd: '')..lastActivity = activity;
+    test('panes in herdr\'s order, then sessions by when they started; what is not dated last', () async {
+      final h = await _fleet({'a': const []});
+      final machine = h.fleet.connections.single;
+      final attention = AttentionSet(fleet: h.fleet);
+      AgentRowData pane(String id, AgentStatus status) => _row(id, status, machine);
+      // No folder, like the panes above: one group.
+      FakeAgentSession session(String key, DateTime? started, {DateTime? activity}) =>
+          FakeAgentSession(key: key, machine: machine, cwd: '')
+            ..startedAt = started
+            ..lastActivity = activity;
 
-        final layout = boardLayout(
-          [
-            pane('pane-3h', StatusTime.exact(noon.subtract(const Duration(hours: 3)))),
-            pane('pane-undated', null),
-            pane('pane-5d', StatusTime.exact(noon.subtract(const Duration(days: 5)))),
-          ],
-          [
-            session('s-3d', noon.subtract(const Duration(days: 3))),
-            session('s-10m', noon.subtract(const Duration(minutes: 10))),
-            session('s-undated', null),
-          ],
-          attention,
-          now: noon,
-        );
+      final layout = boardLayout(
+        [pane('w2:p1', AgentStatus.working), pane('odd-id', AgentStatus.idle), pane('w1:p3', AgentStatus.done)],
+        [
+          session('s-undated', null, activity: noon),
+          session('s-late', noon, activity: noon.subtract(const Duration(days: 3))),
+          session('s-early', noon.subtract(const Duration(days: 1)), activity: noon),
+        ],
+        attention,
+      );
 
-        expect(
-          [
-            for (final i in layout.groups.single.items)
-              switch (i) {
-                PaneItem(:final row) => row.key,
-                SessionItem(:final session) => session.key,
-              },
-          ],
-          ['s-10m', 'pane-3h', 'pane-undated', 's-undated', 's-3d', 'pane-5d'],
-          reason: 'recent first, mixed; the undated panes then sessions; then the old, newest first',
-        );
-        attention.dispose();
-        h.dispose();
-      },
-    );
+      expect(
+        [
+          for (final i in layout.groups.single.items)
+            switch (i) {
+              PaneItem(:final row) => row.key,
+              SessionItem(:final session) => session.key,
+            },
+        ],
+        ['w1:p3', 'w2:p1', 'odd-id', 's-early', 's-late', 's-undated'],
+        reason: 'when it started, not when it last did something',
+      );
+      attention.dispose();
+      h.dispose();
+    });
   });
 
   group('the idle fold', () {
@@ -618,23 +696,16 @@ void main() {
       }
     });
 
-    test('past that, the first idle rows show and the rest sit behind one line that says how many and what', () {
+    test('past that, the last idle rows show and the older ones sit behind one line that says how many and what', () {
       final e = entries([group('app', AgentStatus.idle, 9, working: 2)]);
 
-      expect(open(e), [true, true, ...List.filled(idleShown, true), ...List.filled(4, false)]);
+      expect(open(e), [true, true, ...List.filled(4, false), ...List.filled(idleShown, true)]);
       final more = folds(e).single;
       expect(more.hidden, 4);
       expect(more.kind, 'idle');
-      expect(more.names, [
-        'app-k$idleShown',
-        'app-k${idleShown + 1}',
-      ], reason: 'the first two it holds, so it is not a guess');
+      expect(more.names, ['app-k0', 'app-k1'], reason: 'the first two it holds, so it is not a guess');
       expect(more.open, isFalse);
-      expect(
-        e.indexOf(more),
-        1 + 2 + idleShown,
-        reason: 'header, the working rows, the idle rows that show, then the fold',
-      );
+      expect(e.indexOf(more), 1 + 2 + 9, reason: 'after the group\'s rows, which keep their places');
     });
 
     test('each project has its own fold: opening one leaves the other folded', () {

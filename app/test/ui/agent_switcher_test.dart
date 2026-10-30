@@ -154,16 +154,16 @@ void main() {
     double y(String text) => tester.getTopLeft(_inSheet(find.text(text)).first).dy;
     // Every pane works in `/work/w1`: one project, named by its folder.
     final headers = ['Needs you', 'w1'];
-    final rows = ['task 4', 'task 2', 'task 3', 'task 1'];
+    final rows = ['task 4', 'task 2', 'task 1', 'task 3'];
     for (final text in [...headers, ...rows]) {
       expect(_inSheet(find.text(text)), findsOneWidget, reason: '$text is listed once');
     }
     expect(y('Needs you'), lessThan(y('task 4')));
     expect(y('task 4'), lessThan(y('task 2')), reason: 'longest waiting first, as the board');
     expect(y('task 2'), lessThan(y('w1')));
-    expect(y('w1'), lessThan(y('task 3')));
-    expect(y('task 3'), lessThan(y('task 1')), reason: 'inside the project, working before idle');
-    expect(y('task 1'), lessThan(y('All agents on the board')), reason: 'the way to the board is last');
+    expect(y('w1'), lessThan(y('task 1')));
+    expect(y('task 1'), lessThan(y('task 3')), reason: 'inside the project, the order they were started in');
+    expect(y('task 3'), lessThan(y('All agents on the board')), reason: 'the way to the board is last');
 
     // The agent in front is marked and does nothing.
     final here = _inSheet(find.text('Here'));

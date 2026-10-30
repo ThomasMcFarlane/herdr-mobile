@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/repositories/agent_session.dart';
+import '../../../data/repositories/attention_set.dart';
 import '../../../data/repositories/batch_actions.dart';
 import '../../../data/repositories/fleet_repository.dart';
 
@@ -81,17 +82,22 @@ class SelectionHeader extends StatelessWidget {
   }
 }
 
-/// The three actions on the picked agents, in a floating pill at the bottom
-/// while the board is picking: the one bar home ever has there, within the
-/// thumb's reach. An action is enabled when it
+/// The actions on the picked agents, in a floating pill at the bottom while
+/// the board is picking: the one bar home ever has there, within the thumb's
+/// reach. `Reviewed` marks the picked finished agents reviewed at once, with
+/// one toast and its Undo and no sheet (cheap, and undone in one tap); Stop,
+/// Message and Close go through a confirm sheet. An action is enabled when it
 /// would touch at least one of them (a message also when the only candidates
 /// are agents waiting for an answer, which the confirm sheet offers to type
 /// into on the person's say so). While a batch runs the bar says so with a
 /// spinner.
 class BatchActionBar extends StatelessWidget {
-  const BatchActionBar({super.key, required this.onAction});
+  const BatchActionBar({super.key, required this.onAction, required this.onReview});
 
   final ValueChanged<BatchAction> onAction;
+
+  /// Marks the picked agents that are to review ([toReviewRefs]) reviewed.
+  final ValueChanged<Set<String>> onReview;
 
   @override
   Widget build(BuildContext context) {
@@ -139,12 +145,20 @@ class BatchActionBar extends StatelessWidget {
       return plan.run.isNotEmpty || (a == BatchAction.message && plan.waiting.any((s) => s.canSendAnyway));
     }
 
+    final attention = context.watch<AttentionSet?>();
+    final reviewable = attention == null ? const <String>{} : toReviewRefs(attention).intersection(selection.refs);
+
     final busy = selection.busy;
     if (busy != null) {
       return LoadingRow('$busy…', padding: EdgeInsets.zero, center: true, maxLines: 1);
     }
     return Row(
       children: [
+        _BarAction(
+          label: 'Reviewed',
+          icon: HerdrIcons.reviewed,
+          onTap: reviewable.isNotEmpty ? () => onReview(reviewable) : null,
+        ),
         _BarAction(
           label: 'Stop',
           icon: HerdrIcons.stop,

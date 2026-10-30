@@ -152,6 +152,11 @@ abstract interface class AgentSessionView implements Listenable, AttachTarget {
   /// "since this app saw it"). Null when the session has no such time.
   DateTime? get lastActivity;
 
+  /// When the agent was started, by the host's own clock (a keeper's
+  /// `started_at`); null when the host did not say. The board lists a
+  /// project's sessions in this order, so a new one appends and none moves.
+  DateTime? get startedAt;
+
   /// When the turn that runs now started, by this phone's clock: the instant
   /// of [send] for a turn this phone started (the elapsed clock of the status
   /// line counts from there, whatever the agent takes to answer), else when

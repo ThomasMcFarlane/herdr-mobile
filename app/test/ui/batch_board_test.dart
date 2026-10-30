@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:ui' show Tristate;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/acp/session_state.dart';
 import 'package:herdr_mobile/data/models/machine_profile.dart';
@@ -14,6 +15,7 @@ import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_card.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_more_row.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_session_rows.dart';
+import 'package:herdr_mobile/ui/features/agents/batch_action_bar.dart';
 import 'package:herdr_mobile/ui/features/agents/batch_actions_sheet.dart';
 import 'package:herdr_mobile/ui/features/agents/agents_screen.dart';
 import 'package:herdr_mobile/ui/features/machines/machines_screen.dart';
@@ -288,17 +290,75 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('Select all done picks the finished ones, even from a folded project', (tester) async {
+    testWidgets('to review picks exactly the finished ones, even from a folded project', (tester) async {
       final h = await _studio(_ten());
       await _pump(tester, h);
       await _tap(tester, _doneProject);
       expect(_row('task 6'), findsNothing);
 
-      await _tap(tester, find.byKey(const ValueKey('select-all-done')));
+      await _tap(tester, find.byKey(toReviewKey));
       expect(_selected(2), findsOneWidget);
       expect(_row('task 6'), findsOneWidget, reason: 'what is picked is on screen');
+      expect(_enabled(tester, 'Reviewed'), isTrue);
       expect(_enabled(tester, 'Close'), isTrue);
       expect(_enabled(tester, 'Stop'), isFalse);
+      await teardownBoard(tester, h);
+    });
+
+    testWidgets('to review replaces what was picked before', (tester) async {
+      final h = await _studio(_ten());
+      await _pump(tester, h);
+      await _longPress(tester, _row('task 1'));
+      expect(_selected(1), findsOneWidget);
+
+      await _tap(tester, find.byKey(toReviewKey));
+      expect(_selected(2), findsOneWidget, reason: 'exactly the finished ones, not the working one too');
+      expect(_enabled(tester, 'Stop'), isFalse);
+      await teardownBoard(tester, h);
+    });
+
+    testWidgets('the count is hit from a 44 dp band, though its line is shorter', (tester) async {
+      final h = await _studio(_ten());
+      await _pump(tester, h);
+      final words = tester.getRect(find.byKey(toReviewKey));
+      expect(words.height, lessThan(kMinTap), reason: 'it paints at the line\'s height');
+      final target = tester.renderObject(
+        find.descendant(of: find.byKey(toReviewKey), matching: find.byType(Listener)).first,
+      );
+      bool hits(double y) {
+        final result = HitTestResult();
+        RendererBinding.instance.hitTestInView(result, Offset(words.center.dx, y), tester.view.viewId);
+        return result.path.any((e) => e.target == target);
+      }
+
+      var top = words.center.dy, bottom = words.center.dy;
+      while (hits(top - 1)) {
+        top--;
+      }
+      while (hits(bottom + 1)) {
+        bottom++;
+      }
+      expect(bottom - top + 1, greaterThanOrEqualTo(kMinTap), reason: 'the status line takes two lines here');
+
+      await tester.tapAt(Offset(words.center.dx, top + 1));
+      await _settle(tester);
+      expect(_selected(2), findsOneWidget, reason: 'a tap at the band\'s edge picks them');
+      await teardownBoard(tester, h);
+    });
+
+    testWidgets('Reviewed marks the picked finished agents with one toast; Undo brings them back', (tester) async {
+      final h = await _studio(_ten());
+      await _pump(tester, h);
+      await _tap(tester, find.byKey(toReviewKey));
+      await _tap(tester, find.descendant(of: find.byType(BatchActionBar), matching: find.text('Reviewed')));
+
+      expect(find.text('Marked 2 reviewed'), findsOneWidget, reason: 'one toast for both');
+      expect(find.byKey(toReviewKey), findsNothing, reason: 'nothing left to review');
+      expect(find.text('2 selected'), findsNothing, reason: 'picking ends');
+      expect(find.byType(BatchSheet), findsNothing, reason: 'cheap and undone in a tap: no confirm sheet');
+
+      await _tap(tester, find.text('Undo'));
+      expect(toReviewCount(tester), 2);
       await teardownBoard(tester, h);
     });
 
@@ -657,11 +717,11 @@ void main() {
   });
 
   group('close', () {
-    testWidgets('Select all done, then Close: the finished panes are closed, nothing else', (tester) async {
+    testWidgets('to review, then Close: the finished panes are closed, nothing else', (tester) async {
       final h = await _studio(_ten());
       await _pump(tester, h);
 
-      await _tap(tester, find.byKey(const ValueKey('select-all-done')));
+      await _tap(tester, find.byKey(toReviewKey));
       await _tap(tester, find.text('Close'));
 
       expect(find.text('Close agents'), findsOneWidget);
@@ -870,10 +930,11 @@ void main() {
         ]);
         await _pump(tester, h, width: 320, height: 640, textScale: 2, brightness: brightness, bottomInset: 24);
 
-        // Open the project's idle fold, so All has every agent to pick.
+        // Open the project's idle fold (after its rows), so All has every
+        // agent to pick, then back up to the first one.
         await tester.scrollUntilVisible(find.byType(AgentMoreRow), 400, scrollable: find.byType(Scrollable).first);
         await _tap(tester, find.byType(AgentMoreRow));
-        await tester.drag(find.byType(Scrollable).first, const Offset(0, 20000));
+        await tester.scrollUntilVisible(_row(longTitle('w1:p1')), -400, scrollable: find.byType(Scrollable).first);
         await _settle(tester);
         await _longPress(tester, _row(longTitle('w1:p1')));
         expect(tester.takeException(), isNull);

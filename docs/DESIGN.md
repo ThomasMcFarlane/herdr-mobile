@@ -191,7 +191,7 @@ own fallback drew Claude Code's `⏵⏵ auto mode on` as `▯▯ auto mode on`.
 - **Drawn icons** (`HerdrIcons`, `herdr_icons.dart`, generated with its font by
   `tool/icons/build_icons.py`): the selection bar, the Settings gear, the agent
   and machine everywhere, Stop (`stop`; `stopMark`, its square alone, inside a
-  round button: the composer), a message or a chat (`message`), browsing a
+  round button: the composer), Reviewed (`reviewed`, a check in Stop's ring), a message or a chat (`message`), browsing a
   machine's files (`folder`, lighter than Lucide's open folder, which had four
   times the ink of the `⋯` beside it), and the `Made` list (a glyph per kind: a window with a
   pulse for a server, a window with text for a page, a picture, a document; a

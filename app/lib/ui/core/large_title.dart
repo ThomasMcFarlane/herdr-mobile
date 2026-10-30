@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import 'press.dart';
 import 'chips.dart';
@@ -43,7 +44,10 @@ class SliverLargeTitle extends StatelessWidget {
 
   final String title;
 
-  /// One quiet line under the big title, or [subtitleLines] of them.
+  /// One quiet line under the big title, or [subtitleLines] of them. A
+  /// control in it (home's `3 to review`) is hit from a [kMinTap] band: its
+  /// words, the title block's bottom above them and the gap under the line,
+  /// each touch taken into the nearest line.
   final Widget? subtitle;
 
   /// How many lines [subtitle] is given (1 or 2). Home's status line takes a
@@ -174,13 +178,26 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
             ),
           ),
         ),
-        if (subtitle != null) SizedBox(height: _subtitleHeight, child: subtitle),
+        if (subtitle != null)
+          _HitBand(
+            // Up into the title block (which takes no tap): a whole touch
+            // target above the first line's middle, so a control there is
+            // one even with a second line under it. Down through the gap
+            // under the line, when nothing sits there.
+            above: kMinTap - _subtitleBlock / 2,
+            below: bottom == null ? SliverLargeTitle._gap : 0,
+            child: SizedBox(height: _subtitleHeight, child: subtitle),
+          ),
+        // The gap under the line is the band's to hit (it paints nothing).
+        if (subtitle != null && bottom == null) const SizedBox(height: SliverLargeTitle._gap),
       ],
     );
     // No layer at rest (opacity 1); the title is simply absent once it is gone.
     if (big < 1) titles = Opacity(opacity: big, child: titles);
     if (big == 0) {
-      titles = SizedBox(height: _titleBlock + (subtitle != null ? _subtitleHeight : 0));
+      titles = SizedBox(
+        height: _titleBlock + (subtitle != null ? _subtitleHeight + (bottom == null ? SliverLargeTitle._gap : 0) : 0),
+      );
     }
 
     // Bars clamp text scale like iOS navigation bars: their blocks are fixed
@@ -300,4 +317,47 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
       old.subtitleLines != subtitleLines ||
       old.bottom != bottom ||
       old.actions != actions;
+}
+
+/// Takes a touch up to [above] dp over its child and [below] dp under it to
+/// the nearest point well inside the child, so a control on a line shorter than
+/// [kMinTap] is still a [kMinTap] target. Only where its parents reach: a
+/// parent hit-tests within its own size first.
+class _HitBand extends SingleChildRenderObjectWidget {
+  const _HitBand({required this.above, required this.below, required super.child});
+
+  final double above;
+  final double below;
+
+  @override
+  _RenderHitBand createRenderObject(BuildContext context) => _RenderHitBand(above, below);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderHitBand renderObject) => renderObject
+    ..above = above
+    ..below = below;
+}
+
+class _RenderHitBand extends RenderProxyBox {
+  _RenderHitBand(this.above, this.below);
+
+  static const _edge = 8.0;
+
+  double above;
+  double below;
+
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) {
+    final band = Rect.fromLTRB(0, -above, size.width, size.height + below);
+    if (!band.contains(position)) return false;
+    // Well inside the line, not on its edge: the words sit a little inside
+    // their line box.
+    final inset = size.height / 2 < _edge ? size.height / 2 : _edge;
+    final inside = Offset(position.dx, position.dy.clamp(inset, size.height - inset));
+    if (hitTestChildren(result, position: inside)) {
+      result.add(BoxHitTestEntry(this, position));
+      return true;
+    }
+    return false;
+  }
 }
