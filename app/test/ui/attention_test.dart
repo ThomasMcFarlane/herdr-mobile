@@ -449,7 +449,7 @@ void main() {
       ]);
       await pumpBoard(tester, h, height: _tall);
       final ds = tester.element(find.byType(HomeShell)).ds;
-      for (final label in ['Mark all reviewed', 'Select all']) {
+      for (final label in ['Mark reviewed', 'Select all']) {
         final words = tester.widget<Text>(find.descendant(of: find.byType(TextAction), matching: find.text(label)));
         expect(words.style?.color, ds.textSecondary, reason: label);
       }

@@ -267,7 +267,8 @@ class _MachineRow extends StatelessWidget {
 }
 
 /// The row's second line: how many agents when online, otherwise the state in
-/// words; then the address, cut in the middle so its end (the host) stays.
+/// words; then the address, cut in the middle so its end (the host's
+/// domain) and its start (the user and the machine's name) both stay.
 class _Subtitle extends StatelessWidget {
   const _Subtitle({required this.machine});
 
@@ -291,47 +292,65 @@ class _Subtitle extends StatelessWidget {
         ? state.label
         : '${state.label} · not connecting';
     final address = '${p.username}@${p.host}${p.port == 22 ? '' : ':${p.port}'}';
-    final cut = address.length > _tailKept ? address.length - _tailKept : 0;
     final style = Type.secondary.copyWith(color: ds.textMuted);
     final leadStyle = loud ? Type.secondaryStrong.copyWith(color: ds.blockedText) : style;
-    final tail = address.substring(cut);
+    final scaler = MediaQuery.textScalerOf(context);
     return LayoutBuilder(
       builder: (context, box) {
         // The count or state comes first and is cut last; the address gives
         // way from its middle, and goes when even its end has no room.
-        final room = box.maxWidth - _width(context, '$lead · ', leadStyle) - _width(context, tail, style);
-        if (room <= 0) {
-          return Text(lead, maxLines: 1, overflow: TextOverflow.ellipsis, style: leadStyle);
-        }
-        return Row(
-          children: [
-            Text(lead, maxLines: 1, style: leadStyle),
-            Text(' · ', maxLines: 1, style: style),
-            Flexible(
-              child: Text(
-                address.substring(0, cut),
-                maxLines: 1,
-                softWrap: false,
-                overflow: TextOverflow.ellipsis,
-                style: style,
-              ),
-            ),
-            Text(tail, maxLines: 1, softWrap: false, style: style),
-          ],
+        final room = box.maxWidth - _width('$lead · ', leadStyle, scaler);
+        final shown = middleCut(address, room, (t) => _width(t, style, scaler), tailKept: _tailKept);
+        return Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(text: lead, style: leadStyle),
+              if (shown != null) TextSpan(text: ' · $shown', style: style),
+            ],
+          ),
+          maxLines: 1,
+          softWrap: false,
+          overflow: TextOverflow.ellipsis,
         );
       },
     );
   }
 
-  static double _width(BuildContext context, String text, TextStyle style) {
+  static double _width(String text, TextStyle style, TextScaler scaler) {
     final painter = TextPainter(
       text: TextSpan(text: text, style: style),
       textDirection: TextDirection.ltr,
-      textScaler: MediaQuery.textScalerOf(context),
+      textScaler: scaler,
       maxLines: 1,
     )..layout();
     final width = painter.width;
     painter.dispose();
     return width;
   }
+}
+
+/// [text] as it fits [room] by [width]: whole when it fits, else its start
+/// and its last [tailKept] characters joined by `…`, keeping as much of the
+/// start as fits; null when not even `…` and the end fit.
+///
+/// One string, measured whole. The address used to be two texts side by
+/// side, the start ellipsized in a flexible box: the box kept its full width
+/// after the cut, which left a gap before the end (`maya@studio-…   l1a2b.ts.net`).
+@visibleForTesting
+String? middleCut(String text, double room, double Function(String) width, {required int tailKept}) {
+  if (width(text) <= room) return text;
+  if (text.length <= tailKept) return null;
+  final tail = text.substring(text.length - tailKept);
+  if (width('…$tail') > room) return null;
+  // The longest start that fits: widths grow with the start's length.
+  var lo = 0, hi = text.length - tailKept;
+  while (lo < hi) {
+    final mid = (lo + hi + 1) ~/ 2;
+    if (width('${text.substring(0, mid)}…$tail') <= room) {
+      lo = mid;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  return '${text.substring(0, lo)}…$tail';
 }

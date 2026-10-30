@@ -258,11 +258,24 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
     _liveRefs = {for (final a in overview.agents) paneRef(a.key), for (final s in sessionList) sessionRef(s.key)};
     if (_selection.active) _queueRetain();
 
+    final status = _StatusLine(
+      waiting: needYouCount,
+      working: working,
+      agents: overview.agents.length + sessionList.length,
+      machines: overview.machineCount,
+      troubled: troubled.length,
+    );
+    // Measured once per build with the longest "heard" the minute can grow
+    // into, so the header does not change height (and move the list) as the
+    // minutes tick.
+    final heard = heardLabel(context.read<FleetRepository>().connections);
+    final statusLines = status.lines(context, heard: heard == null ? null : _StatusLine.longestHeard);
+
     final list = AppRefresh(
       onRefresh: () async {
         await Future.wait([context.read<FleetRepository>().retryAll(), if (sessions != null) sessions.refresh()]);
       },
-      edgeOffset: SliverLargeTitle.extent(context, hasSubtitle: true),
+      edgeOffset: SliverLargeTitle.extent(context, hasSubtitle: true, subtitleLines: statusLines),
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
@@ -270,17 +283,16 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
             title: 'Agents',
             // The board's one status line. Steps once a minute, so "heard 3m
             // ago" grows while nothing else changes: a board that went quiet
-            // says so instead of looking live.
+            // says so instead of looking live. It takes a second line rather
+            // than cut its end ("1 not connected") on a narrow phone.
             subtitle: MinuteBuilder(
-              builder: (context, _) => _StatusLine(
-                waiting: needYouCount,
-                working: working,
-                agents: overview.agents.length + sessionList.length,
-                machines: overview.machineCount,
-                troubled: troubled.length,
-                heard: heardLabel(context.read<FleetRepository>().connections),
+              builder: (context, _) => Text.rich(
+                status.span(context, heard: heardLabel(context.read<FleetRepository>().connections)),
+                maxLines: statusLines,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
+            subtitleLines: statusLines,
             // Scrolled, the bar keeps the chip and the two actions, and no
             // centred `Agents` to collide with the chip (home needs no name).
             compactTitle: false,
@@ -329,7 +341,7 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
               itemCount: listed.length,
               findChildIndexCallback: (key) => indexes[key],
               itemBuilder: (context, i) => switch (listed[i]) {
-                final AgentHeader h => SectionLabel(
+                final AgentHeader h => _SectionHeader(
                   key: h.key,
                   label: h.status.label,
                   // Needs you and Working are counted by the status line, so
@@ -339,7 +351,7 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
                   count: _countedAbove(h.status) || (h.count == 0 && h.offline > 0) ? null : h.count,
                   expanded: h.collapsible ? h.expanded : null,
                   onTap: h.collapsible ? () => _toggleSection(h.status) : null,
-                  trailing: _headerTrailing(h, review: review, needYou: needYouCount),
+                  actions: _headerActions(h, review: review, needYou: needYouCount),
                 ),
                 final AgentLine l => Collapse(
                   key: l.key,
@@ -469,22 +481,26 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
   /// What a section header carries on its right. Needs you: how many of its
   /// rows are out of reach, then the walk through every waiting agent (the
   /// triage sheet) when more than one waits: only the first is a card. Done:
-  /// the offline note, then "Mark all reviewed" when something can be marked
+  /// the offline note, then "Mark reviewed" when something can be marked
   /// (an offline agent cannot: it is not counted and the note says why,
-  /// instead of a button that would do nothing) and "Select all".
-  Widget? _headerTrailing(AgentHeader h, {required int review, required int needYou}) => switch (h.status) {
-    // The action's 44 dp box, kept while there is no action: a second agent
-    // starting to wait must not move the card in front under the thumb.
-    AgentStatus.blocked when h.offline == 0 && needYou < 2 => const SizedBox(height: kMinTap),
+  /// instead of a button that would do nothing) and "Select all". The
+  /// section already says "all": the words were "Mark all reviewed" and
+  /// wrapped on a 320 dp phone.
+  _HeaderActions? _headerActions(AgentHeader h, {required int review, required int needYou}) => switch (h.status) {
     AgentStatus.blocked => _HeaderActions(
       offline: h.offline,
+      // The action's room is kept while there is no action (its 44 dp box,
+      // and the choice of line made as if it were there): a second agent
+      // starting to wait must not move the card in front under the thumb.
+      holdsFor: _answerOneByOne,
       actions: [
         if (needYou > 1)
           // The sheet walks the same set, in the same order: terminal agents
           // and agent sessions.
-          TextAction(
+          (
             key: const ValueKey('answer-one-by-one'),
-            label: 'Answer one by one',
+            label: _answerOneByOne,
+            tone: TextActionTone.accent,
             onTap: () => unawaited(showTriageSheet(context)),
           ),
       ],
@@ -493,13 +509,13 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
       offline: h.offline,
       actions: [
         if (review > 0)
-          TextAction(
+          (
             key: const ValueKey('mark-all-reviewed'),
-            label: 'Mark all reviewed',
+            label: 'Mark reviewed',
             tone: TextActionTone.quiet,
             onTap: _markAllReviewed,
           ),
-        TextAction(
+        (
           key: const ValueKey('select-all-done'),
           label: 'Select all',
           tone: TextActionTone.quiet,
@@ -509,6 +525,8 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
     ),
     _ => null,
   };
+
+  static const _answerOneByOne = 'Answer one by one';
 
   /// Picks every finished agent (terminal and session), opening the section
   /// they sit in so that what is picked is on screen.
@@ -563,41 +581,146 @@ class _OfflineNote extends StatelessWidget {
 
   final int count;
 
+  static String words(int count) => '$count offline';
+
+  static TextStyle style(Ds ds) => Type.label.copyWith(color: ds.textMuted, fontFeatures: Type.tabular);
+
   @override
-  Widget build(BuildContext context) => Text(
-    '$count offline',
-    maxLines: 1,
-    overflow: TextOverflow.ellipsis,
-    style: Type.label.copyWith(color: context.ds.textMuted, fontFeatures: Type.tabular),
-  );
+  Widget build(BuildContext context) =>
+      Text(words(count), maxLines: 1, overflow: TextOverflow.ellipsis, style: style(context.ds));
 }
 
-/// The ghost buttons on a section header, after the note of how many of its
-/// rows are offline: Needs you's walk, Done's "Mark all reviewed" (absent
-/// when nothing can be reached to mark) and "Select all". The row shrinks
-/// (the labels ellipsize) before it can push the section's name off a
-/// narrow, large-text screen.
-class _HeaderActions extends StatelessWidget {
-  const _HeaderActions({required this.actions, this.offline = 0});
+/// One ghost button on a section header, as data, so the header can measure
+/// its words before it decides where they go.
+typedef _HeaderAction = ({Key key, String label, TextActionTone tone, VoidCallback onTap});
 
-  final List<Widget> actions;
+/// What a section header carries after its name: the note of how many of
+/// its rows are offline, then its ghost buttons (Needs you's walk, Done's
+/// "Mark reviewed" and "Select all").
+class _HeaderActions {
+  const _HeaderActions({required this.actions, this.offline = 0, this.holdsFor});
+
+  final List<_HeaderAction> actions;
   final int offline;
+
+  /// The label of an action that may come and go: its room is kept, and the
+  /// header is laid out as if it were there, so its arrival moves nothing.
+  final String? holdsFor;
+
+  bool get isEmpty => actions.isEmpty && offline == 0 && holdsFor == null;
+
+  /// The width the note and the buttons take on one line.
+  double width(BuildContext context) {
+    final ds = context.ds;
+    final scaler = MediaQuery.textScalerOf(context);
+    final labels = [
+      for (final a in actions) a.label,
+      if (holdsFor case final held? when !actions.any((a) => a.label == held)) held,
+    ];
+    final parts = [
+      if (offline > 0) _textWidth(_OfflineNote.words(offline), _OfflineNote.style(ds), scaler),
+      for (final l in labels) _textWidth(l, Type.labelStrong, scaler),
+    ];
+    final gaps = offline > 0 && labels.isNotEmpty
+        ? Gap.sm + Gap.md * (labels.length - 1)
+        : Gap.md * (labels.length - 1);
+    return parts.fold(0.0, (a, b) => a + b) + (parts.length > 1 ? gaps : 0);
+  }
+
+  List<Widget> children() => [
+    if (offline > 0) _OfflineNote(count: offline),
+    for (final a in actions) TextAction(key: a.key, label: a.label, tone: a.tone, onTap: a.onTap),
+  ];
+}
+
+double _textWidth(String text, TextStyle style, TextScaler scaler) {
+  final painter = TextPainter(
+    text: TextSpan(text: text, style: style),
+    textDirection: TextDirection.ltr,
+    textScaler: scaler,
+    maxLines: 1,
+  )..layout();
+  final width = painter.width;
+  painter.dispose();
+  return width;
+}
+
+/// A board section's header. Its name always shows whole: when the name and
+/// the actions do not fit on one line (a narrow phone, large text), the
+/// actions drop to their own line under it, left-aligned with the name, and
+/// wrap if they must. Why not shrink them: an ellipsized "Mark re…" is an
+/// action the person cannot read, and squeezing the name ("Do…") hid which
+/// section the actions belong to.
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({
+    super.key,
+    required this.label,
+    required this.count,
+    required this.expanded,
+    required this.onTap,
+    required this.actions,
+  });
+
+  final String label;
+  final int? count;
+  final bool? expanded;
+  final VoidCallback? onTap;
+  final _HeaderActions? actions;
+
+  /// The width the header's name, count and caret need on one line.
+  double _labelWidth(BuildContext context) {
+    final scaler = MediaQuery.textScalerOf(context);
+    return _textWidth(label, Type.labelStrong, scaler) +
+        (count == null ? 0 : Gap.sm + _textWidth('$count', Type.label.copyWith(fontFeatures: Type.tabular), scaler)) +
+        (expanded == null ? 0 : Gap.xs + IconSize.row);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final room = MediaQuery.sizeOf(context).width - 2 * Gap.gutter - 96;
-    return ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: math.max(room, 120)),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (offline > 0) ...[
-            Flexible(child: _OfflineNote(count: offline)),
-            if (actions.isNotEmpty) const SizedBox(width: Gap.sm),
+    final actions = this.actions;
+    SectionLabel header({Widget? trailing}) =>
+        SectionLabel(label: label, count: count, expanded: expanded, onTap: onTap, trailing: trailing);
+    if (actions == null) return header();
+    if (actions.isEmpty) return header();
+    final room = MediaQuery.sizeOf(context).width - 2 * Gap.gutter;
+    // One dp of slack for rounding between the measure and the layout.
+    final oneLine = _labelWidth(context) + Gap.sm + actions.width(context) + 1 <= room;
+    final items = actions.children();
+    if (oneLine) {
+      if (items.isEmpty) return header(trailing: const SizedBox(height: kMinTap));
+      return header(
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final (i, w) in items.indexed) ...[
+              if (i > 0) SizedBox(width: i == 1 && actions.offline > 0 ? Gap.sm : Gap.md),
+              w,
+            ],
           ],
-          for (final (i, a) in actions.indexed) ...[if (i > 0) const SizedBox(width: Gap.md), Flexible(child: a)],
-        ],
-      ),
+        ),
+      );
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        header(),
+        Container(
+          constraints: const BoxConstraints(minHeight: kMinTap),
+          padding: const EdgeInsets.symmetric(horizontal: Gap.gutter),
+          child: Wrap(
+            spacing: Gap.md,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              for (final w in items)
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: kMinTap),
+                  child: Align(widthFactor: 1, heightFactor: 1, child: w),
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -640,14 +763,15 @@ String? heardLabel(List<MachineConnection> connections) {
 /// 1 not connected`. The needs-you count is the only loud words on it (the
 /// blocked text colour), and the only place the board says it. A board with nothing waiting or working says
 /// `nothing running`, so the line always answers "is everything alive?".
-class _StatusLine extends StatelessWidget {
+/// Counts are tabular, so a number that changes does not shift the words
+/// after it.
+class _StatusLine {
   const _StatusLine({
     required this.waiting,
     required this.working,
     required this.agents,
     required this.machines,
     required this.troubled,
-    required this.heard,
   });
 
   final int waiting;
@@ -655,35 +779,65 @@ class _StatusLine extends StatelessWidget {
   final int agents;
   final int machines;
   final int troubled;
-  final String? heard;
 
-  @override
-  Widget build(BuildContext context) {
-    final ds = context.ds;
+  /// The longest [heardLabel] in practice (`Elapsed.compact` past an hour),
+  /// for measuring.
+  static const longestHeard = 'heard 23h 59m ago';
+
+  /// The facts in order; the needs-you count is the loud one.
+  List<({String text, bool loud})> _facts(String? heard) {
     final quiet = [
       if (working > 0) '$working working' else if (waiting == 0 && agents > 0) 'nothing running',
       ?heard,
       if (troubled > 0) '$troubled not connected',
     ];
     if (waiting == 0 && quiet.isEmpty) quiet.add(countOf(machines, 'machine'));
-    final style = Type.secondary.copyWith(color: ds.textSecondary, fontFeatures: Type.tabular);
-    return Text.rich(
-      TextSpan(
-        children: [
-          if (waiting > 0) ...[
-            TextSpan(
-              text: needYou(waiting),
-              style: Type.secondaryStrong.copyWith(color: ds.blockedText),
-            ),
-            if (quiet.isNotEmpty) const TextSpan(text: ' · '),
-          ],
-          TextSpan(text: quiet.join(' · ')),
-        ],
-      ),
+    return [if (waiting > 0) (text: needYou(waiting), loud: true), for (final q in quiet) (text: q, loud: false)];
+  }
+
+  static TextSpan _join(Ds ds, List<({String text, bool loud})> facts, {int breakAt = -1}) => TextSpan(
+    style: Type.secondary.copyWith(color: ds.textSecondary, fontFeatures: Type.tabular),
+    children: [
+      for (final (i, f) in facts.indexed) ...[
+        if (i > 0) TextSpan(text: i == breakAt ? '\n' : ' · '),
+        TextSpan(
+          text: f.text,
+          style: f.loud ? Type.secondaryStrong.copyWith(color: ds.blockedText, fontFeatures: Type.tabular) : null,
+        ),
+      ],
+    ],
+  );
+
+  /// The line, with [heard] for this minute. When it does not fit one line
+  /// it breaks between two facts, never inside one: `2 not` / `connected`
+  /// read as two broken facts.
+  TextSpan span(BuildContext context, {required String? heard}) {
+    final ds = context.ds;
+    final facts = _facts(heard);
+    final whole = _join(ds, facts);
+    if (_fits(context, whole)) return whole;
+    var at = facts.length - 1;
+    while (at > 1 && !_fits(context, _join(ds, facts.sublist(0, at)))) {
+      at--;
+    }
+    return _join(ds, facts, breakAt: at);
+  }
+
+  /// 1, or 2 when the line does not fit the large title's width.
+  int lines(BuildContext context, {required String? heard}) => _fits(context, _join(context.ds, _facts(heard))) ? 1 : 2;
+
+  /// Whether [text] fits one line of the large title (with the header's own
+  /// text-scale cap, [kBarTextScale]).
+  static bool _fits(BuildContext context, TextSpan text) {
+    final painter = TextPainter(
+      text: text,
+      textDirection: TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context).clamp(maxScaleFactor: kBarTextScale),
       maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: style,
-    );
+    )..layout(maxWidth: math.max(0, MediaQuery.sizeOf(context).width - 2 * Gap.gutter));
+    final fits = !painter.didExceedMaxLines;
+    painter.dispose();
+    return fits;
   }
 }
 
@@ -745,11 +899,12 @@ class _FoldAway extends StatelessWidget {
 /// with a mark, and a tap opens Machines. It reads as status, not as a
 /// button: no fill at rest (the round buttons on the right have one),
 /// secondary words, and its mark and words start on the large title's edge.
-/// The mark is a shape first: filled when every machine that is on is
-/// online (the done colour), a ring otherwise, coloured by the machine that
-/// most needs the person (the blocked colour for one to fix or approve, the
-/// working colour while one connects). A switched-off machine is neither a
-/// problem nor online: it is not counted.
+/// The mark is the [LinkDot] of the machine that most needs the person, the
+/// same shape as its row on Machines: the quiet filled dot when every machine
+/// that is on is online, the working ring while one connects, the blocked
+/// ring with a dot for one to fix or approve, a quiet ring when every machine
+/// is off. A switched-off machine is neither a problem nor online: it is not
+/// counted.
 class _MachineHealth extends StatelessWidget {
   const _MachineHealth({required this.online, required this.enabled, required this.worst, required this.onTap});
 
@@ -761,8 +916,6 @@ class _MachineHealth extends StatelessWidget {
   final LinkState? worst;
   final VoidCallback onTap;
 
-  static const _mark = 8.0;
-  static const _ring = 2.0;
   static const _height = 36.0;
 
   /// From the bar's padded edge to the large title's: the mark lines up
@@ -772,8 +925,7 @@ class _MachineHealth extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ds = context.ds;
-    final allOn = worst == null && enabled > 0;
-    final color = allOn ? ds.done : (worst?.color(ds) ?? ds.textTertiary);
+    final state = worst ?? (enabled == 0 ? LinkState.disabled : LinkState.online);
     final words = enabled == 0 ? 'All machines off' : '$online of ${countOf(enabled, 'machine')}';
     final spoken = enabled == 0 ? words : '$words online';
     return PressBuilder(
@@ -795,16 +947,7 @@ class _MachineHealth extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              key: const ValueKey('machine-health-mark'),
-              width: _mark,
-              height: _mark,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: allOn ? color : null,
-                border: allOn ? null : Border.all(color: color, width: _ring),
-              ),
-            ),
+            LinkDot(key: const ValueKey('machine-health-mark'), state: state),
             const SizedBox(width: Gap.sm),
             Flexible(
               child: Text(

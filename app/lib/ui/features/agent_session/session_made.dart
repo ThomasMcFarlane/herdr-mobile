@@ -11,7 +11,6 @@ import '../../../data/acp/session_made.dart';
 import '../../../data/models/remote_file.dart';
 import '../../../data/models/web_bridge.dart' show sensitiveServiceOf;
 import '../../../data/repositories/agent_session.dart';
-import '../../../data/repositories/machine_connection.dart' show LinkState;
 
 import 'package:herdr_mobile/ui/core/kit.dart';
 
@@ -498,7 +497,7 @@ class _KindTabs extends StatelessWidget {
             kind,
             label,
             count: count,
-            leading: running ? const LinkDot(state: LinkState.online) : null,
+            leading: running ? const LinkDot.live() : null,
             // The dot is all a sighted person gets of "running"; say it.
             semanticLabel: running ? '$label, $count, running' : null,
           ),
@@ -664,7 +663,7 @@ class _AppRow extends StatelessWidget {
       subtitle: [if (service != null || named != null) 'Port ${app.port}', status].join(' · '),
       dim: state == ServerState.stopped || service != null,
       onTap: () => onOpen(app.entry),
-      trailing: running ? const LinkDot(state: LinkState.online) : null,
+      trailing: running ? const LinkDot.live() : null,
     );
     final pages = service == null && app.pages.isNotEmpty;
     return Column(

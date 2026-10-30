@@ -17,7 +17,11 @@ It answers both from the header and keeps everything else quiet.
   `Needs you` and `Working` headers carry no count of their own. Why: the
   count was said four times on one screen (a filter chip, the section
   header, a floating triage pill and the tab badge), and every repeat is
-  chrome that costs the focus a glance is made of.
+  chrome that costs the focus a glance is made of. On a narrow phone the
+  line takes a second line (the header grows by one subtitle block) rather
+  than cut its end: `1 not connect…` hid the part that mattered most. It is
+  measured with the longest `heard` the minute can reach, so the header does
+  not change height as the minutes tick; counts are tabular figures.
 - **No filter chips, no triage pill.** The chips repeated the section headers
   and the pill repeated the count. The triage walk is `Answer one by one` on
   the Needs you header, shown when more than one agent waits (with one, the
@@ -43,11 +47,11 @@ It answers both from the header and keeps everything else quiet.
   board is short (Idle folds, sections fold) and a fling is one gesture,
   while a tappable title would be a target nobody could see.
 - **The header: the machines chip on the left, `+` and Settings on the
-  right.** The chip (`_MachineHealth`) says `4 of 5 machines` with a mark: a
-  filled dot in the done colour when every machine that is switched on is
-  online, otherwise a ring coloured by the machine that most needs the person
-  (`worstLinkState`: the blocked colour for one to fix or approve, the
-  working colour while one connects). A switched-off machine is neither a
+  right.** The chip (`_MachineHealth`) says `4 of 5 machines` with a mark:
+  the `LinkDot` of the machine that most needs the person (`worstLinkState`),
+  the same shape its row has on Machines: the quiet filled dot when every
+  machine that is switched on is online, the working ring while one
+  connects, the blocked ring with a dot for one to fix or approve. A switched-off machine is neither a
   problem nor online, so it is not counted (`AgentsOverview.enabledCount`).
   It reads as status, not a button: no fill at rest (a fill only under the
   press), `Type.label` in `textSecondary`, a 44 dp target, and its mark starts
@@ -271,7 +275,7 @@ reason (`SheetAction.unavailable`), dimmed.
   (`swipe_review.dart`). Undo is `unmarkReviewed` / `unmarkSeen`, which only
   restore that very finished turn. Springs, 1:1 tracking, rubber band at
   the end; screen readers get a `Mark reviewed` action.
-- **Mark all reviewed**: a quiet text action (`TextActionTone.quiet`, grey,
+- **Mark reviewed**: a quiet text action (`TextActionTone.quiet`, grey,
   as is Select all beside it: they tidy, they do not answer anything, so the
   accent stays for what does) on the Done section header. It reviews every finished, reachable terminal agent and session
   (`AttentionSet.toReview`) at once under ONE toast, `Marked 4 reviewed`, whose
@@ -279,7 +283,14 @@ reason (`SheetAction.unavailable`), dimmed.
   when nothing finished can be reached: the header says `2 offline` instead.
   Why: offline finished agents used to stay counted and the button did
   nothing, silently. Per-device state only; herdr's own seen state is never
-  touched.
+  touched. The words were `Mark all reviewed`; the section already says all,
+  and the longer words wrapped at 320 dp. When a header's name and its
+  actions do not fit one line (large text), the actions drop to their own
+  line under the name and wrap if they must: an ellipsized action cannot be
+  read, and a squeezed name (`Do…`) hid which section they act on. Needs you
+  keeps the room of `Answer one by one` (and chooses its line as if it were
+  there) while only one agent waits, so a second one arriving moves no card
+  under the thumb; at large text that is an empty 44 dp line.
 - **Glance notification**: the quiet `Watching N agents` notice carries
   `2 need you · 3 working`; a terminal agent's needs-you notification shows the
   question and the command and offers up to two buttons for the options that

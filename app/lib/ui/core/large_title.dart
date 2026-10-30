@@ -26,6 +26,7 @@ class SliverLargeTitle extends StatelessWidget {
     this.bottom,
     this.bottomHeight = 0,
     this.compactTitle = true,
+    this.subtitleLines = 1,
   });
 
   /// A pushed screen's header: [AppBackButton] leads.
@@ -36,13 +37,19 @@ class SliverLargeTitle extends StatelessWidget {
     this.actions = const [],
     this.bottom,
     this.bottomHeight = 0,
+    this.subtitleLines = 1,
   }) : leading = const AppBackButton(),
        compactTitle = true;
 
   final String title;
 
-  /// One quiet line under the big title.
+  /// One quiet line under the big title, or [subtitleLines] of them.
   final Widget? subtitle;
+
+  /// How many lines [subtitle] is given (1 or 2). Home's status line takes a
+  /// second line rather than cut its end on a narrow phone: the end says how
+  /// many machines are not connected, the part that matters most.
+  final int subtitleLines;
 
   /// Pushed screens use [SliverLargeTitle.back]; home has its machines chip.
   final Widget? leading;
@@ -66,13 +73,17 @@ class SliverLargeTitle extends StatelessWidget {
   static const _gap = 8.0;
 
   /// Height of the part that scrolls away.
-  static double _large(bool hasSubtitle, double bottomHeight) =>
-      _titleBlock + (hasSubtitle ? _subtitleBlock : 0) + bottomHeight + _gap;
+  static double _large(bool hasSubtitle, double bottomHeight, [int subtitleLines = 1]) =>
+      _titleBlock + (hasSubtitle ? _subtitleBlock * subtitleLines : 0) + bottomHeight + _gap;
 
   /// The pinned header's full (unscrolled) height: where the list content
   /// starts. Use it as the `edgeOffset` of a pull-to-refresh indicator.
-  static double extent(BuildContext context, {bool hasSubtitle = false, double bottomHeight = 0}) =>
-      MediaQuery.paddingOf(context).top + _barHeight + _large(hasSubtitle, bottomHeight);
+  static double extent(
+    BuildContext context, {
+    bool hasSubtitle = false,
+    double bottomHeight = 0,
+    int subtitleLines = 1,
+  }) => MediaQuery.paddingOf(context).top + _barHeight + _large(hasSubtitle, bottomHeight, subtitleLines);
 
   /// The pinned bar's height once the large title has scrolled away: the part
   /// of the screen's top that content scrolled under is hidden by.
@@ -85,6 +96,7 @@ class SliverLargeTitle extends StatelessWidget {
       topInset: MediaQuery.paddingOf(context).top,
       title: title,
       subtitle: subtitle,
+      subtitleLines: subtitleLines,
       leading: leading,
       actions: actions,
       bottom: bottom,
@@ -101,6 +113,7 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
     required this.topInset,
     required this.title,
     required this.subtitle,
+    required this.subtitleLines,
     required this.leading,
     required this.actions,
     required this.bottom,
@@ -113,6 +126,7 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
   final double topInset;
   final String title;
   final Widget? subtitle;
+  final int subtitleLines;
   final Widget? leading;
   final List<Widget> actions;
   final Widget? bottom;
@@ -125,7 +139,9 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
   static const _titleBlock = SliverLargeTitle._titleBlock;
   static const _subtitleBlock = SliverLargeTitle._subtitleBlock;
 
-  double get _large => SliverLargeTitle._large(subtitle != null, bottomHeight);
+  double get _large => SliverLargeTitle._large(subtitle != null, bottomHeight, subtitleLines);
+
+  double get _subtitleHeight => _subtitleBlock * subtitleLines;
 
   @override
   double get minExtent => topInset + _bar;
@@ -158,13 +174,13 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
             ),
           ),
         ),
-        if (subtitle != null) SizedBox(height: _subtitleBlock, child: subtitle),
+        if (subtitle != null) SizedBox(height: _subtitleHeight, child: subtitle),
       ],
     );
     // No layer at rest (opacity 1); the title is simply absent once it is gone.
     if (big < 1) titles = Opacity(opacity: big, child: titles);
     if (big == 0) {
-      titles = SizedBox(height: _titleBlock + (subtitle != null ? _subtitleBlock : 0));
+      titles = SizedBox(height: _titleBlock + (subtitle != null ? _subtitleHeight : 0));
     }
 
     // Bars clamp text scale like iOS navigation bars: their blocks are fixed
@@ -281,6 +297,7 @@ class _LargeTitleDelegate extends SliverPersistentHeaderDelegate {
       old.compactTitle != compactTitle ||
       old.leading != leading ||
       old.subtitle != subtitle ||
+      old.subtitleLines != subtitleLines ||
       old.bottom != bottom ||
       old.actions != actions;
 }

@@ -1,6 +1,7 @@
 // The agents tab through the real shell: sections, collapsing, connection
 // notices and the states around an empty or failing fleet.
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/machine_profile.dart';
 import 'package:herdr_mobile/data/repositories/machine_connection.dart';
@@ -165,10 +166,9 @@ void main() {
 
   // The left of home's header: the fleet at a glance, and the way to Machines.
   group('the machines chip', () {
-    BoxDecoration mark(WidgetTester tester) =>
-        tester.widget<Container>(find.byKey(const ValueKey('machine-health-mark'))).decoration! as BoxDecoration;
+    LinkDot mark(WidgetTester tester) => tester.widget<LinkDot>(find.byKey(const ValueKey('machine-health-mark')));
 
-    testWidgets('counts the machines that are on; one not online turns its dot to a ring', (tester) async {
+    testWidgets('counts the machines that are on; one needing the person changes the mark\'s shape', (tester) async {
       final h = await UiHarness.create([
         (profile: _machine('a', 'one'), snapshot: snapshotWith([_pane(1, 'working')])),
         (profile: _machine('b', 'two'), snapshot: snapshotWith([_pane(2, 'working')])),
@@ -181,15 +181,15 @@ void main() {
       final ds = tester.element(find.byType(AgentsScreen)).ds;
 
       expect(find.text('2 of 2 machines'), findsOneWidget, reason: 'switched off is neither a problem nor online');
-      expect(mark(tester).color, ds.done, reason: 'all online: a filled dot');
-      expect(mark(tester).border, isNull);
+      expect(mark(tester).mark, LinkMark.dot, reason: 'all online: the quiet filled dot, as on Machines');
+      expect(mark(tester).colorIn(ds), isNot(ds.done), reason: 'healthy is not news: no status colour');
 
       h.transports['b']!.failure = const HerdrTransportException('Host key changed', fatal: true);
       h.fleet.connection('b')!.reconnect();
       await settle(tester);
       expect(find.text('1 of 2 machines'), findsOneWidget);
-      expect(mark(tester).color, isNull, reason: 'not all online: a ring');
-      expect((mark(tester).border! as Border).top.color, ds.blocked, reason: 'one needs the person');
+      expect(mark(tester).mark, LinkMark.target, reason: 'one needs the person: a different shape, not only a colour');
+      expect(mark(tester).colorIn(ds), ds.blocked);
       expect(find.bySemanticsLabel('1 of 2 machines online'), findsOneWidget);
 
       await tester.tap(find.byKey(const ValueKey('machine-health')));
@@ -359,6 +359,74 @@ void main() {
       reason: 'the loud colour is for a question; the finished one waits quietly on the board',
     );
     await teardownUi(tester, h);
+  });
+
+  // What a narrow phone at large text does to the header and the section
+  // headers: everything that says something stays whole.
+  group('fit', () {
+    RenderParagraph paragraph(WidgetTester tester, Finder f) => tester.renderObject<RenderParagraph>(f);
+
+    for (final scale in [1.6, 2.0]) {
+      testWidgets('the status line takes a second line at 320 dp and ${scale}x instead of cutting its end', (
+        tester,
+      ) async {
+        final h = await UiHarness.create([
+          (
+            profile: _machine('a', 'studio'),
+            snapshot: snapshotWith([_pane(1, 'blocked'), _pane(2, 'working'), _pane(3, 'working')]),
+          ),
+          (profile: _machine('b', 'laptop'), snapshot: snapshotWith([_pane(4, 'working')])),
+        ]);
+        await pumpUi(tester, h, width: 320, height: 640, textScale: scale);
+        h.transports['b']!.failure = const HerdrTransportException('Host key changed', fatal: true);
+        h.fleet.connection('b')!.reconnect();
+        await settle(tester);
+
+        final line = find.descendant(
+          of: find.byType(SliverLargeTitle),
+          matching: find.textContaining('not connected', findRichText: true),
+        );
+        expect(line, findsOneWidget);
+        final p = paragraph(tester, line);
+        expect(p.didExceedMaxLines, isFalse, reason: 'the end, "1 not connected", is the part that matters');
+        final oneLine = Type.secondary.fontSize! * Type.secondary.height! * kBarTextScale;
+        expect(p.size.height, greaterThan(oneLine * 1.5), reason: 'it wrapped to a second line');
+        // The header grew with it: the strip under it is not overlapped.
+        expect(tester.getRect(line).bottom, lessThanOrEqualTo(tester.getRect(find.byType(StatusStrip)).top));
+        expect(tester.takeException(), isNull);
+        await teardownUi(tester, h);
+      });
+    }
+
+    testWidgets('Done\'s actions fit beside its name at 320 dp, and drop under it at 2x', (tester) async {
+      final h = await UiHarness.create([
+        (
+          profile: _machine('a', 'studio'),
+          snapshot: snapshotWith([_pane(1, 'done'), _pane(2, 'done'), _pane(3, 'working')]),
+        ),
+      ]);
+      final done = find.descendant(of: find.byType(SectionLabel), matching: find.text('Done'));
+      final mark = find.text('Mark reviewed');
+
+      await pumpUi(tester, h, width: 320, height: _tall);
+      expect(mark, findsOneWidget);
+      final oneLine = Type.labelStrong.fontSize! * 2;
+      expect(tester.getSize(mark).height, lessThan(oneLine), reason: 'one line, not wrapped');
+      expect(
+        (tester.getCenter(mark).dy - tester.getCenter(done).dy).abs(),
+        lessThan(2),
+        reason: 'beside the section\'s name',
+      );
+
+      await pumpUi(tester, h, width: 320, height: _tall, textScale: 2);
+      expect(paragraph(tester, done).didExceedMaxLines, isFalse, reason: 'the section\'s name is never "Do…"');
+      expect(paragraph(tester, mark).didExceedMaxLines, isFalse);
+      expect(tester.getRect(mark).top, greaterThan(tester.getRect(done).bottom), reason: 'on its own line');
+      expect(mark.hitTestable(), findsOneWidget);
+      expect(find.text('Select all').hitTestable(), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await teardownUi(tester, h);
+    });
   });
 
   group('motion and identity', () {
