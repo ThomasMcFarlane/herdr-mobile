@@ -1,6 +1,6 @@
 # The board (home)
 
-How the Agents board, the app's home, shows, groups, answers and reviews
+How the Agents board, the app's home, shows, sorts, answers and reviews
 agents, and how Machines and Settings are reached from it.
 
 The design system (tokens, kit, motion, words) is `docs/DESIGN.md`; this file holds what this screen does and why.
@@ -28,15 +28,22 @@ It answers both from the header and keeps everything else quiet.
   card in front is the whole walk). The header keeps the action's 44 dp box
   when it has none, so a second agent starting to wait moves nothing under
   the thumb.
-- **One decision in front.** In the default `Compact` density
-  (`BoardDensity.compact`), the first agent of Needs you that can be answered
-  is an `AgentCard` with its answers; every other waiting agent is a one-line
-  row under it, and every agent in a project is a row. `Cards` (Settings > Look >
-  Agent list) draws every agent as a card. There was an `Auto` (cards below
-  five agents); it went, since compact is now right at any count, and a saved
-  `auto` reads as the default.
-- **Needs you never folds.** A project's fold is restored after the process is
-  reclaimed; a folded Needs you would hide the one loud section.
+- **One decision in front, every other agent a row.** The first agent of
+  Needs you that can be answered is an `AgentCard` with its answers (and,
+  when no question is read, the end of its terminal and `Reply…`); every
+  other agent, waiting or not, is a one-line `AgentCompactRow`. There is no
+  density setting. Why (owner decision): the `Cards` density (`BoardDensity`,
+  Settings, Look, Agent list) drew eleven idle agents as bordered cards each
+  with `Reply…`, and the owner could not tell what to look at. It went with
+  its persistence; a value an older version saved (`app.density.v1`) is never
+  read. The card only ever holds a live waiting agent, so it never changes
+  status in place (its arrival wash, `Motion.arrival`, went too) and never
+  swipes to review.
+- **Needs you never folds.** A section's fold is restored after the process
+  is reclaimed (`folded-sections`: status names, one per line; a name it
+  does not know is ignored, and the 0.1.45 int and the 0.1.47 project keys
+  lived under other ids, so nothing restored can throw); a folded Needs you
+  would hide the one loud section.
 - **No bar under home.** There is no tab bar (it held Agents, Machines and
   Settings). Why (owner decision): most of the time the person cares about
   agents, not machines; home is the app, chrome costs focus, and the bar
@@ -44,7 +51,7 @@ It answers both from the header and keeps everything else quiet.
   the batch bar is the only bottom bar, and only while picking (the list then
   keeps its room). Re-tapping the Agents tab used to scroll the board to the
   top; that gesture went with the tab, and nothing replaces it: the calm
-  board is short (idle rows fold, projects fold) and a fling is one gesture,
+  board is short (Idle folds, sections fold) and a fling is one gesture,
   while a tappable title would be a target nobody could see.
 - **The header: the machines chip on the left, `+` and Settings on the
   right.** The chip (`_MachineHealth`) says `4 of 5 machines` with a mark:
@@ -58,8 +65,7 @@ It answers both from the header and keeps everything else quiet.
   on the large title's edge. A tap opens Machines. The gear (`Settings`)
   carries a quiet accent dot while a newer version waits (`CircleButton.mark`,
   `update available` to a screen reader). Two trailing actions, the budget;
-  density is a setting and `Past sessions` is a row of the `New agent
-  session` form. Scrolled, the bar keeps the chip and the two buttons and no
+  `Past sessions` is a row of the `New agent session` form. Scrolled, the bar keeps the chip and the two buttons and no
   compact `Agents` title (`compactTitle: false`): centred, it collided with
   the chip at 320 dp, and home needs no name. Before the first machine the
   header holds the gear alone: there is no fleet to sum up and nothing to
@@ -73,113 +79,93 @@ It answers both from the header and keeps everything else quiet.
   status line: it carries the next step (`Retry`, `Approve`, or Machines),
   which the status line cannot. The status line still says `N not connected`.
 
-## Grouped by project
+## Sections by status, newest first
 
-Owner decision, chosen from a prototype: people run several features of one
-repo in separate git worktrees, and status sections (Needs you, Done, Working,
-Idle) scattered one repo's features across the board and named rows by agent
-kind. The board now reads, top to bottom (`boardLayout`,
-`agents_grouping.dart`):
+Owner decision. 0.1.46 and 0.1.47 grouped the board by project (a repo with
+its worktrees), rows in the order they were started, with a Cards density.
+On the phone the owner could not tell what to look at: 3-day-old agents sat
+on top and 12-minute-old ones last, one repo split into a group per machine,
+and every idle agent was a card. Asked which order finds an agent fastest,
+they chose status sections, newest first, rows instead of cards. The board
+reads, top to bottom (`boardLayout`, `boardOrder`, `agents_grouping.dart`):
 
-- **Needs you**, across every project, exactly as before: the attention
-  order, the one decision card, rows for the rest, `Answer one by one`, never
-  folded. An agent that needs the person is pinned here and not repeated in
-  its project.
-- **One group per project**: its name (`Type.row`, the name of a thing, in
-  the text colour) with a caret, and one muted summary line in the board's
-  own words: `studio-mac · 2 working · 1 quiet · 1 done · 3 idle · 4 worktrees`
-  (the machine only when the board spans several; `quiet` counts the working
-  rows that say quiet; `worktrees` only for a repo with several open
-  checkouts; two lines at most, since one line cut the counts at large text
-  on a narrow phone). No status colour: attention is Needs you's. A tap
-  folds it, kept by the project's key across a reclaimed process. Folded,
-  the summary says what is inside. A project with one agent, and the board's
-  only project, have no summary (owner decision: over one row it repeated
-  the row, over the only project it repeated the status line); the machine
-  then sits muted beside the name, in the same text so the name keeps its
-  room, when the board spans several machines.
+- **Needs you**: `AttentionSet`'s order, what can be answered first, longest
+  waiting first, then what is out of reach. The one decision card, rows for
+  the rest, `Answer one by one`, never folded. Not newest first, though the
+  owner said "newest first within each": a new waiter on top would replace
+  the card in front under the thumb; joining below it moves nothing, and the
+  triage walk and the notifications use the same order.
+- **Working**, **To review** (finished, not reviewed: the status line's
+  words) and **Idle**, each newest first by when its state began
+  (`compareNewestFirst`): a terminal agent's `since`; a session's turn start
+  while it works (its last event moves with every event, and the row would
+  move with it), else its last activity. A time within the last day first,
+  then no known time (it may be minutes or months old), then older. To review
+  lists what can be marked before what is out of reach. Unknown comes last,
+  by machine and pane. Ties keep machine and pane order.
+
+Rows move when their status does (a finished agent leaves Working for the top
+of To review); that is the order the owner chose. Headers: `Needs you`,
+`Working` and `To review` carry no count (the status line says it); `Idle`
+does. Every section but Needs you folds on a tap.
+
+**Which feature, on every row** (`agentWhere`): `herdr-mobile · fix/login ·
+omp`, the repo (herdr's `repo_name`, else the folder's last part), the branch
+(`MachineConnection.branchOf`) or, until it is read, the checkout's folder
+(left out when it is the repo's own name), the agent kind, and the machine
+when the board spans several. A part the title says, or one already said, is
+left out. The line ends in an ellipsis and the time is the row's trailing
+slot, so a long branch cuts the end of the line, never the time. The peek and
+the reply sheet show the same line (`AgentRowData.subtitle`); a session's is
+`sessionWhereOnBoard`.
 
 **To review lives in the status line.** `3 to review` (quiet: `textSecondary`,
-`secondaryStrong`, warming to `text` on pointer-down; a button read as `3 to
-review, select them`) selects exactly the finished agents that can be marked
-(`AttentionSet.toReview`), replacing any earlier pick, and opens the projects
-and the fold that hold them. The selection bar's `Reviewed` (a check in
+`secondaryStrong`, a dotted underline, warming to `text` on pointer-down; a
+button read as `3 to review, select them`) selects exactly the finished agents
+that can be marked (`AttentionSet.toReview`), replacing any earlier pick, and
+opens To review if it was folded. The selection bar's `Reviewed` (a check in
 Stop's ring) marks the picked finished agents at once, no confirm sheet,
 under one toast with one Undo (`markAllReviewedWithUndo`, the swipe's group),
 and ends picking. Out-of-reach ones are said, not counted: `3 to review, 1
 offline`, or `2 offline to review` (not a button) when none can be marked.
-Why (owner decision): a `To review · Mark reviewed · Select all` line above
-the projects was one more row of chrome between Needs you and the work; the
-count belongs with the other counts, and selecting first shows what will be
-cleared. The line is 22 dp high, so `SliverLargeTitle` hit-tests its subtitle
-from a band (`_HitBand`): `kMinTap` above the first line's middle, into the
-title block that takes no tap, and the gap under it, each touch taken into
-the nearest line. Measured in `batch_board_test` (a 44 dp band with the line
-on two lines).
+Why (owner decision): a `Mark reviewed · Select all` line on a header was one
+more row of chrome; the count belongs with the other counts, and selecting
+first shows what will be cleared. The line is 22 dp high, so
+`SliverLargeTitle` hit-tests its subtitle from a band (`_HitBand`): `kMinTap`
+above the first line's middle, into the title block that takes no tap, and
+the gap under it, each touch taken into the nearest line. Measured in
+`batch_board_test` (a 44 dp band with the line on two lines).
 
-**The project's key** (`repoKeyIn`) is per machine: the repo's primary
-checkout (herdr's `repo_root`) when herdr places the folder in a repo, else
-the folder itself, else one `Other` per machine for an agent with no folder.
-herdr reports a repo only for workspaces in a worktree group, so a plain
-workspace is its own folder until the first worktree is opened beside it. The
-key is chosen so that it does not move as that data arrives: an agent in the
-primary checkout's folder has the same key before (its folder) and after (the
-repo root). One in a linked checkout or a sub-folder joins its repo's group
-then, once. Nothing is fetched to guess sooner (`PathFinder`'s SFTP probe is
-per folder, too costly for a board).
-
-**Nothing moves unless the person moves it** (owner decision: a predictable
-board; a status change never moves a row). Projects by name
-(case-insensitive), then machine, then key. Rows inside a project, every
-agent but the waiting ones, in the order they were started (`_startOf`,
-`agents_grouping.dart`), known on the first frame and never changed by a
-status:
-
-- Terminal agents by herdr's pane id, `w<workspace>:p<pane>`, compared as two
-  counters (`herdrPaneCounters`; base 36, shorter first: `wZ` < `w11`, `p9` <
-  `p10`). Both only grow and are never reused: herdr's `session.json` keeps a
-  `next_public_pane_number` per workspace and persists workspace ids, and a
-  live herdr 0.9.5 listed `wB`, `wC`, `wD`, `wS` ... `wZ`, `w11`, `w12` in the
-  order the workspaces were made, across restarts (`w11:p2`..`p5` after its
-  `p1` closed). The schema says only `pane_id: string`
-  (`docs/herdr-api.schema.json`, `PaneInfo`), so an id of another shape sorts
-  after these by folder, then id. A pane split later in an older workspace
-  sits with that workspace's panes, not at the very end (unverified how often
-  that happens in practice).
-- Then agent sessions by their keeper's `started_at`
-  (`AgentSessionView.startedAt`, the host's clock, kept in the cached list);
-  one with no time last, by folder, then key.
-- Not by branch: branches are read after the first frame, and rows would
-  shuffle once when they arrived.
-
-A finished agent keeps its place and only its glyph changes; one that starts
-waiting moves to Needs you and comes back to its place once answered. A row
-is named by its task; the line under it is the branch, else the
-checkout's folder, then the agent kind (`fix/rate-limit · omp`). The repo is
-the header's and is not repeated, and a folder that is the project's own name
-is left out (`Claude Code`). The idle `N more` fold is per project
-(`idleShown`, 5), opened per project and not kept: it holds the idle and
-offline rows but the five started last, and sits after the project's rows;
-opened, the rows show in their own places. The fold only hides, never
-reorders, so an idle agent that starts working again shows where it always
-was (it then leaves the fold: a reveal, not a move). What a fold holds is
-decided when the person starts looking and held until they look afresh (the
-board shown again, the app resumed): an agent that goes idle meanwhile stays
-in view (`heldFoldsFor`). Why: worked out on every build, the fold hid the
-oldest idle row the moment another agent went idle, under the person's eyes.
+**The idle fold** (`idleShown`, 5): Idle shows its five newest rows and folds
+the rest behind one `N more idle` line after them, with the names of the first
+two it holds; opened, it reads `Show less`. Not kept across launches. A row
+the person has seen during this look, in Idle or in any other section, never
+goes into the fold until they look afresh (the board shown again, the app
+resumed): `idleFoldFor` and the board's `SeenRows`. Why (owner decision, a
+predictable board): worked out on every build, the fold hid a row the moment
+another agent went idle, under the person's eyes. Rows the person never saw,
+such as a second machine's agents arriving after the board opened, fold as
+usual: holding the fold as it was at the first build would have left a whole
+machine's idle agents unfolded until the next look.
 
 **Branches** come from `MachineConnection.loadBranchesOnce`: one
 `worktree.list` per repo with several open checkouts, at most once per
-machine per app run, after the first frame that shows such a repo. Never per
-rebuild (the board checks `branchesAsked`); no timer. A failure leaves the
-checkout's folder on the row. A checkout opened later is named by its folder
-until the machine screen or the start form reads it. The board rebuilds when
-a branch is learnt (`AgentsOverview.branches`).
+machine per app run, after the first frame that shows a row in such a repo.
+Never per rebuild (the board checks `branchesAsked`); no timer. A failure
+leaves the checkout's folder on the row. A checkout opened later is named by
+its folder until the machine screen or the start form reads it. The board
+rebuilds when a branch is learnt (`AgentsOverview.branches`).
 
-The swipe walk (needs you, then done project by project), `agentsWorking`,
-the title switcher (Needs you, then each project, its rows named as on the
-board) and `to review`'s pick read the same layout (`boardLayoutOf`, or the
-layout the board last built), so their order is the board's.
+What went with project grouping: group headers and their summaries, the
+per-project fold (`folded-groups`), start order (herdr's pane counters and
+`AgentSessionView.startedAt`), `Place.repoRoot` (a group's key) and
+`agentPlaceNames` (the switcher's own naming: `agentWhere` already tells
+worktrees apart).
+
+The swipe walk (Needs you, then To review), `agentsWorking`, the title
+switcher (the sections and rows as the board shows them) and batch targets
+read the same layout (`boardLayoutOf`, `groupByStatus`), so their order is the
+board's.
 
 ## Blocked prompts
 
@@ -249,7 +235,7 @@ once and its spinner through the read and the send. Why: previews are read at
 most every 1.5 s, so a question answered on the desktop could still be on the
 phone, and its `1` would have answered whatever the agent asked next.
 
-A card that stops waiting (answered, or answered elsewhere) goes to its project at once and leaves a gap of its own height that closes over
+A card that stops waiting (answered, or answered elsewhere) goes to its section at once and leaves a gap of its own height that closes over
 `Motion.expand` (`AgentFolding`), so the next question glides up under the
 thumb instead of jumping by a whole card; reduced motion skips the gap.
 
@@ -283,7 +269,7 @@ Machines chip counting offline panes).
   three questions in the loud colour, and attention must be the only loud
   thing.
 - **One board, one place per agent.** Agent sessions sit with the terminal
-  agents (a session row in Needs you or in its project). Why: a separate
+  agents (a session row in the section of its status). Why: a separate
   sessions
   section jumped above the terminal cards whenever a session started or
   stopped waiting, moving every answer under the thumb, and "what waits" had
@@ -375,7 +361,7 @@ reason (`SheetAction.unavailable`), dimmed.
   starts waiting is felt though the count stayed the same. Not during the
   first 3 s after start-up or after resuming (the fleet catching up is not
   news), at most one per 2 s, nothing for an agent that stops waiting.
-- **Swipe to review**: a leftward swipe on a done, live card or compact row,
+- **Swipe to review**: a leftward swipe on a done, live row,
   or on a done, reachable agent session row (not while picking), reveals a quiet
   `Reviewed`; past the threshold, or on a
   flick, the row slides out and `markReviewed` (terminal) or
@@ -385,7 +371,7 @@ reason (`SheetAction.unavailable`), dimmed.
   restore that very finished turn. Springs, 1:1 tracking, rubber band at
   the end; screen readers get a `Mark reviewed` action.
 - **Mark reviewed**: `3 to review` in the status line, then `Reviewed` in
-  the selection bar (see "Grouped by project"). It reviews the picked
+  the selection bar (see "Sections by status, newest first"). It reviews the picked
   finished, reachable terminal agents and sessions at once under ONE toast,
   `Marked 4 reviewed`, whose Undo restores them all (and joins a swipe's
   toast still showing). Per-device state only; herdr's own seen state is

@@ -28,7 +28,7 @@ class SegmentOption<T> {
 /// The app's one switch: a slim tinted pill (`ds.fill`, no border) and ONE
 /// capsule under the chosen cell in `ds.accentWash`, its label in
 /// `ds.accentText`: the app's one selection look. It picks the value of a setting (theme,
-/// density) and switches what a sheet shows (the kinds of what a session made);
+/// how agents open) and switches what a sheet shows (the kinds of what a session made);
 /// the job differs, the look does not.
 ///
 /// Cells are equal width when every option fits at its own size, and the row

@@ -1,12 +1,10 @@
 // The board and its chrome tell one story about what needs you: the status
 // line, Needs you and its `to review` count agree, what is out of reach says
 // so instead of being counted, reviewing clears to review on this phone only,
-// wait times are honest, Needs you follows the wait while rows keep their
-// places, and density follows the count.
+// wait times are honest, and only the first agent that needs you is a card.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/machine_profile.dart';
-import 'package:herdr_mobile/data/repositories/app_settings.dart';
 import 'package:herdr_mobile/data/repositories/attention_set.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_card.dart';
@@ -15,7 +13,6 @@ import 'package:herdr_mobile/ui/features/pane/pane_screen.dart';
 import 'package:herdr_mobile/ui/shell/home_shell.dart';
 import 'package:provider/provider.dart';
 
-import '../support/settings_support.dart';
 import '../support/shot.dart' show loadAppFonts;
 import 'board_support.dart';
 import 'ui_harness.dart';
@@ -147,7 +144,7 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('the board runs Needs you, then the project in the order its agents were started', (tester) async {
+    testWidgets('the board runs Needs you, Working, To review, then Idle', (tester) async {
       final h = await BoardHarness.create([
         _machine('a', [_pane(1, 'idle'), _pane(2, 'working'), _pane(3, 'done'), _pane(4, 'blocked')]),
       ]);
@@ -157,9 +154,12 @@ void main() {
       final ys = [
         _top(tester, section('Needs you')),
         _top(tester, _card('task 4')),
-        // Every pane works in `/work/w1`: one project.
-        _top(tester, find.byKey(const ValueKey('group/a:/work/w1'))),
-        for (final i in [1, 2, 3]) _top(tester, _card('task $i')),
+        _top(tester, section('Working')),
+        _top(tester, _row('task 2')),
+        _top(tester, section('To review')),
+        _top(tester, _row('task 3')),
+        _top(tester, section('Idle')),
+        _top(tester, _row('task 1')),
       ];
       expect(ys, orderedEquals([...ys]..sort()), reason: 'top to bottom');
       expect(ys.toSet(), hasLength(ys.length));
@@ -179,7 +179,7 @@ void main() {
       expect(toReviewCount(tester), 2);
       expect(statusNeedsYou(tester), '1 needs you');
 
-      await tester.tap(_card('task 2'));
+      await tester.tap(_row('task 2'));
       await settle(tester);
       expect(find.byType(PaneScreen), findsOneWidget);
       expect(_wanted(tester), 2);
@@ -202,29 +202,12 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('a compact row reviews too', (tester) async {
-      final h = await BoardHarness.create([
-        _machine('a', [_pane(1, 'done'), _pane(2, 'done')]),
-      ]);
-      await h.appSettings.setDensity(BoardDensity.compact);
-      await pumpBoard(tester, h, height: _tall);
-      expect(_wanted(tester), 2);
-
-      await tester.tap(_row('task 1'));
-      await settle(tester);
-
-      expect(_wanted(tester), 1);
-      await _back(tester);
-      expect(toReviewCount(tester), 1);
-      await teardownBoard(tester, h);
-    });
-
     testWidgets('a reviewed agent that finishes again is Done again', (tester) async {
       final h = await BoardHarness.create([
         _machine('a', [_pane(1, 'done')]),
       ]);
       await pumpBoard(tester, h, height: _tall);
-      await tester.tap(_card('task 1'));
+      await tester.tap(_row('task 1'));
       await settle(tester);
       await _back(tester);
       expect(_wanted(tester), 0);
@@ -305,18 +288,21 @@ void main() {
       expect(_said('needs you, 5 minutes'), findsOneWidget);
       expect(_said('needs you, 1 minute'), findsOneWidget);
       final y = [
-        for (final i in [1, 2, 3]) _top(tester, _card('task $i')),
+        for (final i in [1, 2, 3]) _top(tester, find.text('task $i')),
       ];
+      expect(_card('task 2'), findsOneWidget, reason: 'the longest waiting is the one in front');
       expect(y[1], lessThan(y[0]), reason: '20 minutes above 5');
       expect(y[0], lessThan(y[2]), reason: '5 minutes above 1');
       await teardownBoard(tester, h);
     });
 
-    testWidgets('inside a project, agents keep their places as they finish', (tester) async {
+    // Owner decision: newest first within each section.
+    testWidgets('an agent that finishes moves from Working to the top of To review', (tester) async {
       final h = await BoardHarness.create([
         _machine('a', [_pane(1, 'working'), _pane(2, 'working')]),
       ]);
       await pumpBoard(tester, h, height: _tall);
+      final review = find.widgetWithText(SectionLabel, 'To review');
 
       await h.changeStatuses(
         tester,
@@ -325,7 +311,8 @@ void main() {
         ago: const Duration(minutes: 40),
         title: _title,
       );
-      expect(_top(tester, _card('task 1')), lessThan(_top(tester, _card('task 2'))), reason: 'started first');
+      expect(_top(tester, _row('task 1')), lessThan(_top(tester, review)), reason: 'still working');
+      expect(_top(tester, _row('task 2')), greaterThan(_top(tester, review)));
       await h.changeStatuses(
         tester,
         'a',
@@ -334,7 +321,8 @@ void main() {
         title: _title,
       );
 
-      expect(_top(tester, _card('task 1')), lessThan(_top(tester, _card('task 2'))), reason: 'finishing moves nothing');
+      expect(find.widgetWithText(SectionLabel, 'Working'), findsNothing, reason: 'nothing works');
+      expect(_top(tester, _row('task 1')), lessThan(_top(tester, _row('task 2'))), reason: 'the newest finished first');
       await teardownBoard(tester, h);
     });
   });
@@ -353,9 +341,9 @@ void main() {
       await h.changeStatuses(tester, 'a', panes, title: _title);
       expect(_said('working, quiet for 14 minutes'), findsNWidgets(2), reason: 'the next refresh, 14 minutes on');
       expect(
-        _top(tester, _card('task 1')),
-        lessThan(_top(tester, _card('task 2'))),
-        reason: 'the order they were started in',
+        _top(tester, _row('task 1')),
+        lessThan(_top(tester, _row('task 2'))),
+        reason: 'they started working together: pane order',
       );
 
       // task 1 speaks up: a burst of events, no refresh.
@@ -375,8 +363,8 @@ void main() {
       expect(notified, 0, reason: 'no notification per event');
       await h.changeStatuses(tester, 'a', panes, title: _title);
       expect(
-        _top(tester, _card('task 1')),
-        lessThan(_top(tester, _card('task 2'))),
+        _top(tester, _row('task 1')),
+        lessThan(_top(tester, _row('task 2'))),
         reason: 'quiet or not, a row keeps its place',
       );
       expect(_said('working, quiet for 14 minutes'), findsOneWidget, reason: 'only task 2 is still quiet');
@@ -395,8 +383,8 @@ void main() {
     });
   });
 
-  group('density', () {
-    testWidgets('compact: the first agent that needs you is a card, every other agent a row', (tester) async {
+  group('cards and rows', () {
+    testWidgets('the first agent that needs you is a card, every other agent a row', (tester) async {
       final h = await BoardHarness.create([
         _machine('a', [
           _pane(1, 'blocked'),
@@ -406,7 +394,6 @@ void main() {
           _pane(5, 'done'),
         ]),
       ]);
-      await h.appSettings.setDensity(BoardDensity.compact);
       await pumpBoard(tester, h, height: _tall);
 
       expect(find.byType(AgentCard), findsOneWidget, reason: 'one decision in front');
@@ -416,20 +403,19 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('Needs you cannot be folded; a project can', (tester) async {
+    testWidgets('Needs you cannot be folded; Working can', (tester) async {
       final h = await BoardHarness.create([
         _machine('a', [_pane(1, 'blocked'), _pane(2, 'working')]),
       ]);
-      await h.appSettings.setDensity(BoardDensity.compact);
       await pumpBoard(tester, h, height: _tall);
 
       await tester.tap(find.widgetWithText(SectionLabel, 'Needs you'));
       await settle(tester);
       expect(_card('task 1'), findsOneWidget, reason: 'still there');
 
-      await tester.tap(find.byKey(const ValueKey('group/a:/work/w1')));
+      await tester.tap(find.byKey(const ValueKey('header/working')));
       await settle(tester);
-      expect(_row('task 2').hitTestable(), findsNothing, reason: 'the project folds');
+      expect(_row('task 2').hitTestable(), findsNothing, reason: 'the section folds');
       await teardownBoard(tester, h);
     });
 
@@ -450,7 +436,7 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('the header holds two actions, + and Settings: no density or history button', (tester) async {
+    testWidgets('the header holds two actions, + and Settings: no history button', (tester) async {
       final h = await BoardHarness.create([
         _machine('a', [_pane(1, 'working')]),
       ]);
@@ -460,47 +446,6 @@ void main() {
       expect(actions, findsNWidgets(2), reason: 'the budget (DESIGN.md Hierarchy 6)');
       expect(find.byTooltip('New agent session'), findsOneWidget);
       expect(find.byTooltip('Settings'), findsOneWidget);
-      await teardownBoard(tester, h);
-    });
-
-    testWidgets('Settings > Look > Agent list sets Compact or Cards, and the board follows', (tester) async {
-      final h = await BoardHarness.create([
-        _machine('a', [_pane(1, 'blocked'), for (var i = 2; i <= 4; i++) _pane(i, 'working')]),
-      ]);
-      await pumpBoard(tester, h, height: _tall);
-      expect(h.appSettings.density, BoardDensity.cards, reason: 'the harness pins cards');
-      expect(find.byType(AgentCard), findsNWidgets(4));
-
-      Finder option(String label) =>
-          find.descendant(of: find.byType(Segmented<BoardDensity>), matching: find.text(label));
-      // The control is in the Look group, which starts closed on every visit.
-      Future<void> choose(String label) async {
-        await openHomePage(tester, 'Settings');
-        await openSettingsGroup(tester, 'Look');
-        await tester.tap(option(label));
-        await settle(tester);
-        await backHome(tester);
-      }
-
-      await choose('Compact');
-      expect(h.appSettings.density, BoardDensity.compact);
-      expect(find.byType(AgentCard), findsOneWidget, reason: 'the one that needs you');
-      expect(find.byType(AgentCompactRow), findsNWidgets(3));
-
-      await choose('Cards');
-      expect(h.appSettings.density, BoardDensity.cards);
-      expect(find.byType(AgentCard), findsNWidgets(4));
-      await teardownBoard(tester, h);
-    });
-
-    testWidgets('the saved choice is what the board opens with', (tester) async {
-      final h = await BoardHarness.create([
-        _machine('a', [for (var i = 1; i <= 2; i++) _pane(i, 'working')]),
-      ]);
-      await h.appSettings.setDensity(BoardDensity.compact);
-      await pumpBoard(tester, h, height: _tall);
-
-      expect(find.byType(AgentCompactRow), findsNWidgets(2));
       await teardownBoard(tester, h);
     });
   });

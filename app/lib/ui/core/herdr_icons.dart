@@ -55,7 +55,7 @@ abstract final class HerdrIcons {
   /// What a session made: the Made chip (a sparkle).
   static const IconData made = IconData(0xE024, fontFamily: 'HerdrIcons');
 
-  /// Look: theme and density (Settings).
+  /// Look: theme and text (Settings).
   static const IconData look = IconData(0xE030, fontFamily: 'HerdrIcons');
 
   /// Notifications (Settings).

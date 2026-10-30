@@ -1,4 +1,4 @@
-// The board through the real shell: Needs you, the projects and their folds,
+// The board through the real shell: its status sections and their folds,
 // connection notices and the states around an empty or failing fleet.
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -33,22 +33,19 @@ void _push(UiHarness h, List<Pane> panes) {
   h.transports['a']!.emit(_statusEvent);
 }
 
-Finder _row(String title) => find.widgetWithText(AgentCard, title);
+/// An agent on the board, the card in front or a row.
+Finder _row(String title) => find.ancestor(
+  of: find.text(title),
+  matching: find.byWidgetPredicate((w) => w is AgentCard || w is AgentCompactRow),
+);
 
-/// A project's header on machine `a`, by its folder (`/work/<ws>` unless a
-/// test says otherwise).
-Finder _project(String path) => find.byKey(ValueKey('group/a:$path'));
-
-/// A group's summary, read as plain words (it keeps each count with its word).
-Finder _summary(String text, {bool whole = true}) => find.byWidgetPredicate((w) {
-  final read = w is Text ? w.data?.replaceAll('\u00a0', ' ') : null;
-  return read != null && (whole ? read == text : read.contains(text));
-});
+/// A section's header, by status name (`working`, `idle`).
+Finder _section(String status) => find.byKey(ValueKey('header/$status'));
 
 /// The card's tappable body: one semantics node reading the whole card.
 Finder _body(String title) => find.descendant(of: _row(title), matching: find.byType(PressBuilder)).first;
 
-/// Tall enough to build every card of a small fleet at once (cards are ~170dp).
+/// Tall enough to build every agent of a small fleet at once.
 const _tall = 2400.0;
 
 /// Makes every machine fail like a rejected login, so each becomes a notice.
@@ -66,9 +63,7 @@ void main() {
   setUpAll(loadAppFonts);
 
   group('sections', () {
-    testWidgets('Needs you first, then the project in the order its agents started; it folds, Needs you stays', (
-      tester,
-    ) async {
+    testWidgets('Needs you, then Working, then Idle; a section folds, Needs you stays', (tester) async {
       final h = await UiHarness.create([
         (
           profile: _machine('a', 'workstation'),
@@ -82,16 +77,18 @@ void main() {
       await pumpUi(tester, h, height: _tall);
 
       double y(String t) => tester.getTopLeft(_row(t)).dy;
-      expect(y('task 3'), lessThan(y('task 1')));
-      expect(y('task 1'), lessThan(y('task 2')), reason: 'started first, though idle');
+      expect(y('task 3'), lessThan(y('task 2')));
+      expect(y('task 2'), lessThan(y('task 1')), reason: 'working above idle');
 
-      await tester.tap(_project('/work/w1'));
+      await tester.tap(_section('working'));
       await settle(tester);
       expect(_row('task 2'), findsNothing);
-      expect(_row('task 1'), findsNothing);
-      expect(_row('task 3'), findsOneWidget, reason: 'Needs you is pinned above every project and never folds');
+      expect(_row('task 1'), findsOneWidget, reason: 'Idle is its own section');
+      await tester.tap(find.byKey(const ValueKey('header/blocked')), warnIfMissed: false);
+      await settle(tester);
+      expect(_row('task 3'), findsOneWidget, reason: 'Needs you never folds');
 
-      await tester.tap(_project('/work/w1'));
+      await tester.tap(_section('working'));
       await settle(tester);
       expect(_row('task 2'), findsOneWidget);
       await teardownUi(tester, h);
@@ -123,17 +120,15 @@ void main() {
       ]);
       await pumpUi(tester, h, height: _tall);
 
-      final row = find.byType(AgentCard);
+      final row = find.byType(AgentCompactRow);
       expect(tester.getSize(row).height, lessThan(230));
       final title = find.descendant(of: row, matching: find.textContaining('Refactor'));
       expect(tester.widget<Text>(title).maxLines, 2);
       await teardownUi(tester, h);
     });
 
-    testWidgets('a row says what tells it apart in its project; the project names the machine only among several', (
-      tester,
-    ) async {
-      Future<void> expectLine(List<String> machines, String line, String? machine) async {
+    testWidgets('a row says its repo and agent, and its machine only among several', (tester) async {
+      Future<void> expectLine(List<String> machines, String line) async {
         final h = await UiHarness.create([
           for (final id in machines)
             (
@@ -145,18 +140,11 @@ void main() {
         ]);
         await pumpUi(tester, h, height: _tall);
         expect(find.descendant(of: _row('Task'), matching: find.text(line)), findsOneWidget);
-        // One agent: no summary line; the machine sits beside the name.
-        expect(find.descendant(of: _project('/src/main'), matching: _summary('working', whole: false)), findsNothing);
-        expect(
-          find.descendant(of: _project('/src/main'), matching: find.textContaining('box-a', findRichText: true)),
-          findsNWidgets(machine == null ? 0 : 1),
-        );
         await teardownUi(tester, h);
       }
 
-      // The folder is the project's name, so the row does not repeat it.
-      await expectLine(['a'], 'Claude Code', null);
-      await expectLine(['a', 'b'], 'Claude Code', 'box-a');
+      await expectLine(['a'], 'main · Claude Code');
+      await expectLine(['a', 'b'], 'main · Claude Code · box-a');
     });
 
     testWidgets('120 agents in one section: counted in full, the list ends clear of the bottom edge', (tester) async {
@@ -180,7 +168,7 @@ void main() {
       await settle(tester);
 
       final last = tester
-          .widgetList(find.byType(AgentCard))
+          .widgetList(find.byType(AgentCompactRow))
           .map((w) => tester.getRect(find.byWidget(w)).bottom)
           .reduce((a, b) => a > b ? a : b);
       final screen = tester.view.physicalSize.height / tester.view.devicePixelRatio;
@@ -241,15 +229,15 @@ void main() {
 
       await pumpUi(tester, h, height: _tall);
       expect(reads(), 1, reason: 'one repo with several checkouts: one read');
-      expect(find.descendant(of: _row('task 2'), matching: find.text('fix/login · Claude Code')), findsOneWidget);
-      expect(find.descendant(of: _row('task 1'), matching: find.text('main · Claude Code')), findsOneWidget);
+      expect(find.descendant(of: _row('task 2'), matching: find.text('app · fix/login · Claude Code')), findsOneWidget);
+      expect(find.descendant(of: _row('task 1'), matching: find.text('app · main · Claude Code')), findsOneWidget);
 
       for (final status in ['done', 'working', 'idle']) {
         transport.snapshot = repoSnapshot(panes(status));
         transport.emit(_statusEvent);
         await settle(tester);
       }
-      await tester.tap(_project(primary));
+      await tester.tap(_section('working'));
       await settle(tester);
       expect(reads(), 1, reason: 'the board rebuilt and folded, and asked nothing again');
       await teardownUi(tester, h);
@@ -259,8 +247,12 @@ void main() {
       final h = await UiHarness.create([(profile: _machine('a', 'studio'), snapshot: repoSnapshot(panes('working')))]);
       // No answer: the read fails and the rows keep their folders.
       await pumpUi(tester, h, height: _tall);
-      expect(find.descendant(of: _row('task 2'), matching: find.text('app-login · Claude Code')), findsOneWidget);
-      expect(find.descendant(of: _row('task 1'), matching: find.text('Claude Code')), findsOneWidget);
+      expect(find.descendant(of: _row('task 2'), matching: find.text('app · app-login · Claude Code')), findsOneWidget);
+      expect(
+        find.descendant(of: _row('task 1'), matching: find.text('app · Claude Code')),
+        findsOneWidget,
+        reason: 'the primary checkout\'s folder is the repo\'s own name',
+      );
       await teardownUi(tester, h);
     });
   });
@@ -355,7 +347,7 @@ void main() {
       expect(find.textContaining('3 not connected'), findsOneWidget);
 
       // The agents the person came for are still on the first screen.
-      expect(tester.getTopLeft(find.byType(AgentCard).first).dy, lessThan(300));
+      expect(tester.getTopLeft(find.byType(AgentCompactRow).first).dy, lessThan(300));
 
       await tester.tap(find.byType(StatusStrip));
       await settle(tester);
@@ -543,11 +535,11 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
     }
 
-    testWidgets('folding a project animates its rows away instead of cutting them', (tester) async {
+    testWidgets('folding a section animates its rows away instead of cutting them', (tester) async {
       final h = await two();
       await pumpUi(tester, h, height: _tall);
 
-      await tester.tap(_project('/work/w1'));
+      await tester.tap(_section('working'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 110));
       expect(_row('task 2'), findsOneWidget, reason: 'still on its way out');
@@ -557,11 +549,11 @@ void main() {
       await teardownUi(tester, h);
     });
 
-    testWidgets('an agent moving to Needs you and back keeps every row in place', (tester) async {
+    testWidgets('an agent moving to Needs you moves no other row\'s element', (tester) async {
       final h = await two();
       await pumpUi(tester, h, height: _tall);
       final before = {
-        for (final t in ['task 1', 'task 2', 'task 3']) t: tester.element(_row(t)),
+        for (final t in ['task 2', 'task 3']) t: tester.element(_row(t)),
       };
 
       await change(tester, h, [_pane(1, 'blocked'), _pane(2, 'working'), _pane(3, 'idle')]);
@@ -573,7 +565,7 @@ void main() {
       await teardownUi(tester, h);
     });
 
-    testWidgets('a folded project stays still when Needs you above it disappears', (tester) async {
+    testWidgets('a folded section stays still when Needs you above it disappears', (tester) async {
       final h = await UiHarness.create([
         (
           profile: _machine('a', 'workstation'),
@@ -584,12 +576,12 @@ void main() {
         ),
       ]);
       await pumpUi(tester, h, height: _tall);
-      await tester.tap(_project('/work/w1'));
+      await tester.tap(_section('working'));
       await settle(tester);
 
       await change(tester, h, [_pane(2, 'working')]);
 
-      final chevron = find.descendant(of: _project('/work/w1'), matching: find.byType(RotationTransition));
+      final chevron = find.descendant(of: _section('working'), matching: find.byType(RotationTransition));
       // Folded, the caret points right (no turn).
       expect(tester.widget<RotationTransition>(chevron).turns.value, 0, reason: 'the caret must not spin to catch up');
       await teardownUi(tester, h);
@@ -701,7 +693,7 @@ void main() {
       await settle(tester);
     }
 
-    testWidgets('the folded projects survive the process', (tester) async {
+    testWidgets('the folded sections survive the process', (tester) async {
       final h = await UiHarness.create([
         (
           profile: _machine('a', 'workstation'),
@@ -712,14 +704,14 @@ void main() {
         ),
       ]);
       await pumpRestorable(tester, h);
-      await tester.tap(_project('/work/w1'));
+      await tester.tap(_section('working'));
       await settle(tester);
       expect(_row('task 2'), findsNothing);
 
       await tester.restartAndRestore();
       await settle(tester);
       expect(_row('task 1'), findsOneWidget);
-      expect(_row('task 2'), findsNothing, reason: 'the project stayed folded');
+      expect(_row('task 2'), findsNothing, reason: 'Working stayed folded');
       await teardownUi(tester, h);
     });
   });

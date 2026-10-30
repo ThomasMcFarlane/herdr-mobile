@@ -4,15 +4,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Which look the app wears. [system] follows the phone's dark mode.
 enum ThemeChoice { light, dark, system }
 
-/// How the Agents board draws its rows. [compact], the default: the first
-/// agent waiting on the person is a card with its answers, every other agent
-/// a row. [cards]: every agent a card with its live preview.
-///
-/// There was an `auto` (cards below five agents); it went when the board
-/// turned calm by default, since compact is now what the board does at any
-/// count. A saved `auto` reads as unknown, so as the default.
-enum BoardDensity { cards, compact }
-
 /// What opening an agent that runs in a herdr pane (and can be followed
 /// through its own log, see `ObservedSessions`) shows: the [chat] the app has
 /// for agent sessions, or the pane's [terminal]. Agents without a readable
@@ -30,10 +21,6 @@ abstract interface class AppSettingsStore {
 
   Future<void> writeDarkTerminal(bool dark);
 
-  Future<BoardDensity?> readDensity();
-
-  Future<void> writeDensity(BoardDensity density);
-
   Future<OpenAgentsAs?> readOpenAgentsAs();
 
   Future<void> writeOpenAgentsAs(OpenAgentsAs value);
@@ -46,7 +33,6 @@ abstract interface class AppSettingsStore {
 class PrefsAppSettingsStore implements AppSettingsStore {
   static const _themeKey = 'app.theme.v1';
   static const _darkTerminalKey = 'app.darkTerminal.v1';
-  static const _densityKey = 'app.density.v1';
   static const _openAsKey = 'app.openAgentsAs.v1';
   static const _smoothTextKey = 'app.smoothText.v1';
 
@@ -76,21 +62,6 @@ class PrefsAppSettingsStore implements AppSettingsStore {
   Future<void> writeDarkTerminal(bool dark) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_darkTerminalKey, dark);
-  }
-
-  @override
-  Future<BoardDensity?> readDensity() async {
-    final saved = (await SharedPreferences.getInstance()).get(_densityKey);
-    for (final choice in BoardDensity.values) {
-      if (choice.name == saved) return choice;
-    }
-    return null;
-  }
-
-  @override
-  Future<void> writeDensity(BoardDensity density) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_densityKey, density.name);
   }
 
   @override
@@ -124,6 +95,12 @@ class PrefsAppSettingsStore implements AppSettingsStore {
 /// App-wide preferences that are not about one screen. Load it before
 /// `runApp`, so the very first frame is already in the chosen theme and on the
 /// tab the person left.
+///
+/// There was a board density (`app.density.v1`: `Cards` or `Compact`); it went
+/// when the board became status sections of rows with one decision card
+/// (owner decision: eleven idle agents drawn as cards hid what to look at). A
+/// value saved by an older version is never read: it stays in the
+/// preferences, unused, and changes nothing.
 class AppSettings extends ChangeNotifier {
   AppSettings(this._store);
 
@@ -135,7 +112,6 @@ class AppSettings extends ChangeNotifier {
 
   ThemeChoice _theme = defaultTheme;
   bool _darkTerminal = false;
-  BoardDensity _density = BoardDensity.compact;
   OpenAgentsAs _openAs = OpenAgentsAs.chat;
   bool _smoothText = true;
 
@@ -144,10 +120,6 @@ class AppSettings extends ChangeNotifier {
   /// Panes stay dark on the light theme. Off by default: a pane is drawn in
   /// the colours of the theme.
   bool get darkTerminal => _darkTerminal;
-
-  /// What the person chose for the board's rows; [BoardDensity.compact]
-  /// until they choose.
-  BoardDensity get density => _density;
 
   /// How agents that can be followed through their log open; [OpenAgentsAs.chat]
   /// until the person chooses.
@@ -158,22 +130,16 @@ class AppSettings extends ChangeNotifier {
   /// shown and when it ends do not change, only the pace.
   bool get smoothText => _smoothText;
 
-  /// Whether the board draws every agent as a card (a live preview each)
-  /// rather than rows under the one waiting agent in front.
-  bool get cards => _density == BoardDensity.cards;
-
   /// Reads the saved settings. Anything missing or unreadable is the default.
   Future<void> load() async {
     try {
       _theme = await _store.readTheme() ?? defaultTheme;
       _darkTerminal = await _store.readDarkTerminal() ?? false;
-      _density = await _store.readDensity() ?? BoardDensity.compact;
       _openAs = await _store.readOpenAgentsAs() ?? OpenAgentsAs.chat;
       _smoothText = await _store.readSmoothText() ?? true;
     } on Object {
       _theme = defaultTheme;
       _darkTerminal = false;
-      _density = BoardDensity.compact;
       _openAs = OpenAgentsAs.chat;
       _smoothText = true;
     }
@@ -195,15 +161,6 @@ class AppSettings extends ChangeNotifier {
       notifyListeners();
     }
     return _store.writeDarkTerminal(_darkTerminal);
-  }
-
-  /// Applies [density] right away and saves it.
-  Future<void> setDensity(BoardDensity density) {
-    if (density != _density) {
-      _density = density;
-      notifyListeners();
-    }
-    return _store.writeDensity(_density);
   }
 
   /// Applies [value] right away and saves it.

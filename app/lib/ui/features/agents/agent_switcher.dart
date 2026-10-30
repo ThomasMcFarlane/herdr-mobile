@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
-import '../../../data/models/herdr_models.dart' show AgentStatus;
 import '../../../data/repositories/agent_screens.dart';
 import '../../../data/repositories/attention_set.dart';
 import '../../../data/repositories/fleet_repository.dart';
@@ -12,7 +11,6 @@ import '../../../data/words/plural.dart';
 
 import 'package:herdr_mobile/ui/core/kit.dart';
 
-import 'agent_identity.dart';
 import 'agent_navigation.dart';
 import 'agents_grouping.dart';
 
@@ -65,8 +63,8 @@ class AgentSwitchMark extends StatelessWidget {
   );
 }
 
-/// Every agent the board lists, in its order (Needs you, then each project),
-/// to switch to in place. The row of [current] says `Here` and does nothing; another row
+/// Every agent the board lists, in its sections and order, to switch to in
+/// place. The row of [current] says `Here` and does nothing; another row
 /// replaces this screen (Back still lands on the board).
 /// The last row goes back to the board. Reads only what is in memory.
 Future<void> showAgentSwitcher(BuildContext context, AgentRef current) => showAppSheet<void>(
@@ -100,8 +98,6 @@ class _SwitcherSheet extends StatelessWidget {
     // that changes, so the open sheet does not rebuild per event.
     final attention = context.watch<AttentionSet?>();
     final layout = attention == null ? const BoardLayout() : boardLayoutOf(context, attention: attention);
-    final waiting = layout.needsYou;
-    final names = agentPlaceNames([for (final item in waiting) placeOfItem(item)]);
     final several = context.read<FleetRepository>().connections.length > 1;
     final ds = context.ds;
     return SheetScaffold(
@@ -112,28 +108,12 @@ class _SwitcherSheet extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // The board's order: Needs you across every project, each row named
-          // by its place among the others (and its machine, when there are
-          // several); then each project, its rows named inside it as the
-          // board names them (the header says the repo and the machine).
-          if (waiting.isNotEmpty) ...[
-            SectionLabel(label: AgentStatus.blocked.label, count: layout.needsYouCount),
-            for (final (i, item) in waiting.indexed)
-              _row(
-                context,
-                ds,
-                item,
-                identityLine(
-                  place: names[i],
-                  agent: agentKindOf(item),
-                  machine: several ? _machineOf(item) : null,
-                  title: _titleOf(item),
-                ),
-              ),
-          ],
-          for (final group in layout.groups) ...[
-            SectionLabel(label: several ? '${group.label} · ${group.machine.profile.label}' : group.label),
-            for (final row in group.rows) _row(context, ds, row.item, row.where),
+          // The board's sections and order, each row named as the board
+          // names it (`repo · branch · agent`, and the machine when there are
+          // several).
+          for (final section in layout.sections) ...[
+            SectionLabel(label: sectionLabel(section.status), count: section.count),
+            for (final item in section.items) _row(context, ds, item, whereOfItem(item, showMachine: several)),
           ],
           const SizedBox(height: Gap.sm),
           Padding(
@@ -155,11 +135,6 @@ class _SwitcherSheet extends StatelessWidget {
   static String _titleOf(BoardItem item) => switch (item) {
     PaneItem(:final row) => row.title,
     SessionItem(:final session) => session.title,
-  };
-
-  static String _machineOf(BoardItem item) => switch (item) {
-    PaneItem(:final row) => row.machine.profile.label,
-    SessionItem(:final session) => session.machine.profile.label,
   };
 
   Widget _row(BuildContext context, Ds ds, BoardItem item, String subtitle) {

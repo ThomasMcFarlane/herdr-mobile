@@ -1,5 +1,5 @@
-// A project's idle rows through the real shell: a long list folds its older
-// rows behind one line that says how many and what, and opens them in place.
+// Idle through the real shell: a long list folds its older rows behind one
+// line that says how many and what, and opens them in place.
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/models/machine_profile.dart';
@@ -21,31 +21,31 @@ void main() {
     ),
   ]);
 
-  testWidgets('27 idle agents show the five started last, then one line that names the first two it holds', (
-    tester,
-  ) async {
+  // None of them has a known time, so newest first ties and they keep pane
+  // order.
+  testWidgets('27 idle agents show the first five, then one line that names the first two it holds', (tester) async {
     final h = await fleet(27);
     await pumpUi(tester, h, height: 3000);
 
-    expect(find.text('Task 23'), findsOneWidget);
-    expect(find.text('Task 27'), findsOneWidget);
-    expect(find.text('Task 22'), findsNothing, reason: 'folded away');
+    expect(find.text('Task 01'), findsOneWidget);
+    expect(find.text('Task 05'), findsOneWidget);
+    expect(find.text('Task 06'), findsNothing, reason: 'folded away');
     final fold = find.byType(AgentMoreRow);
     expect(fold, findsOneWidget);
     expect(
       tester.getTopLeft(fold).dy,
-      greaterThan(tester.getTopLeft(find.text('Task 27')).dy),
+      greaterThan(tester.getTopLeft(find.text('Task 05')).dy),
       reason: 'after the rows',
     );
     expect(find.text('${27 - idleShown} more idle'), findsOneWidget);
-    expect(find.text('Task 01 \u00B7 Task 02'), findsOneWidget, reason: 'what is inside, not a guess');
+    expect(find.text('Task 06 \u00B7 Task 07'), findsOneWidget, reason: 'what is inside, not a guess');
 
     await tester.tap(fold);
     await settle(tester);
-    expect(find.text('Task 01'), findsOneWidget, reason: 'every row shows');
+    expect(find.text('Task 27'), findsOneWidget, reason: 'every row shows');
     expect(
-      tester.getTopLeft(find.text('Task 01')).dy,
-      lessThan(tester.getTopLeft(find.text('Task 27')).dy),
+      tester.getTopLeft(find.text('Task 27')).dy,
+      greaterThan(tester.getTopLeft(find.text('Task 05')).dy),
       reason: 'in its own place',
     );
     expect(find.text('Show less'), findsOneWidget);
@@ -53,7 +53,7 @@ void main() {
 
     await tester.tap(find.text('Show less'));
     await settle(tester);
-    expect(find.text('Task 01'), findsNothing);
+    expect(find.text('Task 27'), findsNothing);
     expect(find.text('${27 - idleShown} more idle'), findsOneWidget);
     await teardownUi(tester, h);
   });
@@ -72,13 +72,14 @@ void main() {
     ]);
     await pumpUi(tester, h, height: 3000);
     expect(find.text('2 more idle'), findsOneWidget);
-    expect(find.text('Task 03'), findsOneWidget);
+    expect(find.text('Task 05'), findsOneWidget);
 
     final panes = h.transports['a']!.snapshot['panes'] as List;
     panes[7] = {...panes[7] as Map<String, dynamic>, 'agent_status': 'idle'};
     await h.fleet.connections.single.refresh();
     await settle(tester);
-    expect(find.text('Task 03'), findsOneWidget, reason: 'still where the person saw it');
+    expect(find.text('Task 08'), findsOneWidget, reason: 'the newest idle, on top');
+    expect(find.text('Task 05'), findsOneWidget, reason: 'still in view, though it is now sixth');
     expect(find.text('2 more idle'), findsOneWidget);
 
     for (final s in [AppLifecycleState.inactive, AppLifecycleState.hidden, AppLifecycleState.paused]) {
@@ -89,7 +90,7 @@ void main() {
     }
     await h.fleet.connections.single.refresh();
     await settle(tester);
-    expect(find.text('Task 03'), findsNothing, reason: 'the next look folds it');
+    expect(find.text('Task 05'), findsNothing, reason: 'the next look folds it');
     expect(find.text('3 more idle'), findsOneWidget);
     await teardownUi(tester, h);
   });

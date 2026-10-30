@@ -1,19 +1,17 @@
-// The agents home as a live board: previews, answers without leaving it,
-// triage, density, and the cost of all that on a virtualised list.
+// The agents home as a live board: the card in front and its preview, answers
+// without leaving it, triage, and the cost of all that on a virtualised list.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/services.dart' show SystemChannels;
 import 'package:herdr_mobile/data/models/machine_profile.dart';
 import 'package:herdr_mobile/data/models/pane_preview.dart';
 import 'package:herdr_mobile/data/repositories/agent_screens.dart';
-import 'package:herdr_mobile/data/repositories/app_settings.dart';
 import 'package:herdr_mobile/data/services/herdr_transport.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/support/step_clock.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_card.dart';
 import 'package:herdr_mobile/ui/features/agents/reply_sheet.dart';
 import 'package:herdr_mobile/ui/features/pane/pane_screen.dart';
-import 'package:herdr_mobile/ui/shell/home_shell.dart';
 import 'package:herdr_mobile/data/repositories/attention_set.dart';
 import 'package:provider/provider.dart';
 
@@ -63,9 +61,9 @@ void main() {
   setUpAll(loadAppFonts);
 
   group('preview', () {
-    testWidgets('a working card shows the end of the terminal, the newest line strongest', (tester) async {
+    testWidgets('the card in front shows the end of its terminal, the newest line strongest', (tester) async {
       final h = await BoardHarness.create([
-        _machine('a', [_pane(1, 'working')]),
+        _machine('a', [_pane(1, 'blocked')]),
       ]);
       h.previews.set('a/w1:p1', ['reading schema.sql', 'writing migration', 'running tests']);
       await pumpBoard(tester, h, height: _tall);
@@ -78,37 +76,26 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('a done card keeps 3 rows, a working card 5', (tester) async {
+    testWidgets('working, finished and idle agents are rows: no preview, and their panes are never read', (
+      tester,
+    ) async {
       final h = await BoardHarness.create([
-        _machine('a', [_pane(1, 'working'), _pane(2, 'done')]),
-      ]);
-      final lines = ['l1', 'l2', 'l3', 'l4', 'l5', 'l6', 'l7'];
-      h.previews.set('a/w1:p1', lines);
-      h.previews.set('a/w1:p2', lines);
-      await pumpBoard(tester, h, height: _tall);
-
-      int shown(String title) =>
-          lines.where((l) => find.descendant(of: _card(title), matching: find.text(l)).evaluate().isNotEmpty).length;
-      expect(shown('task 1'), 5);
-      expect(shown('task 2'), 3);
-      await teardownBoard(tester, h);
-    });
-
-    testWidgets('an idle agent shows no preview and its pane is never read', (tester) async {
-      final h = await BoardHarness.create([
-        _machine('a', [_pane(1, 'idle'), _pane(2, 'unknown')]),
+        _machine('a', [_pane(1, 'working'), _pane(2, 'done'), _pane(3, 'idle'), _pane(4, 'unknown')]),
       ]);
       h.previews.set('a/w1:p1', ['> ']);
       await pumpBoard(tester, h, height: _tall);
 
-      expect(h.previews.opened, isEmpty, reason: 'previews of idle panes are noise and traffic');
+      expect(find.byType(AgentCard), findsNothing);
+      expect(find.byType(AgentCompactRow), findsNWidgets(4));
+      expect(h.previews.opened, isEmpty, reason: 'previews of rows are noise and traffic');
       expect(find.text('> '), findsNothing);
+      expect(replyTo('task 1'), findsNothing, reason: 'Reply… is the waiting card\'s');
       await teardownBoard(tester, h);
     });
 
     testWidgets('the card keeps its height while lines arrive', (tester) async {
       final h = await BoardHarness.create([
-        _machine('a', [_pane(1, 'working')]),
+        _machine('a', [_pane(1, 'blocked')]),
       ]);
       await pumpBoard(tester, h, height: _tall);
       double height() => tester.getSize(find.byType(AgentCard)).height;
@@ -127,63 +114,39 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('an offline machine dims its cards once and says so', (tester) async {
+    testWidgets('an offline machine\'s rows say so', (tester) async {
       final h = await BoardHarness.create([
         _machine('a', [_pane(1, 'working')]),
       ]);
-      h.previews.set('a/w1:p1', ['last known line']);
       await pumpBoard(tester, h, height: _tall);
       h.network.goOffline();
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.descendant(of: _card('task 1'), matching: find.text('offline')), findsOneWidget);
-      expect(find.descendant(of: _card('task 1'), matching: find.byType(Opacity)), findsOneWidget);
-      expect(find.text('last known line'), findsOneWidget, reason: 'the data stays, marked stale');
-      expect(replyTo('task 1'), findsNothing, reason: 'can’t answer offline');
+      expect(find.descendant(of: find.byType(AgentCompactRow), matching: find.text('offline')), findsOneWidget);
       await teardownBoard(tester, h);
     });
   });
 
   group('watching', () {
-    testWidgets('only built cards are watched, and scrolling past releases them', (tester) async {
+    testWidgets('only the card in front is watched, and scrolling past releases it', (tester) async {
       final h = await BoardHarness.create([
-        _machine('a', [for (var i = 1; i <= 30; i++) _pane(i, 'working')]),
+        _machine('a', [_pane(1, 'blocked'), for (var i = 2; i <= 40; i++) _pane(i, 'working')]),
       ]);
       await pumpBoard(tester, h);
 
-      expect(h.previews.openCount, inInclusiveRange(1, 10), reason: 'a screenful, not 30');
+      expect(h.previews.openCount, 1, reason: 'the card, not 40 rows');
       expect(h.previews.open['a/w1:p1'], 1);
 
       await tester.fling(find.byType(CustomScrollView).first, const Offset(0, -20000), 20000);
       await settle(tester);
       expect(h.previews.open['a/w1:p1'], 0, reason: 'scrolled far away: no reads for it');
-      expect(h.previews.openCount, inInclusiveRange(1, 10));
       await teardownBoard(tester, h);
       expect(h.previews.openCount, 0, reason: 'a leaked watcher reads forever');
     });
 
-    testWidgets('folding a project releases its cards', (tester) async {
+    testWidgets('an agent that stops waiting stops being watched', (tester) async {
       final h = await BoardHarness.create([
-        _machine('a', [
-          _pane(1, 'working'),
-          _pane(2, 'working'),
-          (id: 'w2:p3', ws: 'w2', agent: 'claude', status: 'done'),
-        ]),
-      ]);
-      await pumpBoard(tester, h, height: _tall);
-      expect(h.previews.openCount, 3);
-
-      // The panes of workspace w1 work in `/work/w1`: one project.
-      await tester.tap(find.byKey(const ValueKey('group/a:/work/w1')));
-      await tester.pump();
-      await settle(tester);
-      expect(h.previews.openCount, 1, reason: 'only the other project\'s card is still on the board');
-      await teardownBoard(tester, h);
-    });
-
-    testWidgets('an agent that goes idle stops being watched', (tester) async {
-      final h = await BoardHarness.create([
-        _machine('a', [_pane(1, 'working')]),
+        _machine('a', [_pane(1, 'blocked')]),
       ]);
       await pumpBoard(tester, h, height: _tall);
       expect(h.previews.openCount, 1);
@@ -193,34 +156,23 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('compact rows watch nothing, but a blocked agent keeps its card', (tester) async {
+    testWidgets('rows watch nothing; the blocked agent in front keeps its card', (tester) async {
       final h = await BoardHarness.create([
         _machine('a', [_pane(1, 'working'), _pane(2, 'blocked')]),
       ]);
       await pumpBoard(tester, h, height: _tall);
-      expect(h.previews.openCount, 2);
-
-      await h.appSettings.setDensity(BoardDensity.compact);
-      await settle(tester);
       expect(find.byType(AgentCompactRow), findsOneWidget, reason: 'the working one');
       expect(find.byType(AgentCard), findsOneWidget, reason: 'the blocked one still asks');
       expect(h.previews.openCount, 1, reason: 'only the blocked card reads its pane');
-
-      await h.appSettings.setDensity(BoardDensity.cards);
-      await settle(tester);
-      expect(find.byType(AgentCard), findsNWidgets(2));
-      expect(h.previews.openCount, 2);
       await teardownBoard(tester, h);
     });
 
-    testWidgets('in the compact list a blocked agent can still be answered from the board', (tester) async {
+    testWidgets('a blocked agent can be answered from the board', (tester) async {
       final h = await BoardHarness.create([
         _machine('a', [_pane(1, 'blocked'), _pane(2, 'working')]),
       ]);
       h.previews.set('a/w1:p1', ['…context…'], prompt: _menu);
       await pumpBoard(tester, h, height: _tall);
-      await h.appSettings.setDensity(BoardDensity.compact);
-      await settle(tester);
 
       for (final r in _menu.replies) {
         expect(find.text(r.label), findsOneWidget);
@@ -232,13 +184,11 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('an offline machine’s blocked agent can’t be answered, so it is a compact row', (tester) async {
+    testWidgets('an offline machine’s blocked agent can’t be answered, so it is a row', (tester) async {
       final h = await BoardHarness.create([
         _machine('a', [_pane(1, 'blocked')]),
       ]);
       await pumpBoard(tester, h, height: _tall);
-      await h.appSettings.setDensity(BoardDensity.compact);
-      await settle(tester);
       expect(find.byType(AgentCard), findsOneWidget);
 
       h.network.goOffline();
@@ -548,7 +498,7 @@ void main() {
 
     testWidgets('Reply… keeps a full tap target and clear of the words it floats over', (tester) async {
       final h = await BoardHarness.create([
-        _machine('a', [_pane(1, 'working')]),
+        _machine('a', [_pane(1, 'blocked')]),
       ]);
       final long = 'npm run test -- --watch=false ${'x' * 200}';
       h.previews.set('a/w1:p1', [long]);
@@ -561,18 +511,6 @@ void main() {
       final line = tester.getRect(find.textContaining('npm run test'));
       expect(line.right, lessThanOrEqualTo(word.left), reason: 'the last row ends before Reply… begins');
       expect(word.center.dy, moreOrLessEquals(line.center.dy, epsilon: 1), reason: 'on the last row');
-      await teardownBoard(tester, h);
-    });
-
-    testWidgets('on an offline machine there are no chips to tap: only the last look remains', (tester) async {
-      final h = await blocked(tester);
-      expect(find.text('1. Yes'), findsOneWidget);
-      h.network.goOffline();
-      await tester.pump(const Duration(milliseconds: 300));
-
-      expect(find.text('1. Yes'), findsNothing, reason: 'an old question must not be answerable');
-      expect(find.text('…context…'), findsOneWidget);
-      expect(_keysSent(h, 'a'), isEmpty);
       await teardownBoard(tester, h);
     });
   });
@@ -691,16 +629,16 @@ void main() {
       h.previews.set('a/w1:p2', ['y'], prompt: _menu);
       await pumpBoard(tester, h, height: _tall);
       Finder yes(String title) => find.descendant(of: _card(title), matching: find.text('1. Yes'));
+      expect(_card('task 2'), findsNothing, reason: 'the second one waiting is a row');
 
-      // Task 1 stops waiting (answered on the desktop): the answers of task 2
-      // move up to where task 1's were.
-      final was = tester.getTopLeft(_card('task 2')).dy;
+      // Task 1 stops waiting (answered on the desktop): task 2 comes to the
+      // front, its answers where task 1's were.
       h.transports['a']!.snapshot = snapshotWith([_pane(1, 'working'), _pane(2, 'blocked')], title: _title);
       h.transports['a']!.emit(const {'event': 'pane.agent_status_changed'});
-      for (var i = 0; i < 60 && tester.getTopLeft(_card('task 2')).dy >= was; i++) {
+      for (var i = 0; i < 60 && yes('task 2').evaluate().isEmpty; i++) {
         await tester.pump(const Duration(milliseconds: 16));
       }
-      expect(tester.getTopLeft(_card('task 2')).dy, lessThan(was), reason: 'the card moved up');
+      expect(yes('task 2'), findsOneWidget, reason: 'task 2 is in front');
 
       await tester.tap(yes('task 2'));
       await tester.pump(const Duration(milliseconds: 50));
@@ -717,14 +655,14 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('a card that stops waiting folds away: the cards below glide up instead of jumping', (tester) async {
+    testWidgets('a card that stops waiting folds away: the rows below glide up instead of jumping', (tester) async {
       final h = await BoardHarness.create([
         _machine('a', [_pane(1, 'blocked'), _pane(2, 'blocked')]),
       ]);
       h.previews.set('a/w1:p1', ['x'], prompt: _menu);
       h.previews.set('a/w1:p2', ['y'], prompt: _menu);
       await pumpBoard(tester, h, height: _tall);
-      double top(String title) => tester.getTopLeft(_card(title)).dy;
+      double top(String title) => tester.getTopLeft(find.text(title)).dy;
 
       final was = top('task 2');
       h.transports['a']!.snapshot = snapshotWith([_pane(1, 'working'), _pane(2, 'blocked')], title: _title);
@@ -814,28 +752,29 @@ void main() {
       await tester.drag(scroll, const Offset(0, -900));
       await tester.pump(const Duration(milliseconds: 400));
       final offset = tester.state<ScrollableState>(find.byType(Scrollable).first).position.pixels;
-      // A card clearly on screen (the first built one may be in the cache above).
+      // A row clearly on screen (the first built one may be in the cache above).
       final visible = tester
-          .widgetList<AgentCard>(find.byType(AgentCard))
+          .widgetList<AgentCompactRow>(find.byType(AgentCompactRow))
           .firstWhere((w) => tester.getRect(find.byWidget(w)).top >= 160)
           .agent
           .title;
-      final card = tester.element(_card(visible));
+      Finder rowOf(String title) => find.widgetWithText(AgentCompactRow, title);
+      final row = tester.element(rowOf(visible));
 
       await h.changeStatuses(tester, 'a', [
         for (var i = 1; i <= 12; i++) _pane(i, i == 12 ? 'blocked' : 'working'),
       ], title: _title);
       expect(
-        tester.element(find.byType(AgentCard).first).read<AttentionSet>().needsYou,
+        tester.element(find.byType(AgentCompactRow).first).read<AttentionSet>().needsYou,
         hasLength(1),
         reason: 'it is counted',
       );
       expect(tester.state<ScrollableState>(find.byType(Scrollable).first).position.pixels, offset);
-      expect(tester.element(_card(visible)), same(card), reason: 'cards were inflated again when one started waiting');
+      expect(tester.element(rowOf(visible)), same(row), reason: 'rows were inflated again when one started waiting');
       await teardownBoard(tester, h);
     });
 
-    testWidgets('the last card ends above the bottom edge, with room to spare', (tester) async {
+    testWidgets('the last row ends above the bottom edge, with room to spare', (tester) async {
       final h = await BoardHarness.create([
         _machine('a', [_pane(1, 'blocked'), for (var i = 2; i <= 8; i++) _pane(i, 'working')]),
       ]);
@@ -845,7 +784,7 @@ void main() {
         await settle(tester);
       }
       final last = tester
-          .widgetList(find.byType(AgentCard))
+          .widgetList(find.byType(AgentCompactRow))
           .map((w) => tester.getRect(find.byWidget(w)).bottom)
           .reduce((a, b) => a > b ? a : b);
       expect(find.byType(FloatingBarPill), findsNothing, reason: 'home has no bar over the list');
@@ -855,9 +794,11 @@ void main() {
   });
 
   group('reply sheet', () {
+    // Waiting on a prompt the app does not read: the card shows the
+    // terminal, and Reply… answers in words.
     Future<BoardHarness> working(WidgetTester tester) async {
       final h = await BoardHarness.create([
-        _machine('a', [_pane(1, 'working')]),
+        _machine('a', [_pane(1, 'blocked')]),
       ]);
       h.previews.set('a/w1:p1', ['step one', 'step two']);
       await pumpBoard(tester, h, height: _tall);
@@ -953,34 +894,8 @@ void main() {
     });
   });
 
-  testWidgets('the chosen density survives the process being reclaimed', (tester) async {
-    final h = await BoardHarness.create([
-      _machine('a', [_pane(1, 'working')]),
-    ]);
-    tester.view
-      ..physicalSize = const Size(360, 2400) * 2
-      ..devicePixelRatio = 2;
-    addTearDown(tester.view.reset);
-    await tester.pumpWidget(
-      MultiProvider(
-        providers: h.providers,
-        child: MaterialApp(restorationScopeId: 'app', theme: AppTheme.dark(), home: const HomeShell()),
-      ),
-    );
-    await settle(tester);
-    expect(find.byType(AgentCard), findsOneWidget);
-
-    await h.appSettings.setDensity(BoardDensity.compact);
-    await settle(tester);
-    await tester.restartAndRestore();
-    await settle(tester);
-    expect(find.byType(AgentCompactRow), findsOneWidget);
-    expect(find.byType(AgentCard), findsNothing);
-    await teardownBoard(tester, h);
-  });
-
   group('opening an agent', () {
-    testWidgets('tapping the card opens its pane', (tester) async {
+    testWidgets('tapping a row opens its pane', (tester) async {
       final h = await BoardHarness.create([
         _machine('a', [_pane(1, 'working')]),
       ]);
@@ -990,20 +905,6 @@ void main() {
       await settle(tester);
       expect(h.agentScreens.front, const FrontAgent(PaneAgent('a', 'w1:p1'), AgentView.terminal));
       expect(find.byType(PaneScreen), findsOneWidget);
-      await teardownBoard(tester, h);
-    });
-
-    testWidgets('a compact row does too', (tester) async {
-      final h = await BoardHarness.create([
-        _machine('a', [_pane(1, 'working')]),
-      ]);
-      await pumpBoard(tester, h, height: _tall);
-      await h.appSettings.setDensity(BoardDensity.compact);
-      await settle(tester);
-
-      await tester.tap(find.text('task 1'));
-      await settle(tester);
-      expect(h.agentScreens.front, const FrontAgent(PaneAgent('a', 'w1:p1'), AgentView.terminal));
       await teardownBoard(tester, h);
     });
   });
@@ -1040,7 +941,7 @@ void main() {
 
     testWidgets('reduced motion: the board is still, previews and labels still live', (tester) async {
       final h = await BoardHarness.create([
-        _machine('a', [_pane(1, 'working')]),
+        _machine('a', [_pane(1, 'blocked')]),
       ]);
       h.previews.set('a/w1:p1', ['still readable']);
       await pumpBoard(tester, h, height: _tall, reduceMotion: true);
@@ -1091,12 +992,12 @@ void main() {
         _machine('a', [_pane(1, 'working')]),
       ]);
       await pumpBoard(tester, h, height: _tall);
-      expect(find.byType(AgentCard), findsOneWidget);
+      expect(find.byType(AgentCompactRow), findsOneWidget);
       await teardownBoard(tester, h);
 
       h = await BoardHarness.create([_machine('a', const [])]);
       await pumpBoard(tester, h, height: _tall);
-      expect(find.byType(AgentCard), findsNothing);
+      expect(find.byType(AgentCompactRow), findsNothing);
       expect(find.text('No agents running'), findsOneWidget);
       await teardownBoard(tester, h);
     });

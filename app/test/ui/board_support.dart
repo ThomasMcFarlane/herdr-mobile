@@ -149,9 +149,10 @@ class BoardHarness {
     }
     await fleet.settled();
     final harness = BoardHarness._(machines, fleet, network, transports, shift, agentScreens);
-    // Cards whatever the agent count (`auto` turns compact from 5); the board
-    // tests look at cards. attention_test.dart tests `auto`.
-    await harness.appSettings.setDensity(BoardDensity.cards);
+    // One more turn before the test acts: what the first read set going
+    // finishes on it (a test that took the machine offline at once found its
+    // reconnect never restored the wait).
+    await Future<void>.value();
     return harness;
   }
 

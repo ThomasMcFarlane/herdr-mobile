@@ -4,6 +4,24 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [Unreleased]
+
+- The board is back in sections by what each agent needs: `Needs you`, then
+  `Working`, then `To review`, then `Idle`. Inside each, the newest is on top,
+  so the agent that just finished or just stopped is the first you see; one
+  waiting on you longest still leads `Needs you`.
+- Every agent is one row, except the first one that needs you, which keeps
+  its card with the answers. Under each title, the row says which feature it
+  is: the repo, the branch and the agent (`herdr-mobile · fix/login · omp`),
+  and the machine when you have several.
+- The `Agent list` setting (`Compact` or `Cards`) is gone from Settings,
+  `Look`: the board is always rows.
+- Tap a section's name to fold it; the fold is kept. `Idle` shows its five
+  newest and folds the rest behind `N more idle`; an agent you saw while
+  looking stays in view until you next open the board.
+- The dotted `to review` count at the top still selects the finished agents,
+  and `Reviewed` in the bar still marks them all with one `Undo`.
+
 ## [0.1.47] - 2026-10-30
 
 ### Your agents, by project, in a board that holds still

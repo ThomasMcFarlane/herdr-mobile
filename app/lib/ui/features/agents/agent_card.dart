@@ -22,18 +22,13 @@ import 'reply_sheet.dart';
 import 'board_selection.dart';
 import 'swipe_review.dart';
 
-/// Rows of terminal a card previews, by what the agent is doing. A working
-/// agent gets the most (the stream is the signal), a finished one shows how it
-/// ended, an idle one shows nothing: a prompt box and a status bar are noise.
-int previewRowCount(AgentStatus status) => switch (status) {
-  AgentStatus.working || AgentStatus.blocked => 5,
-  AgentStatus.done => 3,
-  AgentStatus.idle || AgentStatus.unknown => 0,
-};
+/// Rows of terminal the card previews while the app reads no question in
+/// them: enough to see what the agent asks.
+const _previewRows = 5;
 
 /// The card's way to answer in words, at the end of its last line (the
-/// question's, the preview's or the subtitle's). A quiet word, not the ↩
-/// circle it replaced: the arrow read as undo or back.
+/// question's or the preview's). A quiet word, not the ↩ circle it
+/// replaced: the arrow read as undo or back.
 const _replyLabel = 'Reply…';
 
 /// The painted width of [_replyLabel] at each text scale: measured once, not
@@ -55,12 +50,15 @@ double _replyWidth(TextScaler scaler) => _replyWidths[scaler.scale(1)] ??= () {
 /// A line's height in [style] at [scaler].
 double _lineOf(TextStyle style, TextScaler scaler) => scaler.scale(style.fontSize!) * style.height!;
 
-/// One agent as a board card: what it is doing (task, where, how long), a calm
-/// live look at the end of its terminal, and, when it is blocked on a prompt
-/// the app understands, the question, what it is about (the command) and
-/// one-tap answers.
+/// The one decision in front of the board: the first agent of Needs you that
+/// can be answered, as a card. What it is (task, where, how long), a calm live
+/// look at the end of its terminal and, when it is blocked on a prompt the app
+/// understands, the question, what it is about (the command) and one-tap
+/// answers. Every other agent is a row ([AgentCompactRow]). Why (owner
+/// decision): a setting that drew every agent as a card put eleven idle cards
+/// with `Reply…` between the person and what needed them.
 ///
-/// The card's height depends only on its status and the prompt (its question,
+/// The card's height depends only on the prompt (its question,
 /// its subject and how its answers group, see `ReplyLayout`), never on how many lines have arrived or
 /// on the state of the chips, so the board does not jump while a preview fills
 /// in. It watches its pane's preview only while it is built and on a screen
@@ -79,11 +77,7 @@ class AgentCard extends StatefulWidget {
   State<AgentCard> createState() => _AgentCardState();
 }
 
-class _AgentCardState extends State<AgentCard>
-    with SingleTickerProviderStateMixin, TapGuardState<AgentCard>, AnswerSurfaceMixin<AgentCard> {
-  // Created on the first arrival, like the glyph's: a card that never gets
-  // news carries one null field.
-  AnimationController? _arrival;
+class _AgentCardState extends State<AgentCard> with TapGuardState<AgentCard>, AnswerSurfaceMixin<AgentCard> {
   late final PanePreviews _previews;
 
   @override
@@ -103,7 +97,7 @@ class _AgentCardState extends State<AgentCard>
   bool _onScreen = true;
   bool _started = false;
 
-  bool get _wantsPreview => _onScreen && previewRowCount(_agent.status) > 0;
+  bool get _wantsPreview => _onScreen;
 
   @override
   void initState() {
@@ -130,11 +124,6 @@ class _AgentCardState extends State<AgentCard>
     super.didUpdateWidget(old);
     _syncWatch();
     syncShown();
-    final news = widget.agent.status == AgentStatus.blocked || widget.agent.status == AgentStatus.done;
-    if (news && old.agent.status != widget.agent.status && !Motion.reduced(context)) {
-      // The card changed status: a faint accent wash that fades finds it.
-      (_arrival ??= AnimationController(vsync: this, duration: Motion.arrival)).forward(from: 0);
-    }
   }
 
   void _syncWatch() {
@@ -182,12 +171,6 @@ class _AgentCardState extends State<AgentCard>
     if (!_unsettled) _openSheet();
   }
 
-  @override
-  void dispose() {
-    _arrival?.dispose();
-    super.dispose();
-  }
-
   void _open() {
     Haptics.tick();
     _agent.machine.markReviewed(_agent.paneId);
@@ -219,9 +202,6 @@ class _AgentCardState extends State<AgentCard>
     final sel = rowSelect(context, paneRef(_agent.key));
     final a = _agent;
     final prompt = _promptIn(preview);
-    final rows = previewRowCount(a.status);
-    final shown = prompt == null ? math.max(rows, 0) : 0;
-    final slim = rows == 0;
     final chipsHeight = prompt == null ? 0.0 : ReplyChips.heightFor(prompt);
     final canReply = !a.stale;
     final scaler = MediaQuery.textScalerOf(context);
@@ -229,79 +209,64 @@ class _AgentCardState extends State<AgentCard>
     // What a line keeps clear at its end for `Reply…`.
     final replyRoom = replyWidth + Gap.sm;
     final stackTime = _stackTime(context);
-    final slimReplyEnd = slim && canReply ? EdgeInsets.only(right: replyRoom) : EdgeInsets.zero;
     // The answers are deaf and dimmed while they are new under the thumb: the
     // card's own guard (its question changed, or it grew) or the board's gate
     // (a card above them came or went, see `SettleGate`).
     final guarded = context.select<SettleGate?, bool>((g) => g?.closed ?? false) || !settled;
 
-    // A blocked card is the same card as any other: the glyph, the section
-    // and the orange question wash already say so (a tinted card with an
-    // orange outline was the fourth statement of it).
-    // The arrival wash is painted under the content by [_ArrivalWash]: the
-    // animation repaints it, never rebuilds the preview and the answers.
+    // The glyph, the section and the orange question wash already say it
+    // waits (a tinted card with an orange outline was the fourth statement
+    // of it).
     final tint = sel.selected ? Color.alphaBlend(ds.accentWash, ds.surface) : ds.surface;
     // Picked is a tint, never an outline ("tint, don't outline").
     final edge = ds.hairline;
-    // A finished agent on a reachable machine can be marked reviewed without
-    // opening it: by a swipe, or by the screen reader's "Mark reviewed".
-    final swipeable = a.status == AgentStatus.done && !a.stale && !sel.active;
-    bool review() => markReviewedWithUndo(context, a.machine, a.paneId);
-
     final body = AnimatedSize(
       // A question arriving or being answered changes what the card holds:
       // it grows or folds instead of snapping.
       duration: Motion.of(context, Motion.expand),
       curve: Motion.easeOut,
       alignment: Alignment.topCenter,
-      child: ReviewAction(
-        enabled: swipeable,
-        onReviewed: review,
-        child: PressBuilder(
-          onTap: sel.active ? _pick : _open,
-          onLongPress: () => _pick(feedback: false),
-          selected: sel.active ? sel.selected : null,
-          semanticLabel: _semanticLabel(prompt),
-          builder: (context, pressed) => AnimatedContainer(
-            duration: Motion.pressing(pressed),
-            curve: Motion.easeOut,
-            decoration: BoxDecoration(
-              color: pressed ? Color.alphaBlend(ds.pressTint, tint) : tint,
-              borderRadius: BorderRadius.circular(_radius),
-              border: Border.all(color: edge),
-            ),
-            child: CustomPaint(
-              painter: _arrival == null ? null : _ArrivalWash(_arrival!, color: ds.accentWash, radius: _radius - 1),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(_pad, Gap.md, _pad, _pad),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _Header(agent: a, showTime: !stackTime),
-                    Padding(
-                      padding: const EdgeInsets.only(left: _glyphColumn) + slimReplyEnd,
-                      child: _Subtitle(text: a.subtitle),
-                    ),
-                    if (stackTime)
-                      Padding(
-                        padding: const EdgeInsets.only(left: _glyphColumn) + slimReplyEnd,
-                        child: StateTime(agent: a),
-                      ),
-                    if (!slim) const SizedBox(height: Gap.md),
-                    if (prompt != null) ...[
-                      QuestionWash(
-                        question: prompt.question,
-                        subject: prompt.subject,
-                        // Room for the `Reply…` that floats over the wash's end.
-                        trailing: canReply ? SizedBox(width: replyRoom) : null,
-                        onReadAll: _more,
-                      ),
-                      SizedBox(height: Gap.md + chipsHeight),
-                    ] else if (shown > 0)
-                      _PreviewPanel(rows: shown, lines: preview?.lines, replyRoom: canReply ? replyRoom : 0),
-                  ],
+      child: PressBuilder(
+        onTap: sel.active ? _pick : _open,
+        onLongPress: () => _pick(feedback: false),
+        selected: sel.active ? sel.selected : null,
+        semanticLabel: _semanticLabel(prompt),
+        builder: (context, pressed) => AnimatedContainer(
+          duration: Motion.pressing(pressed),
+          curve: Motion.easeOut,
+          decoration: BoxDecoration(
+            color: pressed ? Color.alphaBlend(ds.pressTint, tint) : tint,
+            borderRadius: BorderRadius.circular(_radius),
+            border: Border.all(color: edge),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(_pad, Gap.md, _pad, _pad),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _Header(agent: a, showTime: !stackTime),
+                Padding(
+                  padding: const EdgeInsets.only(left: _glyphColumn),
+                  child: _Subtitle(text: a.subtitle),
                 ),
-              ),
+                if (stackTime)
+                  Padding(
+                    padding: const EdgeInsets.only(left: _glyphColumn),
+                    child: StateTime(agent: a),
+                  ),
+                const SizedBox(height: Gap.md),
+                if (prompt != null) ...[
+                  QuestionWash(
+                    question: prompt.question,
+                    subject: prompt.subject,
+                    // Room for the `Reply…` that floats over the wash's end.
+                    trailing: canReply ? SizedBox(width: replyRoom) : null,
+                    onReadAll: _more,
+                  ),
+                  SizedBox(height: Gap.md + chipsHeight),
+                ] else
+                  _PreviewPanel(rows: _previewRows, lines: preview?.lines, replyRoom: canReply ? replyRoom : 0),
+              ],
             ),
           ),
         ),
@@ -339,15 +304,13 @@ class _AgentCardState extends State<AgentCard>
             _replyAt(
               // The text's right edge and the centre of the line it ends, from
               // the card's bottom right.
-              right: _pad + (prompt != null ? Gap.md : (slim ? 0 : Gap.sm + Gap.hair)),
+              right: _pad + (prompt != null ? Gap.md : Gap.sm + Gap.hair),
               centre: prompt != null
                   ? _pad +
                         chipsHeight +
                         Gap.md +
                         Gap.md +
                         _questionLastLine(prompt, context, box.maxWidth, replyRoom) / 2
-                  : slim
-                  ? _pad + _lineOf(stackTime ? Type.caption : Type.secondary, scaler) / 2
                   : _pad + Gap.sm + _PreviewPanel.lineOf(context) / 2,
               width: replyWidth,
               title: a.title,
@@ -358,16 +321,9 @@ class _AgentCardState extends State<AgentCard>
       ),
     );
     card = NotificationListener<SizeChangedLayoutNotification>(onNotification: _onResize, child: card);
-    // A stale card keeps its words at full strength (they are what the person
-    // opens it to read, and `offline` is spelled out beside the title); only
-    // the glyph recedes.
-    return SwipeToReview(
-      enabled: swipeable,
-      onReviewed: review,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: _margin, vertical: Gap.xs),
-        child: card,
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: _margin, vertical: Gap.xs),
+      child: card,
     );
   }
 
@@ -733,25 +689,3 @@ class AgentCompactRow extends StatelessWidget {
 /// word, so it drops under the subtitle.
 bool _stackTime(BuildContext context) =>
     MediaQuery.textScalerOf(context).scale(1) > 1.25 || MediaQuery.sizeOf(context).width < 340;
-
-/// The faint accent that finds a card which just changed section, fading over
-/// [Motion.arrival]. Painted under the card's content and driven by the
-/// animation, so a frame repaints this alone.
-class _ArrivalWash extends CustomPainter {
-  _ArrivalWash(this.animation, {required this.color, required this.radius}) : super(repaint: animation);
-
-  final Animation<double> animation;
-  final Color color;
-  final double radius;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final t = 1 - animation.value;
-    if (t <= 0) return;
-    final rect = RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(radius));
-    canvas.drawRRect(rect, Paint()..color = Color.lerp(color.withAlpha(0), color, t)!);
-  }
-
-  @override
-  bool shouldRepaint(_ArrivalWash old) => old.color != color || old.radius != radius || old.animation != animation;
-}

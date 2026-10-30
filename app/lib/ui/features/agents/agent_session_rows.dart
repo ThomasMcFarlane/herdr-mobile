@@ -104,8 +104,8 @@ class AgentSessionRow extends StatelessWidget {
   final AgentSessionView session;
   final bool divider;
 
-  /// Where it runs, in place of [sessionMeta]: inside a project's group the
-  /// line leaves out the repo, which is the group's name.
+  /// Where it runs, in place of [sessionMeta]: on the board, which feature
+  /// it is (`repo · branch · agent`, `sessionWhereOnBoard`).
   final String? where;
 
   @override

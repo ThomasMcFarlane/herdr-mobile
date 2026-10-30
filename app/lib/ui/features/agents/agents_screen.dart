@@ -7,7 +7,6 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/models/herdr_models.dart';
-import '../../../data/repositories/app_settings.dart';
 import '../../../data/repositories/fleet_repository.dart';
 import '../../../data/repositories/machine_connection.dart';
 import '../../../data/repositories/agent_session.dart';
@@ -33,17 +32,15 @@ import 'board_selection.dart';
 import 'reply_sheet.dart';
 import 'swipe_review.dart';
 
-/// Every agent across every machine: what needs the person pinned on top
-/// across every project, then one group per project (a repo with all its
-/// worktrees, else a folder), each agent a row named by its task with its
-/// branch under it. Why (owner decision): people run several features of one
-/// repo in separate worktrees, and status sections scattered one repo's
-/// features across Working, Done and Idle. Terminal agents and agent sessions
-/// share every place, so "what waits" has one place to look. Needs you and
-/// the status line's `to review` count and order what [AttentionSet] says,
-/// the same as the triage sheet and the notifications. Nothing on it moves
-/// unless the person moves it: projects by name, rows in the order they were
-/// started ([boardLayout]).
+/// Every agent across every machine, in one section per status: Needs you,
+/// Working, To review, Idle ([boardLayout]), newest first within each, every
+/// agent a row named by its task with `repo · branch · agent` under it. Why
+/// (owner decision): grouped by project in start order, the board on the
+/// phone gave no idea what to look at; by status, what needs the person and
+/// what just changed are on top. Terminal agents and agent sessions share the
+/// sections, so "what waits" has one place to look. Needs you and the status
+/// line's `to review` count and order what [AttentionSet] says, the same as
+/// the triage sheet and the notifications.
 ///
 /// Calm by default: one status line says the count once, the first waiting
 /// agent is a card with its answers and every other agent is a row. Why: the
@@ -71,24 +68,24 @@ class AgentsScreen extends StatefulWidget {
 }
 
 class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
-  // A group shows its first idle rows and folds the rest ([idleShown]); the
-  // groups whose fold is open. Not kept: the board opens folded again, the
-  // way a long inbox does.
-  final _openFolds = <String>{};
+  // Idle shows its newest rows and folds the rest ([idleShown]); true opens
+  // them. Not kept: the board opens folded again, the way a long inbox does.
+  bool _idleOpen = false;
 
-  // What each fold holds, decided when the person starts looking and held
-  // until they look afresh (the board shown again, the app resumed), so a
-  // row never slips into a fold under their eyes ([heldFoldsFor]).
-  HeldFolds _heldFolds = {};
+  // The rows the person has seen during this look, until they look afresh
+  // (the board shown again, the app resumed): the idle fold never takes one,
+  // so a row never slips into it under their eyes ([idleFoldFor]).
+  SeenRows _seen = {};
   late final AppLifecycleListener _lifecycle;
   bool? _reportedVisible;
   AgentSessions? _sessions;
 
-  // Folded groups, by [BoardGroup.key], one per line, so the set survives the
-  // process being reclaimed. Nothing secret lives here (machine ids and
-  // folders). Needs you never folds. It replaced one bit per status section
-  // under another id: a restored int read as this string would throw.
-  final _foldedGroups = RestorableString('');
+  // Folded sections, by status name, one per line, so the set survives the
+  // process being reclaimed. Needs you never folds; a name this version does
+  // not know is ignored. Its own id: 0.1.45 kept an int under `collapsed` and
+  // 0.1.47 project keys under `folded-groups`, and a restored value of
+  // another type read as this string would throw.
+  final _foldedSections = RestorableString('');
 
   // The last page built. Hidden under a pushed page, the board hands this
   // back instead of rebuilding, so fleet updates cost it one cheap build call.
@@ -117,22 +114,19 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
   final _folding = <String, ({double height, Key? after, int at})>{};
   List<AgentEntry> _lastEntries = const [];
 
-  // The layout the last build showed: what `to review` unfolds to show.
-  BoardLayout _layout = const BoardLayout();
-
   @override
   String get restorationId => 'agents';
 
   @override
   void restoreState(RestorationBucket? oldBucket, bool initialRestore) {
-    registerForRestoration(_foldedGroups, 'folded-groups');
+    registerForRestoration(_foldedSections, 'folded-sections');
   }
 
   @override
   void initState() {
     super.initState();
     _selection.addListener(_onSelection);
-    _lifecycle = AppLifecycleListener(onResume: () => setState(() => _heldFolds = {}));
+    _lifecycle = AppLifecycleListener(onResume: () => setState(() => _seen = {}));
   }
 
   /// Tells the shell when picking starts and ends (Back is the board's
@@ -153,16 +147,13 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
       ..removeListener(_onSelection)
       ..dispose();
     _gate.dispose();
-    _foldedGroups.dispose();
+    _foldedSections.dispose();
     super.dispose();
   }
 
-  Set<String> get _foldedKeys => {
-    for (final key in _foldedGroups.value.split('\n'))
-      if (key.isNotEmpty) key,
-  };
+  Set<AgentStatus> get _collapsed => foldedSectionsOf(_foldedSections.value);
 
-  void _setFolded(Set<String> keys) => _foldedGroups.value = keys.join('\n');
+  void _setCollapsed(Set<AgentStatus> sections) => _foldedSections.value = foldedSectionsText(sections);
 
   void _addMachine() => openMachineForm(context);
 
@@ -188,26 +179,30 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
 
   static final _noUpdate = Listenable.merge(const <Listenable>[]);
 
-  void _toggleGroup(String key) => setState(() {
-    final folded = _foldedKeys;
-    if (!folded.remove(key)) folded.add(key);
-    _setFolded(folded);
+  void _toggleSection(AgentStatus s) => setState(() {
+    final collapsed = _collapsed;
+    if (!collapsed.remove(s)) collapsed.add(s);
+    _setCollapsed(collapsed);
   });
 
-  void _toggleFold(String key) => setState(() {
-    if (!_openFolds.remove(key)) _openFolds.add(key);
-  });
+  void _toggleIdle() => setState(() => _idleOpen = !_idleOpen);
 
-  /// Reads the branches of a machine whose repos the board shows with
-  /// several checkouts, once per machine for the app run
+  /// Reads the branches of a machine with a board row in a repo that has
+  /// several open checkouts, once per machine for the app run
   /// ([MachineConnection.loadBranchesOnce]), after the frame: the rows are
   /// named by their checkout's folder until then. Never per rebuild: a
   /// machine already asked is skipped here.
   void _askBranches(BoardLayout layout) {
-    final machines = {
-      for (final g in layout.groups)
-        if (g.checkouts > 1 && g.machine.isLive && !g.machine.branchesAsked) g.machine,
-    };
+    final machines = <MachineConnection>{};
+    for (final item in layout.items) {
+      final (machine, cwd) = switch (item) {
+        PaneItem(:final row) => (row.machine, row.machine.paneById(row.paneId)?.cwd),
+        SessionItem(:final session) => (session.machine, session.cwd),
+      };
+      if (machines.contains(machine) || !machine.isLive || machine.branchesAsked) continue;
+      final place = machine.places.of(cwd);
+      if (place != null && machine.places.groupOf(place.workspaceId) != null) machines.add(machine);
+    }
     if (machines.isEmpty) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       for (final m in machines) {
@@ -220,7 +215,7 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
   /// page): they list their hosts every minute only then.
   void _reportVisible(bool visible) {
     if (_reportedVisible == visible) return;
-    if (visible) _heldFolds = {};
+    if (visible) _seen = {};
     _reportedVisible = visible;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -236,20 +231,12 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
       if (_page case final page?) return page;
     }
     final overview = context.select<FleetRepository, AgentsOverview>(AgentsOverview.of);
-    // Set in Settings > Look > Agent list.
-    final cards = context.select<AppSettings, bool>((s) => s.cards);
     final sessions = _sessions = context.watch<AgentSessions?>();
     final attention = context.watch<AttentionSet>();
-    return _page = _buildPage(context, overview, sessions, attention, cards: cards);
+    return _page = _buildPage(context, overview, sessions, attention);
   }
 
-  Widget _buildPage(
-    BuildContext context,
-    AgentsOverview overview,
-    AgentSessions? sessions,
-    AttentionSet attention, {
-    required bool cards,
-  }) {
+  Widget _buildPage(BuildContext context, AgentsOverview overview, AgentSessions? sessions, AttentionSet attention) {
     // No bar under home: the list ends above the system inset, and keeps the
     // batch bar's room only while it is up, so the last row can be read
     // above it.
@@ -280,16 +267,16 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
     }
 
     final sessionList = sessions?.sessions ?? const <AgentSessionView>[];
-    final layout = _layout = boardLayout(overview.agents, sessionList, attention);
+    final layout = boardLayout(overview.agents, sessionList, attention);
     _askBranches(layout);
     final entries = boardEntries(
       layout,
-      collapsed: _foldedKeys,
-      openFolds: _openFolds,
+      collapsed: _collapsed,
+      idleOpen: _idleOpen,
       showMachine: overview.machineCount > 1,
-      heldFolds: heldFoldsFor(layout, _heldFolds),
+      idleFold: idleFoldFor(layout, _seen),
     );
-    _armGateWhenAnswersMove(entries, cards: cards);
+    _armGateWhenAnswersMove(entries);
     final listed = _withFolding(entries, overview);
     final indexes = entryIndexes(listed);
 
@@ -297,7 +284,7 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
     final needYouCount = attention.needsYou.length;
     final working = layout.working;
 
-    // What All picks: the rows the board shows (open groups),
+    // What All picks: the rows the board shows (open sections),
     // and what a pane that went away takes out of the selection.
     _visibleRefs = [
       for (final e in entries)
@@ -359,9 +346,8 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
               onTap: _showMachines,
             ),
             // Two actions, the budget (DESIGN.md Hierarchy 6): start an agent,
-            // and Settings. Density is a setting (Settings > Look > Agent
-            // list) and Past sessions is a row of the `+` form, where resuming
-            // is one of the ways to start.
+            // and Settings. Past sessions is a row of the `+` form, where
+            // resuming is one of the ways to start.
             actions: [
               CircleButton(icon: LucideIcons.plus, tooltip: 'New agent session', onPressed: _newSession),
               _settingsButton(),
@@ -395,23 +381,15 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
               itemCount: listed.length,
               findChildIndexCallback: (key) => indexes[key],
               itemBuilder: (context, i) => switch (listed[i]) {
-                // Counted by the status line, so its header does not say it
-                // again.
-                final NeedsYouHeader h => _SectionHeader(
+                final AgentHeader h => _SectionHeader(
                   key: h.key,
-                  label: AgentStatus.blocked.label,
-                  count: null,
-                  expanded: null,
-                  onTap: null,
-                  actions: _needsYouActions(h, needYou: needYouCount),
-                ),
-                final GroupHeader h => _GroupHeader(
-                  key: h.key,
-                  label: h.group.label,
-                  machine: h.machine,
-                  summary: h.summary,
-                  expanded: h.expanded,
-                  onTap: () => _toggleGroup(h.group.key),
+                  label: sectionLabel(h.status),
+                  // Needs you, Working and To review are counted by the
+                  // status line, so their headers do not say it again.
+                  count: _countedAbove(h.status) ? null : h.section.count,
+                  expanded: h.collapsible ? h.expanded : null,
+                  onTap: h.collapsible ? () => _toggleSection(h.status) : null,
+                  actions: h.status == AgentStatus.blocked ? _needsYouActions(h.section, needYou: needYouCount) : null,
                 ),
                 final AgentLine l => Collapse(
                   key: l.key,
@@ -421,12 +399,10 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
                   child: KeyedSubtree(
                     key: _measure.putIfAbsent(l.agent.key, GlobalKey.new),
                     // The board's job is to let you answer: the agent in
-                    // front of Needs you keeps its card and its answers in
-                    // the compact list; the others waiting are named in rows
-                    // (the triage walk, from the header, answers them in turn).
-                    child: cards || l.front
-                        ? AgentCard(agent: l.agent)
-                        : AgentCompactRow(agent: l.agent, divider: !l.last),
+                    // front of Needs you keeps its card and its answers;
+                    // every other agent is a row (the triage walk, from the
+                    // header, answers the waiting ones in turn).
+                    child: l.front ? AgentCard(agent: l.agent) : AgentCompactRow(agent: l.agent, divider: !l.last),
                   ),
                 ),
                 final SessionLine l => Collapse(
@@ -434,7 +410,7 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
                   open: l.open,
                   child: AgentSessionRow(session: l.session, divider: !l.last, where: l.where),
                 ),
-                final AgentMore m => AgentMoreRow(key: m.key, more: m, onTap: () => _toggleFold(m.groupKey)),
+                final AgentMore m => AgentMoreRow(key: m.key, more: m, onTap: _toggleIdle),
                 final AgentFolding f => _FoldAway(key: f.key, height: f.height, onDone: () => _folded(f.agentKey)),
               },
             ),
@@ -476,13 +452,13 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
     );
   }
 
-  /// Closes [_gate] when the cards above an answer changed: one was removed or
-  /// inserted, or the order changed. A card appended below the last answer
-  /// moves nothing.
-  void _armGateWhenAnswersMove(List<AgentEntry> entries, {required bool cards}) {
+  /// Closes [_gate] when the lines above the card's answers changed: one was
+  /// removed or inserted, or the order changed. A line appended below the
+  /// card moves nothing.
+  void _armGateWhenAnswersMove(List<AgentEntry> entries) {
     var last = -1;
     for (final (i, e) in entries.indexed) {
-      if (e is AgentLine && e.agent.status == AgentStatus.blocked && !e.agent.stale && (cards || e.front)) last = i;
+      if (e is AgentLine && e.front) last = i;
     }
     final layout = [for (final e in entries.take(last + 1)) e.key];
     final before = _answerLayout;
@@ -541,8 +517,8 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
   /// What the Needs you header carries on its right: how many of its rows are
   /// out of reach, then the walk through every waiting agent (the triage
   /// sheet) when more than one waits: only the first is a card.
-  _HeaderActions _needsYouActions(NeedsYouHeader h, {required int needYou}) => _HeaderActions(
-    offline: h.offline,
+  _HeaderActions _needsYouActions(BoardSection section, {required int needYou}) => _HeaderActions(
+    offline: section.offline,
     // The action's room is kept while there is no action (its 44 dp box,
     // and the choice of line made as if it were there): a second agent
     // starting to wait must not move the card in front under the thumb.
@@ -562,29 +538,21 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
 
   static const _answerOneByOne = 'Answer one by one';
 
+  /// Whether the status line already counts this section.
+  static bool _countedAbove(AgentStatus s) =>
+      s == AgentStatus.blocked || s == AgentStatus.working || s == AgentStatus.done;
+
   /// The status line's `3 to review`: picks exactly the finished agents that
   /// can be marked ([toReviewRefs]), for the batch bar's Reviewed (one toast,
-  /// one Undo) or any other batch action, and opens the projects (and a fold)
-  /// holding them so that what is picked is on screen. Why a selection and
-  /// not a Mark reviewed at once: the person sees what they clear before they
-  /// clear it, and can drop one.
+  /// one Undo) or any other batch action, and opens To review if it was
+  /// folded so that what is picked is on screen. Why a selection and not a
+  /// Mark reviewed at once: the person sees what they clear before they clear
+  /// it, and can drop one.
   void _selectToReview() {
     final refs = toReviewRefs(context.read<AttentionSet>());
     if (refs.isEmpty) return;
-    String refOf(BoardItem item) => switch (item) {
-      PaneItem(:final row) => paneRef(row.key),
-      SessionItem(:final session) => sessionRef(session.key),
-    };
-    final groups = <String>{};
-    final folds = <String>{};
-    for (final g in _layout.groups) {
-      if (g.items.any((i) => refs.contains(refOf(i)))) groups.add(g.key);
-      if (foldedItems(g, held: _heldFolds).any((i) => refs.contains(refOf(i)))) folds.add(g.key);
-    }
-    setState(() {
-      _setFolded(_foldedKeys.difference(groups));
-      _openFolds.addAll(folds);
-    });
+    final collapsed = _collapsed;
+    if (collapsed.remove(AgentStatus.done)) setState(() => _setCollapsed(collapsed));
     _selection.selectOnly(refs);
   }
 
@@ -766,94 +734,6 @@ class _SectionHeader extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// A project's header on the board: its name (a repo, else a folder) and a
-/// one-line summary of what its rows are doing, in the words the board
-/// already uses (`2 working · 1 done · 4 worktrees`). A tap folds it; folded,
-/// the summary is what still says what is inside. Quiet on purpose: the
-/// name of a thing in the text colour, the summary muted, no count in a
-/// status colour (attention is Needs you's, pinned above). Without a summary
-/// (one agent, or the only project) it is one line, the machine muted beside
-/// the name when the board spans several.
-class _GroupHeader extends StatelessWidget {
-  const _GroupHeader({
-    super.key,
-    required this.label,
-    required this.summary,
-    required this.expanded,
-    required this.onTap,
-    this.machine,
-  });
-
-  final String label;
-  final String? machine;
-  final String summary;
-  final bool expanded;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ds = context.ds;
-    return Padding(
-      padding: const EdgeInsets.only(top: Gap.md),
-      child: Semantics(
-        header: true,
-        expanded: expanded,
-        child: PressRow(
-          onTap: () {
-            Haptics.tick();
-            onTap();
-          },
-          minHeight: kMinTap,
-          padding: const EdgeInsets.symmetric(horizontal: Gap.gutter - PressRow.inset, vertical: Gap.sm),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  // One text: the name keeps its room and the machine after
-                  // it gives way first (two flexible boxes split the row and
-                  // cut a short name's machine at 320 dp).
-                  Flexible(
-                    child: Text.rich(
-                      TextSpan(
-                        text: label,
-                        children: [
-                          if (machine case final machine?)
-                            TextSpan(
-                              text: '  $machine',
-                              style: Type.secondary.copyWith(color: ds.textMuted),
-                            ),
-                        ],
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Type.row.copyWith(color: ds.text),
-                    ),
-                  ),
-                  const SizedBox(width: Gap.xs),
-                  Caret(open: expanded),
-                ],
-              ),
-              if (summary.isNotEmpty) ...[
-                const SizedBox(height: Gap.hair),
-                // Two lines at most: at large text on a narrow phone one line
-                // cut the counts the fold exists to show. It breaks only
-                // between facts, so a count never leaves its word (`1 / done`).
-                Text(
-                  summary.split(' · ').map((f) => f.replaceAll(' ', '\u00a0')).join(' · '),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Type.secondary.copyWith(color: ds.textMuted, fontFeatures: Type.tabular),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

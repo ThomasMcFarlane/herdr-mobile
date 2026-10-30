@@ -9,7 +9,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/acp/session_state.dart';
 import 'package:herdr_mobile/data/models/machine_profile.dart';
 import 'package:herdr_mobile/data/repositories/agent_session.dart';
-import 'package:herdr_mobile/data/repositories/app_settings.dart';
 import 'package:herdr_mobile/data/services/herdr_transport.dart';
 import 'package:herdr_mobile/ui/core/kit.dart';
 import 'package:herdr_mobile/ui/features/agents/agent_card.dart';
@@ -55,8 +54,8 @@ List<Pane> _ten() => [
   for (var i = 8; i <= 10; i++) _pane(i, 'idle'),
 ];
 
-/// The header of the project the finished agents of [_ten] work in.
-final _doneProject = find.byKey(const ValueKey('group/a:/work/w2'));
+/// The header of To review, where the finished agents of [_ten] are.
+final _doneProject = find.byKey(const ValueKey('header/done'));
 
 Future<BoardHarness> _studio(List<Pane> panes) => BoardHarness.create([_machine('a', panes, label: 'studio-mac')]);
 
@@ -179,7 +178,13 @@ void main() {
       expect(find.byType(FloatingBarPill), findsOneWidget, reason: 'the batch bar, only while picking');
       expect(find.text('All'), findsOneWidget);
       expect(find.text('Cancel'), findsOneWidget);
-      expect(tester.getSemantics(_row('task 1')).flagsCollection.isSelected, Tristate.isTrue);
+      expect(
+        tester
+            .getSemantics(find.ancestor(of: _row('task 1'), matching: find.byType(AgentCompactRow)))
+            .flagsCollection
+            .isSelected,
+        Tristate.isTrue,
+      );
 
       await _tap(tester, _row('task 2'));
       expect(_selected(2), findsOneWidget);
@@ -264,22 +269,7 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('compact rows pick the same way', (tester) async {
-      final h = await _studio([_pane(1, 'working'), _pane(2, 'idle')]);
-      await h.appSettings.setDensity(BoardDensity.compact);
-      await _pump(tester, h);
-      expect(find.byType(AgentCompactRow), findsNWidgets(2));
-
-      await _longPress(tester, _row('task 1'));
-      expect(_selected(1), findsOneWidget);
-      expect(tester.getSemantics(find.byType(AgentCompactRow).first).flagsCollection.isSelected, Tristate.isTrue);
-      await _tap(tester, _row('task 2'));
-      expect(_selected(2), findsOneWidget);
-      expect(h.agentScreens.front, isNull);
-      await teardownBoard(tester, h);
-    });
-
-    testWidgets('a folded project isn’t "visible": All leaves it out', (tester) async {
+    testWidgets('a folded section isn’t "visible": All leaves it out', (tester) async {
       final h = await _studio(_ten());
       await _pump(tester, h);
       await _tap(tester, _doneProject);
@@ -290,7 +280,7 @@ void main() {
       await teardownBoard(tester, h);
     });
 
-    testWidgets('to review picks exactly the finished ones, even from a folded project', (tester) async {
+    testWidgets('to review picks exactly the finished ones, even from a folded To review', (tester) async {
       final h = await _studio(_ten());
       await _pump(tester, h);
       await _tap(tester, _doneProject);
@@ -920,7 +910,7 @@ void main() {
         '— ưu tiên rất cao, kiểm thử lại toàn bộ trước khi phát hành';
 
     List<Pane> thirty() => [
-      for (var i = 1; i <= 30; i++) _pane(i, const ['working', 'blocked', 'done', 'idle', 'unknown'][i % 5]),
+      for (var i = 1; i <= 30; i++) _pane(i, const ['working', 'blocked', 'done', 'idle', 'idle', 'unknown'][i % 6]),
     ];
 
     for (final brightness in Brightness.values) {
@@ -930,7 +920,7 @@ void main() {
         ]);
         await _pump(tester, h, width: 320, height: 640, textScale: 2, brightness: brightness, bottomInset: 24);
 
-        // Open the project's idle fold (after its rows), so All has every
+        // Open the idle fold (after Idle's rows), so All has every
         // agent to pick, then back up to the first one.
         await tester.scrollUntilVisible(find.byType(AgentMoreRow), 400, scrollable: find.byType(Scrollable).first);
         await _tap(tester, find.byType(AgentMoreRow));

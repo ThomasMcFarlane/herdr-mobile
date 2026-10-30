@@ -1,5 +1,5 @@
 // The agent screen's title is the switcher: a tap lists every agent the board
-// lists, in its order (Needs you, then each project); a row replaces the screen (Back still
+// lists, in its sections and order; a row replaces the screen (Back still
 // reaches the board); the count beside the chevron is the other agents that
 // need the person, and nothing at 0.
 import 'dart:async';
@@ -141,9 +141,7 @@ int? _badge(WidgetTester tester, Finder bar) {
 void main() {
   setUpAll(loadAppFonts);
 
-  testWidgets('the title opens the switcher, which lists Needs you then each project, in the board\'s order', (
-    tester,
-  ) async {
+  testWidgets('the title opens the switcher, which lists the board\'s sections, in the board\'s order', (tester) async {
     final h = await _harness();
     await _pump(tester, h);
     await _report(tester, h);
@@ -152,18 +150,14 @@ void main() {
     await _openSwitcher(tester);
     expect(find.byType(BottomSheet), findsOneWidget);
     double y(String text) => tester.getTopLeft(_inSheet(find.text(text)).first).dy;
-    // Every pane works in `/work/w1`: one project, named by its folder.
-    final headers = ['Needs you', 'w1'];
-    final rows = ['task 4', 'task 2', 'task 1', 'task 3'];
-    for (final text in [...headers, ...rows]) {
+    final order = ['Needs you', 'task 4', 'task 2', 'Working', 'task 3', 'Idle', 'task 1', 'All agents on the board'];
+    for (final text in order) {
       expect(_inSheet(find.text(text)), findsOneWidget, reason: '$text is listed once');
     }
-    expect(y('Needs you'), lessThan(y('task 4')));
-    expect(y('task 4'), lessThan(y('task 2')), reason: 'longest waiting first, as the board');
-    expect(y('task 2'), lessThan(y('w1')));
-    expect(y('w1'), lessThan(y('task 1')));
-    expect(y('task 1'), lessThan(y('task 3')), reason: 'inside the project, the order they were started in');
-    expect(y('task 3'), lessThan(y('All agents on the board')), reason: 'the way to the board is last');
+    final ys = [for (final text in order) y(text)];
+    expect(ys, orderedEquals([...ys]..sort()), reason: 'longest waiting first, then each section, as the board');
+    // Each row says which feature it is, as on the board.
+    expect(_inSheet(find.text('w1 · Claude Code')), findsNWidgets(4));
 
     // The agent in front is marked and does nothing.
     final here = _inSheet(find.text('Here'));

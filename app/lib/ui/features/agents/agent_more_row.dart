@@ -4,7 +4,7 @@ import 'package:herdr_mobile/ui/core/kit.dart';
 
 import 'agents_grouping.dart';
 
-/// The row that stands for the rows a group folds away ("22 more idle", the
+/// The row that stands for the rows a section folds away ("22 more idle", the
 /// names of the first two under it) and opens them in place; open it says "Show
 /// fewer". Quiet on purpose: it is inventory, not something that needs the
 /// person. The caret stays, since it tells something here: this opens.
@@ -18,8 +18,7 @@ class AgentMoreRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final ds = context.ds;
     final open = more.open;
-    final kind = more.kind == null ? '' : ' ${more.kind}';
-    final title = open ? 'Show less' : '${more.hidden} more$kind';
+    final title = open ? 'Show less' : '${more.hidden} more ${more.status.name}';
     final detail = open ? null : more.names.map((n) => n.trim()).where((n) => n.isNotEmpty).join(' \u00B7 ');
     return PressRow(
       onTap: () {
@@ -28,7 +27,7 @@ class AgentMoreRow extends StatelessWidget {
       },
       minHeight: kMinTap,
       semanticLabel: open
-          ? 'Show less$kind agents'
+          ? 'Show less ${more.status.name} agents'
           : '$title agents, folded${detail == null || detail.isEmpty ? '' : '. $detail'}',
       padding: const EdgeInsets.symmetric(horizontal: Gap.gutter - PressRow.inset, vertical: Gap.sm),
       child: Row(

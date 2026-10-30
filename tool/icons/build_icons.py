@@ -135,7 +135,7 @@ GLYPHS = [
     dict(cp=0xE024, name='made', doc='What a session made: the Made chip (a sparkle).',
          strokes=['M12 2.5C12.7 8 16 11.3 21.5 12C16 12.7 12.7 16 12 21.5C11.3 16 8 12.7 2.5 12C8 11.3 11.3 8 12 2.5Z']),
     # The Settings groups: peers in one list (Agents uses `agents`).
-    dict(cp=0xE030, name='look', doc='Look: theme and density (Settings).',
+    dict(cp=0xE030, name='look', doc='Look: theme and text (Settings).',
          # Contrast: a ring, its right half filled. One glyph for light, dark and density.
          rings=[(12, 12, 8.5)], fills=['M12 3.5A8.5 8.5 0 0 1 12 20.5Z']),
     dict(cp=0xE031, name='notifications', doc='Notifications (Settings).',

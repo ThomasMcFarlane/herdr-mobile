@@ -81,8 +81,7 @@ element has the same weight" is a fail.
    the words. The rule covers only what the glyph already says: a quiet
    working agent reads `quiet 14m`, because the working glyph does not say
    quiet. A screen's status line and its section headers are the summary,
-   and say a count once (a board project's one-line summary counts only its
-   own rows, which the status line cannot say) (the board's needs-you count is in its status line,
+   and say a count once (the board's needs-you count is in its status line,
    not its header: the count said four times on one screen was noise).
 6. **Header budget.** A top bar holds at most two trailing actions, ⋯
    included (`AppTopBar` asserts it): a third truncated the title, which is
@@ -234,7 +233,6 @@ does not.
 | `sheetIn` / `sheetOut` | 250 / 190 | sheets, toasts, floating lanes |
 | `page` | 260 | push and pop (the Cupertino slide, shortened) |
 | `draw` / `brand` | 320 / 420 | `DrawCheck`, the brand mark: rare moments |
-| `arrival` | 420 | a highlight fading on a card that changed status |
 | `holdFill` / `holdSnapBack` | 550 / 200 | hold to confirm: fills slow, snaps back fast |
 
 Distances: `Motion.travel` 16 (a floating thing entering), `enterScale` .97
@@ -266,9 +264,10 @@ the **settle**: when the status of a glyph already on screen changes, the old
 shape fades and the new one is drawn in once (`Motion.settle`: a ring sweeps
 round, the check and the bar are stroked, the dot lands) and a needs-you or done
 glyph sends one faint ring outward; then the ticker stops. A glyph built with
-its status never animates, and reduced motion skips it. A card that changed
-status gets an accent wash that fades over `Motion.arrival` (a highlight
-decaying, not a movement), and a card resizes with `AnimatedSize` when its
+its status never animates, and reduced motion skips it. (A card that changed
+status used to get an accent wash, `Motion.arrival`; it went with the Cards
+density: the one card on the board is the waiting agent in front, which never
+changes status in place.) A card resizes with `AnimatedSize` when its
 question appears or is answered instead of snapping: a height change the person
 did not cause must not jump the rows under their thumb.
 
