@@ -4,17 +4,34 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
-## [Unreleased]
+## [0.1.47] - 2026-10-30
 
-- The board groups your agents by project: what needs you stays on top, then
-  one group per repo (all its worktrees together, else a folder) with a
-  one-line summary, and each agent is named by its task with its branch under
-  it, so the features of one repo are side by side.
-- Nothing on the board moves unless you move it: projects in name order,
-  agents in the order they were started, and an agent that finishes only
-  changes its mark.
-- `3 to review` in the status line selects the finished agents, and
-  `Reviewed` in the selection bar marks them with one Undo.
+### Your agents, by project, in a board that holds still
+
+What needs you stays on top. Below it, each repo is one group with all its
+worktrees together, and each agent shows its task with its branch under it,
+so the features of one repo sit side by side. Nothing moves unless you move
+it: projects are in name order, agents in the order they were started, and
+an agent that finishes only changes its mark.
+
+> [!TIP]
+> Try it: tap the dotted "to review" count at the top to select the finished
+> agents, then `Reviewed` in the bar to mark them all; Undo brings them back.
+
+- A project's line under its name sums it up, like
+  `2 working · 1 done · 4 worktrees`; a project with one agent, or the only
+  project, has no such line. Tap a project's name to fold it.
+- Branch names are read once per machine each time the app starts, never on
+  a timer. Until they arrive, a row shows its checkout's folder.
+- The `N more idle` line keeps what it held while you look: an agent that
+  goes idle stays in view until you next open the board.
+- Swiping between chats and the agent list at the top of a chat follow the
+  same order as the board.
+
+**Fixed**
+
+- 0.1.46 already grouped the board by project, in an order that moved
+  whenever an agent started or finished; its notes did not say so.
 
 ## [0.1.46] - 2026-10-30
 
