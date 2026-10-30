@@ -162,7 +162,11 @@ is left out (`Claude Code`). The idle `N more` fold is per project
 offline rows but the five started last, and sits after the project's rows;
 opened, the rows show in their own places. The fold only hides, never
 reorders, so an idle agent that starts working again shows where it always
-was (it then leaves the fold: a reveal, not a move).
+was (it then leaves the fold: a reveal, not a move). What a fold holds is
+decided when the person starts looking and held until they look afresh (the
+board shown again, the app resumed): an agent that goes idle meanwhile stays
+in view (`heldFoldsFor`). Why: worked out on every build, the fold hid the
+oldest idle row the moment another agent went idle, under the person's eyes.
 
 **Branches** come from `MachineConnection.loadBranchesOnce`: one
 `worktree.list` per repo with several open checkouts, at most once per

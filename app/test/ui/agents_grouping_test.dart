@@ -360,7 +360,11 @@ void main() {
       }
       if (known) group(snapshot);
       final h = await UiHarness.create([(profile: _machine('a', 'm-a'), snapshot: snapshot)]);
-      await pumpEventQueue(times: 50);
+      // Until the panes are listed, not a fixed 50 turns: in check.sh's one
+      // shared engine each turn is slow, and five fleets of 50 took 30 s.
+      for (var i = 0; i < 500 && AgentsOverview.of(h.fleet).agents.length < panes.length; i++) {
+        await pumpEventQueue(times: 1);
+      }
       return h;
     }
 
@@ -404,16 +408,6 @@ void main() {
       for (final g in layoutOf(h).groups) [g.label, ...idsOf(g)],
     ];
 
-    Future<void> setStatuses(UiHarness h, Map<String, String> statuses) async {
-      h.transports['a']!.snapshot['panes'] = [
-        for (final p in h.transports['a']!.snapshot['panes'] as List)
-          if (statuses[(p as Map<String, dynamic>)['pane_id']] case final s?) {...p, 'agent_status': s} else p,
-      ];
-      // Read now, as the event's refresh would after its delay.
-      await h.fleet.connections.single.refresh();
-      await pumpEventQueue(times: 50);
-    }
-
     test('projects by name and rows in the order they were started, whatever they are doing', () async {
       final h = await repoFleet(
         [
@@ -433,26 +427,37 @@ void main() {
       ]);
     });
 
+    // The same four agents in each status mix, each read by a fleet of its
+    // own: the order is a function of which agents there are, never of what
+    // they are doing. (Driving one live connection through four refreshes
+    // timed out on a loaded runner.)
     test('a status change moves no project and no row: only the glyph changes', () async {
-      final h = await repoFleet(
-        [at('w1:p1', 'w1', 'working'), at('w2:p2', 'w2', 'idle'), at('w3:p3', 'w3', 'done'), at('w4:p4', 'w4', 'idle')],
-        {'w1:p1': primary, 'w2:p2': login, 'w3:p3': search, 'w4:p4': '/src/notes'},
+      Future<List<List<String>>> boardWith(List<String> statuses) async {
+        final ids = ['w1:p1', 'w2:p2', 'w3:p3', 'w4:p4'];
+        final h = await repoFleet(
+          [for (final (i, id) in ids.indexed) at(id, 'w${i + 1}', statuses[i])],
+          {'w1:p1': primary, 'w2:p2': login, 'w3:p3': search, 'w4:p4': '/src/notes'},
+        );
+        addTearDown(h.dispose);
+        return boardOf(h);
+      }
+
+      final before = await boardWith(['working', 'idle', 'done', 'idle']);
+      expect(
+        await boardWith(['done', 'working', 'done', 'working']),
+        before,
+        reason: 'working to done, idle to working',
       );
-      addTearDown(h.dispose);
-      final before = boardOf(h);
-
-      await setStatuses(h, {'w1:p1': 'done', 'w2:p2': 'working', 'w4:p4': 'working'});
-      expect(boardOf(h), before, reason: 'working to done, idle to working');
-      await setStatuses(h, {'w1:p1': 'idle', 'w3:p3': 'idle', 'w4:p4': 'done'});
-      expect(boardOf(h), before, reason: 'done to idle (reviewed)');
-
-      await setStatuses(h, {'w2:p2': 'blocked'});
-      expect(boardOf(h), [
+      expect(await boardWith(['idle', 'working', 'idle', 'done']), before, reason: 'done to idle (reviewed)');
+      expect(await boardWith(['idle', 'blocked', 'idle', 'done']), [
         ['app', 'w1:p1', 'w3:p3'],
         ['notes', 'w4:p4'],
       ], reason: 'a waiting agent is pinned in Needs you');
-      await setStatuses(h, {'w2:p2': 'working'});
-      expect(boardOf(h), before, reason: 'answered, it is back in its own place');
+      expect(
+        await boardWith(['idle', 'working', 'idle', 'done']),
+        before,
+        reason: 'answered, it is back in its own place',
+      );
     });
 
     test('a new agent appends to its project; the projects stay put', () async {

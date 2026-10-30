@@ -774,13 +774,15 @@ AgentRowData _withSubtitle(AgentRowData row, String subtitle) => (
 /// A group shows its last [idleShown] idle (or offline) rows and folds the
 /// older ones behind one [AgentMore] line after its rows (opened when its
 /// key is in [openFolds]), unless folding would hide a single row
-/// ([_folded]). The rows are in the list either way, closed, so that they
+/// ([_folded]); with [heldFolds], what each fold held when the person
+/// started looking. The rows are in the list either way, closed, so that they
 /// animate away.
 List<AgentEntry> boardEntries(
   BoardLayout layout, {
   Set<String> collapsed = const {},
   Set<String> openFolds = const {},
   bool showMachine = false,
+  HeldFolds? heldFolds,
 }) {
   String titleOf(BoardItem item) => switch (item) {
     PaneItem(:final row) => row.title,
@@ -820,17 +822,25 @@ List<AgentEntry> boardEntries(
         open: !collapsed.contains(group.key),
         foldOpen: openFolds.contains(group.key),
         titleOf: titleOf,
+        held: heldFolds,
       ),
     ],
   ];
 }
 
-/// The rows of [group] its fold holds, by index: the idle and out-of-reach
-/// rows ("inventory") but the last [idleShown] of them, so the agents started
-/// most recently stay in view. None when folding would hide a single row.
-/// Rows keep their place either way: the fold only hides, it never reorders,
-/// so an idle agent that starts working again shows where it always was.
-Set<int> _folded(BoardGroup group) {
+/// What each group's fold holds, by [BoardGroup.key], decided once and then
+/// held while the person looks (see [heldFoldsFor]).
+typedef HeldFolds = Map<String, Set<String>>;
+
+String _itemKey(BoardItem item) => switch (item) {
+  PaneItem(:final row) => 'p:${row.key}',
+  SessionItem(:final session) => 's:${session.key}',
+};
+
+/// The rows the fold would hold now, by index: the idle and out-of-reach rows
+/// ("inventory") but the last [idleShown] of them, so the agents started most
+/// recently stay in view. None when folding would hide a single row.
+Set<int> _foldNow(BoardGroup group) {
   final tail = [
     for (final (i, r) in group.rows.indexed)
       if (_rankOf(r.item) >= 2) i,
@@ -838,17 +848,48 @@ Set<int> _folded(BoardGroup group) {
   return tail.length > idleShown + 1 ? tail.take(tail.length - idleShown).toSet() : const {};
 }
 
+/// Holds what each group of [layout] folds as it is now, adding the groups
+/// [held] has not seen yet and keeping the rest. The board calls it on every
+/// build and drops [held] when it is looked at afresh (opened again, the app
+/// back from the background). Why (owner decision, a predictable board): a
+/// fold worked out on every build hid a row the moment another agent went
+/// idle, under the person's eyes.
+HeldFolds heldFoldsFor(BoardLayout layout, HeldFolds held) {
+  for (final g in layout.groups) {
+    held.putIfAbsent(g.key, () => {for (final i in _foldNow(g)) _itemKey(g.rows[i].item)});
+  }
+  return held;
+}
+
+/// The rows of [group] its fold holds, by index. With [held], the rows it
+/// held when the person started looking that are still idle or out of reach:
+/// one that starts working shows in its place, and one that goes idle stays
+/// in view until the next look. Without, the fold as it would be now. Rows
+/// keep their place either way: the fold only hides, it never reorders.
+Set<int> _folded(BoardGroup group, HeldFolds? held) {
+  final keys = held?[group.key];
+  if (keys == null) return _foldNow(group);
+  final hidden = {
+    for (final (i, r) in group.rows.indexed)
+      if (_rankOf(r.item) >= 2 && keys.contains(_itemKey(r.item))) i,
+  };
+  return hidden.length > 1 ? hidden : const {};
+}
+
 /// The rows of [group] its fold holds (none when it has no fold).
-Iterable<BoardItem> foldedItems(BoardGroup group) => [for (final i in _folded(group)) group.rows[i].item];
+Iterable<BoardItem> foldedItems(BoardGroup group, {HeldFolds? held}) => [
+  for (final i in _folded(group, held)) group.rows[i].item,
+];
 
 List<AgentEntry> _groupLines(
   BoardGroup group, {
   required bool open,
   required bool foldOpen,
   required String Function(BoardItem) titleOf,
+  HeldFolds? held,
 }) {
   final rows = group.rows;
-  final hidden = _folded(group);
+  final hidden = _folded(group, held);
   final foldable = hidden.isNotEmpty;
   final folded = foldable && !foldOpen;
 

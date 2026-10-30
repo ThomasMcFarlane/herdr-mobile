@@ -75,6 +75,12 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
   // groups whose fold is open. Not kept: the board opens folded again, the
   // way a long inbox does.
   final _openFolds = <String>{};
+
+  // What each fold holds, decided when the person starts looking and held
+  // until they look afresh (the board shown again, the app resumed), so a
+  // row never slips into a fold under their eyes ([heldFoldsFor]).
+  HeldFolds _heldFolds = {};
+  late final AppLifecycleListener _lifecycle;
   bool? _reportedVisible;
   AgentSessions? _sessions;
 
@@ -126,6 +132,7 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
   void initState() {
     super.initState();
     _selection.addListener(_onSelection);
+    _lifecycle = AppLifecycleListener(onResume: () => setState(() => _heldFolds = {}));
   }
 
   /// Tells the shell when picking starts and ends (Back is the board's
@@ -140,6 +147,7 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
 
   @override
   void dispose() {
+    _lifecycle.dispose();
     _sessions?.setBoardVisible(false);
     _selection
       ..removeListener(_onSelection)
@@ -212,6 +220,7 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
   /// page): they list their hosts every minute only then.
   void _reportVisible(bool visible) {
     if (_reportedVisible == visible) return;
+    if (visible) _heldFolds = {};
     _reportedVisible = visible;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -278,6 +287,7 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
       collapsed: _foldedKeys,
       openFolds: _openFolds,
       showMachine: overview.machineCount > 1,
+      heldFolds: heldFoldsFor(layout, _heldFolds),
     );
     _armGateWhenAnswersMove(entries, cards: cards);
     final listed = _withFolding(entries, overview);
@@ -569,7 +579,7 @@ class _AgentsScreenState extends State<AgentsScreen> with RestorationMixin {
     final folds = <String>{};
     for (final g in _layout.groups) {
       if (g.items.any((i) => refs.contains(refOf(i)))) groups.add(g.key);
-      if (foldedItems(g).any((i) => refs.contains(refOf(i)))) folds.add(g.key);
+      if (foldedItems(g, held: _heldFolds).any((i) => refs.contains(refOf(i)))) folds.add(g.key);
     }
     setState(() {
       _setFolded(_foldedKeys.difference(groups));
@@ -1016,8 +1026,15 @@ class _ReviewCount extends StatelessWidget {
   final String text;
   final VoidCallback onTap;
 
-  static TextStyle style(Ds ds, {required bool pressed}) =>
-      Type.secondaryStrong.copyWith(color: pressed ? ds.text : ds.textSecondary, fontFeatures: Type.tabular);
+  // A dotted underline says it can be tapped: weight alone (500 among 400)
+  // read as one more count.
+  static TextStyle style(Ds ds, {required bool pressed}) => Type.secondaryStrong.copyWith(
+    color: pressed ? ds.text : ds.textSecondary,
+    fontFeatures: Type.tabular,
+    decoration: TextDecoration.underline,
+    decorationStyle: TextDecorationStyle.dotted,
+    decorationColor: ds.textTertiary,
+  );
 
   @override
   // A node of its own: inline, its button would take the whole line's words.
