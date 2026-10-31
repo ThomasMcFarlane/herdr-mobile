@@ -19,7 +19,7 @@ Intro text.
 
 ## [0.2.0] - 2026-11-01
 
-[![Watch what's new · 1 change · 0:10 · 3 MB](https://github.com/tuan3w/herdr-mobile/releases/download/v0.2.0/0.2.0-whats-new.jpg)](https://github.com/tuan3w/herdr-mobile/releases/download/v0.2.0/0.2.0-whats-new.mp4)
+[![Watch what's new · 1 change · 0:10 · 3 MB](https://github.com/ThomasMcFarlane/herdr-mobile/releases/download/v0.2.0/0.2.0-whats-new.jpg)](https://github.com/ThomasMcFarlane/herdr-mobile/releases/download/v0.2.0/0.2.0-whats-new.mp4)
 
 ### Pictures stay on the phone
 

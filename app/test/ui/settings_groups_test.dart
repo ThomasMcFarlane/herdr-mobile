@@ -33,7 +33,7 @@ import '../support/settings_support.dart';
 import '../support/shot.dart' show loadAppFonts;
 import '../support/update_fakes.dart';
 
-const _base = 'https://github.com/tuan3w/herdr-mobile/releases/download/v99.0.0';
+const _base = 'https://github.com/ThomasMcFarlane/herdr-mobile/releases/download/v99.0.0';
 
 ReleaseInfo _release({String notes = '### One new thing\n\nIt does what it says.'}) => ReleaseInfo(
   version: '99.0.0',

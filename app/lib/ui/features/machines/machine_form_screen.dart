@@ -77,9 +77,12 @@ class _FormState extends State<_Form> with RestorationMixin {
   late final _userR = RestorableTextEditingController(text: widget.existing?.username);
   late final _sessionR = RestorableTextEditingController(text: widget.existing?.session ?? 'default');
   late final _socketR = RestorableTextEditingController(text: widget.existing?.socketPath);
+  late final _rootsR = RestorableTextEditingController(text: widget.existing?.agentRoots.join('\n'));
   late final _authR = RestorableInt((widget.existing?.auth ?? SshAuth.key).index);
   late final _advancedR = RestorableBool(
-    (widget.existing?.session ?? 'default') != 'default' || (widget.existing?.socketPath ?? '').isNotEmpty,
+    (widget.existing?.session ?? 'default') != 'default' ||
+        (widget.existing?.socketPath ?? '').isNotEmpty ||
+        (widget.existing?.agentRoots ?? const []).isNotEmpty,
   );
   // Whether a generated key is held as a draft in secure storage. Only the
   // flag is restorable; the key itself never enters restoration state.
@@ -96,6 +99,7 @@ class _FormState extends State<_Form> with RestorationMixin {
   TextEditingController get _user => _userR.value;
   TextEditingController get _session => _sessionR.value;
   TextEditingController get _socket => _socketR.value;
+  TextEditingController get _roots => _rootsR.value;
   SshAuth get _auth => SshAuth.values[_authR.value];
   bool get _advanced => _advancedR.value;
 
@@ -118,6 +122,7 @@ class _FormState extends State<_Form> with RestorationMixin {
     registerForRestoration(_userR, 'user');
     registerForRestoration(_sessionR, 'session');
     registerForRestoration(_socketR, 'socket');
+    registerForRestoration(_rootsR, 'agent_roots');
     registerForRestoration(_authR, 'auth');
     registerForRestoration(_advancedR, 'advanced');
     registerForRestoration(_keyDraftR, 'key_draft');
@@ -150,7 +155,7 @@ class _FormState extends State<_Form> with RestorationMixin {
 
   @override
   void dispose() {
-    for (final r in [_labelR, _hostR, _portR, _userR, _sessionR, _socketR]) {
+    for (final r in [_labelR, _hostR, _portR, _userR, _sessionR, _socketR, _rootsR]) {
       r.dispose();
     }
     _authR.dispose();
@@ -173,6 +178,7 @@ class _FormState extends State<_Form> with RestorationMixin {
     password: _password.text,
     session: _session.text.trim(),
     socketPath: _socket.text.trim(),
+    agentRoots: _roots.text.trim(),
   );
 
   Future<void> _paste() async {
@@ -322,6 +328,7 @@ class _FormState extends State<_Form> with RestorationMixin {
         _user.text != (e?.username ?? '') ||
         _session.text != (e?.session ?? 'default') ||
         _socket.text != (e?.socketPath ?? '') ||
+        _roots.text != (e?.agentRoots.join('\n') ?? '') ||
         _auth != (e?.auth ?? SshAuth.key) ||
         _key.text.trim().isNotEmpty ||
         _passphrase.text.isNotEmpty ||
@@ -340,6 +347,7 @@ class _FormState extends State<_Form> with RestorationMixin {
       _user,
       _session,
       _socket,
+      _roots,
       _authR,
       _key,
       _passphrase,
@@ -616,6 +624,16 @@ class _FormState extends State<_Form> with RestorationMixin {
                                     controller: _socket,
                                     hint: '~/.config/herdr/herdr.sock',
                                     helper: 'Only used when herdr lacks remote-api-bridge',
+                                  ),
+                                  LabeledField(
+                                    label: 'Extra agent folders (optional)',
+                                    controller: _roots,
+                                    hint: '~/.claude/identities/*',
+                                    helper:
+                                        'Claude config dirs and Codex homes to search for chat logs, one per line. '
+                                        'A trailing /* means every folder in it',
+                                    keyboardType: TextInputType.multiline,
+                                    maxLines: 3,
                                   ),
                                 ],
                               ),

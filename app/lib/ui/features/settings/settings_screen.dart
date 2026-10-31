@@ -460,13 +460,13 @@ class _AboutGroup extends StatelessWidget {
   final bool open;
   final VoidCallback onToggle;
 
-  static const _repoLabel = 'github.com/tuan3w/herdr-mobile · GPL-3.0';
+  static const _repoLabel = 'github.com/ThomasMcFarlane/herdr-mobile · GPL-3.0';
 
   /// The notice GPL-3.0 section 5(d) asks an interactive program to show.
   static const _legalese =
       'Copyright © 2026 Tuan Nguyen. herdr mobile is free '
       'software under the GNU General Public License v3.0, and comes with no '
-      'warranty. Its source is at github.com/tuan3w/herdr-mobile.';
+      'warranty. Its source is at github.com/ThomasMcFarlane/herdr-mobile.';
 
   Future<void> _openRepo(BuildContext context) async {
     final toaster = Toaster.of(context);

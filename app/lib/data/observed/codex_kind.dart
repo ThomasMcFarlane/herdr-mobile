@@ -40,7 +40,12 @@ class CodexSubagentLogs implements SubagentLogs {
   Future<String?> pathOf(MachineConnection machine, String parentLogPath, SubagentInfo info) async {
     final id = info.logId;
     if (id == null) return null;
-    final found = await _locator.locateById(machine.files, id, machineId: machine.profile.id);
+    final found = await _locator.locateById(
+      machine.files,
+      id,
+      machineId: machine.profile.id,
+      extraRoots: machine.profile.agentRoots,
+    );
     return found is Located ? found.path : null;
   }
 

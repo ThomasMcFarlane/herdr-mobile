@@ -8,20 +8,20 @@ import 'package:herdr_mobile/data/services/apk_installer.dart';
 
 import 'support/update_fakes.dart';
 
-const _base = 'https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.7';
+const _base = 'https://github.com/ThomasMcFarlane/herdr-mobile/releases/download/v0.1.7';
 
 ReleaseInfo _release([String version = '0.1.7']) => ReleaseInfo(
   version: version,
   apkUrl: '$_base/herdr-mobile-$version.apk',
   size: 1000,
-  pageUrl: 'https://github.com/tuan3w/herdr-mobile/releases/tag/v$version',
+  pageUrl: 'https://github.com/ThomasMcFarlane/herdr-mobile/releases/tag/v$version',
   notes: '### Better\n\n- a thing',
   sha256: 'a' * 64,
 );
 
 Map<String, Object?> _github({String tag = 'v0.1.7', List<Map<String, Object?>>? assets}) => {
   'tag_name': tag,
-  'html_url': 'https://github.com/tuan3w/herdr-mobile/releases/tag/$tag',
+  'html_url': 'https://github.com/ThomasMcFarlane/herdr-mobile/releases/tag/$tag',
   'body': '  notes  ',
   'assets':
       assets ??
@@ -122,15 +122,18 @@ void main() {
       expect(asset('$_base/../../../../other/repo/releases/download/v1/herdr-mobile-0.1.7.apk'), 'refused');
       expect(asset('$_base/herdr-mobile-0.1.7.apk?x=1'), 'refused');
       expect(
-        asset('https://github.com:8443/tuan3w/herdr-mobile/releases/download/v0.1.7/herdr-mobile-0.1.7.apk'),
+        asset('https://github.com:8443/ThomasMcFarlane/herdr-mobile/releases/download/v0.1.7/herdr-mobile-0.1.7.apk'),
         'refused',
       );
       expect(
-        asset('https://user@github.com/tuan3w/herdr-mobile/releases/download/v0.1.7/herdr-mobile-0.1.7.apk'),
+        asset('https://user@github.com/ThomasMcFarlane/herdr-mobile/releases/download/v0.1.7/herdr-mobile-0.1.7.apk'),
         'refused',
       );
       expect(asset('https://github.com/other/repo/releases/download/v0.1.7/herdr-mobile-0.1.7.apk'), 'refused');
-      expect(asset('http://github.com/tuan3w/herdr-mobile/releases/download/v0.1.7/herdr-mobile-0.1.7.apk'), 'refused');
+      expect(
+        asset('http://github.com/ThomasMcFarlane/herdr-mobile/releases/download/v0.1.7/herdr-mobile-0.1.7.apk'),
+        'refused',
+      );
     });
 
     test('a field of the wrong type is read as missing', () {

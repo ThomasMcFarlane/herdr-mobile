@@ -53,7 +53,7 @@ android {
     defaultConfig {
         // `--android-project-arg=appIdSuffix=.kbbench` installs a benchmark build
         // beside the real app (own data, own icon) instead of over it.
-        applicationId = "dev.herdrmobile.herdr_mobile" + (project.findProperty("appIdSuffix") as String? ?: "")
+        applicationId = "dev.herdrmobile.herdr_mobile.ais" + (project.findProperty("appIdSuffix") as String? ?: "")
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

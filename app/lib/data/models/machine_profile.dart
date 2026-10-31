@@ -17,6 +17,7 @@ class MachineProfile {
     this.session = 'default',
     this.socketPath,
     this.hostKeyFingerprint,
+    this.agentRoots = const [],
     this.enabled = true,
   });
 
@@ -30,6 +31,10 @@ class MachineProfile {
     session: (j['session'] as String?) ?? 'default',
     socketPath: j['socketPath'] as String?,
     hostKeyFingerprint: j['hostKeyFingerprint'] as String?,
+    agentRoots: [
+      for (final r in (j['agentRoots'] as List?) ?? const [])
+        if (r is String && r.trim().isNotEmpty) r.trim(),
+    ],
     enabled: j['enabled'] != false,
   );
 
@@ -61,7 +66,19 @@ class MachineProfile {
 
   /// Pinned `SHA256:<base64>` host key (trust on first use).
   final String? hostKeyFingerprint;
+
+  /// Extra folders where agents keep their files on this machine, beyond
+  /// `~/.claude` and `~/.codex`: Claude config dirs and Codex homes that a
+  /// session was not started in (`CLAUDE_CONFIG_DIR`, `CODEX_HOME`). Absolute,
+  /// or starting with `~/`; a trailing `/*` stands for every folder in it.
+  final List<String> agentRoots;
   final bool enabled;
+
+  /// [agentRoots] from the form's text: one entry per comma or line.
+  static List<String> parseAgentRoots(String text) => [
+    for (final r in text.split(RegExp(r'[,\n]')))
+      if (r.trim().isNotEmpty) r.trim(),
+  ];
 
   MachineProfile copyWith({
     String? label,
@@ -74,6 +91,7 @@ class MachineProfile {
     bool clearSocketPath = false,
     String? hostKeyFingerprint,
     bool clearHostKey = false,
+    List<String>? agentRoots,
     bool? enabled,
   }) => MachineProfile(
     id: id,
@@ -85,6 +103,7 @@ class MachineProfile {
     session: session ?? this.session,
     socketPath: clearSocketPath ? null : socketPath ?? this.socketPath,
     hostKeyFingerprint: clearHostKey ? null : hostKeyFingerprint ?? this.hostKeyFingerprint,
+    agentRoots: agentRoots ?? this.agentRoots,
     enabled: enabled ?? this.enabled,
   );
 
@@ -98,6 +117,7 @@ class MachineProfile {
     'session': session,
     if (socketPath != null) 'socketPath': socketPath,
     if (hostKeyFingerprint != null) 'hostKeyFingerprint': hostKeyFingerprint,
+    if (agentRoots.isNotEmpty) 'agentRoots': agentRoots,
     'enabled': enabled,
   };
 }
