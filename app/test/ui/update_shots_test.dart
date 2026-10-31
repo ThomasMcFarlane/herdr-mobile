@@ -50,9 +50,9 @@ const _notes = '''
 
 final _release = ReleaseInfo(
   version: '0.1.7',
-  apkUrl: 'https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.7/herdr-mobile-0.1.7.apk',
+  apkUrl: 'https://github.com/ThomasMcFarlane/herdr-mobile/releases/download/v0.1.7/herdr-mobile-0.1.7.apk',
   size: 48 * 1024 * 1024 + 300000,
-  pageUrl: 'https://github.com/tuan3w/herdr-mobile/releases/tag/v0.1.7',
+  pageUrl: 'https://github.com/ThomasMcFarlane/herdr-mobile/releases/tag/v0.1.7',
   notes: _notes,
   sha256: 'a' * 64,
 );
@@ -230,7 +230,7 @@ void main() {
   testWidgets('update sheet with a walkthrough clip', (tester) async {
     final feed = FakeReleaseFeed();
     final update = await make(feed, FakeReleaseFiles());
-    const base = 'https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.7';
+    const base = 'https://github.com/ThomasMcFarlane/herdr-mobile/releases/download/v0.1.7';
     feed.answer = ReleaseInfo(
       version: _release.version,
       apkUrl: _release.apkUrl,
@@ -262,8 +262,8 @@ void main() {
     // No video plugin in a test: the player's failure state.
     final clip = ReleaseClip.find(
       "[![Watch what's new · 4 changes · 0:14 · 5.1 MB]"
-          '(https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.7/0.1.7-whats-new.jpg)]'
-          '(https://github.com/tuan3w/herdr-mobile/releases/download/v0.1.7/0.1.7-whats-new.mp4)',
+          '(https://github.com/ThomasMcFarlane/herdr-mobile/releases/download/v0.1.7/0.1.7-whats-new.jpg)]'
+          '(https://github.com/ThomasMcFarlane/herdr-mobile/releases/download/v0.1.7/0.1.7-whats-new.mp4)',
       '0.1.7',
     )!;
     await shoot(

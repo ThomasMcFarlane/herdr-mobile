@@ -88,7 +88,7 @@ class _Server {
     version: '0.1.7',
     apkUrl: 'http://127.0.0.1:${http.port}/herdr-mobile-0.1.7.apk',
     size: apk.length,
-    pageUrl: 'https://github.com/tuan3w/herdr-mobile/releases/tag/v0.1.7',
+    pageUrl: 'https://github.com/ThomasMcFarlane/herdr-mobile/releases/tag/v0.1.7',
     notes: '',
     sha256: sha,
     sumsUrl: sha == null ? 'http://127.0.0.1:${http.port}/SHA256SUMS' : null,

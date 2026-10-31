@@ -34,7 +34,7 @@ void main() {
   GitHubReleaseFeed feed() => GitHubReleaseFeed(url: Uri.parse('http://127.0.0.1:${server.port}/latest'));
 
   String release(String tag, {Object? size = 10}) {
-    final base = 'https://github.com/tuan3w/herdr-mobile/releases/download/$tag';
+    final base = 'https://github.com/ThomasMcFarlane/herdr-mobile/releases/download/$tag';
     return jsonEncode({
       'tag_name': tag,
       'assets': [
