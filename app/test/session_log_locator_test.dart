@@ -183,6 +183,94 @@ void main() {
       expect(locator.mayLocate(_pane()), isTrue);
       expect(locator.mayLocate(_pane(agent: 'omp')), isFalse);
     });
+
+    group('config dir', () {
+      const swap = '/home/dev/.claude/identities/swap';
+      final inSwap = '$swap/projects/-work-app/$_sid.jsonl';
+      Future<List<PaneProcess>> claudeProcess(String _) async => [
+        const PaneProcess(pid: 4242, name: '2.1.293', argv0: 'claude'),
+      ];
+
+      FakeFs withPidFile(String root) => FakeFs()
+        ..addFile('$root/sessions/4242.json', '{"pid":4242,"sessionId":"$_sid","cwd":"/work/app","kind":"interactive"}')
+        ..addFile('$root/projects/-work-app/$_sid.jsonl', '{}\n');
+
+      test('a process with CLAUDE_CONFIG_DIR is read from that folder', () async {
+        final fs = withPidFile(swap)
+          ..addFile('/proc/4242/environ', 'HOME=/home/dev\u0000CLAUDE_CONFIG_DIR=$swap/\u0000X=1');
+        final found = await locator.locateWith(_files(fs), claudeProcess, _pane());
+        expect((found as Located).path, inSwap);
+      });
+
+      test('an unreadable or silent environment falls back to ~/.claude', () async {
+        final defaults = '/home/dev/.claude';
+        final silent = withPidFile(defaults)..addFile('/proc/4242/environ', 'HOME=/home/dev\u0000');
+        expect((await locator.locateWith(_files(silent), claudeProcess, _pane()) as Located).path, inCwd);
+
+        final denied = withPidFile(defaults)
+          ..addFile('/proc/4242/environ', 'CLAUDE_CONFIG_DIR=$swap')
+          ..deny.add('/proc/4242');
+        expect((await locator.locateWith(_files(denied), claudeProcess, _pane()) as Located).path, inCwd);
+
+        final missing = withPidFile(defaults);
+        expect((await locator.locateWith(_files(missing), claudeProcess, _pane()) as Located).path, inCwd);
+      });
+
+      test('a relative, ~ or .. value is not used', () async {
+        for (final bad in ['identities/swap', '~/.claude/identities/swap', '$swap/../swap', '/home/dev/a\u0001b']) {
+          final fs = withPidFile('/home/dev/.claude')
+            ..addFile('/proc/4242/environ', 'CLAUDE_CONFIG_DIR=$bad\u0000')
+            ..addFile('$swap/sessions/4242.json', '{"pid":4242,"sessionId":"$_sid","kind":"interactive"}');
+          final found = await ClaudeLocator().locateWith(_files(fs), claudeProcess, _pane());
+          expect((found as Located).path, inCwd, reason: bad);
+        }
+      });
+
+      test('an id alone is found in a configured extra folder', () async {
+        final fs = FakeFs()..addFile(inSwap, '{}\n');
+        final found = await locator.locateWith(
+          _files(fs),
+          _noProcesses,
+          _pane(session: _ref('claude', 'id', _sid)),
+          extraRoots: [swap],
+        );
+        expect((found as Located).path, inSwap);
+      });
+
+      test('a /* entry stands for every folder in it, and ~/ is the login folder', () async {
+        final fs = FakeFs()
+          ..addDir('/home/dev/.claude/identities/other')
+          ..addFile(inSwap, '{}\n');
+        for (final entry in ['/home/dev/.claude/identities/*', '~/.claude/identities/*']) {
+          final found = await ClaudeLocator().locateWith(
+            _files(fs),
+            _noProcesses,
+            _pane(session: _ref('claude', 'id', _sid)),
+            extraRoots: [entry],
+          );
+          expect((found as Located).path, inSwap, reason: entry);
+        }
+      });
+
+      test('the default folder is tried first, and a found file is remembered', () async {
+        final fs = FakeFs()
+          ..addFile(inCwd, '{}\n')
+          ..addFile(inSwap, '{}\n');
+        final pane = _pane(session: _ref('claude', 'id', _sid));
+        expect((await locator.locateWith(_files(fs), _noProcesses, pane, extraRoots: [swap]) as Located).path, inCwd);
+        fs.calls.clear();
+        expect(await locator.locateWith(_files(fs), _noProcesses, pane, extraRoots: [swap]), isA<Located>());
+        expect(fs.calls.where((c) => c.startsWith('list') || c.startsWith('stat')), isEmpty);
+      });
+
+      test('a scan that found nothing is repeated once the folders listed change', () async {
+        final fs = FakeFs()..addDir('/home/dev/.claude/projects/-other');
+        final pane = _pane(session: _ref('claude', 'id', _sid));
+        expect(await locator.locateWith(_files(fs), _noProcesses, pane), isA<NotYet>());
+        fs.addFile(inSwap, '{}\n');
+        expect(await locator.locateWith(_files(fs), _noProcesses, pane, extraRoots: [swap]), isA<Located>());
+      });
+    });
   });
 
   group('Codex', () {
@@ -267,6 +355,41 @@ void main() {
       fs.calls.clear();
       expect(await locator.locateWith(_files(fs), pane, machineId: 'm'), isA<Located>());
       expect(fs.calls, isEmpty);
+    });
+
+    test('a codex process with CODEX_HOME is looked into there', () async {
+      const home = '/home/dev/.codex-work';
+      final fs = FakeFs()
+        ..addFile('$home/sessions/2026/09/06/${rollout('2026-09-06T21-03-17')}', '{}\n')
+        ..addFile('/proc/77/environ', 'CODEX_HOME=$home\u0000');
+      final found = await CodexLocator().locateWith(
+        _files(fs),
+        _pane(agent: 'codex', session: _ref('codex', 'id', id)),
+        processes: (_) async => [const PaneProcess(pid: 77, name: 'codex', argv0: 'codex')],
+      );
+      expect((found as Located).path, '$home/sessions/2026/09/06/${rollout('2026-09-06T21-03-17')}');
+    });
+
+    test('without a usable CODEX_HOME the default and then the configured folders are tried', () async {
+      const home = '/home/dev/.codex-work';
+      final fs = FakeFs()
+        ..addFile('$home/sessions/2026/09/06/${rollout('2026-09-06T21-03-17')}', '{}\n')
+        ..addFile('/proc/77/environ', 'CODEX_HOME=relative\u0000');
+      final pane = _pane(agent: 'codex', session: _ref('codex', 'id', id));
+      final found = await CodexLocator().locateWith(
+        _files(fs),
+        pane,
+        processes: (_) async => [const PaneProcess(pid: 77, name: 'codex', argv0: 'codex')],
+        extraRoots: ['/home/dev/*'],
+      );
+      expect((found as Located).path, contains(home), reason: 'a /* entry lists the folders of /home/dev');
+    });
+
+    test('a thread with no process is found in a configured extra home', () async {
+      const home = '/home/dev/.codex-work';
+      final fs = FakeFs()..addFile('$home/sessions/2026/09/06/${rollout('2026-09-06T21-03-17')}', '{}\n');
+      final found = await CodexLocator().locateById(_files(fs), id, extraRoots: [home]);
+      expect(found, isA<Located>());
     });
   });
 }

@@ -6,6 +6,7 @@ import '../repositories/fleet_agent.dart';
 import '../repositories/machine_connection.dart';
 import '../services/herdr_transport.dart' show HerdrApiException;
 import '../services/remote_files.dart';
+import 'agent_roots.dart';
 import 'session_log_locator.dart';
 
 /// Lists the foreground processes of a pane (`pane.process_info`).
@@ -13,17 +14,28 @@ typedef PaneProcesses = Future<List<PaneProcess>> Function(String paneId);
 
 /// Finds the log of a Claude Code pane.
 ///
-/// Claude writes `~/.claude/projects/{cwd with every non-alphanumeric character
+/// Claude writes `<config dir>/projects/{cwd with every non-alphanumeric character
 /// replaced by "-"}/{sessionId}.jsonl` (the file is named by the session id and
 /// does not exist until the first message). herdr's hook reports the session id
 /// and the transcript path, but only once its integration is installed and the
 /// session started or resumed after that. Without it, the running process
-/// tells: `~/.claude/sessions/{pid}.json` maps a `claude` pid to its session id.
+/// tells: `<config dir>/sessions/{pid}.json` maps a `claude` pid to its session id.
+///
+/// The config dir is `~/.claude` unless the process runs with
+/// `CLAUDE_CONFIG_DIR` (read from its `/proc/<pid>/environ`). A session known
+/// by id alone is looked for in `~/.claude`, then in the folders listed on the
+/// machine ([MachineProfile.agentRoots]).
 class ClaudeLocator implements SessionLogLocator {
   ClaudeLocator();
 
-  /// Session ids whose project folders were all looked into without finding the file.
+  /// Session ids (with the roots looked into) whose project folders were all
+  /// looked into without finding the file.
   final _scanned = <String>{};
+
+  /// machine/id -> path, as [CodexLocator] does: a session's file never moves.
+  final _found = <String, String>{};
+
+  static const _envVar = 'CLAUDE_CONFIG_DIR';
 
   /// Shown verbatim.
   static const unlinkedWhy =
@@ -45,14 +57,25 @@ class ClaudeLocator implements SessionLogLocator {
   bool mayLocate(Pane pane) => FleetAgent.kindOf(pane) == 'claude';
 
   @override
-  Future<LogLocation> locate(MachineConnection machine, Pane pane) =>
-      locateWith(machine.files, machine.api.paneProcessInfo, pane);
+  Future<LogLocation> locate(MachineConnection machine, Pane pane) => locateWith(
+    machine.files,
+    machine.api.paneProcessInfo,
+    pane,
+    machineId: machine.profile.id,
+    extraRoots: machine.profile.agentRoots,
+  );
 
-  Future<LogLocation> locateWith(RemoteFiles files, PaneProcesses processes, Pane pane) async {
+  Future<LogLocation> locateWith(
+    RemoteFiles files,
+    PaneProcesses processes,
+    Pane pane, {
+    String machineId = '',
+    List<String> extraRoots = const [],
+  }) async {
     // The running process is the truth about which session the pane runs: the
     // session herdr reports is the one the hook saw last, and stays after the
     // agent in the pane was exited and started again.
-    final byProcess = await _byProcess(files, processes, pane);
+    final byProcess = await _byProcess(files, processes, pane, machineId);
     if (byProcess != null) return byProcess;
     final session = pane.session;
     if (session != null) {
@@ -62,16 +85,18 @@ class ClaudeLocator implements SessionLogLocator {
         return await _exists(files, session.value) ? Located(session.value) : const NotYet(notYetWhy);
       }
       if (session.kind == 'id' && _sessionId.hasMatch(session.value)) {
-        return _byId(files, session.value, cwd: pane.cwd);
+        final home = await files.home();
+        final roots = await candidateRoots(files, '$home/.claude', extraRoots);
+        return _byId(files, session.value, roots, machineId, cwd: pane.cwd);
       }
     }
     return const Unlinked(unlinkedWhy);
   }
 
   /// The log of the session the `claude` process in [pane] runs
-  /// (`~/.claude/sessions/<pid>.json` names it), or null when that cannot be
+  /// (`<config dir>/sessions/<pid>.json` names it), or null when that cannot be
   /// told (an old herdr, no such process, no file of its own).
-  Future<LogLocation?> _byProcess(RemoteFiles files, PaneProcesses processes, Pane pane) async {
+  Future<LogLocation?> _byProcess(RemoteFiles files, PaneProcesses processes, Pane pane, String machineId) async {
     final List<PaneProcess> running;
     try {
       running = await processes(pane.id);
@@ -82,14 +107,16 @@ class ClaudeLocator implements SessionLogLocator {
     final home = await files.home();
     for (final p in running) {
       if (!_isClaude(p)) continue;
-      final json = await _readPidFile(files, '$home/.claude/sessions/${p.pid}.json');
+      // Where this process keeps its files: its own CLAUDE_CONFIG_DIR, else the default.
+      final root = await processEnvRoot(files, p.pid, _envVar) ?? '$home/.claude';
+      final json = await _readPidFile(files, '$root/sessions/${p.pid}.json');
       // The file must be this process's own: a stale one of a crashed process
       // whose pid was reused names another session.
       if (json == null || json['kind'] != 'interactive' || json['pid'] != p.pid) continue;
       final id = json['sessionId'];
       if (id is! String || !_sessionId.hasMatch(id)) continue;
       final cwd = json['cwd'];
-      return _byId(files, id, cwd: cwd is String ? cwd : pane.cwd);
+      return _byId(files, id, [root], machineId, cwd: cwd is String ? cwd : pane.cwd);
     }
     return null;
   }
@@ -120,38 +147,50 @@ class ClaudeLocator implements SessionLogLocator {
   }
 
   /// The log of session [id]: in the folder its working directory names, else
-  /// in whichever project folder holds it (a symlinked or renamed cwd).
-  Future<LogLocation> _byId(RemoteFiles files, String id, {String? cwd}) async {
-    final home = await files.home();
-    final projects = '$home/.claude/projects';
+  /// in whichever project folder holds it (a symlinked or renamed cwd), in each
+  /// of the config [roots] in turn.
+  Future<LogLocation> _byId(RemoteFiles files, String id, List<String> roots, String machineId, {String? cwd}) async {
+    final cached = _found['$machineId/$id'];
+    if (cached != null) return Located(cached);
     if (cwd != null && cwd.isNotEmpty) {
-      final guess = '$projects/${cwd.replaceAll(_unsafeInName, '-')}/$id.jsonl';
-      if (isReadableLogPath(guess) && await _exists(files, guess)) return Located(guess);
+      for (final root in roots) {
+        final guess = '$root/projects/${cwd.replaceAll(_unsafeInName, '-')}/$id.jsonl';
+        if (isReadableLogPath(guess) && await _exists(files, guess)) return _remember(machineId, id, guess);
+      }
     }
     // One full look for a session that has no file yet, not one per poll: after
     // it only the folder its working directory names is looked at.
-    if (_scanned.contains(id)) return const NotYet(notYetWhy);
-    final List<RemoteEntry> dirs;
-    try {
-      dirs =
-          [
-            for (final e in await files.list(projects))
-              if (e.isDirectory) e,
-          ]..sort(
-            (a, b) => (b.modified ?? DateTime.fromMillisecondsSinceEpoch(0)).compareTo(
-              a.modified ?? DateTime.fromMillisecondsSinceEpoch(0),
-            ),
-          );
-    } on RemoteFileException catch (e) {
-      if (_absent(e)) return const NotYet(notYetWhy);
-      rethrow;
+    final scanKey = '$machineId/$id/${roots.join('\n')}';
+    if (_scanned.contains(scanKey)) return const NotYet(notYetWhy);
+    for (final root in roots) {
+      final projects = '$root/projects';
+      final List<RemoteEntry> dirs;
+      try {
+        dirs =
+            [
+              for (final e in await files.list(projects))
+                if (e.isDirectory) e,
+            ]..sort(
+              (a, b) => (b.modified ?? DateTime.fromMillisecondsSinceEpoch(0)).compareTo(
+                a.modified ?? DateTime.fromMillisecondsSinceEpoch(0),
+              ),
+            );
+      } on RemoteFileException catch (e) {
+        if (_absent(e)) continue;
+        rethrow;
+      }
+      for (final dir in dirs.take(maxProjects)) {
+        final path = '$projects/${dir.name}/$id.jsonl';
+        if (isReadableLogPath(path) && await _exists(files, path)) return _remember(machineId, id, path);
+      }
     }
-    for (final dir in dirs.take(maxProjects)) {
-      final path = '$projects/${dir.name}/$id.jsonl';
-      if (isReadableLogPath(path) && await _exists(files, path)) return Located(path);
-    }
-    _scanned.add(id);
+    _scanned.add(scanKey);
     return const NotYet(notYetWhy);
+  }
+
+  LogLocation _remember(String machineId, String id, String path) {
+    _found['$machineId/$id'] = path;
+    return Located(path);
   }
 
   Future<bool> _exists(RemoteFiles files, String path) async {

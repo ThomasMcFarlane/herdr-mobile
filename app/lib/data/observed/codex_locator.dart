@@ -2,18 +2,27 @@ import '../models/herdr_models.dart';
 import '../models/remote_file.dart';
 import '../repositories/fleet_agent.dart';
 import '../repositories/machine_connection.dart';
+import '../services/herdr_transport.dart' show HerdrApiException;
 import '../services/remote_files.dart';
+import 'agent_roots.dart';
+import 'claude_locator.dart' show PaneProcesses;
 import 'session_log_locator.dart';
 
 /// Finds the log of a Codex pane.
 ///
-/// Codex writes `~/.codex/sessions/YYYY/MM/DD/rollout-<local time>-<id>.jsonl`
+/// Codex writes `<codex home>/sessions/YYYY/MM/DD/rollout-<local time>-<id>.jsonl`
 /// when the first prompt is sent; the date folder and the name's stamp are the
 /// HOST's local time at creation, and `<id>` is a UUIDv7 whose first 48 bits are
 /// the creation time in milliseconds UTC. herdr's hook reports the thread id
 /// only (not the path), and only once its integration is installed and the
 /// session started or resumed after that. Without a session reference the pane
 /// cannot be linked: Codex keeps no map from a process to its thread.
+///
+/// The codex home is `~/.codex` unless the process runs with `CODEX_HOME`
+/// (read from its `/proc/<pid>/environ`). Without a codex process to ask, the
+/// default and then the folders listed on the machine
+/// ([MachineProfile.agentRoots]) are tried; a home that held a session is
+/// tried first next time (a subagent's thread has no pane of its own).
 class CodexLocator implements SessionLogLocator {
   CodexLocator();
 
@@ -35,28 +44,108 @@ class CodexLocator implements SessionLogLocator {
   /// id -> path, per machine: a session's file never moves.
   final _found = <String, String>{};
 
+  /// machine -> the home the last session was found in.
+  final _homeHint = <String, String>{};
+
+  static const _envVar = 'CODEX_HOME';
+
   @override
   bool mayLocate(Pane pane) => pane.session != null && FleetAgent.kindOf(pane) == 'codex';
 
   @override
-  Future<LogLocation> locate(MachineConnection machine, Pane pane) =>
-      locateWith(machine.files, pane, machineId: machine.profile.id);
+  Future<LogLocation> locate(MachineConnection machine, Pane pane) => locateWith(
+    machine.files,
+    pane,
+    machineId: machine.profile.id,
+    processes: machine.api.paneProcessInfo,
+    extraRoots: machine.profile.agentRoots,
+  );
 
-  Future<LogLocation> locateWith(RemoteFiles files, Pane pane, {String machineId = ''}) async {
+  Future<LogLocation> locateWith(
+    RemoteFiles files,
+    Pane pane, {
+    String machineId = '',
+    PaneProcesses? processes,
+    List<String> extraRoots = const [],
+  }) async {
     final session = pane.session;
     if (session == null) return const Unlinked(unlinkedWhy);
     if (session.kind == 'path' && isReadableLogPath(session.value)) return Located(session.value);
-    if (session.kind == 'id') return locateById(files, session.value, machineId: machineId);
+    if (session.kind == 'id') {
+      return locateById(
+        files,
+        session.value,
+        machineId: machineId,
+        extraRoots: extraRoots,
+        codexHome: processes == null ? null : await _homeOfProcess(files, processes, pane),
+      );
+    }
     return const Unlinked(unlinkedWhy);
   }
 
-  /// The log of thread [id] (a main session's or a subagent's).
-  Future<LogLocation> locateById(RemoteFiles files, String id, {String machineId = ''}) async {
+  /// The `CODEX_HOME` of the codex process in [pane], or null when there is
+  /// none, it sets none, or herdr cannot list processes.
+  Future<String?> _homeOfProcess(RemoteFiles files, PaneProcesses processes, Pane pane) async {
+    final List<PaneProcess> running;
+    try {
+      running = await processes(pane.id);
+    } on HerdrApiException {
+      return null;
+    }
+    for (final p in running) {
+      if (!_isCodex(p)) continue;
+      final home = await processEnvRoot(files, p.pid, _envVar);
+      if (home != null) return home;
+    }
+    return null;
+  }
+
+  /// Codex itself (a launcher script or the native binary): its `argv0`, the
+  /// first word of its command line or its name is `codex`.
+  static bool _isCodex(PaneProcess p) {
+    if (p.pid < 1) return false;
+    String base(String? s) => (s ?? '').split('/').where((x) => x.isNotEmpty).lastOrNull ?? '';
+    final first = (p.cmdline ?? '').trim().split(RegExp(r'\s+')).first;
+    return base(p.argv0) == 'codex' || base(first) == 'codex' || p.name == 'codex';
+  }
+
+  /// The log of thread [id] (a main session's or a subagent's). It is looked
+  /// for in [codexHome] when the process says it, else in `~/.codex` and
+  /// [extraRoots].
+  Future<LogLocation> locateById(
+    RemoteFiles files,
+    String id, {
+    String machineId = '',
+    String? codexHome,
+    List<String> extraRoots = const [],
+  }) async {
     if (!_uuid.hasMatch(id)) return const NotYet(notYetWhy);
     final cached = _found['$machineId/$id'];
     if (cached != null) return Located(cached);
-    final home = await files.home();
-    final root = '$home/.codex/sessions';
+    final List<String> homes;
+    if (codexHome != null) {
+      homes = [codexHome];
+    } else {
+      final home = await files.home();
+      homes = await candidateRoots(files, '$home/.codex', extraRoots);
+      final hint = _homeHint[machineId];
+      if (hint != null && homes.remove(hint)) homes.insert(0, hint);
+    }
+    var compressed = false;
+    for (final codexRoot in homes) {
+      final found = await _inRoot(files, id, '$codexRoot/sessions');
+      compressed |= found.compressed;
+      final path = found.path;
+      if (path != null && isReadableLogPath(path)) {
+        _found['$machineId/$id'] = path;
+        _homeHint[machineId] = codexRoot;
+        return Located(path);
+      }
+    }
+    return compressed ? const Unlinked(compressedWhy) : const NotYet(notYetWhy);
+  }
+
+  Future<({String? path, bool compressed})> _inRoot(RemoteFiles files, String id, String root) async {
     var compressed = false;
 
     Future<String?> inDay(String dir) async {
@@ -82,11 +171,7 @@ class CodexLocator implements SessionLogLocator {
     }
     // A v7 id says its day; only an id that does not is looked for by walking.
     if (id[14] != '7') path ??= await _walk(files, root, inDay);
-    if (path != null && isReadableLogPath(path)) {
-      _found['$machineId/$id'] = path;
-      return Located(path);
-    }
-    return compressed ? const Unlinked(compressedWhy) : const NotYet(notYetWhy);
+    return (path: path, compressed: compressed);
   }
 
   /// Date folders newest first, at most [maxLists] listings in all.
