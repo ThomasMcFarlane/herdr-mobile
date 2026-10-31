@@ -138,9 +138,10 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
     this.sliceBudget = const Duration(milliseconds: 6),
     this.readyAfter = const Duration(milliseconds: 2500),
     this.silenceAfter = const Duration(milliseconds: 1500),
-    this.confirmWithin = const Duration(seconds: 10),
+    this.confirmWithin = const Duration(seconds: 20),
     this.blockedGrace = const Duration(seconds: 3),
     this.answerGrace = const Duration(seconds: 8),
+    this.settleAfterAnswer = const Duration(seconds: 6),
     this.problemHold = const Duration(seconds: 12),
     this.subagentPoll = const Duration(seconds: 4),
     this.subagentActive = const Duration(seconds: 8),
@@ -219,6 +220,10 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
 
   /// How long an answered request stays hidden while the pane catches up.
   final Duration answerGrace;
+
+  /// How long after an answer the pane may still report blocked before that
+  /// counts as needing the terminal: herdr lags the log.
+  final Duration settleAfterAnswer;
 
   /// How long a failure message stays.
   final Duration problemHold;
@@ -330,6 +335,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
   Timer? _suppressTimer;
   bool _busy = false;
   Timer? _blockedTimer;
+  Timer? _settleTimer;
   bool _blockedSettled = false;
   DateTime? _lastCancelAt;
   final _waiters = <_Waiter>[];
@@ -723,7 +729,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
     return switch (_pending) {
       PendingQuestion() => 'Answer the question above first',
       PendingPermission() => 'Answer the request above first',
-      _ => _blocked ? 'Needs you in the terminal' : null,
+      _ => _blocked && _settleTimer == null ? 'Needs you in the terminal' : null,
     };
   }
 
@@ -1573,7 +1579,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
         prompt = understood;
         sig = 'prompt:${promptSignature(understood)}';
       } else {
-        needsTerminal = _blockedSettled;
+        needsTerminal = _blockedSettled && _settleTimer == null;
       }
     }
     if (sig.isNotEmpty && sig == _suppressedSig) {
@@ -1615,6 +1621,11 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
       _suppressTimer = null;
     }
     if (next == null) _pendingSig = '';
+    // A new question or request ends the wait for herdr to catch up.
+    if (next != null && next != _pending) {
+      _settleTimer?.cancel();
+      _settleTimer = null;
+    }
     _pending = next;
     _pendingPrompt = next is PendingPermission ? prompt : null;
     _pendingFromMenu = _pendingPrompt != null && _preview?.prompt == null;
@@ -1625,7 +1636,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
     _pendingAsk = next is PendingQuestion ? ask : null;
     _needsTerminal = needsTerminal;
     // Blocked but not understood: give the preview a moment before saying so.
-    if (_blocked && next == null && sig.isEmpty && !_blockedSettled) {
+    if (_blocked && next == null && sig.isEmpty && !_blockedSettled && _settleTimer == null) {
       _blockedTimer ??= Timer(blockedGrace, () {
         _blockedTimer = null;
         _blockedSettled = true;
@@ -2027,6 +2038,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
   /// The pane did not take the answer: the request comes back, new, and the
   /// person is told.
   void _refuse(PendingRequest p, String message) {
+    debugPrint('herdr: answer refused on $paneId: $message');
     _attempt++;
     _setProblem(message);
     _refresh();
@@ -2035,6 +2047,8 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
   /// [p] was answered: it stays hidden until the pane moves on, or for
   /// [answerGrace], after which it comes back if the pane still waits.
   void _suppress(PendingRequest p) {
+    _settleTimer?.cancel();
+    _settleTimer = Timer(settleAfterAnswer, _endSettle);
     _suppressedSig = _pendingSig.split('\u0003').first;
     _suppressTimer?.cancel();
     _suppressTimer = Timer(answerGrace, () {
@@ -2044,6 +2058,13 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
       _refresh();
     });
     _refresh();
+  }
+
+  void _endSettle() {
+    if (_settleTimer == null) return;
+    _settleTimer?.cancel();
+    _settleTimer = null;
+    if (!_disposed) _refresh();
   }
 
   @override
@@ -2056,7 +2077,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
       unawaited(_cancelAsk(p));
       return;
     }
-    if (ask == null) return _refuse(p, _notTaken);
+    if (ask == null) return _refuse(p, _notTaken('the question was not in the session log yet'));
     final parsed = askAnswers(ask, response.content);
     if (parsed.problem != null) {
       _refuse(p, parsed.problem!);
@@ -2084,7 +2105,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
     }
   }
 
-  static const _notTaken = 'The terminal didn’t take that answer. Open the terminal.';
+  static String _notTaken(String why) => 'The terminal didn’t take that answer ($why). Open the terminal.';
 
   Future<void> _answerAsk(PendingQuestion p, PendingAsk ask, List<AskAnswer> answers) async {
     _busy = true;
@@ -2097,18 +2118,20 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
         switch (next) {
           case AskDone():
             submitted = true;
-          case AskMismatch():
-            return _refuse(p, _notTaken);
+          case AskMismatch(:final why):
+            return _refuse(p, _notTaken('the dialog on screen did not match: $why'));
           case AskSend(:final keys, :final text, :final submits):
             await machine.api.sendInput(paneId, text ?? '', keys: keys);
             submitted = submits;
         }
       }
-      if (!submitted) return _refuse(p, _notTaken);
+      if (!submitted) return _refuse(p, _notTaken('the dialog still waited after $maxAskSteps steps'));
       // The log has the last word: the tool's result line, with the answer.
       final recorded = await _waitFor(() => _mapper.pendingAsk?.toolCallId != ask.toolCallId, confirmWithin);
       final output = _log.toolCall(ask.toolCallId)?.rawOutput;
-      if (!recorded) return _refuse(p, _notTaken);
+      if (!recorded) {
+        return _refuse(p, _notTaken('the session log did not show the answer within ${confirmWithin.inSeconds} s'));
+      }
       if (!kind.ask!.resultMatches(output is String ? output : null, ask, answers)) {
         _setProblem('The terminal recorded a different answer than the one you gave. Check the terminal.');
       }
@@ -2299,6 +2322,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
       _problemTimer,
       _suppressTimer,
       _blockedTimer,
+      _settleTimer,
       _silenceTimer,
       _rosterTimer,
       _activeTimer,

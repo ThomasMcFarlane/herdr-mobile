@@ -4,6 +4,17 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [0.1.50] - 2026-10-31
+
+### Answering a Claude question says why it failed
+
+- When the terminal does not take an answer to an agent's question, the
+  message now says why: the question was not in the log yet, the dialog on
+  screen did not match, or the log did not show the answer in time.
+- The app waits up to 20 seconds, not 10, for the log to show an answer.
+- After an answer, `Needs you in the terminal` no longer flashes while herdr
+  catches up.
+
 ## [0.1.49] - 2026-10-31
 
 ### A fork build that installs beside herdr, and chat for moved agent folders

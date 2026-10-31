@@ -80,6 +80,19 @@ Future<(ObservedRig, ObservedAgentSession)> _open(
   return (rig, session);
 }
 
+/// An omp tool approval the pane reports blocked, understood.
+Future<(ObservedRig, ObservedAgentSession, Object)> _blockedApproval() async {
+  final (rig, session) = await _open(
+    _log([
+      toolCallLine('a1', 'c1', 'bash', {'command': 'ls -la'}),
+    ]),
+    status: 'blocked',
+    screen: _approval('ls -la'),
+  );
+  await eventually(() => session.state.pending.isNotEmpty, reason: 'the dialog is understood');
+  return (rig, session, session.state.pending.single.id);
+}
+
 final _question = toolCallLine('a3', 'ask1', 'ask', {
   'questions': [
     {
@@ -224,6 +237,29 @@ void main() {
       session.answerQuestion(session.state.pending.single.id, const ElicitationCancel());
       await eventually(() => session.error != null, reason: 'the person is told');
       expect(rig.sent('pane.send_keys'), isEmpty);
+    });
+  });
+
+  group('an answer that was refused says why', () {
+    test('a dialog that is not the one asked about gives the reason', () async {
+      final (rig, session) = await _open(_log([_question]), status: 'working', screen: fixtureScreen('ask-form-q3'));
+      await eventually(() => session.state.pending.isNotEmpty, reason: 'the question');
+      session.answerQuestion(session.state.pending.single.id, const ElicitationAccept({'q0': '0'}));
+      await eventually(() => session.error != null, reason: 'refused');
+      expect(session.error, contains('The terminal didn’t take that answer ('));
+      expect(session.error, contains('the dialog on screen did not match: '));
+      expect(rig.sent('pane.send_keys'), isEmpty);
+    });
+  });
+
+  group('after an answer the pane may still say blocked for a while', () {
+    test('there is no “Needs you in the terminal” within the settle window', () async {
+      final (rig, session, id) = await _blockedApproval();
+      session.answerPermission(id, const PermissionSelected('0'));
+      await eventually(() => rig.sent('pane.send_keys').isNotEmpty, reason: 'keys sent');
+      await eventually(() => session.state.pending.isEmpty, reason: 'the card is gone');
+      expect(session.sendBlocked, isNull);
+      expect(session.needsTerminal, isFalse);
     });
   });
 
