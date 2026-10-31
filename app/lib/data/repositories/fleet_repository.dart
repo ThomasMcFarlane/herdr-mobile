@@ -250,6 +250,7 @@ class FleetRepository extends ChangeNotifier {
     p.auth.name,
     p.session,
     p.socketPath,
+    p.agentRoots.join(','),
     p.enabled,
   ].join('|');
 

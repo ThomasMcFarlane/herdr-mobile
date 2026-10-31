@@ -23,6 +23,7 @@ class MachineFormValues {
     this.password = '',
     this.session = 'default',
     this.socketPath = '',
+    this.agentRoots = '',
   });
 
   final String label;
@@ -35,6 +36,9 @@ class MachineFormValues {
   final String password;
   final String session;
   final String socketPath;
+
+  /// One folder per line or comma ([MachineProfile.parseAgentRoots]).
+  final String agentRoots;
 }
 
 enum TestState { idle, testing, ok, failed }
@@ -262,6 +266,7 @@ class MachineFormViewModel extends ChangeNotifier {
     auth: v.auth,
     session: v.session.isEmpty ? 'default' : v.session,
     socketPath: v.socketPath.isEmpty ? null : v.socketPath,
+    agentRoots: MachineProfile.parseAgentRoots(v.agentRoots),
     hostKeyFingerprint: fingerprint,
     enabled: existing?.enabled ?? true,
   );
@@ -362,7 +367,8 @@ class MachineFormViewModel extends ChangeNotifier {
         t.passphrase == v.passphrase &&
         t.password == v.password &&
         t.session == v.session &&
-        t.socketPath == v.socketPath;
+        t.socketPath == v.socketPath &&
+        t.agentRoots == v.agentRoots;
   }
 
   /// Stores the machine. False when nothing could be stored: [saveError]
