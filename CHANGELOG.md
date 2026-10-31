@@ -4,6 +4,21 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [0.1.49] - 2026-10-31
+
+### A fork build that installs beside herdr, and chat for moved agent folders
+
+This build is `herdr (AIS)`: it has its own app id, so it installs next to
+herdr instead of over it, and its updater follows
+`ThomasMcFarlane/herdr-mobile`.
+
+- Chat mode finds Claude Code logs when Claude runs with `CLAUDE_CONFIG_DIR`,
+  and Codex logs when Codex runs with `CODEX_HOME`: the app asks the running
+  process where its folder is.
+- A machine has a new `Extra agent folders` setting in `Advanced`, for sessions
+  the app cannot ask a process about. Put one folder per line; a trailing `/*`
+  means every folder in it (`~/.claude/identities/*`).
+
 ## [0.1.48] - 2026-10-30
 
 ### The board says what to look at again
