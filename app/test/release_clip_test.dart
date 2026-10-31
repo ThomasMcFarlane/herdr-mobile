@@ -31,7 +31,10 @@ void main() {
         '$_base/$_v-whats-new.mp4',
       ),
       ('$_base/$_v-whats-new.jpg?x=1', '$_base/$_v-whats-new.mp4'),
-      ('http://github.com/ThomasMcFarlane/herdr-mobile/releases/download/v$_v/$_v-whats-new.jpg', '$_base/$_v-whats-new.mp4'),
+      (
+        'http://github.com/ThomasMcFarlane/herdr-mobile/releases/download/v$_v/$_v-whats-new.jpg',
+        '$_base/$_v-whats-new.mp4',
+      ),
     ]) {
       expect(
         ReleaseClip.find(_line(poster: poster, video: video), _v),

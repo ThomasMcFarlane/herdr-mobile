@@ -130,7 +130,10 @@ void main() {
         'refused',
       );
       expect(asset('https://github.com/other/repo/releases/download/v0.1.7/herdr-mobile-0.1.7.apk'), 'refused');
-      expect(asset('http://github.com/ThomasMcFarlane/herdr-mobile/releases/download/v0.1.7/herdr-mobile-0.1.7.apk'), 'refused');
+      expect(
+        asset('http://github.com/ThomasMcFarlane/herdr-mobile/releases/download/v0.1.7/herdr-mobile-0.1.7.apk'),
+        'refused',
+      );
     });
 
     test('a field of the wrong type is read as missing', () {
