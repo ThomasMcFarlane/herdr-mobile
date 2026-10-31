@@ -14,9 +14,9 @@ typedef PaneProcesses = Future<List<PaneProcess>> Function(String paneId);
 
 /// Finds the log of a Claude Code pane.
 ///
-/// Claude writes `<config dir>/projects/{cwd with every non-alphanumeric character
-/// replaced by "-"}/{sessionId}.jsonl` (the file is named by the session id and
-/// does not exist until the first message). herdr's hook reports the session id
+/// Claude writes `<config dir>/projects/{slug}/{sessionId}.jsonl`, where the slug is the
+/// cwd with every non-alphanumeric character replaced by "-" (the file is named by
+/// the session id and does not exist until the first message). herdr's hook reports the session id
 /// and the transcript path, but only once its integration is installed and the
 /// session started or resumed after that. Without it, the running process
 /// tells: `<config dir>/sessions/{pid}.json` maps a `claude` pid to its session id.
