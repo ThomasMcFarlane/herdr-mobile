@@ -237,13 +237,18 @@ void main() {
       // Near: a block takes 125 ms on the wire (8 KB at 64 KB/s), so the link is
       // full with ~1 request and lateness is small against that; 14 blocks are
       // enough for a window that balloons from 8 to show.
+      // The window starts at 8, and a late timer can bunch answers into one
+      // period and inflate its size (9 to 11 seen on loaded hosted runners), so
+      // the bound is not the start but the far link's floor: whatever lateness
+      // does, the near link must stay strictly below what the far link earns.
+      const nearCeiling = 16;
       make(
         s: FakeSftpServer(rtt: const Duration(milliseconds: 2), bytesPerSecond: 64 << 10, keepBytes: false),
         adaptive: true,
         block: 8192,
       );
       await files.upload(local('near.bin', 14 * 8192, sparse: true).path, remote).done;
-      expect(server.maxOutstanding, lessThanOrEqualTo(8));
+      expect(server.maxOutstanding, lessThan(nearCeiling), reason: 'near window below the far floor ($nearCeiling)');
 
       // Far: ~hundreds of 4 KB requests would fill it, so the window climbs to
       // the cap. The long round trip keeps lateness small against it (the climb
@@ -257,8 +262,8 @@ void main() {
       await files.upload(local('far.bin', 2 * 1024 * 1024, sparse: true).path, remote).done;
       // Not exactly the cap: how far the climb gets before the file ends depends
       // on the real clock (28 of 32 on a loaded hosted runner). What the link
-      // earns is a window well past the near link's (<= 8), never past the cap.
-      expect(server.maxOutstanding, inInclusiveRange(16, 32));
+      // earns is a window well past the near link's (< 16), never past the cap.
+      expect(server.maxOutstanding, inInclusiveRange(nearCeiling, 32));
     });
 
     test('progress is reported at most every 100 ms', () async {
