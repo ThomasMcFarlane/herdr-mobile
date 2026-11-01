@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/acp/acp_models.dart' show MessageRole;
 import 'package:herdr_mobile/data/acp/session_state.dart';
+import 'package:herdr_mobile/data/observed/observed_contracts.dart' show LogBatch;
 import 'package:herdr_mobile/data/observed/omp_kind.dart';
 import 'package:herdr_mobile/data/observed/omp_log_mapper.dart';
 import 'package:herdr_mobile/data/repositories/agent_session.dart' show AgentLink, EarlierHistory;
@@ -136,5 +137,88 @@ void main() {
     expect(said.toSet(), hasLength(said.length));
     expect(said.last, 'question 79');
     expect(said.length, greaterThan(19));
+  });
+
+  group('the agent writes while the older turns are still arriving', () {
+    /// A wider read held half way, as a big log makes it.
+    Future<(ObservedRig, ObservedAgentSession, List<LogBatch>)> halfRead(String status) async {
+      final rig = await ObservedRig.create(status: status);
+      addTearDown(rig.dispose);
+      rig.source.write([sessionLine(), ..._turns(80)]);
+      final session = ObservedAgentSession(
+        machine: rig.machine,
+        paneId: 'w1:p1',
+        kind: ompKind,
+        source: rig.source,
+        mapper: OmpLogMapper.new,
+        previews: rig.previews,
+      );
+      addTearDown(session.dispose);
+      session.acquire();
+      await eventually(() => session.link == AgentLink.live && session.state.items.isNotEmpty, reason: 'log followed');
+      rig.source.holdTails = true;
+      session.loadEarlier();
+      await eventually(() => rig.source.calls.length == 3, reason: 'wider read and live follow asked');
+      final batches = rig.source.tailOf(rig.source.calls.last.tailBytes, batchLines: 10);
+      for (final b in batches.take(batches.length - 1)) {
+        rig.source.streams.last.add(b);
+      }
+      await pumpEventQueue();
+      expect(session.earlier, EarlierHistory.loading);
+      return (rig, session, batches);
+    }
+
+    /// The agent appends [more]: every open channel gets it.
+    void append(ObservedRig rig, List<String> more) {
+      rig.source.write(more);
+      for (final c in rig.source.streams.skip(1)) {
+        c.add(LogBatch(more, rig.source.end));
+      }
+    }
+
+    test('a question is asked at once, not “Needs you in the terminal”', () async {
+      final (rig, session, batches) = await halfRead('working');
+      rig.transport.screen = 'some question the menu parser does not know\n';
+      append(rig, [
+        toolCallLine('aq', 'ask1', 'ask', {
+          'questions': [
+            {
+              'id': 'db',
+              'question': 'Which database?',
+              'options': [
+                {'label': 'SQLite'},
+                {'label': 'Postgres'},
+              ],
+            },
+          ],
+        }),
+      ]);
+      await rig.setStatus('blocked');
+      await eventually(() => session.state.pending.isNotEmpty, reason: 'the question');
+      expect(session.state.pending.single, isA<PendingQuestion>());
+      expect(session.earlier, EarlierHistory.loading, reason: 'the older turns are still on their way');
+      await Future<void>.delayed(const Duration(seconds: 6));
+      expect(session.needsTerminal, isFalse);
+      expect(session.sendBlocked, isNot(contains('Needs you in the terminal')));
+
+      rig.source.streams.last.add(LogBatch(const [], rig.source.end, caughtUp: true));
+      await eventually(() => session.earlier != EarlierHistory.loading, reason: 'adopted');
+      expect(session.state.pending.single, isA<PendingQuestion>(), reason: 'the question survives the swap');
+      expect(batches, isNotEmpty);
+    });
+
+    test('a new line is shown, and once after the older turns are adopted', () async {
+      final (rig, session, _) = await halfRead('working');
+      append(rig, [userLine('u-new', 'one more')]);
+      await eventually(() => _said(session).contains('one more'), reason: 'shown while loading');
+      expect(session.earlier, EarlierHistory.loading);
+
+      rig.source.streams.last.add(LogBatch(const [], rig.source.end, caughtUp: true));
+      await eventually(() => session.earlier != EarlierHistory.loading, reason: 'adopted');
+      expect(_said(session).where((k) => k == 'one more'), hasLength(1));
+      expect(_said(session).last, 'one more');
+      expect(_said(session).toSet(), hasLength(_said(session).length), reason: 'nothing doubled');
+      expect(_said(session).length, greaterThan(19));
+    });
   });
 }

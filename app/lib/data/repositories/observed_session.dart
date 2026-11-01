@@ -302,6 +302,12 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
   AgentSessionState? _wideLog;
   int? _wideHead;
 
+  /// Beside a wider read: the follow of what the agent appends after what is
+  /// shown, so a question, a permission request or a new line is seen while
+  /// the older turns are still arriving. It feeds the shown mapper and log;
+  /// the wider read replaces both (and ends this) when it is whole.
+  StreamSubscription<LogBatch>? _liveSub;
+
   // What the part of the log before the shown tail made (see [MadeHistory]):
   // read from the host when the person asks (`readEarlierMade`, the digest of
   // the lines, never the chat), kept per log in the disk cache, and read on
@@ -415,10 +421,52 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
   void loadEarlier() {
     if (earlier != EarlierHistory.available || !held || _followedPath == null) return;
     _tailBytes = math.min(_maxTail, (_tailBytes ?? _defaultTail) * 4);
+    final resumeAt = _offset;
+    final path = _followedPath;
     _startWide();
     _offset = null;
     _restartFollow();
+    if (resumeAt != null && path != null) _followLive(path, resumeAt);
     _refresh();
+  }
+
+  /// Follows [path] from [from] into what is shown while a wider read is under
+  /// way. Best effort: if it fails or the log starts over, it ends and the
+  /// wider read (which sees the same lines) carries on alone.
+  void _followLive(String path, int from) {
+    _dropLive();
+    var work = Future<void>.value();
+    final epoch = _epoch;
+    late final StreamSubscription<LogBatch> sub;
+    sub = _source
+        .follow(path, from: from)
+        .listen(
+          (batch) {
+            work = work.then((_) {
+              if (!_alive(epoch) || !identical(_liveSub, sub) || _wideLog == null) return;
+              if (batch.reset) return _dropLive();
+              if (batch.lines.isEmpty) return;
+              for (final line in batch.lines) {
+                for (final u in _mapper.map(line)) {
+                  _log = _log.apply(u);
+                }
+              }
+              _composed = null;
+              _onLogEntries();
+              _refresh(urgent: true);
+              _wake();
+            });
+          },
+          onError: (Object e, StackTrace s) => _dropLive(),
+          cancelOnError: true,
+        );
+    _liveSub = sub;
+  }
+
+  void _dropLive() {
+    final sub = _liveSub;
+    _liveSub = null;
+    if (sub != null) unawaited(sub.cancel());
   }
 
   void _startWide() {
@@ -429,6 +477,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
 
   /// The wider read is whole: it becomes what is shown.
   void _adoptWide() {
+    _dropLive();
     _mapper = _wideMapper!;
     // What was shown keeps its keys: the list holds its place by them.
     _log = _wideLog!.withKeysOf(_log);
@@ -1036,6 +1085,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
     _cancelMadeRead();
     _lingerTimer = null;
     if (!_following && _sub == null) return;
+    _dropLive();
     _epoch++;
     _dropStream();
     _following = false;
@@ -1322,6 +1372,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
   }
 
   void _resetLog() {
+    _dropLive();
     _mapper.reset();
     // The log starts over: what was kept of the old one is wrong for the new, and
     // the cache is keyed by the path alone.
@@ -2310,6 +2361,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
     if (_disposed) return;
     _disposed = true;
     _epoch++;
+    _dropLive();
     machine.removeListener(_onMachine);
     parent?.removeListener(_onMachine);
     _dropStream();
