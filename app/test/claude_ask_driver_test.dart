@@ -517,4 +517,184 @@ void main() {
       );
     });
   });
+
+  group('Claude Code 2.1.312 and the question read from the screen', () {
+    test('a lone single choice, its question on a `│ ` row, is read as a question with descriptions', () {
+      final screen = _screen('ask2312-single');
+      final s = parseClaudeAsk(screen);
+      expect(s.kind, ClaudeAskKind.question);
+      expect(s.title, 'Capture 1 of 2 (single question). Answer anything after ~10 seconds. Which colour?');
+      expect(s.cursorNumber, 1);
+
+      final ask = claudeAskFromScreen(screen)!;
+      expect(ask.fromScreen, isTrue);
+      expect(ask.toolCallId, startsWith('screen:'));
+      final q = ask.questions.single;
+      expect(q.id, 'Colour');
+      expect(q.question, startsWith('Capture 1 of 2'));
+      expect(q.multi, isFalse);
+      expect(
+        [for (final o in q.options) (o.label, o.description)],
+        [
+          ('Red', 'A warm colour, first option'),
+          ('Green', 'A cool colour, second option'),
+          ('Blue', 'Another cool colour, third option'),
+        ],
+      );
+    });
+
+    test('the older captures are read too: single, multi-select, a wrapped question', () {
+      final single = claudeAskFromScreen(_screen('askfull-single'))!.questions.single;
+      expect(single.question, 'Which color do you prefer?');
+      expect(single.options.map((o) => o.label), ['Red', 'Green', 'Blue']);
+
+      final multi = claudeAskFromScreen(_screen('askfull-multi'))!.questions.single;
+      expect(multi.multi, isTrue);
+      expect(multi.options.map((o) => o.label), ['Apple', 'Banana', 'Cherry', 'Date']);
+
+      final wrap = claudeAskFromScreen(_screen('askfull-question-wrap'))!.questions.single;
+      expect(wrap.question, startsWith('Which month do you like?'));
+      expect(wrap.options.first.description, 'Start of the new year, cold and quiet');
+    });
+
+    test('the id stays when the cursor or the boxes change, and differs for another question', () {
+      final a = claudeAskFromScreen(_screen('askfull-multi'))!;
+      final b = claudeAskFromScreen(_screen('askfull-multi-toggled'))!;
+      expect(b.toolCallId, a.toolCallId);
+      expect(claudeAskFromScreen(_screen('askfull-single'))!.toolCallId, isNot(a.toolCallId));
+    });
+
+    test('a tab of a form is a question of its own, with the header of the highlighted tab', () {
+      final screen = _screen('ask2312-form-tab1');
+      final s = parseClaudeAsk(screen);
+      expect(s.kind, ClaudeAskKind.question);
+      expect([for (final t in s.tabs) t.label], ['Fruit', 'Extras']);
+      expect(s.activeTab, 'Fruit');
+      expect(s.options.map((o) => o.label), ['Apple', 'Mango', 'Type something.']);
+
+      final ask = claudeAskFromScreen(screen)!;
+      expect(ask.fromScreen, isTrue);
+      expect(ask.endsDialog, isFalse, reason: 'it goes on to the next tab');
+      expect(ask.formTabs, 2);
+      final q = ask.questions.single;
+      expect(q.id, 'Fruit');
+      expect(q.question, startsWith('Capture 2 of 2, question one'));
+      expect([for (final o in q.options) (o.label, o.description)], [('Apple', 'Crunchy'), ('Mango', 'Sweet')]);
+      // Plain text cannot say which tab is the one: no header, but a question.
+      expect(claudeAskFromScreen(_screen('askfull-two-q2'))!.questions.single.multi, isTrue);
+    });
+
+    test('the review tab is a card: Submit answers or Cancel, with what was answered', () {
+      final ask = claudeAskFromScreen(_screen('askfull-two-review'))!;
+      expect(ask.review, isTrue);
+      expect(ask.endsDialog, isTrue);
+      final q = ask.questions.single;
+      expect(q.id, 'Submit');
+      expect(q.options.map((o) => o.label), ['Submit answers', 'Cancel']);
+      expect(q.question, contains('Which language do I prefer?: Go'));
+      expect(q.question, contains('Which extras do I want?: Tests'));
+    });
+
+    test('a form is answered tab by tab: each tab by its keys alone, then the review', () {
+      final fake = FakeClaudeAsk(const [_color, _fruits]);
+      AskStep step(PendingAsk ask, AskAnswer a, ClaudeAskDriver d) => d.next(fake.screen());
+
+      // Tab 1: the card is read from the screen; the answer moves on to tab 2.
+      final one = claudeAskFromScreen(fake.screen())!;
+      var d = ClaudeAskDriver(one, const [
+        AskAnswer(selected: [2]),
+      ]);
+      for (var i = 0; i < 10 && fake.tab == 0; i++) {
+        final st = step(one, const AskAnswer(), d);
+        if (st is AskSend) st.keys.forEach(fake.press);
+      }
+      expect(fake.tab, 1);
+      expect(step(one, const AskAnswer(), d), isA<AskDone>(), reason: 'the dialog moved on');
+
+      // Tab 2 is another card, a multi-select; confirming it goes to the review.
+      final two = claudeAskFromScreen(fake.screen())!;
+      expect(two.toolCallId, isNot(one.toolCallId));
+      expect(two.questions.single.multi, isTrue);
+      d = ClaudeAskDriver(two, const [
+        AskAnswer(selected: [0, 1]),
+      ]);
+      for (var i = 0; i < 12 && fake.tab == 1; i++) {
+        final st = step(two, const AskAnswer(), d);
+        if (st is AskSend) st.keys.forEach(fake.press);
+      }
+      expect(fake.tab, 2, reason: 'the review');
+      expect(step(two, const AskAnswer(), d), isA<AskDone>());
+
+      // The review is a card; 1 submits.
+      final review = claudeAskFromScreen(fake.screen())!;
+      expect(review.review, isTrue);
+      d = ClaudeAskDriver(review, const [
+        AskAnswer(selected: [0]),
+      ]);
+      final st = step(review, const AskAnswer(), d) as AskSend;
+      expect(st.keys, ['1']);
+      expect(st.submits, isTrue);
+      st.keys.forEach(fake.press);
+      expect(fake.submitted, isTrue);
+      expect(fake.answerOf(0), 'Blue');
+      expect(fake.answerOf(1), 'Apple, Banana');
+    });
+
+    test('a lone multi-select read from the screen is submitted on its review', () {
+      final ask = claudeAskFromScreen(_screen('askfull-multi'))!;
+      final fake = FakeClaudeAsk(ask.questions);
+      final d = ClaudeAskDriver(ask, const [
+        AskAnswer(selected: [0, 2]),
+      ]);
+      for (var i = 0; i < 20 && fake.open; i++) {
+        final st = d.next(fake.screen());
+        if (st is AskDone) fail('done before the answers were submitted: ${fake.keys}');
+        if (st is AskMismatch) fail(st.why);
+        if (st is AskSend) st.keys.forEach(fake.press);
+      }
+      expect(fake.submitted, isTrue);
+      expect(fake.answerOf(0), 'Apple, Cherry');
+    });
+
+    test('cancelling on the review sends 2; a card for a tab that is no longer on screen is refused', () {
+      final fake = FakeClaudeAsk(const [_color, _fruits]);
+      final one = claudeAskFromScreen(fake.screen())!;
+      fake.press('right');
+      final d = ClaudeAskDriver(one, const [
+        AskAnswer(selected: [0]),
+      ]);
+      expect(d.next(fake.screen()), isA<AskMismatch>(), reason: 'nothing was sent from the other tab');
+      fake.press('right');
+      final review = claudeAskFromScreen(fake.screen())!;
+      final c = ClaudeAskDriver(review, const [
+        AskAnswer(selected: [1]),
+      ]).next(fake.screen()) as AskSend;
+      expect(c.keys, ['2']);
+    });
+
+    test('a typed custom answer and a screen with no dialog give no question', () {
+      expect(claudeAskFromScreen(_screen('askfull-multi-submit-row')), isNull, reason: 'the Other row holds text');
+      expect(claudeAskFromScreen(_screen('approval-bash')), isNull);
+      expect(claudeAskFromScreen(''), isNull);
+    });
+
+    test('the driver answers the question read from the screen, single and multi', () {
+      final single = claudeAskFromScreen(_screen('ask2312-single'))!;
+      final fake = FakeClaudeAsk(single.questions);
+      final sent = _drive(fake, const [
+        AskAnswer(selected: [1]),
+      ]);
+      expect(fake.submitted, isTrue);
+      expect(fake.answerOf(0), 'Green');
+      expect(sent, isNotEmpty);
+
+      final multi = claudeAskFromScreen(_screen('askfull-multi'))!;
+      final fakeMulti = FakeClaudeAsk(multi.questions);
+      _drive(fakeMulti, const [
+        AskAnswer(selected: [0, 2]),
+      ]);
+      expect(fakeMulti.submitted, isTrue);
+      expect(fakeMulti.answerOf(0), 'Apple, Cherry');
+    });
+  });
 }

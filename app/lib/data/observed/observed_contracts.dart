@@ -97,10 +97,33 @@ class AskQuestion {
 
 /// A question tool call that has no result yet.
 class PendingAsk {
-  const PendingAsk({required this.toolCallId, required this.questions});
+  const PendingAsk({
+    required this.toolCallId,
+    required this.questions,
+    this.fromScreen = false,
+    this.review = false,
+    this.formTabs = 0,
+  });
 
   final String toolCallId;
   final List<AskQuestion> questions;
+
+  /// Read from the pane's dialog, not from the agent's log (which, for the
+  /// newest Claude Code, holds a question only after it is answered):
+  /// [toolCallId] is made up and the log has no call under it.
+  final bool fromScreen;
+
+  /// Read from the screen: the review tab of a form (`Submit answers` or
+  /// `Cancel`), the end of it.
+  final bool review;
+
+  /// Read from the screen: the number of tabs of the form this question is one
+  /// tab of; 0 for a lone question. Only the review and a lone question end the
+  /// dialog, so only they are confirmed by the log.
+  final int formTabs;
+
+  /// Answering it ends the dialog (the log then holds the call).
+  bool get endsDialog => !fromScreen || review || formTabs == 0;
 }
 
 /// A plan the agent submitted for approval.

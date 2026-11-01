@@ -291,9 +291,11 @@ class ScreenTransport extends FakeTransport {
     if (method != 'pane.read') return super.request(method, params);
     calls.add((method, params));
     final list = screens;
-    final text = liveScreen != null
+    var text = liveScreen != null
         ? liveScreen!()
         : (list == null ? screen : list[sends < list.length ? sends : list.length - 1]);
+    // Like herdr: the colours come only when asked for (`format: ansi`).
+    if (params['format'] != 'ansi') text = text.replaceAll(RegExp('\u001b\\[[0-9;?]*[ -/]*[@-~]'), '');
     return Future.value({
       'type': 'pane_read',
       'read': {'text': text, 'truncated': false},

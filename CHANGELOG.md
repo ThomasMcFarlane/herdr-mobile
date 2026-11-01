@@ -4,6 +4,17 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [0.1.52] - 2026-11-01
+
+### Claude Code questions show in the chat again
+
+- A question from Claude Code appears as the usual question card again. The
+  newest Claude Code writes a question to its log only after you have
+  answered it, so the app now reads an open question from the terminal screen.
+- A single question, single or multiple choice, is answered from the phone as
+  before. A form with several questions is answered one tab at a time: each
+  question appears as a card, and a last card, `Submit`, sends the answers.
+
 ## [0.1.51] - 2026-11-01
 
 ### A question asked while older messages load shows in the chat
