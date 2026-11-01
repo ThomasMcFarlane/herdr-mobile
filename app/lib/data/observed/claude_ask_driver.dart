@@ -503,22 +503,44 @@ bool looksLikeClaudeAsk(String screen) => parseClaudeAsk(screen).kind != ClaudeA
 /// Reads the question dialog out of [screen] (plain or ANSI; whole rows of the
 /// pane, at least the dialog's height: 45 rows are safe). Only the dialog at
 /// the bottom counts.
+///
+/// Mods may draw panels left or right of the transcript, bands above and a
+/// status line below. The dialog is found by its own geometry ([_dialogSpan])
+/// and every row is cropped to its columns, so what is beside it never reaches
+/// the parser; what is above its top rule is ignored by the parser, and a few
+/// rows under the footer are dropped (more than [_rowsAfterFooter] of text
+/// there means the dialog scrolled away).
 ClaudeAskScreen parseClaudeAsk(String screen) {
-  final lines = [for (final raw in screen.split('\n')) _cleanRow(raw)];
+  final rows = [for (final raw in screen.split('\n')) _plainRow(raw)];
+  final span = _dialogSpan(rows);
+  var lines = [for (final r in rows) _cleanRow(span == null ? r : _cropCells(r, span.$1, span.$2))];
+  final footer = lines.lastIndexWhere(_footerRow.hasMatch);
+  final ready = lines.lastIndexWhere((l) => l.trim() == 'Ready to submit your answers?');
+  if (ready > footer) {
+    // The review tab ends with its own menu.
+    lines = lines.sublist(0, ready + 4 < lines.length ? ready + 4 : lines.length);
+  } else if (footer >= 0) {
+    if (lines.skip(footer + 1).where((l) => l.trim().isNotEmpty).length > _rowsAfterFooter) {
+      return ClaudeAskScreen.none;
+    }
+    lines = lines.sublist(0, footer + 1);
+  }
   while (lines.isNotEmpty && lines.last.trim().isEmpty) {
     lines.removeLast();
   }
   if (lines.isEmpty) return ClaudeAskScreen.none;
 
-  // The review tab ends with its own menu; a question tab with the footer.
-  final ready = lines.lastIndexWhere((l) => l.trim() == 'Ready to submit your answers?');
   final String? active = _activeTab(screen);
-  if (ready >= 0 && lines.length - ready <= 4) return _parseReview(lines, ready);
-  final footer = lines.lastIndexWhere(_footerRow.hasMatch);
-  if (footer < 0 || lines.length - footer > 2) return ClaudeAskScreen.none;
-  final parsed = _parseQuestion(lines, footer);
+  final readyAt = lines.lastIndexWhere((l) => l.trim() == 'Ready to submit your answers?');
+  if (readyAt >= 0 && lines.length - readyAt <= 4) return _parseReview(lines, readyAt);
+  final footerAt = lines.lastIndexWhere(_footerRow.hasMatch);
+  if (footerAt < 0 || lines.length - footerAt > 2) return ClaudeAskScreen.none;
+  final parsed = _parseQuestion(lines, footerAt);
   return parsed.kind == ClaudeAskKind.none ? parsed : parsed._withActive(active);
 }
+
+/// Rows of text a mod's status line may take under the dialog's footer.
+const _rowsAfterFooter = 8;
 
 /// The tab drawn highlighted (a background colour) in the strip of a screen
 /// read WITH its colours, or null.
@@ -533,12 +555,104 @@ String? _activeTab(String screen) {
   return null;
 }
 
-String _cleanRow(String raw) {
+/// A row as the terminal shows it: no colours, the last carriage return wins.
+String _plainRow(String raw) {
   final cr = raw.lastIndexOf('\r');
-  var t = (cr < 0 ? raw : raw.substring(cr + 1)).replaceAll(_ansi, '').trimRight();
+  return (cr < 0 ? raw : raw.substring(cr + 1)).replaceAll(_ansi, '');
+}
+
+String _cleanRow(String plain) {
+  var t = plain.trimRight();
   // The question wraps under a bar of its own (`│ ...`).
   t = t.replaceFirst(RegExp(r'^│ ?'), '');
   return t;
+}
+
+/// Width in terminal cells of the character [c]: 2 for wide ones (CJK,
+/// emoji), 0 for combining marks, else 1.
+int _cells(int c) {
+  if (c >= 0x300 && c <= 0x36f || c == 0x200d || c >= 0xfe00 && c <= 0xfe0f) return 0;
+  if (c >= 0x1100 && c <= 0x115f ||
+      c >= 0x2e80 && c <= 0xa4cf ||
+      c >= 0xac00 && c <= 0xd7a3 ||
+      c >= 0xf900 && c <= 0xfaff ||
+      c >= 0xfe30 && c <= 0xfe6f ||
+      c >= 0xff00 && c <= 0xff60 ||
+      c >= 0xffe0 && c <= 0xffe6 ||
+      c >= 0x1f300 && c <= 0x1faff) {
+    return 2;
+  }
+  return 1;
+}
+
+/// [row] cut to the cell columns [from, to): a wide character that would
+/// straddle an edge is dropped.
+String _cropCells(String row, int from, int to) {
+  final out = StringBuffer();
+  var col = 0;
+  for (final c in row.runes) {
+    final w = _cells(c);
+    if (col >= from && col + w <= to) out.writeCharCode(c);
+    col += w;
+    if (col >= to) break;
+  }
+  return out.toString();
+}
+
+/// The cell column where [needle] starts in [row], or -1.
+int _cellOf(String row, String needle) {
+  final at = row.indexOf(needle);
+  if (at < 0) return -1;
+  var col = 0;
+  for (final c in row.substring(0, at).runes) {
+    col += _cells(c);
+  }
+  return col;
+}
+
+/// The columns `(start, end)` of the dialog box: the run of `─` (the dialog's
+/// rule) that spans the column its footer (or, on the review, its `Ready to
+/// submit` line) starts at. A mod's panel beside the dialog may draw rules of
+/// its own on the same rows; the one spanning the footer's column is the
+/// dialog's, and when several do, the one the most rows agree on. Null when
+/// there is no such rule: the rows are then read as they are.
+(int, int)? _dialogSpan(List<String> rows) {
+  var anchor = rows.lastIndexWhere((r) => r.contains('Enter to select'));
+  var needle = 'Enter to select';
+  final ready = rows.lastIndexWhere((r) => r.contains('Ready to submit your answers?'));
+  if (ready > anchor) {
+    anchor = ready;
+    needle = 'Ready to submit your answers?';
+  }
+  if (anchor < 0) return null;
+  final column = _cellOf(rows[anchor], needle);
+  final votes = <(int, int), int>{};
+  for (var i = anchor - 1; i >= 0 && i >= anchor - 120; i--) {
+    var col = 0;
+    int? start;
+    void close(int end) {
+      if (start != null && end - start! >= 20 && start! <= column && column < end) {
+        votes[(start!, end)] = (votes[(start!, end)] ?? 0) + 1;
+      }
+      start = null;
+    }
+
+    for (final c in rows[i].runes) {
+      if (c == 0x2500) {
+        start ??= col;
+      } else {
+        close(col);
+      }
+      col += _cells(c);
+    }
+    close(col);
+  }
+  if (votes.isEmpty) return null;
+  final best = votes.entries.reduce((a, b) {
+    if (b.value != a.value) return b.value > a.value ? b : a;
+    return b.key.$2 - b.key.$1 > a.key.$2 - a.key.$1 ? b : a;
+  });
+  return best.key;
 }
 
 ClaudeAskScreen _parseQuestion(List<String> lines, int footer) {

@@ -543,6 +543,107 @@ void main() {
       );
     });
 
+    test('a plugin side panel drawn right of the dialog is cropped away; the wrapped question is joined', () {
+      final screen = _screen('ask2312-sidepanel');
+      expect(looksLikeClaudeAsk(screen), isTrue);
+      final ask = claudeAskFromScreen(screen)!;
+      final q = ask.questions.single;
+      expect(q.id, 'Lock + image');
+      expect(q.multi, isFalse);
+      expect(
+        q.question,
+        'Two checks on the Surface Book. (1) Did Super+L lock the screen? (2) After unlocking, look at the bottom '
+        'Herdr pane: I started a test Claude session there, it read battery.png, and I pressed Ctrl+O to expand the '
+        'transcript. Is the image drawn inside the pane?',
+      );
+      expect(
+        [for (final o in q.options) (o.label, o.description)],
+        [
+          ('Locks; image shows', 'Both work.'),
+          (
+            'Locks; no image',
+            'Super+L works, but Claude does not draw the image. I will look at what triggers image drawing.',
+          ),
+          ('Did not lock', 'Describe what happened under Other.'),
+        ],
+      );
+    });
+
+    test('the same screen without colours, and a screen with no panel, give the same question', () {
+      final screen = _screen('ask2312-sidepanel');
+      final plain = screen.replaceAll(RegExp('\u001b\\[[0-9;]*m'), '');
+      expect(claudeAskFromScreen(plain)!.toolCallId, claudeAskFromScreen(screen)!.toolCallId);
+      // The question's own `│ ` (column 0) is not a panel.
+      expect(claudeAskFromScreen(_screen('ask2312-single')), isNotNull);
+    });
+
+    group('whatever a mod draws around the dialog', () {
+      final ansi = RegExp('\u001b\\[[0-9;?]*[ -/]*[@-~]');
+
+      /// [fixture] drawn in a wider terminal: [left] cells of panel before the
+      /// dialog's columns, [right] after, each with a border and, on one row,
+      /// a rule of its own; [above] and [below] are full-width bands.
+      String around(String fixture, {int left = 0, int right = 0, String? above, String? below}) {
+        final rows = [for (final r in _screen(fixture).split('\n')) r.replaceAll(ansi, '').trimRight()];
+        final rule = rows.firstWhere((r) => RegExp(r'^─{20,}').hasMatch(r)).length;
+        final width = rows.fold<int>(rule, (m, r) => r.length > m ? r.length : m);
+        String panel(int i, int w, String side) =>
+            i == 3 ? '$side${'─' * (w - 2)}$side'.padRight(w) : '$side task $i'.padRight(w - 1) + side;
+        final out = <String>[
+          ?above?.padRight(left + width + right),
+          for (final (i, r) in rows.indexed)
+            '${left > 0 ? panel(i, left, '│') : ''}${r.padRight(width)}${right > 0 ? panel(i, right, '│') : ''}',
+          ?below?.padRight(left + width + right),
+        ];
+        return out.join('\n');
+      }
+
+      PendingAsk read(String screen) => claudeAskFromScreen(screen)!;
+
+      for (final fixture in ['ask2312-single', 'askfull-multi', 'ask2312-form-tab1', 'askfull-single']) {
+        final base = read(_screen(fixture));
+        for (final (name, screen) in [
+          ('a panel on the left', around(fixture, left: 30)),
+          ('a panel on the right', around(fixture, right: 40)),
+          ('panels on both sides', around(fixture, left: 25, right: 35)),
+          (
+            'a band above and a status line below',
+            around(fixture, right: 20, above: 'MOD BAND | 3 tasks', below: 'mod status: ready · 2 agents'),
+          ),
+          (
+            'a band above and a status line below, with panels',
+            around(fixture, left: 20, right: 20, above: 'MOD BAND', below: 'status'),
+          ),
+        ]) {
+          test('$fixture with $name is the same question', () {
+            expect(looksLikeClaudeAsk(screen), isTrue);
+            final ask = read(screen);
+            // (The helper draws without colours, which name the highlighted tab.)
+            if (fixture != 'ask2312-form-tab1') expect(ask.toolCallId, base.toolCallId);
+            expect(ask.questions.single.question, base.questions.single.question);
+            expect(ask.questions.single.multi, base.questions.single.multi);
+            expect(ask.questions.single.options.map((o) => o.label), base.questions.single.options.map((o) => o.label));
+            expect(parseClaudeAsk(screen).cursorNumber, parseClaudeAsk(_screen(fixture)).cursorNumber);
+          });
+        }
+      }
+
+      test('a narrower pane (a shorter rule) is read as it is', () {
+        final narrow = _screen('askfull-single')
+            .split('\n')
+            .map((r) => r.replaceAll(ansi, '').replaceAll(RegExp('─{20,}'), '─' * 60))
+            .join('\n');
+        expect(read(narrow).questions.single.options.map((o) => o.label), ['Red', 'Green', 'Blue']);
+      });
+
+      test('a wide character in the panel does not shift the dialog', () {
+        final rows = _screen('ask2312-single').split('\n').map((r) => r.replaceAll(ansi, '').trimRight()).toList();
+        final width = rows.fold<int>(0, (m, r) => r.length > m ? r.length : m);
+        final screen = [for (final r in rows) '日本語 ✅│${r.padRight(width)}'].join('\n');
+        expect(read(screen).questions.single.options.map((o) => o.label), ['Red', 'Green', 'Blue']);
+      });
+    });
+
     test('the older captures are read too: single, multi-select, a wrapped question', () {
       final single = claudeAskFromScreen(_screen('askfull-single'))!.questions.single;
       expect(single.question, 'Which color do you prefer?');

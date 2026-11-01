@@ -10,6 +10,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herdr_mobile/data/acp/acp_models.dart';
 import 'package:herdr_mobile/data/acp/session_state.dart';
+import 'package:herdr_mobile/data/observed/claude_ask_driver.dart' show claudeAskFromScreen;
 import 'package:herdr_mobile/data/observed/claude_kind.dart';
 import 'package:herdr_mobile/data/observed/claude_log_mapper.dart';
 import 'package:herdr_mobile/data/observed/observed_contracts.dart';
@@ -374,6 +375,25 @@ void main() {
     // come back once the log's own has been answered.
     await Future<void>.delayed(const Duration(milliseconds: 300));
     expect(session.state.pending.where((p) => '${p.id}'.contains('screen:')), isEmpty);
+  });
+
+  test('a dialog beside a side panel is a card, and answering option 2 sends down and enter', () async {
+    final screen = _screen('ask2312-sidepanel');
+    final (rig, session) = await _open(screen: screen, blockedGrace: const Duration(seconds: 30));
+    await eventually(() => session.state.pending.isNotEmpty, reason: 'the question');
+    final card = session.state.pending.single as PendingQuestion;
+    expect(card.request.message, contains('Two checks on the Surface Book'));
+    final asked = claudeAskFromScreen(screen)!.questions.single;
+
+    rig.transport.onInput = (_) {
+      rig.transport.liveScreen = () => 'Working...\n';
+      rig.source.push(_answeredLines('Locks; no image', question: asked.question));
+    };
+    session.answerQuestion(card.id, const ElicitationAccept({'q0': '1'}));
+    await eventually(() => rig.sent('pane.send_input').isNotEmpty, reason: 'keys sent');
+    expect(rig.sent('pane.send_input').first['keys'], ['down', 'enter']);
+    await eventually(() => session.state.pending.isEmpty, reason: 'the card is gone');
+    expect(session.error, isNull);
   });
 
   test('an answer that never reaches the log, with the dialog still there, is refused saying why', () async {
