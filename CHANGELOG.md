@@ -4,6 +4,15 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [0.1.51] - 2026-11-01
+
+### A question asked while older messages load shows in the chat
+
+- When Claude asks you a question while the chat is still loading earlier
+  messages, the question now appears at once. Before, the chat said
+  `Needs you in the terminal` until the older messages had finished loading.
+- New messages that arrive during that load show up as they come.
+
 ## [0.1.50] - 2026-10-31
 
 ### Answering a Claude question says why it failed
