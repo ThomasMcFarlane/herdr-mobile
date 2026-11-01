@@ -644,6 +644,60 @@ void main() {
       });
     });
 
+    group('the live reads, with the CR herdr puts before each line break', () {
+      String live(String name) => File('test/fixtures/prompts/claude/$name.crlf.ansi').readAsStringSync();
+      String plain(String raw) => raw.replaceAll('\r', '').replaceAll(RegExp('\u001b\\[[0-9;?]*[ -/]*[@-~]'), '');
+
+      test('the captures really carry their CRs', () {
+        expect(live('ask2312-sidepanel-live').contains('\r\n'), isTrue);
+        expect(live('ask2312-traytap-live').contains('\r\n'), isTrue);
+      });
+
+      test('a lone question beside a TASKS board', () {
+        final raw = live('ask2312-sidepanel-live');
+        expect(looksLikeClaudeAsk(raw), isTrue);
+        final ask = claudeAskFromScreen(raw)!;
+        final q = ask.questions.single;
+        expect(q.id, 'Lock + image');
+        expect(q.question, startsWith('Two checks on the Surface Book.'));
+        expect(q.question, endsWith('Is the image drawn inside the pane?'));
+        expect(q.multi, isFalse);
+        expect(q.options.map((o) => o.label), ['Locks; image shows', 'Locks; no image', 'Did not lock']);
+        expect(q.options.first.description, 'Both work.');
+        expect(claudeAskFromScreen(plain(raw))!.toolCallId, ask.toolCallId);
+      });
+
+      test('descriptions wrapped over two rows are joined; the cursor may be on the Other row', () {
+        final raw = live('ask2312-traytap-live');
+        expect(looksLikeClaudeAsk(raw), isTrue);
+        final ask = claudeAskFromScreen(raw)!;
+        final q = ask.questions.single;
+        expect(q.id, 'Tray tap');
+        expect(q.question, startsWith('There is now a keyboard icon at the top right'));
+        expect(q.question, endsWith('What happened?'));
+        expect(q.multi, isFalse);
+        expect(q.options.map((o) => o.label), ['Both toggle', 'Only touchpad works', 'Neither works']);
+        expect(
+          q.options[0].description,
+          'Finger and touchpad both show and hide the keyboard, so the problem was the unrecognisable icon.',
+        );
+        expect(q.options[1].description, endsWith('toggles it.'));
+        expect(parseClaudeAsk(raw).cursorNumber, 4);
+        expect(claudeAskFromScreen(plain(raw))!.toolCallId, ask.toolCallId);
+      });
+
+      test('every captured screen reads the same with CRLF line endings', () {
+        final dir = Directory('test/fixtures/prompts/claude').listSync().whereType<File>();
+        for (final f in dir.where((f) => RegExp(r'ask(full|2312)-[a-z0-9-]+\.txt$').hasMatch(f.path))) {
+          final name = f.uri.pathSegments.last.replaceAll('.txt', '');
+          final lf = _screen(name);
+          final crlf = lf.replaceAll('\n', '\r\n');
+          expect(parseClaudeAsk(crlf).fingerprint, parseClaudeAsk(lf).fingerprint, reason: name);
+          expect(parseClaudeAsk(crlf).kind, parseClaudeAsk(lf).kind, reason: name);
+        }
+      });
+    });
+
     test('the older captures are read too: single, multi-select, a wrapped question', () {
       final single = claudeAskFromScreen(_screen('askfull-single'))!.questions.single;
       expect(single.question, 'Which color do you prefer?');

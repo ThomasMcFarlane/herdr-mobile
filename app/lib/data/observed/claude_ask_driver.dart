@@ -1,3 +1,4 @@
+import '../decision/plain_text.dart' show afterCarriageReturn;
 import 'observed_contracts.dart';
 import 'omp_ask_driver.dart' show AskDone, AskMismatch, AskSend, AskStep;
 
@@ -557,8 +558,7 @@ String? _activeTab(String screen) {
 
 /// A row as the terminal shows it: no colours, the last carriage return wins.
 String _plainRow(String raw) {
-  final cr = raw.lastIndexOf('\r');
-  return (cr < 0 ? raw : raw.substring(cr + 1)).replaceAll(_ansi, '');
+  return afterCarriageReturn(raw).replaceAll(_ansi, '');
 }
 
 String _cleanRow(String plain) {

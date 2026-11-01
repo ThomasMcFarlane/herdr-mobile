@@ -1,0 +1,2 @@
+# Real herdr pane reads (--format ansi) keep their CR before each line break: stored byte for byte.
+app/test/fixtures/prompts/claude/*.crlf.ansi -text

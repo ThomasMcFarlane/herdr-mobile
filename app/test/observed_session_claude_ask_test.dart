@@ -396,6 +396,29 @@ void main() {
     expect(session.error, isNull);
   });
 
+  test(
+    'the live read of the Tray tap dialog (CRLF, cursor on row 4) is a card; option 2 is two ups and enter',
+    () async {
+      final raw = File('test/fixtures/prompts/claude/ask2312-traytap-live.crlf.ansi').readAsStringSync();
+      final screen = raw.replaceAll('\r\n', '\n');
+      final (rig, session) = await _open(screen: screen, blockedGrace: const Duration(seconds: 30));
+      await eventually(() => session.state.pending.isNotEmpty, reason: 'the question');
+      final card = session.state.pending.single as PendingQuestion;
+      expect(card.request.message, contains('keyboard icon'));
+      final asked = claudeAskFromScreen(raw)!.questions.single;
+
+      rig.transport.onInput = (_) {
+        rig.transport.liveScreen = () => 'Working...\n';
+        rig.source.push(_answeredLines('Only touchpad works', question: asked.question));
+      };
+      session.answerQuestion(card.id, const ElicitationAccept({'q0': '1'}));
+      await eventually(() => rig.sent('pane.send_input').isNotEmpty, reason: 'keys sent');
+      expect(rig.sent('pane.send_input').first['keys'], ['up', 'up', 'enter']);
+      await eventually(() => session.state.pending.isEmpty, reason: 'the card is gone');
+      expect(session.error, isNull);
+    },
+  );
+
   test('an answer that never reaches the log, with the dialog still there, is refused saying why', () async {
     final (_, session) = await _open(
       screen: _screen('ask2312-single'),

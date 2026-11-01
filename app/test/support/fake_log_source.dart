@@ -295,6 +295,8 @@ class ScreenTransport extends FakeTransport {
         ? liveScreen!()
         : (list == null ? screen : list[sends < list.length ? sends : list.length - 1]);
     // Like herdr: the colours come only when asked for (`format: ansi`).
+    // Like herdr's `format: ansi`: every row ends in CR LF.
+    if (params['format'] == 'ansi') text = text.replaceAll('\r\n', '\n').replaceAll('\n', '\r\n');
     if (params['format'] != 'ansi') text = text.replaceAll(RegExp('\u001b\\[[0-9;?]*[ -/]*[@-~]'), '');
     return Future.value({
       'type': 'pane_read',

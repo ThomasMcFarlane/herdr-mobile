@@ -8,6 +8,7 @@ import '../acp/acp_models.dart';
 import '../acp/agent_host.dart' show AgentHostException;
 import '../acp/auth_needed.dart';
 import '../acp/past_session.dart' show ResumeTarget;
+import '../decision/plain_text.dart' show afterCarriageReturn;
 import '../acp/prompt_queue.dart';
 import '../acp/background/background_work.dart';
 import '../acp/session_made.dart' show MadeFold, MadeHistory;
@@ -2077,8 +2078,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
     if (menu) return kind.menuPrompt?.call(text);
     final rows = <String>[];
     for (final raw in text.split('\n')) {
-      final cr = raw.lastIndexOf('\r');
-      final row = cleanPreviewRow(stripAnsi(cr < 0 ? raw : raw.substring(cr + 1)));
+      final row = cleanPreviewRow(stripAnsi(afterCarriageReturn(raw)));
       if (row != null) rows.add(row.length > 160 ? row.substring(0, 160) : row);
     }
     return detectPrompt(rows);
