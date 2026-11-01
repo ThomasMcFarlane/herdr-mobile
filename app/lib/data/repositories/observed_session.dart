@@ -334,6 +334,10 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
   PromptInfo? _menu;
   bool _probing = false;
   PanePreview? _probedFor;
+
+  /// The question the blocked pane's dialog shows, read by [_probe] when the
+  /// log has none (see [ObservedAsk.fromScreen]).
+  PendingAsk? _screenAsk;
   PendingAsk? _pendingAsk;
   bool _needsTerminal = false;
   int _attempt = 0;
@@ -1392,6 +1396,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
     _composed = null;
     _offset = null;
     _pendingAsk = null;
+    _screenAsk = null;
     _refined = const {};
   }
 
@@ -1613,13 +1618,24 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
     // The log's open question is enough: herdr marks the dialog blocked only
     // when its omp extension is installed. Answers are checked against the
     // screen before a key is sent.
-    final asking = kind.ask == null ? null : _mapper.pendingAsk;
+    // The log's question wins; only when it has none (Claude Code 2.1.312 writes
+    // a question to the log after it is answered) the dialog on the screen is
+    // the question.
+    // A card made from the screen before the log held the question is over once
+    // the log has it (older Claude Code writes it while open).
+    if (_mapper.pendingAsk != null) _screenAsk = null;
+    final asking = kind.ask == null ? null : (_mapper.pendingAsk ?? (_blocked ? _screenAsk : null));
     if (asking != null && machine.isLive && (_pane?.isAgent ?? false)) {
       ask = asking;
       sig = 'ask:${askSignature(asking)}';
+      // The dialog may change under a card made from the screen (a tab changed
+      // at the desk, another dialog): look again whenever the pane moves.
+      if (asking.fromScreen && !_busy && _preview != null && !_probing && !identical(_probedFor, _preview)) {
+        unawaited(_probe(_preview!));
+      }
     } else if (_blocked) {
       final understood = _preview?.prompt ?? _menu;
-      if (kind.menuPrompt != null &&
+      if ((kind.menuPrompt != null || kind.ask?.fromScreen != null) &&
           _preview != null &&
           _preview!.prompt == null &&
           !_probing &&
@@ -1682,6 +1698,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
     _pendingFromMenu = _pendingPrompt != null && _preview?.prompt == null;
     if (!_blocked) {
       _menu = null;
+      _screenAsk = null;
       _probedFor = null;
     }
     _pendingAsk = next is PendingQuestion ? ask : null;
@@ -2072,13 +2089,18 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
   Future<void> _probe(PanePreview seen) async {
     _probing = true;
     try {
-      final read = await machine.api.readPane(paneId, lines: 60);
+      // With its colours when the question is read from the screen: only they
+      // tell which tab of a form is the one on screen.
+      final read = await machine.api.readPane(paneId, lines: 60, ansi: kind.ask?.fromScreen != null);
       if (_disposed) return;
       _menu = kind.menuPrompt?.call(read.text);
+      _screenAsk = kind.ask?.fromScreen?.call(read.text);
     } on HerdrApiException {
       _menu = null;
+      _screenAsk = null;
     } on HerdrTransportException {
       _menu = null;
+      _screenAsk = null;
     } finally {
       _probing = false;
       _probedFor = seen;
@@ -2090,6 +2112,11 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
   /// person is told.
   void _refuse(PendingRequest p, String message) {
     debugPrint('herdr: answer refused on $paneId: $message');
+    if (_screenAsk != null) {
+      // What the screen showed may have changed: read it again.
+      _screenAsk = null;
+      _probedFor = null;
+    }
     _attempt++;
     _setProblem(message);
     _refresh();
@@ -2162,6 +2189,9 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
     _busy = true;
     try {
       var submitted = false;
+      // Calls the log has now: a question read from the screen is confirmed by
+      // a call that is new after the keys.
+      final known = {for (final c in _log.toolCalls) c.toolCallId};
       final stepper = kind.ask!.stepper(ask, answers);
       for (var step = 0; step < maxAskSteps && !submitted; step++) {
         final read = await machine.api.readPane(paneId, lines: 60);
@@ -2177,6 +2207,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
         }
       }
       if (!submitted) return _refuse(p, _notTaken('the dialog still waited after $maxAskSteps steps'));
+      if (ask.fromScreen) return await _confirmScreenAsk(p, ask, answers, known);
       // The log has the last word: the tool's result line, with the answer.
       final recorded = await _waitFor(() => _mapper.pendingAsk?.toolCallId != ask.toolCallId, confirmWithin);
       final output = _log.toolCall(ask.toolCallId)?.rawOutput;
@@ -2194,6 +2225,70 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
     } finally {
       _busy = false;
     }
+  }
+
+  /// Confirms an answer to a question that was read from the screen. The log
+  /// has no call under the made-up id: it gains the question's call and result
+  /// together once answered, so the confirmation is a NEW call of the question
+  /// tool whose result says the answers given. Without one in time, the dialog
+  /// being gone from the screen is accepted (the answer went in, only the log is
+  /// late); a dialog still there is refused, saying so.
+  Future<void> _confirmScreenAsk(PendingQuestion p, PendingAsk ask, List<AskAnswer> answers, Set<String> known) async {
+    if (!ask.endsDialog) {
+      // A tab of a form: the driver saw the dialog go on to another tab and the
+      // log has nothing yet. The next tab is read afresh for its own card.
+      // With colours, as the card was made: the id holds the highlighted tab.
+      final read = await machine.api.readPane(paneId, lines: 60, ansi: true);
+      if (kind.ask!.fromScreen?.call(read.text)?.toolCallId == ask.toolCallId) {
+        return _refuse(p, _notTaken('the form is still on the same question'));
+      }
+      _endScreenAsk(ask);
+      _suppress(p);
+      return;
+    }
+    final tool = kind.ask!.askToolName;
+    ToolCall? recorded() {
+      for (final c in _log.toolCalls) {
+        if (known.contains(c.toolCallId) || c.name != tool || !c.status.isFinished) continue;
+        final out = c.rawOutput is String ? c.rawOutput as String : null;
+        // The call that asked THIS question; another new one is not ours.
+        // (The review has no question text of its own: any new call is the form's.)
+        if (ask.review ||
+            out != null &&
+                ask.questions.every((q) => out.replaceAll(RegExp(r'\s+'), ' ').contains('"${q.question}"="'))) {
+          return c;
+        }
+      }
+      return null;
+    }
+
+    if (await _waitFor(() => recorded() != null, confirmWithin)) {
+      final out = recorded()!.rawOutput;
+      if (!ask.review && !kind.ask!.resultMatches(out is String ? out : null, ask, answers)) {
+        _setProblem('The terminal recorded a different answer than the one you gave. Check the terminal.');
+      }
+    } else {
+      final read = await machine.api.readPane(paneId, lines: 60);
+      if (kind.ask!.looksLikeAsk(read.text)) {
+        return _refuse(
+          p,
+          _notTaken(
+            'the question is still on the terminal after ${confirmWithin.inSeconds} s and the log has no answer',
+          ),
+        );
+      }
+    }
+    // The pane moved on: the made-up question is over, and the log's own line
+    // (arriving later, or already here) leaves no open question behind.
+    _endScreenAsk(ask);
+    _suppress(p);
+  }
+
+  /// The question [ask] is over. A newer card (the next tab, already read) is
+  /// kept; the screen is read again either way.
+  void _endScreenAsk(PendingAsk ask) {
+    if (_screenAsk?.toolCallId == ask.toolCallId) _screenAsk = null;
+    _probedFor = null;
   }
 
   Future<bool> _waitFor(bool Function() test, Duration timeout) {

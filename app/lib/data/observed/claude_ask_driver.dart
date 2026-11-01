@@ -88,8 +88,21 @@ class ClaudeAskDriver {
   AskStep _plan(ClaudeAskScreen s) {
     if (s.kind == ClaudeAskKind.none) return const AskDone();
     final qs = ask.questions.length;
-    if (s.tabs.isNotEmpty && s.tabs.length != qs) {
+    // A question read from the screen is ONE tab of its form: the strip names
+    // the others, and this driver answers only the one asked.
+    if (!ask.fromScreen && s.tabs.isNotEmpty && s.tabs.length != qs) {
       return AskMismatch('${s.tabs.length} tabs on screen, $qs questions asked');
+    }
+    if (ask.fromScreen) {
+      if (ask.review) {
+        return s.kind == ClaudeAskKind.review ? _submitTab(s) : const AskMismatch('the review is not on screen');
+      }
+      // The dialog went on to another tab (or the review) after the answer.
+      // A LONE question (no form: its strip has only itself and `Submit`) ends
+      // on its review: the answer is only given when that is submitted.
+      if (s.kind == ClaudeAskKind.review && ask.formTabs == 0 && _sent.isNotEmpty) return _review(s);
+      if (_sent.isNotEmpty && (s.kind == ClaudeAskKind.review || _which(s) == null)) return const AskDone();
+      if (s.kind == ClaudeAskKind.review) return const AskMismatch('the review is on screen, not the question');
     }
     return s.kind == ClaudeAskKind.review ? _review(s) : _question(s);
   }
@@ -112,6 +125,19 @@ class ClaudeAskDriver {
     }
     // Digit 1 submits at once, wherever the cursor is.
     return const AskSend(keys: ['1'], submits: true, why: 'submit the answers');
+  }
+
+  /// The review tab of a form read from the screen: `1` submits all the
+  /// answers, `2` cancels the tool call (the card's two options).
+  AskStep _submitTab(ClaudeAskScreen s) {
+    final a = answers.single;
+    if (a.selected.length != 1) return const AskMismatch('the review needs exactly one choice');
+    _sent.add(0);
+    return switch (a.selected.single) {
+      0 => const AskSend(keys: ['1'], submits: true, why: 'submit the answers'),
+      1 => const AskSend(keys: ['2'], submits: true, why: 'cancel the answers'),
+      _ => const AskMismatch('no such choice on the review'),
+    };
   }
 
   // -- a question tab ----------------------------------------------------------
@@ -189,13 +215,21 @@ class ClaudeAskDriver {
     final k = a.selected.single;
     // Already answered with it (the tab strip says so and the row is marked):
     // on to the next tab.
-    if (_sent.contains(i) && s.tabAnswered(i) && s.options[k].marked) {
+    if (_sent.contains(i) && s.tabAnswered(_tabOf(s, i)) && s.options[k].marked) {
       return _advance(s, i, onOtherRow: cursor == n + 1);
     }
     // Sent but the dialog did not take it: ask again.
     _sent.remove(i);
     _sent.add(i);
     return AskSend(keys: [...moveTo(k + 1), 'enter'], submits: lone, why: 'choose ${q.options[k].label}');
+  }
+
+  /// The strip's index of question [i]: its own for a form answered whole, the
+  /// tab named by the question's id for one read from the screen.
+  int _tabOf(ClaudeAskScreen s, int i) {
+    if (!ask.fromScreen) return i;
+    final at = s.tabs.indexWhere((t) => t.label == ask.questions[i].id);
+    return at < 0 ? i : at;
   }
 
   /// Goes on from a finished question to the next tab (the review after the
@@ -260,6 +294,91 @@ bool claudeAskResultMatches(String? output, PendingAsk ask, List<AskAnswer> answ
   return true;
 }
 
+// ------------------------------------------------------- the ask on screen
+
+/// The question the dialog on [screen] shows, or null when it is not one this
+/// app can show faithfully.
+///
+/// Claude Code 2.1.312 writes the `AskUserQuestion` call to its log only after
+/// the question is answered, so while it is open the screen is all there is.
+/// A form of several questions names every header in the tab strip but draws
+/// only the current tab's question, and reading the others would take keys
+/// sent only to look, which is never done. So a form is answered TAB BY TAB:
+/// the card is the tab on screen, answering it sends that tab's keys alone
+/// (which moves Claude on), and the next read shows the next tab as a new card.
+/// The review tab is a card of its own (header `Submit`, options `Submit
+/// answers` and `Cancel`, built from the layout of the older `askfull-two-review`
+/// capture: 2.1.312's review tab has not been captured). The review is the end
+/// of the form; the log confirms it, as it does a lone question.
+///
+/// The id is `screen:` and a hash of what identifies the tab (header, question,
+/// labels and descriptions), not the cursor or the checkboxes, so it stays the
+/// same while the person moves about in the terminal. The header is the
+/// highlighted tab when [screen] has its colours, else empty.
+///
+/// A dialog with typed Other text, or one this parser does not know, gives null.
+PendingAsk? claudeAskFromScreen(String screen) {
+  final s = parseClaudeAsk(screen);
+  if (s.kind == ClaudeAskKind.review) return _reviewAsk(s);
+  if (s.kind != ClaudeAskKind.question || s.title.isEmpty) return null;
+  // The last numbered row is the Other row; the real options come before it.
+  final rows = s.options.sublist(0, s.options.length - 1);
+  if (rows.isEmpty || !_isPlaceholder(s.options.last.label)) return null;
+  final multi = s.options.last.hasBox;
+  if (rows.any((o) => o.hasBox != multi)) return null;
+  final header = s.tabs.length > 1 ? (s.activeTab ?? '') : (s.tabs.isEmpty ? '' : s.tabs.single.label);
+  final key = [
+    header,
+    s.title,
+    multi,
+    for (final o in rows) ...[o.label, o.description],
+  ].join('\u0001');
+  return PendingAsk(
+    toolCallId: 'screen:${_fnv(key)}',
+    fromScreen: true,
+    formTabs: s.tabs.length > 1 ? s.tabs.length : 0,
+    questions: [
+      AskQuestion(
+        id: header.isEmpty ? 'q0' : header,
+        question: s.title,
+        multi: multi,
+        options: [for (final o in rows) AskOption(label: o.label, description: o.description)],
+      ),
+    ],
+  );
+}
+
+PendingAsk? _reviewAsk(ClaudeAskScreen s) {
+  if (s.menu.length != 2) return null;
+  final text = [
+    'Ready to submit your answers?',
+    for (final (q, a) in s.review) '$q: ${a.isEmpty ? '(no answer)' : a}',
+  ].join('\n');
+  final key = ['review', text, ...s.menu].join('\u0001');
+  return PendingAsk(
+    toolCallId: 'screen:${_fnv(key)}',
+    fromScreen: true,
+    review: true,
+    formTabs: s.tabs.length,
+    questions: [
+      AskQuestion(
+        id: 'Submit',
+        question: text,
+        options: [for (final m in s.menu) AskOption(label: m)],
+      ),
+    ],
+  );
+}
+
+/// FNV-1a, 32 bits, in hex: the same text gives the same id on every run.
+String _fnv(String text) {
+  var h = 0x811c9dc5;
+  for (final c in text.codeUnits) {
+    h = ((h ^ c) * 0x01000193) & 0xffffffff;
+  }
+  return h.toRadixString(16).padLeft(8, '0');
+}
+
 // ------------------------------------------------------------- screen model
 
 enum ClaudeAskKind { none, question, review }
@@ -272,6 +391,8 @@ class ClaudeAskRow {
     required this.cursor,
     required this.checked,
     required this.marked,
+    this.hasBox = false,
+    this.description = '',
   });
 
   final int number;
@@ -285,6 +406,12 @@ class ClaudeAskRow {
 
   /// `✔` after the label of a single choice: the answer given earlier.
   final bool marked;
+
+  /// The row has a checkbox (`[ ]`): the question is a multi-select.
+  final bool hasBox;
+
+  /// The rows under the label, joined: the option's description.
+  final String description;
 }
 
 /// One tab of the strip: the question's header and whether it is answered.
@@ -306,6 +433,8 @@ class ClaudeAskScreen {
     this.cursorOnSubmit = false,
     this.review = const [],
     this.fingerprint = '',
+    this.activeTab,
+    this.menu = const [],
   });
 
   static const none = ClaudeAskScreen(kind: ClaudeAskKind.none);
@@ -329,6 +458,26 @@ class ClaudeAskScreen {
 
   /// Same dialog in the same state, to tell a key that did not land.
   final String fingerprint;
+
+  /// The label of the highlighted tab, when the screen was read with its colours
+  /// (the plain text does not tell the tab you are on); else null.
+  final String? activeTab;
+
+  /// The review's menu rows (`Submit answers`, `Cancel`).
+  final List<String> menu;
+
+  ClaudeAskScreen _withActive(String? active) => ClaudeAskScreen(
+    kind: kind,
+    tabs: tabs,
+    title: title,
+    options: options,
+    cursorNumber: cursorNumber,
+    cursorOnSubmit: cursorOnSubmit,
+    review: review,
+    fingerprint: fingerprint,
+    activeTab: active,
+    menu: menu,
+  );
 
   bool tabAnswered(int i) => i >= 0 && i < tabs.length && tabs[i].answered;
 
@@ -363,10 +512,25 @@ ClaudeAskScreen parseClaudeAsk(String screen) {
 
   // The review tab ends with its own menu; a question tab with the footer.
   final ready = lines.lastIndexWhere((l) => l.trim() == 'Ready to submit your answers?');
+  final String? active = _activeTab(screen);
   if (ready >= 0 && lines.length - ready <= 4) return _parseReview(lines, ready);
   final footer = lines.lastIndexWhere(_footerRow.hasMatch);
   if (footer < 0 || lines.length - footer > 2) return ClaudeAskScreen.none;
-  return _parseQuestion(lines, footer);
+  final parsed = _parseQuestion(lines, footer);
+  return parsed.kind == ClaudeAskKind.none ? parsed : parsed._withActive(active);
+}
+
+/// The tab drawn highlighted (a background colour) in the strip of a screen
+/// read WITH its colours, or null.
+String? _activeTab(String screen) {
+  for (final raw in screen.split('\n')) {
+    if (!raw.contains('\u001b[48;')) continue;
+    for (final m in RegExp('\u001b\\[48;[0-9;]*m([^\u001b]*)').allMatches(raw)) {
+      final t = RegExp(r'^\s*[☐☒☑✔]\s+(.*?)\s*$').firstMatch(m[1]!);
+      if (t != null) return t[1];
+    }
+  }
+  return null;
 }
 
 String _cleanRow(String raw) {
@@ -422,6 +586,7 @@ ClaudeAskScreen _parseQuestion(List<String> lines, int footer) {
     at++;
   }
   final options = <ClaudeAskRow>[];
+  final described = <List<String>>[];
   int? cursorNumber;
   var onSubmit = false;
   var hasSubmit = false;
@@ -444,11 +609,22 @@ ClaudeAskScreen _parseQuestion(List<String> lines, int footer) {
       final cursor = m[1] != null;
       if (cursor) cursorNumber = int.parse(m[2]!);
       options.add(
-        ClaudeAskRow(number: int.parse(m[2]!), label: label, cursor: cursor, checked: checked, marked: marked),
+        ClaudeAskRow(
+          number: int.parse(m[2]!),
+          label: label,
+          cursor: cursor,
+          checked: checked,
+          marked: marked,
+          hasBox: box != null,
+        ),
       );
+      described.add([]);
     } else if (_submitRow.hasMatch(row)) {
       hasSubmit = true;
       onSubmit = _submitRow.firstMatch(row)![1] != null;
+    } else if (options.isNotEmpty && !hasSubmit && row.trim().isNotEmpty) {
+      // The rows under an option are its description.
+      described.last.add(row.trim());
     }
   }
   // The arrow rows in order: the numbered options (Other last), a multi-select's
@@ -460,6 +636,19 @@ ClaudeAskScreen _parseQuestion(List<String> lines, int footer) {
     if (o.number != i + 1) return ClaudeAskScreen.none;
   }
   if (options.length < 2) return ClaudeAskScreen.none;
+  for (final (i, o) in options.indexed) {
+    final d = _flat(described[i].join(' '));
+    if (d.isEmpty) continue;
+    options[i] = ClaudeAskRow(
+      number: o.number,
+      label: o.label,
+      cursor: o.cursor,
+      checked: o.checked,
+      marked: o.marked,
+      hasBox: o.hasBox,
+      description: d,
+    );
+  }
   final print = [
     tabs.map((t) => '${t.answered ? 1 : 0}').join(),
     title.join(' '),
@@ -519,6 +708,10 @@ ClaudeAskScreen _parseReview(List<String> lines, int ready) {
     if (m[1] != null) menuCursor = int.parse(m[2]!);
   }
   if (!hasMenu) return ClaudeAskScreen.none;
+  final menu = <String>[
+    for (var i = ready + 1; i < lines.length; i++)
+      if (_optionRow.firstMatch(lines[i]) != null) _optionRow.firstMatch(lines[i])![3]!,
+  ];
   // The strip above `Review your answers`, if it is on screen.
   final tabs = <ClaudeAskTab>[];
   for (var i = head - 1; i >= 0 && i >= head - 2; i--) {
@@ -534,6 +727,7 @@ ClaudeAskScreen _parseReview(List<String> lines, int ready) {
     kind: ClaudeAskKind.review,
     tabs: tabs,
     review: pairs,
+    menu: menu,
     cursorNumber: menuCursor == 0 ? null : menuCursor,
     fingerprint: 'review|${pairs.map((p) => '${p.$1}=${p.$2}').join('|')}|$menuCursor',
   );

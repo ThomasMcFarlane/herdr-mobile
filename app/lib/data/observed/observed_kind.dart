@@ -11,7 +11,13 @@ typedef AskStepper = AskStep Function(String screen);
 /// How an agent's question tool is answered from the phone: its dialog is
 /// driven by keys, one screen at a time, and the log has the last word.
 class ObservedAsk {
-  const ObservedAsk({required this.stepper, required this.looksLikeAsk, required this.resultMatches});
+  const ObservedAsk({
+    required this.stepper,
+    required this.looksLikeAsk,
+    required this.resultMatches,
+    this.fromScreen,
+    this.askToolName,
+  });
 
   /// The planner for one answer (one per answer: it remembers what scrolled out
   /// of view).
@@ -23,6 +29,15 @@ class ObservedAsk {
   /// Whether the tool result the agent recorded ([output]) says what the person
   /// answered.
   final bool Function(String? output, PendingAsk ask, List<AskAnswer> answers) resultMatches;
+
+  /// The question the dialog on a screen shows, for an agent whose log does not
+  /// hold a question while it is open (Claude Code 2.1.312); null where the
+  /// log always does (omp) or when the dialog cannot be shown faithfully.
+  final PendingAsk? Function(String screen)? fromScreen;
+
+  /// The name of the question tool in the log, to find its call once answered
+  /// when the question came from the screen.
+  final String? askToolName;
 }
 
 /// Where the transcripts of an agent's subagents are and whether they still
