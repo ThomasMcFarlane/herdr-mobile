@@ -4,6 +4,15 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [0.1.53] - 2026-11-02
+
+### Claude Code questions show beside panels and bands
+
+- A Claude Code question now shows in the chat when a mod draws panels (such as
+  a task board) or bands around the transcript, on either side or above and
+  below it. Before, the chat said `Needs you in the terminal`.
+- A long question that wraps over several lines shows as one paragraph.
+
 ## [0.1.52] - 2026-11-01
 
 ### Claude Code questions show in the chat again
