@@ -4,6 +4,14 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [0.1.54] - 2026-11-02
+
+### Claude Code questions show in the chat
+
+- A Claude Code question now shows in the chat as the usual card. The
+  terminal's coloured screen ends each row with a carriage return, which made
+  the question read as blank, so the chat said `Needs you in the terminal`.
+
 ## [0.1.53] - 2026-11-02
 
 ### Claude Code questions show beside panels and bands
