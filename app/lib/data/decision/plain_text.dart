@@ -20,6 +20,16 @@ final _csi = RegExp(r'\x1B\[[0-?]*(?: q|[!-/]*[@-~])');
 // to show.
 final _otherEscape = RegExp(r'\x1B[@-Z\\^_]|\x1B[ -/]*[0-Z\\^-~]');
 
+/// A screen row as the terminal shows it after carriage returns: the text after
+/// the last one wins (a progress bar's last state). One CR at the very end is
+/// the line ending of a CRLF read (herdr's `format: ansi` ends every row so),
+/// not an overwrite: it is dropped first, or the whole row would read as blank.
+String afterCarriageReturn(String row) {
+  final trimmed = row.endsWith('\r') ? row.substring(0, row.length - 1) : row;
+  final cr = trimmed.lastIndexOf('\r');
+  return cr < 0 ? trimmed : trimmed.substring(cr + 1);
+}
+
 /// [text] without terminal escape sequences (colour, cursor, OSC titles). A
 /// sequence that does not complete keeps its ESC, which [isHiddenRune] flags.
 String stripAnsi(String text) =>

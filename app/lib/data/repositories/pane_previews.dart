@@ -4,7 +4,7 @@ import 'dart:ui' show AppLifecycleState;
 
 import 'package:flutter/foundation.dart';
 
-import '../decision/plain_text.dart' as plain show stripAnsi;
+import '../decision/plain_text.dart' as plain show afterCarriageReturn, stripAnsi;
 import '../models/herdr_models.dart';
 import '../models/pane_preview.dart';
 import '../services/herdr_api.dart';
@@ -528,9 +528,7 @@ String stripAnsi(String s) {
 List<String> previewRows(String text, {int maxLength = 160, int keep = 12}) {
   final out = <String>[];
   for (final raw in text.split('\n')) {
-    var line = stripAnsi(raw).replaceAll('\t', '    ');
-    final cr = line.trimRight().lastIndexOf('\r');
-    if (cr >= 0) line = line.substring(cr + 1);
+    final line = plain.afterCarriageReturn(stripAnsi(raw)).replaceAll('\t', '    ');
     final cleaned = cleanPreviewRow(line);
     if (cleaned == null) continue;
     out.add(cleaned.length > maxLength ? _cut(cleaned, maxLength) : cleaned);
