@@ -2,7 +2,7 @@ import 'dart:collection';
 
 import '../models/herdr_models.dart' show AgentStatus;
 import '../models/pane_preview.dart';
-import '../services/herdr_api.dart' show HerdrApiExceptionX;
+import '../services/herdr_api.dart' show HerdrApiExceptionX, ReadSource;
 import '../services/herdr_transport.dart' show HerdrApiException;
 import '../services/notifier.dart' show NotificationAnswer;
 import 'command_risk.dart' show grantsStandingPermission;
@@ -128,7 +128,7 @@ class PaneAnswerer {
   }
 
   Future<PromptInfo?> _read(MachineConnection conn, String paneId) async {
-    final read = await conn.api.readPane(paneId, lines: _readLines);
+    final read = await conn.api.readPane(paneId, source: ReadSource.visible, lines: _readLines);
     // Only a pane the machine reports as blocked has a question to answer.
     final pane = conn.snapshot.panes.where((p) => p.id == paneId).firstOrNull;
     if (pane == null || pane.status != AgentStatus.blocked) return null;

@@ -4,6 +4,15 @@ What changed for the person using herdr mobile, newest first. Versions follow
 `0.1.x` patch releases; each section is the release notes of its GitHub
 release.
 
+## [0.1.55] - 2026-11-02
+
+### Claude Code questions show when the dialog sits high on a tall screen
+
+- A Claude Code question now shows in the chat as the usual card even when
+  the terminal is tall and the dialog is drawn near the top, with blank rows
+  under it. The app read only the bottom of such a screen, found it empty and
+  said `Needs you in the terminal`. It now reads the screen as it is drawn.
+
 ## [0.1.54] - 2026-11-02
 
 ### Claude Code questions show in the chat

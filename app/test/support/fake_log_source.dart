@@ -294,6 +294,20 @@ class ScreenTransport extends FakeTransport {
     var text = liveScreen != null
         ? liveScreen!()
         : (list == null ? screen : list[sends < list.length ? sends : list.length - 1]);
+    // Like herdr: `visible` is the screen without its trailing blank rows,
+    // `recent` the last rows of the whole screen, blank ones too; `lines` keeps
+    // the last of them. A read without `lines` is given whole.
+    final lines = params['lines'];
+    if (lines is int) {
+      var rows = text.split('\n');
+      if (params['source'] == 'visible') {
+        while (rows.isNotEmpty && rows.last.replaceAll('\r', '').trim().isEmpty) {
+          rows = rows.sublist(0, rows.length - 1);
+        }
+      }
+      if (rows.length > lines) rows = rows.sublist(rows.length - lines);
+      text = rows.join('\n');
+    }
     // Like herdr: the colours come only when asked for (`format: ansi`).
     // Like herdr's `format: ansi`: every row ends in CR LF.
     if (params['format'] == 'ansi') text = text.replaceAll('\r\n', '\n').replaceAll('\n', '\r\n');

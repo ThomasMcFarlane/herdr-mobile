@@ -15,6 +15,7 @@ import '../acp/session_made.dart' show MadeFold, MadeHistory;
 import '../acp/session_state.dart';
 import '../acp/subagents/subagent_run.dart' show SubagentLogStatus, SubagentRun, SubagentSummary;
 import '../models/herdr_models.dart';
+import '../services/herdr_api.dart' show ReadSource;
 import '../models/pane_preview.dart';
 import '../models/slash_command.dart';
 import '../models/remote_file.dart' show RemoteFileErrorKind, RemoteFileException;
@@ -2070,7 +2071,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
   /// agent's own menus (omp's tool approval, plan review) or the generic prompt
   /// detector.
   Future<PromptInfo?> _freshPrompt({required bool menu}) async {
-    final read = await machine.api.readPane(paneId, lines: 60);
+    final read = await machine.api.readPane(paneId, source: ReadSource.visible, lines: 60);
     return _parsePrompt(read.text, menu: menu);
   }
 
@@ -2091,7 +2092,12 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
     try {
       // With its colours when the question is read from the screen: only they
       // tell which tab of a form is the one on screen.
-      final read = await machine.api.readPane(paneId, lines: 60, ansi: kind.ask?.fromScreen != null);
+      final read = await machine.api.readPane(
+        paneId,
+        source: ReadSource.visible,
+        lines: 60,
+        ansi: kind.ask?.fromScreen != null,
+      );
       if (_disposed) return;
       _menu = kind.menuPrompt?.call(read.text);
       _screenAsk = kind.ask?.fromScreen?.call(read.text);
@@ -2170,7 +2176,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
   Future<void> _cancelAsk(PendingQuestion p) async {
     _busy = true;
     try {
-      final read = await machine.api.readPane(paneId, lines: 60);
+      final read = await machine.api.readPane(paneId, source: ReadSource.visible, lines: 60);
       if (!kind.ask!.looksLikeAsk(read.text)) return _refuse(p, _screenMoved);
       await machine.api.sendKeys(paneId, const ['esc']);
       _suppress(p);
@@ -2194,7 +2200,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
       final known = {for (final c in _log.toolCalls) c.toolCallId};
       final stepper = kind.ask!.stepper(ask, answers);
       for (var step = 0; step < maxAskSteps && !submitted; step++) {
-        final read = await machine.api.readPane(paneId, lines: 60);
+        final read = await machine.api.readPane(paneId, source: ReadSource.visible, lines: 60);
         final next = stepper(read.text);
         switch (next) {
           case AskDone():
@@ -2238,7 +2244,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
       // A tab of a form: the driver saw the dialog go on to another tab and the
       // log has nothing yet. The next tab is read afresh for its own card.
       // With colours, as the card was made: the id holds the highlighted tab.
-      final read = await machine.api.readPane(paneId, lines: 60, ansi: true);
+      final read = await machine.api.readPane(paneId, source: ReadSource.visible, lines: 60, ansi: true);
       if (kind.ask!.fromScreen?.call(read.text)?.toolCallId == ask.toolCallId) {
         return _refuse(p, _notTaken('the form is still on the same question'));
       }
@@ -2268,7 +2274,7 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
         _setProblem('The terminal recorded a different answer than the one you gave. Check the terminal.');
       }
     } else {
-      final read = await machine.api.readPane(paneId, lines: 60);
+      final read = await machine.api.readPane(paneId, source: ReadSource.visible, lines: 60);
       if (kind.ask!.looksLikeAsk(read.text)) {
         return _refuse(
           p,
