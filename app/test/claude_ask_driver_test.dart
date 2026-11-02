@@ -667,6 +667,16 @@ void main() {
         expect(claudeAskFromScreen(plain(raw))!.toolCallId, ask.toolCallId);
       });
 
+      test('a dialog drawn near the top of a tall screen (Claude Code 2.1.316, 701 x 201)', () {
+        final raw = live('ask2316-high-dialog');
+        expect(looksLikeClaudeAsk(raw), isTrue);
+        final q = claudeAskFromScreen(raw)!.questions.single;
+        expect(q.id, 'Sentry');
+        expect(q.question, startsWith('NAZARE-FRONTEND-PROD-166 and NAZARE-FRONTEND-PROD-16X came from'));
+        expect(q.multi, isFalse);
+        expect(q.options.map((o) => o.label), ['Resolve them', 'Leave open', 'Type something.']);
+      });
+
       test('descriptions wrapped over two rows are joined; the cursor may be on the Other row', () {
         final raw = live('ask2312-traytap-live');
         expect(looksLikeClaudeAsk(raw), isTrue);

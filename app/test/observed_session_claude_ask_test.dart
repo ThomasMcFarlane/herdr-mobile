@@ -419,6 +419,18 @@ void main() {
     },
   );
 
+  test('a dialog above many blank rows is a card, read from the visible screen', () async {
+    final raw = File('test/fixtures/prompts/claude/ask2316-high-dialog.crlf.ansi').readAsStringSync();
+    final screen = raw.replaceAll('\r\n', '\n') + '\n' * 178;
+    final (rig, session) = await _open(screen: screen, blockedGrace: const Duration(seconds: 30));
+    await eventually(() => session.state.pending.isNotEmpty, reason: 'the question');
+    final card = session.state.pending.single as PendingQuestion;
+    expect(card.request.message, contains('NAZARE-FRONTEND-PROD-166'));
+    final reads = rig.transport.of('pane.read');
+    expect(reads, isNotEmpty);
+    expect(reads.map((r) => r['source']).toSet(), {'visible'});
+  });
+
   test('an answer that never reaches the log, with the dialog still there, is refused saying why', () async {
     final (_, session) = await _open(
       screen: _screen('ask2312-single'),

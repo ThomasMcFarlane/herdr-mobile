@@ -114,7 +114,7 @@ class PanePreviews {
   Future<PromptInfo?> recheck(MachineConnection machine, String paneId) async {
     final watch = _machines[machine.profile.id]?.panes[paneId];
     final seq = watch?.startRead();
-    final read = await machine.api.readPane(paneId, lines: readLines);
+    final read = await machine.api.readPane(paneId, source: ReadSource.visible, lines: readLines);
     final rows = previewRows(read.text, maxLength: maxLineLength, keep: readLines);
     if (watch != null && !watch.disposed) watch.offer(rows, seq!);
     if (machine.paneById(paneId)?.status != AgentStatus.blocked) return null;
@@ -393,7 +393,7 @@ class _PaneWatch {
     final seq = startRead();
     try {
       if (conn == null) return;
-      final result = await conn.api.readPane(paneId, lines: _owner.readLines);
+      final result = await conn.api.readPane(paneId, source: ReadSource.visible, lines: _owner.readLines);
       if (disposed) return;
       _apply(result.text, seq);
       gone = false;

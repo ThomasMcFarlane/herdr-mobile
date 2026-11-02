@@ -84,7 +84,7 @@ class MachineConnection extends ChangeNotifier {
       ? null
       : ScreenWaits(
           readers: screenWaits,
-          read: (paneId) async => (await _api.readPane(paneId, lines: 60)).text,
+          read: (paneId) async => (await _api.readPane(paneId, source: ReadSource.visible, lines: 60)).text,
           onChange: _onReviewedChanged,
           clock: _clock,
         );
