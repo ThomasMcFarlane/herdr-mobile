@@ -674,7 +674,7 @@ void main() {
         expect(q.id, 'Sentry');
         expect(q.question, startsWith('NAZARE-FRONTEND-PROD-166 and NAZARE-FRONTEND-PROD-16X came from'));
         expect(q.multi, isFalse);
-        expect(q.options.map((o) => o.label), ['Resolve them', 'Leave open', 'Type something.']);
+        expect(q.options.map((o) => o.label), ['Resolve them', 'Leave open']);
       });
 
       test('descriptions wrapped over two rows are joined; the cursor may be on the Other row', () {

@@ -504,11 +504,11 @@ void main() {
       h.release();
     }, panes: [_pane('w1:p1')]);
 
-    _rig('asks for a handful of rows, plain text, recent source', (async, rig) {
+    _rig('asks for a handful of rows, plain text, visible source', (async, rig) {
       final h = rig.previews.watch('m', 'w1:p1');
       async.flushMicrotasks();
       final call = rig.t.calls.firstWhere((c) => c.$1 == 'pane.read').$2;
-      expect(call['source'], 'recent');
+      expect(call['source'], 'visible');
       expect(call['lines'], lessThanOrEqualTo(24));
       expect(call['strip_ansi'], isTrue);
       h.release();
