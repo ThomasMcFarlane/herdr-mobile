@@ -2092,7 +2092,12 @@ class ObservedAgentSession extends ChangeNotifier implements AgentSessionView, S
     try {
       // With its colours when the question is read from the screen: only they
       // tell which tab of a form is the one on screen.
-      final read = await machine.api.readPane(paneId, source: ReadSource.visible, lines: 60, ansi: kind.ask?.fromScreen != null);
+      final read = await machine.api.readPane(
+        paneId,
+        source: ReadSource.visible,
+        lines: 60,
+        ansi: kind.ask?.fromScreen != null,
+      );
       if (_disposed) return;
       _menu = kind.menuPrompt?.call(read.text);
       _screenAsk = kind.ask?.fromScreen?.call(read.text);
